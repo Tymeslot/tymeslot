@@ -40,3 +40,9 @@ msgstr "Виберіть тип зустрічі"
 msgctxt "paper"
 msgid "That time was just booked. Choose another."
 msgstr "Цей час щойно забронювали. Виберіть інший."
+
+#: lib/tymeslot_web/themes/quill/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "quill"
+msgid "Arrange a meeting"
+msgstr "Домовитися про зустріч"

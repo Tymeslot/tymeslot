@@ -107,12 +107,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         alt={Demo.avatar_alt_text(@organizer_profile)}
                         class="overview-avatar rounded-full object-cover shadow-2xl border-4 border-white/50 transition-all duration-300 hover:scale-105 cursor-pointer"
                       />
-                      <div class="overview-success-badge absolute rounded-full flex items-center justify-center shadow-lg">
-                        <%!-- An inline icon, not an emoji: an emoji paints only where
-                             the visitor's system has a colour emoji font, and as an
-                             empty box everywhere else. --%>
-                        <.icon name="hero-check-mini" class="overview-success-badge-icon" />
-                      </div>
                     </div>
                   </div>
 

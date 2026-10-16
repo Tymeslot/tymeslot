@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
       # A single heading displaces a different sentence in each theme, so the
       # organiser has to be shown both.
-      assert html =~ "Let&#39;s Connect!"
+      assert html =~ "Arrange a meeting"
       assert html =~ "Schedule with Sarah"
       assert html =~ "your current theme"
     end
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       saved = Repo.reload!(profile)
       assert saved.booking_text_enabled
       # The current theme's default heading, not the other theme's.
-      assert saved.booking_heading == "Let's Connect!"
+      assert saved.booking_heading == "Arrange a meeting"
       assert saved.booking_greeting == "Hi! I'm Sarah."
       assert saved.booking_instruction == "Pick an option to get started."
     end

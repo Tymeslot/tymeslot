@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
   describe "get_voice/1" do
     test "is the voice the theme names, or nil" do
       assert ThemeInfo.get_voice("99") == FixtureVoice
-      assert ThemeInfo.get_voice("1") == nil
+      assert ThemeInfo.get_voice("2") == nil
       assert ThemeInfo.get_voice("no-such-theme") == nil
     end
   end

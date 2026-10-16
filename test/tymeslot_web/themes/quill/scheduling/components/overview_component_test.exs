@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     test "shows the theme's own wording when the organiser has not customised it" do
       html = render_overview(organizer_profile: build(:profile, full_name: "Sarah Rodriguez"))
 
-      assert html =~ "Let&#39;s Connect!"
+      assert html =~ "Arrange a meeting"
       assert html =~ "Hi! I&#39;m Sarah Rodriguez."
       assert html =~ "Pick an option to get started."
     end
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       assert html =~ "Ready to grow your business?"
       assert html =~ "I am Sarah, and I help teams ship."
       assert html =~ "Choose whichever session suits you."
-      refute html =~ "Let&#39;s Connect!"
+      refute html =~ "Arrange a meeting"
       refute html =~ "Pick an option to get started."
     end
 
@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
 
       html = render_overview(organizer_profile: profile)
 
-      assert html =~ "Let&#39;s Connect!"
+      assert html =~ "Arrange a meeting"
       refute html =~ "Ready to grow your business?"
     end
 
@@ -156,17 +156,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     end
   end
 
-  describe "avatar badge" do
-    # An emoji needs a colour-emoji font the booker's device may lack, which
-    # draws an empty box; the badge draws its check as an inline icon instead.
-    test "draws its check as an icon, not as a text glyph" do
-      badge =
-        render_overview([])
-        |> Floki.parse_document!()
-        |> Floki.find(".overview-success-badge")
+  describe "the organiser's avatar and the heading" do
+    test "draws no verification tick, and a calm heading" do
+      html = render_overview([])
+      doc = Floki.parse_document!(html)
 
-      assert Floki.find(badge, "svg.overview-success-badge-icon") != []
-      assert String.trim(Floki.text(badge)) == ""
+      assert Floki.find(doc, ".overview-success-badge") == []
+      assert Floki.find(doc, ".overview-avatar") != []
+      assert html =~ "Arrange a meeting"
+      refute html =~ "Let's Connect!"
     end
   end
 

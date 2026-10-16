@@ -40,3 +40,9 @@ msgstr "Sélectionnez un type de réunion"
 msgctxt "paper"
 msgid "That time was just booked. Choose another."
 msgstr "Ce créneau vient d'être réservé. Choisissez-en un autre."
+
+#: lib/tymeslot_web/themes/quill/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "quill"
+msgid "Arrange a meeting"
+msgstr "Organiser un rendez-vous"

@@ -14,7 +14,7 @@ A consultant, an agency or a professional service that wants its booking page to
 
 ## Look
 
-A wide glass card over a gradient, an image or a looping video, with Inter and generous spacing. The card adapts to its own width through container queries; on the schedule step it locks to the viewport, its actions pinned on screen.
+A wide glass card over a gradient, an image or a looping video, with Inter and generous spacing. The card adapts to its own width through container queries; on the schedule step it locks to the viewport, its actions pinned on screen. The organiser's avatar carries no badge.
 
 ## Options
 
@@ -22,11 +22,11 @@ A colour palette (a preset scheme or a custom seed colour) and a background of a
 
 ## Voice
 
-Polished and friendly. The shared booking copy is Quill's voice.
+Polished and calm. `Quill.Voice` words the heading; every other line is still the shared booking copy until Quill's own lines land.
 
-- **Tone:** confident, warm and businesslike; it welcomes rather than instructs.
-- **Rules:** short, plain labels; exclamation marks in the welcome and the confirmation headline; the organiser introduced by name when there is one.
-- **Lines:** heading "Let's Connect!", with the greeting "Hi! I'm Sarah Rodriguez."; meeting-type prompt "Pick an option to get started."; time prompt "Select a Date & Time"; details prompt "Enter Your Details"; button "Book Meeting"; confirmation "Meeting Confirmed!"; slot taken "This time slot is no longer available. Please select a different time."
+- **Tone:** confident, warm and businesslike; considered rather than casual.
+- **Rules:** short, plain labels; no exclamation marks in Quill's own lines (the shared greeting and the confirmation headline keep theirs until Quill words them); the organiser introduced by name when there is one; nothing on the page claims what it cannot back.
+- **Lines:** heading "Arrange a meeting", with the greeting "Hi! I'm Sarah Rodriguez."; meeting-type prompt "Pick an option to get started."; time prompt "Select a Date & Time"; details prompt "Enter Your Details"; button "Book Meeting" ("Continue to payment" for a paid type); confirmation "Meeting Confirmed!"; slot taken "This time slot is no longer available. Please select a different time." The heading is in `Quill.Voice`, context `quill` of `booking_voice`.
 
 ## Axes
 

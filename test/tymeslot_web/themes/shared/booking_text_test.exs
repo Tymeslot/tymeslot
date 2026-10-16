@@ -97,12 +97,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
     end
 
     test "fall back to the generic heading for a theme with no opinion of its own" do
-      assert BookingText.default_heading(:some_future_theme, "Sam") ==
-               BookingText.default_heading(:quill, "Sam")
+      assert BookingText.default_heading(:some_future_theme, "Sam") == "Let's Connect!"
     end
 
     test "fall back to the generic heading when there is no name to put in it" do
-      assert BookingText.default_heading(:rhythm, nil) == BookingText.default_heading(:quill, nil)
+      assert BookingText.default_heading(:rhythm, nil) == "Let's Connect!"
       refute BookingText.default_heading(:rhythm, nil) =~ "Schedule with"
     end
   end
