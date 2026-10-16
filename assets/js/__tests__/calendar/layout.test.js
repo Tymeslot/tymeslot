@@ -4,7 +4,7 @@
  * at least its first title line uncovered.
  */
 import { describe, expect, test } from "vitest";
-import { CHIP_WIDTH, LINE_HEIGHT, PAD_TOP, countLines, layoutDay, placeDay } from "../../calendar/layout.js";
+import { CHIP_WIDTH, LINE_HEIGHT, PAD_TOP, countLines, layoutColumn, layoutDay, placeDay } from "../../calendar/layout.js";
 import { makeScale } from "../../calendar/time.js";
 
 const scale = makeScale(52, false);
@@ -126,5 +126,106 @@ describe("placeDay, the vertical pass", () => {
     const merged = laid.filter((item) => item.chip);
     expect(merged).toHaveLength(1);
     expect(merged[0].hidden).toHaveLength(6);
+  });
+});
+
+describe("review regressions", () => {
+  const place = (segments, colWidth = 200) => placeDay(layoutDay(segments, opts(colWidth)), { yOf: scale.yOf, minHeight: 20 });
+  const byId = (laid, id) => laid.find((item) => item.id === id);
+
+  test("a short event nested in an event that folds behind the chip is placed without crashing", () => {
+    const segments = [ev("a", 540, 780), ev("b", 540, 780), ev("c", 540, 780), ev("n", 560, 575)];
+    const laid = place(segments, 100);
+    const visible = new Set(events(laid).map((item) => item.id));
+    const n = byId(laid, "n");
+    expect(n).toBeDefined();
+    expect(n.nestIn === null || visible.has(n.nestIn)).toBe(true);
+  });
+
+  test("a long event never joins a short event's nested group", () => {
+    const laid = layoutDay([ev("L", 540, 900, "Focus"), ev("a", 540, 560, "Standup"), ev("z", 550, 880, "Offsite")], opts(200));
+    expect(chips(laid)).toEqual([]);
+    expect(byId(laid, "z")).toMatchObject({ level: 0, width: 100 });
+    expect(byId(laid, "a").nestIn).toBe("L");
+  });
+
+  test("the fold ends where the crowd ends, and a long event is not hidden behind it", () => {
+    const crowd = ["a", "b", "c", "d"].map((id) => ev(id, 540, 570));
+    const laid = layoutDay([...crowd, ev("z", 550, 780, "Workshop")], opts(200));
+    expect(events(laid).map((item) => item.id)).toContain("z");
+    const [chip] = chips(laid);
+    expect(chip).toMatchObject({ s: 540, e: 570 });
+    expect(chip.hidden).toEqual(["b", "c", "d"]);
+  });
+
+  test("an overlay close enough to the earlier title drops that title's time line", () => {
+    const laid = place([ev("a", 540, 720, "Workshop"), ev("b", 570, 690, "Lunch")]);
+    expect(byId(laid, "b").level).toBe(1);
+    expect(byId(laid, "a")).toMatchObject({ lineClamp: 1, hideTime: true });
+  });
+
+  test("a merged chip carries the warning when either side has one", () => {
+    const five = (start, attention = []) => ["a", "b", "c", "d", "e"].map((id) => ev(`${id}${start}`, start, start + 60, id, { attention: attention.includes(id) }));
+    const laid = place([...five(540), ...five(590, ["c", "d", "e"])]);
+    const merged = chips(laid);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].warn).toBe(true);
+  });
+
+  test("chips far apart stay separate", () => {
+    const five = (start) => ["a", "b", "c", "d", "e"].map((id) => ev(`${id}${start}`, start, start + 60));
+    expect(chips(place([...five(540), ...five(720)]))).toHaveLength(2);
+  });
+
+  test("layoutColumn defaults the minimum height to 20px", () => {
+    const [item] = layoutColumn([ev("a", 540, 545)], opts(200));
+    expect(item.height).toBe(20);
+  });
+
+  test("the output does not depend on the input order", () => {
+    const segments = [
+      ev("a", 540, 780, "Workshop"), ev("b", 555, 570, "Standup"), ev("c", 540, 600), ev("d", 545, 600),
+      ev("e", 550, 620, "e", { attention: true }), ev("f", 600, 660), ev("g", 610, 640), ev("h", 720, 840),
+    ];
+    const forward = layoutColumn(segments, opts(160));
+    expect(layoutColumn([...segments].reverse(), opts(160))).toEqual(forward);
+    expect(layoutColumn([...segments.slice(4), ...segments.slice(0, 4)], opts(160))).toEqual(forward);
+  });
+
+  test("a chip draws above every event, however deep the cascade", () => {
+    const cascade = Array.from({ length: 12 }, (_, i) => ev(`k${i}`, 480 + i * 30, 1200));
+    const crowd = ["a", "b", "c", "d", "e"].map((id) => ev(id, 1100, 1160));
+    const laid = layoutDay([...cascade, ...crowd], opts(400));
+    const [chip] = chips(laid);
+    expect(chip).toBeDefined();
+    expect(chip.z).toBeGreaterThan(Math.max(...events(laid).map((item) => item.z)));
+  });
+
+  test("a column too narrow for one 64px column still keeps one column beside the chip", () => {
+    const laid = layoutDay([ev("a", 540, 600), ev("b", 540, 600)], opts(80));
+    expect(events(laid)).toHaveLength(1);
+    expect(events(laid)[0].width).toBe(80 - CHIP_WIDTH);
+  });
+
+  test("whether a later event can overlay is measured in the earlier event's own column", () => {
+    const laid = layoutDay([ev("A", 540, 720, "Quarterly planning"), ev("B", 545, 720, "x"), ev("g", 575, 700, "g")], opts(200));
+    expect(byId(laid, "g").level).toBe(0);
+  });
+
+  test("a short event nested in an indented host starts inside the host", () => {
+    const laid = layoutDay(
+      [ev("A", 480, 720), ev("B", 540, 720), ev("C", 600, 720), ev("D", 660, 780), ev("E", 670, 690)],
+      opts(200),
+    );
+    const d = byId(laid, "D");
+    const e = byId(laid, "E");
+    expect(e.nestIn).toBe("D");
+    expect(e.left).toBeGreaterThan(d.left);
+    expect(e.left + e.width).toBeLessThanOrEqual(200);
+  });
+
+  test("an event at the very end of the day stays inside the grid", () => {
+    const [item] = place([ev("a", 1435, 1440)]);
+    expect(item.top + item.height).toBeLessThanOrEqual(scale.yOf(1440));
   });
 });

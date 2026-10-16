@@ -6,14 +6,18 @@
  *  - an event that starts later overlays the earlier one with an indent, so
  *    the earlier title stays readable;
  *  - a short event inside a long one overlays the long one's right half (on a
- *    narrow column, all but its left third) instead of halving it throughout;
+ *    narrow host, all but its left third) instead of halving it throughout;
  *  - touching events do not overlap;
- *  - when shared columns would fall below MIN_EVENT_WIDTH, the extra columns
- *    fold into a "+N more" chip, each remaining column at least
- *    FOLD_COLUMN_WIDTH wide.
- * Added to the sketch: a column holding an event that needs attention (sync
- * pending or failed) is kept visible ahead of the others, and a chip that
- * still has to hide one is marked `warn`.
+ *  - when shared columns would fall below MIN_EVENT_WIDTH, the crowd folds
+ *    into a "+N more" chip, each remaining column FOLD_COLUMN_WIDTH wide or
+ *    more. A column too narrow for even one such column beside the chip
+ *    (under about 94px) still keeps one, narrower column.
+ * Added to the sketch: the fold is decided per moment, not per group. An
+ * event is hidden only if, at some point in its life, more events than there
+ * are columns run at once and it ranks below them: one that needs attention
+ * (sync pending or failed) ranks first, then the longer one. Each chip covers
+ * only the stretch where something is hidden, and a chip still hiding an
+ * attention item is marked `warn`.
  *
  * All inputs are plain data; text measurement is injected (`measureLines`),
  * so the module is testable without a canvas.
@@ -24,7 +28,13 @@ export const CHIP_WIDTH = 30;
 export const LINE_HEIGHT = 15;
 export const PAD_TOP = 3;
 
+const SHORT_EVENT = 30;
+const MINUTES_PER_DAY = 1440;
 const ceil15 = (minutes) => Math.ceil(minutes / 15) * 15;
+const overlaps = (a, b) => a.s < b.e && a.e > b.s;
+const compareIds = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+// Stronger first: attention, then longer, then earlier, then by id.
+const byStrength = (a, b) => Number(!!b.attention) - Number(!!a.attention) || b.e - b.s - (a.e - a.s) || a.s - b.s || compareIds(a, b);
 
 /** How many lines `text` wraps to in `width` px, by whole words. */
 export function countLines(text, width, measureWidth) {
@@ -50,6 +60,15 @@ export function countLines(text, width, measureWidth) {
   return lines;
 }
 
+// How many columns fit beside the chip once `width` folds: at least one.
+const foldSlots = (width) => Math.max(1, Math.floor((width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH));
+
+// The width of one column of `width` split `n` ways, after any fold.
+function columnWidth(width, n) {
+  if (n > 1 && width / n < MIN_EVENT_WIDTH) return (width - CHIP_WIDTH) / foldSlots(width);
+  return width / n;
+}
+
 /**
  * Lays out one day's segments ({ id, s, e, title, attention }, minutes from
  * midnight). Returns events ({ id, s, e, level, left, width, z, nestIn }) and
@@ -57,9 +76,7 @@ export function countLines(text, width, measureWidth) {
  * across the column; `placeDay` adds the vertical pass.
  */
 export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines }) {
-  const segs = segments
-    .map((segment) => ({ ...segment }))
-    .sort((a, b) => a.s - b.s || b.e - b.s - (a.e - a.s) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const segs = segments.map((segment) => ({ ...segment })).sort((a, b) => a.s - b.s || b.e - b.s - (a.e - a.s) || compareIds(a, b));
 
   const startGap = Math.max(15, ceil15((22 / hourHeight) * 60));
   const indent = Math.max(12, Math.round(colWidth * 0.18));
@@ -67,88 +84,109 @@ export function layoutDay(segments, { colWidth, hourHeight, yOf, measureLines })
   const groups = [];
 
   for (const g of segs) {
-    const over = placed.filter((p) => p.s < g.e && p.e > g.s);
-    // Overlay only when the earlier event's title (up to two lines) fits above
-    // the later one; otherwise the two share columns.
+    const over = placed.filter((p) => overlaps(p, g));
+    // Overlay only when the earlier event's title (up to two lines, in its
+    // own column) fits above the later one; otherwise the two share columns.
     const close = over.filter(
       (p) =>
         g.s - p.s < startGap ||
-        yOf(g.s) - yOf(p.s) < 4 + LINE_HEIGHT * Math.min(2, measureLines(p.title, p.group.width - CHIP_WIDTH - 14)),
+        yOf(g.s) - yOf(p.s) < 4 + LINE_HEIGHT * Math.min(2, measureLines(p.title, columnWidth(p.group.width, p.group.ends.length) - 14)),
     );
-    const shortInLong = close.length > 0 && close.every((p) => p.e - p.s >= 90) && g.e - g.s <= 30;
+    const isShort = g.e - g.s <= SHORT_EVENT;
+    const shortInLong = close.length > 0 && close.every((p) => p.e - p.s >= 90) && isShort;
 
     if (!close.length || shortInLong) {
       const level = over.length ? Math.max(...over.map((p) => p.level)) + 1 : 0;
-      const left = shortInLong
-        ? Math.round(colWidth < 140 ? colWidth / 3 : colWidth * 0.5)
-        : Math.min(level * indent, Math.round(colWidth * 0.6));
-      const group = { left, width: colWidth - left, members: [g] };
+      let left = Math.min(level * indent, Math.round(colWidth * 0.6));
+      if (shortInLong) {
+        // Nest in the topmost close event, the strongest of those at that
+        // level, and overlay its right half (two thirds when it is narrow).
+        const top = Math.max(...close.map((p) => p.level));
+        const host = close.filter((p) => p.level === top).sort(byStrength)[0];
+        const { left: hostLeft, width: hostWidth } = host.group;
+        left = Math.round(hostLeft + (hostWidth < 140 ? hostWidth / 3 : hostWidth * 0.5));
+        g.nestIn = host.id;
+      }
+      const group = { left, width: colWidth - left, members: [], ends: [], nested: shortInLong };
       groups.push(group);
       g.level = level;
-      g.group = group;
-      if (shortInLong) g.nestIn = close[close.length - 1].id;
+      join(group, g);
     } else {
-      const host = close[close.length - 1];
-      host.group.members.push(g);
+      // A long event shares with an event of its own kind, never with a short
+      // one nested inside a third, whose narrow group would fold it away.
+      const own = isShort ? [] : close.filter((p) => !p.group.nested);
+      const candidates = own.length ? own : close;
+      const host = candidates[candidates.length - 1];
       g.level = host.level;
-      g.group = host.group;
+      if (host.nestIn) g.nestIn = host.nestIn;
+      join(host.group, g);
     }
 
     placed.push(g);
   }
 
-  return groups.flatMap((group) => layoutGroup(group));
-}
+  const chipZ = 4 + Math.max(0, ...segs.map((g) => g.level));
+  const out = groups.flatMap((group) => layoutGroup(group, chipZ));
 
-function layoutGroup(group) {
-  const ends = [];
-  for (const m of group.members) {
-    let col = ends.findIndex((end) => end <= m.s);
-    if (col < 0) {
-      col = ends.length;
-      ends.push(m.e);
-    } else {
-      ends[col] = m.e;
-    }
-    m.col = col;
+  // A nested event whose host folded behind a chip nests in a visible event
+  // of the host's group instead, or in none.
+  const seg = new Map(segs.map((g) => [g.id, g]));
+  for (const item of out) {
+    if (item.chip || !item.nestIn || !seg.get(item.nestIn).hidden) continue;
+    const other = seg.get(item.nestIn).group.members.find((o) => !o.hidden && o.id !== item.id && overlaps(o, item));
+    item.nestIn = other ? other.id : null;
   }
 
-  const n = ends.length;
+  return out;
+}
+
+function join(group, g) {
+  const col = group.ends.findIndex((end) => end <= g.s);
+  if (col < 0) group.ends.push(g.e);
+  else group.ends[col] = g.e;
+  group.members.push(g);
+  g.group = group;
+}
+
+// Lays out each run of transitively overlapping members on its own, so one
+// crowd's columns and fold do not outlive it.
+function layoutGroup(group, chipZ) {
+  return runsOf(group.members).flatMap((run) => layoutRun(group, run, chipZ));
+}
+
+function layoutRun(group, members, chipZ) {
+  const n = assignSlots(members).length;
   const folding = n > 1 && group.width / n < MIN_EVENT_WIDTH;
-  const slots = folding ? Math.max(1, Math.floor((group.width - CHIP_WIDTH) / FOLD_COLUMN_WIDTH)) : n;
-  const visible = chooseColumns(group.members, n, slots);
-  const slotOf = new Map(visible.map((col, slot) => [col, slot]));
-  const unit = visible.length < n ? (group.width - CHIP_WIDTH) / visible.length : group.width / n;
+  const slots = folding ? foldSlots(group.width) : n;
+  const unit = columnWidth(group.width, n);
+  const shown = folding ? chooseVisible(members, slots) : members;
+  for (const m of members) m.hidden = !shown.includes(m);
+  const visible = members.filter((m) => !m.hidden);
+  assignSlots(visible);
+
   const out = [];
-  const hidden = [];
-
-  for (const m of group.members) {
-    if (!slotOf.has(m.col)) {
-      hidden.push(m);
-      continue;
-    }
-
-    const slot = slotOf.get(m.col);
+  for (const m of visible) {
     let span = 1;
-    for (let k = slot + 1; k < visible.length; k += 1) {
-      const col = visible[k];
-      if (group.members.some((o) => o !== m && o.col === col && o.s < m.e && o.e > m.s)) break;
+    for (let k = m.slot + 1; k < slots; k += 1) {
+      if (visible.some((o) => o !== m && o.slot === k && overlaps(o, m))) break;
       span += 1;
     }
 
-    out.push({ id: m.id, s: m.s, e: m.e, level: m.level, left: group.left + slot * unit, width: span * unit, z: 3 + m.level, nestIn: m.nestIn ?? null });
+    out.push({ id: m.id, s: m.s, e: m.e, level: m.level, left: group.left + m.slot * unit, width: span * unit, z: 3 + m.level, nestIn: m.nestIn ?? null });
   }
 
-  if (hidden.length) {
+  for (const hidden of runsOf(members.filter((m) => m.hidden))) {
+    const s = Math.min(...hidden.map((m) => m.s));
+    const e = Math.max(...hidden.map((m) => m.e));
     out.push({
       chip: true,
-      ids: group.members.map((m) => m.id),
+      ids: members.filter((m) => m.s < e && m.e > s).map((m) => m.id),
       hidden: hidden.map((m) => m.id),
-      s: Math.min(...hidden.map((m) => m.s)),
-      e: Math.max(...hidden.map((m) => m.e)),
+      s,
+      e,
       left: group.left + group.width - CHIP_WIDTH,
       width: CHIP_WIDTH,
-      z: 14,
+      z: chipZ,
       warn: hidden.some((m) => m.attention),
     });
   }
@@ -156,16 +194,45 @@ function layoutGroup(group) {
   return out;
 }
 
-// The columns that stay visible: those holding an attention item first, then
-// the rest in order, as many as there are slots, returned in column order.
-function chooseColumns(members, n, slots) {
-  const all = Array.from({ length: n }, (_, col) => col);
-  if (slots >= n) return all;
+// Gives each member (in start order) the lowest free slot; returns the slot
+// ends, whose count is the most members that overlap at once.
+function assignSlots(members) {
+  const ends = [];
+  for (const m of members) {
+    let slot = ends.findIndex((end) => end <= m.s);
+    if (slot < 0) slot = ends.push(m.e) - 1;
+    else ends[slot] = m.e;
+    m.slot = slot;
+  }
+  return ends;
+}
 
-  const urgent = all.filter((col) => members.some((m) => m.col === col && m.attention));
-  const rest = all.filter((col) => !urgent.includes(col));
+// The members that stay visible with `slots` columns: strongest first, each
+// kept unless `slots` stronger ones already run at some moment of its life.
+function chooseVisible(members, slots) {
+  const kept = [];
+  for (const m of [...members].sort(byStrength)) {
+    const moments = [m.s, ...kept.filter((o) => o.s > m.s && o.s < m.e).map((o) => o.s)];
+    const peak = Math.max(...moments.map((t) => kept.filter((o) => o.s <= t && o.e > t).length));
+    if (peak < slots) kept.push(m);
+  }
+  return members.filter((m) => kept.includes(m));
+}
 
-  return [...urgent, ...rest].slice(0, slots).sort((a, b) => a - b);
+// Splits members (in start order) into runs that overlap transitively.
+function runsOf(members) {
+  const runs = [];
+  let end = -Infinity;
+  for (const m of members) {
+    if (!runs.length || m.s >= end) {
+      runs.push([m]);
+      end = m.e;
+    } else {
+      runs[runs.length - 1].push(m);
+      end = Math.max(end, m.e);
+    }
+  }
+  return runs;
 }
 
 /**
@@ -177,9 +244,16 @@ function chooseColumns(members, n, slots) {
  */
 export function placeDay(laid, { yOf, minHeight = 20 }) {
   const items = laid.map((item) => ({ ...item }));
+  // Nothing hangs below the end of the day, however short it is.
+  const dayEnd = yOf(MINUTES_PER_DAY);
+  const clamp = (item) => {
+    item.top = Math.min(item.top, dayEnd - item.height);
+  };
   for (const item of items) {
     item.top = yOf(item.s);
     item.height = Math.max(minHeight, yOf(item.e) - item.top - 2);
+    if (item.chip) item.height = Math.max(36, item.height);
+    clamp(item);
   }
 
   const evs = items.filter((item) => !item.chip);
@@ -187,7 +261,6 @@ export function placeDay(laid, { yOf, minHeight = 20 }) {
   const merged = [];
 
   for (const chip of items.filter((item) => item.chip).sort((a, b) => a.top - b.top)) {
-    chip.height = Math.max(36, chip.height);
     const last = merged[merged.length - 1];
     if (last && chip.top < last.top + last.height + 2) {
       last.ids = [...new Set([...last.ids, ...chip.ids])];
@@ -203,11 +276,13 @@ export function placeDay(laid, { yOf, minHeight = 20 }) {
   for (const item of evs) {
     if (!item.nestIn) continue;
     const host = byId.get(item.nestIn);
+    if (!host) continue;
     const minTop = host.top + PAD_TOP + LINE_HEIGHT + 3;
     if (item.top < minTop) {
       const bottom = item.top + item.height;
       item.top = minTop;
       item.height = Math.max(minHeight, bottom - item.top);
+      clamp(item);
     }
   }
 
