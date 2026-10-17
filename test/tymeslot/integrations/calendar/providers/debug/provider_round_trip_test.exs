@@ -35,7 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
     Enum.find(normalised, &(&1.uid == uid))
   end
 
-  test "timed event round-trips with reminders and recurrence intact" do
+  # A repeating event is kept as its CalDAV document and read back as a
+  # CalDAV series is: the alarm stays in the document, but the cache does not
+  # read alarms (or Tymeslot's authorship) back from any CalDAV calendar.
+  test "timed repeating event round-trips with its recurrence, its alarm in its document" do
     event_data = %{
       uid: "evt-timed",
       summary: "Weekly sync",
@@ -63,11 +66,12 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
              description: "Status update",
              location: "Room 1",
              recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
-             reminders: [%{method: :popup, minutes_before: 10}],
              status: :confirmed,
              transparency: :opaque,
-             created_by_tymeslot: true
-           } = normalised_for("evt-timed_20260615T100000")
+             provider_event_id: "debug:evt-timed"
+           } = series = normalised_for("evt-timed_20260615T100000")
+
+    assert series.raw_ical =~ "TRIGGER:-PT10M"
   end
 
   test "update_event adds a colour reflected after normalisation" do

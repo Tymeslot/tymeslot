@@ -11,10 +11,14 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   also show as busy on the booking page, and vice-versa.
 
   The recurring `pattern` + explicit `rules` are projected into busy blocks by
-  the pure `DebugSchedule` generator; in-app events are stored verbatim. All
-  store access tolerates the store not running: it runs on every dev server, in
-  `:test` only when a test starts it, and reads then fall back to the default
-  pattern (not an empty set).
+  the pure `DebugSchedule` generator; in-app events are stored verbatim, except
+  that a repeating one is kept as the iCalendar document a CalDAV server would
+  hold, and written, listed and expanded by the CalDAV family's own code
+  (`DebugCalendarProvider.Series`), so the grid's scoped edits and deletes of a
+  debug series behave exactly as they do on CalDAV. All store access tolerates
+  the store not running: it runs on every dev server, in `:test` only when a
+  test starts it, and reads then fall back to the default pattern (not an
+  empty set).
 
   Only wired up in development/test via the `debug` integration provider.
   """
@@ -24,19 +28,15 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.DebugCalendarProvider.Series
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
-  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
-  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
 
   # Synthetic events have no real timezone; default to UTC for the provider path.
   # The interactive dev calendar (`Tymeslot.Dev.Calendar`) resolves the
   # organiser's timezone instead.
   @default_timezone "Etc/UTC"
-
-  # What a write of one occurrence, or of a series from one occurrence,
-  # carries over besides its timing.
-  @written_fields [:summary, :description, :location, :colour, :reminders, :attendees]
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) when is_map(config) do
@@ -52,51 +52,48 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
     event_data
     |> stored_event_from(uid)
+    |> Series.stored_form()
     |> DebugStore.put_event()
 
     {:ok, CreatedEvent.new(uid)}
   end
 
   # A scoped edit of a series names it by its address and the occurrence by
-  # its key, as `SeriesEdit` does for the CalDAV family; anything else is a
-  # whole-event write.
+  # its key, as `SeriesEdit` does for the CalDAV family, and is answered as
+  # the CalDAV writer answers it; anything else is a whole-event write, which
+  # patches a series' document as CalDAV patches a synced event.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def update_event(_client, _uid, %{
-        occurrence: %{href: href, key: key, scope: scope} = occurrence
-      }) do
-    with uid when is_binary(uid) <- series_uid(href),
-         {:ok, master} <- DebugStore.fetch_event(uid) do
-      master
-      |> scoped_write(scope, key, Map.get(occurrence, :changes, %{}))
-      |> Enum.each(&DebugStore.put_event/1)
-    else
-      _missing -> {:error, :not_found}
-    end
-  end
+  def update_event(_client, _uid, %{occurrence: %{href: _href, key: _key, scope: _scope} = occ}),
+    do: Series.write(occ)
 
   def update_event(_client, uid, event_data) do
-    existing =
+    updated =
       case DebugStore.fetch_event(uid) do
-        {:ok, event} -> event
-        :error -> %{}
+        {:ok, existing} ->
+          case Series.stored_form(existing) do
+            %{raw_ical: _document} = series -> Series.patch(series, event_data)
+            event -> Series.stored_form(Map.merge(event, stored_event_from(event_data, uid)))
+          end
+
+        :error ->
+          Series.stored_form(stored_event_from(event_data, uid))
       end
 
-    merged = Map.merge(existing, stored_event_from(event_data, uid))
-    DebugStore.put_event(merged)
-    :ok
+    DebugStore.put_event(updated)
   end
 
-  # One occurrence is skipped (`opts[:occurrence]`); otherwise the event, or
-  # the series its address names, goes. The runtime hands a provider outside
-  # the CalDAV family its `provider_event_id` as the id, so a series' address
-  # can arrive either way.
+  # One occurrence is deleted (`opts[:occurrence]`) and answered as the
+  # CalDAV writer answers it; otherwise the event, or the series its address
+  # names, goes. The runtime hands a provider outside the CalDAV family its
+  # `provider_event_id` as the id, so a series' address can arrive either way.
   @impl Tymeslot.Integrations.Calendar.Provider
   def delete_event(_client, id, opts) do
-    uid = series_uid(opts[:provider_event_id]) || series_uid(id) || id
-
     case opts[:occurrence] do
-      %{key: key} -> skip_occurrence(uid, key)
-      _whole -> DebugStore.delete_event(uid)
+      %{href: _href, key: _key} = occurrence ->
+        Series.delete(occurrence)
+
+      _whole ->
+        DebugStore.delete_event(Series.uid(opts[:provider_event_id]) || Series.uid(id) || id)
     end
   end
 
@@ -156,7 +153,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       |> DebugSchedule.events(rules, start_time, end_time, @default_timezone)
       |> Enum.map(&Map.put(&1, :created_by_tymeslot, false))
 
-    created = stored_in_range(Map.values(events), start_time, end_time)
+    created = listed(Map.values(events), start_time, end_time)
 
     {:ok, generated ++ created}
   end
@@ -167,10 +164,13 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def convert_events(events), do: events
 
+  # A series' VEVENTs are expanded by the normaliser the CalDAV sync uses,
+  # over the window every sync reads.
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) when is_list(raw_events) do
-    events = Enum.map(raw_events, &normalise_event(&1, context))
-    {:ok, events}
+    {series, others} = Enum.split_with(raw_events, &Map.has_key?(&1, :raw_ical))
+    {:ok, expanded} = ICalNormaliser.normalise_events(series, context, :debug)
+    {:ok, Enum.map(others, &normalise_event(&1, context)) ++ expanded}
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -214,274 +214,59 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   end
 
   @doc """
-  The stored events overlapping `[range_start, range_end)`, with every
-  repeating one expanded into its occurrences the way the CalDAV family
-  caches a series: one row per occurrence, under the series' uid and the
-  occurrence's key, all sharing the series' address (`series_href/1`).
-  Skipped occurrences (`:exdates`) are left out and changed ones
-  (`:overrides`) carry their changes. All-day events are projected to
-  day-spanning blocks for the overlap check but returned with their dates.
+  The stored events overlapping `[range_start, range_end)` in the busy-block
+  shape the interactive dev calendar reads: a one-off event as stored, and
+  each occurrence of a repeating one as the live CalDAV busy-time check
+  expands it (`DebugCalendarProvider.Series.occurrences/3`), timed ones in
+  UTC and all-day ones by date (the last day they cover). All-day events are
+  projected to day-spanning blocks for the overlap check but returned with
+  their dates.
   """
   @spec stored_events_in_range(DateTime.t(), DateTime.t()) :: [map()]
-  def stored_events_in_range(range_start, range_end),
-    do: stored_in_range(Map.values(DebugStore.snapshot().events), range_start, range_end)
-
-  @doc "Where a debug series is addressed, as a CalDAV resource is by its href."
-  @spec series_href(String.t()) :: String.t()
-  def series_href(uid), do: "debug:#{uid}"
-
-  defp stored_in_range(events, range_start, range_end) do
-    events
-    |> Enum.flat_map(&occurrences(&1, range_start, range_end))
-    |> Enum.filter(&overlaps?(&1, range_start, range_end))
+  def stored_events_in_range(range_start, range_end) do
+    DebugStore.snapshot().events
+    |> Map.values()
+    |> Enum.flat_map(&stored_in_range(Series.stored_form(&1), range_start, range_end))
   end
 
-  defp occurrences(%{recurrence_rule: rule} = master, range_start, range_end)
-       when is_binary(rule) and rule != "" do
-    zone = series_zone(master)
-    skipped = Map.get(master, :exdates, [])
-    overrides = Map.get(master, :overrides, %{})
-
-    shifted =
-      Map.merge(master, %{
-        start_time: in_zone(master.start_time, zone),
-        end_time: in_zone(Map.get(master, :end_time) || master.start_time, zone)
-      })
-
-    span = span_seconds(shifted)
-    expanded = expanded_slots(shifted, span, range_start, range_end)
-    moved = moved_slots(shifted, expanded, overrides, zone)
-
-    expanded
-    |> Map.merge(moved)
-    |> Enum.reject(fn {key, _occurrence} -> key in skipped end)
-    |> Enum.map(&occurrence_row(&1, master, Map.get(overrides, elem(&1, 0), %{}), span, zone))
+  defp stored_in_range(%{raw_ical: _document} = entry, range_start, range_end) do
+    entry
+    |> Series.resource(range_start, range_end)
+    |> Series.occurrences(range_start, range_end)
+    |> Enum.map(&busy_occurrence/1)
   end
 
-  defp occurrences(event, _range_start, _range_end), do: [event]
+  defp stored_in_range(event, range_start, range_end),
+    do: Enum.filter([event], &overlaps?(&1, range_start, range_end))
 
-  # The rule's occurrences by key. Expansion starts wider than the range by the
-  # series' span and a day, so an occurrence that began before it (a long one,
-  # or an all-day one west of UTC) is found; `overlaps?/3` trims the rest.
-  defp expanded_slots(shifted, span, range_start, range_end) do
-    shifted
-    |> RecurrenceExpander.expand(DateTime.add(range_start, -(span + 86_400), :second), range_end)
-    |> Map.new(&{occurrence_key(&1.start_time), &1})
-  end
+  defp busy_occurrence(%{start_time: %Date{} = start} = occurrence) do
+    finish = Map.get(occurrence, :end_time) || Date.add(start, 1)
 
-  # A moved occurrence may sit in the range though its original slot does not,
-  # so every override that moves one the rule really makes is listed too, and
-  # trimmed by its own times. An override that changes no time keeps the
-  # master's, which belong to another slot, so it lists only with its expanded
-  # slot; a key the rule no longer produces (a series cut short by a later
-  # edit) lists nothing.
-  defp moved_slots(shifted, expanded, overrides, zone) do
-    overrides
-    |> Enum.filter(fn {key, change} ->
-      Map.has_key?(change, :start_time) and not Map.has_key?(expanded, key) and
-        slot_exists?(shifted, key, zone)
-    end)
-    |> Map.new(fn {key, _change} -> {key, shifted} end)
-  end
-
-  defp occurrence_row({key, occurrence}, master, override, span, zone) do
-    occurrence
-    |> Map.drop([:exdates, :overrides])
-    |> Map.merge(override_with_end(override, span))
-    # The series' identity always wins over an override's.
-    |> Map.merge(%{
-      uid: "#{master.uid}_#{key}",
-      provider_event_id: series_href(master.uid),
-      provider_metadata: %{uid: master.uid},
-      timezone: zone
+    Map.merge(occurrence, %{
+      all_day: true,
+      end_time: Enum.max([start, Date.add(finish, -1)], Date),
+      status: "confirmed"
     })
   end
 
-  # A stored zone the tz database does not know falls back to the default.
-  defp series_zone(event) do
-    zone = Map.get(event, :timezone) || @default_timezone
+  defp busy_occurrence(occurrence),
+    do: Map.merge(occurrence, %{all_day: false, status: "confirmed"})
 
-    case DateTime.shift_zone(~U[2000-01-01 00:00:00Z], zone) do
-      {:ok, _shifted} -> zone
-      {:error, _reason} -> @default_timezone
-    end
-  end
+  @doc "Where a debug series is addressed, as a CalDAV resource is by its href."
+  @spec series_href(String.t()) :: String.t()
+  defdelegate series_href(uid), to: Series, as: :href
 
-  defp series_uid("debug:" <> uid), do: uid
-  defp series_uid(_other), do: nil
-
-  defp skip_occurrence(uid, key) do
-    case DebugStore.fetch_event(uid) do
-      {:ok, master} -> DebugStore.put_event(Map.update(master, :exdates, [key], &[key | &1]))
-      :error -> :ok
-    end
-  end
-
-  # This occurrence only: its changes are kept against its key.
-  defp scoped_write(master, :this_only, key, changes) do
-    fields = Map.take(changes, [:start_time, :end_time | @written_fields])
-    overrides = Map.update(Map.get(master, :overrides, %{}), key, fields, &Map.merge(&1, fields))
-    [Map.put(master, :overrides, overrides)]
-  end
-
-  # Every occurrence: the series moves by as much as this occurrence did. The
-  # skipped occurrences and the changed ones are keyed on the old times, so
-  # their keys move by the same amount and keep naming the same occurrences
-  # (an override's own times are explicit and stay as written).
-  defp scoped_write(master, :all, key, changes) do
-    zone = series_zone(master)
-    delta = shift_amount(key_start(key, zone), changes)
-
-    moved =
-      master
-      |> shift(delta, changes)
-      |> Map.merge(Map.take(changes, [:recurrence_rule | @written_fields]))
-      |> rekey(delta, zone)
-
-    [moved]
-  end
-
-  # This and every later occurrence: the series ends before this one, and a
-  # new series starts from it with the changes.
-  defp scoped_write(master, :following, key, changes) do
-    slot = key_start(key, series_zone(master))
-    start = Map.get(changes, :start_time, slot)
-    finish = Map.get(changes, :end_time, add(start, span(master)))
-
-    head = Map.update!(master, :recurrence_rule, &RRule.end_before(&1, slot))
-
-    tail =
-      master
-      |> Map.drop([:exdates, :overrides])
-      |> Map.merge(Map.take(changes, [:recurrence_rule | @written_fields]))
-      |> Map.merge(%{uid: "#{master.uid}-#{key}", start_time: start, end_time: finish})
-
-    [head, tail]
-  end
-
-  defp shift_amount(slot, %{start_time: new_start}), do: difference(new_start, slot)
-  defp shift_amount(_slot, _changes), do: 0
-
-  defp shift(master, delta, changes) do
-    start = add(master.start_time, delta)
-
-    length =
-      case changes do
-        %{start_time: new_start, end_time: new_end} -> difference(new_end, new_start)
-        _unchanged -> span(master)
+  # The stored events as a listing hands them over: a series as the parsed
+  # VEVENTs of its document, which `normalise_events/2` expands as the CalDAV
+  # sync does, a one-off event as stored.
+  defp listed(events, range_start, range_end) do
+    Enum.flat_map(events, fn event ->
+      case Series.stored_form(event) do
+        %{raw_ical: _document} = series -> Series.resource(series, range_start, range_end)
+        one_off -> Enum.filter([one_off], &overlaps?(&1, range_start, range_end))
       end
-
-    Map.merge(master, %{start_time: start, end_time: add(start, length)})
+    end)
   end
-
-  defp rekey(master, 0, _zone), do: master
-
-  defp rekey(master, delta, zone) do
-    move = &(&1 |> key_start(zone) |> add(delta) |> in_zone(zone) |> occurrence_key())
-
-    master
-    |> Map.replace_lazy(:exdates, &Enum.map(&1, move))
-    |> Map.replace_lazy(:overrides, &Map.new(&1, fn {key, change} -> {move.(key), change} end))
-  end
-
-  defp span(master),
-    do: difference(Map.get(master, :end_time) || master.start_time, master.start_time)
-
-  defp difference(%DateTime{} = later, %DateTime{} = earlier),
-    do: DateTime.diff(later, earlier, :second)
-
-  defp difference(%Date{} = later, %Date{} = earlier), do: Date.diff(later, earlier)
-
-  # A date moves by days, a moment by seconds.
-  defp add(value, amount) do
-    case value do
-      %DateTime{} -> DateTime.add(value, amount, :second)
-      %Date{} -> Date.add(value, amount)
-    end
-  end
-
-  # The occurrence key back to the slot the series put it in.
-  defp key_start(key, zone) do
-    case slot_start(key, zone) do
-      nil -> raise ArgumentError, "not an occurrence key: #{inspect(key)}"
-      slot -> slot
-    end
-  end
-
-  defp span_seconds(%{all_day: true, start_time: %Date{} = start, end_time: %Date{} = finish}),
-    do: (Date.diff(finish, start) + 1) * 86_400
-
-  defp span_seconds(%{start_time: %DateTime{} = start, end_time: %DateTime{} = finish}),
-    do: max(DateTime.diff(finish, start), 0)
-
-  defp span_seconds(_event), do: 0
-
-  # An override that moves an occurrence without saying when it ends keeps
-  # the series' length.
-  defp override_with_end(%{start_time: %DateTime{} = start} = change, span)
-       when not is_map_key(change, :end_time),
-       do: Map.put(change, :end_time, DateTime.add(start, span, :second))
-
-  defp override_with_end(%{start_time: %Date{} = start} = change, span)
-       when not is_map_key(change, :end_time),
-       do: Map.put(change, :end_time, Date.add(start, div(span, 86_400) - 1))
-
-  defp override_with_end(change, _span), do: change
-
-  # Whether the rule makes the occurrence an override's key names.
-  defp slot_exists?(master, key, zone) do
-    case slot_start(key, zone) do
-      nil ->
-        false
-
-      slot ->
-        master
-        |> RecurrenceExpander.expand(slot, slot_end(slot))
-        |> Enum.any?(&(occurrence_key(&1.start_time) == key))
-    end
-  end
-
-  defp slot_start(<<_date::binary-size(8)>> = key, _zone) do
-    case Date.from_iso8601(
-           binary_part(key, 0, 4) <>
-             "-" <> binary_part(key, 4, 2) <> "-" <> binary_part(key, 6, 2)
-         ) do
-      {:ok, date} -> date
-      {:error, _reason} -> nil
-    end
-  end
-
-  defp slot_start(key, zone) do
-    with {:ok, naive} <- NaiveDateTime.from_iso8601(timed_key_to_iso(key)),
-         {:ok, datetime} <- DateTime.from_naive(naive, zone) do
-      datetime
-    else
-      _error -> nil
-    end
-  end
-
-  defp timed_key_to_iso(
-         <<y::binary-size(4), m::binary-size(2), d::binary-size(2), "T", h::binary-size(2),
-           mi::binary-size(2), sec::binary-size(2)>>
-       ),
-       do: "#{y}-#{m}-#{d}T#{h}:#{mi}:#{sec}"
-
-  defp timed_key_to_iso(_key), do: "invalid"
-
-  defp slot_end(%Date{} = date), do: date
-  defp slot_end(%DateTime{} = datetime), do: DateTime.add(datetime, 1, :second)
-
-  defp in_zone(%DateTime{} = datetime, zone) do
-    case DateTime.shift_zone(datetime, zone) do
-      {:ok, shifted} -> shifted
-      {:error, _reason} -> datetime
-    end
-  end
-
-  defp in_zone(other, _zone), do: other
-
-  defp occurrence_key(%DateTime{} = start), do: Calendar.strftime(start, "%Y%m%dT%H%M%S")
-  defp occurrence_key(%Date{} = start), do: Calendar.strftime(start, "%Y%m%d")
 
   defp overlaps?(
          %{all_day: true, start_time: %Date{} = start_date} = event,

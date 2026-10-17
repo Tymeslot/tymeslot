@@ -9,7 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugStore do
   pattern + rules into busy blocks; `events` carry the full event payload
   (recurrence, reminders, colour, all-day, location, description, attendees) so
   they round-trip through both the booking availability path and the dashboard
-  calendar grid.
+  calendar grid. A repeating event is kept as the iCalendar document a CalDAV
+  server would hold (`:raw_ical`; see `DebugCalendarProvider.Series`).
 
   This module lives in `lib/` (not `dev/support`) so the `:debug` calendar
   provider — which is compiled in all environments — can read and write it
