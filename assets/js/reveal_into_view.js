@@ -10,7 +10,7 @@
  *
  *     JS.dispatch("tymeslot:reveal", to: "#heading", detail: %{until: "#first-field"})
  *
- * and this listener scrolls the target to the top of its scrolling box
+ * and this listener scrolls the target to the top of the view
  * (`scroll-margin-top` gives it room there) unless it is already settled:
  * the target and the element `until` names (the first field) both wholly in
  * view, and the target in the top third of the window. A layout that shows
@@ -71,12 +71,33 @@ function reveal(el, until) {
     if (entries.size < watched.length) return
 
     observer.disconnect()
-    if (!settled(entries.get(el), entries.get(until))) {
-      el.scrollIntoView({ block: "start", inline: "nearest" })
-    }
+    if (!settled(entries.get(el), entries.get(until))) bringToTop(el)
   })
 
   watched.forEach((node) => observer.observe(node))
+}
+
+// `scrollIntoView` scrolls every box between the target and the top-level
+// viewport, across the frame's edge too: in a modal embed that includes the
+// embedding page's frame around the iframe, which clips with overflow hidden
+// and is left scrolled, cutting off the card's top and rounded corners. A
+// framed page whose own document scrolls (a modal, or an inline embed with a
+// capped height) therefore scrolls that document alone. Only a frame as tall
+// as its page (an inline embed) needs the embedding page to scroll, and
+// `scrollIntoView` is the one way across a cross-origin frame's edge.
+function bringToTop(el) {
+  if (window.self !== window.top && documentScrolls()) {
+    const margin = parseFloat(window.getComputedStyle(el).scrollMarginTop) || 0
+    const top = window.scrollY + el.getBoundingClientRect().top - margin
+    window.scrollTo({ top: Math.max(top, 0), left: window.scrollX })
+  } else {
+    el.scrollIntoView({ block: "start", inline: "nearest" })
+  }
+}
+
+function documentScrolls() {
+  const root = document.scrollingElement || document.documentElement
+  return root.scrollHeight > window.innerHeight
 }
 
 export function installRevealIntoView(root = window) {

@@ -1,8 +1,9 @@
 /**
  * Tests for the reveal request (reveal_into_view.js): a target is scrolled
  * to the top unless it sits in the top third with the field under it wholly
- * in view; nothing scrolls before the observer reports, and a page inside a
- * frame checks again once the frame has resized.
+ * in view; nothing scrolls before the observer reports, a page inside a
+ * frame checks again once the frame has resized, and a framed page whose own
+ * document scrolls never moves the embedding page.
  */
 
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
@@ -134,6 +135,58 @@ describe('reveal request', () => {
     // Only the first resize after the request counts.
     window.dispatchEvent(new Event('resize'));
     expect(observers).toHaveLength(2);
+  });
+
+  describe('inside a frame', () => {
+    let scrollTo;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.spyOn(window, 'top', 'get').mockReturnValue({});
+      scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+      geometry.set(heading, { ratio: 1, top: 520 });
+      geometry.set(field, { ratio: 0.2, top: 680 });
+    });
+
+    afterEach(() => {
+      // Let the wait for the frame's resize lapse, dropping its listener.
+      vi.runAllTimers();
+      vi.useRealTimers();
+      delete document.documentElement.scrollHeight;
+      delete window.scrollY;
+    });
+
+    test('whose document scrolls, scrolls that document alone, never the page around it', () => {
+      // A modal embed: the frame is capped, and its own page scrolls inside it.
+      Object.defineProperty(document.documentElement, 'scrollHeight', {
+        configurable: true,
+        value: window.innerHeight + 900,
+      });
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 150 });
+      heading.style.scrollMarginTop = '24px';
+      heading.getBoundingClientRect = () => ({ top: 520 });
+
+      dispatch();
+      observers[0].report();
+
+      expect(heading.scrollIntoView).not.toHaveBeenCalled();
+      expect(scrollTo).toHaveBeenCalledWith({ top: 150 + 520 - 24, left: window.scrollX });
+    });
+
+    test('as tall as its page, asks the embedding page to scroll', () => {
+      // An inline embed: the frame has grown to its page, so only the
+      // embedding page can bring the heading up.
+      Object.defineProperty(document.documentElement, 'scrollHeight', {
+        configurable: true,
+        value: window.innerHeight,
+      });
+
+      dispatch();
+      observers[0].report();
+
+      expect(scrollTo).not.toHaveBeenCalled();
+      expect(heading.scrollIntoView).toHaveBeenCalledWith({ block: 'start', inline: 'nearest' });
+    });
   });
 
   test('a top-level page does not wait for a resize', () => {
