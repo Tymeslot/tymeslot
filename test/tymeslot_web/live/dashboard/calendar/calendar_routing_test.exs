@@ -60,6 +60,8 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
       [job] = all_enqueued(worker: CalendarEventDeleteWorker)
       send(lv.pid, {:calendar_delete_result, user.id, job.id, {:failed, :forbidden}})
 
+      # The component's flash is one more hop: a third message to the LiveView.
+      settled(lv)
       assert settled(lv) =~ "Failed to delete event"
       refute has_element?(lv, "#calendar-toast", "Deleted “Dentist”")
     end
