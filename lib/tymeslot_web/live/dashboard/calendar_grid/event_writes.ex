@@ -49,14 +49,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   task name and silently drop each other's answer.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -225,7 +224,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   end
 
   defp run_effect({:dropped, reason, count}, socket) do
-    send(self(), {:flash, {:warning, dropped_message(reason, count)}})
+    send(self(), {:flash, {:warning, CalendarEditMessages.dropped_message(reason, count)}})
     socket
   end
 
@@ -238,23 +237,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
     if selected && not Enum.any?(socket.assigns.events, &(&1.id == selected.id)),
       do: assign(socket, :selected_event, nil),
       else: socket
-  end
-
-  defp dropped_message(:series_move, count) do
-    dngettext(
-      "dashboard_calendar_events",
-      "The series was moved, but a change you made while it was moving was not applied. Please make it again.",
-      "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again.",
-      count
-    )
-  end
-
-  defp dropped_message(:series_write, count) do
-    dngettext(
-      "dashboard_calendar_events",
-      "The series was updated, but a change you made while it was saving was not applied. Please make it again.",
-      "The series was updated, but %{count} changes you made while it was saving were not applied. Please make them again.",
-      count
-    )
   end
 end

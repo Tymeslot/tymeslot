@@ -6,16 +6,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @weekday_atoms %{
@@ -82,14 +83,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   @spec check_edit_rate_limit(Phoenix.LiveView.Socket.t()) ::
           :ok | {:error, :rate_limited, String.t()}
-  def check_edit_rate_limit(socket) do
-    user_id = socket.assigns.current_user.id
-
-    case RateLimiter.check(:calendar_event_edit, user_id) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, :rate_limited, message}
-    end
-  end
+  def check_edit_rate_limit(socket), do: EditGuard.rate_limit(socket.assigns.current_user.id)
 
   @doc """
   Refuses a change to a calendar event that a group meeting with live seats
@@ -110,25 +104,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   since then must still count. Scoped to the acting organiser's meetings.
   """
   @spec check_seat_lock(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :group_booking}
-  def check_seat_lock(socket, event) do
-    if Meetings.group_booking_uid?(socket.assigns.current_user.id, Map.get(event, :uid)) do
-      {:error, :group_booking}
-    else
-      :ok
-    end
-  end
+  def check_seat_lock(socket, event),
+    do: EditGuard.seat_lock(socket.assigns.current_user.id, event)
 
   @doc """
   Why an event `check_seat_lock/2` refuses cannot be changed here: the one
   wording the refusal flash, the locked badge and the event modal share.
   """
   @spec seat_lock_message() :: String.t()
-  def seat_lock_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
-    )
-  end
+  def seat_lock_message, do: CalendarEditMessages.seat_lock_message()
 
   @spec check_move_rate_limit(Phoenix.LiveView.Socket.t()) ::
           :ok | {:error, :rate_limited, String.t()}
@@ -545,49 +529,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   inside a continuation that has to hand a socket back.
   """
   @spec flash_guard(Phoenix.LiveView.Socket.t(), term()) :: Phoenix.LiveView.Socket.t()
-  def flash_guard(socket, {:error, :unauthorized}) do
-    send(
-      self(),
-      {:flash,
-       {:error,
-        dgettext("dashboard_calendar_events", "You don't have permission to modify this event")}}
-    )
-
-    socket
-  end
-
-  def flash_guard(socket, {:error, :read_only}) do
-    send(
-      self(),
-      {:flash,
-       {:error,
-        dgettext(
-          "dashboard_calendar_events",
-          "This calendar is read-only. Events on it can't be changed from Tymeslot."
-        )}}
-    )
-
-    socket
-  end
-
-  def flash_guard(socket, {:error, :rate_limited, _message}) do
-    send(
-      self(),
-      {:flash,
-       {:warning, dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}}
-    )
-
-    socket
-  end
-
-  def flash_guard(socket, {:error, :group_booking}) do
-    send(self(), {:flash, {:warning, seat_lock_message()}})
-    socket
-  end
-
   def flash_guard(socket, {:error, :until_before_start}) do
     send(self(), {:flash, {:error, until_before_start_message()}})
 
+    socket
+  end
+
+  def flash_guard(socket, error) do
+    send(self(), {:flash, CalendarEditMessages.refusal(error)})
     socket
   end
 

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -45,7 +46,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
             Shared.flash_guard_error(socket, error)
 
           {:error, :recurring_event} ->
-            send(self(), {:flash, {:error, recurring_delete_refused_message()}})
+            send(
+              self(),
+              {:flash, {:error, CalendarEditMessages.recurring_delete_refused_message()}}
+            )
+
             {:noreply, socket}
 
           {:error, :unauthorized} ->
@@ -163,7 +168,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     {:noreply,
      socket
      |> assign(:pending_delete, nil)
-     |> put_flash(:error, delete_failed_message(failure, Map.get(pending, :notify_on_delete)))}
+     |> put_flash(
+       :error,
+       CalendarEditMessages.delete_failed_message(failure, Map.get(pending, :notify_on_delete))
+     )}
   end
 
   defp put_deleted_flash(socket, :cancelled, _pending) do
@@ -200,43 +208,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
   defp put_deleted_flash(socket, :none, {scope, notified}) do
     put_flash(socket, :info, delete_success_flash(scope, notified == :sent))
-  end
-
-  # A queued delete will be replayed on the next sync; anything else is final.
-  # Nobody is notified of a delete that has not happened, which a queued one
-  # that was meant to notify says, since its retry sends nothing.
-  defp delete_failed_message(%{retry: :queued}, true),
-    do:
-      dgettext(
-        "dashboard_calendar_events",
-        "Delete failed - queued to retry on next sync. Attendees have not been notified."
-      )
-
-  defp delete_failed_message(%{retry: :queued}, _notify?),
-    do: dgettext("dashboard_calendar_events", "Delete failed - queued to retry on next sync")
-
-  defp delete_failed_message(failure, _notify?), do: delete_failed_message(failure)
-
-  defp delete_failed_message(%{reason: :recurring_event}), do: recurring_delete_refused_message()
-
-  # The cached row does not say which occurrence or series the event is.
-  defp delete_failed_message(%{reason: reason})
-       when reason in [:unaddressable_occurrence, :unaddressable_series] do
-    dgettext(
-      "dashboard_calendar_events",
-      "This event could not be deleted here. Please delete it in your calendar app."
-    )
-  end
-
-  defp delete_failed_message(_failure),
-    do: dgettext("dashboard_calendar_events", "Failed to delete event")
-
-  # Exchange has no scoped delete, so none of its series can be deleted here.
-  defp recurring_delete_refused_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
-    )
   end
 
   defp delete_success_flash(:series, true),

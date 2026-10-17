@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
       {:ok, scope} ->
         if scope in [:following, :all] and EventWrites.series_busy?(socket, prompt.event) do
           {:noreply, reverted} = handle_cancel_recurrence_prompt(%{}, socket)
-          send(self(), {:flash, {:warning, series_saving_message()}})
+          send(self(), {:flash, {:warning, CalendarEditMessages.series_saving_message()}})
           {:noreply, reverted}
         else
           socket = assign(socket, :recurrence_prompt, nil)
@@ -55,15 +56,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
     else
       _not_offered -> :error
     end
-  end
-
-  # A write to the whole series would race a change of another of its
-  # events still saving, or its move (see `EventWrites`).
-  defp series_saving_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "A change to this series is still saving. Please make this change once it has saved."
-    )
   end
 
   defp unknown_scope_message do

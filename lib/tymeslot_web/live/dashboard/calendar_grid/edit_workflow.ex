@@ -6,12 +6,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -443,12 +443,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   # Resolves the event's integration from the loaded list — the same list
   # `owned_integration_ids` is built from, so an event whose integration is
   # missing here is one the organiser does not own.
-  defp writable_event?(assigns, event) do
-    case Enum.find(assigns.integrations, &(&1.id == event.calendar_integration_id)) do
-      nil -> false
-      integration -> Selection.event_writable?(event, integration)
-    end
-  end
+  defp writable_event?(assigns, event), do: EditGuard.editable?(assigns.integrations, event)
 
   @spec assert_owns_integration(Phoenix.LiveView.Socket.t(), integer() | nil) ::
           :ok | {:error, :unauthorized}
