@@ -128,6 +128,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
     fail(lv, user, 0, 3)
 
     refute has_element?(lv, "[id^=calendar-sync-problem-]")
+    refute_push_event(lv, "calendar:events", %{}, 500)
   end
 
   test "a change waiting to be sent is named once the sync keeps failing", %{
@@ -304,7 +305,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
       lv |> element("#calendar-sync-#{integration.id}") |> render_click()
 
       refute syncing?(lv, integration)
-      assert has_element?(lv, "#calendar-toast", "Too many syncs. Please wait a moment.")
+
+      assert has_element?(
+               lv,
+               "#calendar-toast",
+               "You've asked for several syncs recently. Try again in a few minutes."
+             )
     end
 
     test "opening the calendar is not counted against it", %{conn: conn, user: user} do
@@ -403,5 +409,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
 
     assert has_element?(lv, "#calendar-sync-banner[role=status][aria-live=polite]")
     refute has_element?(lv, "#calendar-sync-problem-#{integration.id}[role=status]")
+  end
+
+  describe "an account that needs signing in again" do
+    test "is not synced on open, and has no Sync now in the rail", %{
+      conn: conn,
+      integration: integration
+    } do
+      integration |> Changeset.change(needs_reauth: true) |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      refute syncing?(lv, integration)
+      refute_enqueued(worker: SyncGoogleCalendarWorker)
+      refute has_element?(lv, "#calendar-sync-#{integration.id}")
+      assert has_element?(lv, "#calendar-sync-problem-#{integration.id} a", "Reconnect")
+    end
   end
 end

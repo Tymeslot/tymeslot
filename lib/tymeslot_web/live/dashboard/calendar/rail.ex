@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :accounts, :list, required: true
   attr :syncing_ids, :any, default: MapSet.new()
   attr :problem_ids, :any, default: MapSet.new()
+  attr :reauth_ids, :any, default: MapSet.new()
   attr :mini_cursor, :any, required: true
   attr :view, :atom, required: true
   attr :date, :any, required: true
@@ -94,7 +95,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               <span class="sr-only">{dgettext("dashboard_calendar", "Sync problem")}</span>
             </span>
             <.icon_button
-              :if={not MapSet.member?(@syncing_ids, account.id)}
+              :if={
+                not MapSet.member?(@syncing_ids, account.id) and
+                  not MapSet.member?(@reauth_ids, account.id)
+              }
               id={"calendar-sync-#{account.id}"}
               icon="hero-arrow-path"
               size={:sm}

@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
 
     socket.assigns.integrations
     |> CalendarGrid.stale_integrations()
-    |> Enum.reject(&MapSet.member?(failing, &1.id))
+    |> Enum.reject(&(&1.needs_reauth or MapSet.member?(failing, &1.id)))
     |> Enum.reduce(socket, &request(&2, &1.id))
   end
 
@@ -74,10 +74,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
           request(socket, integration_id)
 
         {:error, :rate_limited, _message} ->
-          Toast.show(
-            socket,
-            dgettext("dashboard_calendar", "Too many syncs. Please wait a moment.")
-          )
+          too_many(socket)
+
+        {:error, _other} ->
+          too_many(socket)
       end
     else
       _not_theirs -> socket
@@ -96,17 +96,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
         failure_counts: Map.delete(socket.assigns.failure_counts, integration_id)
       )
 
-  @doc "An attempt to sync `integration_id` failed or was discarded."
-  @spec failed(socket(), integer()) :: socket()
+  @doc """
+  An attempt to sync `integration_id` failed or was discarded. `:unknown`
+  when the surface does not show that integration, so nothing changed.
+  """
+  @spec failed(socket(), integer()) :: {:ok, socket()} | :unknown
   def failed(socket, integration_id) do
     if shown?(socket, integration_id),
       do:
-        assign(socket,
-          syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
-          sync_refs: Map.delete(socket.assigns.sync_refs, integration_id),
-          failure_counts: Map.update(socket.assigns.failure_counts, integration_id, 1, &(&1 + 1))
-        ),
-      else: socket
+        {:ok,
+         assign(socket,
+           syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
+           sync_refs: Map.delete(socket.assigns.sync_refs, integration_id),
+           failure_counts: Map.update(socket.assigns.failure_counts, integration_id, 1, &(&1 + 1))
+         )},
+      else: :unknown
   end
 
   @doc """
@@ -128,6 +132,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   @spec failed_ids(map()) :: MapSet.t()
   def failed_ids(%{failure_counts: counts}),
     do: for({id, count} <- counts, count >= @persistent, into: MapSet.new(), do: id)
+
+  defp too_many(socket),
+    do:
+      Toast.show(
+        socket,
+        dgettext(
+          "dashboard_calendar",
+          "You've asked for several syncs recently. Try again in a few minutes."
+        )
+      )
 
   defp shown?(socket, integration_id),
     do: Enum.any?(socket.assigns.integrations, &(&1.id == integration_id))

@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         %{action: :integration_sync_failed, integration_id: id},
         %{assigns: %{ready?: true}} = socket
       ),
-      do: {:ok, socket |> SyncStatus.failed(id) |> schedule_reload(:integration_synced)}
+      do: {:ok, failed_sync(socket, id)}
 
   def update(%{action: :sync_timeout, integration_id: id, ref: ref}, socket),
     do: {:ok, SyncStatus.timed_out(socket, id, ref)}
@@ -129,6 +129,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   defp schedule_reload(%{assigns: %{pending_reload: scope}} = socket, action),
     do: assign(socket, :pending_reload, widest(scope, scope(action)))
+
+  defp failed_sync(socket, id) do
+    case SyncStatus.failed(socket, id) do
+      {:ok, socket} -> schedule_reload(socket, :integration_synced)
+      :unknown -> socket
+    end
+  end
 
   # A write saved for later leaves its event waiting to be sent, which the
   # sync banner names, so the loaded events must show that state. The price
@@ -204,6 +211,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           locale={@locale}
           syncing_ids={@syncing_ids}
           problem_ids={MapSet.new(@sync_problems, & &1.integration_id)}
+          reauth_ids={MapSet.new(for(%{needs_reauth: true, id: id} <- @integrations, do: id))}
           target={@myself}
         />
         <Canvas.canvas
