@@ -5,7 +5,9 @@
    once the card shows the details column beside the picker, the part lines
    up under the picker, so the column stays a sidebar.
      below 40rem (month) / 59rem (week)  full width
-     from there                           under the picker */
+     from there                           under the picker
+     from 52rem (month)                   in the picker's place, once a time
+                                          is picked (paper-card--booking) */
 
 .paper-book {
   display: flex;
@@ -120,14 +122,31 @@
   border-top: 0;
 }
 
+/* Inside the schedule's grid, the part takes the picker's column. */
 @container scheduling (min-width: 40rem) {
-  .paper-card:not(.paper-card--week) .paper-book {
-    margin-inline-start: calc(var(--paper-details-width) + var(--space-lg));
+  .paper-schedule:not(.paper-schedule--week) > .paper-book {
+    grid-column: 2;
+    margin-inline-start: var(--space-lg);
   }
 }
 
 @container scheduling (min-width: 59rem) {
-  .paper-card--week .paper-book {
-    margin-inline-start: calc(var(--paper-details-width) + var(--space-lg));
+  .paper-schedule--week > .paper-book {
+    grid-column: 2;
+    margin-inline-start: var(--space-lg);
+  }
+}
+
+/* On a wide card, once a time is picked, the part takes the picker's
+   place beside the details; "Change time" brings the picker back. */
+@container scheduling (min-width: 52rem) {
+  .paper-card--booking .paper-schedule:not(.paper-schedule--week):has(> .paper-book) > .paper-picker {
+    display: none;
+  }
+
+  .paper-card--booking .paper-schedule:not(.paper-schedule--week) > .paper-book {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
   }
 }

@@ -78,7 +78,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         id="paper-book-heading"
         class="paper-heading paper-book__title"
         tabindex="-1"
-        phx-mounted={assigns[:focus_details] && JS.focus()}
+        phx-mounted={
+          assigns[:focus_details] &&
+            JS.add_class("paper-card--booking", to: "#schedule-step") |> JS.focus()
+        }
       >
         {dpgettext("booking_voice", "paper", "Enter your details")}
       </h2>
@@ -93,7 +96,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
           class="paper-book__change"
           data-testid="paper-change-time"
           phx-click={
-            JS.focus(
+            JS.remove_class("paper-card--booking", to: "#schedule-step")
+            |> JS.focus(
               to:
                 "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
             )

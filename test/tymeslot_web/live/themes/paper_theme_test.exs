@@ -181,6 +181,23 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
       assert has_element?(view, "[data-testid='paper-book-when']")
 
+      # The part shares the schedule's grid with the details column and the
+      # picker, so a wide card can swap it in place of the picker.
+      assert has_element?(
+               view,
+               "[data-testid='paper-schedule'] .paper-schedule > [data-testid='paper-book']"
+             )
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-change-time'][phx-click*='remove_class'][phx-click*='paper-card--booking']"
+             )
+
+      assert has_element?(
+               view,
+               "#paper-book-heading[phx-mounted*='add_class'][phx-mounted*='paper-card--booking']"
+             )
+
       assert has_element?(
                view,
                "[data-testid='paper-book-when'] button[type='button'][data-testid='paper-change-time']",

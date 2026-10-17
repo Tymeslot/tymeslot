@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   @moduledoc """
   Paper's schedule screen, the journey's second moment, collecting the slot,
   the answers and the attendee: one card holding the meeting's details and a
-  picker, the actions bar, and once a time is picked, the details part below
+  picker, the actions bar, and once a time is picked, the details part (beside the details column in the picker's place on a wide month card, below the picker otherwise)
   (`Paper.Scheduling.Details`: every question at once, then the form, and
   one submit for both).
   The organiser's calendar view option (`Options.CalendarView`, read from
@@ -219,6 +219,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             />
           </div>
         </div>
+
+        <Details.book :if={@stage != :none} {assigns} target={@myself} />
       </div>
 
       <div
@@ -261,8 +263,6 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           <% end %>
         </p>
       </div>
-
-      <Details.book :if={@stage != :none} {assigns} target={@myself} />
     </section>
     """
   end
