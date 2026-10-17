@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
+  alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
@@ -42,6 +43,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   # The mini month only pages within the years the grid can show.
   @mini_years 1900..2200
+
+  # What a timing choice can send; `Manipulation` parses it again.
+  @timing_scopes ~w(this_only following all)
 
   @impl Phoenix.LiveComponent
   def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
@@ -164,6 +168,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       </div>
       <Preview.preview :if={@preview} preview={@preview} target={@myself} />
       <Toast.toast toast={@toast} target={@myself} />
+      <SeriesScopeModal.series_scope_modal
+        :if={@series_prompt}
+        prompt={@series_prompt}
+        target={@myself}
+      />
     </div>
     """
   end
@@ -241,6 +250,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event("calendar:dismiss_toast", _params, socket),
     do: {:noreply, Toast.dismiss(socket)}
+
+  # The scope is client input: only the scopes a prompt offers are acted on.
+  def handle_event("calendar:choose_scope", %{"scope" => scope}, socket)
+      when scope in @timing_scopes,
+      do: {:noreply, Manipulation.choose_scope(socket, scope)}
+
+  def handle_event("calendar:choose_scope", _params, socket), do: {:noreply, socket}
+
+  def handle_event("calendar:cancel_scope", _params, socket),
+    do: {:noreply, Manipulation.cancel_scope(socket)}
 
   # Focus goes back to the event chip only for the Close button and Escape;
   # a click elsewhere (`refocus: "false"` from the click-away) keeps focus

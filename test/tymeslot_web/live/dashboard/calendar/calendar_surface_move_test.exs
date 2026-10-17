@@ -356,8 +356,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       flush_pushes(lv)
       move(lv, "event-#{standup.id}", "2026-10-15T11:00", "2026-10-15T11:30")
 
-      assert %{kind: :timing, event: %{id: id}} = surface(lv).series_prompt
-      assert id == standup.id
+      assert has_element?(lv, "#calendar-series-scope", "Standup")
       assert %{start: "2026-10-15T11:00"} = snapped_back(lv, "event-#{standup.id}")
     end
   end
@@ -388,9 +387,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       assert_push_event(lv, "calendar:events", %{events: events})
       assert %{start: "2026-10-15T09:00"} = Enum.find(events, &(&1.id == first_id))
 
-      # Asserted on the assigns until the series choice renders (Task 12).
-      assert %{event: %{id: id}} = surface(lv).series_prompt
-      assert id == second.id
+      assert has_element?(lv, "#calendar-series-scope", "Retro")
+      refute has_element?(lv, "#calendar-series-scope", "Standup")
       refute_receive {:written, _uid, _payload}, 100
     end
   end
@@ -497,17 +495,5 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
 
     unless match?(%{start: "2026-10-14T10:00"}, Enum.find(events, &(&1.id == id))),
       do: await_original(lv, id)
-  end
-
-  # The series choice is not rendered until Task 12, so its assigns are read
-  # from the component's state; nothing else here does that.
-  defp surface(lv) do
-    render(lv)
-    {components, _ids, _uuids} = :sys.get_state(lv.pid).components
-
-    Enum.find_value(components, fn
-      {_cid, {CalendarSurface, "calendar", assigns, _private, _prints}} -> assigns
-      _other -> nil
-    end)
   end
 end
