@@ -281,20 +281,101 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     refute has_element?(view, "#when-step", "Duration:")
   end
 
-  test "says there are no free times when no day in the window is free", %{conn: conn} do
-    # Free on no weekday at all, so the page lands on no day.
-    %{profile: profile} = seed_organiser(@theme_id, "folio-full", days: [])
-    {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat")
+  describe "a month with no free day" do
+    @empty "#when-step [data-testid='folio-month-empty']"
+    @later "#when-step [data-intent='later']"
 
-    await_availability(view)
+    # The calendar reads one event: the whole of next month, busy.
+    defp block_next_month do
+      first = Date.utc_today() |> Date.beginning_of_month() |> Date.shift(month: 1)
+      after_it = Date.shift(first, month: 1)
 
-    assert has_element?(
-             view,
-             "#when-step [data-testid='folio-month-empty']",
-             "I have no free times at the moment."
-           )
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:ok,
+         [
+           %{
+             uid: "busy-next-month",
+             start_time: DateTime.new!(first, ~T[00:00:00], "Etc/UTC"),
+             end_time: DateTime.new!(after_it, ~T[00:00:00], "Etc/UTC"),
+             status: "confirmed",
+             transparency: "opaque",
+             summary: "Busy"
+           }
+         ]}
+      end)
 
-    refute has_element?(view, "[data-testid='folio-next-free-day']")
+      first
+    end
+
+    defp page_later(view) do
+      view |> element(@later) |> render_click()
+      await_availability(view)
+    end
+
+    defp page_to_window_end(view) do
+      if has_element?(view, @later <> ":not([disabled])") do
+        page_later(view)
+        page_to_window_end(view)
+      end
+    end
+
+    test "says there are no free times only at the end of the booking window",
+         %{conn: conn} do
+      %{profile: profile} =
+        seed_organiser(@theme_id, "folio-window", days: [], advance_booking_days: 90)
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat")
+      await_availability(view)
+
+      page_to_window_end(view)
+      assert has_element?(view, @later <> "[disabled]")
+      assert has_element?(view, @empty, "I have no free times at the moment.")
+      refute has_element?(view, "[data-testid='folio-next-free-day']")
+    end
+
+    test "a link to an empty month with a later month free is not told there is nothing",
+         %{conn: conn} do
+      first = block_next_month()
+
+      %{profile: profile} =
+        seed_organiser(@theme_id, "folio-link-empty", advance_booking_days: 90)
+
+      linked = Date.add(first, 9)
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat?date=#{linked}")
+      await_availability(view)
+
+      assert has_element?(view, @empty, "I'm fully booked this month.")
+      refute has_element?(view, @empty, "I have no free times at the moment.")
+      refute has_element?(view, "[data-testid='folio-next-free-day']")
+    end
+
+    test "the button to the next free day selects it and lists its times", %{conn: conn} do
+      block_next_month()
+      %{profile: profile} = seed_organiser(@theme_id, "folio-next-day", advance_booking_days: 90)
+      {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat")
+      await_availability(view)
+
+      %{selected_date: landing_day} = live_assigns(view)
+      assert landing_day =~ ~r/^\d{4}-\d{2}-\d{2}$/
+
+      page_later(view)
+      assert has_element?(view, @empty, "I'm fully booked this month.")
+      assert live_assigns(view).selected_date == nil
+
+      view |> element("[data-testid='folio-next-free-day']") |> render_click()
+      await_availability(view)
+      await(view, "#when-step [data-fact='time']")
+
+      assert live_assigns(view).selected_date == landing_day
+
+      assert has_element?(
+               view,
+               "#when-step [data-fact='date'][data-value='#{landing_day}'][aria-pressed='true']"
+             )
+
+      refute has_element?(view, @empty)
+    end
   end
 
   test "says so in its own words when there are no meeting types", %{conn: conn} do

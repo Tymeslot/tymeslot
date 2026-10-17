@@ -71,7 +71,56 @@ defmodule TymeslotWeb.Themes.Folio.WhenMomentTest do
 
     assert text(doc, "[data-testid='folio-month-empty'] p") == "I'm fully booked this month."
     assert [button] = Floki.find(doc, "[data-testid='folio-next-free-day']")
-    assert Floki.attribute(button, "phx-click") == ["first_available_week"]
+    assert Floki.attribute(button, "class") == ["folio-button folio-button--secondary"]
+
+    # One click: back to the landing's month, its day selected, then the focus
+    # on the month heading, which the re-render leaves in place.
+    assert [click] = Floki.attribute(button, "phx-click")
+    assert [["push", %{"event" => "first_available_week"}] | rest] = Jason.decode!(click)
+
+    assert [
+             ["push", %{"event" => "select_date", "value" => %{"date" => "2030-04-02"}}],
+             ["focus", %{"to" => "#folio-calendar-month"}]
+           ] = rest
+
+    assert [heading] = Floki.find(doc, "#folio-calendar-month")
+    assert Floki.attribute(heading, "tabindex") == ["-1"]
+  end
+
+  test "an empty month is a neutral notice, the slow-load line keeps the warning style" do
+    doc = when_moment(availability_status: :error)
+
+    assert [_notice] =
+             Floki.find(doc, "[data-testid='folio-month-empty'].folio-calendar__notice--empty")
+
+    assert [slow] = Floki.find(doc, "p.folio-calendar__notice")
+    refute "folio-calendar__notice--empty" in String.split(hd(Floki.attribute(slow, "class")))
+  end
+
+  test "a month booked out before the window ends says only that it is fully booked" do
+    # The month on show is this one: the booking window reaches into the next,
+    # which the page did not land on (a `?date=` link, a language switch), so
+    # nothing here says the whole window is empty.
+    today = Date.utc_today()
+
+    doc = when_moment(current_year: today.year, current_month: today.month)
+
+    assert text(doc, "[data-testid='folio-month-empty']") == "I'm fully booked this month."
+    assert Floki.find(doc, "[data-testid='folio-next-free-day']") == []
+  end
+
+  test "a landing in the month on show offers no way to another month" do
+    landing = %{
+      current_year: 2030,
+      current_month: 3,
+      current_week_start: ~D[2030-03-04],
+      selected_date: "2030-03-05"
+    }
+
+    doc = when_moment(calendar_landing: landing)
+
+    assert text(doc, "[data-testid='folio-month-empty']") == "I have no free times at the moment."
+    assert Floki.find(doc, "[data-testid='folio-next-free-day']") == []
   end
 
   test "says nothing of the kind while the month has a free day" do

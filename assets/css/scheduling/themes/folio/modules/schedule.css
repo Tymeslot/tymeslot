@@ -57,6 +57,12 @@
   text-align: center;
 }
 
+/* An empty month is a plain fact, not a warning; the slow-load line keeps the
+   warning colour. */
+.folio-calendar__notice--empty {
+  color: var(--theme-text-secondary);
+}
+
 .folio-calendar__weekdays,
 .folio-calendar__grid {
   display: grid;

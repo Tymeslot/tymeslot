@@ -127,7 +127,11 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
           >
             <.icon name="hero-chevron-left-mini" class="folio-calendar__nav-icon" />
           </button>
-          <h3 class="folio-calendar__month calendar-month-label">
+          <h3
+            id="folio-calendar-month"
+            class="folio-calendar__month calendar-month-label"
+            tabindex="-1"
+          >
             {LocalizationHelpers.get_month_year_display(@current_year, @current_month)}
           </h3>
           <button
@@ -156,23 +160,27 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
 
         <div
           :if={@month_notice}
-          class="folio-calendar__notice"
+          class="folio-calendar__notice folio-calendar__notice--empty"
           role="status"
           data-testid="folio-month-empty"
         >
-          <%= if @month_notice == :elsewhere do %>
-            <p>{dpgettext("booking_voice", "folio", "I'm fully booked this month.")}</p>
-            <button
-              type="button"
-              class="folio-button folio-button--quiet"
-              phx-click="first_available_week"
-              phx-target={@myself}
-              data-testid="folio-next-free-day"
-            >
-              {dpgettext("booking_voice", "folio", "Show my next free day")}
-            </button>
-          <% else %>
-            <p>{dpgettext("booking_voice", "folio", "I have no free times at the moment.")}</p>
+          <%= case @month_notice do %>
+            <% :elsewhere -> %>
+              <p>{dpgettext("booking_voice", "folio", "I'm fully booked this month.")}</p>
+              <%!-- The month re-renders and takes this button with it, so the focus
+                   moves to the month heading, which stays. --%>
+              <button
+                type="button"
+                class="folio-button folio-button--secondary"
+                phx-click={next_free_day(@myself, @calendar_landing.selected_date)}
+                data-testid="folio-next-free-day"
+              >
+                {dpgettext("booking_voice", "folio", "Show my next free day")}
+              </button>
+            <% :booked -> %>
+              <p>{dpgettext("booking_voice", "folio", "I'm fully booked this month.")}</p>
+            <% :none_free -> %>
+              <p>{dpgettext("booking_voice", "folio", "I have no free times at the moment.")}</p>
           <% end %>
         </div>
 
@@ -246,16 +254,39 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
 
   defp month_label(_year, _month, _delta), do: nil
 
+  # The button's click: back to the landing's month and week, then its day
+  # selected (the return alone leaves no day selected, so no times show), then
+  # the focus on the month heading.
+  defp next_free_day(target, date) do
+    "first_available_week"
+    |> JS.push(target: target)
+    |> JS.push("select_date", value: %{date: date}, target: target)
+    |> JS.focus(to: "#folio-calendar-month")
+  end
+
   # What a month with no free day says: nothing while it loads or while a
   # day of its own can be picked; `:elsewhere` when the page landed on a
-  # free day in another month (the button goes there); `:none_free` when it
-  # landed on none, so no month in the window has one.
+  # free day in another month (the button goes there); `:none_free` at the
+  # end of the booking window, where the next-month arrow is disabled and
+  # no later month can have a free day; `:booked` otherwise, since a later
+  # month may have one the page did not land on (a `?date=` link, a language
+  # switch, a first free day beyond the landing's search).
   defp month_notice(days, assigns) do
     cond do
       not month_empty?(days, assigns.availability_status) -> nil
       landed_elsewhere?(assigns) -> :elsewhere
-      true -> :none_free
+      window_ends_here?(assigns) -> :none_free
+      true -> :booked
     end
+  end
+
+  defp window_ends_here?(assigns) do
+    CalendarNavigation.next_month_disabled?(
+      assigns.current_year,
+      assigns.current_month,
+      assigns.user_timezone,
+      assigns.booking_window_days
+    )
   end
 
   defp month_empty?(days, status) when status in [:loaded, :error] do
