@@ -64,6 +64,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
       assert keys -- Map.keys(ClientStrings.build("en")) == []
     end
 
+    test "the move mode's strings keep their placeholders for the hook" do
+      strings = ClientStrings.build("en")
+
+      assert strings.range_on_day == "%{date}, %{start} to %{finish}"
+      assert strings.moving =~ "%{title}"
+      assert strings.moving =~ "%{when}"
+      assert strings.move_cancelled =~ "%{when}"
+      assert strings.move_saving =~ "%{title}"
+    end
+
     test "placeholders survive for the hook to fill" do
       strings = ClientStrings.build("en")
 

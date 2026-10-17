@@ -50,7 +50,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       empty_three_day: dgettext("dashboard_calendar", "Nothing planned on these days."),
       empty_week: dgettext("dashboard_calendar", "Nothing planned this week."),
       loading: dgettext("dashboard_calendar", "Loading calendar"),
-      list_label: dgettext("dashboard_calendar", "Events at this time")
+      list_label: dgettext("dashboard_calendar", "Events at this time"),
+      range_on_day:
+        dgettext("dashboard_calendar", "%{date}, %{start} to %{finish}",
+          date: "%{date}",
+          start: "%{start}",
+          finish: "%{finish}"
+        ),
+      moving:
+        dgettext(
+          "dashboard_calendar",
+          "Moving %{title}, %{when}. Arrow keys move it, Shift with Up or Down changes how long it lasts, Enter saves, Escape cancels.",
+          title: "%{title}",
+          when: "%{when}"
+        ),
+      move_cancelled:
+        dgettext("dashboard_calendar", "Move cancelled. %{title} stays at %{when}.",
+          title: "%{title}",
+          when: "%{when}"
+        ),
+      move_saving:
+        dgettext("dashboard_calendar", "Saving %{title} at %{when}.",
+          title: "%{title}",
+          when: "%{when}"
+        )
     }
   end
 end
