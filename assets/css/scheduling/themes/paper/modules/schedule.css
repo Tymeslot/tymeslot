@@ -77,8 +77,21 @@
     column-gap: var(--space-lg);
   }
 
+  /* The times end where the calendar ends: size containment keeps the list
+     out of the row's height, the row is the calendar's, and the list
+     stretches to it and scrolls inside. */
+  .paper-slots {
+    align-self: stretch;
+    contain: size;
+  }
+
+  .paper-slots .slot-list {
+    height: 100%;
+  }
+
   .paper-slots .slot-list__body {
-    max-height: var(--paper-slots-max-height);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
   }
 

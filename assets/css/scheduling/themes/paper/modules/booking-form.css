@@ -138,6 +138,11 @@
      concentric under every radius option (square under sharp). */
   border-radius: max(0rem, calc(min(var(--radius-control), var(--paper-radius-box)) - var(--space-3xs)));
   color: var(--ink-2);
+  /* Sentence case, as the rest of Paper's voice, not the shared capitals. */
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .paper-theme-wrapper .location-option:hover {

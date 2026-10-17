@@ -256,6 +256,23 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
 
       assert has_element?(view, "[data-testid='paper-book'] form[data-fact='attendee']")
       refute has_element?(view, "[data-testid='paper-book'] [data-intent='continue']")
+
+      # Only the required question carries the marker, and its input says so.
+      assert has_element?(
+               view,
+               "[data-testid='paper-question'][data-index='0'] .paper-question__label [data-testid='paper-question-required']",
+               "*"
+             )
+
+      assert has_element?(
+               view,
+               "[data-testid='paper-question'][data-index='0'] input[aria-required='true']"
+             )
+
+      refute has_element?(
+               view,
+               "[data-testid='paper-question'][data-index='1'] [data-testid='paper-question-required']"
+             )
     end
 
     @tag :capture_log

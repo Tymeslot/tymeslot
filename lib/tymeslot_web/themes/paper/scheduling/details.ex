@@ -134,7 +134,17 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         data-testid="paper-question"
         data-index={index}
       >
-        <h3 class="paper-question__label">{question.definition["label"]}</h3>
+        <h3 class="paper-question__label">
+          {question.definition["label"]}
+          <%!-- The marker Name and Email carry. Its input states the requirement
+               (`aria-required`), so the asterisk is decoration. --%>
+          <span
+            :if={question.definition["required"] == true}
+            class="text-red-500 ml-0.5"
+            aria-hidden="true"
+            data-testid="paper-question-required"
+          >*</span>
+        </h3>
         <p :if={question.definition["help_text"]} class="paper-question__help">
           {question.definition["help_text"]}
         </p>
