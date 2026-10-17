@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.ColourTokens
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventBlocking
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Clock
@@ -60,7 +61,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       guests: guests(event),
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
-      sync_note: sync_note(event, integration)
+      sync_note: sync_note(event, integration),
+      editable: EditGuard.editable?(context.integrations, event)
     }
   end
 

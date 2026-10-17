@@ -12,6 +12,8 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.EventPayload
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
 
   @context %{
@@ -61,7 +63,8 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              end: "2026-10-16T10:15",
              colour: "calendar-3",
              free: false,
-             attention: false
+             attention: false,
+             editable: false
            }
   end
 
@@ -156,5 +159,33 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
     assert payload.reset == true
     assert payload.settings == %{density: "compact"}
     assert [%{id: "event-42"}] = payload.events
+  end
+
+  describe "editable" do
+    # As loaded from the database, where the list is cast to entries.
+    defp integration(calendar_list),
+      do: %CalendarIntegrationSchema{
+        id: 7,
+        provider: "google",
+        calendar_list: Enum.map(calendar_list, &CalendarEntry.normalize/1)
+      }
+
+    test "an event on a writable calendar of the organiser's can be changed" do
+      context =
+        Map.put(@context, :integrations, [integration([%{"id" => "work", "selected" => true}])])
+
+      assert %{editable: true} = EventPayload.event(timed([]), context)
+    end
+
+    test "an event on a read-only calendar cannot" do
+      list = [%{"id" => "work", "selected" => true, "read_only" => true}]
+      context = Map.put(@context, :integrations, [integration(list)])
+
+      assert %{editable: false} = EventPayload.event(timed([]), context)
+    end
+
+    test "without the organiser's integrations nothing is offered" do
+      assert %{editable: false} = EventPayload.event(timed([]), @context)
+    end
   end
 end

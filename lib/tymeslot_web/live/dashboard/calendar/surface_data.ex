@@ -214,6 +214,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       timezone: assigns.timezone,
       integration_tokens: assigns.integration_tokens,
       calendar_tokens: assigns.calendar_tokens,
+      integrations: assigns.integrations,
       events: assigns.events,
       settings: settings(assigns),
       reset: reset

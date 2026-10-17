@@ -10,16 +10,22 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
 
   Event ids are prefixed by kind (`"event-42"`, `"booking-<uuid>"`), so a
   provider row and a booking can never collide in the hook's cache.
+
+  `editable` says whether the organiser can change the event from the calendar
+  (`EditGuard.editable?/2`); the hook offers dragging, resizing and deleting
+  only on those, and the server checks again on every change.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.ColourTokens
+  alias Tymeslot.CalendarGrid.EditGuard
 
   @type context :: %{
           required(:timezone) => String.t(),
           required(:integration_tokens) => map(),
           required(:calendar_tokens) => map(),
+          optional(:integrations) => [map()],
           optional(atom()) => term()
         }
 
@@ -52,7 +58,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         colour:
           ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
         free: Map.get(event, :transparency) == "transparent",
-        attention: Map.get(event, :sync_state, "synced") != "synced"
+        attention: Map.get(event, :sync_state, "synced") != "synced",
+        editable: EditGuard.editable?(Map.get(context, :integrations, []), event)
       },
       timing(event, context.timezone)
     )
