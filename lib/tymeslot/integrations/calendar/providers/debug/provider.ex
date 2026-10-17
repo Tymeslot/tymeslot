@@ -100,15 +100,18 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def build_client_configs(integration) do
-    if Application.get_env(:tymeslot, :environment) in [:dev, :test] do
-      [%{user_id: integration.user_id}]
-    else
-      []
-    end
+    if dev_or_test?(), do: [%{user_id: integration.user_id}], else: []
   end
 
+  # Every write the calendar makes (create, edit, delete) resolves its client
+  # through this config. Without one, each answered :no_calendar_integration
+  # wherever the interactive dev stub was not compiled in.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def build_booking_client_config(_integration), do: nil
+  def build_booking_client_config(integration) do
+    if dev_or_test?(), do: %{user_id: integration.user_id}, else: nil
+  end
+
+  defp dev_or_test?, do: Application.get_env(:tymeslot, :environment) in [:dev, :test]
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(_client, opts) do

@@ -38,6 +38,7 @@ defmodule Tymeslot.Dev.Calendar do
 
   alias Tymeslot.Integrations.Calendar.CalendarBehaviour
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Profiles.ProfileQueries
@@ -96,17 +97,16 @@ defmodule Tymeslot.Dev.Calendar do
     end
   end
 
+  # Edits and deletes go through the debug provider, so an edit of one
+  # occurrence of a series, or of the series from one occurrence, is stored
+  # exactly as it is on a dev server without this stub.
   @impl CalendarBehaviour
-  def update_event(uid, event_data, _context) do
-    record_event(Map.put(event_data, :uid, uid))
-    :ok
-  end
+  def update_event(uid, event_data, _context),
+    do: DebugCalendarProvider.update_event(nil, uid, event_data)
 
   @impl CalendarBehaviour
-  def delete_event(uid, _context, _opts) do
-    DebugStore.delete_event(uid)
-    :ok
-  end
+  def delete_event(uid, _context, opts),
+    do: DebugCalendarProvider.delete_event(nil, uid, opts)
 
   @impl CalendarBehaviour
   def get_booking_integration_info(_context), do: {:error, :no_integration}
