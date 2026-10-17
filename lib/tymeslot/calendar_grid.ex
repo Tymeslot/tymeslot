@@ -436,6 +436,13 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate cancel_scheduled_delete(user_id, token), to: ScheduledDelete, as: :cancel
 
   @doc """
+  The user's scheduled deletes that have not finished. See
+  `Tymeslot.CalendarGrid.ScheduledDelete.pending/1`.
+  """
+  @spec pending_deletes(pos_integer()) :: [map()]
+  defdelegate pending_deletes(user_id), to: ScheduledDelete, as: :pending
+
+  @doc """
   Whether an event may be moved to another calendar: on its own, with its
   whole series, or not at all. See
   `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
