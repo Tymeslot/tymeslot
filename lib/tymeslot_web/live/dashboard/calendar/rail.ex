@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               class="shrink-0 text-tymeslot-400"
               title={dgettext("dashboard_calendar", "Syncing")}
             >
-              <.icon name="hero-arrow-path-mini" class="h-4 w-4 animate-spin" />
+              <.icon name="hero-arrow-path-mini" class="h-4 w-4 motion-safe:animate-spin" />
               <span class="sr-only">{dgettext("dashboard_calendar", "Syncing")}</span>
             </span>
             <span

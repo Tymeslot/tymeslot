@@ -18,11 +18,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncBanner do
   @spec sync_banner(map()) :: Phoenix.LiveView.Rendered.t()
   def sync_banner(assigns) do
     ~H"""
-    <div id="calendar-sync-banner" class="shrink-0">
+    <div id="calendar-sync-banner" class="shrink-0" role="status" aria-live="polite">
       <div
         :for={problem <- @problems}
         id={"calendar-sync-problem-#{problem.integration_id}"}
-        role="status"
         class="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-3 py-2 text-token-sm text-amber-900 md:px-4"
       >
         <.icon name="hero-exclamation-triangle-mini" class="h-4 w-4 shrink-0 text-amber-600" />
@@ -64,7 +63,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncBanner do
     do:
       dgettext(
         "dashboard_calendar",
-        "%{account} isn't responding. Its events may be out of date.", account: account)
+        "%{account} isn't responding. Its events may be out of date.",
+        account: account
+      )
 
   defp message(%{kind: :unreachable, account: account, pending: [title]}),
     do:

@@ -6,6 +6,7 @@ defmodule Tymeslot.CalendarGrid.Freshness do
   """
 
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.SyncSchedule
@@ -49,9 +50,7 @@ defmodule Tymeslot.CalendarGrid.Freshness do
   """
   @spec request_sync(integer(), integer()) :: :ok | {:error, term()}
   def request_sync(user_id, integration_id) do
-    integrations = Management.list_active_calendar_integrations(user_id)
-
-    case Enum.find(integrations, &(&1.id == integration_id)) do
+    case CalendarIntegrationQueries.get_active_ref(user_id, integration_id) do
       nil ->
         {:error, :not_found}
 

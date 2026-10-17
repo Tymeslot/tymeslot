@@ -197,6 +197,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  The id and provider of one of the user's active integrations, without
+  decrypting its credentials: enough to ask for its sync. `nil` when the id
+  is not the user's, or the integration is not active.
+  """
+  @spec get_active_ref(integer(), integer()) :: %{id: integer(), provider: String.t()} | nil
+  def get_active_ref(user_id, id) do
+    CalendarIntegrationSchema
+    |> where([c], c.id == ^id and c.user_id == ^user_id and c.is_active == true)
+    |> select([c], %{id: c.id, provider: c.provider})
+    |> Repo.one()
+  end
+
+  @doc """
   Gets a calendar integration by user ID and provider.
   Returns {:ok, integration} if found, {:error, :not_found} otherwise.
 

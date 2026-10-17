@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
   alias Phoenix.LiveView
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
@@ -37,6 +38,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
     end
 
     :ok
+  end
+
+  defp persist_failures(user, integration, count) do
+    {:ok, _state} =
+      IntegrationHealthStateQueries.get_or_init("calendar", integration.id, user.id)
+
+    IntegrationHealthStateQueries.update_fields("calendar", integration.id,
+      consecutive_sync_failures: count
+    )
+  end
+
+  defp flush_pushes do
+    receive do
+      {_ref, {:push_event, _event, _payload}} -> flush_pushes()
+    after
+      0 -> :ok
+    end
   end
 
   defp syncing?(lv, integration),
@@ -223,15 +241,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
   end
 
   describe "failures persisted before the calendar opened" do
-    defp persist_failures(user, integration, count) do
-      {:ok, _state} =
-        IntegrationHealthStateQueries.get_or_init("calendar", integration.id, user.id)
-
-      IntegrationHealthStateQueries.update_fields("calendar", integration.id,
-        consecutive_sync_failures: count
-      )
-    end
-
     test "three in a row name the account on mount, without a broadcast", %{
       conn: conn,
       user: user,
@@ -277,5 +286,122 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
     settled(lv)
 
     assert syncing?(lv, integration)
+  end
+
+  describe "Sync now and Retry are rate limited like Refresh" do
+    test "a refused one shows no spinner and says to wait", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      fail(lv, user, integration.id, 1)
+      refute syncing?(lv, integration)
+
+      for _hit <- 1..10, do: RateLimiter.check(:calendar_refresh, user.id)
+      on_exit(fn -> RateLimiter.clear_bucket("calendar_refresh:#{user.id}") end)
+
+      lv |> element("#calendar-sync-#{integration.id}") |> render_click()
+
+      refute syncing?(lv, integration)
+      assert has_element?(lv, "#calendar-toast", "Too many syncs. Please wait a moment.")
+    end
+
+    test "opening the calendar is not counted against it", %{conn: conn, user: user} do
+      for _hit <- 1..9, do: RateLimiter.check(:calendar_refresh, user.id)
+      on_exit(fn -> RateLimiter.clear_bucket("calendar_refresh:#{user.id}") end)
+
+      {:ok, _lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert RateLimiter.check(:calendar_refresh, user.id) == :ok
+    end
+  end
+
+  test "an account that keeps failing is not synced again on open", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    persist_failures(user, integration, 2)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    refute syncing?(lv, integration)
+    refute_enqueued(worker: SyncGoogleCalendarWorker)
+  end
+
+  test "a sync discarded for rejected credentials shows the account needing sign-in", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    refute has_element?(lv, "#calendar-sync-problem-#{integration.id}")
+
+    integration |> Changeset.change(needs_reauth: true) |> Repo.update!()
+    send(lv.pid, {:calendar_sync_failed, user.id, integration.id})
+    assert_push_event(lv, "calendar:events", %{reset: true}, 1_000)
+
+    assert has_element?(
+             lv,
+             "#calendar-sync-problem-#{integration.id}",
+             "Work account needs you to sign in again."
+           )
+  end
+
+  test "a change waiting to be sent is named after a queued write, until a sync clears it", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    dentist =
+      event(integration, "work", "Dentist", ~U[2026-10-15 14:00:00Z], 60, sync_state: "synced")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    refute has_element?(lv, "#calendar-sync-problem-#{integration.id}")
+
+    dentist |> Changeset.change(sync_state: "locally_modified") |> Repo.update!()
+    write = {{integration.id, "uid-1"}, 1}
+    send(lv.pid, {:event_update_result, {:error, %{retry: :queued, write: write}}})
+    assert_push_event(lv, "calendar:events", %{reset: true}, 1_000)
+
+    assert has_element?(lv, "#calendar-sync-problem-#{integration.id}", "Dentist")
+
+    # The queued write may push the window more than once; only the push the
+    # sync causes may satisfy the next wait.
+    flush_pushes()
+    dentist |> Repo.reload!() |> Changeset.change(sync_state: "synced") |> Repo.update!()
+    send(lv.pid, {:calendar_sync_complete, user.id, integration.id})
+    assert_push_event(lv, "calendar:events", %{reset: true}, 1_000)
+
+    refute has_element?(lv, "#calendar-sync-problem-#{integration.id}")
+  end
+
+  test "a change on a hidden calendar is still named", %{
+    conn: conn,
+    integration: integration
+  } do
+    event(integration, "family", "Piano", ~U[2026-10-15 14:00:00Z], 60,
+      sync_state: "locally_modified"
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("[data-calendar-id='family']") |> render_click()
+
+    assert has_element?(lv, "#calendar-sync-problem-#{integration.id}", "Piano")
+  end
+
+  test "the banner container is the live region, not each row", %{
+    conn: conn,
+    integration: integration
+  } do
+    event(integration, "work", "Dentist", ~U[2026-10-15 14:00:00Z], 60,
+      sync_state: "locally_modified"
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(lv, "#calendar-sync-banner[role=status][aria-live=polite]")
+    refute has_element?(lv, "#calendar-sync-problem-#{integration.id}[role=status]")
   end
 end

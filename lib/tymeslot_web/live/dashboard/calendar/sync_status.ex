@@ -23,11 +23,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   earlier request cannot stop the spinner of a later one.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [send_update_after: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
+  alias TymeslotWeb.Dashboard.Calendar.Toast
 
   @timeout 60_000
 
@@ -48,17 +52,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   @doc "Asks for a sync of every stale account."
   @spec refresh_stale(socket()) :: socket()
   def refresh_stale(socket) do
+    failing = failed_ids(socket.assigns)
+
     socket.assigns.integrations
     |> CalendarGrid.stale_integrations()
+    |> Enum.reject(&MapSet.member?(failing, &1.id))
     |> Enum.reduce(socket, &request(&2, &1.id))
   end
 
-  @doc "Sync now or Retry for one account, named by the button's value."
+  @doc """
+  Sync now or Retry for one account, named by the button's value. Counted
+  against the `:calendar_refresh` limit Refresh on the old grid uses; opening
+  the calendar is not (`refresh_stale/1`).
+  """
   @spec sync_account(socket(), String.t() | integer()) :: socket()
   def sync_account(socket, id) do
     with {integration_id, ""} <- Integer.parse(to_string(id)),
          true <- shown?(socket, integration_id) do
-      request(socket, integration_id)
+      case RateLimiter.check(:calendar_refresh, socket.assigns.current_user.id) do
+        :ok ->
+          request(socket, integration_id)
+
+        {:error, :rate_limited, _message} ->
+          Toast.show(
+            socket,
+            dgettext("dashboard_calendar", "Too many syncs. Please wait a moment.")
+          )
+      end
     else
       _not_theirs -> socket
     end

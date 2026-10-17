@@ -65,13 +65,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do:
         {:ok, socket |> SyncStatus.finished(assigns[:integration_id]) |> schedule_reload(action)}
 
-  # One failed attempt (see `SyncStatus`); the events are reloaded as after
-  # any sync, since a failed cycle may still have changed them.
+  # One failed attempt (see `SyncStatus`). The whole context is reloaded as
+  # after a sync: a discard for rejected credentials flags the integration
+  # `needs_reauth`, which the banner must show while the calendar is open.
   def update(
         %{action: :integration_sync_failed, integration_id: id},
         %{assigns: %{ready?: true}} = socket
       ),
-      do: {:ok, socket |> SyncStatus.failed(id) |> schedule_reload(:events_updated)}
+      do: {:ok, socket |> SyncStatus.failed(id) |> schedule_reload(:integration_synced)}
 
   def update(%{action: :sync_timeout, integration_id: id, ref: ref}, socket),
     do: {:ok, SyncStatus.timed_out(socket, id, ref)}
@@ -130,7 +131,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     do: assign(socket, :pending_reload, widest(scope, scope(action)))
 
   # A write saved for later leaves its event waiting to be sent, which the
-  # sync banner names; the loaded events must show that state.
+  # sync banner names, so the loaded events must show that state. The price
+  # is one events query per queued write (coalesced with any other reload
+  # within `@reload_delay`); patching the one event in place would need to
+  # know the sync state the queue stored, which only the database holds.
   defp reload_if_queued(%{assigns: %{ready?: true}} = socket, :queued),
     do: schedule_reload(socket, :events_updated)
 
@@ -161,7 +165,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         locale: Gettext.get_locale(TymeslotWeb.Gettext),
         days: SurfaceData.days(assigns),
         sync_problems:
-          SyncProblems.list(assigns.integrations, assigns.events, SyncStatus.failed_ids(assigns))
+          SyncProblems.list(
+            assigns.integrations,
+            assigns.window_events,
+            SyncStatus.failed_ids(assigns)
+          )
       )
 
     ~H"""
