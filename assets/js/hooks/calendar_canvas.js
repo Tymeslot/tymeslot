@@ -22,6 +22,9 @@
  *    drops it, since the server reads the URL again;
  *  - a drag moves or resizes an event the organiser can change and pushes
  *    `calendar:move` on the drop (see calendar_canvas/drag.js);
+ *  - on a focused event the arrow keys move focus, M moves it from the keyboard,
+ *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
+ *    calendar_canvas/keys.js);
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -31,6 +34,7 @@
  */
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
+import { KeysMixin } from "./calendar_canvas/keys.js";
 import { placePopover } from "../calendar/popover.js";
 import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
@@ -68,6 +72,7 @@ const viewport = () => ({ width: window.innerWidth, height: window.innerHeight }
 
 export const CalendarCanvas = {
   ...DragMixin,
+  ...KeysMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -96,6 +101,7 @@ export const CalendarCanvas = {
     ];
     for (const [name, listener] of this.listeners) this.el.addEventListener(name, listener);
     this.mountDrag();
+    this.mountKeys();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -129,6 +135,7 @@ export const CalendarCanvas = {
     this.frame = null;
     this.closeList();
     this.destroyDrag();
+    this.destroyKeys();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
@@ -277,7 +284,8 @@ export const CalendarCanvas = {
     this.el.innerHTML = renderGrid({
       view: this.view,
       days,
-      events: eventsForDays(this.cache, days),
+      events: this.withMoving(eventsForDays(this.cache, days)),
+      movingId: this.moving?.id ?? null,
       settings: this.settings,
       strings: this.strings,
       now,
@@ -287,10 +295,15 @@ export const CalendarCanvas = {
       hourHeight: this.hourHeight(),
     });
     this.el.setAttribute("aria-busy", "false");
+    this.applyRoving();
 
     const scroller = this.el.querySelector("[data-scroll]");
     if (scroller) scroller.scrollTop = this.scrollTop ?? this.initialScroll(days, now);
-    this.focusBy(focused);
+    // A deleted event's focus goes to the neighbour chosen when Delete was pressed.
+    if (!this.focusBy(focused) && focused && this.pendingFocus) {
+      this.focusBy(this.pendingFocus);
+      this.pendingFocus = null;
+    }
   },
 
   // First draw: an hour and a half before now when today is in view, else 08:00.
@@ -353,11 +366,13 @@ export const CalendarCanvas = {
   },
 
   handleKey(e) {
+    // A live drag owns the keyboard; its Escape is the drag mixin's own listener.
+    if (this.drag) return undefined;
+    if (this.moving) return this.movingKey(e);
+    if (e.key === "Escape") return e.repeat ? undefined : this.closeList();
+    const target = e.target.closest?.(".cal-col .cal-ev[data-event-id]");
+    if (target && this.el.contains(target) && this.eventKey(e, target)) return undefined;
     if (e.repeat) return undefined;
-    if (e.key === "Escape") {
-      if (this.escapeDrag()) return undefined;
-      return this.closeList();
-    }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches?.('[data-event-id][role="button"]')) {
       e.preventDefault();
       this.open(e.target.dataset.eventId, e.target);
