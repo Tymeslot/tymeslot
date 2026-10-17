@@ -31,8 +31,9 @@ export const DragMixin = {
     this.swallowClick = false;
     this.swallowTimer = null;
     this.scrollFrame = null;
+    this.escaped = false;
     this.escapeListener = (e) => {
-      if (e.key === "Escape" && this.cancelDrag()) this.swallowNextClick();
+      if (e.key === "Escape") this.escapeDrag();
     };
     this.scrollListener = () => this.followPointer();
     this.dragListeners = [
@@ -54,6 +55,17 @@ export const DragMixin = {
     document.removeEventListener("keydown", this.escapeListener);
     this.stopAutoScroll();
     clearTimeout(this.swallowTimer);
+    this.press = null;
+    this.drag = null;
+  },
+
+  // Escape ends a live drag. The release that follows (however late) is
+  // still the drag's, so its click stays swallowed until then.
+  escapeDrag() {
+    if (!this.cancelDrag()) return false;
+    this.swallowClick = true;
+    this.escaped = true;
+    return true;
   },
 
   // The click that follows a drag's release is not a click; it is gone by the next tick.
@@ -67,8 +79,9 @@ export const DragMixin = {
 
   pointerDown(e) {
     this.swallowClick = false;
-    // A second pointer neither takes over nor restarts a press.
-    if (this.press && !samePointer(this.press, e)) return;
+    this.escaped = false;
+    // A second pointer cannot take over a live drag; it replaces a mere press.
+    if (this.drag && !samePointer(this.press, e)) return;
     if (e.button !== 0 || e.pointerType === "touch" || !this.settings) return;
     const target = e.target.closest?.(".cal-col .cal-ev[data-editable]");
     if (!target || !this.el.contains(target)) return;
@@ -170,8 +183,7 @@ export const DragMixin = {
       const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
       const next = Math.min(max, Math.max(0, scroller.scrollTop + velocity));
       if (next === scroller.scrollTop) return;
-      scroller.scrollTop = next;
-      this.followPointer();
+      scroller.scrollTop = next; // the scroll event re-runs the pointer's move
       this.scrollFrame = requestAnimationFrame(step);
     };
     this.scrollFrame = requestAnimationFrame(step);
@@ -189,7 +201,10 @@ export const DragMixin = {
     const last = this.drag?.last;
     if (!scroller || !last) return 0;
     const rect = scroller.getBoundingClientRect();
-    if (last.y < rect.top + EDGE) return -Math.ceil(MAX_SCROLL_STEP * Math.min(1, (rect.top + EDGE - last.y) / EDGE));
+    // The headings and the all-day lane stick to the scroller's top, so the grid's visible top is below them.
+    const top = this.el.querySelector(".cal-top")?.getBoundingClientRect().bottom ?? rect.top;
+    if (last.y >= rect.top && last.y < top) return 0; // over the headings themselves
+    if (last.y < top + EDGE) return -Math.ceil(MAX_SCROLL_STEP * Math.min(1, (top + EDGE - last.y) / EDGE));
     if (last.y > rect.bottom - EDGE) return Math.ceil(MAX_SCROLL_STEP * Math.min(1, (last.y - (rect.bottom - EDGE)) / EDGE));
     return 0;
   },
@@ -199,6 +214,10 @@ export const DragMixin = {
     const wasDragging = !!this.drag;
     const { state, range } = this.drag || {};
     this.endDrag();
+    if (this.escaped) {
+      this.escaped = false;
+      this.swallowNextClick();
+    }
     if (!wasDragging) return;
     this.swallowNextClick();
     if (range.startMin !== state.startMin || range.endMin !== state.endMin) this.commitMove(state.id, range);

@@ -355,10 +355,7 @@ export const CalendarCanvas = {
   handleKey(e) {
     if (e.repeat) return undefined;
     if (e.key === "Escape") {
-      if (this.cancelDrag()) {
-        this.swallowNextClick();
-        return undefined;
-      }
+      if (this.escapeDrag()) return undefined;
       return this.closeList();
     }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches?.('[data-event-id][role="button"]')) {

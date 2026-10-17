@@ -301,32 +301,90 @@ test("the columns' position is read afresh on every move", () => {
   expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-14T13:00", end: "2026-10-14T14:00" }]);
 });
 
-test("near the scroller's bottom edge the grid scrolls, within its range, and stops on the drop", () => {
+// Stubs a scroller 600px tall inside which the headings sit on top: they end at y = 60.
+function scrollRig(el) {
   const frames = [];
+  const cancelled = vi.fn();
   vi.stubGlobal("requestAnimationFrame", (callback) => frames.push(callback));
-  vi.stubGlobal("cancelAnimationFrame", () => {});
-  const { el, hook } = mountHook();
-  let top = 0;
-  hook.gridGeometry = () => ({ left: 0, top, colWidth: 100, days, scale: makeScale(52, false) });
+  vi.stubGlobal("cancelAnimationFrame", cancelled);
   const scroller = el.querySelector("[data-scroll]");
   let scrollTop = 0;
   Object.defineProperty(scroller, "scrollTop", { get: () => scrollTop, set: (v) => (scrollTop = v), configurable: true });
   Object.defineProperty(scroller, "scrollHeight", { value: 1000, configurable: true });
   Object.defineProperty(scroller, "clientHeight", { value: 600, configurable: true });
   scroller.getBoundingClientRect = () => ({ top: 0, bottom: 600, left: 0, right: 900 });
-  const run = () => frames.splice(0).forEach((frame) => frame());
+  el.querySelector(".cal-top").getBoundingClientRect = () => ({ top: 0, bottom: 60, left: 0, right: 900 });
+  return { scroll: () => scrollTop, set: (v) => (scrollTop = v), run: () => frames.splice(0).forEach((frame) => frame()), frames, cancelled };
+}
+
+test("near the scroller's bottom edge the grid scrolls, within its range", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+  const rig = scrollRig(el);
 
   pointer("pointerdown", block(el, "event-1"), 250, 582);
   pointer("pointermove", el, 250, 590);
   pointer("pointermove", el, 250, 598);
-  run();
-  expect(scrollTop).toBeGreaterThan(0);
+  rig.run();
+  expect(rig.scroll()).toBeGreaterThan(0);
 
-  for (let i = 0; i < 100; i += 1) run();
-  expect(scrollTop).toBe(400); // clamped to scrollHeight - clientHeight
+  for (let i = 0; i < 100; i += 1) rig.run();
+  expect(rig.scroll()).toBe(400); // clamped to scrollHeight - clientHeight
+});
 
-  pointer("pointerup", el, 250, 598);
-  expect(frames.length).toBe(0);
+test("the top zone starts below the sticky headings, not at the scroller's top", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+  const rig = scrollRig(el);
+  rig.set(200);
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 250, 400);
+  pointer("pointermove", el, 250, 30); // over the middle of the headings
+  rig.run();
+  expect(rig.scroll()).toBe(200);
+
+  pointer("pointermove", el, 250, 70); // just below them
+  rig.run();
+  expect(rig.scroll()).toBeLessThan(200);
+});
+
+test("a drop or a destroy mid-scroll stops the scrolling", () => {
+  for (const end of ["drop", "destroy"]) {
+    const { el, hook } = mountHook();
+    withGeometry(hook);
+    const rig = scrollRig(el);
+
+    pointer("pointerdown", block(el, "event-1"), 250, 582);
+    pointer("pointermove", el, 250, 590);
+    pointer("pointermove", el, 250, 598);
+    rig.run();
+    const before = rig.scroll();
+    expect(before).toBeGreaterThan(0);
+    expect(before).toBeLessThan(400);
+
+    if (end === "drop") pointer("pointerup", el, 250, 598);
+    else hook.destroyDrag();
+    expect(rig.cancelled).toHaveBeenCalled();
+    rig.run();
+    expect(rig.scroll()).toBe(before);
+    expect(hook.drag).toBeNull();
+    expect(hook.press).toBeNull();
+    unmountAll();
+  }
+});
+
+test("a new pointer replaces a press that never became a drag", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-2"), 250, 842, { pointerId: 2 });
+  pointer("pointerdown", block(el, "event-1"), 250, 582, { pointerId: 3 });
+  pointer("pointermove", el, 260, 592, { pointerId: 3 });
+  pointer("pointermove", el, 350, 634, { pointerId: 3 });
+  pointer("pointerup", el, 350, 634, { pointerId: 3 });
+
+  expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-15T12:00", end: "2026-10-15T13:00" }]);
 });
 
 test("the block pressed is found again when opening the drag redrew the grid", () => {
@@ -344,7 +402,7 @@ test("the block pressed is found again when opening the drag redrew the grid", (
   expect(block(el, "event-1").classList.contains("is-dragging")).toBe(true);
 });
 
-test("Escape pressed on the page cancels a live drag and the click after it is swallowed", () => {
+test("Escape pressed on the page cancels a live drag and the click after the release is swallowed", () => {
   vi.useFakeTimers();
   const { el, hook } = mountHook();
   withGeometry(hook);
@@ -354,6 +412,9 @@ test("Escape pressed on the page cancels a live drag and the click after it is s
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   expect(block(el, "event-1").classList.contains("is-dragging")).toBe(false);
 
+  // A slow release: the click that ends it is still the drag's.
+  vi.advanceTimersByTime(500);
+  pointer("pointerup", el, 350, 634);
   block(el, "event-1").click();
   expect(pushes(hook, "calendar:open")).toEqual([]);
 
