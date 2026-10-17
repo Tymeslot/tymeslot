@@ -25,6 +25,7 @@
  *  - on a focused event the arrow keys move focus, M moves it from the keyboard,
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
+ *  - Ctrl + scroll zooms the hours for the visit (see calendar_canvas/zoom.js);
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -35,6 +36,7 @@
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
+import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
 import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
@@ -73,6 +75,7 @@ const viewport = () => ({ width: window.innerWidth, height: window.innerHeight }
 export const CalendarCanvas = {
   ...DragMixin,
   ...KeysMixin,
+  ...ZoomMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -102,11 +105,14 @@ export const CalendarCanvas = {
     for (const [name, listener] of this.listeners) this.el.addEventListener(name, listener);
     this.mountDrag();
     this.mountKeys();
+    this.mountZoom();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
     this.handleEvent("calendar:settings", (settings) => {
       this.settings = settings;
+      // A density chosen in display options replaces any zoom.
+      this.zoomHour = null;
       this.render();
     });
     this.handleEvent("calendar:preview-closed", () => this.previewClosed());
@@ -136,6 +142,7 @@ export const CalendarCanvas = {
     this.closeList();
     this.destroyDrag();
     this.destroyKeys();
+    this.destroyZoom();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
@@ -316,9 +323,10 @@ export const CalendarCanvas = {
     return Math.max(0, scale.yOf(target) - 4);
   },
 
-  // The hour height the grid is drawn at: a Ctrl + scroll zoom, else the density's.
+  // The hour height the grid is drawn at: a Ctrl + scroll zoom (kept
+  // fractional in zoomHour, rounded here), else the density's.
   hourHeight() {
-    return this.zoomHour ?? (HOUR_HEIGHT[this.settings.density] || HOUR_HEIGHT.comfortable);
+    return Math.round(this.zoomHour ?? (HOUR_HEIGHT[this.settings.density] || HOUR_HEIGHT.comfortable));
   },
 
   currentScale() {

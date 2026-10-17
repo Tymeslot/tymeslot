@@ -79,7 +79,7 @@ function periodLabel(days, strings) {
 export function renderGrid(model) {
   const { view, days, events, settings, strings, now, width, measureWidth, nightOpen } = model;
   // A Ctrl + scroll zoom (hooks/calendar_canvas/zoom.js) overrides the density's height.
-  const hourHeight = model.hourHeight || HOUR_HEIGHT[settings.density] || HOUR_HEIGHT.comfortable;
+  const hourHeight = Math.round(model.hourHeight) || HOUR_HEIGHT[settings.density] || HOUR_HEIGHT.comfortable;
   const fold = settings.fold_night && !nightOpen;
   const scale = makeScale(hourHeight, fold);
   const colWidth = Math.max(40, (width - AXIS_WIDTH - 1) / days.length);
