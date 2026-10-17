@@ -8,17 +8,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.RecurrenceScope
-  alias Tymeslot.CalendarGrid.WriteGuardian
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.CalendarGrid.WriteTask
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-
-  require Logger
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
   def default_integration_id(socket) do
@@ -164,33 +160,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           Phoenix.LiveView.Socket.t()
   def run_async(socket, tag, fun, crash_result, opts \\ [])
       when is_atom(tag) and is_function(fun, 0) do
-    lv_pid = self()
-    report_to_guardian? = Keyword.get(opts, :report_to_guardian, false)
-
-    {:ok, _pid} =
-      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-        message = {tag, run_guarded(tag, fun, crash_result)}
-
-        if report_to_guardian?,
-          do: WriteGuardian.report(lv_pid, message),
-          else: send(lv_pid, message)
-      end)
-
+    :ok = WriteTask.start(tag, fun, crash_result, opts)
     socket
-  end
-
-  defp run_guarded(tag, fun, crash_result) do
-    fun.()
-  catch
-    kind, reason ->
-      Logger.error("Calendar grid task crashed",
-        task: tag,
-        kind: kind,
-        error: LogFormat.reason(reason),
-        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
-      )
-
-      crash_result
   end
 
   @doc """
