@@ -176,7 +176,7 @@
   padding: var(--space-2xs) var(--space-xs);
   border: 0;
   background: none;
-  color: var(--theme-primary);
+  color: var(--theme-text-secondary);
   font-size: var(--theme-font-size-sm);
   text-decoration: underline;
   text-underline-offset: var(--space-3xs);
