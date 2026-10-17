@@ -12,6 +12,7 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EditGuard
+  alias Tymeslot.Security.RateLimiter
 
   setup do
     user = insert(:user)
@@ -59,5 +60,36 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
     integration: integration
   } do
     assert EditGuard.check(user.id, [integration], event(integration, "work")) == :ok
+  end
+
+  test "check/3 refuses an event a group meeting with live seats sits on", %{
+    user: user,
+    integration: integration
+  } do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        capacity: 4,
+        calendar_uid: "group-uid-1"
+      )
+
+    insert(:participant, meeting: meeting)
+
+    event = %{event(integration, "work") | uid: "group-uid-1"}
+
+    assert EditGuard.check(user.id, [integration], event) == {:error, :group_booking}
+  end
+
+  test "check/3 refuses once the organiser is past the edit rate limit", %{
+    user: user,
+    integration: integration
+  } do
+    for _attempt <- 1..30, do: RateLimiter.check(:calendar_event_edit, user.id)
+
+    assert {:error, :rate_limited, message} =
+             EditGuard.check(user.id, [integration], event(integration, "work"))
+
+    assert message =~ "calendar event edit"
   end
 end
