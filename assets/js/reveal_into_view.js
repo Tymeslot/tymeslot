@@ -37,8 +37,11 @@ function settled(target, until) {
   return target.boundingClientRect.top <= window.innerHeight * SETTLED_SHARE
 }
 
-// How long an embedded page waits for its frame to grow to the new content.
+// How long a page waits for its frame (or, for a scroll cut short, its
+// document) to start growing to the new content, and how long a frame must
+// then hold its size before the check runs again.
 const FRAME_RESIZE_WAIT_MS = 1000
+export const FRAME_SETTLE_MS = 150
 
 export function revealIntoView(event) {
   const el = event.target
@@ -52,10 +55,15 @@ export function revealIntoView(event) {
   // An embed's frame grows to the new content only after the embedding page
   // hears of its height (iframe_embed.js), so what the first check saw may
   // be cut off by the old frame: check again once the frame has resized.
+  // It grows in steps, one per height the page posts, and until the last
+  // one an inline embed's page still scrolls inside a frame shorter than
+  // itself, which `bringToTop` would take for a modal; so the check waits
+  // for the frame to hold its size.
   if (window.self !== window.top) {
+    let timer = null
     const again = () => {
-      window.removeEventListener("resize", again)
-      reveal(el, until)
+      clearTimeout(timer)
+      timer = setTimeout(() => reveal(el, until), FRAME_SETTLE_MS)
     }
     window.addEventListener("resize", again)
     setTimeout(() => window.removeEventListener("resize", again), FRAME_RESIZE_WAIT_MS)
@@ -86,18 +94,64 @@ function reveal(el, until) {
 // as its page (an inline embed) needs the embedding page to scroll, and
 // `scrollIntoView` is the one way across a cross-origin frame's edge.
 function bringToTop(el) {
+  scrollToTop(el)
+  finishOnceGrown(el)
+}
+
+function scrollToTop(el) {
   if (window.self !== window.top && documentScrolls()) {
-    const margin = parseFloat(window.getComputedStyle(el).scrollMarginTop) || 0
-    const top = window.scrollY + el.getBoundingClientRect().top - margin
-    window.scrollTo({ top: Math.max(top, 0), left: window.scrollX })
+    window.scrollTo({ top: Math.max(topOf(el), 0), left: window.scrollX })
   } else {
     el.scrollIntoView({ block: "start", inline: "nearest" })
   }
 }
 
+// What a visitor does to scroll for themselves, which ends the wait below.
+const OWN_SCROLL_EVENTS = ["wheel", "touchstart", "keydown"]
+
+// A scroll stops at the end of the document. A part that has just opened is
+// often still short of what goes under it (a continuous page's times arrive
+// after its heading takes the focus), so the scroll ends short of the top,
+// by however much was still to come: the target lands lower on one run than
+// on the next. When the document has grown enough, the scroll is finished,
+// unless the visitor has scrolled for themselves in the meantime.
+function finishOnceGrown(el) {
+  if (typeof ResizeObserver === "undefined" || !documentScrolls() || reachable(el)) return
+
+  let timer = null
+  const observer = new ResizeObserver(() => {
+    if (!reachable(el)) return
+    stop()
+    scrollToTop(el)
+  })
+  const stop = () => {
+    observer.disconnect()
+    clearTimeout(timer)
+    OWN_SCROLL_EVENTS.forEach((type) => window.removeEventListener(type, stop))
+  }
+
+  observer.observe(document.documentElement)
+  OWN_SCROLL_EVENTS.forEach((type) => window.addEventListener(type, stop, { passive: true }))
+  timer = setTimeout(stop, FRAME_RESIZE_WAIT_MS)
+}
+
+// Where the document must scroll to for `el` to sit at the top of the view,
+// its `scroll-margin-top` above it; the same during a smooth scroll as after.
+function topOf(el) {
+  const margin = parseFloat(window.getComputedStyle(el).scrollMarginTop) || 0
+  return window.scrollY + el.getBoundingClientRect().top - margin
+}
+
+function reachable(el) {
+  return topOf(el) <= scrollRoot().scrollHeight - window.innerHeight + 1
+}
+
 function documentScrolls() {
-  const root = document.scrollingElement || document.documentElement
-  return root.scrollHeight > window.innerHeight
+  return scrollRoot().scrollHeight > window.innerHeight
+}
+
+function scrollRoot() {
+  return document.scrollingElement || document.documentElement
 }
 
 export function installRevealIntoView(root = window) {
