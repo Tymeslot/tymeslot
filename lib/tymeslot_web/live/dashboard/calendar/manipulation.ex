@@ -33,9 +33,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
+  # What the grid can draw as one timed event: no longer than a week, and
+  # starting in the years it can show.
+  @max_span_seconds 7 * 86_400
+  @years 1900..2200
+
   @doc "Applies a move or resize the hook drew, or snaps the grid back."
   @spec move(socket(), map()) :: socket()
   def move(socket, %{"id" => id, "start" => start, "end" => finish}) when is_binary(id) do
+    socket = drop_open_choice(socket)
+
     case validate(socket, id, start, finish) do
       {:ok, event, changes} ->
         apply_timing(socket, event, changes)
@@ -50,6 +57,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
 
   def move(socket, _params), do: SurfaceData.push_events(socket, false)
 
+  # A series choice still open when another change arrives is given up: the
+  # event it was for goes back to what the server holds.
+  defp drop_open_choice(%{assigns: %{series_prompt: %{kind: :timing}}} = socket),
+    do: cancel_scope(socket)
+
+  defp drop_open_choice(socket), do: socket
+
   # The event and the timing it is to take, or why not: a refusal the edit
   # guard made, or `:ignore` for a change that is invalid or no change.
   defp validate(socket, id, start, finish) do
@@ -57,8 +71,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
 
     with {:ok, event} <- timed_event(socket, id),
          {:ok, start_at} <- wall_to_utc(start, timezone),
-         {:ok, end_at} <- wall_to_utc(finish, timezone),
-         true <- DateTime.compare(end_at, start_at) == :gt,
+         {:ok, end_at} <- end_at(event, start, finish, start_at, timezone),
+         true <- sensible?(start_at, end_at),
          true <- changed?(event, start_at, end_at),
          :ok <- EditGuard.check(user.id, integrations, event) do
       {:ok, event, %{start_at: start_at, end_at: end_at}}
@@ -119,10 +133,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   def forget(socket, key),
     do: assign(socket, :undo, UndoStack.drop(socket.assigns.undo, &(Map.get(&1, :key) == key)))
 
+  # Undoing writes the timing the change replaced, so it only runs while the
+  # event still has the timing the change gave it; an event moved or synced
+  # since would be put back over a newer version.
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns
 
     with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, entry.id),
+         true <- unchanged_since?(event, entry),
          :ok <- EditGuard.check(user.id, integrations, event) do
       socket
       |> Writes.update(
@@ -134,19 +152,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
       |> Toast.show(
         dgettext("dashboard_calendar", "Moved back to %{when}",
           when: when_text(socket, entry.before.start_at)
-        )
+        ),
+        key: entry.key
       )
     else
-      :error ->
+      {:error, :rate_limited, _message} = refusal ->
+        socket |> assign(:undo, UndoStack.push(socket.assigns.undo, entry)) |> refuse(refusal)
+
+      {:error, _reason} = refusal ->
+        refuse(socket, refusal)
+
+      _gone_or_changed ->
         Toast.show(
           socket,
           dgettext("dashboard_calendar", "That change can't be undone any more.")
         )
-
-      refusal ->
-        refuse(socket, refusal)
     end
   end
+
+  defp unchanged_since?(event, %{after: %{start_at: start_at, end_at: end_at}}),
+    do: same?(event.start_at, start_at) and same?(event.end_at, end_at)
 
   defp apply_timing(socket, event, changes) do
     case CalendarGrid.edit_scopes(event) do
@@ -177,13 +202,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
       key: WriteQueue.key(event),
       id: EventPayload.id(event),
       before: Map.take(event, [:start_at, :end_at]),
+      after: Map.take(changes, [:start_at, :end_at]),
       scope: scope
     }
 
     socket
     |> Writes.update(event, Map.merge(event, changes), changes, scope_opts(scope))
     |> remember(undoable?, entry)
-    |> Toast.show(timing_message(socket, event, changes, scope), undo: undoable?)
+    |> Toast.show(timing_message(socket, event, changes, scope),
+      undo: undoable?,
+      key: entry.key
+    )
   end
 
   defp remember(socket, false, _entry), do: socket
@@ -254,6 +283,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
       {:ok, %{all_day: false, start_at: %DateTime{}, end_at: %DateTime{}} = event} -> {:ok, event}
       _other -> :error
     end
+  end
+
+  # A move keeps the event's length: when the wall-clock span the hook drew
+  # is the span the event has on the wall, the end is the new start plus the
+  # event's own duration, so a clock change in between cannot stretch or
+  # shrink it. A resize resolves its end from the wall clock.
+  defp end_at(event, start, finish, start_at, timezone) do
+    with {:ok, wall_start} <- NaiveDateTime.from_iso8601(start <> ":00"),
+         {:ok, wall_end} <- NaiveDateTime.from_iso8601(finish <> ":00") do
+      if NaiveDateTime.diff(wall_end, wall_start) == wall_length(event, timezone),
+        do: {:ok, DateTime.add(start_at, DateTime.diff(event.end_at, event.start_at))},
+        else: wall_to_utc(finish, timezone)
+    else
+      _invalid -> :error
+    end
+  end
+
+  defp wall_length(event, timezone) do
+    NaiveDateTime.diff(
+      event.end_at |> DateTime.shift_zone!(timezone) |> DateTime.to_naive(),
+      event.start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_naive()
+    )
+  end
+
+  defp sensible?(start_at, end_at) do
+    span = DateTime.diff(end_at, start_at)
+    span > 0 and span <= @max_span_seconds and start_at.year in @years
   end
 
   defp changed?(event, start_at, end_at),

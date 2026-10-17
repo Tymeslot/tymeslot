@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   @moduletag :live
 
   import Phoenix.LiveView, only: [send_update: 3]
+  import Tymeslot.Factory, only: [insert: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.CalendarMock
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   setup %{conn: conn} do
@@ -243,5 +245,235 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       assert render(lv) =~ "a change you made while it was saving was not applied"
       refute_received {:written, _uid, _payload}
     end
+  end
+
+  describe "a change the calendar refuses snaps back and writes nothing" do
+    # The event `id` as the snap-back push draws it; nothing was written.
+    defp snapped_back(lv, id) do
+      assert_push_event(lv, "calendar:events", %{events: events})
+      render(lv)
+      refute_received {:written, _uid, _payload}
+      Enum.find(events, &(&1.id == id))
+    end
+
+    test "an event that is not in the window", %{lv: lv, id: id} do
+      flush_pushes(lv)
+      move(lv, "event-0", "2026-10-15T11:00", "2026-10-15T12:00")
+
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+    end
+
+    test "another organiser's event", %{lv: lv} do
+      stranger = insert(:calendar_integration, is_active: true)
+      theirs = event(stranger, "work", "Not yours", ~U[2026-10-15 09:00:00Z])
+      flush_pushes(lv)
+
+      move(lv, "event-#{theirs.id}", "2026-10-15T11:00", "2026-10-15T12:00")
+
+      refute snapped_back(lv, "event-#{theirs.id}")
+    end
+
+    test "a booking", %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          title: "Intro call",
+          start_time: ~U[2026-10-15 10:00:00Z],
+          end_time: ~U[2026-10-15 10:30:00Z],
+          status: "confirmed"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      flush_pushes(lv)
+      move(lv, "booking-#{meeting.id}", "2026-10-15T14:00", "2026-10-15T14:30")
+
+      assert %{start: "2026-10-15T11:00"} = snapped_back(lv, "booking-#{meeting.id}")
+    end
+
+    test "an all-day event", %{conn: conn, integration: integration} do
+      holiday =
+        event(integration, "work", "Holiday", ~U[2026-10-16 00:00:00Z], 1440,
+          all_day: true,
+          start_date: ~D[2026-10-16],
+          end_date: ~D[2026-10-17]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      flush_pushes(lv)
+      move(lv, "event-#{holiday.id}", "2026-10-17T10:00", "2026-10-17T11:00")
+
+      assert %{all_day: true} = snapped_back(lv, "event-#{holiday.id}")
+    end
+
+    test "an end at or before the start", %{lv: lv, id: id} do
+      flush_pushes(lv)
+      move(lv, id, "2026-10-15T11:00", "2026-10-15T11:00")
+
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+    end
+
+    test "times that are not times", %{lv: lv, id: id} do
+      flush_pushes(lv)
+      move(lv, id, "not a time", "2026-10-15T11:00")
+
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+    end
+
+    test "a span of more than a week", %{lv: lv, id: id} do
+      flush_pushes(lv)
+      move(lv, id, "2026-10-15T09:00", "2026-10-23T09:00")
+
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+    end
+
+    test "a start outside the years the grid can show", %{lv: lv, id: id} do
+      flush_pushes(lv)
+      move(lv, id, "1800-01-01T10:00", "1800-01-01T11:00")
+
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+    end
+
+    test "a series member waits for the series choice, writing nothing", %{
+      conn: conn,
+      integration: integration
+    } do
+      standup =
+        event(integration, "work", "Standup", ~U[2026-10-15 08:00:00Z], 30,
+          recurring_event_id: "master-1"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      flush_pushes(lv)
+      move(lv, "event-#{standup.id}", "2026-10-15T11:00", "2026-10-15T11:30")
+
+      assert %{kind: :timing, event: %{id: id}} = surface(lv).series_prompt
+      assert id == standup.id
+      assert %{start: "2026-10-15T11:00"} = snapped_back(lv, "event-#{standup.id}")
+    end
+  end
+
+  describe "a second move while the series choice is open" do
+    test "puts the first event back and asks about the second", %{
+      conn: conn,
+      integration: integration
+    } do
+      first =
+        event(integration, "work", "Standup", ~U[2026-10-15 08:00:00Z], 30,
+          recurring_event_id: "master-1"
+        )
+
+      second =
+        event(integration, "work", "Retro", ~U[2026-10-16 08:00:00Z], 30,
+          recurring_event_id: "master-2"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      move(lv, "event-#{first.id}", "2026-10-15T11:00", "2026-10-15T11:30")
+      move(lv, "event-#{second.id}", "2026-10-16T11:00", "2026-10-16T11:30")
+
+      assert %{event: %{id: id}} = surface(lv).series_prompt
+      assert id == second.id
+      first_id = "event-#{first.id}"
+      assert same?(surface(lv).events_by_id[first_id].start_at, ~U[2026-10-15 08:00:00Z])
+      refute_received {:written, _uid, _payload}
+    end
+  end
+
+  test "a change from the start edge says when the event now starts", %{lv: lv, id: id} do
+    move(lv, id, "2026-10-14T10:30", "2026-10-14T11:00")
+
+    assert has_element?(lv, "#calendar-toast", "Now starts at 10:30")
+  end
+
+  describe "across a clock change" do
+    test "a move keeps the event's length", %{conn: conn, integration: integration} do
+      # Clocks in London go forward at 01:00 on 29 March 2026: 01:30 does not exist.
+      talk = event(integration, "work", "Talk", ~U[2026-03-28 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-03-28")
+
+      move(lv, "event-#{talk.id}", "2026-03-29T00:30", "2026-03-29T01:30")
+
+      uid = talk.uid
+      assert_receive {:written, ^uid, payload}
+      assert same?(payload.start_time, ~U[2026-03-29 00:30:00Z])
+      assert same?(payload.end_time, ~U[2026-03-29 01:30:00Z])
+    end
+  end
+
+  describe "undo after the event has changed" do
+    test "writes nothing and says so", %{lv: lv, review: review, id: id} do
+      move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
+      assert_receive {:written, _uid, _moved}
+      eventually(fn -> assert same?(Repo.reload!(review).start_at, ~U[2026-10-15 10:00:00Z]) end)
+
+      # A sync brings the event as it was changed elsewhere.
+      review
+      |> Changeset.change(
+        start_at: ~U[2026-10-16 13:00:00.000000Z],
+        end_at: ~U[2026-10-16 14:00:00.000000Z]
+      )
+      |> Repo.update!()
+
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
+
+      eventually(fn ->
+        assert same?(surface(lv).events_by_id[id].start_at, ~U[2026-10-16 13:00:00Z])
+      end)
+
+      lv |> element("#calendar-undo") |> render_click()
+
+      assert has_element?(lv, "#calendar-toast", "That change can't be undone any more.")
+      refute_received {:written, _uid, _payload}
+    end
+
+    test "that the rate limit refuses stays undoable", %{lv: lv, user: user, id: id} do
+      move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
+      assert_receive {:written, _uid, _moved}
+      for _i <- 1..30, do: RateLimiter.check(:calendar_event_edit, user.id)
+
+      lv |> element("#calendar-undo") |> render_click()
+
+      refute_received {:written, _uid, _payload}
+      assert [%{kind: :timing}] = surface(lv).undo
+    end
+  end
+
+  describe "a failed write's toast" do
+    test "is dismissed only for the event that failed", %{
+      conn: conn,
+      integration: integration,
+      review: review
+    } do
+      other = event(integration, "work", "Retro", ~U[2026-10-16 09:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      hold_writes()
+
+      move(lv, "event-#{review.id}", "2026-10-15T11:00", "2026-10-15T12:00")
+      assert_receive {:write_started, writer, _uid, _payload}
+      move(lv, "event-#{other.id}", "2026-10-16T14:00", "2026-10-16T15:00")
+      assert_receive {:write_started, other_writer, _uid, _payload}
+      assert review.uid != other.uid
+
+      send(writer, {:answer, {:error, :provider_down}})
+
+      eventually(fn ->
+        assert surface(lv).event_writes.chains
+               |> Map.keys()
+               |> Enum.all?(&(&1 != WriteQueue.key(review)))
+      end)
+
+      assert has_element?(lv, "#calendar-toast", "Moved to Fri 16 Oct, 14:00")
+      send(other_writer, {:answer, :ok})
+    end
+  end
+
+  defp surface(lv) do
+    render(lv)
+    {components, _ids, _uuids} = :sys.get_state(lv.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {CalendarSurface, "calendar", assigns, _private, _prints}} -> assigns
+      _other -> nil
+    end)
   end
 end

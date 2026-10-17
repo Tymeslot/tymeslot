@@ -70,11 +70,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     do: {:ok, Writes.settle(socket, ref, outcome)}
 
   # A failed write is taken back off the grid by the queue; its change can
-  # no longer be undone, and the toast that named it gives way to the flash
-  # that says it failed.
+  # no longer be undone, and the toast that named it (not another event's)
+  # gives way to the flash that says it failed.
   def update(%{action: :revert_event, write: {key, _seq} = ref}, socket),
     do:
-      {:ok, socket |> Writes.settle(ref, :failed) |> Manipulation.forget(key) |> Toast.dismiss()}
+      {:ok,
+       socket |> Writes.settle(ref, :failed) |> Manipulation.forget(key) |> Toast.dismiss(key)}
 
   def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 

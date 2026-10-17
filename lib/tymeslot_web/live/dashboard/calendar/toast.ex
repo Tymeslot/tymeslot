@@ -18,7 +18,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
 
   @lifetime 10_000
 
-  @doc "Shows `message`; `undo: true` adds the Undo button."
+  @doc """
+  Shows `message`; `undo: true` adds the Undo button. `key:` names the
+  event the message is about, so `dismiss/2` can leave other events' toasts.
+  """
   @spec show(Phoenix.LiveView.Socket.t(), String.t(), keyword()) :: Phoenix.LiveView.Socket.t()
   def show(socket, message, opts \\ []) do
     id = System.unique_integer([:positive])
@@ -29,7 +32,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
       @lifetime
     )
 
-    assign(socket, :toast, %{id: id, message: message, undo: Keyword.get(opts, :undo, false)})
+    assign(socket, :toast, %{
+      id: id,
+      key: Keyword.get(opts, :key),
+      message: message,
+      undo: Keyword.get(opts, :undo, false)
+    })
   end
 
   @doc "Removes the toast `id` if it is still the one shown."
@@ -40,6 +48,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
   @doc "Removes the toast."
   @spec dismiss(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def dismiss(socket), do: assign(socket, :toast, nil)
+
+  @doc "Removes the toast if it is about the event `key` names."
+  @spec dismiss(Phoenix.LiveView.Socket.t(), term()) :: Phoenix.LiveView.Socket.t()
+  def dismiss(%{assigns: %{toast: %{key: key}}} = socket, key), do: dismiss(socket)
+  def dismiss(socket, _key), do: socket
 
   attr :toast, :map, default: nil
   attr :target, :any, required: true
