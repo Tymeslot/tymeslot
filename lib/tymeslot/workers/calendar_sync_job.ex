@@ -33,6 +33,7 @@ defmodule Tymeslot.Workers.CalendarSyncJob do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.SyncHealth
   alias Tymeslot.Workers.SyncRequest
@@ -92,6 +93,7 @@ defmodule Tymeslot.Workers.CalendarSyncJob do
           |> cycle.()
           |> bound(job, opts)
           |> unless_gone(integration, &SyncHealth.record_outcome(integration, &1))
+          |> tap(&announce_failure(&1, integration))
         end
         |> InvalidEventReport.collect()
         |> SyncRequest.rerun_if_requested(job)
@@ -123,6 +125,15 @@ defmodule Tymeslot.Workers.CalendarSyncJob do
       tap(verdict, record)
     end
   end
+
+  # A cycle that failed or was discarded tells the organiser's open
+  # calendars, which would otherwise show the account as syncing until a
+  # fallback timer gave up. A snooze is still waiting, not failed.
+  defp announce_failure(verdict, integration)
+       when is_tuple(verdict) and elem(verdict, 0) in [:error, :discard],
+       do: SyncBroadcast.broadcast_sync_failed(integration.user_id, integration.id)
+
+  defp announce_failure(_verdict, _integration), do: :ok
 
   defp bound(verdict, job, opts) do
     case Keyword.fetch(opts, :max_snoozes) do
