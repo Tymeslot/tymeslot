@@ -118,6 +118,13 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
            )
   end
 
+  test "a renamed occurrence outside the range does not list at the master's time" do
+    change_master(%{overrides: %{"20261109T090000" => %{summary: "Planning"}}})
+
+    assert ["standup_20261005T090000"] =
+             Enum.map(listed(~U[2026-10-05 00:00:00Z], ~U[2026-10-06 00:00:00Z]), & &1.uid)
+  end
+
   test "a timed occurrence that started before the range but overlaps it is listed" do
     change_master(%{end_time: ~U[2026-10-05 11:00:00Z]})
 

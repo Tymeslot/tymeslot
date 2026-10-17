@@ -228,12 +228,15 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       |> Map.new(&{occurrence_key(&1.start_time), &1})
 
     # A moved occurrence may sit in the range though its original slot does
-    # not, so every override is listed too, and trimmed by its own times.
+    # not, so every override that moves one is listed too, and trimmed by its
+    # own times. An override that changes no time keeps the master's, which
+    # belong to another slot, so it lists only with its expanded slot.
     moved =
       overrides
-      |> Map.keys()
-      |> Enum.reject(&Map.has_key?(expanded, &1))
-      |> Map.new(&{&1, shifted})
+      |> Enum.filter(fn {key, change} ->
+        Map.has_key?(change, :start_time) and not Map.has_key?(expanded, key)
+      end)
+      |> Map.new(fn {key, _change} -> {key, shifted} end)
 
     expanded
     |> Map.merge(moved)
