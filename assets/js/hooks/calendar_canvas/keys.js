@@ -187,6 +187,7 @@ export const KeysMixin = {
   // draw next anyway; `announce: false` where focus or the page moved on.
   cancelMove({ announce = true, redraw = true } = {}) {
     if (!this.moving) return false;
+    clearTimeout(this.announceTimer);
     const { id, original } = this.moving;
     const event = this.cache.events.get(id);
     this.moving = null;

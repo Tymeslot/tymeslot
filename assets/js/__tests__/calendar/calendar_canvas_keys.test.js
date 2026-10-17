@@ -415,3 +415,51 @@ test("the scroll container is an application region named for the period", () =>
   expect(scroller.getAttribute("aria-roledescription")).toBe("calendar");
   expect(scroller.getAttribute("aria-label")).toBe("Mon 12 Oct to Sun 18 Oct");
 });
+
+test("a pending repeat announcement is dropped when the move mode ends silently", () => {
+  vi.useFakeTimers();
+  try {
+    const { el, hook, live } = mountHook();
+    block(el, "event-1").focus();
+    press("m");
+    press("ArrowDown");
+    press("ArrowDown", { repeat: true });
+    const before = live.textContent;
+
+    hook.open("event-2", block(el, "event-2"));
+    vi.advanceTimersByTime(1_000);
+
+    expect(live.textContent).toBe(before);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("a payload for another week ends the move mode", () => {
+  const { el, handlers, hook } = mountHook();
+  block(el, "event-1").focus();
+  press("m");
+
+  handlers["calendar:events"](payload({ date: "2026-10-21", range: { from: "2026-10-12", to: "2026-11-02" } }));
+
+  expect(hook.moving).toBeNull();
+});
+
+test("destroying the hook clears a pending announcement", () => {
+  vi.useFakeTimers();
+  try {
+    const { el, hook, live } = mountHook();
+    block(el, "event-1").focus();
+    press("m");
+    press("ArrowDown");
+    press("ArrowDown", { repeat: true });
+    const before = live.textContent;
+
+    hook.destroyed();
+    vi.advanceTimersByTime(1_000);
+
+    expect(live.textContent).toBe(before);
+  } finally {
+    vi.useRealTimers();
+  }
+});
