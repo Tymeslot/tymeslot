@@ -75,17 +75,29 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
     ~H"""
     <section class="paper-book" data-testid="paper-book" aria-labelledby="paper-book-heading">
       <%!-- Keyed by the visitor's pick count, so every pick mounts a fresh
-           heading and its phx-mounted runs again, also after "Change time"
-           (the section itself stays mounted, so it would not fire twice). --%>
-      <div id={"paper-book-head-#{assigns[:pick_seq] || 0}"} class="paper-book__head">
+           wrapper and its phx-mounted runs again, also after "Change time".
+           The hook sits on the wrapper, whose id changes, not on the heading:
+           the patch keeps the heading's element (same id) and only moves it,
+           so a phx-mounted there fires on the first pick alone. It hides the
+           picker, focuses the heading and brings the heading to the top of
+           the view when the first field below it is out of sight. --%>
+      <div
+        id={"paper-book-head-#{assigns[:pick_seq] || 0}"}
+        class="paper-book__head"
+        phx-mounted={
+          assigns[:focus_details] &&
+            JS.add_class("paper-card--booking", to: "#schedule-step")
+            |> JS.focus(to: "#paper-book-heading")
+            |> JS.dispatch("tymeslot:reveal",
+              to: "#paper-book-heading",
+              detail: %{until: "#schedule-step :is(.paper-question__input, [name='booking[name]'])"}
+            )
+        }
+      >
         <h2
           id="paper-book-heading"
           class="paper-heading paper-book__title"
           tabindex="-1"
-          phx-mounted={
-            assigns[:focus_details] &&
-              JS.add_class("paper-card--booking", to: "#schedule-step") |> JS.focus()
-          }
         >
           {dpgettext("booking_voice", "paper", "Enter your details")}
         </h2>

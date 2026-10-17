@@ -14,7 +14,8 @@
   flex-direction: column;
   gap: var(--space-md);
   max-width: var(--paper-book-width);
-  margin-top: var(--space-xl);
+  /* In the one-column schedule the grid's gap is the space above the rule,
+     matching the space under it, as under the details' own rule. */
   padding-top: var(--space-lg);
   border-top: var(--border-width-thin) solid var(--line-1);
 }
@@ -24,8 +25,11 @@
   display: contents;
 }
 
+/* Brought to the top of the view once a time is picked
+   (reveal_into_view.js), with a little room above it. */
 .paper-book__title {
   margin: 0;
+  scroll-margin-top: var(--space-lg);
 }
 
 /* The heading takes the focus when the part appears, to bring it into view;
@@ -131,10 +135,12 @@
   border-top: 0;
 }
 
-/* Inside the schedule's grid, the part takes the picker's column. */
+/* Inside the schedule's grid, the part takes the picker's column; that
+   grid has no gap, so the part keeps its own space above the rule. */
 @container scheduling (min-width: 40rem) {
   .paper-schedule:not(.paper-schedule--week) > .paper-book {
     grid-column: 2;
+    margin-top: var(--space-xl);
     margin-inline-start: var(--space-lg);
   }
 }
@@ -142,6 +148,7 @@
 @container scheduling (min-width: 59rem) {
   .paper-schedule--week > .paper-book {
     grid-column: 2;
+    margin-top: var(--space-xl);
     margin-inline-start: var(--space-lg);
   }
 }

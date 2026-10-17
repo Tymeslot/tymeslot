@@ -9,6 +9,10 @@ import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { AutoScrollToSlots } from "../utility_hooks"
 import { PaymentRedirectOpenTab } from "../hooks/payment_redirect_open_tab"
+import { installRevealIntoView } from "../reveal_into_view"
+
+// `JS.dispatch("tymeslot:reveal", ...)` from a booking page's templates.
+installRevealIntoView()
 
 // Define public-specific hooks
 // (RecaptchaV3 is already registered in CoreHooks and inherited via initializeBundle)
