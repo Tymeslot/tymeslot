@@ -285,26 +285,34 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     @empty "#when-step [data-testid='folio-month-empty']"
     @later "#when-step [data-intent='later']"
 
-    # The calendar reads one event: the whole of next month, busy.
+    # The calendar reads two busy events: all of today, so the first free day
+    # is tomorrow whatever the time of day (and a month-end evening lands in
+    # the next month), and all of the month after that day's, which is the
+    # empty month under test. Returns that month's first day.
     defp block_next_month do
-      first = Date.utc_today() |> Date.beginning_of_month() |> Date.shift(month: 1)
-      after_it = Date.shift(first, month: 1)
+      today = Date.utc_today()
+      first = today |> Date.add(1) |> Date.beginning_of_month() |> Date.shift(month: 1)
 
       stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
         {:ok,
          [
-           %{
-             uid: "busy-next-month",
-             start_time: DateTime.new!(first, ~T[00:00:00], "Etc/UTC"),
-             end_time: DateTime.new!(after_it, ~T[00:00:00], "Etc/UTC"),
-             status: "confirmed",
-             transparency: "opaque",
-             summary: "Busy"
-           }
+           busy("busy-today", today, Date.add(today, 1)),
+           busy("busy-next-month", first, Date.shift(first, month: 1))
          ]}
       end)
 
       first
+    end
+
+    defp busy(uid, from, until) do
+      %{
+        uid: uid,
+        start_time: DateTime.new!(from, ~T[00:00:00], "Etc/UTC"),
+        end_time: DateTime.new!(until, ~T[00:00:00], "Etc/UTC"),
+        status: "confirmed",
+        transparency: "opaque",
+        summary: "Busy"
+      }
     end
 
     defp page_later(view) do
