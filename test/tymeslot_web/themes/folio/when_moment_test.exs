@@ -100,12 +100,12 @@ defmodule TymeslotWeb.Themes.Folio.WhenMomentTest do
   test "a day's click brings the times heading into view" do
     doc = when_moment(selected_date: "2030-03-12", available_slots: ["9:00 AM"])
 
-    assert [day | _] = Floki.find(doc, "[data-fact='date']")
+    assert [day | _later_days] = Floki.find(doc, "[data-fact='date']")
     assert Floki.attribute(day, "phx-value-date") == ["2030-03-01"]
     assert [click] = Floki.attribute(day, "phx-click")
 
     assert [
-             ["push", %{"event" => "select_date", "target" => _}],
+             ["push", %{"event" => "select_date", "target" => _target}],
              ["dispatch", %{"event" => "tymeslot:reveal", "to" => to}]
            ] = Jason.decode!(click)
 

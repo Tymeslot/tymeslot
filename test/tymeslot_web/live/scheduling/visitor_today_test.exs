@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Live.Scheduling.VisitorTodayTest do
       today_buttons =
         html
         |> Floki.parse_document!()
-        |> Floki.find("button[phx-click='select_date'][phx-value-date][aria-current='date']")
+        |> Floki.find("button[phx-click*='select_date'][phx-value-date][aria-current='date']")
 
       todays = today_buttons |> Floki.attribute("phx-value-date") |> Enum.uniq()
 

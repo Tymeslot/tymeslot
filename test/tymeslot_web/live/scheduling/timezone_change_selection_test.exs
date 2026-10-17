@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
     view
     |> render()
     |> Floki.parse_document!()
-    |> Floki.find("button[phx-click='select_date'][phx-value-date]")
+    |> Floki.find("button[phx-click*='select_date'][phx-value-date]")
     |> Enum.filter(fn button ->
       classes = button |> Floki.attribute("class") |> List.first("") |> String.split()
       "selected" in classes or "calendar-day--selected" in classes
