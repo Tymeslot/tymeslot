@@ -87,6 +87,14 @@ defmodule TymeslotWeb.Themes.Folio.WhenMomentTest do
     assert Floki.attribute(heading, "tabindex") == ["-1"]
   end
 
+  # The times load after the heading takes the focus; on a phone their own
+  # scroll would carry the page past the heading the focus brought up.
+  test "the times leave the view to the heading" do
+    doc = when_moment(selected_date: "2030-03-12", available_slots: ["9:00 AM"])
+
+    assert Floki.attribute(doc, "#slots-container", "data-auto-scroll") == ["off"]
+  end
+
   test "an empty month is a neutral notice, the slow-load line keeps the warning style" do
     doc = when_moment(availability_status: :error)
 

@@ -240,6 +240,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
         target={@myself}
         heading_tag="h3"
         period_tag="h4"
+        auto_scroll={false}
       />
     </section>
     """
