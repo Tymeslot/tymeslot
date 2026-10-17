@@ -13,9 +13,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   import Phoenix.LiveView, only: [send_update: 3]
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
-  alias Ecto.Changeset
   alias Tymeslot.CalendarMock
   alias Tymeslot.Repo
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
