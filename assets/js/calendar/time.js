@@ -34,6 +34,13 @@ export function parseWall(text) {
   return dayNumber(text) * MINUTES_PER_DAY + h * 60 + m;
 }
 
+// The inverse of parseWall: a wall-clock minute as "2026-10-15T11:00".
+export function formatWall(minute) {
+  const day = Math.floor(minute / MINUTES_PER_DAY);
+  const rest = minute - day * MINUTES_PER_DAY;
+  return `${isoFromDay(day)}T${pad(Math.floor(rest / 60))}:${pad(rest % 60)}`;
+}
+
 // 1 is Monday, 7 is Sunday, as Elixir's Date.day_of_week/1.
 export function isoWeekday(day) {
   return ((new Date(day * MS_PER_DAY).getUTCDay() + 6) % 7) + 1;
@@ -73,7 +80,17 @@ export function makeScale(hourHeight, foldNight) {
         : NIGHT_STRIP + ((minute - NIGHT_END) / 60) * hourHeight
       : (minute / 60) * hourHeight;
 
-  return { hourHeight, foldNight, firstMinute: foldNight ? NIGHT_END : 0, yOf, height: yOf(MINUTES_PER_DAY) };
+  // The minute at `y` pixels from the day's top, within the day.
+  const minuteOf = (y) => {
+    const minute = foldNight
+      ? y <= NIGHT_STRIP
+        ? (y / NIGHT_STRIP) * NIGHT_END
+        : NIGHT_END + ((y - NIGHT_STRIP) / hourHeight) * 60
+      : (y / hourHeight) * 60;
+    return Math.min(MINUTES_PER_DAY, Math.max(0, minute));
+  };
+
+  return { hourHeight, foldNight, firstMinute: foldNight ? NIGHT_END : 0, yOf, minuteOf, height: yOf(MINUTES_PER_DAY) };
 }
 
 export function formatMinutes(minute, timeFormat) {
