@@ -220,50 +220,53 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       })
 
     span = span_seconds(shifted)
-
-    # Expand wider than the range by the series' span and a day, so an
-    # occurrence that began before it (a long one, or an all-day one west of
-    # UTC) is found; `overlaps?/3` trims the rest.
-    expanded =
-      shifted
-      |> RecurrenceExpander.expand(
-        DateTime.add(range_start, -(span + 86_400), :second),
-        range_end
-      )
-      |> Map.new(&{occurrence_key(&1.start_time), &1})
-
-    # A moved occurrence may sit in the range though its original slot does
-    # not, so every override that moves one the rule really makes is listed
-    # too, and trimmed by its own times. An override that changes no time
-    # keeps the master's, which belong to another slot, so it lists only with
-    # its expanded slot; a key the rule no longer produces (a series cut
-    # short by a later edit) lists nothing.
-    moved =
-      overrides
-      |> Enum.filter(fn {key, change} ->
-        Map.has_key?(change, :start_time) and not Map.has_key?(expanded, key) and
-          slot_exists?(shifted, key, zone)
-      end)
-      |> Map.new(fn {key, _change} -> {key, shifted} end)
+    expanded = expanded_slots(shifted, span, range_start, range_end)
+    moved = moved_slots(shifted, expanded, overrides, zone)
 
     expanded
     |> Map.merge(moved)
     |> Enum.reject(fn {key, _occurrence} -> key in skipped end)
-    |> Enum.map(fn {key, occurrence} ->
-      occurrence
-      |> Map.drop([:exdates, :overrides])
-      |> Map.merge(override_with_end(Map.get(overrides, key, %{}), span))
-      # The series' identity always wins over an override's.
-      |> Map.merge(%{
-        uid: "#{master.uid}_#{key}",
-        provider_event_id: series_href(master.uid),
-        provider_metadata: %{uid: master.uid},
-        timezone: zone
-      })
-    end)
+    |> Enum.map(&occurrence_row(&1, master, Map.get(overrides, elem(&1, 0), %{}), span, zone))
   end
 
   defp occurrences(event, _range_start, _range_end), do: [event]
+
+  # The rule's occurrences by key. Expansion starts wider than the range by the
+  # series' span and a day, so an occurrence that began before it (a long one,
+  # or an all-day one west of UTC) is found; `overlaps?/3` trims the rest.
+  defp expanded_slots(shifted, span, range_start, range_end) do
+    shifted
+    |> RecurrenceExpander.expand(DateTime.add(range_start, -(span + 86_400), :second), range_end)
+    |> Map.new(&{occurrence_key(&1.start_time), &1})
+  end
+
+  # A moved occurrence may sit in the range though its original slot does not,
+  # so every override that moves one the rule really makes is listed too, and
+  # trimmed by its own times. An override that changes no time keeps the
+  # master's, which belong to another slot, so it lists only with its expanded
+  # slot; a key the rule no longer produces (a series cut short by a later
+  # edit) lists nothing.
+  defp moved_slots(shifted, expanded, overrides, zone) do
+    overrides
+    |> Enum.filter(fn {key, change} ->
+      Map.has_key?(change, :start_time) and not Map.has_key?(expanded, key) and
+        slot_exists?(shifted, key, zone)
+    end)
+    |> Map.new(fn {key, _change} -> {key, shifted} end)
+  end
+
+  defp occurrence_row({key, occurrence}, master, override, span, zone) do
+    occurrence
+    |> Map.drop([:exdates, :overrides])
+    |> Map.merge(override_with_end(override, span))
+    # The series' identity always wins over an override's.
+    |> Map.merge(%{
+      uid: "#{master.uid}_#{key}",
+      provider_event_id: series_href(master.uid),
+      provider_metadata: %{uid: master.uid},
+      timezone: zone
+    })
+  end
 
   # A stored zone the tz database does not know falls back to the default.
   defp series_zone(event) do
@@ -308,7 +311,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     end
   end
 
-  defp slot_start(<<_::binary-size(8)>> = key, _zone) do
+  defp slot_start(<<_date::binary-size(8)>> = key, _zone) do
     case Date.from_iso8601(
            binary_part(key, 0, 4) <>
              "-" <> binary_part(key, 4, 2) <> "-" <> binary_part(key, 6, 2)
@@ -323,7 +326,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
          {:ok, datetime} <- DateTime.from_naive(naive, zone) do
       datetime
     else
-      _ -> nil
+      _error -> nil
     end
   end
 

@@ -218,4 +218,19 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
     assert moved.start_at == ~U[2026-10-19 14:00:00Z]
     assert moved.end_at == ~U[2026-10-19 14:15:00Z]
   end
+
+  test "an all-day override past the series' end is not listed" do
+    DebugStore.put_event(%{
+      uid: "holiday",
+      summary: "Holiday",
+      all_day: true,
+      start_time: ~D[2026-10-07],
+      end_time: ~D[2026-10-07],
+      recurrence_rule: "FREQ=WEEKLY;BYDAY=WE;UNTIL=20261021",
+      overrides: %{"20261104" => %{start_time: ~D[2026-11-05], end_time: ~D[2026-11-05]}}
+    })
+
+    rows = listed(~U[2026-11-01 00:00:00Z], ~U[2026-11-09 00:00:00Z])
+    refute Enum.any?(rows, &String.starts_with?(&1.uid, "holiday"))
+  end
 end
