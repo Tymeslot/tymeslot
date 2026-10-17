@@ -20,6 +20,8 @@
  *    steps from it and tells the server with `calendar:goto`. Answers for
  *    another period only overrule it after a short grace, and a reconnect
  *    drops it, since the server reads the URL again;
+ *  - a drag moves or resizes an event the organiser can change and pushes
+ *    `calendar:move` on the drop (see calendar_canvas/drag.js);
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -28,6 +30,7 @@
  *   data-strings          JSON of translated copy (see ClientStrings)
  */
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
+import { DragMixin } from "./calendar_canvas/drag.js";
 import { placePopover } from "../calendar/popover.js";
 import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
@@ -64,6 +67,8 @@ function canvasMeasure() {
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 
 export const CalendarCanvas = {
+  ...DragMixin,
+
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
     this.cache = emptyCache();
@@ -90,6 +95,7 @@ export const CalendarCanvas = {
       ["keydown", (e) => this.handleKey(e)],
     ];
     for (const [name, listener] of this.listeners) this.el.addEventListener(name, listener);
+    this.mountDrag();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -122,6 +128,7 @@ export const CalendarCanvas = {
     if (this.frame) cancelAnimationFrame(this.frame);
     this.frame = null;
     this.closeList();
+    this.destroyDrag();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
@@ -249,6 +256,11 @@ export const CalendarCanvas = {
 
   render() {
     if (!this.settings || !this.clock) return;
+    // A drag owns the dragged block until the drop; redraw then.
+    if (this.drag) {
+      this.dirty = true;
+      return;
+    }
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
     const previous = this.el.querySelector("[data-scroll]");
     if (previous) this.scrollTop = previous.scrollTop;
@@ -275,6 +287,7 @@ export const CalendarCanvas = {
       width: this.el.clientWidth,
       measureWidth: this.measureWidth,
       nightOpen: this.nightOpen,
+      hourHeight: this.hourHeight(),
     });
     this.el.setAttribute("aria-busy", "false");
 
@@ -285,13 +298,28 @@ export const CalendarCanvas = {
 
   // First draw: an hour and a half before now when today is in view, else 08:00.
   initialScroll(days, now) {
-    const scale = makeScale(HOUR_HEIGHT[this.settings.density] || HOUR_HEIGHT.comfortable, this.settings.fold_night && !this.nightOpen);
+    const scale = this.currentScale();
     const today = isoFromDay(Math.floor(now / MINUTES_PER_DAY));
     const target = days.includes(today) ? Math.max(NIGHT_END, (now % MINUTES_PER_DAY) - 90) : 480;
     return Math.max(0, scale.yOf(target) - 4);
   },
 
+  // The hour height the grid is drawn at: a Ctrl + scroll zoom, else the density's.
+  hourHeight() {
+    return this.zoomHour ?? (HOUR_HEIGHT[this.settings.density] || HOUR_HEIGHT.comfortable);
+  },
+
+  currentScale() {
+    return makeScale(this.hourHeight(), this.settings.fold_night && !this.nightOpen);
+  },
+
   handleClick(e) {
+    // The click that ends a drag is not a click on what lies under it.
+    if (this.swallowClick) {
+      this.swallowClick = false;
+      e.stopPropagation();
+      return undefined;
+    }
     const target = e.target;
     const event = target.closest("[data-event-id]");
     if (event) {
@@ -329,7 +357,7 @@ export const CalendarCanvas = {
 
   handleKey(e) {
     if (e.repeat) return undefined;
-    if (e.key === "Escape") return this.closeList();
+    if (e.key === "Escape") return this.cancelDrag() || this.closeList();
     if ((e.key === "Enter" || e.key === " ") && e.target.matches?.('[data-event-id][role="button"]')) {
       e.preventDefault();
       this.open(e.target.dataset.eventId, e.target);
