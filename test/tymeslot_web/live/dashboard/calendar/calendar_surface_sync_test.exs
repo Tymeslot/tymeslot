@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Phoenix.LiveView
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
@@ -266,7 +267,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
     lv |> element("#calendar-sync-#{integration.id}") |> render_click()
     assert syncing?(lv, integration)
 
-    Phoenix.LiveView.send_update(lv.pid, CalendarSurface,
+    LiveView.send_update(lv.pid, CalendarSurface,
       id: "calendar",
       action: :sync_timeout,
       integration_id: integration.id,
