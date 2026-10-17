@@ -213,18 +213,36 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     skipped = Map.get(master, :exdates, [])
     overrides = Map.get(master, :overrides, %{})
 
-    master
-    |> Map.merge(%{
-      start_time: in_zone(master.start_time, zone),
-      end_time: in_zone(Map.get(master, :end_time) || master.start_time, zone)
-    })
-    |> RecurrenceExpander.expand(range_start, range_end)
-    |> Enum.map(&{occurrence_key(&1.start_time), &1})
+    shifted =
+      Map.merge(master, %{
+        start_time: in_zone(master.start_time, zone),
+        end_time: in_zone(Map.get(master, :end_time) || master.start_time, zone)
+      })
+
+    # Expand a day wider than the range so an occurrence that began just
+    # before it (an all-day one west of UTC, or one still running) is found;
+    # `overlaps?/3` trims the rest.
+    expanded =
+      shifted
+      |> RecurrenceExpander.expand(DateTime.add(range_start, -1, :day), range_end)
+      |> Map.new(&{occurrence_key(&1.start_time), &1})
+
+    # A moved occurrence may sit in the range though its original slot does
+    # not, so every override is listed too, and trimmed by its own times.
+    moved =
+      overrides
+      |> Map.keys()
+      |> Enum.reject(&Map.has_key?(expanded, &1))
+      |> Map.new(&{&1, shifted})
+
+    expanded
+    |> Map.merge(moved)
     |> Enum.reject(fn {key, _occurrence} -> key in skipped end)
     |> Enum.map(fn {key, occurrence} ->
       occurrence
       |> Map.drop([:exdates, :overrides])
       |> Map.merge(Map.get(overrides, key, %{}))
+      # The series' identity always wins over an override's.
       |> Map.merge(%{
         uid: "#{master.uid}_#{key}",
         provider_event_id: series_href(master.uid),
@@ -238,7 +256,13 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   defp series_zone(event), do: Map.get(event, :timezone) || @default_timezone
 
-  defp in_zone(%DateTime{} = datetime, zone), do: DateTime.shift_zone!(datetime, zone)
+  defp in_zone(%DateTime{} = datetime, zone) do
+    case DateTime.shift_zone(datetime, zone) do
+      {:ok, shifted} -> shifted
+      {:error, _reason} -> datetime
+    end
+  end
+
   defp in_zone(other, _zone), do: other
 
   defp occurrence_key(%DateTime{} = start), do: Calendar.strftime(start, "%Y%m%dT%H%M%S")

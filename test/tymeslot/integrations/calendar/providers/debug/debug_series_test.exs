@@ -29,11 +29,11 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
     :ok
   end
 
-  defp listed do
+  defp listed(range_start \\ ~U[2026-10-12 00:00:00Z], range_end \\ ~U[2026-11-02 00:00:00Z]) do
     {:ok, events} =
       DebugCalendarProvider.list_events(%{user_id: 1},
-        start_time: ~U[2026-10-12 00:00:00Z],
-        end_time: ~U[2026-11-02 00:00:00Z]
+        start_time: range_start,
+        end_time: range_end
       )
 
     {:ok, normalised} =
@@ -43,7 +43,12 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
         synced_at: ~U[2026-10-12 00:00:00Z]
       })
 
-    Enum.sort_by(normalised, & &1.start_at, DateTime)
+    Enum.sort_by(normalised, & &1.uid)
+  end
+
+  defp change_master(changes) do
+    {:ok, master} = DebugStore.fetch_event("standup")
+    DebugStore.put_event(Map.merge(master, changes))
   end
 
   test "lists one row per occurrence in range, keyed and addressed like a CalDAV series" do
@@ -93,5 +98,87 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
     })
 
     assert Enum.any?(listed(), &(&1.uid == "dentist" and is_nil(&1.provider_event_id)))
+  end
+
+  test "an occurrence moved across the range boundary lists only where it now is" do
+    change_master(%{
+      overrides: %{
+        "20261102T090000" => %{
+          start_time: ~U[2026-11-01 09:00:00Z],
+          end_time: ~U[2026-11-01 09:15:00Z]
+        }
+      }
+    })
+
+    assert Enum.any?(listed(), &(&1.uid == "standup_20261102T090000"))
+
+    refute Enum.any?(
+             listed(~U[2026-11-02 00:00:00Z], ~U[2026-11-09 00:00:00Z]),
+             &(&1.uid == "standup_20261102T090000")
+           )
+  end
+
+  test "a timed occurrence that started before the range but overlaps it is listed" do
+    change_master(%{end_time: ~U[2026-10-05 11:00:00Z]})
+
+    assert Enum.any?(
+             listed(~U[2026-10-12 10:00:00Z], ~U[2026-10-13 00:00:00Z]),
+             &(&1.uid == "standup_20261012T090000")
+           )
+  end
+
+  test "a series keeps its zone: keys are local wall-clock across a DST change" do
+    change_master(%{
+      timezone: "Europe/Warsaw",
+      start_time: ~U[2026-10-05 07:00:00Z],
+      end_time: ~U[2026-10-05 07:15:00Z]
+    })
+
+    assert [first, second, _third] = listed()
+    assert first.uid == "standup_20261012T090000"
+    assert second.uid == "standup_20261019T090000"
+
+    assert [_, _, _, last] = listed(~U[2026-10-12 00:00:00Z], ~U[2026-11-03 00:00:00Z])
+    assert last.uid == "standup_20261102T090000"
+    assert DateTime.compare(last.start_at, ~U[2026-11-02 08:00:00Z]) == :eq
+    assert last.timezone == "Europe/Warsaw"
+  end
+
+  test "the occurrences either side of a DST end keep 09:00 local" do
+    change_master(%{
+      timezone: "Europe/Warsaw",
+      start_time: ~U[2026-10-05 07:00:00Z],
+      end_time: ~U[2026-10-05 07:15:00Z]
+    })
+
+    rows = listed(~U[2026-10-19 00:00:00Z], ~U[2026-10-27 00:00:00Z])
+    assert [before_change, after_change] = rows
+    assert before_change.uid == "standup_20261019T090000"
+    assert DateTime.compare(before_change.start_at, ~U[2026-10-19 07:00:00Z]) == :eq
+    assert after_change.uid == "standup_20261026T090000"
+    assert DateTime.compare(after_change.start_at, ~U[2026-10-26 08:00:00Z]) == :eq
+  end
+
+  test "an unknown stored zone does not crash listing" do
+    change_master(%{timezone: "Mars/Olympus"})
+    assert {:ok, _events} = DebugCalendarProvider.list_events(%{user_id: 1}, [])
+  end
+
+  test "a repeating all-day event keys by date and lists on the range's first day west of UTC" do
+    DebugStore.put_event(%{
+      uid: "holiday",
+      summary: "Holiday",
+      all_day: true,
+      start_time: ~D[2026-10-07],
+      end_time: ~D[2026-10-07],
+      recurrence_rule: "FREQ=WEEKLY;BYDAY=WE"
+    })
+
+    rows = listed(~U[2026-10-14 04:00:00Z], ~U[2026-10-21 04:00:00Z])
+    assert first = Enum.find(rows, &(&1.uid == "holiday_20261014"))
+    assert first.all_day
+    assert first.start_date == ~D[2026-10-14]
+    assert first.end_date == ~D[2026-10-14]
+    assert first.provider_event_id == "debug:holiday"
   end
 end
