@@ -173,6 +173,9 @@ export const AutoScrollToSlots = {
       // Skip auto-scroll when embedded in an iframe (modal handles its own viewport)
       if (document.documentElement.hasAttribute('data-embedded')) return;
 
+      // A page that places the view itself opts out (SlotList's `auto_scroll`).
+      if (this.el.dataset.autoScroll === 'off') return;
+
       // Scroll on mobile and tablet viewports (when layout is stacked)
       if (window.innerWidth < 1024) {
         // Check if slots have been loaded (not empty state)

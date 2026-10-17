@@ -264,4 +264,20 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotListTest do
       assert Floki.find(render.(%{loading: false, error: nil}), "#own-empty") != []
     end
   end
+
+  describe "auto-scroll" do
+    test "a list scrolls itself into view by default" do
+      doc = render_list(available_slots: ["9:00 AM"])
+
+      assert Floki.attribute(doc, "#slots-container", "phx-hook") == ["AutoScrollToSlots"]
+      assert Floki.attribute(doc, "#slots-container", "data-auto-scroll") == []
+    end
+
+    test "a list that opts out keeps the hook, for its focus move, and turns the scroll off" do
+      doc = render_list(available_slots: ["9:00 AM"], auto_scroll: false)
+
+      assert Floki.attribute(doc, "#slots-container", "phx-hook") == ["AutoScrollToSlots"]
+      assert Floki.attribute(doc, "#slots-container", "data-auto-scroll") == ["off"]
+    end
+  end
 end

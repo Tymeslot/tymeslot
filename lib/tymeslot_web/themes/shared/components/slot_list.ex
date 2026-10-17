@@ -19,6 +19,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   `toggle_hour` with `phx-value-hour`. The `AutoScrollToSlots` hook in
   `assets/js/utility_hooks.js` relies on `#slots-container`,
   `.slot-list__heading` and `[data-slots-loaded]`; change them together.
+  `auto_scroll={false}` (`data-auto-scroll="off"`) keeps the hook's focus
+  move and drops its scroll.
   Each time button carries the markup contract's `data-fact="time"`, its
   `data-value` the value `select_time` sends, and `aria-pressed` says whether
   it is the chosen time; the hour toggle only discloses its minutes, so it
@@ -56,6 +58,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   attr :heading_tag, :string, default: "h2", values: ~w(h2 h3)
   attr :period_tag, :string, default: "div", values: ~w(div h3 h4)
 
+  attr :auto_scroll, :boolean,
+    default: true,
+    doc:
+      "whether a new day's times scroll themselves to the top of a narrow standalone " <>
+        "page (`AutoScrollToSlots`); false for a page that places the view itself, such as " <>
+        "a continuous page whose opening section's heading takes the focus"
+
   slot :loading, doc: "replaces the default loading markup"
   slot :error, doc: "replaces the default error markup; receives the error message"
   slot :empty, doc: "replaces the default fully-booked markup"
@@ -74,7 +83,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
       )
 
     ~H"""
-    <div class="slot-list" id="slots-container" phx-hook="AutoScrollToSlots">
+    <div
+      class="slot-list"
+      id="slots-container"
+      phx-hook="AutoScrollToSlots"
+      data-auto-scroll={if !@auto_scroll, do: "off"}
+    >
       <.dynamic_tag tag_name={@heading_tag} class="slot-list__heading" tabindex="-1">
         {dgettext("booking", "Available Times")}
       </.dynamic_tag>
