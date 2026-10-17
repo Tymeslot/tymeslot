@@ -20,11 +20,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.CalendarGrid.EventWindow
   alias Tymeslot.CalendarGrid.Period
   alias Tymeslot.CalendarGrid.WorkingHours
+  alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.Calendar.Preview
+  alias TymeslotWeb.Dashboard.Calendar.UndoStack
+  alias TymeslotWeb.Dashboard.Calendar.Writes
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -50,7 +53,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       window: nil,
       rail_open: true,
       open_menu: nil,
-      preview: nil
+      preview: nil,
+      event_writes: WriteQueue.new(),
+      writes_adopted_after: nil,
+      undo: UndoStack.new(),
+      toast: nil,
+      series_prompt: nil,
+      delete_prompt: nil,
+      pending_deletes: %{},
+      syncing_ids: MapSet.new(),
+      failed_ids: MapSet.new()
     )
   end
 
@@ -66,10 +78,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket |> assign_clock() |> apply_params()
 
       not socket.assigns.ready? ->
-        socket |> load_context() |> apply_params() |> load_window() |> assign(:ready?, true)
+        socket
+        |> load_context()
+        |> apply_params()
+        |> load_window()
+        |> Writes.adopt()
+        |> assign(:ready?, true)
 
       true ->
-        follow_params(socket)
+        socket |> adopt_if_revived() |> follow_params()
     end
   end
 
@@ -151,15 +168,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   # needs no query.
   defp filter_events(socket) do
     events =
-      EventWindow.reject_hidden(
-        socket.assigns.window_events,
+      socket.assigns.window_events
+      |> EventWindow.reject_hidden(
         socket.assigns.hidden_integration_ids,
         socket.assigns.hidden_calendar_keys
       )
+      |> reject_pending(socket.assigns.pending_deletes)
 
     socket
     |> assign(events: events, events_by_id: Map.new(events, &{EventPayload.id(&1), &1}))
     |> rebuild_preview()
+  end
+
+  # Events whose delete has not run yet are already gone for the organiser;
+  # `pending_deletes` maps each delete's token to `%{ids: ids, ...}`, the
+  # events it hides (see `Deletion`).
+  defp reject_pending(events, pending) when map_size(pending) == 0, do: events
+
+  defp reject_pending(events, pending) do
+    hidden = pending |> Map.values() |> Enum.flat_map(& &1.ids) |> MapSet.new()
+    Enum.reject(events, &MapSet.member?(hidden, EventPayload.id(&1)))
   end
 
   # An open preview was built from the events as they were: rebuild it from
@@ -231,6 +259,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def push_settings(socket), do: push_event(socket, "calendar:settings", settings(socket.assigns))
 
   @doc """
+  Shows `event` in place of the loaded event with the same id (a change
+  shown before the provider has answered, or the event as a write left it),
+  without pushing.
+  """
+  @spec show_event(socket(), map()) :: socket()
+  def show_event(socket, event) do
+    id = EventPayload.id(event)
+
+    window_events =
+      Enum.map(socket.assigns.window_events, &if(EventPayload.id(&1) == id, do: event, else: &1))
+
+    socket |> assign(:window_events, window_events) |> filter_events()
+  end
+
+  @doc "Applies hidden calendars and pending deletes to the loaded window again, without pushing."
+  @spec refilter(socket()) :: socket()
+  def refilter(socket), do: filter_events(socket)
+
+  @doc """
   After a visibility change: rebuild the rail, re-filter the loaded window
   (no query) and push with a cache reset.
   """
@@ -277,6 +324,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
           do: push_period(socket),
           else: socket |> load_window() |> push_events(false)
     end
+  end
+
+  # LiveView revives a surface rendered again before the browser confirmed
+  # its removal (the organiser left the calendar and came straight back). It
+  # takes back the queue its guardian has been driving since, as a surface
+  # mounted afresh does, and reloads what those writes changed. The gate is
+  # the one the old grid uses: `calendar_left` counts departures, and the
+  # surface remembers the count its queue was adopted at.
+  defp adopt_if_revived(socket) do
+    if socket.assigns[:calendar_left] == socket.assigns.writes_adopted_after,
+      do: socket,
+      else: socket |> Writes.adopt() |> reload(:events)
   end
 
   defp push_period(%{assigns: %{view: view, date: date}} = socket),

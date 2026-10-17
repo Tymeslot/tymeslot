@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
   alias TymeslotWeb.Dashboard.Calendar.Visibility
+  alias TymeslotWeb.Dashboard.Calendar.Writes
 
   @reload_delay 250
 
@@ -60,6 +61,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do: {:ok, SurfaceData.reload(socket, scope)},
       else: {:ok, socket}
   end
+
+  # A write's answer, routed here by `CalendarRouting` (see `Writes`). A
+  # failed write is taken back off the grid by the queue itself.
+  def update(%{action: :event_write_settled, write: ref, outcome: outcome}, socket),
+    do: {:ok, Writes.settle(socket, ref, outcome)}
+
+  def update(%{action: :revert_event, write: {_key, _seq} = ref}, socket),
+    do: {:ok, Writes.settle(socket, ref, :failed)}
+
+  def update(%{action: :event_writes_released, release: release}, socket),
+    do: {:ok, Writes.resume(socket, release)}
 
   # Messages for the old grid (an import's progress, a move between
   # calendars) reach whichever calendar is on screen; this one has nothing
