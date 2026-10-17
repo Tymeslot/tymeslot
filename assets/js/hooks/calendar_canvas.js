@@ -81,7 +81,8 @@ export const CalendarCanvas = {
     this.measureWidth = this.measureWidth || canvasMeasure();
 
     this.outside = (e) => {
-      if (this.list && !this.list.contains(e.target)) this.closeList();
+      // A press on the chip itself is left to its click, which toggles the list.
+      if (this.list && !this.list.contains(e.target) && !this.listAnchorEl?.contains(e.target)) this.closeList();
     };
     this.listeners = [
       ["calendar:navigate", (e) => this.navigate(e.detail)],
@@ -226,7 +227,10 @@ export const CalendarCanvas = {
 
   // The minute tick moves the now line; an open "+N" list must not be torn down for it.
   tick() {
-    if (this.list) return;
+    if (this.list) {
+      this.dirty = true;
+      return;
+    }
     this.render();
   },
 
@@ -393,7 +397,9 @@ export const CalendarCanvas = {
   },
 
   showList(events, anchor, label) {
+    const reopening = this.list && this.listAnchorEl === anchor;
     this.closeList();
+    if (reopening) return;
     const holder = document.createElement("div");
     holder.innerHTML = renderList([...events].sort((a, b) => a.startMin - b.startMin), { strings: this.strings, timeFormat: this.settings.time_format, label });
     const list = holder.firstElementChild;
@@ -405,6 +411,7 @@ export const CalendarCanvas = {
     list.style.maxHeight = position.maxHeight ? `${Math.round(position.maxHeight)}px` : "";
     this.list = list;
     this.listAnchor = this.focusKeyOf(anchor);
+    this.listAnchorEl = anchor;
     document.addEventListener("pointerdown", this.outside);
     list.querySelector("button")?.focus();
   },
@@ -413,6 +420,7 @@ export const CalendarCanvas = {
   dropList() {
     document.removeEventListener("pointerdown", this.outside);
     this.list = null;
+    this.listAnchorEl = null;
     this.dirty = false;
   },
 

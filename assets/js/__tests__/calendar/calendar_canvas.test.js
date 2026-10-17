@@ -326,6 +326,33 @@ test("a pointer press outside the list closes it", () => {
   expect(el.querySelector(".cal-list")).toBeNull();
 });
 
+test("pressing the +N chip again closes its list", () => {
+  const { el, reply } = mountHook();
+  reply(payload({ events: fiveAt() }));
+  const chip = el.querySelector(".cal-more");
+  chip.click();
+  chip.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  expect(el.querySelector(".cal-list")).not.toBeNull();
+  chip.click();
+  expect(el.querySelector(".cal-list")).toBeNull();
+});
+
+test("a minute tick skipped while the list is open redraws once it closes", () => {
+  vi.useFakeTimers();
+  try {
+    const { el, hook, reply } = mountHook();
+    reply(payload({ events: fiveAt() }));
+    el.querySelector(".cal-more").click();
+    const render = vi.spyOn(hook, "render");
+    vi.advanceTimersByTime(60_000);
+    expect(render).not.toHaveBeenCalled();
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(render).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 test("the scroll position survives a visit to the skeleton", () => {
   const { el, hook, reply, handlers } = mountHook();
   reply(payload());
