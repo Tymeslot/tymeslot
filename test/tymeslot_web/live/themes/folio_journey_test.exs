@@ -117,6 +117,12 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
 
     assert has_element?(view, "[data-testid='schedule-another']", "Book another session")
 
+    # The row stacks in markup order on a phone: the primary action first.
+    assert has_element?(
+             view,
+             "[data-testid='folio-confirmation'] .folio-actions--in-order [data-testid='schedule-another']"
+           )
+
     assert has_element?(view, ".folio-masthead--full")
     refute has_element?(view, "#offer-step")
 
@@ -202,6 +208,10 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
       assert has_element?(view, "#folio-question-1")
       refute has_element?(view, "#folio-question-1[phx-mounted]")
 
+      # Every question moves on with Continue, not Next.
+      assert has_element?(view, "#you-step [data-intent='continue']", "Continue")
+      refute has_element?(view, "#you-step [data-intent='continue']", "Next")
+
       BookingDriver.back(view)
 
       assert has_element?(view, "#folio-question-0[phx-mounted*='focus']")
@@ -268,10 +278,8 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     %{profile: profile} = seed_organiser(@theme_id, "folio-person")
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-    assert has_element?(
-             view,
-             "#masthead-step a[href='#offer-step'][data-testid='folio-jump-to-offer']"
-           )
+    # A short (or no) bio leaves the ways to work in view: no link.
+    refute has_element?(view, "[data-testid='folio-jump-to-offer']")
 
     BookingDriver.choose_meeting_type(view, "quick-chat")
 
@@ -279,6 +287,64 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert has_element?(view, "[data-testid='folio-summary-bar'] [data-testid='summary-bar']")
     refute has_element?(view, "[data-testid='folio-jump-to-offer']")
     refute has_element?(view, "#when-step", "Duration:")
+  end
+
+  test "a long bio gets a link down to the offers, between the headline and the bio",
+       %{conn: conn} do
+    bio = String.duplicate("Clear, kind feedback is a skill anyone can learn. ", 8)
+
+    %{profile: profile} =
+      seed_organiser(@theme_id, "folio-long-bio",
+        profile: [headline: "Coach for managers", bio: bio]
+      )
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+    assert has_element?(
+             view,
+             "#masthead-step .folio-identity .folio-identity__after a[href='#offer-step'][data-testid='folio-jump-to-offer']"
+           )
+
+    # It sits above the bio, so the first screen holds it.
+    html = view |> element("#masthead-step .folio-identity") |> render()
+    {link_at, _length} = :binary.match(html, "folio-jump-to-offer")
+    {bio_at, _length} = :binary.match(html, "profile-bio")
+    assert link_at < bio_at
+
+    BookingDriver.choose_meeting_type(view, "quick-chat")
+    refute has_element?(view, "[data-testid='folio-jump-to-offer']")
+  end
+
+  @tag :capture_log
+  test "a paid type's price is in the actions row, before the submit it describes",
+       %{conn: conn} do
+    %{user: user, profile: profile} =
+      seed_organiser(@theme_id, "folio-paid-actions",
+        types: [
+          [
+            name: "Strategy Session",
+            duration_minutes: 60,
+            payment_required: true,
+            price_cents: 12_000
+          ]
+        ]
+      )
+
+    insert(:connect_account, user: user, default_currency: "chf")
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+    BookingDriver.choose_meeting_type(view, "strategy-session")
+    BookingDriver.pick_first_slot(view, on: ahead())
+
+    assert has_element?(
+             view,
+             "#you-step .folio-actions > #submit-price-amount[data-testid='submit-price']",
+             "CHF 120.00"
+           )
+
+    assert has_element?(
+             view,
+             "#you-step .folio-actions > [data-testid='submit-booking'][aria-describedby='submit-price-amount']"
+           )
   end
 
   describe "a month with no free day" do

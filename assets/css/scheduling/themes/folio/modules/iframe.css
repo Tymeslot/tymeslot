@@ -36,15 +36,19 @@ html.folio-theme[data-embed-layout="column"] .folio-page > .content-area {
 
 /* ...and so does the page's column: the shared rule above gives every
    .booker-card (Folio's sections among them) the container's whole width,
-   so the sections count their gutter inside it, and the identity, the jump
-   link, the language row and the summary bar follow rather than keep the
-   standalone reading column. */
+   so the sections count their gutter inside it, and the identity, the
+   language row and the summary bar follow rather than keep the standalone
+   reading column. The confirmation's section is no .booker-card itself (its
+   page is), so it is released here. */
 html.folio-theme[data-embed-layout="column"] .folio-section {
   box-sizing: border-box;
 }
 
+html.folio-theme[data-embed-layout="column"] .folio-outcome {
+  max-width: none;
+}
+
 html.folio-theme[data-embed-layout="column"] .folio-identity,
-html.folio-theme[data-embed-layout="column"] .folio-jump,
 html.folio-theme[data-embed-layout="column"] .folio-language {
   max-width: none;
 }

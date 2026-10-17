@@ -70,15 +70,17 @@
   overflow-wrap: anywhere;
 }
 
-/* The link from under the masthead down to the ways to work. */
+/* The link down to the ways to work, in the masthead's identity grid
+   between the name and headline and a long bio (so it is on the first
+   screen, above the bio). */
+.folio-identity__after {
+  grid-column: 1 / -1;
+}
+
 .folio-jump {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2xs);
-  box-sizing: content-box;
-  max-width: var(--folio-column);
-  margin: var(--space-md) auto 0;
-  padding-inline: var(--folio-gutter);
   color: var(--theme-primary);
   font-family: var(--theme-font-heading);
   text-decoration: underline;

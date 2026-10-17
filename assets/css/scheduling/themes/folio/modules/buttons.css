@@ -72,7 +72,8 @@
 }
 
 /* The actions row: the way back on the left, the primary action on the
-   right; stacked full width, primary first, on a narrow card. */
+   right; stacked full width, primary first, on a narrow card (a row whose
+   primary comes first in the markup, `--in-order`, stacks as written). */
 .folio-actions {
   display: flex;
   flex-wrap: wrap;
@@ -87,7 +88,21 @@
   margin-inline-start: auto;
 }
 
+/* A paid type's price (the booking's actions) sits at the row's end, just
+   before the submit it belongs to; stacked, it is the line above it. */
+.folio-actions > .folio-booking__price {
+  margin-inline-start: auto;
+}
+
+.folio-actions > .folio-booking__price + .folio-button--primary:last-child {
+  margin-inline-start: 0;
+}
+
 @container scheduling (width < 30rem) {
+  .folio-actions > .folio-booking__price {
+    margin-inline-start: 0;
+  }
+
   .folio-actions {
     flex-direction: column-reverse;
     align-items: stretch;
@@ -95,6 +110,12 @@
 
   .folio-actions > .folio-button--primary:last-child {
     margin-inline-start: 0;
+  }
+
+  /* The confirmation's row already leads with its primary action (Add to
+     calendar), so it stacks in markup order, not reversed. */
+  .folio-actions--in-order {
+    flex-direction: column;
   }
 }
 

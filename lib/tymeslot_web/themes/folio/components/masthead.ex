@@ -25,6 +25,9 @@ defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
   attr :organizer_profile, :map, default: nil
   attr :username_context, :string, default: nil
 
+  slot :after_intro,
+    doc: "drawn between the name and headline and the bio, on the full variant"
+
   @spec masthead(map()) :: Phoenix.LiveView.Rendered.t()
   def masthead(assigns) do
     assigns =
@@ -62,6 +65,9 @@ defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
           <% else %>
             <p class="folio-identity__name">{@name}</p>
           <% end %>
+        </div>
+        <div :if={@variant == :full and @after_intro != []} class="folio-identity__after">
+          {render_slot(@after_intro)}
         </div>
         <ProfileIntro.bio
           :if={@variant == :full}

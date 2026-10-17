@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           answers={@custom_field_answers}
         />
 
-        <div class="folio-actions">
+        <div class="folio-actions folio-actions--in-order">
           <a
             :if={PathHandlers.calendar_ics_path(assigns)}
             href={PathHandlers.calendar_ics_path(assigns)}

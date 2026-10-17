@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
           data-intent="continue"
           phx-target={@myself}
         >
-          {if @last?, do: dgettext("booking", "Continue"), else: dgettext("booking", "Next")}
+          {dgettext("booking", "Continue")}
           <.icon name="hero-arrow-right-mini" class="folio-button__icon" />
         </button>
       </div>
@@ -230,15 +230,14 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
         stage={:before}
       />
 
-      <SubmitPrice.price
-        meeting_type={@meeting_type}
-        currency={@host_currency}
-        locale={@locale}
-        rescheduling={@is_rescheduling}
-        class="folio-booking__price"
-      />
-
-      <div class="folio-actions">
+      <div class="folio-actions folio-actions--in-order">
+        <SubmitPrice.price
+          meeting_type={@meeting_type}
+          currency={@host_currency}
+          locale={@locale}
+          rescheduling={@is_rescheduling}
+          class="folio-booking__price"
+        />
         <button
           type="submit"
           form="booking-form"
