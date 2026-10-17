@@ -19,6 +19,11 @@
   border-top: var(--border-width-thin) solid var(--line-1);
 }
 
+/* The keyed wrapper that remounts the heading on every pick adds no box. */
+.paper-book__head {
+  display: contents;
+}
+
 .paper-book__title {
   margin: 0;
 }

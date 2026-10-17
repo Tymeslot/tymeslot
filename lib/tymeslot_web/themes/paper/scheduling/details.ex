@@ -74,17 +74,22 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
 
     ~H"""
     <section class="paper-book" data-testid="paper-book" aria-labelledby="paper-book-heading">
-      <h2
-        id="paper-book-heading"
-        class="paper-heading paper-book__title"
-        tabindex="-1"
-        phx-mounted={
-          assigns[:focus_details] &&
-            JS.add_class("paper-card--booking", to: "#schedule-step") |> JS.focus()
-        }
-      >
-        {dpgettext("booking_voice", "paper", "Enter your details")}
-      </h2>
+      <%!-- Keyed by the visitor's pick count, so every pick mounts a fresh
+           heading and its phx-mounted runs again, also after "Change time"
+           (the section itself stays mounted, so it would not fire twice). --%>
+      <div id={"paper-book-head-#{assigns[:pick_seq] || 0}"} class="paper-book__head">
+        <h2
+          id="paper-book-heading"
+          class="paper-heading paper-book__title"
+          tabindex="-1"
+          phx-mounted={
+            assigns[:focus_details] &&
+              JS.add_class("paper-card--booking", to: "#schedule-step") |> JS.focus()
+          }
+        >
+          {dpgettext("booking_voice", "paper", "Enter your details")}
+        </h2>
+      </div>
       <p class="paper-book__when" data-testid="paper-book-when">
         <.icon name="hero-calendar" class="paper-book__when-icon" />
         <span>

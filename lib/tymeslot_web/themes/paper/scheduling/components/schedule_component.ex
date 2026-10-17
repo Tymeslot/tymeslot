@@ -87,6 +87,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   def handle_event(event, params, socket) when event in @pick_events do
     socket
     |> assign(:focus_details, true)
+    |> assign(:pick_seq, (socket.assigns[:pick_seq] || 0) + 1)
     |> then(&StepEvents.handle_event(event, params, &1))
   end
 
