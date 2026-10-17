@@ -61,6 +61,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       else: {:ok, socket}
   end
 
+  # Messages for the old grid (an import's progress, a move between
+  # calendars) reach whichever calendar is on screen; this one has nothing
+  # to do with them.
+  def update(%{action: _other}, socket), do: {:ok, socket}
+
   def update(assigns, socket), do: {:ok, socket |> assign(assigns) |> SurfaceData.sync()}
 
   defp schedule_reload(%{assigns: %{pending_reload: nil}} = socket, action) do

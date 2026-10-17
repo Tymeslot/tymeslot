@@ -131,22 +131,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
   end
 
   describe "the old grid's messages while the new calendar is shown" do
-    test "none are sent to it" do
+    test "the clock tick is not sent, and write results go to the new surface" do
       new_surface = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
 
       CalendarEventHandlers.handle_tick(new_surface)
-      CalendarEventHandlers.handle_event_writes_released({1, "uid"}, new_surface)
-      CalendarEventHandlers.handle_event_update_result({:ok, write: nil}, new_surface)
-
       refute_received {:phoenix, :send_update, _update}
       refute_received :tick
+
+      CalendarEventHandlers.handle_event_writes_released({1, "uid"}, new_surface)
+
+      assert_received {:phoenix, :send_update,
+                       {{CalendarSurface, "calendar"}, %{action: :event_writes_released}}}
     end
 
     test "refreshes go to the new surface and to nothing else" do
       new_surface = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
 
       CalendarEventHandlers.handle_calendar_events_updated(new_surface)
-      CalendarEventHandlers.handle_calendar_sync_complete(new_surface)
+      CalendarEventHandlers.handle_calendar_sync_complete(new_surface, 1)
       CalendarEventHandlers.handle_reset_calendar_sync(new_surface)
 
       for action <- [:events_updated, :integration_synced, :refresh_events] do

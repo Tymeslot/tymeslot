@@ -182,19 +182,18 @@ defmodule TymeslotWeb.DashboardLive do
 
   defp assign_calendar_redesign(socket), do: socket
 
-  # Swapping to the new surface unmounts the old grid while this process lives
-  # on, exactly as leaving the calendar does, so any writes it still has
-  # queued go to its guardian the same way (see `handle_dashboard_params/2`).
-  defp switch_calendar_surface(socket, true) do
+  # Swapping surfaces either way unmounts one calendar while this process
+  # lives on, exactly as leaving the calendar does, so any writes it still
+  # has queued go to its guardian the same way, and the calendar mounted
+  # next takes them back (see `handle_dashboard_params/2`).
+  defp switch_calendar_surface(socket, enabled) do
     WriteGuardian.detach()
 
     assign(socket,
-      calendar_redesign: true,
+      calendar_redesign: enabled,
       calendar_left: Map.get(socket.assigns, :calendar_left, 0) + 1
     )
   end
-
-  defp switch_calendar_surface(socket, false), do: assign(socket, :calendar_redesign, false)
 
   @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -461,8 +460,14 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
     do: socket |> CalendarEventHandlers.handle_calendar_events_updated() |> rebuild_agenda()
 
-  def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket),
-    do: CalendarEventHandlers.handle_calendar_sync_complete(socket)
+  def handle_info({:calendar_sync_complete, _user_id, integration_id}, socket),
+    do: CalendarEventHandlers.handle_calendar_sync_complete(socket, integration_id)
+
+  def handle_info({:calendar_sync_failed, _user_id, integration_id}, socket),
+    do: CalendarEventHandlers.handle_calendar_sync_failed(socket, integration_id)
+
+  def handle_info({:calendar_delete_result, _user_id, token, outcome}, socket),
+    do: CalendarEventHandlers.handle_calendar_delete_result(socket, token, outcome)
 
   def handle_info(:calendar_sync_flash, socket),
     do: CalendarEventHandlers.handle_calendar_sync_flash(socket)

@@ -16,12 +16,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
-  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
+  alias TymeslotWeb.Dashboard.CalendarRouting
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
 
   require Logger
@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc "Advances the clock-tick timer and pushes the current time to the calendar grid."
   @spec handle_tick(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_tick(socket) do
-    if grid_on_screen?(socket) do
+    if CalendarRouting.grid_on_screen?(socket) do
       Process.send_after(self(), :tick, 60_000)
 
       send_update(CalendarGridComponent,
@@ -45,16 +45,34 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
-    refresh_calendar(socket, :events_updated)
+    CalendarRouting.refresh(socket, :events_updated)
 
     {:noreply, socket}
   end
 
-  @doc "Notifies the calendar grid that an integration sync completed."
-  @spec handle_calendar_sync_complete(Phoenix.LiveView.Socket.t()) ::
+  @doc "Tells the calendar on screen that `integration_id`'s sync completed."
+  @spec handle_calendar_sync_complete(Phoenix.LiveView.Socket.t(), integer()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_calendar_sync_complete(socket) do
-    refresh_calendar(socket, :integration_synced)
+  def handle_calendar_sync_complete(socket, integration_id) do
+    CalendarRouting.refresh(socket, :integration_synced, integration_id: integration_id)
+
+    {:noreply, socket}
+  end
+
+  @doc "Tells the calendar on screen that `integration_id`'s sync failed or was discarded."
+  @spec handle_calendar_sync_failed(Phoenix.LiveView.Socket.t(), integer()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_calendar_sync_failed(socket, integration_id) do
+    CalendarRouting.sync_failed(socket, integration_id)
+
+    {:noreply, socket}
+  end
+
+  @doc "Tells the new calendar how a delete it scheduled ended."
+  @spec handle_calendar_delete_result(Phoenix.LiveView.Socket.t(), pos_integer(), term()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_calendar_delete_result(socket, token, outcome) do
+    CalendarRouting.delete_settled(socket, token, outcome)
 
     {:noreply, socket}
   end
@@ -71,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_reset_calendar_sync(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_reset_calendar_sync(socket) do
-    refresh_calendar(socket, :refresh_events)
+    CalendarRouting.refresh(socket, :refresh_events)
 
     {:noreply, socket}
   end
@@ -119,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_event_writes_released(tuple(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_writes_released(release, socket) do
-    to_grid(socket,
+    CalendarRouting.to_mounted(socket,
       action: :event_writes_released,
       release: release
     )
@@ -127,46 +145,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, socket}
   end
 
-  # A write's result reaches the grid only while it is on screen. Once the
-  # organiser has left the calendar or switched to the new surface, the LiveView's write guardian drives
-  # the queue (`Tymeslot.CalendarGrid.WriteGuardian.detach/0`) and hears
-  # every result itself, and a grid component LiveView has yet to delete
-  # would otherwise drive the same queue as well, starting its writes a
-  # second time.
-  defp to_grid(socket, assigns) do
-    if grid_on_screen?(socket),
-      do: send_update(CalendarGridComponent, [{:id, "calendar"} | assigns])
-
-    :ok
-  end
-
-  # The old grid is on screen on the calendar page unless the organiser has
-  # switched to the new surface, whose swap leaves the old grid component
-  # alive on the server until the browser confirms its removal.
-  defp grid_on_screen?(socket),
-    do: socket.assigns.live_action == :calendar and socket.assigns[:calendar_redesign] != true
-
-  # A sync or an outside change reaches whichever calendar is on screen:
-  # the old grid through its own gate, the new surface only while the
-  # organiser is on the calendar page with it switched on.
-  defp refresh_calendar(socket, action) do
-    cond do
-      grid_on_screen?(socket) ->
-        send_update(CalendarGridComponent, id: "calendar", action: action)
-
-      surface_on_screen?(socket) ->
-        send_update(CalendarSurface, id: "calendar", action: action)
-
-      true ->
-        :ok
-    end
-  end
-
-  defp surface_on_screen?(socket),
-    do: socket.assigns.live_action == :calendar and socket.assigns[:calendar_redesign] == true
-
   defp settle_write(socket, write, outcome) do
-    to_grid(socket,
+    CalendarRouting.to_mounted(socket,
       action: :event_write_settled,
       write: write,
       outcome: outcome
@@ -174,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   defp revert_failed_update(payload, socket) do
-    to_grid(socket,
+    CalendarRouting.to_mounted(socket,
       action: :revert_event,
       write: payload[:write],
       original_event: payload[:original_event]
@@ -273,7 +253,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_move_result({:ok, new_event_info}, socket) do
     case new_event_info[:series_to] do
       nil ->
-        to_grid(socket,
+        CalendarRouting.to_mounted(socket,
           action: :event_moved,
           new_event_uid: new_event_info[:uid],
           new_event_integration_id: new_event_info[:integration_id]
@@ -283,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, level, message)}
 
       calendar ->
-        to_grid(socket,
+        CalendarRouting.to_mounted(socket,
           action: :series_moved,
           moved_event: new_event_info[:original_event]
         )
@@ -296,7 +276,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_move_result({:error, payload}, socket) do
     case payload[:series_to] do
       nil ->
-        to_grid(socket,
+        CalendarRouting.to_mounted(socket,
           action: :revert_event,
           original_event: payload[:original_event]
         )
@@ -304,7 +284,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
 
       _calendar ->
-        to_grid(socket,
+        CalendarRouting.to_mounted(socket,
           action: :series_move_failed,
           moved_event: payload[:original_event]
         )
@@ -443,7 +423,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_ics_import_progress(non_neg_integer(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_ics_import_progress(done, socket) do
-    to_grid(socket, action: :ics_import_progress, done: done)
+    CalendarRouting.to_mounted(socket, action: :ics_import_progress, done: done)
     {:noreply, socket}
   end
 
@@ -454,7 +434,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_ics_import_result(term(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_ics_import_result(result, %{assigns: %{live_action: :calendar}} = socket) do
-    to_grid(socket, action: :ics_import_finished, result: result)
+    CalendarRouting.to_mounted(socket, action: :ics_import_finished, result: result)
     {:noreply, socket}
   end
 
@@ -539,7 +519,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_video_result({:ok, result}, socket) do
     updated_event = result[:updated_event]
 
-    to_grid(socket,
+    CalendarRouting.to_mounted(socket,
       action: :video_link_updated,
       write: result[:write],
       original_event: result[:original_event],
@@ -551,7 +531,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   def handle_event_video_result({:error, payload}, socket) do
-    to_grid(socket,
+    CalendarRouting.to_mounted(socket,
       action: :revert_event,
       write: payload[:write],
       original_event: payload[:original_event]
