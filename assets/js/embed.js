@@ -221,7 +221,12 @@
     url.searchParams.append('parent-origin', window.location.origin);
 
     iframe.src = url.toString();
+    // display: block, as an inline iframe sits on a line box whose descender
+    // gap makes the wrapper's content a few pixels taller than the wrapper:
+    // the modal's frame clips with overflow hidden, so that overflow can be
+    // scrolled and cut the top of the booking page off.
     iframe.style.cssText = `
+      display: block;
       width: 100%;
       height: 100%;
       border: none;
