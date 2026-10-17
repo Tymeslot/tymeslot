@@ -24,6 +24,7 @@ import { MINUTES_PER_DAY, dayNumber, formatWall, isoFromDay, normaliseEvent, per
 const BLOCKS = ".cal-col .cal-ev[data-event-id]";
 const MODALS = "#calendar-series-scope, #calendar-delete-confirm";
 const MODAL_WATCH_MS = 10_000;
+const REPEAT_ANNOUNCE_MS = 300;
 const TYPING = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
 
 export const KeysMixin = {
@@ -33,12 +34,24 @@ export const KeysMixin = {
     this.pendingFocus = null;
     this.modalWatch = null;
     this.modalTimer = null;
+    this.announceTimer = null;
     this.undoKey = (e) => {
-      if (this.drag) return;
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z" && !e.target.closest?.(TYPING)) {
-        e.preventDefault();
-        this.pushEventTo(this.el, "calendar:undo", {});
-      }
+      if (this.drag || e.defaultPrevented || e.isComposing) return;
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+      if (e.key?.toLowerCase() !== "z" && e.code !== "KeyZ") return;
+      const target = e.target;
+      if (target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
+      e.preventDefault();
+      this.pushEventTo(this.el, "calendar:undo", {});
+    };
+    // Focus leaving for another part of the page ends a move mode; a null
+    // target is only a redraw replacing the focused block.
+    this.focusOut = (e) => {
+      if (this.moving && e.relatedTarget && !this.el.contains(e.relatedTarget)) this.cancelMove();
+    };
+    // The preview's Delete button lives outside the canvas.
+    this.previewDelete = (e) => {
+      if (e.target.closest?.("#calendar-preview-delete") && this.lastOpened) this.watchModal(this.lastOpened);
     };
     // Focus does not bubble; captured here it still reaches the canvas.
     this.focusIn = (e) => {
@@ -49,12 +62,17 @@ export const KeysMixin = {
       target.tabIndex = 0;
     };
     document.addEventListener("keydown", this.undoKey);
+    document.addEventListener("click", this.previewDelete);
     this.el.addEventListener("focus", this.focusIn, true);
+    this.el.addEventListener("focusout", this.focusOut);
   },
 
   destroyKeys() {
     document.removeEventListener("keydown", this.undoKey);
+    document.removeEventListener("click", this.previewDelete);
     this.el.removeEventListener("focus", this.focusIn, true);
+    this.el.removeEventListener("focusout", this.focusOut);
+    clearTimeout(this.announceTimer);
     this.unwatchModal();
   },
 
@@ -64,6 +82,8 @@ export const KeysMixin = {
     const day = target.closest("[data-day]")?.dataset.day;
 
     if (e.key.startsWith("Arrow") || e.key === "Home" || e.key === "End") {
+      // Alt or Cmd with an arrow is the browser's Back and Forward.
+      if (e.altKey || e.metaKey || e.ctrlKey) return false;
       e.preventDefault();
       const next = nextFocus(this.focusItems(), { id, day: dayNumber(day) }, e.key);
       if (next && this.focusBy({ attr: "data-event-id", value: next.id, day: isoFromDay(next.day) })) document.activeElement?.scrollIntoView?.({ block: "nearest" });
@@ -120,11 +140,10 @@ export const KeysMixin = {
 
     if (e.key === "Escape") {
       e.preventDefault();
-      const { original } = this.moving;
-      this.moving = null;
-      this.render();
-      this.focusBy({ attr: "data-event-id", value: event.id });
-      return this.announce(cancelledText(event.title ?? "", original, this.strings, tf));
+      // The preview closes on any Escape that reaches the window.
+      e.stopPropagation();
+      this.cancelMove();
+      return this.focusBy({ attr: "data-event-id", value: event.id });
     }
 
     if (e.key === "Enter") {
@@ -142,6 +161,7 @@ export const KeysMixin = {
     }
 
     if (e.key.startsWith("Arrow")) {
+      if (e.altKey || e.metaKey || e.ctrlKey) return undefined;
       e.preventDefault();
       const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
       this.moving.range = moveStep(this.moving.range, e.key, {
@@ -152,10 +172,27 @@ export const KeysMixin = {
       });
       this.render();
       this.focusBy({ attr: "data-event-id", value: event.id });
-      return this.announce(rangeText(this.moving.range, this.strings, tf));
+      const text = rangeText(this.moving.range, this.strings, tf);
+      // While a key repeats only where it ends up is worth reading.
+      if (!e.repeat) return this.announce(text);
+      clearTimeout(this.announceTimer);
+      this.announceTimer = setTimeout(() => this.announce(text), REPEAT_ANNOUNCE_MS);
+      return undefined;
     }
 
     return undefined;
+  },
+
+  // Leaves the move mode without saving. `redraw: false` for callers that
+  // draw next anyway; `announce: false` where focus or the page moved on.
+  cancelMove({ announce = true, redraw = true } = {}) {
+    if (!this.moving) return false;
+    const { id, original } = this.moving;
+    const event = this.cache.events.get(id);
+    this.moving = null;
+    if (redraw) this.render();
+    if (announce && event) this.announce(cancelledText(event.title ?? "", original, this.strings, this.settings.time_format));
+    return true;
   },
 
   // The cached events with the one being moved where the move mode has it.
@@ -185,7 +222,9 @@ export const KeysMixin = {
     let seen = false;
     this.modalWatch = new MutationObserver(() => {
       if (document.querySelector(MODALS)) {
+        // An open modal can wait as long as it likes; only "none appeared" times out.
         seen = true;
+        clearTimeout(this.modalTimer);
         return;
       }
       if (!seen) return;
@@ -193,7 +232,10 @@ export const KeysMixin = {
       this.returnFocus(id);
     });
     this.modalWatch.observe(document.body, { childList: true, subtree: true });
-    this.modalTimer = setTimeout(() => this.unwatchModal(), MODAL_WATCH_MS);
+    this.modalTimer = setTimeout(() => {
+      this.unwatchModal();
+      this.pendingFocus = null;
+    }, MODAL_WATCH_MS);
   },
 
   unwatchModal() {
@@ -212,6 +254,7 @@ export const KeysMixin = {
   },
 
   announce(text) {
+    clearTimeout(this.announceTimer);
     const region = document.getElementById("calendar-live");
     if (region) region.textContent = String(text ?? "");
   },

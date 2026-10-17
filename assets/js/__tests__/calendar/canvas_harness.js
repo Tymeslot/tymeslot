@@ -30,6 +30,8 @@ export const strings = {
   moving: "Moving %{title}, %{when}.",
   move_cancelled: "Move cancelled. %{title} stays at %{when}.",
   move_saving: "Saving %{title} at %{when}.",
+  calendar_role: "calendar",
+  period_range: "%{from} to %{to}",
 };
 
 export const settings = { week_start: "monday", show_weekends: true, density: "comfortable", fold_night: false, time_format: "24h", working_hours: {} };

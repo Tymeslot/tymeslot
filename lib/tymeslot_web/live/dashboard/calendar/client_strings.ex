@@ -51,6 +51,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       empty_week: dgettext("dashboard_calendar", "Nothing planned this week."),
       loading: dgettext("dashboard_calendar", "Loading calendar"),
       list_label: dgettext("dashboard_calendar", "Events at this time"),
+      calendar_role: dgettext("dashboard_calendar", "calendar"),
+      period_range:
+        dgettext("dashboard_calendar", "%{from} to %{to}", from: "%{from}", to: "%{to}"),
       range_on_day:
         dgettext("dashboard_calendar", "%{date}, %{start} to %{finish}",
           date: "%{date}",

@@ -123,6 +123,7 @@ export const DragMixin = {
   startDrag() {
     const { event, mode, slot, pointerId } = this.press;
     let target = this.press.target;
+    this.cancelMove?.({ announce: false });
     this.closeList();
     // Closing the list may have redrawn the grid and detached the pressed block.
     if (!target.isConnected) {
@@ -252,6 +253,8 @@ export const DragMixin = {
     const event = this.cache.events.get(id);
     if (event) this.cache.events.set(id, normaliseEvent({ ...event, start, end }));
     this.render();
+    // A series event asks which events to change; focus returns after that modal.
+    this.watchModal?.(id);
     this.pushEventTo(this.el, "calendar:move", { id, start, end });
   },
 

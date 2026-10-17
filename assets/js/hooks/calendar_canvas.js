@@ -171,6 +171,7 @@ export const CalendarCanvas = {
       return false;
     }
     this.clearPending();
+    if (view !== this.view || date !== this.date) this.cancelMove({ redraw: false });
     this.view = view;
     this.date = date;
     return true;
@@ -226,6 +227,7 @@ export const CalendarCanvas = {
       return;
     }
 
+    this.cancelMove({ redraw: false });
     this.view = view;
     this.date = date;
     this.clearPending();
@@ -368,7 +370,11 @@ export const CalendarCanvas = {
   handleKey(e) {
     // A live drag owns the keyboard; its Escape is the drag mixin's own listener.
     if (this.drag) return undefined;
-    if (this.moving) return this.movingKey(e);
+    if (this.moving) {
+      // The move mode belongs to its own block; a key anywhere else ends it first.
+      if (e.target.closest?.(".cal-col .cal-ev[data-event-id]")?.dataset.eventId === this.moving.id) return this.movingKey(e);
+      this.cancelMove({ announce: false });
+    }
     if (e.key === "Escape") return e.repeat ? undefined : this.closeList();
     const target = e.target.closest?.(".cal-col .cal-ev[data-event-id]");
     if (target && this.el.contains(target) && this.eventKey(e, target)) return undefined;
@@ -381,6 +387,7 @@ export const CalendarCanvas = {
   },
 
   open(id, anchor) {
+    this.cancelMove({ announce: false });
     this.lastOpened = id;
     // Opened from a "+N" list, focus returns to its chip: the event itself may
     // be one the chip hides.

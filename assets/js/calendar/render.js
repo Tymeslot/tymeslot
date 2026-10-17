@@ -69,6 +69,13 @@ function emptyText(view, strings) {
   return strings.empty_week;
 }
 
+// The period the grid shows, for the region's accessible name.
+function periodLabel(days, strings) {
+  const first = dateLabel(days[0], strings);
+  const last = dateLabel(days[days.length - 1], strings);
+  return days.length > 1 ? interpolate(strings.period_range, { from: first, to: last }) : first;
+}
+
 export function renderGrid(model) {
   const { view, days, events, settings, strings, now, width, measureWidth, nightOpen } = model;
   // A Ctrl + scroll zoom (hooks/calendar_canvas/zoom.js) overrides the density's height.
@@ -88,7 +95,7 @@ export function renderGrid(model) {
 
   return (
     `<div class="cal-grid" data-density="${escapeHtml(settings.density)}" style="--cal-days:${days.length};--cal-axis:${AXIS_WIDTH}px;--cal-hour:${hourHeight}px;--cal-strip:${fold ? NIGHT_STRIP : 0}px">` +
-    `<div class="cal-scroll" data-scroll>` +
+    `<div class="cal-scroll" data-scroll role="application" aria-roledescription="${escapeHtml(strings.calendar_role)}" aria-label="${escapeHtml(periodLabel(days, strings))}">` +
     `<div class="cal-top">${head(days, ctx)}${allDayLane(allDay, days, ctx)}</div>` +
     `<div class="cal-body" style="height:${Math.ceil(scale.height)}px">` +
     `<div class="cal-axis">${axis(ctx)}</div>` +
