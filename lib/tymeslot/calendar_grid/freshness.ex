@@ -43,6 +43,27 @@ defmodule Tymeslot.CalendarGrid.Freshness do
   end
 
   @doc """
+  Asks for a sync of one of the user's active integrations, as Refresh does
+  for all of them. `{:error, :not_found}` for an integration that is not
+  the user's, or not active.
+  """
+  @spec request_sync(integer(), integer()) :: :ok | {:error, term()}
+  def request_sync(user_id, integration_id) do
+    integrations = Management.list_active_calendar_integrations(user_id)
+
+    case Enum.find(integrations, &(&1.id == integration_id)) do
+      nil ->
+        {:error, :not_found}
+
+      integration ->
+        case SyncSchedule.request_sync(integration) do
+          {:ok, _job} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  @doc """
   Returns integrations whose cached data is stale: never synced, or synced
   longer ago than their provider's stale threshold (`SyncSchedule`). An
   Outlook integration still waiting for its first sync is pending, not

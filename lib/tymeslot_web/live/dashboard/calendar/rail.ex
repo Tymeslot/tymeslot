@@ -2,7 +2,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   @moduledoc """
   The collapsible left rail of the calendar surface: a mini-month of the
   visible range, then the organiser's calendars grouped by account, each with
-  a colour checkbox and a lock when Tymeslot cannot write to it.
+  a colour checkbox, a lock when Tymeslot cannot write to it, and its sync
+  status: a spinner while it syncs, a warning while it has a problem
+  (explained in the banner), and Sync now.
 
   Calendar sets and the bookable layer join the rail in later plans. On
   phones the rail is hidden and the toolbar's filter chip says what is
@@ -15,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
 
   attr :accounts, :list, required: true
+  attr :syncing_ids, :any, default: MapSet.new()
+  attr :problem_ids, :any, default: MapSet.new()
   attr :mini_cursor, :any, required: true
   attr :view, :atom, required: true
   attr :date, :any, required: true
@@ -71,6 +75,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               {account.name}
             </span>
             <.lock :if={account.read_only} label={dgettext("dashboard_calendar", "Read only")} />
+            <span
+              :if={MapSet.member?(@syncing_ids, account.id)}
+              data-syncing
+              class="shrink-0 text-tymeslot-400"
+              title={dgettext("dashboard_calendar", "Syncing")}
+            >
+              <.icon name="hero-arrow-path-mini" class="h-4 w-4 animate-spin" />
+              <span class="sr-only">{dgettext("dashboard_calendar", "Syncing")}</span>
+            </span>
+            <span
+              :if={MapSet.member?(@problem_ids, account.id)}
+              data-sync-problem
+              class="shrink-0 text-amber-600"
+              title={dgettext("dashboard_calendar", "Sync problem")}
+            >
+              <.icon name="hero-exclamation-triangle-mini" class="h-4 w-4" />
+              <span class="sr-only">{dgettext("dashboard_calendar", "Sync problem")}</span>
+            </span>
+            <.icon_button
+              :if={not MapSet.member?(@syncing_ids, account.id)}
+              id={"calendar-sync-#{account.id}"}
+              icon="hero-arrow-path"
+              size={:sm}
+              label={dgettext("dashboard_calendar", "Sync %{account} now", account: account.name)}
+              phx-click="calendar:sync_account"
+              phx-value-integration-id={account.id}
+              phx-target={@target}
+            />
           </div>
           <ul
             role="group"

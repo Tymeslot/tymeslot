@@ -1,0 +1,103 @@
+defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
+  @moduledoc """
+  Which of the organiser's accounts the calendar surface shows as syncing
+  (`syncing_ids`) and which as failing.
+
+  The surface asks for a sync of every stale account when it opens
+  (`refresh_stale/1`) and of one account on Sync now or Retry
+  (`sync_account/2`). A completed sync clears the account (`finished/2`); a
+  failed or discarded one stops its spinner (`failed/2`, from the broadcast
+  in `Tymeslot.Workers.CalendarSyncJob`); a spinner nothing answers stops
+  after `@timeout` (`timed_out/2`).
+
+  The broadcast comes after every failed attempt, including ones Oban will
+  retry, so one failure is not news. Failures are counted per account since
+  its last success, and the banner names an account (`failed_ids/1`) only
+  once it has failed `@persistent` times in a row. A broadcast naming an
+  integration the surface does not show (one deleted mid-sync) is ignored.
+  """
+
+  import Phoenix.Component, only: [assign: 2]
+  import Phoenix.LiveView, only: [send_update_after: 3]
+
+  alias Tymeslot.CalendarGrid
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
+
+  @timeout 60_000
+
+  # Consecutive failed attempts before the banner speaks.
+  @persistent 2
+
+  @type socket :: Phoenix.LiveView.Socket.t()
+
+  @doc "Asks for a sync of every stale account."
+  @spec refresh_stale(socket()) :: socket()
+  def refresh_stale(socket) do
+    socket.assigns.integrations
+    |> CalendarGrid.stale_integrations()
+    |> Enum.reduce(socket, &request(&2, &1.id))
+  end
+
+  @doc "Sync now or Retry for one account, named by the button's value."
+  @spec sync_account(socket(), String.t() | integer()) :: socket()
+  def sync_account(socket, id) do
+    with {integration_id, ""} <- Integer.parse(to_string(id)),
+         true <- shown?(socket, integration_id) do
+      request(socket, integration_id)
+    else
+      _not_theirs -> socket
+    end
+  end
+
+  @doc "A sync of `integration_id` completed; `nil` when the message named none."
+  @spec finished(socket(), integer() | nil) :: socket()
+  def finished(socket, nil), do: socket
+
+  def finished(socket, integration_id),
+    do:
+      assign(socket,
+        syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
+        failure_counts: Map.delete(socket.assigns.failure_counts, integration_id)
+      )
+
+  @doc "An attempt to sync `integration_id` failed or was discarded."
+  @spec failed(socket(), integer()) :: socket()
+  def failed(socket, integration_id) do
+    if shown?(socket, integration_id),
+      do:
+        assign(socket,
+          syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
+          failure_counts: Map.update(socket.assigns.failure_counts, integration_id, 1, &(&1 + 1))
+        ),
+      else: socket
+  end
+
+  @doc "Nothing answered the sync of `integration_id` in time; stop showing it."
+  @spec timed_out(socket(), integer()) :: socket()
+  def timed_out(socket, integration_id),
+    do: assign(socket, syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id))
+
+  @doc "The accounts whose failure has persisted: what the banner names."
+  @spec failed_ids(map()) :: MapSet.t()
+  def failed_ids(%{failure_counts: counts}),
+    do: for({id, count} <- counts, count >= @persistent, into: MapSet.new(), do: id)
+
+  defp shown?(socket, integration_id),
+    do: Enum.any?(socket.assigns.integrations, &(&1.id == integration_id))
+
+  defp request(socket, integration_id) do
+    case CalendarGrid.request_sync(socket.assigns.current_user.id, integration_id) do
+      :ok ->
+        send_update_after(
+          CalendarSurface,
+          [id: socket.assigns.id, action: :sync_timeout, integration_id: integration_id],
+          @timeout
+        )
+
+        assign(socket, syncing_ids: MapSet.put(socket.assigns.syncing_ids, integration_id))
+
+      {:error, _reason} ->
+        socket
+    end
+  end
+end

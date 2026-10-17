@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.Period
+  alias Tymeslot.CalendarGrid.SyncProblems
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.DeleteConfirmModal
@@ -30,6 +31,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.SyncBanner
+  alias TymeslotWeb.Dashboard.Calendar.SyncStatus
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
   alias TymeslotWeb.Dashboard.Calendar.Visibility
@@ -57,9 +60,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # one reload after `@reload_delay`. What the reload covers is the widest of
   # the actions asked for: `:events_updated` alone needs only the events.
   @impl Phoenix.LiveComponent
-  def update(%{action: action}, %{assigns: %{ready?: true}} = socket)
+  def update(%{action: action} = assigns, %{assigns: %{ready?: true}} = socket)
       when action in @refresh_actions,
-      do: {:ok, schedule_reload(socket, action)}
+      do:
+        {:ok, socket |> SyncStatus.finished(assigns[:integration_id]) |> schedule_reload(action)}
+
+  # One failed attempt (see `SyncStatus`); the events are reloaded as after
+  # any sync, since a failed cycle may still have changed them.
+  def update(
+        %{action: :integration_sync_failed, integration_id: id},
+        %{assigns: %{ready?: true}} = socket
+      ),
+      do: {:ok, socket |> SyncStatus.failed(id) |> schedule_reload(:events_updated)}
+
+  def update(%{action: :sync_timeout, integration_id: id}, socket),
+    do: {:ok, SyncStatus.timed_out(socket, id)}
 
   def update(%{action: action}, socket) when action in @refresh_actions, do: {:ok, socket}
 
@@ -74,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # A write's answer, routed here by `CalendarRouting` (see `Writes`). A
   # failed write is taken back off the grid by the queue itself.
   def update(%{action: :event_write_settled, write: ref, outcome: outcome}, socket),
-    do: {:ok, Writes.settle(socket, ref, outcome)}
+    do: {:ok, socket |> Writes.settle(ref, outcome) |> reload_if_queued(outcome)}
 
   # A failed write is taken back off the grid by the queue; its change can
   # no longer be undone, and the toast that named it (not another event's)
@@ -114,6 +129,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   defp schedule_reload(%{assigns: %{pending_reload: scope}} = socket, action),
     do: assign(socket, :pending_reload, widest(scope, scope(action)))
 
+  # A write saved for later leaves its event waiting to be sent, which the
+  # sync banner names; the loaded events must show that state.
+  defp reload_if_queued(%{assigns: %{ready?: true}} = socket, :queued),
+    do: schedule_reload(socket, :events_updated)
+
+  defp reload_if_queued(socket, _outcome), do: socket
+
   defp shift_mini_cursor(socket, dir) do
     cursor = Date.shift(socket.assigns.mini_cursor, month: step(dir))
 
@@ -137,7 +159,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     assigns =
       assign(assigns,
         locale: Gettext.get_locale(TymeslotWeb.Gettext),
-        days: SurfaceData.days(assigns)
+        days: SurfaceData.days(assigns),
+        sync_problems:
+          SyncProblems.list(assigns.integrations, assigns.events, SyncStatus.failed_ids(assigns))
       )
 
     ~H"""
@@ -158,6 +182,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         hidden_count={@hidden_count}
         target={@myself}
       />
+      <SyncBanner.sync_banner problems={@sync_problems} syncing_ids={@syncing_ids} target={@myself} />
       <div class="flex min-h-0 flex-1">
         <Rail.rail
           :if={@rail_open}
@@ -169,6 +194,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           today={@today}
           week_start={Period.week_start(@preferences.week_start_day)}
           locale={@locale}
+          syncing_ids={@syncing_ids}
+          problem_ids={MapSet.new(@sync_problems, & &1.integration_id)}
           target={@myself}
         />
         <Canvas.canvas
@@ -247,6 +274,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event("calendar:show_all", _params, socket),
     do: {:noreply, Visibility.show_all(socket)}
+
+  def handle_event("calendar:sync_account", %{"integration-id" => id}, socket),
+    do: {:noreply, SyncStatus.sync_account(socket, id)}
 
   # Only an event in the loaded window, which holds this organiser's events
   # alone, can be opened; anything else answers `opened: false`.

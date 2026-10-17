@@ -113,19 +113,25 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_event_update_result({:error, payload}, socket) do
     if payload[:retry] == :queued do
       settle_write(socket, payload[:write], :queued)
-
-      {:noreply,
-       put_flash(
-         socket,
-         :warning,
-         dgettext(
-           "dashboard_calendar_events",
-           "Your calendar could not be reached. The change is saved and will sync on the next attempt."
-         )
-       )}
+      {:noreply, queued_flash(socket)}
     else
       revert_failed_update(payload, socket)
     end
+  end
+
+  # The new calendar says this in its sync banner, naming the change.
+  defp queued_flash(socket) do
+    if CalendarRouting.surface_on_screen?(socket),
+      do: socket,
+      else:
+        put_flash(
+          socket,
+          :warning,
+          dgettext(
+            "dashboard_calendar_events",
+            "Your calendar could not be reached. The change is saved and will sync on the next attempt."
+          )
+        )
   end
 
   @doc """

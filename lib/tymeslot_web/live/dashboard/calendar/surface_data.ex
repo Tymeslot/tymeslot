@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.Preview
+  alias TymeslotWeb.Dashboard.Calendar.SyncStatus
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
   alias TymeslotWeb.Dashboard.Calendar.Writes
 
@@ -64,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       delete_prompt: nil,
       pending_deletes: %{},
       syncing_ids: MapSet.new(),
-      failed_ids: MapSet.new()
+      failure_counts: %{}
     )
   end
 
@@ -86,6 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         |> Deletion.resume()
         |> load_window()
         |> Writes.adopt()
+        |> SyncStatus.refresh_stale()
         |> assign(:ready?, true)
 
       true ->
