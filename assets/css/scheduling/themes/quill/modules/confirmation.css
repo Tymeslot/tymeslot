@@ -170,13 +170,17 @@
   gap: var(--space-2xs);
 }
 
-/* "Schedule another": a quiet link under the calendar action, which leads. */
+/* "Schedule another": a quiet link under the calendar action, which leads.
+   It is quiet by its size, its plain weight and its underline, not by a
+   dimmer colour: the secondary text colour falls under 4.5:1 on the default
+   scheme's glass card, the page's text colour clears it on every scheme. */
 .confirmation-restart-link {
   align-self: center;
   padding: var(--space-2xs) var(--space-xs);
   border: 0;
   background: none;
-  color: var(--theme-text-secondary);
+  color: var(--theme-text);
+  font-weight: var(--font-weight-normal);
   font-size: var(--theme-font-size-sm);
   text-decoration: underline;
   text-underline-offset: var(--space-3xs);
