@@ -27,10 +27,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
       show
       size={:small}
       icon="hero-arrow-path"
+      confirm_variant={if @prompt.kind == :delete, do: :danger, else: :primary}
       title={title(@prompt.kind)}
       on_cancel={JS.push("calendar:cancel_scope", target: @target)}
     >
       <p>{question(@prompt)}</p>
+      <p :if={@prompt.kind == :timing} id="calendar-scope-undo-note" class="text-tymeslot-500">
+        {dgettext("dashboard_calendar", "Only “This event” can be undone.")}
+      </p>
       <:actions>
         <.action_button
           :for={{scope, label} <- @choices}

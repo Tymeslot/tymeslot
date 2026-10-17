@@ -23,7 +23,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesTest do
 
     standup =
       event(context.integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
-        recurring_event_id: "standup-series"
+        recurring_event_id: "standup-series",
+        uid: "standup-series_20261014T083000Z"
       )
 
     {:ok, lv, _html} = live(context.conn, ~p"/dashboard/calendar")
@@ -50,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesTest do
     assert has_element?(lv, "#calendar-scope-this_only")
     assert has_element?(lv, "#calendar-scope-following")
     assert has_element?(lv, "#calendar-scope-all")
+    assert has_element?(lv, "#calendar-scope-undo-note", "Only “This event” can be undone.")
     refute_received {:written, _uid, _payload}
   end
 
@@ -62,11 +64,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesTest do
     assert has_element?(lv, "#calendar-undo")
   end
 
-  test "all events is written and says it cannot be undone here", %{lv: lv} do
+  test "all events is written and says it cannot be undone here", %{lv: lv, standup: standup} do
     html = lv |> element("#calendar-scope-all") |> render_click()
+
+    uid = standup.uid
+    assert_receive {:written, ^uid, _payload}
 
     assert html =~ "Series changed. Changes to several events can&#39;t be undone here."
     refute html =~ ~s(id="calendar-undo")
+  end
+
+  test "this and following events is written with that scope", %{lv: lv} do
+    lv |> element("#calendar-scope-following") |> render_click()
+
+    assert_receive {:written, _uid, payload}
+    assert %{occurrence: %{scope: :following}} = payload
+    refute has_element?(lv, "#calendar-series-scope")
   end
 
   test "cancelling puts the event back", %{lv: lv, id: id} do
