@@ -66,15 +66,15 @@
   background: var(--surface-subtle);
 }
 
-.paper-type[aria-pressed="true"] {
+.paper-type[aria-current="true"] {
   border-left-color: var(--theme-primary);
   background: var(--paper-selected-surface);
 }
 
 /* The chosen row's tint takes a little contrast from the secondary text. */
-.paper-type[aria-pressed="true"] .paper-type__description,
-.paper-type[aria-pressed="true"] .paper-type__meta,
-.paper-type[aria-pressed="true"] .paper-fact__icon {
+.paper-type[aria-current="true"] .paper-type__description,
+.paper-type[aria-current="true"] .paper-type__meta,
+.paper-type[aria-current="true"] .paper-fact__icon {
   color: var(--paper-ink-selected);
 }
 
@@ -135,7 +135,7 @@
   color: var(--ink-2);
 }
 
-.paper-type[aria-pressed="true"] .paper-type__chevron {
+.paper-type[aria-current="true"] .paper-type__chevron {
   color: var(--paper-accent-ink);
 }
 

@@ -89,10 +89,16 @@
     height: 100%;
   }
 
+  /* The list's height is the calendar's, so it rarely ends on a whole time.
+     Its last edge fades out, so a time cut off there reads as more to
+     scroll, not as clipped; the space under the last time is as tall as
+     the fade, so once scrolled to the end every time is whole and clear. */
   .paper-slots .slot-list__body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    padding-bottom: var(--space-2xl);
+    mask-image: linear-gradient(to bottom, black calc(100% - var(--space-2xl)), transparent);
   }
 
   /* The capped list clips what lies outside it, so a time's focus ring sits

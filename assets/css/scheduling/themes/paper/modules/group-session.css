@@ -15,7 +15,7 @@
 }
 
 /* On a chosen meeting type the hint takes the row's selected ink. */
-.paper-type[aria-pressed="true"] .group-session-hint {
+.paper-type[aria-current="true"] .group-session-hint {
   color: var(--paper-ink-selected);
 }
 
