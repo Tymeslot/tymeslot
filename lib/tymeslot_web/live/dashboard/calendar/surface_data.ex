@@ -65,7 +65,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       delete_prompt: nil,
       pending_deletes: %{},
       syncing_ids: MapSet.new(),
-      failure_counts: %{}
+      failure_counts: %{},
+      sync_refs: %{}
     )
   end
 
@@ -87,6 +88,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         |> Deletion.resume()
         |> load_window()
         |> Writes.adopt()
+        |> SyncStatus.load_persisted()
         |> SyncStatus.refresh_stale()
         |> assign(:ready?, true)
 

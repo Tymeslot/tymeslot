@@ -73,8 +73,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       ),
       do: {:ok, socket |> SyncStatus.failed(id) |> schedule_reload(:events_updated)}
 
-  def update(%{action: :sync_timeout, integration_id: id}, socket),
-    do: {:ok, SyncStatus.timed_out(socket, id)}
+  def update(%{action: :sync_timeout, integration_id: id, ref: ref}, socket),
+    do: {:ok, SyncStatus.timed_out(socket, id, ref)}
 
   def update(%{action: action}, socket) when action in @refresh_actions, do: {:ok, socket}
 

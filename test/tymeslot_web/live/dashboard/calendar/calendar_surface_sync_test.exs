@@ -15,8 +15,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   setup %{conn: conn}, do: owner(conn)
 
@@ -217,5 +219,62 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
     html = settled(lv)
 
     refute html =~ "Your calendar could not be reached"
+  end
+
+  describe "failures persisted before the calendar opened" do
+    defp persist_failures(user, integration, count) do
+      {:ok, _state} =
+        IntegrationHealthStateQueries.get_or_init("calendar", integration.id, user.id)
+
+      IntegrationHealthStateQueries.update_fields("calendar", integration.id,
+        consecutive_sync_failures: count
+      )
+    end
+
+    test "three in a row name the account on mount, without a broadcast", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      persist_failures(user, integration, 3)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(
+               lv,
+               "#calendar-sync-problem-#{integration.id}",
+               "Work account isn't responding."
+             )
+    end
+
+    test "a single one does not", %{conn: conn, user: user, integration: integration} do
+      persist_failures(user, integration, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      refute has_element?(lv, "#calendar-sync-problem-#{integration.id}")
+    end
+  end
+
+  test "the timer of an earlier request does not stop a later request's spinner", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    fail(lv, user, integration.id, 1)
+    lv |> element("#calendar-sync-#{integration.id}") |> render_click()
+    assert syncing?(lv, integration)
+
+    Phoenix.LiveView.send_update(lv.pid, CalendarSurface,
+      id: "calendar",
+      action: :sync_timeout,
+      integration_id: integration.id,
+      ref: make_ref()
+    )
+
+    settled(lv)
+
+    assert syncing?(lv, integration)
   end
 end

@@ -15,6 +15,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   its last success, and the banner names an account (`failed_ids/1`) only
   once it has failed `@persistent` times in a row. A broadcast naming an
   integration the surface does not show (one deleted mid-sync) is ignored.
+  The counts start from the persisted ones (`load_persisted/1`), so an
+  account that has been failing for hours is named as soon as the calendar
+  opens.
+
+  Each request's timer carries a ref (`sync_refs`), so the timer of an
+  earlier request cannot stop the spinner of a later one.
   """
 
   import Phoenix.Component, only: [assign: 2]
@@ -29,6 +35,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   @persistent 2
 
   @type socket :: Phoenix.LiveView.Socket.t()
+
+  @doc "Starts the failure counts from the persisted ones, for the shown accounts."
+  @spec load_persisted(socket()) :: socket()
+  def load_persisted(socket) do
+    counts = CalendarGrid.sync_failures(socket.assigns.current_user.id)
+    shown = Enum.map(socket.assigns.integrations, & &1.id)
+
+    assign(socket, failure_counts: Map.take(counts, shown))
+  end
 
   @doc "Asks for a sync of every stale account."
   @spec refresh_stale(socket()) :: socket()
@@ -57,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
     do:
       assign(socket,
         syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
+        sync_refs: Map.delete(socket.assigns.sync_refs, integration_id),
         failure_counts: Map.delete(socket.assigns.failure_counts, integration_id)
       )
 
@@ -67,15 +83,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
       do:
         assign(socket,
           syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
+          sync_refs: Map.delete(socket.assigns.sync_refs, integration_id),
           failure_counts: Map.update(socket.assigns.failure_counts, integration_id, 1, &(&1 + 1))
         ),
       else: socket
   end
 
-  @doc "Nothing answered the sync of `integration_id` in time; stop showing it."
-  @spec timed_out(socket(), integer()) :: socket()
-  def timed_out(socket, integration_id),
-    do: assign(socket, syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id))
+  @doc """
+  Nothing answered the request `ref` for `integration_id` in time; stop
+  showing it. A timer of an earlier request (a different ref) does nothing.
+  """
+  @spec timed_out(socket(), integer(), reference()) :: socket()
+  def timed_out(socket, integration_id, ref) do
+    if socket.assigns.sync_refs[integration_id] == ref,
+      do:
+        assign(socket,
+          syncing_ids: MapSet.delete(socket.assigns.syncing_ids, integration_id),
+          sync_refs: Map.delete(socket.assigns.sync_refs, integration_id)
+        ),
+      else: socket
+  end
 
   @doc "The accounts whose failure has persisted: what the banner names."
   @spec failed_ids(map()) :: MapSet.t()
@@ -88,13 +115,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   defp request(socket, integration_id) do
     case CalendarGrid.request_sync(socket.assigns.current_user.id, integration_id) do
       :ok ->
+        ref = make_ref()
+
         send_update_after(
           CalendarSurface,
-          [id: socket.assigns.id, action: :sync_timeout, integration_id: integration_id],
+          [
+            id: socket.assigns.id,
+            action: :sync_timeout,
+            integration_id: integration_id,
+            ref: ref
+          ],
           @timeout
         )
 
-        assign(socket, syncing_ids: MapSet.put(socket.assigns.syncing_ids, integration_id))
+        assign(socket,
+          syncing_ids: MapSet.put(socket.assigns.syncing_ids, integration_id),
+          sync_refs: Map.put(socket.assigns.sync_refs, integration_id, ref)
+        )
 
       {:error, _reason} ->
         socket

@@ -40,6 +40,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Integrations.Calendar.SyncSchedule
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
 
@@ -182,6 +183,10 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc "Enqueues a sync of each of the user's active integrations. See `Freshness.refresh_events/1`."
   defdelegate refresh_events(user_id), to: Freshness
+
+  @doc "The consecutive failed sync cycles of each of the user's calendar integrations, by id."
+  @spec sync_failures(integer()) :: %{integer() => pos_integer()}
+  def sync_failures(user_id), do: HealthCheck.sync_failure_counts(:calendar, user_id)
 
   @doc "Enqueues a sync of one of the user's active integrations. See `Freshness.request_sync/2`."
   defdelegate request_sync(user_id, integration_id), to: Freshness
