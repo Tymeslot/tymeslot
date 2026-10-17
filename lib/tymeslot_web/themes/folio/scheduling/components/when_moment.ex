@@ -213,7 +213,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
               data-date={day[:date]}
               data-fact={day[:current_month] && "date"}
               data-value={day[:current_month] && day[:date]}
-              phx-click="select_date"
+              phx-click={select_date(@myself)}
               phx-value-date={day[:date]}
               phx-target={@myself}
               disabled={!bookable || Map.get(day, :loading, false)}
@@ -254,6 +254,18 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.WhenMoment do
   end
 
   defp month_label(_year, _month, _delta), do: nil
+
+  # A day's click: its times, brought into view. The times stack under the
+  # month at every width, and the slot list leaves the view alone
+  # (`auto_scroll={false}`, so that the times loading as the moment opens do
+  # not carry its heading away), so the click asks for the times heading at
+  # the top itself. A tapped button is not focused on iOS Safari, so the
+  # heading taking the focus would not move the page there.
+  defp select_date(target) do
+    "select_date"
+    |> JS.push(target: target)
+    |> JS.dispatch("tymeslot:reveal", to: "#slots-container .slot-list__heading")
+  end
 
   # The button's click: back to the landing's month and week, then its day
   # selected (the return alone leaves no day selected, so no times show), then

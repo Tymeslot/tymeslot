@@ -95,6 +95,23 @@ defmodule TymeslotWeb.Themes.Folio.WhenMomentTest do
     assert Floki.attribute(doc, "#slots-container", "data-auto-scroll") == ["off"]
   end
 
+  # With the slot list's own scroll off, a day picked on a phone brings its
+  # times into view through the click itself.
+  test "a day's click brings the times heading into view" do
+    doc = when_moment(selected_date: "2030-03-12", available_slots: ["9:00 AM"])
+
+    assert [day | _] = Floki.find(doc, "[data-fact='date']")
+    assert Floki.attribute(day, "phx-value-date") == ["2030-03-01"]
+    assert [click] = Floki.attribute(day, "phx-click")
+
+    assert [
+             ["push", %{"event" => "select_date", "target" => _}],
+             ["dispatch", %{"event" => "tymeslot:reveal", "to" => to}]
+           ] = Jason.decode!(click)
+
+    assert [_heading] = Floki.find(doc, to)
+  end
+
   test "an empty month is a neutral notice, the slow-load line keeps the warning style" do
     doc = when_moment(availability_status: :error)
 
