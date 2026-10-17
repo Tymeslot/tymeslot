@@ -257,10 +257,7 @@ export const CalendarCanvas = {
   render() {
     if (!this.settings || !this.clock) return;
     // A drag owns the dragged block until the drop; redraw then.
-    if (this.drag) {
-      this.dirty = true;
-      return;
-    }
+    if (this.drag) return;
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
     const previous = this.el.querySelector("[data-scroll]");
     if (previous) this.scrollTop = previous.scrollTop;
@@ -357,7 +354,13 @@ export const CalendarCanvas = {
 
   handleKey(e) {
     if (e.repeat) return undefined;
-    if (e.key === "Escape") return this.cancelDrag() || this.closeList();
+    if (e.key === "Escape") {
+      if (this.cancelDrag()) {
+        this.swallowNextClick();
+        return undefined;
+      }
+      return this.closeList();
+    }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches?.('[data-event-id][role="button"]')) {
       e.preventDefault();
       this.open(e.target.dataset.eventId, e.target);

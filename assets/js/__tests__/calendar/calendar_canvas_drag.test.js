@@ -3,9 +3,9 @@
  * a drag moves or resizes the block under the pointer, sends nothing until
  * the drop, then asks the server to make it so; a click still opens.
  */
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { addDays, makeScale } from "../../calendar/time.js";
-import { block, event, mountHook, payload, pushes, unmountAll } from "./canvas_harness.js";
+import { block, event, mountHook, payload, pushes, settings, unmountAll } from "./canvas_harness.js";
 
 const days = Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k));
 
@@ -15,10 +15,23 @@ function withGeometry(hook) {
   return hook;
 }
 
-const pointer = (type, target, x, y) =>
-  target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 }));
+// A pointer event as the browser sends it: jsdom has no PointerEvent, so the
+// pointer's id and held buttons ride on a mouse event. A press and a move
+// hold the primary button, a release does not.
+function pointer(type, target, x, y, extra = {}) {
+  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+  Object.defineProperty(e, "pointerId", { value: extra.pointerId ?? 1 });
+  Object.defineProperty(e, "buttons", { value: extra.buttons ?? (type === "pointerup" ? 0 : 1) });
+  return target.dispatchEvent(e);
+}
 
-afterEach(unmountAll);
+const press = (hook, el, id = "event-1") => ({ el, hook, target: block(el, id) });
+
+afterEach(() => {
+  unmountAll();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 test("dragging to another day and time asks the server to move the event there", () => {
   const { el, hook } = mountHook();
@@ -118,7 +131,234 @@ test("a payload arriving mid-drag waits for the drop", () => {
 
   pointer("pointerdown", block(el, "event-1"), 250, 582);
   pointer("pointermove", el, 350, 634);
-  handlers["calendar:events"](payload());
+  handlers["calendar:events"](payload({ events: [event("event-1", "Renamed by the server", "2026-10-14T11:00", "2026-10-14T12:00")] }));
 
   expect(block(el, "event-1").classList.contains("is-dragging")).toBe(true);
+  expect(block(el, "event-1").textContent).not.toContain("Renamed");
+
+  pointer("pointerup", el, 350, 634);
+  handlers["calendar:events"](payload({ events: [event("event-1", "Renamed by the server", "2026-10-15T12:00", "2026-10-15T13:00")] }));
+
+  expect(el.querySelectorAll('[data-event-id="event-1"]').length).toBe(1);
+  expect(block(el, "event-1").textContent).toContain("Renamed by the server");
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(false);
+});
+
+function drop(hook, el) {
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 260, 592);
+  pointer("pointermove", el, 350, 634);
+  pointer("pointerup", el, 350, 634);
+}
+
+test("the server confirming the move leaves one block at the new time", () => {
+  const { el, hook, handlers } = mountHook();
+  withGeometry(hook);
+  drop(hook, el);
+
+  handlers["calendar:events"](payload({ events: [event("event-1", "Design review", "2026-10-15T12:00", "2026-10-15T13:00")] }));
+
+  expect(el.querySelectorAll('[data-event-id="event-1"]').length).toBe(1);
+  expect(block(el, "event-1").closest("[data-day]").dataset.day).toBe("2026-10-15");
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(false);
+});
+
+test("the server refusing the move puts the block back at its original time", () => {
+  const { el, hook, handlers } = mountHook();
+  withGeometry(hook);
+  drop(hook, el);
+  expect(block(el, "event-1").closest("[data-day]").dataset.day).toBe("2026-10-15");
+
+  handlers["calendar:events"](payload());
+
+  expect(el.querySelectorAll('[data-event-id="event-1"]').length).toBe(1);
+  expect(block(el, "event-1").closest("[data-day]").dataset.day).toBe("2026-10-14");
+});
+
+test("a pointercancel mid-drag puts the event back and sends nothing", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 350, 634);
+  pointer("pointercancel", el, 350, 634);
+
+  expect(pushes(hook, "calendar:move")).toEqual([]);
+  expect(block(el, "event-1").closest("[data-day]").dataset.day).toBe("2026-10-14");
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(false);
+});
+
+test("a move with no button held ends the drag, so a later press cannot drop it", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 260, 592);
+  pointer("pointermove", el, 350, 634, { buttons: 0 });
+  pointer("pointerdown", el, 350, 634);
+  pointer("pointerup", el, 350, 634);
+
+  expect(pushes(hook, "calendar:move")).toEqual([]);
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(false);
+});
+
+test("a context menu or a lost pointer capture cancels the drag", () => {
+  for (const name of ["contextmenu", "lostpointercapture"]) {
+    const { el, hook } = mountHook();
+    withGeometry(hook);
+
+    pointer("pointerdown", block(el, "event-1"), 250, 582);
+    pointer("pointermove", el, 350, 634);
+    el.dispatchEvent(new Event(name, { bubbles: true }));
+    pointer("pointerup", el, 350, 634);
+
+    expect(pushes(hook, "calendar:move")).toEqual([]);
+    expect(block(el, "event-1").closest("[data-day]").dataset.day).toBe("2026-10-14");
+    unmountAll();
+  }
+});
+
+test("a second pointer can neither take over nor end the drag", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 260, 592);
+  pointer("pointerdown", block(el, "event-2"), 250, 842, { pointerId: 2 });
+  pointer("pointermove", el, 50, 100, { pointerId: 2 });
+  pointer("pointerup", el, 50, 100, { pointerId: 2 });
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(true);
+
+  pointer("pointermove", el, 350, 634);
+  pointer("pointerup", el, 350, 634);
+
+  expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-15T12:00", end: "2026-10-15T13:00" }]);
+});
+
+test("the start grip moves the start and keeps the end", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-1").querySelector('[data-grip="start"]'), 250, 572);
+  pointer("pointermove", el, 250, 560);
+  pointer("pointermove", el, 250, 546);
+  pointer("pointerup", el, 250, 546);
+
+  expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-14T10:30", end: "2026-10-14T12:00" }]);
+});
+
+test("resizing to the end of the day reads 00:00", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-1").querySelector('[data-grip="end"]'), 250, 624);
+  pointer("pointermove", el, 250, 700);
+  pointer("pointermove", el, 250, 2000);
+
+  expect(block(el, "event-1").querySelector(".cal-drag-time").textContent).toBe("11:00–00:00");
+});
+
+test("with the night folded, a drag cannot reach into it", () => {
+  const folded = payload({ settings: { ...settings, fold_night: true } });
+  const { el, hook } = mountHook(folded);
+  const scale = makeScale(52, true);
+  hook.gridGeometry = () => ({ left: 0, top: 0, colWidth: 100, days, scale });
+
+  pointer("pointerdown", block(el, "event-1"), 250, scale.yOf(660) + 5);
+  pointer("pointermove", el, 250, scale.yOf(660) - 30);
+  pointer("pointermove", el, 250, 0);
+  pointer("pointerup", el, 250, 0);
+
+  expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-14T07:00", end: "2026-10-14T08:00" }]);
+});
+
+test("a scroll mid-drag keeps the block under the pointer", () => {
+  const { el, hook } = mountHook();
+  let top = 0;
+  hook.gridGeometry = () => ({ left: 0, top, colWidth: 100, days, scale: makeScale(52, false) });
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 250, 600);
+  top = -104; // two hours scrolled; the pointer has not moved
+  el.querySelector("[data-scroll]").dispatchEvent(new Event("scroll"));
+  expect(block(el, "event-1").querySelector(".cal-drag-time").textContent).toBe("13:15–14:15");
+  pointer("pointerup", el, 250, 600);
+
+  expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-14T13:15", end: "2026-10-14T14:15" }]);
+});
+
+test("the columns' position is read afresh on every move", () => {
+  const { el, hook } = mountHook();
+  let top = 0;
+  hook.gridGeometry = () => ({ left: 0, top, colWidth: 100, days, scale: makeScale(52, false) });
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 250, 600);
+  top = -104;
+  pointer("pointermove", el, 250, 582);
+  pointer("pointerup", el, 250, 582);
+
+  expect(pushes(hook, "calendar:move")).toEqual([{ id: "event-1", start: "2026-10-14T13:00", end: "2026-10-14T14:00" }]);
+});
+
+test("near the scroller's bottom edge the grid scrolls, within its range, and stops on the drop", () => {
+  const frames = [];
+  vi.stubGlobal("requestAnimationFrame", (callback) => frames.push(callback));
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  const { el, hook } = mountHook();
+  let top = 0;
+  hook.gridGeometry = () => ({ left: 0, top, colWidth: 100, days, scale: makeScale(52, false) });
+  const scroller = el.querySelector("[data-scroll]");
+  let scrollTop = 0;
+  Object.defineProperty(scroller, "scrollTop", { get: () => scrollTop, set: (v) => (scrollTop = v), configurable: true });
+  Object.defineProperty(scroller, "scrollHeight", { value: 1000, configurable: true });
+  Object.defineProperty(scroller, "clientHeight", { value: 600, configurable: true });
+  scroller.getBoundingClientRect = () => ({ top: 0, bottom: 600, left: 0, right: 900 });
+  const run = () => frames.splice(0).forEach((frame) => frame());
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 250, 590);
+  pointer("pointermove", el, 250, 598);
+  run();
+  expect(scrollTop).toBeGreaterThan(0);
+
+  for (let i = 0; i < 100; i += 1) run();
+  expect(scrollTop).toBe(400); // clamped to scrollHeight - clientHeight
+
+  pointer("pointerup", el, 250, 598);
+  expect(frames.length).toBe(0);
+});
+
+test("the block pressed is found again when opening the drag redrew the grid", () => {
+  vi.stubGlobal("CSS", { escape: (text) => text });
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+  hook.list = document.createElement("div");
+  document.body.append(hook.list);
+  hook.dirty = true;
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 350, 634);
+
+  expect(el.querySelectorAll('.cal-ev[data-event-id="event-1"]').length).toBe(1);
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(true);
+});
+
+test("Escape pressed on the page cancels a live drag and the click after it is swallowed", () => {
+  vi.useFakeTimers();
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 350, 634);
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  expect(block(el, "event-1").classList.contains("is-dragging")).toBe(false);
+
+  block(el, "event-1").click();
+  expect(pushes(hook, "calendar:open")).toEqual([]);
+
+  // Gone by the next tick: a later click is a click again.
+  vi.advanceTimersByTime(1);
+  block(el, "event-1").click();
+  expect(pushes(hook, "calendar:open")).toEqual([{ id: "event-1" }]);
 });
