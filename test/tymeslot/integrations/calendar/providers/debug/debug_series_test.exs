@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
 
   @moduletag :calendar
 
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
   alias Tymeslot.Integrations.Calendar.DebugStore
@@ -232,5 +234,102 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
 
     rows = listed(~U[2026-11-01 00:00:00Z], ~U[2026-11-09 00:00:00Z])
     refute Enum.any?(rows, &String.starts_with?(&1.uid, "holiday"))
+  end
+
+  defp write(scope, key, changes) do
+    DebugCalendarProvider.update_event(nil, "standup_#{key}", %{
+      occurrence: %{href: "debug:standup", key: key, scope: scope, changes: changes}
+    })
+  end
+
+  defp starts, do: listed() |> Enum.map(& &1.start_at) |> Enum.sort(DateTime)
+
+  test "this event only moves the one occurrence" do
+    assert :ok =
+             write(:this_only, "20261019T090000", %{
+               start_time: ~U[2026-10-19 10:00:00Z],
+               end_time: ~U[2026-10-19 10:15:00Z]
+             })
+
+    assert starts() == [
+             ~U[2026-10-12 09:00:00Z],
+             ~U[2026-10-19 10:00:00Z],
+             ~U[2026-10-26 09:00:00Z]
+           ]
+  end
+
+  test "all events moves every occurrence by the same amount" do
+    assert :ok =
+             write(:all, "20261019T090000", %{
+               start_time: ~U[2026-10-19 09:30:00Z],
+               end_time: ~U[2026-10-19 10:00:00Z]
+             })
+
+    assert starts() == [
+             ~U[2026-10-12 09:30:00Z],
+             ~U[2026-10-19 09:30:00Z],
+             ~U[2026-10-26 09:30:00Z]
+           ]
+
+    assert Enum.all?(listed(), &(DateTime.diff(&1.end_at, &1.start_at, :minute) == 30))
+  end
+
+  test "all events keeps a skipped and a changed occurrence on the same occurrences" do
+    :ok =
+      DebugCalendarProvider.delete_event(nil, "debug:standup",
+        provider_event_id: "debug:standup",
+        occurrence: %{href: "debug:standup", key: "20261019T090000"}
+      )
+
+    :ok = write(:this_only, "20261026T090000", %{summary: "Retro"})
+
+    assert :ok =
+             write(:all, "20261012T090000", %{
+               start_time: ~U[2026-10-12 09:30:00Z],
+               end_time: ~U[2026-10-12 09:45:00Z]
+             })
+
+    rows = listed()
+    assert Enum.map(rows, & &1.start_at) == [~U[2026-10-12 09:30:00Z], ~U[2026-10-26 09:30:00Z]]
+    assert Enum.map(rows, & &1.summary) == ["Standup", "Retro"]
+    assert Enum.map(rows, & &1.uid) == ["standup_20261012T093000", "standup_20261026T093000"]
+  end
+
+  test "this and following events splits the series at the occurrence" do
+    assert :ok =
+             write(:following, "20261019T090000", %{
+               start_time: ~U[2026-10-19 14:00:00Z],
+               end_time: ~U[2026-10-19 14:15:00Z]
+             })
+
+    assert starts() == [
+             ~U[2026-10-12 09:00:00Z],
+             ~U[2026-10-19 14:00:00Z],
+             ~U[2026-10-26 14:00:00Z]
+           ]
+  end
+
+  test "deleting one occurrence skips it, and deleting the series removes it" do
+    assert :ok =
+             DebugCalendarProvider.delete_event(nil, "debug:standup",
+               provider_event_id: "debug:standup",
+               occurrence: %{href: "debug:standup", key: "20261019T090000"}
+             )
+
+    assert length(listed()) == 2
+
+    assert :ok =
+             DebugCalendarProvider.delete_event(nil, "debug:standup",
+               provider_event_id: "debug:standup"
+             )
+
+    assert listed() == []
+  end
+
+  test "a debug series takes the calendar's scoped edits" do
+    occurrence = %{provider: "debug", recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"}
+
+    assert Occurrence.series_family(occurrence) == :caldav
+    assert CalendarGrid.repeatable_provider?("debug")
   end
 end

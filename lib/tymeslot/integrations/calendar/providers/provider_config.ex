@@ -286,7 +286,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   Exchange event is never given one from the grid.
   """
   @spec writes_repeat_rules?(atom() | String.t() | any()) :: boolean()
-  def writes_repeat_rules?(provider), do: oauth_provider?(provider) or caldav_based?(provider)
+  def writes_repeat_rules?(provider), do: oauth_provider?(provider) or resource_series?(provider)
+
+  @doc """
+  Whether the provider keeps a repeating series as one resource whose
+  occurrences the calendar edits by key, so that
+  `Tymeslot.CalendarGrid.Occurrence.series_family/1` answers `:caldav`: the
+  CalDAV family, and the debug calendar, which mirrors it so a development
+  calendar exercises every scoped edit.
+  """
+  @spec resource_series?(atom() | String.t() | any()) :: boolean()
+  def resource_series?(provider), do: caldav_based?(provider) or provider in [:debug, "debug"]
 
   @doc """
   Returns the fixed CalDAV server URL for a provider, or `nil` if the user

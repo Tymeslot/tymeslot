@@ -62,7 +62,7 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
 
     cond do
       not Series.member?(event) -> :single
-      ProviderConfig.caldav_based?(provider) -> :caldav
+      ProviderConfig.resource_series?(provider) -> :caldav
       ProviderConfig.oauth_provider?(provider) -> :provider_ids
       true -> :unsupported
     end

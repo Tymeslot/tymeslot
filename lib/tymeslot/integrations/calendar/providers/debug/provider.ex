@@ -26,12 +26,17 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   # Synthetic events have no real timezone; default to UTC for the provider path.
   # The interactive dev calendar (`Tymeslot.Dev.Calendar`) resolves the
   # organiser's timezone instead.
   @default_timezone "Etc/UTC"
+
+  # What a write of one occurrence, or of a series from one occurrence,
+  # carries over besides its timing.
+  @written_fields [:summary, :description, :location, :colour, :reminders, :attendees]
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) when is_map(config) do
@@ -52,7 +57,23 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     {:ok, CreatedEvent.new(uid)}
   end
 
+  # A scoped edit of a series names it by its address and the occurrence by
+  # its key, as `SeriesEdit` does for the CalDAV family; anything else is a
+  # whole-event write.
   @impl Tymeslot.Integrations.Calendar.Provider
+  def update_event(_client, _uid, %{
+        occurrence: %{href: href, key: key, scope: scope} = occurrence
+      }) do
+    with uid when is_binary(uid) <- series_uid(href),
+         {:ok, master} <- DebugStore.fetch_event(uid) do
+      master
+      |> scoped_write(scope, key, Map.get(occurrence, :changes, %{}))
+      |> Enum.each(&DebugStore.put_event/1)
+    else
+      _missing -> {:error, :not_found}
+    end
+  end
+
   def update_event(_client, uid, event_data) do
     existing =
       case DebugStore.fetch_event(uid) do
@@ -65,10 +86,18 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     :ok
   end
 
+  # One occurrence is skipped (`opts[:occurrence]`); otherwise the event, or
+  # the series its address names, goes. The runtime hands a provider outside
+  # the CalDAV family its `provider_event_id` as the id, so a series' address
+  # can arrive either way.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(_client, uid, _opts) do
-    DebugStore.delete_event(uid)
-    :ok
+  def delete_event(_client, id, opts) do
+    uid = series_uid(opts[:provider_event_id]) || series_uid(id) || id
+
+    case opts[:occurrence] do
+      %{key: key} -> skip_occurrence(uid, key)
+      _whole -> DebugStore.delete_event(uid)
+    end
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -275,6 +304,107 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     case DateTime.shift_zone(~U[2000-01-01 00:00:00Z], zone) do
       {:ok, _shifted} -> zone
       {:error, _reason} -> @default_timezone
+    end
+  end
+
+  defp series_uid("debug:" <> uid), do: uid
+  defp series_uid(_other), do: nil
+
+  defp skip_occurrence(uid, key) do
+    case DebugStore.fetch_event(uid) do
+      {:ok, master} -> DebugStore.put_event(Map.update(master, :exdates, [key], &[key | &1]))
+      :error -> :ok
+    end
+  end
+
+  # This occurrence only: its changes are kept against its key.
+  defp scoped_write(master, :this_only, key, changes) do
+    fields = Map.take(changes, [:start_time, :end_time | @written_fields])
+    overrides = Map.update(Map.get(master, :overrides, %{}), key, fields, &Map.merge(&1, fields))
+    [Map.put(master, :overrides, overrides)]
+  end
+
+  # Every occurrence: the series moves by as much as this occurrence did. The
+  # skipped occurrences and the changed ones are keyed on the old times, so
+  # their keys move by the same amount and keep naming the same occurrences
+  # (an override's own times are explicit and stay as written).
+  defp scoped_write(master, :all, key, changes) do
+    zone = series_zone(master)
+    delta = shift_amount(key_start(key, zone), changes)
+
+    moved =
+      master
+      |> shift(delta, changes)
+      |> Map.merge(Map.take(changes, [:recurrence_rule | @written_fields]))
+      |> rekey(delta, zone)
+
+    [moved]
+  end
+
+  # This and every later occurrence: the series ends before this one, and a
+  # new series starts from it with the changes.
+  defp scoped_write(master, :following, key, changes) do
+    slot = key_start(key, series_zone(master))
+    start = Map.get(changes, :start_time, slot)
+    finish = Map.get(changes, :end_time, add(start, span(master)))
+
+    head = Map.update!(master, :recurrence_rule, &RRule.end_before(&1, slot))
+
+    tail =
+      master
+      |> Map.drop([:exdates, :overrides])
+      |> Map.merge(Map.take(changes, [:recurrence_rule | @written_fields]))
+      |> Map.merge(%{uid: "#{master.uid}-#{key}", start_time: start, end_time: finish})
+
+    [head, tail]
+  end
+
+  defp shift_amount(slot, %{start_time: new_start}), do: difference(new_start, slot)
+  defp shift_amount(_slot, _changes), do: 0
+
+  defp shift(master, delta, changes) do
+    start = add(master.start_time, delta)
+
+    length =
+      case changes do
+        %{start_time: new_start, end_time: new_end} -> difference(new_end, new_start)
+        _unchanged -> span(master)
+      end
+
+    Map.merge(master, %{start_time: start, end_time: add(start, length)})
+  end
+
+  defp rekey(master, 0, _zone), do: master
+
+  defp rekey(master, delta, zone) do
+    move = &(&1 |> key_start(zone) |> add(delta) |> in_zone(zone) |> occurrence_key())
+
+    master
+    |> Map.replace_lazy(:exdates, &Enum.map(&1, move))
+    |> Map.replace_lazy(:overrides, &Map.new(&1, fn {key, change} -> {move.(key), change} end))
+  end
+
+  defp span(master),
+    do: difference(Map.get(master, :end_time) || master.start_time, master.start_time)
+
+  defp difference(%DateTime{} = later, %DateTime{} = earlier),
+    do: DateTime.diff(later, earlier, :second)
+
+  defp difference(%Date{} = later, %Date{} = earlier), do: Date.diff(later, earlier)
+
+  # A date moves by days, a moment by seconds.
+  defp add(value, amount) do
+    case value do
+      %DateTime{} -> DateTime.add(value, amount, :second)
+      %Date{} -> Date.add(value, amount)
+    end
+  end
+
+  # The occurrence key back to the slot the series put it in.
+  defp key_start(key, zone) do
+    case slot_start(key, zone) do
+      nil -> raise ArgumentError, "not an occurrence key: #{inspect(key)}"
+      slot -> slot
     end
   end
 
