@@ -12,8 +12,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   The recurring `pattern` + explicit `rules` are projected into busy blocks by
   the pure `DebugSchedule` generator; in-app events are stored verbatim. All
-  store access tolerates the store not running (e.g. in `:test`, or dev without
-  the interactive calendar enabled) — reads then return an empty set.
+  store access tolerates the store not running: it runs on every dev server, in
+  `:test` only when a test starts it, and reads then fall back to the default
+  pattern (not an empty set).
 
   Only wired up in development/test via the `debug` integration provider.
   """
@@ -25,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
+  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   # Synthetic events have no real timezone; default to UTC for the provider path.
   # The interactive dev calendar (`Tymeslot.Dev.Calendar`) resolves the
@@ -125,7 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       |> DebugSchedule.events(rules, start_time, end_time, @default_timezone)
       |> Enum.map(&Map.put(&1, :created_by_tymeslot, false))
 
-    created = events_in_range(Map.values(events), start_time, end_time)
+    created = stored_in_range(Map.values(events), start_time, end_time)
 
     {:ok, generated ++ created}
   end
@@ -173,7 +175,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       :recurrence_rule,
       :colour,
       :attendees,
-      :provider_calendar_id
+      :provider_calendar_id,
+      :timezone
     ])
     |> Map.put(:uid, uid)
     |> Map.put_new(:all_day, false)
@@ -181,12 +184,65 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     |> Map.put(:created_by_tymeslot, true)
   end
 
-  # Keeps stored events overlapping the range. Timed events compare directly;
-  # all-day events are projected to a day-spanning block for the overlap check
-  # but returned verbatim so normalisation can emit start_date/end_date.
-  defp events_in_range(events, range_start, range_end) do
-    Enum.filter(events, &overlaps?(&1, range_start, range_end))
+  @doc """
+  The stored events overlapping `[range_start, range_end)`, with every
+  repeating one expanded into its occurrences the way the CalDAV family
+  caches a series: one row per occurrence, under the series' uid and the
+  occurrence's key, all sharing the series' address (`series_href/1`).
+  Skipped occurrences (`:exdates`) are left out and changed ones
+  (`:overrides`) carry their changes. All-day events are projected to
+  day-spanning blocks for the overlap check but returned with their dates.
+  """
+  @spec stored_events_in_range(DateTime.t(), DateTime.t()) :: [map()]
+  def stored_events_in_range(range_start, range_end),
+    do: stored_in_range(Map.values(DebugStore.snapshot().events), range_start, range_end)
+
+  @doc "Where a debug series is addressed, as a CalDAV resource is by its href."
+  @spec series_href(String.t()) :: String.t()
+  def series_href(uid), do: "debug:#{uid}"
+
+  defp stored_in_range(events, range_start, range_end) do
+    events
+    |> Enum.flat_map(&occurrences(&1, range_start, range_end))
+    |> Enum.filter(&overlaps?(&1, range_start, range_end))
   end
+
+  defp occurrences(%{recurrence_rule: rule} = master, range_start, range_end)
+       when is_binary(rule) and rule != "" do
+    zone = series_zone(master)
+    skipped = Map.get(master, :exdates, [])
+    overrides = Map.get(master, :overrides, %{})
+
+    master
+    |> Map.merge(%{
+      start_time: in_zone(master.start_time, zone),
+      end_time: in_zone(Map.get(master, :end_time) || master.start_time, zone)
+    })
+    |> RecurrenceExpander.expand(range_start, range_end)
+    |> Enum.map(&{occurrence_key(&1.start_time), &1})
+    |> Enum.reject(fn {key, _occurrence} -> key in skipped end)
+    |> Enum.map(fn {key, occurrence} ->
+      occurrence
+      |> Map.drop([:exdates, :overrides])
+      |> Map.merge(Map.get(overrides, key, %{}))
+      |> Map.merge(%{
+        uid: "#{master.uid}_#{key}",
+        provider_event_id: series_href(master.uid),
+        provider_metadata: %{uid: master.uid},
+        timezone: zone
+      })
+    end)
+  end
+
+  defp occurrences(event, _range_start, _range_end), do: [event]
+
+  defp series_zone(event), do: Map.get(event, :timezone) || @default_timezone
+
+  defp in_zone(%DateTime{} = datetime, zone), do: DateTime.shift_zone!(datetime, zone)
+  defp in_zone(other, _zone), do: other
+
+  defp occurrence_key(%DateTime{} = start), do: Calendar.strftime(start, "%Y%m%dT%H%M%S")
+  defp occurrence_key(%Date{} = start), do: Calendar.strftime(start, "%Y%m%d")
 
   defp overlaps?(
          %{all_day: true, start_time: %Date{} = start_date} = event,
@@ -228,6 +284,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   defp base_attrs(raw, context) do
     %{
       uid: Map.fetch!(raw, :uid),
+      provider_event_id: Map.get(raw, :provider_event_id),
+      provider_metadata: Map.get(raw, :provider_metadata, %{}),
+      timezone: Map.get(raw, :timezone),
       calendar_integration_id: context.calendar_integration_id,
       provider: :debug,
       provider_calendar_id: Map.get(raw, :provider_calendar_id) || context.provider_calendar_id,

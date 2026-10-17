@@ -114,15 +114,14 @@ defmodule Tymeslot.Dev.Calendar do
   # --- Helpers ---------------------------------------------------------------
 
   defp generate(_user_id, range_start, range_end, timezone) do
-    %{pattern: pattern, rules: rules, events: events} = DebugStore.snapshot()
+    %{pattern: pattern, rules: rules} = DebugStore.snapshot()
 
     generated = DebugSchedule.events(pattern, rules, range_start, range_end, timezone)
 
     in_app =
-      events
-      |> Map.values()
+      range_start
+      |> DebugCalendarProvider.stored_events_in_range(range_end)
       |> Enum.map(&to_busy_block(&1, timezone))
-      |> DebugSchedule.in_range(range_start, range_end)
 
     Enum.sort_by(generated ++ in_app, & &1.start_time, DateTime)
   end

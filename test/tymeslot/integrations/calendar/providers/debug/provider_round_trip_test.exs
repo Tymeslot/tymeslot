@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
     assert {:ok, %{uid: "evt-timed"}} = DebugCalendarProvider.create_event(@client, event_data)
 
     assert %CalendarEvent{
-             uid: "evt-timed",
+             uid: "evt-timed_20260615T100000",
              provider: :debug,
              all_day: false,
              start_at: ~U[2026-06-15 10:00:00Z],
@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
              status: :confirmed,
              transparency: :opaque,
              created_by_tymeslot: true
-           } = normalised_for("evt-timed")
+           } = normalised_for("evt-timed_20260615T100000")
   end
 
   test "update_event adds a colour reflected after normalisation" do
