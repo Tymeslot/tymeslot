@@ -182,6 +182,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     ~H"""
     <div id="calendar-surface" class="flex min-h-0 flex-1 flex-col bg-white">
       <h1 class="sr-only">{dgettext("dashboard_calendar", "Calendar")}</h1>
+      <p id="calendar-keys-hint" class="sr-only">
+        {dgettext(
+          "dashboard_calendar",
+          "Arrow keys move between events. Press M to move the focused event, Delete to delete it, Ctrl Z to undo."
+        )}
+      </p>
+      <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>
+      <div id="calendar-live" class="sr-only" aria-live="polite" phx-update="ignore"></div>
       <Toolbar.toolbar
         view={@view}
         date={@date}

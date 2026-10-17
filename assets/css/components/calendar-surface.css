@@ -647,3 +647,90 @@
 .cal-check.is-checked {
   background: var(--cal-ev);
 }
+
+/* Editing. Resize hit areas are transparent strips at a draggable block's
+   edges (render.js); the grip is painted only on hover and focus, inside
+   the block's padding, so it never covers text. On touch there are none:
+   long-press dragging and the selected-event handle come with the phone
+   layout. */
+.cal-ev-grip {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.cal-ev-grip.is-start {
+  top: -1px;
+}
+
+.cal-ev-grip.is-end {
+  bottom: -1px;
+}
+
+.cal-ev-grip::after {
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 3px;
+  margin-left: -8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--cal-ev) 60%, var(--cal-ink));
+  content: "";
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.cal-ev-grip.is-start::after {
+  top: 1px;
+}
+
+.cal-ev-grip.is-end::after {
+  bottom: 1px;
+}
+
+.cal-ev:hover .cal-ev-grip::after,
+.cal-ev:focus-visible .cal-ev-grip::after {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .cal-ev-grip {
+    display: none;
+  }
+}
+
+/* The block being dragged spans its column and shows its new time. */
+.cal-ev.is-dragging {
+  left: 1px;
+  z-index: 40;
+  width: calc(var(--cal-col) - 6px);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
+}
+
+.cal-drag-time {
+  margin-top: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The block in the keyboard move mode. */
+.cal-ev.is-moving {
+  z-index: var(--cal-lift);
+  outline: 2px dashed var(--cal-focus);
+  outline-offset: 1px;
+}
+
+/* Keyboard focus never lands under the sticky day headers and all-day lane
+   (the hook sets --cal-top-h after each draw). */
+.cal-ev {
+  scroll-margin-top: calc(var(--cal-top-h, 0px) + 8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-ev-grip::after {
+    transition: none;
+  }
+}
