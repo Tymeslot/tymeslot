@@ -1,7 +1,9 @@
 /**
  * Brings an element to the top of the view when what follows it is out of
  * sight, for a part of the page that opens in answer to the visitor's own
- * action (Paper's details part, once a time is picked).
+ * action: a moment heading that takes the focus as its moment opens
+ * (`Journey.Components.moment_heading/1`), Paper's details part once a time
+ * is picked, and Folio's times once a day is picked.
  *
  * `JS.focus()` scrolls only as far as the focused element itself: on a phone
  * or in a modal embed a heading lands anywhere from the middle to the bottom
@@ -37,20 +39,33 @@ function settled(target, until) {
   return target.boundingClientRect.top <= window.innerHeight * SETTLED_SHARE
 }
 
-// How long a page waits for its frame (or, for a scroll cut short, its
-// document) to start growing to the new content, and how long a frame must
-// then hold its size before the check runs again.
+// How long a framed page listens for its frame resizing to the new content,
+// and how long the frame must then hold its size before the check runs again.
 const FRAME_RESIZE_WAIT_MS = 1000
 export const FRAME_SETTLE_MS = 150
+
+// How long a scroll cut short by the end of the document waits for the
+// document to grow before it is given up.
+export const GROWTH_WAIT_MS = 1000
+
+// Ends the work an earlier reveal still has waiting (its re-check once the
+// frame resizes, its finish once the document grows), so that only the
+// latest request moves the page: a day picked just after a moment opened
+// must not have its times carried away by the opened heading's finish.
+let cancelPending = () => {}
 
 export function revealIntoView(event) {
   const el = event.target
   if (!(el instanceof Element) || typeof IntersectionObserver === "undefined") return
 
+  cancelPending()
+  const pending = []
+  cancelPending = () => pending.splice(0).forEach((cancel) => cancel())
+
   const selector = event.detail && event.detail.until
   const until = (selector && document.querySelector(selector)) || el
 
-  reveal(el, until)
+  reveal(el, until, pending)
 
   // An embed's frame grows to the new content only after the embedding page
   // hears of its height (iframe_embed.js), so what the first check saw may
@@ -63,14 +78,25 @@ export function revealIntoView(event) {
     let timer = null
     const again = () => {
       clearTimeout(timer)
-      timer = setTimeout(() => reveal(el, until), FRAME_SETTLE_MS)
+      timer = setTimeout(() => reveal(el, until, pending), FRAME_SETTLE_MS)
     }
+    const stop = () => {
+      clearTimeout(timer)
+      clearTimeout(lapse)
+      window.removeEventListener("resize", again)
+    }
+    const lapse = setTimeout(() => window.removeEventListener("resize", again), FRAME_RESIZE_WAIT_MS)
     window.addEventListener("resize", again)
-    setTimeout(() => window.removeEventListener("resize", again), FRAME_RESIZE_WAIT_MS)
+    pending.push(stop)
   }
 }
 
-function reveal(el, until) {
+// An element LiveView has removed since the request (a re-rendered moment)
+// measures as a zero rect at the top of the view, which would scroll a
+// framed page by its scroll margin: it is left alone.
+function reveal(el, until, pending) {
+  if (!el.isConnected) return
+
   const watched = until === el ? [el] : [el, until]
   const entries = new Map()
 
@@ -79,10 +105,12 @@ function reveal(el, until) {
     if (entries.size < watched.length) return
 
     observer.disconnect()
-    if (!settled(entries.get(el), entries.get(until))) bringToTop(el)
+    if (!el.isConnected) return
+    if (!settled(entries.get(el), entries.get(until))) bringToTop(el, pending)
   })
 
   watched.forEach((node) => observer.observe(node))
+  pending.push(() => observer.disconnect())
 }
 
 // `scrollIntoView` scrolls every box between the target and the top-level
@@ -93,9 +121,9 @@ function reveal(el, until) {
 // capped height) therefore scrolls that document alone. Only a frame as tall
 // as its page (an inline embed) needs the embedding page to scroll, and
 // `scrollIntoView` is the one way across a cross-origin frame's edge.
-function bringToTop(el) {
+function bringToTop(el, pending) {
   scrollToTop(el)
-  finishOnceGrown(el)
+  finishOnceGrown(el, pending)
 }
 
 function scrollToTop(el) {
@@ -107,21 +135,29 @@ function scrollToTop(el) {
 }
 
 // What a visitor does to scroll for themselves, which ends the wait below.
-const OWN_SCROLL_EVENTS = ["wheel", "touchstart", "keydown"]
+export const OWN_SCROLL_EVENTS = ["wheel", "touchstart", "keydown", "pointerdown"]
 
 // A scroll stops at the end of the document. A part that has just opened is
 // often still short of what goes under it (a continuous page's times arrive
 // after its heading takes the focus), so the scroll ends short of the top,
 // by however much was still to come: the target lands lower on one run than
-// on the next. When the document has grown enough, the scroll is finished,
-// unless the visitor has scrolled for themselves in the meantime.
-function finishOnceGrown(el) {
+// on the next. Each time the document grows the scroll goes on, as far as
+// the new end allows, and once the target can reach the top it is finished:
+// a part with little under it (a day with two times) never lets its heading
+// reach the top, and still ends at the end of the page, with all of what
+// arrived in view. The scroll is left as it is once the visitor has
+// scrolled for themselves, the element has left the page, or a later reveal
+// has taken over.
+function finishOnceGrown(el, pending) {
   if (typeof ResizeObserver === "undefined" || !documentScrolls() || reachable(el)) return
 
   let timer = null
+  let height = scrollRoot().scrollHeight
   const observer = new ResizeObserver(() => {
-    if (!reachable(el)) return
-    stop()
+    if (!el.isConnected) return stop()
+    if (scrollRoot().scrollHeight <= height) return
+    height = scrollRoot().scrollHeight
+    if (reachable(el)) stop()
     scrollToTop(el)
   })
   const stop = () => {
@@ -132,7 +168,8 @@ function finishOnceGrown(el) {
 
   observer.observe(document.documentElement)
   OWN_SCROLL_EVENTS.forEach((type) => window.addEventListener(type, stop, { passive: true }))
-  timer = setTimeout(stop, FRAME_RESIZE_WAIT_MS)
+  timer = setTimeout(stop, GROWTH_WAIT_MS)
+  pending.push(stop)
 }
 
 // Where the document must scroll to for `el` to sit at the top of the view,
