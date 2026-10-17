@@ -74,3 +74,24 @@ test("previewBox is where a range is drawn in its column", () => {
   expect(previewBox({ startMin: wed + 660, endMin: wed + 720 }, scale)).toEqual({ top: 572, height: 52 });
   expect(previewBox({ startMin: wed + 660, endMin: wed + 663 }, scale).height).toBe(12);
 });
+
+describe("the day's edges", () => {
+  test("a long event moved late with the night folded never ends past midnight", () => {
+    const long = event("2026-10-14T06:00", "2026-10-14T23:59");
+    const longer = { ...long, endMin: wed + 1440 };
+    const grabbed = beginDrag("move", longer, slot("2026-10-14", 400));
+    expect(dragRange(grabbed, slot("2026-10-14", 1000), 420)).toEqual({ startMin: wed + 360, endMin: wed + 1440 });
+  });
+
+  test("an end resize of an event starting at 23:50 never ends past midnight", () => {
+    const late = { ...event("2026-10-14T23:50", "2026-10-14T23:59"), endMin: wed + 1440 };
+    const end = beginDrag("end", late, slot("2026-10-14", 1440));
+    expect(dragRange(end, slot("2026-10-14", 1440))).toEqual({ startMin: wed + 1430, endMin: wed + 1440 });
+  });
+
+  test("a start resize keeps a quarter hour before the end even with the night folded", () => {
+    const early = event("2026-10-14T06:00", "2026-10-14T07:10");
+    const start = beginDrag("start", early, slot("2026-10-14", 360));
+    expect(dragRange(start, slot("2026-10-14", 430), 420)).toEqual({ startMin: wed + 415, endMin: wed + 430 });
+  });
+});
