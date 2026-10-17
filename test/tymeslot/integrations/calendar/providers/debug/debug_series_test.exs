@@ -134,41 +134,36 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
            )
   end
 
-  test "a series keeps its zone: keys are local wall-clock across a DST change" do
+  test "a series keeps its zone: keys are local wall-clock across a DST end" do
     change_master(%{
       timezone: "Europe/Warsaw",
       start_time: ~U[2026-10-05 07:00:00Z],
       end_time: ~U[2026-10-05 07:15:00Z]
     })
 
-    assert [first, second, _third] = listed()
-    assert first.uid == "standup_20261012T090000"
-    assert second.uid == "standup_20261019T090000"
+    rows = listed(~U[2026-10-12 00:00:00Z], ~U[2026-11-03 00:00:00Z])
 
-    assert [_, _, _, last] = listed(~U[2026-10-12 00:00:00Z], ~U[2026-11-03 00:00:00Z])
-    assert last.uid == "standup_20261102T090000"
-    assert DateTime.compare(last.start_at, ~U[2026-11-02 08:00:00Z]) == :eq
-    assert last.timezone == "Europe/Warsaw"
-  end
+    assert Enum.map(rows, & &1.uid) == [
+             "standup_20261012T090000",
+             "standup_20261019T090000",
+             "standup_20261026T090000",
+             "standup_20261102T090000"
+           ]
 
-  test "the occurrences either side of a DST end keep 09:00 local" do
-    change_master(%{
-      timezone: "Europe/Warsaw",
-      start_time: ~U[2026-10-05 07:00:00Z],
-      end_time: ~U[2026-10-05 07:15:00Z]
-    })
+    assert Enum.map(rows, &DateTime.to_iso8601(DateTime.shift_zone!(&1.start_at, "Etc/UTC"))) == [
+             "2026-10-12T07:00:00Z",
+             "2026-10-19T07:00:00Z",
+             "2026-10-26T08:00:00Z",
+             "2026-11-02T08:00:00Z"
+           ]
 
-    rows = listed(~U[2026-10-19 00:00:00Z], ~U[2026-10-27 00:00:00Z])
-    assert [before_change, after_change] = rows
-    assert before_change.uid == "standup_20261019T090000"
-    assert DateTime.compare(before_change.start_at, ~U[2026-10-19 07:00:00Z]) == :eq
-    assert after_change.uid == "standup_20261026T090000"
-    assert DateTime.compare(after_change.start_at, ~U[2026-10-26 08:00:00Z]) == :eq
+    assert Enum.all?(rows, &(&1.timezone == "Europe/Warsaw"))
   end
 
   test "an unknown stored zone does not crash listing" do
     change_master(%{timezone: "Mars/Olympus"})
-    assert {:ok, _events} = DebugCalendarProvider.list_events(%{user_id: 1}, [])
+    assert [row | _] = listed()
+    assert row.timezone == "Etc/UTC"
   end
 
   test "a repeating all-day event keys by date and lists on the range's first day west of UTC" do
@@ -187,5 +182,40 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
     assert first.start_date == ~D[2026-10-14]
     assert first.end_date == ~D[2026-10-14]
     assert first.provider_event_id == "debug:holiday"
+  end
+
+  test "an override for a slot the rule no longer makes is not listed" do
+    change_master(%{
+      recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261025T235959Z",
+      overrides: %{
+        "20261102T090000" => %{
+          start_time: ~U[2026-11-02 11:00:00Z],
+          end_time: ~U[2026-11-02 11:30:00Z]
+        }
+      }
+    })
+
+    assert listed(~U[2026-10-26 00:00:00Z], ~U[2026-11-09 00:00:00Z]) == []
+  end
+
+  test "an occurrence longer than a day lists in a range inside its span" do
+    change_master(%{
+      start_time: ~U[2026-10-09 09:00:00Z],
+      end_time: ~U[2026-10-12 09:00:00Z],
+      recurrence_rule: "FREQ=WEEKLY;BYDAY=FR"
+    })
+
+    assert [row] = listed(~U[2026-10-11 00:00:00Z], ~U[2026-10-12 00:00:00Z])
+    assert row.uid == "standup_20261009T090000"
+  end
+
+  test "an override that sets a start but no end keeps the series' length" do
+    change_master(%{
+      overrides: %{"20261019T090000" => %{start_time: ~U[2026-10-19 14:00:00Z]}}
+    })
+
+    assert moved = Enum.find(listed(), &(&1.uid == "standup_20261019T090000"))
+    assert moved.start_at == ~U[2026-10-19 14:00:00Z]
+    assert moved.end_at == ~U[2026-10-19 14:15:00Z]
   end
 end

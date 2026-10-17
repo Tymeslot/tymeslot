@@ -219,22 +219,30 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
         end_time: in_zone(Map.get(master, :end_time) || master.start_time, zone)
       })
 
-    # Expand a day wider than the range so an occurrence that began just
-    # before it (an all-day one west of UTC, or one still running) is found;
-    # `overlaps?/3` trims the rest.
+    span = span_seconds(shifted)
+
+    # Expand wider than the range by the series' span and a day, so an
+    # occurrence that began before it (a long one, or an all-day one west of
+    # UTC) is found; `overlaps?/3` trims the rest.
     expanded =
       shifted
-      |> RecurrenceExpander.expand(DateTime.add(range_start, -1, :day), range_end)
+      |> RecurrenceExpander.expand(
+        DateTime.add(range_start, -(span + 86_400), :second),
+        range_end
+      )
       |> Map.new(&{occurrence_key(&1.start_time), &1})
 
     # A moved occurrence may sit in the range though its original slot does
-    # not, so every override that moves one is listed too, and trimmed by its
-    # own times. An override that changes no time keeps the master's, which
-    # belong to another slot, so it lists only with its expanded slot.
+    # not, so every override that moves one the rule really makes is listed
+    # too, and trimmed by its own times. An override that changes no time
+    # keeps the master's, which belong to another slot, so it lists only with
+    # its expanded slot; a key the rule no longer produces (a series cut
+    # short by a later edit) lists nothing.
     moved =
       overrides
       |> Enum.filter(fn {key, change} ->
-        Map.has_key?(change, :start_time) and not Map.has_key?(expanded, key)
+        Map.has_key?(change, :start_time) and not Map.has_key?(expanded, key) and
+          slot_exists?(shifted, key, zone)
       end)
       |> Map.new(fn {key, _change} -> {key, shifted} end)
 
@@ -244,7 +252,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     |> Enum.map(fn {key, occurrence} ->
       occurrence
       |> Map.drop([:exdates, :overrides])
-      |> Map.merge(Map.get(overrides, key, %{}))
+      |> Map.merge(override_with_end(Map.get(overrides, key, %{}), span))
       # The series' identity always wins over an override's.
       |> Map.merge(%{
         uid: "#{master.uid}_#{key}",
@@ -257,7 +265,78 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   defp occurrences(event, _range_start, _range_end), do: [event]
 
-  defp series_zone(event), do: Map.get(event, :timezone) || @default_timezone
+  # A stored zone the tz database does not know falls back to the default.
+  defp series_zone(event) do
+    zone = Map.get(event, :timezone) || @default_timezone
+
+    case DateTime.shift_zone(~U[2000-01-01 00:00:00Z], zone) do
+      {:ok, _shifted} -> zone
+      {:error, _reason} -> @default_timezone
+    end
+  end
+
+  defp span_seconds(%{all_day: true, start_time: %Date{} = start, end_time: %Date{} = finish}),
+    do: (Date.diff(finish, start) + 1) * 86_400
+
+  defp span_seconds(%{start_time: %DateTime{} = start, end_time: %DateTime{} = finish}),
+    do: max(DateTime.diff(finish, start), 0)
+
+  defp span_seconds(_event), do: 0
+
+  # An override that moves an occurrence without saying when it ends keeps
+  # the series' length.
+  defp override_with_end(%{start_time: %DateTime{} = start} = change, span)
+       when not is_map_key(change, :end_time),
+       do: Map.put(change, :end_time, DateTime.add(start, span, :second))
+
+  defp override_with_end(%{start_time: %Date{} = start} = change, span)
+       when not is_map_key(change, :end_time),
+       do: Map.put(change, :end_time, Date.add(start, div(span, 86_400) - 1))
+
+  defp override_with_end(change, _span), do: change
+
+  # Whether the rule makes the occurrence an override's key names.
+  defp slot_exists?(master, key, zone) do
+    case slot_start(key, zone) do
+      nil ->
+        false
+
+      slot ->
+        master
+        |> RecurrenceExpander.expand(slot, slot_end(slot))
+        |> Enum.any?(&(occurrence_key(&1.start_time) == key))
+    end
+  end
+
+  defp slot_start(<<_::binary-size(8)>> = key, _zone) do
+    case Date.from_iso8601(
+           binary_part(key, 0, 4) <>
+             "-" <> binary_part(key, 4, 2) <> "-" <> binary_part(key, 6, 2)
+         ) do
+      {:ok, date} -> date
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp slot_start(key, zone) do
+    with {:ok, naive} <- NaiveDateTime.from_iso8601(timed_key_to_iso(key)),
+         {:ok, datetime} <- DateTime.from_naive(naive, zone) do
+      datetime
+    else
+      _ -> nil
+    end
+  end
+
+  defp timed_key_to_iso(
+         <<y::binary-size(4), m::binary-size(2), d::binary-size(2), "T", h::binary-size(2),
+           mi::binary-size(2), sec::binary-size(2)>>
+       ),
+       do: "#{y}-#{m}-#{d}T#{h}:#{mi}:#{sec}"
+
+  defp timed_key_to_iso(_key), do: "invalid"
+
+  defp slot_end(%Date{} = date), do: date
+  defp slot_end(%DateTime{} = datetime), do: DateTime.add(datetime, 1, :second)
 
   defp in_zone(%DateTime{} = datetime, zone) do
     case DateTime.shift_zone(datetime, zone) do
