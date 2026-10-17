@@ -22,10 +22,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
+  alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
   alias TymeslotWeb.Dashboard.Calendar.Visibility
   alias TymeslotWeb.Dashboard.Calendar.Writes
@@ -67,8 +69,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :event_write_settled, write: ref, outcome: outcome}, socket),
     do: {:ok, Writes.settle(socket, ref, outcome)}
 
-  def update(%{action: :revert_event, write: {_key, _seq} = ref}, socket),
-    do: {:ok, Writes.settle(socket, ref, :failed)}
+  # A failed write is taken back off the grid by the queue; its change can
+  # no longer be undone, and the toast that named it gives way to the flash
+  # that says it failed.
+  def update(%{action: :revert_event, write: {key, _seq} = ref}, socket),
+    do:
+      {:ok, socket |> Writes.settle(ref, :failed) |> Manipulation.forget(key) |> Toast.dismiss()}
+
+  def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 
   def update(%{action: :event_writes_released, release: release}, socket),
     do: {:ok, Writes.resume(socket, release)}
@@ -154,6 +162,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         />
       </div>
       <Preview.preview :if={@preview} preview={@preview} target={@myself} />
+      <Toast.toast toast={@toast} target={@myself} />
     </div>
     """
   end
@@ -223,6 +232,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         {:reply, %{opened: false}, assign(socket, :preview, nil)}
     end
   end
+
+  def handle_event("calendar:move", params, socket),
+    do: {:noreply, Manipulation.move(socket, params)}
+
+  def handle_event("calendar:undo", _params, socket), do: {:noreply, Manipulation.undo(socket)}
+
+  def handle_event("calendar:dismiss_toast", _params, socket),
+    do: {:noreply, Toast.dismiss(socket)}
 
   # Focus goes back to the event chip only for the Close button and Escape;
   # a click elsewhere (`refocus: "false"` from the click-away) keeps focus

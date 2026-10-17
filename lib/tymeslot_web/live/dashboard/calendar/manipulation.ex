@@ -1,0 +1,278 @@
+defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
+  @moduledoc """
+  Moving and resizing events on the calendar surface, the "this / following
+  / all" choice for a member of a repeating series, and undo.
+
+  The hook sends the wall-clock start and end it drew (`calendar:move`).
+  The change is checked (`EditGuard.check/3`), shown at once and written
+  through `Writes`; the hook is sent the window again whatever happens, so a
+  refused move snaps back to what the server holds. A change the organiser
+  can take back goes on the undo stack and the toast names the result.
+  Undo writes the previous timing the same way, and is not itself undoable.
+
+  A move never tells the event's guests; the toast says so when it has any.
+  """
+
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  import Phoenix.Component, only: [assign: 3]
+
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EditGuard
+  alias Tymeslot.CalendarGrid.EventPayload
+  alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias Tymeslot.CalendarGrid.WriteQueue
+  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.Toast
+  alias TymeslotWeb.Dashboard.Calendar.UndoStack
+  alias TymeslotWeb.Dashboard.Calendar.Writes
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
+  alias TymeslotWeb.Helpers.LocaleFormat
+
+  @type socket :: Phoenix.LiveView.Socket.t()
+
+  @doc "Applies a move or resize the hook drew, or snaps the grid back."
+  @spec move(socket(), map()) :: socket()
+  def move(socket, %{"id" => id, "start" => start, "end" => finish}) when is_binary(id) do
+    case validate(socket, id, start, finish) do
+      {:ok, event, changes} ->
+        apply_timing(socket, event, changes)
+
+      {:error, _reason} = refusal ->
+        socket |> refuse(refusal) |> SurfaceData.push_events(false)
+
+      :ignore ->
+        SurfaceData.push_events(socket, false)
+    end
+  end
+
+  def move(socket, _params), do: SurfaceData.push_events(socket, false)
+
+  # The event and the timing it is to take, or why not: a refusal the edit
+  # guard made, or `:ignore` for a change that is invalid or no change.
+  defp validate(socket, id, start, finish) do
+    %{timezone: timezone, current_user: user, integrations: integrations} = socket.assigns
+
+    with {:ok, event} <- timed_event(socket, id),
+         {:ok, start_at} <- wall_to_utc(start, timezone),
+         {:ok, end_at} <- wall_to_utc(finish, timezone),
+         true <- DateTime.compare(end_at, start_at) == :gt,
+         true <- changed?(event, start_at, end_at),
+         :ok <- EditGuard.check(user.id, integrations, event) do
+      {:ok, event, %{start_at: start_at, end_at: end_at}}
+    else
+      refusal when is_tuple(refusal) and elem(refusal, 0) == :error -> refusal
+      _unchanged_or_invalid -> :ignore
+    end
+  end
+
+  @doc "Writes the change waiting on the series choice in the scope chosen."
+  @spec choose_scope(socket(), String.t()) :: socket()
+  def choose_scope(%{assigns: %{series_prompt: %{kind: :timing} = prompt}} = socket, scope) do
+    case RecurrenceScope.parse(scope) do
+      {:ok, scope} when scope in [:following, :all] ->
+        if Writes.series_busy?(socket, prompt.event) do
+          send(self(), {:flash, {:warning, CalendarEditMessages.series_saving_message()}})
+          cancel_scope(socket)
+        else
+          socket
+          |> assign(:series_prompt, nil)
+          |> write_timing(prompt.event, prompt.changes, scope)
+        end
+
+      {:ok, :this_only} ->
+        socket
+        |> assign(:series_prompt, nil)
+        |> write_timing(prompt.event, prompt.changes, :this_only)
+
+      :error ->
+        cancel_scope(socket)
+    end
+  end
+
+  def choose_scope(socket, _scope), do: socket
+
+  @doc "Closes the series choice; a change waiting on it goes back off the grid."
+  @spec cancel_scope(socket()) :: socket()
+  def cancel_scope(%{assigns: %{series_prompt: %{kind: :timing, event: event}}} = socket) do
+    socket
+    |> assign(:series_prompt, nil)
+    |> SurfaceData.show_event(event)
+    |> SurfaceData.push_events(false)
+  end
+
+  def cancel_scope(socket), do: assign(socket, :series_prompt, nil)
+
+  @doc "Undoes the newest change on the stack."
+  @spec undo(socket()) :: socket()
+  def undo(socket) do
+    case UndoStack.pop(socket.assigns.undo) do
+      {nil, _stack} -> Toast.show(socket, dgettext("dashboard_calendar", "Nothing to undo."))
+      {entry, stack} -> socket |> assign(:undo, stack) |> undo_entry(entry)
+    end
+  end
+
+  @doc "Forgets the undoable changes of the event a failed write was for."
+  @spec forget(socket(), WriteQueue.key()) :: socket()
+  def forget(socket, key),
+    do: assign(socket, :undo, UndoStack.drop(socket.assigns.undo, &(Map.get(&1, :key) == key)))
+
+  defp undo_entry(socket, %{kind: :timing} = entry) do
+    %{current_user: user, integrations: integrations} = socket.assigns
+
+    with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, entry.id),
+         :ok <- EditGuard.check(user.id, integrations, event) do
+      socket
+      |> Writes.update(
+        event,
+        Map.merge(event, entry.before),
+        entry.before,
+        scope_opts(entry.scope)
+      )
+      |> Toast.show(
+        dgettext("dashboard_calendar", "Moved back to %{when}",
+          when: when_text(socket, entry.before.start_at)
+        )
+      )
+    else
+      :error ->
+        Toast.show(
+          socket,
+          dgettext("dashboard_calendar", "That change can't be undone any more.")
+        )
+
+      refusal ->
+        refuse(socket, refusal)
+    end
+  end
+
+  defp apply_timing(socket, event, changes) do
+    case CalendarGrid.edit_scopes(event) do
+      {:ok, :series} ->
+        socket
+        |> SurfaceData.show_event(Map.merge(event, changes))
+        |> assign(:series_prompt, %{
+          kind: :timing,
+          event: event,
+          changes: changes,
+          title: EventPayload.title(event)
+        })
+        |> SurfaceData.push_events(false)
+
+      {:ok, _single_or_this_only} ->
+        write_timing(socket, event, changes, nil)
+    end
+  end
+
+  # A change to one event (on its own, or one occurrence of a series) can be
+  # undone; a change to several events of a series cannot, as the series'
+  # cached rows are dropped until the next sync.
+  defp write_timing(socket, event, changes, scope) do
+    undoable? = scope in [nil, :this_only]
+
+    entry = %{
+      kind: :timing,
+      key: WriteQueue.key(event),
+      id: EventPayload.id(event),
+      before: Map.take(event, [:start_at, :end_at]),
+      scope: scope
+    }
+
+    socket
+    |> Writes.update(event, Map.merge(event, changes), changes, scope_opts(scope))
+    |> remember(undoable?, entry)
+    |> Toast.show(timing_message(socket, event, changes, scope), undo: undoable?)
+  end
+
+  defp remember(socket, false, _entry), do: socket
+
+  defp remember(socket, true, entry),
+    do: assign(socket, :undo, UndoStack.push(socket.assigns.undo, entry))
+
+  defp scope_opts(nil), do: []
+  defp scope_opts(scope), do: [recurrence_scope: scope]
+
+  defp timing_message(socket, event, changes, scope),
+    do: socket |> timing_text(event, changes, scope) |> with_guest_note(event)
+
+  defp timing_text(_socket, _event, _changes, scope) when scope in [:following, :all],
+    do:
+      dgettext(
+        "dashboard_calendar",
+        "Series changed. Changes to several events can't be undone here."
+      )
+
+  defp timing_text(socket, event, changes, _scope) do
+    cond do
+      same?(changes.start_at, event.start_at) ->
+        dgettext("dashboard_calendar", "Now ends at %{time}",
+          time: time_text(socket, changes.end_at)
+        )
+
+      same?(changes.end_at, event.end_at) ->
+        dgettext("dashboard_calendar", "Now starts at %{time}",
+          time: time_text(socket, changes.start_at)
+        )
+
+      true ->
+        dgettext("dashboard_calendar", "Moved to %{when}",
+          when: when_text(socket, changes.start_at)
+        )
+    end
+  end
+
+  defp with_guest_note(text, event) do
+    if event |> Map.get(:attendees) |> List.wrap() |> Enum.any?(),
+      do: text <> " " <> dgettext("dashboard_calendar", "Guests haven't been told."),
+      else: text
+  end
+
+  defp when_text(socket, at) do
+    local = DateTime.shift_zone!(at, socket.assigns.timezone)
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    day = LocaleFormat.format_short_weekday_date(DateTime.to_date(local), locale)
+
+    "#{day}, #{TimeFormat.format(DateTime.to_time(local), socket.assigns.time_format)}"
+  end
+
+  defp time_text(socket, at) do
+    at
+    |> DateTime.shift_zone!(socket.assigns.timezone)
+    |> DateTime.to_time()
+    |> TimeFormat.format(socket.assigns.time_format)
+  end
+
+  defp refuse(socket, refusal) do
+    send(self(), {:flash, CalendarEditMessages.refusal(refusal)})
+    socket
+  end
+
+  defp timed_event(socket, id) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, %{all_day: false, start_at: %DateTime{}, end_at: %DateTime{}} = event} -> {:ok, event}
+      _other -> :error
+    end
+  end
+
+  defp changed?(event, start_at, end_at),
+    do: not (same?(start_at, event.start_at) and same?(end_at, event.end_at))
+
+  defp same?(a, b), do: DateTime.compare(a, b) == :eq
+
+  # The hook's wall-clock minute ("2026-10-15T11:00") in the organiser's
+  # zone, resolved across a clock change as every other wall-clock
+  # conversion is (`DateTimeUtils.resolve_local/3`).
+  defp wall_to_utc(text, timezone) when is_binary(text) do
+    with {:ok, naive} <- NaiveDateTime.from_iso8601(text <> ":00"),
+         time = Time.new!(naive.hour, naive.minute, 0, {0, 6}),
+         {:ok, local} <- DateTimeUtils.resolve_local(NaiveDateTime.to_date(naive), time, timezone) do
+      {:ok, DateTime.shift_zone!(local, "Etc/UTC")}
+    else
+      _invalid -> :error
+    end
+  end
+
+  defp wall_to_utc(_text, _timezone), do: :error
+end
