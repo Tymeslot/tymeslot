@@ -11,9 +11,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWritesTest do
   @moduletag :calendar
   @moduletag :live
 
-  import TymeslotWeb.CalendarSurfaceHelpers, only: [owner: 1]
+  import TymeslotWeb.CalendarSurfaceHelpers, only: [owner: 1, event: 4]
   import Phoenix.LiveView, only: [send_update: 3]
 
+  alias Tymeslot.CalendarGrid.WriteGuardian
+  alias Tymeslot.CalendarGrid.WriteQueue
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
 
@@ -64,6 +66,65 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWritesTest do
       # Updated again with the same count: adopted already.
       update_surface(lv, calendar_left: 1)
       refute_push_event(lv, "calendar:events", %{}, 100)
+    end
+  end
+
+  describe "what a write's answer pushes" do
+    setup %{conn: conn} do
+      context = owner(conn)
+      {:ok, lv, _html} = live(context.conn, ~p"/dashboard/calendar")
+      render(lv)
+      flush_pushes(lv)
+      Map.put(context, :lv, lv)
+    end
+
+    test "nothing when the answer is for a write that is not in flight", %{lv: lv} do
+      send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: :event_write_settled,
+        write: {{1, "gone"}, 1},
+        outcome: {:ok, %{}}
+      )
+
+      render(lv)
+      refute_push_event(lv, "calendar:events", %{}, 100)
+    end
+
+    test "nothing when a release is for an event the surface is not waiting for", %{lv: lv} do
+      send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: :event_writes_released,
+        release: {self(), {1, "gone"}, :unknown}
+      )
+
+      render(lv)
+      refute_push_event(lv, "calendar:events", %{}, 100)
+    end
+
+    test "a series-wide change reaching the surface resets the hook's cache", %{
+      lv: lv,
+      user: user,
+      integration: integration
+    } do
+      review = event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+
+      # Another LiveView of the organiser is writing the event.
+      {queue, _effects} = WriteQueue.update(WriteQueue.new(), review, %{}, [], nil)
+      :ok = WriteGuardian.mirror(queue, user.id)
+      [{lender, _value}] = Registry.lookup(WriteGuardian.registry(), self())
+
+      # The surface is revived and waits for it.
+      update_surface(lv, calendar_left: 1)
+      flush_pushes(lv)
+
+      send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: :event_writes_released,
+        release: {lender, WriteQueue.key(review), :series_changed}
+      )
+
+      render(lv)
+      assert_push_event(lv, "calendar:events", %{reset: true}, 500)
     end
   end
 
