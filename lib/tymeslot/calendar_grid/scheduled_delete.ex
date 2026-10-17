@@ -126,7 +126,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   carries the `token` Undo takes, the address the delete was scheduled with,
   its `scope` and when it is due. `undoable?` is false for a delete that was
   confirmed (it tells someone, so it was scheduled with no undo window) and
-  once a job is running or retrying, even if a snooze put it back to waiting.
+  while a job is running or retrying. A silent delete a rate limit snoozed
+  is back in `scheduled` and still undoable, which is harmless: nothing has
+  reached the calendar yet.
   """
   @spec pending(pos_integer()) :: [map()]
   def pending(user_id) do

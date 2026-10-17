@@ -313,6 +313,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   # A delete with Undo already said "Deleted"; its Undo has run out now. A
   # confirmed one said "Deleting…" and now names the result.
+  defp report(socket, _token, :deleted, %{origin: :elsewhere}), do: socket
+
   defp report(socket, token, :deleted, %{confirmed: true, title: title}),
     do:
       Toast.show(socket, dgettext("dashboard_calendar", "Deleted “%{title}”", title: title),

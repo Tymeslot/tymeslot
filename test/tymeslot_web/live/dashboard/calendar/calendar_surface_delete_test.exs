@@ -331,6 +331,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
       refute id in latest_ids(tab_b)
       refute has_element?(tab_b, "#calendar-undo")
 
+      # When it has run, the tab that deleted says so; this one stays quiet.
+      [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+      send(tab_b.pid, {:calendar_delete_result, context.user.id, job.id, :deleted})
+      settled(tab_b)
+      refute has_element?(tab_b, "#calendar-toast")
+
       canvas(tab_b, "calendar:undo", %{})
       assert has_element?(tab_b, "#calendar-toast", "Nothing to undo.")
     end
@@ -381,7 +387,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
       lv |> element("#calendar-delete-notify") |> render_click()
 
       [job] = all_enqueued(worker: CalendarEventDeleteWorker)
-      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "scheduled"])
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+        set: [state: "scheduled", scheduled_at: DateTime.add(DateTime.utc_now(), 60)]
+      )
 
       {:ok, again, _html} = live(conn, ~p"/dashboard/calendar")
 
