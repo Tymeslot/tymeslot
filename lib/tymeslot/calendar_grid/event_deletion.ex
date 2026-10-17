@@ -73,6 +73,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
@@ -129,6 +130,38 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
       :unsupported -> {:error, :recurring_event}
       _family -> {:ok, :series}
     end
+  end
+
+  @doc """
+  Whether deleting `event` would tell anyone, asked before the calendar
+  offers a delete without a confirmation: `{:notifies, :booking}` when it is
+  the calendar copy of a Tymeslot booking, whose meeting the delete cancels;
+  `{:notifies, {:attendees, count}}` when `user_id` organises it and it has
+  attendees with an address; `:silent` otherwise.
+  """
+  @spec notice(pos_integer(), map()) ::
+          :silent | {:notifies, :booking | {:attendees, pos_integer()}}
+  def notice(user_id, event) do
+    if CalendarEvents.event_linked_to_booking?(
+         event.calendar_integration_id,
+         Map.get(event, :provider_event_id),
+         event.uid
+       ) do
+      {:notifies, :booking}
+    else
+      case AttendeeNotifications.event_deleted(event, addressed_attendees(event), user_id) do
+        {:needs_confirmation, count} -> {:notifies, {:attendees, count}}
+        {:ok, _nobody} -> :silent
+      end
+    end
+  end
+
+  defp addressed_attendees(event) do
+    event
+    |> Map.get(:attendees)
+    |> List.wrap()
+    |> Enum.map(&Attendee.normalise/1)
+    |> Enum.reject(&(is_nil(&1.email) or &1.email == ""))
   end
 
   @doc """

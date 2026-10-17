@@ -22,6 +22,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.Freshness
   alias Tymeslot.CalendarGrid.IcsImport
   alias Tymeslot.CalendarGrid.RepeatRefusal
+  alias Tymeslot.CalendarGrid.ScheduledDelete
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.CalendarGrid.SeriesStart
@@ -410,6 +411,29 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec deletion_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
   defdelegate deletion_scopes(event), to: EventDeletion
+
+  @doc """
+  Whether deleting an event would tell anyone. See
+  `Tymeslot.CalendarGrid.EventDeletion.notice/2`.
+  """
+  @spec delete_notice(pos_integer(), map()) ::
+          :silent | {:notifies, :booking | {:attendees, pos_integer()}}
+  defdelegate delete_notice(user_id, event), to: EventDeletion, as: :notice
+
+  @doc """
+  Schedules a delete behind its undo window. See
+  `Tymeslot.CalendarGrid.ScheduledDelete.schedule/4`.
+  """
+  @spec schedule_delete(pos_integer(), map(), EventDeletion.scope(), keyword()) ::
+          {:ok, pos_integer()} | {:error, term()}
+  defdelegate schedule_delete(user_id, event, scope, opts), to: ScheduledDelete, as: :schedule
+
+  @doc """
+  Cancels a scheduled delete that has not started. See
+  `Tymeslot.CalendarGrid.ScheduledDelete.cancel/2`.
+  """
+  @spec cancel_scheduled_delete(pos_integer(), pos_integer()) :: :ok | {:error, :too_late}
+  defdelegate cancel_scheduled_delete(user_id, token), to: ScheduledDelete, as: :cancel
 
   @doc """
   Whether an event may be moved to another calendar: on its own, with its
