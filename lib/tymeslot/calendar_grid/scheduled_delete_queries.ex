@@ -4,6 +4,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteQueries do
   import Ecto.Query
 
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
   @worker "Tymeslot.Workers.CalendarEventDeleteWorker"
@@ -44,5 +45,30 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteQueries do
       )
 
     Repo.all(query)
+  end
+
+  @doc """
+  Whether any cached row of the series at `address` (see
+  `Tymeslot.CalendarGrid.Occurrence.series_address/1`) remains for the
+  integration.
+  """
+  @spec series_row_exists?(pos_integer(), {:master | :resource, String.t()}) :: boolean()
+  def series_row_exists?(integration_id, {:master, master_id}) do
+    ProviderCalendarEventSchema
+    |> where(
+      [e],
+      e.calendar_integration_id == ^integration_id and
+        (e.recurring_event_id == ^master_id or e.provider_event_id == ^master_id)
+    )
+    |> Repo.exists?()
+  end
+
+  def series_row_exists?(integration_id, {:resource, href}) do
+    ProviderCalendarEventSchema
+    |> where(
+      [e],
+      e.calendar_integration_id == ^integration_id and e.provider_event_id == ^href
+    )
+    |> Repo.exists?()
   end
 end

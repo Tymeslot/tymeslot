@@ -11,11 +11,14 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   @moduletag :calendar
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.Factory
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.ScheduledDelete
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventDeleteWorker
@@ -173,11 +176,43 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     end
   end
 
+  describe "pending_deletes/1 while a delete runs" do
+    test "lists it, but no longer as undoable", %{user: user, event: event} do
+      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+      assert [%{undoable?: true}] = CalendarGrid.pending_deletes(user.id)
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^token), set: [state: "executing"])
+
+      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == {:error, :too_late}
+    end
+  end
+
   describe "running a delete directly" do
-    defp run_delete(user, event, scope \\ :occurrence, attempt) do
+    defp run_delete(user, event, attempt, opts \\ []) do
+      meta = Keyword.get(opts, :meta, %{})
+      scope = Keyword.get(opts, :scope, :occurrence)
       {:ok, token} = CalendarGrid.schedule_delete(user.id, event, scope, [])
       job = Repo.get!(Oban.Job, token)
-      {token, ScheduledDelete.perform(%{job | attempt: attempt, max_attempts: 3})}
+      job = %{job | attempt: attempt, max_attempts: 3, meta: meta}
+      {token, ScheduledDelete.perform(job)}
+    end
+
+    defp google_occurrence(user, stamp \\ "20260601T090000Z") do
+      google =
+        Repo.get_by(CalendarIntegrationSchema,
+          user_id: user.id,
+          provider: "google"
+        ) || insert(:calendar_integration, user: user, provider: "google")
+
+      insert(:provider_calendar_event,
+        calendar_integration: google,
+        provider: "google",
+        uid: "series-1@google.com_#{stamp}",
+        provider_calendar_id: "primary",
+        provider_event_id: "series-1_#{stamp}",
+        recurring_event_id: "series-1"
+      )
     end
 
     test "a rate-limited delete is snoozed, not reported", %{user: user, event: event} do
@@ -189,31 +224,104 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       refute_receive {:calendar_delete_result, _, _, _}
     end
 
-    test "a transient failure retries, and is reported only on the last attempt", %{user: user} do
-      google = insert(:calendar_integration, user: user, provider: "google")
+    for reason <- [
+          :timeout,
+          :network_error,
+          :server_error,
+          :service_unavailable,
+          {:http_error, 503}
+        ] do
+      test "a #{inspect(reason)} failure retries, and is reported only on the last attempt", %{
+        user: user
+      } do
+        occurrence = google_occurrence(user)
+        reason = unquote(Macro.escape(reason))
 
-      occurrence =
-        insert(:provider_calendar_event,
-          calendar_integration: google,
-          provider: "google",
-          uid: "series-1@google.com_20260601T090000Z",
-          provider_calendar_id: "primary",
-          provider_event_id: "series-1_20260601T090000Z",
-          recurring_event_id: "series-1"
-        )
+        expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts ->
+          {:error, reason}
+        end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts ->
-        {:error, :timeout}
-      end)
+        assert {_token, {:error, ^reason}} = run_delete(user, occurrence, 1)
+        refute_receive {:calendar_delete_result, _, _, _}
 
-      assert {_token, {:error, :timeout}} = run_delete(user, occurrence, 1)
-      refute_receive {:calendar_delete_result, _, _, _}
-
-      {token, :ok} = run_delete(user, occurrence, 3)
-      assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :timeout}}
+        {token, :ok} = run_delete(user, occurrence, 3)
+        assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, ^reason}}
+      end
     end
 
-    test "not found on a retry means it is already gone", %{user: user, event: event} do
+    test "a refusal is reported at once, without a retry", %{user: user} do
+      occurrence = google_occurrence(user)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :forbidden}
+      end)
+
+      {token, :ok} = run_delete(user, occurrence, 1)
+      assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :forbidden}}
+    end
+
+    test "an open circuit snoozes for the breaker's recovery time", %{user: user} do
+      occurrence = google_occurrence(user)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :circuit_open}
+      end)
+
+      recovery =
+        div(
+          CalendarCircuitBreaker.get_config(:google).recovery_timeout,
+          1000
+        )
+
+      assert {_token, {:snooze, ^recovery}} = run_delete(user, occurrence, 1)
+      refute_receive {:calendar_delete_result, _, _, _}
+    end
+
+    test "gives up on a rate limit after five snoozes", %{user: user, event: event} do
+      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts ->
+        {:error, {:rate_limited, 30}}
+      end)
+
+      assert {_token, {:snooze, 30}} = run_delete(user, event, 1, meta: %{"snoozed" => 4})
+
+      {token, :ok} = run_delete(user, event, 1, meta: %{"snoozed" => 5})
+      assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :rate_limited}}
+    end
+
+    test "a series delete whose clicked occurrence is gone still deletes the rest", %{
+      user: user
+    } do
+      clicked = google_occurrence(user)
+      sibling = google_occurrence(user, "20260608T090000Z")
+      {:ok, _row} = Repo.delete(clicked)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, opts ->
+        assert opts[:provider_event_id] == "series-1"
+        :ok
+      end)
+
+      {token, :ok} = run_delete(user, clicked, 1, scope: :series)
+      assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
+
+      assert ProviderCalendarEventQueries.get_by_uid(sibling.calendar_integration_id, sibling.uid) ==
+               {:error, :not_found}
+    end
+
+    test "an occurrence delete whose row is gone is deleted without asking the calendar", %{
+      user: user
+    } do
+      clicked = google_occurrence(user)
+      {:ok, _row} = Repo.delete(clicked)
+
+      {token, :ok} = run_delete(user, clicked, 1)
+      assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
+    end
+
+    test "the worker allows three attempts" do
+      assert CalendarEventDeleteWorker.new(%{}).changes.max_attempts == 3
+    end
+
+    test "not found means it is already gone, on any attempt", %{user: user, event: event} do
       expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts ->
         {:error, :not_found}
       end)
@@ -222,7 +330,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
 
       {token, :ok} = run_delete(user, event, 1)
-      assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :not_found}}
+      assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
     end
 
     test "an event whose cached row is gone counts as deleted", %{

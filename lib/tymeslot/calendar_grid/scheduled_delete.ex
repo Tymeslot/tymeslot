@@ -26,22 +26,32 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventDeletion
+  alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ScheduledDeleteQueries
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Workers.CalendarEventDeleteWorker
 
   @undo_delay 12
   @default_snooze 60
 
-  @permanent [:recurring_event, :unaddressable_occurrence, :unaddressable_series]
+  @max_snoozes 5
+
+  # The failures that may pass on their own, as the providers report them: a
+  # request or the connection timing out, a server failing or refusing for the
+  # moment (`{:http_error, status}` is the CalDAV shape for a status it has no
+  # name for). Everything else is a refusal or a missing address, and says the
+  # same thing next time.
+  @transient [:timeout, :network_error, :server_error, :service_unavailable]
 
   # What addresses an event for `EventDeletion` (see
   # `NotificationFlows.build_delete_payload/4` in the old grid).
   @address_fields [
     :uid,
+    :provider,
     :calendar_integration_id,
     :provider_event_id,
     :provider_calendar_id,
@@ -97,10 +107,15 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   def pending(user_id) do
     user_id
     |> ScheduledDeleteQueries.waiting()
-    |> Enum.map(fn %Oban.Job{id: id, args: args, scheduled_at: scheduled_at} ->
+    |> Enum.map(fn %Oban.Job{id: id, args: args, scheduled_at: scheduled_at, state: state} ->
       args
       |> event_from()
-      |> Map.merge(%{token: id, scope: scope(args), scheduled_at: scheduled_at})
+      |> Map.merge(%{
+        token: id,
+        scope: scope(args),
+        scheduled_at: scheduled_at,
+        undoable?: state != "executing"
+      })
     end)
   end
 
@@ -113,9 +128,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   """
   @spec perform(Oban.Job.t()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
   def perform(%Oban.Job{id: token, args: %{"user_id" => user_id} = args} = job) do
-    case run(user_id, args, job.attempt > 1) do
-      {:snooze, seconds} ->
-        {:snooze, seconds}
+    case run(user_id, args) do
+      {:snooze, reason, seconds} ->
+        snooze_or_give_up(job, reason, seconds)
 
       {:retry, reason} when job.attempt < job.max_attempts ->
         {:error, reason}
@@ -126,6 +141,13 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
       outcome ->
         report(user_id, token, args, outcome)
     end
+  end
+
+  # Oban counts each snooze in `meta["snoozed"]`.
+  defp snooze_or_give_up(%Oban.Job{id: token, args: args, meta: meta}, reason, seconds) do
+    if Map.get(meta, "snoozed", 0) >= @max_snoozes,
+      do: report(args["user_id"], token, args, {:failed, reason}),
+      else: {:snooze, seconds}
   end
 
   defp report(user_id, token, args, outcome) do
@@ -141,13 +163,14 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
     :ok
   end
 
-  defp run(user_id, args, retrying?) do
+  defp run(user_id, args) do
     event = event_from(args)
 
-    case ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid) do
-      {:ok, _row} -> delete(user_id, event, args, retrying?)
+    if still_cached?(event, scope(args)) do
+      delete(user_id, event, args)
+    else
       # The sync (or an earlier attempt) already removed it.
-      {:error, :not_found} -> :deleted
+      :deleted
     end
   rescue
     error ->
@@ -159,7 +182,28 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
       {:failed, :crashed}
   end
 
-  defp delete(user_id, event, args, retrying?) do
+  # A series delete goes by the series' address, so it still has work to do
+  # while any row of the series is cached, whichever occurrence was clicked.
+  defp still_cached?(event, :series) do
+    case Occurrence.series_address(event) do
+      {:ok, address} ->
+        ScheduledDeleteQueries.series_row_exists?(event.calendar_integration_id, address)
+
+      {:error, _unaddressable} ->
+        row_cached?(event)
+    end
+  end
+
+  defp still_cached?(event, _occurrence), do: row_cached?(event)
+
+  defp row_cached?(event),
+    do:
+      match?(
+        {:ok, _row},
+        ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid)
+      )
+
+  defp delete(user_id, event, args) do
     notify? = args["notify_attendees"] == true
 
     with :ok <- EditGuard.seat_lock(user_id, event),
@@ -168,27 +212,46 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
       :deleted
     else
       {:error, :group_booking} -> {:failed, :group_booking}
-      {:error, %{reason: reason, retry: retry}} -> classify(reason, retry, retrying?)
+      {:error, %{reason: reason, retry: retry}} -> classify(reason, retry, event)
     end
   end
 
-  defp classify(reason, :queued, _retrying?), do: {:queued, reason}
-  defp classify({:rate_limited, seconds}, _retry, _retrying?), do: {:snooze, snooze(seconds)}
-  defp classify(:rate_limited, _retry, _retrying?), do: {:snooze, snooze(nil)}
-  defp classify(:not_found, _retry, true), do: :deleted
+  defp classify(reason, :queued, _event), do: {:queued, reason}
+  defp classify(:not_found, _retry, _event), do: :deleted
 
-  defp classify(reason, :not_queued, _retrying?) do
+  defp classify({:rate_limited, seconds}, _retry, _event),
+    do: {:snooze, :rate_limited, snooze(seconds)}
+
+  defp classify(:rate_limited, _retry, _event), do: {:snooze, :rate_limited, snooze(nil)}
+
+  defp classify(:circuit_open, _retry, event),
+    do: {:snooze, :circuit_open, breaker_recovery(event)}
+
+  defp classify(reason, :not_queued, _event) do
     if transient?(reason), do: {:retry, reason}, else: {:failed, reason}
+  end
+
+  # The breaker lets a probe through once its recovery time has passed.
+  defp breaker_recovery(event) do
+    case ProviderConfig.parse_known(Map.get(event, :provider)) do
+      {:ok, provider} ->
+        provider
+        |> CalendarCircuitBreaker.get_config()
+        |> Map.fetch!(:recovery_timeout)
+        |> div(1000)
+        |> max(1)
+
+      _unknown ->
+        @default_snooze
+    end
   end
 
   defp snooze(seconds) when is_integer(seconds) and seconds > 0, do: seconds
   defp snooze(_other), do: @default_snooze
 
-  # A failure the calendar might not repeat: not a refusal, a missing event or
-  # an address the cached row cannot give, and not something the delete would
-  # have been queued for the next sync to replay (that is `:queued`).
-  defp transient?(reason),
-    do: reason not in @permanent and CalendarEvents.queueable_error?(reason)
+  defp transient?(reason) when reason in @transient, do: true
+  defp transient?({:http_error, status}) when is_integer(status), do: status >= 500
+  defp transient?(_reason), do: false
 
   defp event_from(args),
     do: Map.new(@address_fields, &{&1, Map.get(args, Atom.to_string(&1))})
