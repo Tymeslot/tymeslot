@@ -15,8 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Phoenix.LiveView
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
