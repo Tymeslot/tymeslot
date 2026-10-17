@@ -176,6 +176,66 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     end
   end
 
+  describe "telling the organiser's other calendars" do
+    test "scheduling a delete announces its address and scope", %{user: user, event: event} do
+      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :series, [])
+
+      assert_receive {:calendar_delete_scheduled, user_id, ^token, address, :series}
+      assert user_id == user.id
+      assert address.uid == "dentist-1"
+      assert address.calendar_integration_id == event.calendar_integration_id
+      assert address.provider_event_id == "/cal/dentist.ics"
+    end
+
+    test "undoing it announces the cancellation", %{user: user, event: event} do
+      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+
+      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == :ok
+      assert_receive {:calendar_delete_cancelled, user_id, ^token}
+      assert user_id == user.id
+    end
+
+    test "a refused or repeated undo announces nothing", %{user: user, event: event} do
+      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == :ok
+      assert_receive {:calendar_delete_cancelled, _user_id, ^token}
+
+      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == {:error, :cancelled}
+      refute_receive {:calendar_delete_cancelled, _user_id, ^token}
+
+      {:ok, other} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+      assert CalendarGrid.cancel_scheduled_delete(insert(:user).id, other) == {:error, :too_late}
+      refute_receive {:calendar_delete_cancelled, _user_id, ^other}
+    end
+
+    test "a job that never existed is too late", %{user: user} do
+      assert CalendarGrid.cancel_scheduled_delete(user.id, 0) == {:error, :too_late}
+    end
+  end
+
+  describe "pending_deletes/1 for a confirmed delete" do
+    test "is never undoable, even after the job is put back to wait", %{user: user, event: event} do
+      {:ok, token} =
+        CalendarGrid.schedule_delete(user.id, event, :occurrence,
+          delay: 0,
+          notify_attendees: true
+        )
+
+      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+
+      # A rate-limited run is snoozed: back to "scheduled", still not undoable.
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^token), set: [state: "scheduled"])
+      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+    end
+
+    test "a retryable delete is still pending, and not undoable", %{user: user, event: event} do
+      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^token), set: [state: "retryable"])
+
+      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+    end
+  end
+
   describe "pending_deletes/1 while a delete runs" do
     test "lists it, but no longer as undoable", %{user: user, event: event} do
       {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])

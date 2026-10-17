@@ -33,7 +33,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
   @doc """
   The entries for `jobs`, as `CalendarGrid.pending_deletes/1` lists them. A
   delete that is already running cannot be undone, so it counts as confirmed.
-  The title is the cached row's, which exists until the delete has run.
+  The title is the cached row's, which exists until the delete has run: one
+  cached-row query per pending job, and an organiser has a handful at most.
   """
   @spec from_jobs([map()]) :: t()
   def from_jobs(jobs) do
@@ -42,6 +43,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
       {job.token, entry(titled, job.scope, not job.undoable?)}
     end)
   end
+
+  @doc """
+  The entry for a delete another tab scheduled, from the address it was
+  scheduled with. It is confirmed here: this tab offers no Undo for it.
+  """
+  @spec foreign(map(), :occurrence | :series) :: map()
+  def foreign(address, scope), do: entry(Occurrence.cached_row(address), scope, true)
 
   @doc "The undoable entry whose delete was scheduled last, with its token."
   @spec latest_undoable(t(), [map()]) :: {pos_integer(), map()} | nil

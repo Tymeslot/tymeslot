@@ -42,6 +42,21 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
     do_broadcast(user_id, {:calendar_delete_result, user_id, token, outcome})
   end
 
+  @doc """
+  Broadcasts that a delete was scheduled from the calendar, with the address
+  it was scheduled with, so the organiser's other calendars hide the event.
+  """
+  @spec broadcast_delete_scheduled(integer(), pos_integer(), map(), atom()) :: :ok
+  def broadcast_delete_scheduled(user_id, token, address, scope) do
+    do_broadcast(user_id, {:calendar_delete_scheduled, user_id, token, address, scope})
+  end
+
+  @doc "Broadcasts that Undo cancelled the scheduled delete `token`."
+  @spec broadcast_delete_cancelled(integer(), pos_integer()) :: :ok
+  def broadcast_delete_cancelled(user_id, token) do
+    do_broadcast(user_id, {:calendar_delete_cancelled, user_id, token})
+  end
+
   defp do_broadcast(user_id, message) do
     case Phoenix.PubSub.broadcast(Tymeslot.PubSub, "calendar_events:#{user_id}", message) do
       :ok ->

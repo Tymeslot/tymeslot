@@ -61,17 +61,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   def choose_scope(socket, _scope), do: socket
 
-  @doc "The organiser confirmed a delete that tells someone; `\"false\"` keeps the guests out of it."
+  @doc """
+  The organiser confirmed a delete that tells someone. `notify` is `"true"`
+  or `"false"` (`"false"` keeps an event's guests out of it and leaves Undo);
+  anything else is ignored and the question stays open.
+  """
   @spec confirm(socket(), String.t()) :: socket()
-  def confirm(%{assigns: %{delete_prompt: %{} = prompt}} = socket, notify) do
+  def confirm(%{assigns: %{delete_prompt: %{notice: notice} = prompt}} = socket, notify)
+      when notify in ["true", "false"] do
     socket = assign(socket, :delete_prompt, nil)
 
-    case {prompt.notice, notify} do
+    case {notice, notify} do
       {{:attendees, _count}, "false"} ->
         delete_with_undo(socket, prompt.event, prompt.scope)
 
-      {notice, _notify} ->
-        delete_now(socket, prompt.event, prompt.scope, match?({:attendees, _count}, notice))
+      {{:attendees, _count}, "true"} ->
+        delete_now(socket, prompt.event, prompt.scope, true)
+
+      {:booking, _notify} ->
+        delete_now(socket, prompt.event, prompt.scope, false)
     end
   end
 
@@ -92,16 +100,75 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
         |> SurfaceData.push_events(false)
         |> Toast.show(dgettext("dashboard_calendar", "“%{title}” is back", title: title))
 
+      {:error, :cancelled} ->
+        cancelled(socket, token)
+
       {:error, :too_late} ->
         Toast.show(
           socket,
-          dgettext(
-            "dashboard_calendar",
-            "Too late to undo: “%{title}” has already been deleted.",
-            title: title
-          )
+          dgettext("dashboard_calendar", "“%{title}” is already being deleted.", title: title),
+          key: {:delete, token}
         )
     end
+  end
+
+  @doc """
+  Another tab scheduled a delete: its event is hidden here too. Undo is not
+  offered, since the toast that carries it belongs to the tab that deleted.
+  """
+  @spec scheduled_elsewhere(socket(), pos_integer(), map(), :occurrence | :series) :: socket()
+  def scheduled_elsewhere(socket, token, address, scope) when is_map(address) do
+    if Map.has_key?(socket.assigns.pending_deletes, token) do
+      socket
+    else
+      pending =
+        Map.put(socket.assigns.pending_deletes, token, PendingDeletes.foreign(address, scope))
+
+      socket
+      |> assign(:pending_deletes, pending)
+      |> SurfaceData.refilter()
+      |> SurfaceData.push_events(false)
+    end
+  end
+
+  @doc """
+  A scheduled delete was undone, here or in another tab: the event is back,
+  and so is nothing to undo. Quiet when this surface knew nothing of it.
+  """
+  @spec cancelled(socket(), pos_integer()) :: socket()
+  def cancelled(socket, token) do
+    if Map.has_key?(socket.assigns.pending_deletes, token) do
+      socket
+      |> assign(:pending_deletes, Map.delete(socket.assigns.pending_deletes, token))
+      |> assign(:undo, UndoStack.drop(socket.assigns.undo, &(Map.get(&1, :token) == token)))
+      |> Toast.dismiss({:delete, token})
+      |> SurfaceData.refilter()
+      |> SurfaceData.push_events(false)
+    else
+      socket
+    end
+  end
+
+  @doc """
+  Forgets the hidden deletes whose job is no longer waiting, so a stale entry
+  (a delete that ran or was undone while a message was missed) hides its
+  event only until the next reload.
+  """
+  @spec prune(socket()) :: socket()
+  def prune(%{assigns: %{pending_deletes: pending}} = socket) when map_size(pending) == 0,
+    do: socket
+
+  def prune(socket) do
+    tokens =
+      socket.assigns.current_user.id
+      |> CalendarGrid.pending_deletes()
+      |> MapSet.new(& &1.token)
+
+    assign(
+      socket,
+      :pending_deletes,
+      Map.filter(socket.assigns.pending_deletes, fn {token, _entry} -> token in tokens end)
+    )
   end
 
   @doc """

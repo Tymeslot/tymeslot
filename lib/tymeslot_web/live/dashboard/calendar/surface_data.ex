@@ -285,7 +285,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   @spec reload(socket(), :full | :events) :: socket()
   def reload(socket, scope \\ :full)
   def reload(socket, :full), do: socket |> load_context() |> reload(:events)
-  def reload(socket, :events), do: socket |> load_window() |> push_events(true)
+
+  def reload(socket, :events),
+    do: socket |> Deletion.prune() |> load_window() |> push_events(true)
 
   @doc """
   Records a saved preference in the assigns. The upsert's return value is not

@@ -40,6 +40,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.CalendarGridComponent
+  alias TymeslotWeb.Dashboard.CalendarRouting
   alias TymeslotWeb.Dashboard.CalendarUpNextStrip
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
@@ -468,6 +469,16 @@ defmodule TymeslotWeb.DashboardLive do
 
   def handle_info({:calendar_delete_result, _user_id, token, outcome}, socket),
     do: CalendarEventHandlers.handle_calendar_delete_result(socket, token, outcome)
+
+  def handle_info({:calendar_delete_scheduled, _user_id, token, address, scope}, socket) do
+    CalendarRouting.delete_scheduled(socket, token, address, scope)
+    {:noreply, socket}
+  end
+
+  def handle_info({:calendar_delete_cancelled, _user_id, token}, socket) do
+    CalendarRouting.delete_cancelled(socket, token)
+    {:noreply, socket}
+  end
 
   def handle_info(:calendar_sync_flash, socket),
     do: CalendarEventHandlers.handle_calendar_sync_flash(socket)

@@ -98,4 +98,29 @@ defmodule TymeslotWeb.Dashboard.CalendarRouting do
 
     :ok
   end
+
+  @doc "A delete was scheduled in another tab of the organiser."
+  @spec delete_scheduled(Phoenix.LiveView.Socket.t(), pos_integer(), map(), atom()) :: :ok
+  def delete_scheduled(socket, token, address, scope) do
+    if surface_on_screen?(socket),
+      do:
+        send_update(CalendarSurface,
+          id: @id,
+          action: :delete_scheduled,
+          token: token,
+          address: address,
+          scope: scope
+        )
+
+    :ok
+  end
+
+  @doc "A scheduled delete was undone, in another tab or this one."
+  @spec delete_cancelled(Phoenix.LiveView.Socket.t(), pos_integer()) :: :ok
+  def delete_cancelled(socket, token) do
+    if surface_on_screen?(socket),
+      do: send_update(CalendarSurface, id: @id, action: :delete_cancelled, token: token)
+
+    :ok
+  end
 end

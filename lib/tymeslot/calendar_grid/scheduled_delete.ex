@@ -74,34 +74,59 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   @spec schedule(pos_integer(), map(), EventDeletion.scope(), keyword()) ::
           {:ok, token()} | {:error, term()}
   def schedule(user_id, event, scope, opts \\ []) when scope in [:occurrence, :series] do
+    delay = Keyword.get(opts, :delay, @undo_delay)
+
     args =
       event
       |> Map.take(@address_fields)
       |> Map.merge(%{
         user_id: user_id,
         scope: scope,
-        notify_attendees: Keyword.get(opts, :notify_attendees, false)
+        notify_attendees: Keyword.get(opts, :notify_attendees, false),
+        undoable: delay > 0
       })
 
-    case args
-         |> CalendarEventDeleteWorker.new(schedule_in: Keyword.get(opts, :delay, @undo_delay))
-         |> Oban.insert() do
-      {:ok, %Oban.Job{id: id}} -> {:ok, id}
-      {:error, reason} -> {:error, reason}
+    case args |> CalendarEventDeleteWorker.new(schedule_in: delay) |> Oban.insert() do
+      {:ok, %Oban.Job{id: id}} ->
+        SyncBroadcast.broadcast_delete_scheduled(
+          user_id,
+          id,
+          Map.take(event, @address_fields),
+          scope
+        )
+
+        {:ok, id}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  @doc "Cancels the delete `token` of `user_id` if it has not started."
-  @spec cancel(pos_integer(), token()) :: :ok | {:error, :too_late}
+  @doc """
+  Cancels the delete `token` of `user_id` if it has not started, and tells
+  the organiser's other calendars. `{:error, :cancelled}` when it was already
+  cancelled (from another tab), `{:error, :too_late}` when it is running, has
+  run, or is not the organiser's.
+  """
+  @spec cancel(pos_integer(), token()) :: :ok | {:error, :cancelled | :too_late}
   def cancel(user_id, token) do
-    if ScheduledDeleteQueries.cancel_waiting(token, user_id), do: :ok, else: {:error, :too_late}
+    if ScheduledDeleteQueries.cancel_waiting(token, user_id) do
+      SyncBroadcast.broadcast_delete_cancelled(user_id, token)
+    else
+      case ScheduledDeleteQueries.state(token, user_id) do
+        "cancelled" -> {:error, :cancelled}
+        _running_done_or_unknown -> {:error, :too_late}
+      end
+    end
   end
 
   @doc """
-  The user's deletes that are still waiting or running, for a surface to hide
-  their events and offer Undo again after a reload. Each entry carries the
-  `token` Undo takes, the address the delete was scheduled with, its `scope`
-  and when it is due.
+  The user's deletes that are still waiting, running or retrying, for a
+  surface to hide their events and offer Undo again after a reload. Each entry
+  carries the `token` Undo takes, the address the delete was scheduled with,
+  its `scope` and when it is due. `undoable?` is false for a delete that was
+  confirmed (it tells someone, so it was scheduled with no undo window) and
+  once a job is running or retrying, even if a snooze put it back to waiting.
   """
   @spec pending(pos_integer()) :: [map()]
   def pending(user_id) do
@@ -114,7 +139,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
         token: id,
         scope: scope(args),
         scheduled_at: scheduled_at,
-        undoable?: state != "executing"
+        undoable?: Map.get(args, "undoable") != false and state in ["scheduled", "available"]
       })
     end)
   end

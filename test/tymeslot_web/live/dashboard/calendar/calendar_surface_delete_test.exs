@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Ecto.Query, only: [from: 2]
+  import Tymeslot.Factory, only: [insert: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
@@ -288,6 +290,158 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
 
       refute "event-#{monday.id}" in ids
       assert "event-#{tuesday.id}" in ids
+    end
+  end
+
+  # A message to the LiveView becomes a component update, itself a message
+  # queued behind it: the first render lets it through, the second shows it.
+  defp settled(lv) do
+    render(lv)
+    render(lv)
+  end
+
+  describe "another tab of the same organiser" do
+    test "undo in one tab brings the event back in the other", context do
+      {tab_a, _dentist, id} = dentist(context)
+      canvas(tab_a, "calendar:delete", %{"id" => id})
+
+      {:ok, tab_b, _html} = live(context.conn, ~p"/dashboard/calendar")
+      refute id in ready_ids(tab_b)
+      assert has_element?(tab_b, "#calendar-undo")
+
+      tab_a |> element("#calendar-undo") |> render_click()
+      settled(tab_b)
+
+      assert id in latest_ids(tab_b)
+      refute has_element?(tab_b, "#calendar-toast", "Deleted “Dentist”")
+
+      canvas(tab_b, "calendar:undo", %{})
+      assert has_element?(tab_b, "#calendar-toast", "Nothing to undo.")
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+    end
+
+    test "a delete made in one tab hides the event in the other, without Undo", context do
+      {tab_a, _dentist, id} = dentist(context)
+      {:ok, tab_b, _html} = live(context.conn, ~p"/dashboard/calendar")
+      assert id in ready_ids(tab_b)
+
+      canvas(tab_a, "calendar:delete", %{"id" => id})
+      settled(tab_b)
+
+      refute id in latest_ids(tab_b)
+      refute has_element?(tab_b, "#calendar-undo")
+
+      canvas(tab_b, "calendar:undo", %{})
+      assert has_element?(tab_b, "#calendar-toast", "Nothing to undo.")
+    end
+
+    test "an Undo for a delete the other tab already undid says nothing is wrong", context do
+      {tab_a, _dentist, id} = dentist(context)
+      canvas(tab_a, "calendar:delete", %{"id" => id})
+      {:ok, tab_b, _html} = live(context.conn, ~p"/dashboard/calendar")
+      [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+
+      # Cancelled behind tab B's back: no announcement reached it.
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "cancelled"])
+      tab_b |> element("#calendar-undo") |> render_click()
+
+      assert id in latest_ids(tab_b)
+      refute render(tab_b) =~ "Too late"
+      refute render(tab_b) =~ "already being deleted"
+    end
+
+    test "a hidden event outlives its delete only until the next reload", context do
+      {lv, dentist, id} = dentist(context)
+      assert id in ready_ids(lv)
+
+      # Announced for a job that is no longer waiting (it ran, or was undone).
+      address = Map.take(dentist, [:uid, :calendar_integration_id, :provider_event_id])
+      send(lv.pid, {:calendar_delete_scheduled, context.user.id, 0, address, :occurrence})
+      settled(lv)
+      refute id in latest_ids(lv)
+
+      send(lv.pid, {:calendar_events_updated, context.user.id, []})
+
+      assert id in latest_ids(lv)
+    end
+  end
+
+  describe "a delete that cannot be undone" do
+    test "a confirmed delete is not offered Undo after a remount, even once snoozed", %{
+      conn: conn,
+      integration: integration
+    } do
+      call =
+        event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+          attendees: [%{"email" => "ada@example.com"}]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{call.id}"})
+      lv |> element("#calendar-delete-notify") |> render_click()
+
+      [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "scheduled"])
+
+      {:ok, again, _html} = live(conn, ~p"/dashboard/calendar")
+
+      refute "event-#{call.id}" in ready_ids(again)
+      refute has_element?(again, "#calendar-undo")
+    end
+
+    test "Undo after the delete has started says it is already being deleted", context do
+      {lv, _dentist, id} = dentist(context)
+      canvas(lv, "calendar:delete", %{"id" => id})
+      [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "executing"])
+
+      lv |> element("#calendar-undo") |> render_click()
+
+      assert has_element?(lv, "#calendar-toast", "“Dentist” is already being deleted.")
+      refute id in latest_ids(lv)
+    end
+
+    test "the calendar copy of a booking asks, offers no quiet delete and cannot be undone", %{
+      conn: conn,
+      integration: integration
+    } do
+      copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
+
+      insert(:meeting,
+        calendar_integration_id: integration.id,
+        calendar_uid: copy.uid,
+        attendee_email: "guest@example.com"
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{copy.id}"})
+
+      assert has_element?(lv, "#calendar-delete-confirm", "calendar copy of a booking")
+      refute has_element?(lv, "#calendar-delete-quietly")
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+
+      lv |> element("#calendar-delete-notify") |> render_click()
+
+      assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"notify_attendees" => false})
+      refute has_element?(lv, "#calendar-undo")
+    end
+
+    test "a confirmation answer that is neither true nor false deletes nothing", %{
+      conn: conn,
+      integration: integration
+    } do
+      call =
+        event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+          attendees: [%{"email" => "ada@example.com"}]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{call.id}"})
+
+      canvas(lv, "calendar:confirm_delete", %{"notify" => "maybe"})
+
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+      assert has_element?(lv, "#calendar-delete-confirm")
     end
   end
 

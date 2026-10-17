@@ -31,15 +31,33 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteQueries do
   end
 
   @doc """
+  The state of the delete `job_id` of `user_id`, `nil` when there is no such
+  delete.
+  """
+  @spec state(pos_integer(), pos_integer()) :: String.t() | nil
+  def state(job_id, user_id) do
+    query =
+      from(job in Oban.Job,
+        where:
+          job.id == ^job_id and job.worker == @worker and
+            fragment("(?->>'user_id')::bigint", job.args) == ^user_id,
+        select: job.state
+      )
+
+    Repo.one(query)
+  end
+
+  @doc """
   The jobs of `user_id`'s deletes that have not finished: waiting out their
-  undo window, due, or running. Oldest first.
+  undo window, due, running, or waiting for a retry. Oldest first.
   """
   @spec waiting(pos_integer()) :: [Oban.Job.t()]
   def waiting(user_id) do
     query =
       from(job in Oban.Job,
         where:
-          job.worker == @worker and job.state in ["scheduled", "available", "executing"] and
+          job.worker == @worker and
+            job.state in ["scheduled", "available", "executing", "retryable"] and
             fragment("(?->>'user_id')::bigint", job.args) == ^user_id,
         order_by: [asc: job.id]
       )

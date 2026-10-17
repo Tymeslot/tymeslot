@@ -87,6 +87,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
     do: {:ok, Deletion.settled(socket, token, outcome)}
 
+  # Another tab scheduled or undid a delete (see `Deletion`).
+  def update(%{action: :delete_scheduled, token: token, address: address, scope: scope}, socket),
+    do: {:ok, Deletion.scheduled_elsewhere(socket, token, address, scope)}
+
+  def update(%{action: :delete_cancelled, token: token}, socket),
+    do: {:ok, Deletion.cancelled(socket, token)}
+
   def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 
   def update(%{action: :event_writes_released, release: release}, socket),

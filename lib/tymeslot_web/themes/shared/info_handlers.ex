@@ -46,6 +46,11 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   def route({:calendar_delete_result, _user_id, _token, _outcome}, socket),
     do: {:noreply, socket}
 
+  def route({:calendar_delete_scheduled, _user_id, _token, _address, _scope}, socket),
+    do: {:noreply, socket}
+
+  def route({:calendar_delete_cancelled, _user_id, _token}, socket), do: {:noreply, socket}
+
   def route(:close_dropdown, socket), do: handle_close_dropdown(socket)
 
   def route({:fetch_available_slots, date, duration, timezone}, socket),
