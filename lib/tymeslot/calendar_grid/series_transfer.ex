@@ -256,8 +256,11 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     end
   end
 
-  # The CalDAV family is recognised as `Occurrence.series_family/1`
-  # recognises it, so a series it offers to move is one this can move.
+  # Only providers whose series a move can copy between calendars. The debug
+  # calendar shares the CalDAV family's series model
+  # (`ProviderConfig.resource_series?/1`), so `EventMove` offers its series a
+  # move, but has no server to copy one to: it is answered
+  # `{:error, :recurring_event}` here, as any provider without a series move.
   defp family(provider) do
     cond do
       ProviderConfig.caldav_based?(provider) -> :caldav
