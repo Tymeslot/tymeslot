@@ -25,6 +25,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Dashboard.Calendar.Deletion
+  alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
   alias TymeslotWeb.Dashboard.Calendar.Writes
@@ -81,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket
         |> load_context()
         |> apply_params()
+        |> Deletion.resume()
         |> load_window()
         |> Writes.adopt()
         |> assign(:ready?, true)
@@ -173,21 +176,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket.assigns.hidden_integration_ids,
         socket.assigns.hidden_calendar_keys
       )
-      |> reject_pending(socket.assigns.pending_deletes)
+      |> PendingDeletes.reject(socket.assigns.pending_deletes)
 
     socket
     |> assign(events: events, events_by_id: Map.new(events, &{EventPayload.id(&1), &1}))
     |> rebuild_preview()
-  end
-
-  # Events whose delete has not run yet are already gone for the organiser;
-  # `pending_deletes` maps each delete's token to `%{ids: ids, ...}`, the
-  # events it hides (see `Deletion`).
-  defp reject_pending(events, pending) when map_size(pending) == 0, do: events
-
-  defp reject_pending(events, pending) do
-    hidden = pending |> Map.values() |> Enum.flat_map(& &1.ids) |> MapSet.new()
-    Enum.reject(events, &MapSet.member?(hidden, EventPayload.id(&1)))
   end
 
   # An open preview was built from the events as they were: rebuild it from

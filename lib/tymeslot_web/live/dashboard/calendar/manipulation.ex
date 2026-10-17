@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
@@ -136,6 +137,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   # Undoing writes the timing the change replaced, so it only runs while the
   # event still has the timing the change gave it; an event moved or synced
   # since would be put back over a newer version.
+  defp undo_entry(socket, %{kind: :delete} = entry), do: Deletion.undo(socket, entry)
+
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns
 

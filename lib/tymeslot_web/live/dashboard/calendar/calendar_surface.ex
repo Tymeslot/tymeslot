@@ -21,6 +21,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
+  alias TymeslotWeb.Dashboard.Calendar.DeleteConfirmModal
+  alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
@@ -44,8 +46,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # The mini month only pages within the years the grid can show.
   @mini_years 1900..2200
 
-  # What a timing choice can send; `Manipulation` parses it again.
+  # What each prompt can send; the module that acts on it parses it again.
   @timing_scopes ~w(this_only following all)
+  @delete_scopes ~w(occurrence series)
 
   @impl Phoenix.LiveComponent
   def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
@@ -80,6 +83,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     do:
       {:ok,
        socket |> Writes.settle(ref, :failed) |> Manipulation.forget(key) |> Toast.dismiss(key)}
+
+  def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
+    do: {:ok, Deletion.settled(socket, token, outcome)}
 
   def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 
@@ -173,6 +179,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         prompt={@series_prompt}
         target={@myself}
       />
+      <DeleteConfirmModal.delete_confirm_modal
+        :if={@delete_prompt}
+        prompt={@delete_prompt}
+        target={@myself}
+      />
     </div>
     """
   end
@@ -251,15 +262,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("calendar:dismiss_toast", _params, socket),
     do: {:noreply, Toast.dismiss(socket)}
 
-  # The scope is client input: only the scopes a prompt offers are acted on.
+  # The scope is client input: only the scopes the open prompt offers are
+  # acted on.
   def handle_event("calendar:choose_scope", %{"scope" => scope}, socket)
-      when scope in @timing_scopes,
-      do: {:noreply, Manipulation.choose_scope(socket, scope)}
+      when is_binary(scope) do
+    case socket.assigns.series_prompt do
+      %{kind: :timing} when scope in @timing_scopes ->
+        {:noreply, Manipulation.choose_scope(socket, scope)}
+
+      %{kind: :delete} when scope in @delete_scopes ->
+        {:noreply, Deletion.choose_scope(socket, scope)}
+
+      _none_or_not_offered ->
+        {:noreply, socket}
+    end
+  end
 
   def handle_event("calendar:choose_scope", _params, socket), do: {:noreply, socket}
 
   def handle_event("calendar:cancel_scope", _params, socket),
     do: {:noreply, Manipulation.cancel_scope(socket)}
+
+  def handle_event("calendar:delete", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, Deletion.request(socket, id)}
+
+  def handle_event("calendar:delete", _params, socket), do: {:noreply, socket}
+
+  def handle_event("calendar:confirm_delete", %{"notify" => notify}, socket)
+      when is_binary(notify),
+      do: {:noreply, Deletion.confirm(socket, notify)}
+
+  def handle_event("calendar:confirm_delete", _params, socket), do: {:noreply, socket}
+
+  def handle_event("calendar:cancel_delete", _params, socket),
+    do: {:noreply, Deletion.cancel(socket)}
 
   # Focus goes back to the event chip only for the Close button and Escape;
   # a click elsewhere (`refocus: "false"` from the click-away) keeps focus

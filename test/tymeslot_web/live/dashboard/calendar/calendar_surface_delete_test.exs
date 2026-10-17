@@ -1,0 +1,353 @@
+defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
+  @moduledoc """
+  Deleting on the new calendar: an event nobody is told about goes at once
+  with Undo; one whose guests or booking would be told asks first; a
+  repeating one asks for this event or all of them; and the grid follows the
+  delete once it has run.
+  """
+
+  use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
+
+  @moduletag :calendar
+  @moduletag :live
+
+  import TymeslotWeb.CalendarSurfaceHelpers
+
+  alias Ecto.Changeset
+  alias Phoenix.ConnTest
+  alias Tymeslot.Repo
+  alias Tymeslot.Workers.CalendarEventDeleteWorker
+
+  setup %{conn: conn}, do: owner(conn)
+
+  defp canvas(lv, name, params),
+    do: lv |> element("#calendar-canvas") |> render_hook(name, params)
+
+  defp pushed_ids(lv) do
+    assert_push_event(lv, "calendar:events", %{events: events})
+    Enum.map(events, & &1.id)
+  end
+
+  defp dentist(%{conn: conn, integration: integration}) do
+    dentist = event(integration, "work", "Dentist", ~U[2026-10-15 14:00:00Z])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    {lv, dentist, "event-#{dentist.id}"}
+  end
+
+  test "Delete in the preview removes the event at once and offers Undo", context do
+    {lv, dentist, id} = dentist(context)
+
+    canvas(lv, "calendar:open", %{"id" => id})
+    lv |> element("#calendar-preview-delete") |> render_click()
+
+    refute id in pushed_ids(lv)
+    refute has_element?(lv, "#calendar-preview")
+    assert has_element?(lv, "#calendar-toast", "Deleted “Dentist”")
+    assert has_element?(lv, "#calendar-undo")
+
+    assert_enqueued(
+      worker: CalendarEventDeleteWorker,
+      args: %{
+        "uid" => dentist.uid,
+        "scope" => "occurrence",
+        "user_id" => context.user.id,
+        "notify_attendees" => false
+      }
+    )
+  end
+
+  test "Undo brings it back before anything is deleted", context do
+    {lv, _dentist, id} = dentist(context)
+    canvas(lv, "calendar:delete", %{"id" => id})
+    pushed_ids(lv)
+
+    lv |> element("#calendar-undo") |> render_click()
+
+    assert id in pushed_ids(lv)
+    assert has_element?(lv, "#calendar-toast", "“Dentist” is back")
+    refute_enqueued(worker: CalendarEventDeleteWorker)
+  end
+
+  test "an event on a read-only calendar offers no Delete and refuses one", %{
+    conn: conn,
+    integration: integration
+  } do
+    integration
+    |> Changeset.change(
+      calendar_list: [
+        %{"id" => "work", "name" => "Work", "selected" => true},
+        %{"id" => "shared", "name" => "Shared", "selected" => true, "read_only" => true}
+      ]
+    )
+    |> Repo.update!()
+
+    shared = event(integration, "shared", "Team offsite", ~U[2026-10-16 09:00:00Z])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    canvas(lv, "calendar:open", %{"id" => "event-#{shared.id}"})
+    refute has_element?(lv, "#calendar-preview-delete")
+
+    canvas(lv, "calendar:delete", %{"id" => "event-#{shared.id}"})
+    assert render(lv) =~ "This calendar is read-only"
+    refute_enqueued(worker: CalendarEventDeleteWorker)
+  end
+
+  test "an event with a guest asks first; telling them deletes it straight away", %{
+    conn: conn,
+    integration: integration
+  } do
+    call =
+      event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+        attendees: [%{"email" => "ada@example.com"}]
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    canvas(lv, "calendar:delete", %{"id" => "event-#{call.id}"})
+
+    assert has_element?(lv, "#calendar-delete-confirm", "It has 1 guest.")
+    refute_enqueued(worker: CalendarEventDeleteWorker)
+
+    lv |> element("#calendar-delete-notify") |> render_click()
+
+    assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"notify_attendees" => true})
+    refute has_element?(lv, "#calendar-undo")
+  end
+
+  test "deleting without telling the guest can still be undone", %{
+    conn: conn,
+    integration: integration
+  } do
+    call =
+      event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+        attendees: [%{"email" => "ada@example.com"}]
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    canvas(lv, "calendar:delete", %{"id" => "event-#{call.id}"})
+    lv |> element("#calendar-delete-quietly") |> render_click()
+
+    assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"notify_attendees" => false})
+    assert has_element?(lv, "#calendar-undo")
+  end
+
+  test "a repeating event asks for this event or all; all hides every one loaded", %{
+    conn: conn,
+    integration: integration
+  } do
+    monday =
+      event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+        recurring_event_id: "standup-series"
+      )
+
+    tuesday =
+      event(integration, "work", "Standup", ~U[2026-10-15 08:30:00Z], 15,
+        recurring_event_id: "standup-series"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    canvas(lv, "calendar:delete", %{"id" => "event-#{monday.id}"})
+
+    assert has_element?(lv, "#calendar-scope-occurrence")
+    lv |> element("#calendar-scope-series") |> render_click()
+
+    ids = pushed_ids(lv)
+    refute "event-#{monday.id}" in ids
+    refute "event-#{tuesday.id}" in ids
+    assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"scope" => "series"})
+  end
+
+  test "once the delete has run the event stays gone, and Undo has nothing left", context do
+    {lv, dentist, id} = dentist(context)
+    canvas(lv, "calendar:delete", %{"id" => id})
+    pushed_ids(lv)
+
+    [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+    Repo.delete!(dentist)
+    send(lv.pid, {:calendar_delete_result, context.user.id, job.id, :deleted})
+
+    refute id in pushed_ids(lv)
+    canvas(lv, "calendar:undo", %{})
+    assert has_element?(lv, "#calendar-toast", "Nothing to undo.")
+  end
+
+  test "a delete the calendar refused brings the event back and says so", context do
+    {lv, _dentist, id} = dentist(context)
+    canvas(lv, "calendar:delete", %{"id" => id})
+    pushed_ids(lv)
+
+    [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+    send(lv.pid, {:calendar_delete_result, context.user.id, job.id, {:failed, :forbidden}})
+
+    assert id in pushed_ids(lv)
+    assert render(lv) =~ "Failed to delete event"
+  end
+
+  defp ready_ids(lv) do
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+    assert_reply(lv, %{events: events})
+    Enum.map(events, & &1.id)
+  end
+
+  # The newest payload pushed so far.
+  defp latest_ids(lv, last \\ nil) do
+    assert_push_event(lv, "calendar:events", %{events: events}, 1_000)
+    drain_ids(lv, Enum.map(events, & &1.id))
+  rescue
+    ExUnit.AssertionError -> last || []
+  end
+
+  defp drain_ids(lv, last) do
+    assert_push_event(lv, "calendar:events", %{events: events}, 50)
+    drain_ids(lv, Enum.map(events, & &1.id))
+  rescue
+    ExUnit.AssertionError -> last
+  end
+
+  describe "a scheduled delete survives the surface that scheduled it" do
+    test "a remounted surface keeps the event hidden and Undo still cancels it", context do
+      {lv, _dentist, id} = dentist(context)
+      canvas(lv, "calendar:delete", %{"id" => id})
+
+      {:ok, again, _html} = live(context.conn, ~p"/dashboard/calendar")
+
+      refute id in ready_ids(again)
+      assert has_element?(again, "#calendar-toast", "Deleted “Dentist”")
+
+      again |> element("#calendar-undo") |> render_click()
+
+      assert id in latest_ids(again)
+      assert has_element?(again, "#calendar-toast", "“Dentist” is back")
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+    end
+
+    test "a delete that has already started stays hidden but offers no Undo", context do
+      {lv, _dentist, id} = dentist(context)
+      canvas(lv, "calendar:delete", %{"id" => id})
+
+      [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+
+      job
+      |> Changeset.change(state: "executing")
+      |> Repo.update!()
+
+      {:ok, again, _html} = live(context.conn, ~p"/dashboard/calendar")
+
+      refute id in ready_ids(again)
+      refute has_element?(again, "#calendar-undo")
+    end
+
+    test "a series delete hides an occurrence in a week that loads later", %{
+      conn: conn,
+      integration: integration
+    } do
+      this_week =
+        event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+          recurring_event_id: "standup-series"
+        )
+
+      later =
+        event(integration, "work", "Standup", ~U[2026-11-04 08:30:00Z], 15,
+          recurring_event_id: "standup-series"
+        )
+
+      other = event(integration, "work", "Lunch", ~U[2026-11-04 12:00:00Z])
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{this_week.id}"})
+      lv |> element("#calendar-scope-series") |> render_click()
+      latest_ids(lv)
+
+      canvas(lv, "calendar:goto", %{"view" => "week", "date" => "2026-11-04"})
+      ids = latest_ids(lv)
+
+      assert "event-#{other.id}" in ids
+      refute "event-#{later.id}" in ids
+    end
+
+    test "an occurrence delete hides only that occurrence after a remount", %{
+      conn: conn,
+      integration: integration
+    } do
+      monday =
+        event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+          recurring_event_id: "standup-series"
+        )
+
+      tuesday =
+        event(integration, "work", "Standup", ~U[2026-10-15 08:30:00Z], 15,
+          recurring_event_id: "standup-series"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{monday.id}"})
+      lv |> element("#calendar-scope-occurrence") |> render_click()
+
+      {:ok, again, _html} = live(conn, ~p"/dashboard/calendar")
+      ids = ready_ids(again)
+
+      refute "event-#{monday.id}" in ids
+      assert "event-#{tuesday.id}" in ids
+    end
+  end
+
+  describe "client input is never trusted" do
+    test "malformed payloads change nothing and crash nothing", %{
+      conn: conn,
+      integration: integration
+    } do
+      call =
+        event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+          attendees: [%{"email" => "ada@example.com"}]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      for {name, params} <- [
+            {"calendar:delete", %{}},
+            {"calendar:delete", %{"id" => 7}},
+            {"calendar:delete", %{"id" => ["event-#{call.id}"]}},
+            {"calendar:delete", %{"id" => "event-0"}},
+            {"calendar:confirm_delete", %{}},
+            {"calendar:confirm_delete", %{"notify" => "true"}},
+            {"calendar:choose_scope", %{"scope" => "series"}},
+            {"calendar:choose_scope", %{"scope" => 3}},
+            {"calendar:cancel_delete", %{}}
+          ] do
+        canvas(lv, name, params)
+      end
+
+      assert Process.alive?(lv.pid)
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+    end
+
+    test "a scope a delete prompt does not offer is ignored", %{
+      conn: conn,
+      integration: integration
+    } do
+      monday =
+        event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+          recurring_event_id: "standup-series"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{monday.id}"})
+
+      canvas(lv, "calendar:choose_scope", %{"scope" => "following"})
+
+      assert has_element?(lv, "#calendar-scope-series")
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+    end
+
+    test "another organiser's event id deletes nothing", %{conn: conn} = context do
+      stranger = owner(ConnTest.build_conn())
+      theirs = event(stranger.integration, "work", "Private", ~U[2026-10-15 10:00:00Z])
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{theirs.id}"})
+
+      refute_enqueued(worker: CalendarEventDeleteWorker)
+      assert context.user.id != stranger.user.id
+    end
+  end
+end

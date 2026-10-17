@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @moduledoc """
-  The read-only preview that opens when an event on the grid is clicked:
+  The preview that opens when an event on the grid is clicked:
   which calendar it sits in, when it is (with how far away), where, who,
   whether guests can book over it, and whether it is still waiting to sync.
 
@@ -9,6 +9,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   and calendar names, whether a calendar blocks bookings), and later plans
   add actions to it that are server writes anyway. The hook only positions it
   (CSS variables on `<html>`) and takes focus back when it closes.
+
+  An event the organiser can change offers Delete (see `Deletion`); editing
+  arrives with the side panel.
   """
 
   use TymeslotWeb, :html
@@ -133,6 +136,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           <.icon name="hero-video-camera-mini" class="h-4 w-4" />
           {dgettext("dashboard_calendar", "Join")}
         </.link>
+      </div>
+      <div :if={@preview.editable} class="mt-4 flex justify-end border-t border-tymeslot-100 pt-3">
+        <.action_button
+          id="calendar-preview-delete"
+          variant={:danger_soft}
+          size={:sm}
+          icon="hero-trash"
+          phx-click="calendar:delete"
+          phx-value-id={@preview.id}
+          phx-target={@target}
+        >
+          {dgettext("dashboard_calendar", "Delete")}
+        </.action_button>
       </div>
     </div>
     """
