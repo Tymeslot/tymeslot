@@ -288,8 +288,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   # A move keeps the event's length: when the wall-clock span the hook drew
   # is the span the event has on the wall, the end is the new start plus the
   # event's own duration, so a clock change in between cannot stretch or
-  # shrink it. A resize resolves its end from the wall clock.
-  defp end_at(event, start, finish, start_at, timezone) do
+  # shrink it. A resize resolves its end from the wall clock. An event that
+  # itself spans a clock change keeps its real duration, so on an ordinary
+  # day it shows an hour longer or shorter on the wall.
+  defp end_at(event, start, finish, start_at, timezone)
+       when is_binary(start) and is_binary(finish) do
     with {:ok, wall_start} <- NaiveDateTime.from_iso8601(start <> ":00"),
          {:ok, wall_end} <- NaiveDateTime.from_iso8601(finish <> ":00") do
       if NaiveDateTime.diff(wall_end, wall_start) == wall_length(event, timezone),
@@ -299,6 +302,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
       _invalid -> :error
     end
   end
+
+  defp end_at(_event, _start, _finish, _start_at, _timezone), do: :error
 
   defp wall_length(event, timezone) do
     NaiveDateTime.diff(

@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.CalendarMock
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
@@ -135,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
 
     assert %{start: "2026-10-16T10:00"} = pushed(lv, id)
     assert render(lv) =~ "This calendar is read-only"
-    refute_received {:written, _uid, _payload}
+    refute_receive {:written, _uid, _payload}, 100
   end
 
   test "a guest's event moves without telling them, and says so", %{
@@ -243,7 +244,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       render(lv)
       render(lv)
       assert render(lv) =~ "a change you made while it was saving was not applied"
-      refute_received {:written, _uid, _payload}
+      refute_receive {:written, _uid, _payload}, 100
     end
   end
 
@@ -251,8 +252,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
     # The event `id` as the snap-back push draws it; nothing was written.
     defp snapped_back(lv, id) do
       assert_push_event(lv, "calendar:events", %{events: events})
-      render(lv)
-      refute_received {:written, _uid, _payload}
+      refute_receive {:written, _uid, _payload}, 100
       Enum.find(events, &(&1.id == id))
     end
 
@@ -312,6 +312,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
     end
 
+    test "an end that is not text", %{lv: lv, id: id} do
+      flush_pushes(lv)
+      move(lv, id, "2026-10-15T11:00", nil)
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+
+      move(lv, id, "2026-10-15T11:00", 42)
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+      assert Process.alive?(lv.pid)
+    end
+
     test "times that are not times", %{lv: lv, id: id} do
       flush_pushes(lv)
       move(lv, id, "not a time", "2026-10-15T11:00")
@@ -368,14 +378,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
         )
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      move(lv, "event-#{first.id}", "2026-10-15T11:00", "2026-10-15T11:30")
+      first_id = "event-#{first.id}"
+      move(lv, first_id, "2026-10-15T11:00", "2026-10-15T11:30")
+      flush_pushes(lv)
+
       move(lv, "event-#{second.id}", "2026-10-16T11:00", "2026-10-16T11:30")
 
+      # The first event is drawn back at 09:00 (08:00 UTC) in London.
+      assert_push_event(lv, "calendar:events", %{events: events})
+      assert %{start: "2026-10-15T09:00"} = Enum.find(events, &(&1.id == first_id))
+
+      # Asserted on the assigns until the series choice renders (Task 12).
       assert %{event: %{id: id}} = surface(lv).series_prompt
       assert id == second.id
-      first_id = "event-#{first.id}"
-      assert same?(surface(lv).events_by_id[first_id].start_at, ~U[2026-10-15 08:00:00Z])
-      refute_received {:written, _uid, _payload}
+      refute_receive {:written, _uid, _payload}, 100
     end
   end
 
@@ -414,27 +430,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       )
       |> Repo.update!()
 
+      flush_pushes(lv)
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
-
-      eventually(fn ->
-        assert same?(surface(lv).events_by_id[id].start_at, ~U[2026-10-16 13:00:00Z])
-      end)
+      assert_push_event(lv, "calendar:events", %{reset: true, events: events}, 1_000)
+      assert %{start: "2026-10-16T14:00"} = Enum.find(events, &(&1.id == id))
 
       lv |> element("#calendar-undo") |> render_click()
 
       assert has_element?(lv, "#calendar-toast", "That change can't be undone any more.")
-      refute_received {:written, _uid, _payload}
+      refute_receive {:written, _uid, _payload}, 100
     end
 
-    test "that the rate limit refuses stays undoable", %{lv: lv, user: user, id: id} do
+    test "that the rate limit refuses stays undoable", %{
+      lv: lv,
+      user: user,
+      review: review,
+      id: id
+    } do
       move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
       assert_receive {:written, _uid, _moved}
       for _i <- 1..30, do: RateLimiter.check(:calendar_event_edit, user.id)
 
       lv |> element("#calendar-undo") |> render_click()
 
-      refute_received {:written, _uid, _payload}
-      assert [%{kind: :timing}] = surface(lv).undo
+      refute_receive {:written, _uid, _payload}, 100
+
+      # Still undoable once the limiter lets the organiser edit again.
+      RateLimit.clear("calendar_event_edit:#{user.id}")
+      lv |> element("#calendar-undo") |> render_click()
+
+      uid = review.uid
+      assert_receive {:written, ^uid, payload}, 1_000
+      assert same?(payload.start_time, ~U[2026-10-14 09:00:00Z])
     end
   end
 
@@ -448,7 +475,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       hold_writes()
 
-      move(lv, "event-#{review.id}", "2026-10-15T11:00", "2026-10-15T12:00")
+      review_id = "event-#{review.id}"
+      move(lv, review_id, "2026-10-15T11:00", "2026-10-15T12:00")
       assert_receive {:write_started, writer, _uid, _payload}
       move(lv, "event-#{other.id}", "2026-10-16T14:00", "2026-10-16T15:00")
       assert_receive {:write_started, other_writer, _uid, _payload}
@@ -456,17 +484,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
 
       send(writer, {:answer, {:error, :provider_down}})
 
-      eventually(fn ->
-        assert surface(lv).event_writes.chains
-               |> Map.keys()
-               |> Enum.all?(&(&1 != WriteQueue.key(review)))
-      end)
+      await_original(lv, review_id)
 
       assert has_element?(lv, "#calendar-toast", "Moved to Fri 16 Oct, 14:00")
       send(other_writer, {:answer, :ok})
     end
   end
 
+  # Waits for the push that draws `id` back at 10:00, where it began.
+  defp await_original(lv, id) do
+    assert_push_event(lv, "calendar:events", %{events: events}, 1_000)
+
+    unless match?(%{start: "2026-10-14T10:00"}, Enum.find(events, &(&1.id == id))),
+      do: await_original(lv, id)
+  end
+
+  # The series choice is not rendered until Task 12, so its assigns are read
+  # from the component's state; nothing else here does that.
   defp surface(lv) do
     render(lv)
     {components, _ids, _uuids} = :sys.get_state(lv.pid).components
