@@ -8,6 +8,7 @@
  * server renders into `data-strings`; nothing here is hard-coded English.
  */
 import { layoutAllDay } from "./allday.js";
+import { draggable } from "./drag.js";
 import { LINE_HEIGHT, countLines, isLongWord, layoutColumn } from "./layout.js";
 import {
   HOUR_HEIGHT,
@@ -38,6 +39,11 @@ const TITLE_INSET = 15;
 const SHORT_TITLE_ROOM = 40;
 const TIME_SCALE = 10 / 12;
 const SHORT_GAP = 5;
+// Resize hit areas: transparent strips at a draggable block's top and bottom
+// edges, drawn as a grip only on hover and focus (calendar-surface.css), so
+// they never paint over text. A block too short to hold both has none.
+const GRIPS = `<span class="cal-ev-grip is-start" data-grip="start" aria-hidden="true"></span><span class="cal-ev-grip is-end" data-grip="end" aria-hidden="true"></span>`;
+const GRIP_MIN_HEIGHT = 18;
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
 export function escapeHtml(value) {
@@ -65,7 +71,8 @@ function emptyText(view, strings) {
 
 export function renderGrid(model) {
   const { view, days, events, settings, strings, now, width, measureWidth, nightOpen } = model;
-  const hourHeight = HOUR_HEIGHT[settings.density] || HOUR_HEIGHT.comfortable;
+  // A Ctrl + scroll zoom (hooks/calendar_canvas/zoom.js) overrides the density's height.
+  const hourHeight = model.hourHeight || HOUR_HEIGHT[settings.density] || HOUR_HEIGHT.comfortable;
   const fold = settings.fold_night && !nightOpen;
   const scale = makeScale(hourHeight, fold);
   const colWidth = Math.max(40, (width - AXIS_WIDTH - 1) / days.length);
@@ -76,7 +83,8 @@ export function renderGrid(model) {
   const allDay = layoutAllDay(events, days, { maxLanes: ALL_DAY_LANES });
   const timedCount = days.reduce((sum, iso) => sum + segmentsForDay(events, iso).length, 0);
   const empty = timedCount === 0 && allDay.bars.length === 0 && allDay.more.every((count) => count === 0);
-  const ctx = { settings, strings, now, scale, fold, colWidth, measureWidth, byId, nowDay, nowMinute, nowShown };
+  const movingId = model.movingId ?? null;
+  const ctx = { settings, strings, now, scale, fold, colWidth, measureWidth, byId, nowDay, nowMinute, nowShown, movingId };
 
   return (
     `<div class="cal-grid" data-density="${escapeHtml(settings.density)}" style="--cal-days:${days.length};--cal-axis:${AXIS_WIDTH}px;--cal-hour:${hourHeight}px;--cal-strip:${fold ? NIGHT_STRIP : 0}px">` +
@@ -242,7 +250,8 @@ function titleHtml(title, width, measureWidth) {
     .join("");
 }
 
-function eventBlock(item, event, { strings, settings, now, measureWidth }) {
+function eventBlock(item, event, { strings, settings, now, measureWidth, movingId }) {
+  const editable = draggable(event);
   const tf = settings.time_format;
   const short = item.height < 38;
   const past = event.endMin <= now;
@@ -252,7 +261,7 @@ function eventBlock(item, event, { strings, settings, now, measureWidth }) {
   const shortWithoutTime = short && !shortRowFits(item, event.title, start, measureWidth);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", event.attention && "is-attention"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", event.attention && "is-attention", movingId === event.id && "is-moving"]
     .filter(Boolean)
     .join(" ");
   const label = [event.title, dateLabel(isoFromDay(event.startDay), strings), range, event.free && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
@@ -264,10 +273,13 @@ function eventBlock(item, event, { strings, settings, now, measureWidth }) {
     (tiny ? `;--cal-lh:${Math.max(8, Math.floor(item.height - 2))}px` : "");
   const timeHtml = time ? `<span class="cal-ev-time"${item.timeGap ? ` style="margin-top:${Math.round(item.timeGap)}px"` : ""}>${escapeHtml(time)}</span>` : "";
 
+  // tabindex -1: the hook makes one block the grid's only tab stop and the
+  // arrow keys move between them.
   return (
-    `<div class="${classes}" role="button" tabindex="0" data-event-id="${escapeHtml(event.id)}" aria-label="${escapeHtml(label)}" style="${style}">` +
+    `<div class="${classes}" role="button" tabindex="-1" data-event-id="${escapeHtml(event.id)}"${editable ? " data-editable" : ""} aria-label="${escapeHtml(label)}" aria-describedby="calendar-keys-hint" style="${style}">` +
     `<span class="cal-ev-title">${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - TITLE_INSET, measureWidth)}</span>${timeHtml}` +
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
+    (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`
   );
 }
