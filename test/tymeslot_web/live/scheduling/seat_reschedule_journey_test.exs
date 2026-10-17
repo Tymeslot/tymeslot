@@ -168,7 +168,11 @@ defmodule TymeslotWeb.Live.Scheduling.SeatRescheduleJourneyTest do
         # reload or a shared link is a fresh booking too. The link named the
         # meeting type, so the fresh booking starts on that type's own
         # schedule step rather than the overview.
-        assert_patch(view, "/#{profile.username}/group-session?timezone=UTC")
+        #
+        # The click only forwards the restart; the patch comes from a later
+        # `handle_info` (relayed by `StepEvents.relay`), so wait for it past
+        # `assert_patch`'s 100 ms default.
+        assert_patch(view, "/#{profile.username}/group-session?timezone=UTC", 1_000)
         refute has_element?(view, "[data-testid='seat-move-notice']")
 
         view = walk_from_schedule_to_booking_form(view, "UTC")

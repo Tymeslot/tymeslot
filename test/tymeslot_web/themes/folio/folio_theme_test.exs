@@ -230,33 +230,18 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
       refute html =~ "2026, "
     end
 
-    defp confirmation_html(overrides) do
-      render_component(
-        ConfirmationComponent,
-        Map.merge(
-          %{
-            id: "confirmation-step",
-            locale: "en",
-            duration: "30-minutes",
-            username_context: "hostuser",
-            selected_date: "2026-09-10",
-            selected_time: "10:00",
-            user_timezone: "UTC",
-            email: "guest@example.com",
-            guest_emails: [],
-            name: "Alice",
-            organizer_profile: build(:profile, full_name: "Jane Organizer"),
-            meeting_type: nil,
-            meeting_status: "confirmed",
-            meeting_uid: "abc123",
-            custom_fields_snapshot: [],
-            custom_field_answers: %{},
-            is_rescheduling: false,
-            theme_tokens: nil
-          },
-          overrides
-        )
-      )
+    test "a moved booking says the new day instead, by name" do
+      html = confirmation_html(%{is_rescheduling: true})
+
+      assert html =~ "See you on Thursday 10 September 2026 instead, Alice"
+      refute html =~ "See you on Thursday 10 September 2026,"
+    end
+
+    test "a moved booking with no name to say ends at the word instead" do
+      html = confirmation_html(%{is_rescheduling: true, name: "  "})
+
+      assert html =~ "See you on Thursday 10 September 2026 instead<"
+      refute html =~ "instead, "
     end
   end
 
@@ -264,5 +249,34 @@ defmodule TymeslotWeb.Themes.Folio.FolioThemeTest do
     test "the dashboard and onboarding pickers list Folio" do
       assert {"Folio", "4"} in ThemeInfo.theme_options()
     end
+  end
+
+  defp confirmation_html(overrides) do
+    render_component(
+      ConfirmationComponent,
+      Map.merge(
+        %{
+          id: "confirmation-step",
+          locale: "en",
+          duration: "30-minutes",
+          username_context: "hostuser",
+          selected_date: "2026-09-10",
+          selected_time: "10:00",
+          user_timezone: "UTC",
+          email: "guest@example.com",
+          guest_emails: [],
+          name: "Alice",
+          organizer_profile: build(:profile, full_name: "Jane Organizer"),
+          meeting_type: nil,
+          meeting_status: "confirmed",
+          meeting_uid: "abc123",
+          custom_fields_snapshot: [],
+          custom_field_answers: %{},
+          is_rescheduling: false,
+          theme_tokens: nil
+        },
+        overrides
+      )
+    )
   end
 end
