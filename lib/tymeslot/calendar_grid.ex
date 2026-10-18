@@ -440,7 +440,8 @@ defmodule Tymeslot.CalendarGrid do
   Cancels a scheduled delete that has not started. See
   `Tymeslot.CalendarGrid.ScheduledDelete.cancel/2`.
   """
-  @spec cancel_scheduled_delete(pos_integer(), pos_integer()) :: :ok | {:error, :too_late}
+  @spec cancel_scheduled_delete(pos_integer(), pos_integer()) ::
+          :ok | {:error, :cancelled | :too_late}
   defdelegate cancel_scheduled_delete(user_id, token), to: ScheduledDelete, as: :cancel
 
   @doc """
