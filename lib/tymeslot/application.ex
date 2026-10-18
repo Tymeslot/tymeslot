@@ -305,10 +305,9 @@ defmodule Tymeslot.Application do
   # builds; tests that need it start it themselves.
   @spec dev_children() :: [module()]
   defp dev_children do
-    if Application.get_env(:tymeslot, :dev_calendar_enabled, false) or
-         Application.get_env(:tymeslot, :environment) == :dev,
-       do: [Tymeslot.Integrations.Calendar.DebugStore],
-       else: []
+    if Application.get_env(:tymeslot, :environment) == :dev,
+      do: [Tymeslot.Integrations.Calendar.DebugStore],
+      else: []
   end
 
   # The startup checks that only work once the rest of the tree is up: the
