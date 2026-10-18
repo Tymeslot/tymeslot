@@ -31,7 +31,7 @@ test("a block under 18px keeps data-editable but gets no grips", () => {
   container.innerHTML = renderGrid({
     view: "week",
     days: Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k)),
-    events: [normaliseEvent({ id: "event-1", kind: "event", title: "Quick sync", all_day: false, start: "2026-10-14T11:00", end: "2026-10-14T11:15", colour: "calendar-2", editable: true })],
+    events: [normaliseEvent({ id: "event-1", kind: "event", title: "Quick sync", all_day: false, start: "2026-10-14T11:00", end: "2026-10-14T11:15", colour: "calendar-2", editable: true, movable: true })],
     settings,
     strings,
     now: parseWall("2026-10-14T08:30"),

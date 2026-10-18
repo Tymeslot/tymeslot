@@ -59,7 +59,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
           ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
         free: Map.get(event, :transparency) == "transparent",
         attention: Map.get(event, :sync_state, "synced") != "synced",
-        editable: EditGuard.editable?(Map.get(context, :integrations, []), event)
+        editable: EditGuard.editable?(Map.get(context, :integrations, []), event),
+        movable: EditGuard.movable?(Map.get(context, :integrations, []), event)
       },
       timing(event, context.timezone)
     )

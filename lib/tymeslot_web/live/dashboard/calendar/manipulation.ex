@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   / all" choice for a member of a repeating series, and undo.
 
   The hook sends the wall-clock start and end it drew (`calendar:move`).
-  The change is checked (`EditGuard.check/3`), shown at once and written
+  The change is checked (`EditGuard.check_timing/3`), shown at once and written
   through `Writes`; the hook is sent the window again whatever happens, so a
   refused move snaps back to what the server holds. A change the organiser
   can take back goes on the undo stack and the toast names the result.
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
          {:ok, end_at} <- end_at(event, start, finish, start_at, timezone),
          true <- sensible?(start_at, end_at),
          true <- changed?(event, start_at, end_at),
-         :ok <- EditGuard.check(user.id, integrations, event) do
+         :ok <- EditGuard.check_timing(user.id, integrations, event) do
       {:ok, event, %{start_at: start_at, end_at: end_at}}
     else
       refusal when is_tuple(refusal) and elem(refusal, 0) == :error -> refusal

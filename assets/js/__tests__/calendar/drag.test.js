@@ -13,7 +13,7 @@ const wed = dayNumber("2026-10-14") * MINUTES_PER_DAY;
 const thu = dayNumber("2026-10-15") * MINUTES_PER_DAY;
 
 const event = (start, end, extra = {}) =>
-  normaliseEvent({ id: "event-1", kind: "event", title: "Review", all_day: false, start, end, editable: true, ...extra });
+  normaliseEvent({ id: "event-1", kind: "event", title: "Review", all_day: false, start, end, editable: true, movable: true, ...extra });
 const review = event("2026-10-14T11:00", "2026-10-14T12:00");
 const slot = (day, minute) => ({ index: 0, day: dayNumber(day), minute });
 
@@ -65,9 +65,11 @@ describe("resize", () => {
 
 test("only single-day timed events the organiser can change are draggable", () => {
   expect(draggable(review)).toBe(true);
-  expect(draggable(event("2026-10-14T11:00", "2026-10-14T12:00", { editable: false }))).toBe(false);
+  expect(draggable(event("2026-10-14T11:00", "2026-10-14T12:00", { editable: false, movable: false }))).toBe(false);
+  // The calendar copy of a booking: deletable, not movable.
+  expect(draggable(event("2026-10-14T11:00", "2026-10-14T12:00", { editable: true, movable: false }))).toBe(false);
   expect(draggable(event("2026-10-14T23:00", "2026-10-15T01:00"))).toBe(false);
-  expect(draggable(normaliseEvent({ id: "a", title: "Trip", all_day: true, start: "2026-10-14", end: "2026-10-15", editable: true }))).toBe(false);
+  expect(draggable(normaliseEvent({ id: "a", title: "Trip", all_day: true, start: "2026-10-14", end: "2026-10-15", editable: true, movable: true }))).toBe(false);
 });
 
 test("a zero-length event is not draggable, the server would refuse its range", () => {

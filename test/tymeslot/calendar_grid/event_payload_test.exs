@@ -64,7 +64,8 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              colour: "calendar-3",
              free: false,
              attention: false,
-             editable: false
+             editable: false,
+             movable: false
            }
   end
 

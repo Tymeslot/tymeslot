@@ -30,7 +30,7 @@ const strings = {
 const settings = { week_start: "monday", show_weekends: true, density: "comfortable", fold_night: false, time_format: "24h", working_hours: {} };
 const week = Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k));
 const review = (extra = {}) =>
-  normaliseEvent({ id: "event-1", kind: "event", title: "Design review", all_day: false, start: "2026-10-14T11:00", end: "2026-10-14T12:00", colour: "calendar-2", editable: true, ...extra });
+  normaliseEvent({ id: "event-1", kind: "event", title: "Design review", all_day: false, start: "2026-10-14T11:00", end: "2026-10-14T12:00", colour: "calendar-2", editable: true, movable: true, ...extra });
 
 function draw(overrides = {}) {
   const container = document.createElement("div");
@@ -64,7 +64,7 @@ test("an event the organiser can change is draggable and has a hit area at each 
 });
 
 test("an event they cannot change has neither", () => {
-  const ev = block(draw({ events: [review({ editable: false })] }));
+  const ev = block(draw({ events: [review({ editable: false, movable: false })] }));
   expect(ev.hasAttribute("data-editable")).toBe(false);
   expect(ev.querySelector("[data-grip]")).toBeNull();
 });
@@ -88,6 +88,12 @@ test("the grips are hidden from assistive technology", () => {
   const grips = [...block(draw()).querySelectorAll("[data-grip]")];
   expect(grips).toHaveLength(2);
   for (const grip of grips) expect(grip.getAttribute("aria-hidden")).toBe("true");
+});
+
+test("the calendar copy of a booking has neither the drag mark nor grips", () => {
+  const ev = block(draw({ events: [review({ editable: true, movable: false })] }));
+  expect(ev.hasAttribute("data-editable")).toBe(false);
+  expect(ev.querySelectorAll("[data-grip]")).toHaveLength(0);
 });
 
 test("an editable event that cannot be dragged is not marked editable", () => {

@@ -46,7 +46,7 @@ export const event = (id, title, start, end, extra = {}) => ({
   colour: "calendar-2",
   free: false,
   attention: false,
-  editable: true,
+  editable: true, movable: true,
   ...extra,
 });
 

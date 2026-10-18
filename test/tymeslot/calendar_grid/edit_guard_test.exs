@@ -92,4 +92,35 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
 
     assert message =~ "calendar event edit"
   end
+
+  describe "the calendar copy of a booking" do
+    setup %{user: user, integration: integration} do
+      insert(:meeting,
+        organizer_user: user,
+        calendar_integration_id: integration.id,
+        calendar_uid: "copy-uid"
+      )
+
+      %{copy: %{event(integration, "work") | uid: "copy-uid"}}
+    end
+
+    test "can be changed in general but not moved", %{
+      user: user,
+      integration: integration,
+      copy: copy
+    } do
+      assert EditGuard.editable?([integration], copy)
+      refute EditGuard.movable?([integration], copy)
+      assert EditGuard.check(user.id, [integration], copy) == :ok
+      assert EditGuard.check_timing(user.id, [integration], copy) == {:error, :booking}
+    end
+
+    test "an ordinary event on the same calendar can be moved", %{
+      user: user,
+      integration: integration
+    } do
+      assert EditGuard.movable?([integration], event(integration, "work"))
+      assert EditGuard.check_timing(user.id, [integration], event(integration, "work")) == :ok
+    end
+  end
 end

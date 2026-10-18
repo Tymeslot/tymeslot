@@ -114,10 +114,23 @@ test("Escape during a drag puts the event back", () => {
 });
 
 test("an event the organiser cannot change does not drag", () => {
-  const readOnly = payload({ events: [event("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00", { editable: false })] });
+  const readOnly = payload({ events: [event("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00", { editable: false, movable: false })] });
   const { el, hook } = mountHook(readOnly);
   withGeometry(hook);
 
+  pointer("pointerdown", block(el, "event-1"), 250, 582);
+  pointer("pointermove", el, 350, 634);
+  pointer("pointerup", el, 350, 634);
+
+  expect(pushes(hook, "calendar:move")).toEqual([]);
+});
+
+test("the calendar copy of a booking does not drag", () => {
+  const copy = payload({ events: [event("event-1", "Booked call", "2026-10-14T11:00", "2026-10-14T12:00", { editable: true, movable: false })] });
+  const { el, hook } = mountHook(copy);
+  withGeometry(hook);
+
+  expect(block(el, "event-1").hasAttribute("data-editable")).toBe(false);
   pointer("pointerdown", block(el, "event-1"), 250, 582);
   pointer("pointermove", el, 350, 634);
   pointer("pointerup", el, 350, 634);

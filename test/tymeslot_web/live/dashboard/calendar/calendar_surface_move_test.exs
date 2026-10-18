@@ -78,7 +78,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   } do
     move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
 
-    assert %{start: "2026-10-15T11:00", end: "2026-10-15T12:00"} = pushed(lv, id)
+    assert %{start: "2026-10-15T11:00", end: "2026-10-15T12:00", editable: true, movable: true} =
+             pushed(lv, id)
+
     assert has_element?(lv, "#calendar-toast", "Moved to Thu 15 Oct, 11:00")
     assert has_element?(lv, "#calendar-undo")
 
@@ -350,6 +352,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       move(lv, "booking-#{meeting.id}", "2026-10-15T14:00", "2026-10-15T14:30")
 
       assert %{start: "2026-10-15T11:00"} = snapped_back(lv, "booking-#{meeting.id}")
+    end
+
+    test "the calendar copy of a booking", %{
+      conn: conn,
+      integration: integration
+    } do
+      copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
+      copy_id = "event-#{copy.id}"
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: copy.uid)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      flush_pushes(lv)
+      move(lv, copy_id, "2026-10-15T16:00", "2026-10-15T16:30")
+
+      assert %{start: "2026-10-15T14:00", editable: true, movable: false} =
+               snapped_back(lv, copy_id)
+
+      assert render(lv) =~ "This is a booking. Reschedule or cancel it from Bookings."
     end
 
     test "a move the rate limit refuses", %{lv: lv, user: user, id: id} do

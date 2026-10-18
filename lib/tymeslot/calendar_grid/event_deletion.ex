@@ -142,11 +142,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   @spec notice(pos_integer(), map()) ::
           :silent | {:notifies, :booking | {:attendees, pos_integer()}}
   def notice(user_id, event) do
-    if CalendarEvents.event_linked_to_booking?(
-         event.calendar_integration_id,
-         Map.get(event, :provider_event_id),
-         event.uid
-       ) do
+    if booking_copy?(event) do
       {:notifies, :booking}
     else
       case AttendeeNotifications.event_deleted(event, addressed_attendees(event), user_id) do
@@ -154,6 +150,16 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
         {:ok, _nobody} -> :silent
       end
     end
+  end
+
+  @doc "Whether `event` is the synced calendar copy of a Tymeslot booking."
+  @spec booking_copy?(map()) :: boolean()
+  def booking_copy?(event) do
+    CalendarEvents.event_linked_to_booking?(
+      event.calendar_integration_id,
+      Map.get(event, :provider_event_id),
+      event.uid
+    )
   end
 
   defp addressed_attendees(event) do

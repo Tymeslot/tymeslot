@@ -14,8 +14,12 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
     * `rate_limit/1`: the organiser is within the calendar edit rate limit.
 
   `check/3` asks all three, in that order, for a change about to be made.
+  `movable?/2` and `check_timing/3` add the one more a change of timing
+  needs: the calendar copy of a booking keeps the booking's time, so it can
+  be deleted from the calendar but not moved or resized.
   """
 
+  alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings
   alias Tymeslot.Security.RateLimiter
@@ -27,6 +31,11 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   @doc "Whether `event` may be changed, for drawing the affordance; no query."
   @spec editable?([map()], map()) :: boolean()
   def editable?(integrations, event), do: writable(integrations, event) == :ok
+
+  @doc "Whether `event` may be moved or resized, for drawing the affordance."
+  @spec movable?([map()], map()) :: boolean()
+  def movable?(integrations, event),
+    do: editable?(integrations, event) and not EventDeletion.booking_copy?(event)
 
   @doc "Whether `event` sits on a writable calendar of one of `integrations`."
   @spec writable([map()], map()) :: :ok | {:error, :booking | :unauthorized | :read_only}
@@ -66,4 +75,15 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
          :ok <- seat_lock(user_id, event),
          do: rate_limit(user_id)
   end
+
+  @doc "`check/3` for a change of timing, which the copy of a booking also refuses."
+  @spec check_timing(pos_integer(), [map()], map()) :: :ok | refusal()
+  def check_timing(user_id, integrations, event) do
+    with :ok <- writable(integrations, event),
+         :ok <- not_booking_copy(event),
+         do: check(user_id, integrations, event)
+  end
+
+  defp not_booking_copy(event),
+    do: if(EventDeletion.booking_copy?(event), do: {:error, :booking}, else: :ok)
 end

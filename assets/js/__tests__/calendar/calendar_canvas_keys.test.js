@@ -74,7 +74,7 @@ test("Delete asks the server to delete the focused event", () => {
 });
 
 test("an event the organiser cannot change ignores M and Delete", () => {
-  const readOnly = payload({ events: [event("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00", { editable: false })] });
+  const readOnly = payload({ events: [event("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00", { editable: false, movable: false })] });
   const { el, hook } = mountHook(readOnly);
   block(el, "event-1").focus();
 
@@ -83,6 +83,21 @@ test("an event the organiser cannot change ignores M and Delete", () => {
 
   expect(block(el, "event-1").classList.contains("is-moving")).toBe(false);
   expect(hook.pushEventTo).not.toHaveBeenCalled();
+});
+
+test("the calendar copy of a booking ignores M but still deletes", () => {
+  const copy = payload({ events: [event("event-1", "Booked call", "2026-10-14T11:00", "2026-10-14T12:00", { editable: true, movable: false })] });
+  const { el, hook } = mountHook(copy);
+  block(el, "event-1").focus();
+
+  press("m");
+
+  expect(block(el, "event-1").classList.contains("is-moving")).toBe(false);
+  expect(hook.pushEventTo).not.toHaveBeenCalled();
+
+  press("Delete");
+
+  expect(pushes(hook, "calendar:delete")).toEqual([{ id: "event-1" }]);
 });
 
 test("Ctrl Z asks to undo anywhere but in a text field", () => {
