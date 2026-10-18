@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
   @moduletag :live
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
 
@@ -73,6 +74,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
     payload
   end
 
+  defp google_event(row) do
+    %{
+      "id" => row.uid,
+      "iCalUID" => row.uid,
+      "status" => "confirmed",
+      "summary" => row.summary,
+      "start" => %{"dateTime" => DateTime.to_iso8601(row.start_at)},
+      "end" => %{"dateTime" => DateTime.to_iso8601(row.end_at)}
+    }
+  end
+
   defp at?(%DateTime{} = actual, expected), do: DateTime.compare(actual, expected) == :eq
 
   setup %{conn: conn} do
@@ -82,6 +94,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
     Mox.stub(CalendarMock, :update_event, fn uid, payload, _context ->
       send(test_pid, {:written, uid, payload})
       :ok
+    end)
+
+    # The sync job the writes leave behind finds nothing new at the provider.
+    Mox.stub(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+      {:ok, %{events: [], next_sync_token: "next"}}
+    end)
+
+    # Its sweep lists what the calendar holds, which is what the cache holds.
+    Mox.stub(GoogleCalendarAPIMock, :list_events, fn integration, calendar, _from, _to ->
+      rows =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where:
+              e.calendar_integration_id == ^integration.id and e.provider_calendar_id == ^calendar
+          )
+        )
+
+      {:ok, Enum.map(rows, &google_event/1)}
     end)
 
     Mox.stub(CalendarMock, :delete_event, fn uid, _context, _opts ->
@@ -161,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
 
     # The window has passed: the queue runs the delete (the jobs the writes
     # left beside it are not what is asserted on).
-    Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
+    assert %{failure: 0} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
     assert Repo.reload!(job).state == "completed"
 
     dentist_uid = dentist.uid
