@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
     assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"scope" => "series"})
   end
 
-  test "once the delete has run the event stays gone, and Undo has nothing left", context do
+  test "once the delete has run the event stays gone, and Undo says it is too late", context do
     {lv, dentist, id} = dentist(context)
     canvas(lv, "calendar:delete", %{"id" => id})
     pushed_ids(lv)
@@ -169,6 +169,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
     send(lv.pid, {:calendar_delete_result, context.user.id, job.id, :deleted})
 
     refute id in pushed_ids(lv)
+    canvas(lv, "calendar:undo", %{})
+
+    assert has_element?(
+             lv,
+             "#calendar-toast",
+             "Too late to undo: “Dentist” has already been deleted."
+           )
+
+    # The marker is spent: the next Ctrl Z finds nothing.
     canvas(lv, "calendar:undo", %{})
     assert has_element?(lv, "#calendar-toast", "Nothing to undo.")
   end

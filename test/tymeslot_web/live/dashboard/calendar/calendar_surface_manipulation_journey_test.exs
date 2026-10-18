@@ -169,9 +169,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
 
     refute Repo.get(ProviderCalendarEventSchema, dentist.id)
 
-    # The grid follows the delete. Ctrl Z has no delete left to bring back: it
-    # takes back the earlier move of Design review, and the dentist stays gone.
+    # The grid follows the delete. The first Ctrl Z says it is too late to
+    # bring the dentist back and writes nothing.
     render(lv)
+    hook(lv, "calendar:undo", %{})
+
+    assert has_element?(
+             lv,
+             "#calendar-toast",
+             "Too late to undo: “Dentist” has already been deleted."
+           )
+
+    # The next one reaches the earlier move of Design review.
     hook(lv, "calendar:undo", %{})
 
     pushes = last_pushed(lv)

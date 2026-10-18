@@ -138,6 +138,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   # event still has the timing the change gave it; an event moved or synced
   # since would be put back over a newer version.
   defp undo_entry(socket, %{kind: :delete} = entry), do: Deletion.undo(socket, entry)
+  defp undo_entry(socket, %{kind: :gone} = entry), do: Deletion.too_late(socket, entry)
 
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns

@@ -974,3 +974,8 @@ msgstr "Událost „%{title}“ se opakuje. Které události chcete smazat?"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” repeats. Which events should change?"
 msgstr "Událost „%{title}“ se opakuje. Které události chcete změnit?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to undo: “%{title}” has already been deleted."
+msgstr ""

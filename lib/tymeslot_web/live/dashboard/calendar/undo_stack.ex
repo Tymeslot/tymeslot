@@ -3,8 +3,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   The changes the organiser can take back on the calendar surface, newest
   first. An entry is a map whose `:kind` says how to undo it (see
   `Manipulation.undo/1`): `:timing` for a move or resize, `:delete` for a
-  delete still inside its undo window. Entries that can no longer be undone
-  (a write that failed, a delete that has run) are dropped with `drop/2`.
+  delete still inside its undo window, `:gone` for a delete that has since
+  run (Ctrl Z on it only says it is too late, so it does not reach an older
+  change by mistake). Entries that can no longer be undone (a write that
+  failed) are dropped with `drop/2`.
   """
 
   @limit 20
@@ -32,4 +34,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   @doc "Removes every entry `fun` answers true for."
   @spec drop(t(), (entry() -> boolean())) :: t()
   def drop(stack, fun), do: Enum.reject(stack, fun)
+
+  @doc "Replaces every entry `fun` answers true for with `entry`, keeping its place."
+  @spec replace(t(), (entry() -> boolean()), entry()) :: t()
+  def replace(stack, fun, entry),
+    do: Enum.map(stack, fn existing -> if fun.(existing), do: entry, else: existing end)
 end

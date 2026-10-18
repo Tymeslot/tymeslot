@@ -32,4 +32,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStackTest do
 
     assert stack == [%{id: 2, key: :b}]
   end
+
+  test "replaces a matching change in place" do
+    stack =
+      UndoStack.new()
+      |> UndoStack.push(%{id: 1, token: 7})
+      |> UndoStack.push(%{id: 2, token: 8})
+      |> UndoStack.replace(&(&1.token == 7), %{kind: :gone, token: 7})
+
+    assert stack == [%{id: 2, token: 8}, %{kind: :gone, token: 7}]
+  end
 end

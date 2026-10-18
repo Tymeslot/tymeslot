@@ -16,7 +16,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   stay hidden until they have run, across a reload, a remount and a week
   change. A surface that loads while one is waiting takes it up again and
   offers Undo for the newest (`resume/1`). Each delete's outcome arrives from
-  its job (`settled/3`).
+  its job (`settled/3`), which turns the delete's Undo into a marker that
+  Ctrl Z answers with "too late" (`too_late/2`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -201,9 +202,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
     socket
     |> assign(:pending_deletes, rest)
-    |> assign(:undo, UndoStack.drop(socket.assigns.undo, &(Map.get(&1, :token) == token)))
+    |> assign(:undo, settle_undo(socket.assigns.undo, token, outcome))
     |> report(token, outcome, pending)
     |> SurfaceData.reload(:events)
+  end
+
+  # A delete that ran leaves a marker in place of its Undo, so the next Ctrl Z
+  # says it is too late instead of quietly taking back an older change. One
+  # that did not run has nothing to say and is dropped.
+  defp settle_undo(stack, token, :deleted) do
+    mine? = &(Map.get(&1, :token) == token)
+
+    case Enum.find(stack, mine?) do
+      %{title: title} ->
+        UndoStack.replace(stack, mine?, %{kind: :gone, token: token, title: title})
+
+      nil ->
+        stack
+    end
+  end
+
+  defp settle_undo(stack, token, _outcome),
+    do: UndoStack.drop(stack, &(Map.get(&1, :token) == token))
+
+  @doc "Ctrl Z on a delete that has already run: it cannot be taken back."
+  @spec too_late(socket(), map()) :: socket()
+  def too_late(socket, %{kind: :gone, title: title}) do
+    Toast.show(
+      socket,
+      dgettext("dashboard_calendar", "Too late to undo: “%{title}” has already been deleted.",
+        title: title
+      )
+    )
   end
 
   defp request_event(socket, event) do
