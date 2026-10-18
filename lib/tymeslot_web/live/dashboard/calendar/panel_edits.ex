@@ -312,11 +312,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
       else: EditGuard.check(user.id, integrations, event)
   end
 
-  defp refuse(socket, refusal),
+  # A refusal shows in the panel's header; with no panel open (a change made
+  # from the preview) it is flashed instead, or it would be silent.
+  defp refuse(%{assigns: %{panel: %{}}} = socket, refusal),
     do: refuse_with(socket, refusal |> CalendarEditMessages.refusal() |> elem(1))
 
-  defp refuse_with(socket, message),
+  defp refuse(socket, refusal), do: flash(socket, refusal)
+
+  defp refuse_with(%{assigns: %{panel: %{}}} = socket, message),
     do: PanelState.update(socket, &PanelStatus.refused(&1, message))
+
+  defp refuse_with(socket, message) do
+    send(self(), {:flash, {:warning, message}})
+    socket
+  end
 
   defp flash(socket, refusal) do
     send(self(), {:flash, CalendarEditMessages.refusal(refusal)})

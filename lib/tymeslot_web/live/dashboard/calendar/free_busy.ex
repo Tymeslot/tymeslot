@@ -6,16 +6,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
   that says what the new state means for bookings. A booking and a
   booking's calendar copy follow their meeting type, so the toggle is
   refused for them (`EditGuard.free_busy_editable?/2`), whatever the client
-  sends, and an event that is moving to another calendar is not written to.
+  sends. A refusal from the write path (moving, rate limit, seat lock) is flashed,
+  since no panel is open to show it.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.EditGuard
-  alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
-  alias TymeslotWeb.Dashboard.Calendar.Transfer
-  alias TymeslotWeb.Dashboard.CalendarEditMessages
+  alias TymeslotWeb.Dashboard.Calendar.Preview
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -26,9 +25,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
 
     with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, id),
          :ok <- editable(socket, event),
-         :ok <- not_moving(socket, event),
          false <- (Map.get(event, :transparency) || "opaque") == value do
-      PanelEdits.write(socket, id, %{transparency: value}, toast: message(free?))
+      PanelEdits.write(socket, id, %{transparency: value}, toast: message(socket, event, value))
     else
       {:error, message} -> flash(socket, message)
       _unknown_or_unchanged -> socket
@@ -46,20 +44,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
          )}
   end
 
-  defp not_moving(socket, event) do
-    if Transfer.moving?(socket, EventPayload.id(event)),
-      do: {:error, CalendarEditMessages.moving_message()},
-      else: :ok
-  end
-
   defp flash(socket, message) do
     send(self(), {:flash, {:warning, message}})
     socket
   end
 
-  defp message(true),
-    do: dgettext("dashboard_calendar", "Shown as free. Guests can book this time.")
+  # What the change means for bookings, said only when the calendar will
+  # really read it that way: the same state the preview will then show.
+  defp message(socket, event, value) do
+    after_change =
+      Preview.build(Map.put(event, :transparency, value), Preview.context(socket.assigns))
 
-  defp message(false),
-    do: dgettext("dashboard_calendar", "Shown as busy. Guests can't book this time.")
+    case {value, after_change.availability.kind} do
+      {"transparent", :free} ->
+        dgettext("dashboard_calendar", "Shown as free. Guests can book this time.")
+
+      {"opaque", :busy} ->
+        dgettext("dashboard_calendar", "Shown as busy. Guests can't book this time.")
+
+      {"transparent", _other} ->
+        dgettext("dashboard_calendar", "Shown as free.")
+
+      {"opaque", _other} ->
+        dgettext("dashboard_calendar", "Shown as busy.")
+    end
+  end
 end

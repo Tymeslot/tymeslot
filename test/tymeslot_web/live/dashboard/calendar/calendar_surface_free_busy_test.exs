@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
 
   @task_timeout 5_000
 
@@ -57,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
     lv |> element("#calendar-preview-edit") |> render_click()
 
     assert has_element?(lv, "#calendar-panel")
+    refute has_element?(lv, "#calendar-preview")
   end
 
   test "Free writes the event as free, says what it means, and can be undone", %{
@@ -165,6 +167,103 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
     refute has_element?(lv, "#calendar-preview-edit")
     refute has_element?(lv, "#calendar-preview-free")
     assert has_element?(lv, "#calendar-preview", "Set in the meeting type")
+  end
+
+  test "a refused toggle is flashed when no panel is open, and writes nothing", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        capacity: 2,
+        start_time: ~U[2026-10-15 10:00:00Z],
+        end_time: ~U[2026-10-15 11:00:00Z]
+      )
+
+    insert(:participant, meeting: meeting)
+
+    workshop =
+      event(integration, "work", "Group workshop", ~U[2026-10-15 10:00:00Z], 60,
+        uid: meeting.calendar_uid
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{workshop.id}")
+    lv |> element("#calendar-preview-free") |> render_click()
+
+    assert render(lv) =~ "This is a group booking."
+    refute has_element?(lv, "#calendar-toast")
+    refute_receive {:provider_update, _pid, _payload}, 100
+  end
+
+  test "the toast does not promise bookings on a calendar that does not block them", %{
+    conn: conn,
+    user: user
+  } do
+    holidays =
+      insert(:calendar_integration,
+        user: user,
+        name: "Holidays",
+        provider: "google",
+        is_active: true,
+        calendar_list: [
+          %{
+            "id" => "hol",
+            "name" => "Holidays",
+            "selected" => true,
+            "blocks_availability" => false
+          }
+        ]
+      )
+
+    holiday =
+      event(holidays, "hol", "Bank holiday", ~U[2026-10-15 09:00:00Z], 60,
+        transparency: "transparent"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{holiday.id}")
+    lv |> element("#calendar-preview-busy") |> render_click()
+
+    await_provider_update(lv)
+    assert has_element?(lv, "#calendar-toast", "Shown as busy.")
+    refute has_element?(lv, "#calendar-toast", "Guests can't book")
+    assert has_element?(lv, "#calendar-preview", "This calendar doesn't block bookings")
+  end
+
+  test "a repeating event asks its series question, and this event alone is written with Undo", %{
+    conn: conn,
+    integration: integration
+  } do
+    standup =
+      event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+        uid: "standup-series_20261014T083000Z",
+        provider_event_id: "standup-series_20261014T083000Z",
+        recurring_event_id: "standup-series"
+      )
+
+    {:ok, _row} =
+      SeriesRuleQueries.put(integration.id, "standup-series", %{
+        rule: "FREQ=DAILY",
+        master_start: ~U[2026-10-01 08:30:00Z],
+        fetched_at: DateTime.utc_now()
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{standup.id}")
+    lv |> element("#calendar-preview-free") |> render_click()
+
+    assert has_element?(lv, "#calendar-series-scope", "Standup")
+    refute_receive {:provider_update, _pid, _payload}, 100
+
+    lv |> element("#calendar-scope-this_only") |> render_click()
+
+    await_provider_update(lv)
+    assert has_element?(lv, "#calendar-toast", "Shown as free. Guests can book this time.")
+    assert has_element?(lv, "#calendar-undo")
   end
 
   test "the keys hint names E", %{lv: lv} do

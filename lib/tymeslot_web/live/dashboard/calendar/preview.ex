@@ -371,18 +371,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
 
   defp not_blocking,
     do: %{
+      kind: :not_blocking,
       label: dgettext("dashboard_calendar", "Busy"),
       note: dgettext("dashboard_calendar", "This calendar doesn't block bookings")
     }
 
   defp busy,
     do: %{
+      kind: :busy,
       label: dgettext("dashboard_calendar", "Busy"),
       note: dgettext("dashboard_calendar", "Guests can't book this time")
     }
 
   defp free,
     do: %{
+      kind: :free,
       label: dgettext("dashboard_calendar", "Free"),
       note: dgettext("dashboard_calendar", "Guests can book this time")
     }

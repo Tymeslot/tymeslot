@@ -194,6 +194,7 @@ export const KeysMixin = {
   // a dialog or modal, quick create (open or saving), a drag or a move mode.
   editKeyAllowed(e) {
     if (e.isComposing || e.defaultPrevented || this.drag || this.createDrag || this.moving || this.quick) return false;
+    // The text-field and dialog tests are defensive: E is only read on a focused event block.
     const target = e.target;
     return !(target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS));
   },
