@@ -124,3 +124,12 @@ test("everything typed is escaped", () => {
   expect(holder.querySelector("#calendar-qc-field").value).toBe(draft.text);
   expect(renderQuickBody({ draft: { ...draft, error: { field: null, message: "<i>no</i>" } }, strings, timeFormat: "24h", calendars })).toContain("&lt;i&gt;no&lt;/i&gt;");
 });
+
+test("a refused end on an all-day draft marks the date chip", () => {
+  const popover = view({ ...applyChip(base(), "allDay", true), error: { field: "end", message: "Too long." } });
+  expect(popover.querySelector('[data-qc-pick="date"]').getAttribute("aria-invalid")).toBe("true");
+});
+
+test("the native inputs have their own focus key", () => {
+  expect(view(base()).querySelector('[data-qc-input="start"]').getAttribute("data-qc-key")).toBe("start-input");
+});

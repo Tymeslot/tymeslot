@@ -6,7 +6,7 @@
  */
 import { afterEach, expect, test, vi } from "vitest";
 import { addDays, makeScale } from "../../calendar/time.js";
-import { mountHook, pushes, unmountAll } from "./canvas_harness.js";
+import { mountHook, payload, pushes, unmountAll } from "./canvas_harness.js";
 
 const days = Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k));
 const popover = () => document.getElementById("calendar-quick-create");
@@ -33,6 +33,7 @@ const reply = (hook, name, answer) => hook.pushEventTo.mock.calls.find(([, pushe
 afterEach(() => {
   unmountAll();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 test("a new draft opens the popover with the field focused", () => {
@@ -268,7 +269,6 @@ test("the popover is placed beside the draft, never over it", () => {
   drawn(el).getBoundingClientRect = () => ({ left: 1000, right: 1100, top: 468, bottom: 494, width: 100, height: 26 });
   hook.placeQuickCreate();
   expect(popover().style.left).toBe(`${1000 - 8 - 340}px`);
-  vi.unstubAllGlobals();
 });
 
 test("calendar:draft-cleared after a failed create removes the saving draft", () => {
@@ -285,4 +285,113 @@ test("the popover does not outlive the hook", () => {
   open();
   unmountAll();
   expect(popover()).toBeNull();
+});
+
+const refusal = "Couldn't save this event. Try again.";
+
+test("a rejected create push returns the popover to editable with the error shown", async () => {
+  const { hook } = open();
+  hook.pushEventTo.mockImplementation(() => Promise.reject(new Error("disconnected")));
+  type("Lunch");
+  key(field(), "Enter");
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
+  expect(popover().querySelector("[data-qc-save]").disabled).toBe(false);
+  expect(hook.draft.status).toBe("editing");
+});
+
+test("a create with no reply in time returns the popover to editable", () => {
+  vi.useFakeTimers();
+  const { hook } = open();
+  type("Lunch");
+  key(field(), "Enter");
+  expect(hook.draft.status).toBe("saving");
+
+  vi.advanceTimersByTime(15000);
+  expect(hook.draft.status).toBe("editing");
+  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
+  // A late reply changes nothing.
+  reply(hook, "calendar:create", { accepted: true });
+  expect(popover()).not.toBeNull();
+});
+
+test("reconnecting while a draft is saving returns the popover to editable", () => {
+  const { hook } = open();
+  key(field(), "Enter");
+  hook.reconnected();
+  expect(hook.draft.status).toBe("editing");
+  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
+});
+
+test("the fallback native picker keeps focus through its first change", () => {
+  const { hook } = open();
+  const start = popover().querySelector('[data-qc-input="start"]');
+  start.showPicker = undefined;
+  popover().querySelector('[data-qc-pick="start"]').click();
+  const input = () => popover().querySelector('[data-qc-input="start"]');
+  expect(document.activeElement).toBe(input());
+
+  input().value = "11:00";
+  input().dispatchEvent(new Event("change", { bubbles: true }));
+  expect(hook.draft.start % 1440).toBe(660);
+  expect(document.activeElement).toBe(input());
+  expect(input().classList.contains("is-open")).toBe(true);
+});
+
+test("More options cannot be sent twice, nor followed by a save", () => {
+  const { hook } = open();
+  type("Planning");
+  const more = popover().querySelector("[data-qc-more]");
+  more.click();
+  popover().querySelector("[data-qc-more]").click();
+  key(field(), "Enter");
+  popover().querySelector("[data-qc-save]").click();
+
+  expect(pushes(hook, "calendar:more_options")).toHaveLength(1);
+  expect(pushes(hook, "calendar:create")).toHaveLength(0);
+  expect(popover().querySelector("[data-qc-save]").disabled).toBe(true);
+  expect(popover().querySelector("[data-qc-more]").disabled).toBe(true);
+
+  reply(hook, "calendar:more_options", { opened: false });
+  expect(hook.draft.status).toBe("editing");
+  expect(popover().querySelector("[data-qc-save]").disabled).toBe(false);
+});
+
+test("More options with no reply in time unlocks the popover", () => {
+  vi.useFakeTimers();
+  const { hook } = open();
+  popover().querySelector("[data-qc-more]").click();
+  vi.advanceTimersByTime(15000);
+  expect(hook.draft.status).toBe("editing");
+  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
+});
+
+test("after an accepted save with nothing to return to, focus lands on the grid", () => {
+  const { el, hook } = open({ first: payload({ events: [] }) });
+  key(field(), "Enter");
+  reply(hook, "calendar:create", { accepted: true });
+  expect(document.activeElement).toBe(el);
+});
+
+test("a press outside after unmount neither throws nor discards", () => {
+  const { hook } = open();
+  const kept = hook.draft;
+  unmountAll();
+  expect(() => document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }))).not.toThrow();
+  expect(hook.draft).toBe(kept);
+});
+
+test("a refused end on an all-day draft marks the date chip; a title refusal describes the field", () => {
+  const { hook } = open();
+  popover().querySelector("[data-qc-allday]").click();
+  key(field(), "Enter");
+  reply(hook, "calendar:create", { accepted: false, field: "end", error: "Too long." });
+  expect(popover().querySelector('[data-qc-pick="date"]').getAttribute("aria-invalid")).toBe("true");
+
+  key(field(), "Enter");
+  hook.pushEventTo.mock.calls.filter(([, pushed]) => pushed === "calendar:create").at(-1)[3]({ accepted: false, field: "title", error: "Needs a title." });
+  expect(field().getAttribute("aria-invalid")).toBe("true");
+  expect(field().getAttribute("aria-describedby")).toContain("calendar-qc-error");
 });

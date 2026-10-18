@@ -28,6 +28,8 @@ import { MINUTES_PER_DAY, isoFromDay, periodDays } from "../../calendar/time.js"
 
 const ESTIMATE = { width: 340, height: 320 };
 const FOLLOW_MS = 400;
+// How long a push may go unanswered before the popover unlocks.
+const REPLY_MS = 15000;
 const FOCUSABLE = 'input:not([tabindex="-1"]), select, button:not([disabled]):not([hidden])';
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
@@ -38,6 +40,8 @@ export const CreateMixin = {
   mountCreate() {
     this.quick = null;
     this.followTimer = null;
+    this.pushTimer = null;
+    this.lostPush = null;
     this.quickOutside = (e) => {
       if (!this.quick || this.quick.element.contains(e.target) || e.target.closest?.("[data-draft-id]")) return;
       this.cancelQuickCreate({ restoreFocus: false });
@@ -47,6 +51,7 @@ export const CreateMixin = {
   },
 
   destroyCreate() {
+    this.clearPush();
     this.el.removeEventListener("scroll", this.quickScroll, true);
     this.closeQuickCreate();
   },
@@ -101,7 +106,11 @@ export const CreateMixin = {
 
   restoreQuickFocus(returnTo) {
     if (returnTo?.isConnected) return returnTo.focus({ preventScroll: true });
-    return this.el.querySelector('.cal-col .cal-ev[data-event-id][tabindex="0"]')?.focus({ preventScroll: true });
+    const block = this.el.querySelector('.cal-col .cal-ev[data-event-id][tabindex="0"]');
+    if (block) return block.focus({ preventScroll: true });
+    // No events: the grid itself takes focus, so it never drops to the page.
+    if (!this.el.hasAttribute("tabindex")) this.el.tabIndex = -1;
+    return this.el.focus({ preventScroll: true });
   },
 
   // A new draft state: redraw the grid, then the popover's body beside it.
@@ -174,12 +183,17 @@ export const CreateMixin = {
       if (typeof input.showPicker !== "function") throw new Error("no picker");
       input.showPicker();
     } catch (_error) {
-      button.hidden = true;
-      input.classList.add("is-open");
-      input.removeAttribute("aria-hidden");
-      input.tabIndex = 0;
+      (this.quick.open ||= new Set()).add(button.dataset.qcPick);
+      this.showInput(button, input);
       input.focus();
     }
+  },
+
+  showInput(button, input) {
+    button.hidden = true;
+    input.classList.add("is-open");
+    input.removeAttribute("aria-hidden");
+    input.tabIndex = 0;
   },
 
   // Re-renders everything under the field, keeping focus on the same control.
@@ -188,9 +202,19 @@ export const CreateMixin = {
     const key = document.activeElement?.closest?.("[data-qc-key]")?.dataset.qcKey;
     this.quick.element.querySelector("[data-qc-body]").innerHTML = renderQuickBody(this.quickState());
     const field = this.quickField();
-    field.readOnly = this.draft.status === "saving";
-    if (this.draft.error?.field === "title") field.setAttribute("aria-invalid", "true");
-    else field.removeAttribute("aria-invalid");
+    field.readOnly = this.draft.status !== "editing";
+    if (this.draft.error?.field === "title") {
+      field.setAttribute("aria-invalid", "true");
+      field.setAttribute("aria-describedby", "calendar-qc-error calendar-qc-hint");
+    } else {
+      field.removeAttribute("aria-invalid");
+      field.setAttribute("aria-describedby", "calendar-qc-hint");
+    }
+    // A native picker shown in a chip's place stays shown through the redraw.
+    for (const chip of this.quick.open || []) {
+      const wrap = this.quick.element.querySelector(`[data-qc-pick="${chip}"]`)?.parentElement;
+      if (wrap) this.showInput(wrap.querySelector("[data-qc-pick]"), wrap.querySelector("[data-qc-input]"));
+    }
     if (key) this.quick.element.querySelector(`[data-qc-key="${key}"]`)?.focus({ preventScroll: true });
     this.placeQuickCreate();
   },
@@ -234,11 +258,42 @@ export const CreateMixin = {
     }, delay);
   },
 
+  // Pushes `event` and settles once: on the server's reply, or as `lost`
+  // when the push is rejected, unanswered for REPLY_MS or the socket
+  // reconnected (the hook's pushes swallow a dead connection, so without
+  // this the popover would wait for ever).
+  pushGuarded(event, params, onReply, onLost) {
+    this.clearPush();
+    let settled = false;
+    const settle = (callback) => (arg) => {
+      if (settled) return;
+      settled = true;
+      this.clearPush();
+      callback(arg);
+    };
+    const lost = settle(onLost);
+    this.lostPush = lost;
+    this.pushTimer = setTimeout(lost, REPLY_MS);
+    const pushed = this.pushEventTo(this.el, event, params, settle(onReply));
+    pushed?.catch?.(lost);
+  },
+
+  clearPush() {
+    clearTimeout(this.pushTimer);
+    this.pushTimer = null;
+    this.lostPush = null;
+  },
+
+  // A push in flight whose reply will not come (called on reconnect).
+  abandonPush() {
+    this.lostPush?.();
+  },
+
   saveQuickCreate() {
     if (this.draft?.status !== "editing") return;
     this.updateDraft({ ...this.draft, status: "saving", error: null });
     const { id } = this.draft;
-    this.pushEventTo(this.el, "calendar:create", toPayload(this.draft), (reply) => this.createReplied(id, reply));
+    this.pushGuarded("calendar:create", toPayload(this.draft), (reply) => this.createReplied(id, reply), () => this.createReplied(id, { accepted: false, field: null }));
   },
 
   createReplied(id, reply) {
@@ -250,9 +305,13 @@ export const CreateMixin = {
       this.restoreQuickFocus(returnTo);
       return;
     }
-    // A refusal may name no field (a rate limit): the message stands alone.
-    const error = { field: reply?.field ?? null, message: reply?.error || this.strings.create_refused };
-    this.draft = { ...this.draft, status: "editing", error };
+    this.reopenWithError(reply?.field ?? null, reply?.error);
+  },
+
+  // Back to editing with the server's message (or the generic one). A refusal
+  // may name no field (a rate limit): the message then stands alone.
+  reopenWithError(field, message) {
+    this.draft = { ...this.draft, status: "editing", error: { field, message: message || this.strings.create_refused } };
     this.render();
     this.refreshQuick();
     this.quickField()?.focus({ preventScroll: true });
@@ -260,12 +319,27 @@ export const CreateMixin = {
 
   moreOptions() {
     if (this.draft?.status !== "editing") return;
+    this.updateDraft({ ...this.draft, status: "opening", error: null });
     const { id } = this.draft;
-    this.pushEventTo(this.el, "calendar:more_options", toPayload(this.draft), (reply) => {
-      if (this.draft?.id !== id || !reply?.opened) return;
-      this.closeQuickCreate();
-      // The panel takes focus; the draft stays drawn until its payload.
-      this.handOver("panel");
-    });
+    const unlock = () => {
+      if (this.draft?.id === id) this.reopenWithError(null, null);
+    };
+    this.pushGuarded(
+      "calendar:more_options",
+      toPayload(this.draft),
+      (reply) => {
+        if (this.draft?.id !== id) return;
+        if (!reply?.opened) {
+          this.draft = { ...this.draft, status: "editing" };
+          this.render();
+          this.refreshQuick();
+          return;
+        }
+        this.closeQuickCreate();
+        // The panel takes focus; the draft stays drawn until its payload.
+        this.handOver("panel");
+      },
+      unlock,
+    );
   },
 };

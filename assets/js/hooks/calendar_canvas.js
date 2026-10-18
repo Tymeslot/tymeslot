@@ -138,6 +138,7 @@ export const CalendarCanvas = {
   // again, so a target still pending from before the drop would wait for an
   // answer that may never come.
   reconnected() {
+    this.abandonPush();
     this.clearPending();
     this.requestData();
   },

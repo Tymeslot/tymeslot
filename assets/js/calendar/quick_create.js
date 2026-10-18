@@ -23,15 +23,16 @@ const clock = (minute) => {
 // Which chip a refused field belongs to.
 const FIELD_CHIPS = { date: ["start", "all_day"], start: ["start"], end: ["end"], calendar: ["calendar"], place: ["location"], guests: ["guests"] };
 
-function invalid(chip, error) {
-  return error?.field && FIELD_CHIPS[chip]?.includes(error.field) ? ' aria-invalid="true" aria-describedby="calendar-qc-error"' : "";
+function invalid(chip, error, allDay = false) {
+  const named = error?.field && (FIELD_CHIPS[chip]?.includes(error.field) || (chip === "date" && allDay && error.field === "end"));
+  return named ? ' aria-invalid="true" aria-describedby="calendar-qc-error"' : "";
 }
 
 function picker(chip, type, label, text, value, { draft }, parsed) {
   return (
     `<span class="cal-qc-chip-wrap">` +
-    `<button type="button" class="cal-qc-chip${parsed ? " is-parsed" : ""}" data-qc-pick="${chip}" data-qc-key="${chip}" aria-label="${escapeHtml(`${label}: ${text}`)}"${invalid(chip, draft.error)}>${escapeHtml(text)}</button>` +
-    `<input class="cal-qc-native" type="${type}" data-qc-input="${chip}" value="${escapeHtml(value)}" tabindex="-1" aria-hidden="true" aria-label="${escapeHtml(label)}"${type === "time" ? ' step="900"' : ""}>` +
+    `<button type="button" class="cal-qc-chip${parsed ? " is-parsed" : ""}" data-qc-pick="${chip}" data-qc-key="${chip}" aria-label="${escapeHtml(`${label}: ${text}`)}"${invalid(chip, draft.error, draft.allDay)}>${escapeHtml(text)}</button>` +
+    `<input class="cal-qc-native" type="${type}" data-qc-input="${chip}" data-qc-key="${chip}-input" value="${escapeHtml(value)}" tabindex="-1" aria-hidden="true" aria-label="${escapeHtml(label)}"${type === "time" ? ' step="900"' : ""}>` +
     `</span>`
   );
 }
@@ -93,14 +94,14 @@ function saveLabel({ draft, strings }) {
 // Everything under the field; re-rendered on every change.
 export function renderQuickBody(state) {
   const { draft, strings } = state;
-  const saving = draft.status === "saving";
+  const locked = draft.status === "saving" || draft.status === "opening";
   return (
     chips(state) +
     showAs(state) +
     (draft.error ? `<p id="calendar-qc-error" class="cal-qc-error" role="alert">${escapeHtml(draft.error.message)}</p>` : "") +
     `<div class="cal-qc-foot">` +
-    `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${saving ? " disabled" : ""}>${escapeHtml(strings.more_options)}</button>` +
-    `<button type="button" class="cal-qc-save" data-qc-save data-qc-key="save"${saving ? " disabled" : ""}>${escapeHtml(saveLabel(state))}</button>` +
+    `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${locked ? " disabled" : ""}>${escapeHtml(strings.more_options)}</button>` +
+    `<button type="button" class="cal-qc-save" data-qc-save data-qc-key="save"${locked ? " disabled" : ""}>${escapeHtml(saveLabel(state))}</button>` +
     `</div>` +
     `<p id="calendar-qc-hint" class="cal-qc-hint">${escapeHtml(strings.quick_create_hint)}</p>`
   );
