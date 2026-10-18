@@ -135,7 +135,7 @@ function allDayLane({ bars, more, rows }, days, { strings, now, byId }) {
     const first = dateLabel(isoFromDay(e.startDay), strings);
     const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
     const label = [e.title, strings.all_day, span, e.endMin <= now && strings.ended].filter(Boolean).join(", ");
-    const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && "is-free", e.kind === "booking" && "is-booking"]
+    const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking"]
       .filter(Boolean)
       .join(" ");
     html +=
@@ -279,10 +279,10 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   const shortWithoutTime = short && !shortRowFits(item, shown, start, measureWidth);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
     .filter(Boolean)
     .join(" ");
-  const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
+  const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && !event.expired && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
     .filter(Boolean)
     .join(", ");
   const style =

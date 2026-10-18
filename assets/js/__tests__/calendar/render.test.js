@@ -301,6 +301,15 @@ describe("renderGrid", () => {
     expect(block.getAttribute("aria-label")).not.toContain("waiting for your answer");
   });
 
+  test("an expired request is not drawn or announced as free, though it carries the free flag", () => {
+    const grid = draw({
+      events: [timed("booking-4", "Dan · Intro", "2026-10-15T09:00", "2026-10-15T10:00", { kind: "booking", colour: "booking", expired: true, free: true })],
+    });
+    const block = grid.querySelector('[data-event-id="booking-4"]');
+    expect(block.classList.contains("is-free")).toBe(false);
+    expect(block.getAttribute("aria-label")).not.toContain("shown as free");
+  });
+
   test("a plain booking has no flag", () => {
     const grid = draw({ events: [timed("booking-3", "Cleo · Intro", "2026-10-15T15:00", "2026-10-15T16:00", { kind: "booking", colour: "booking" })] });
     expect(grid.querySelector('[data-event-id="booking-3"] .cal-ev-request')).toBeNull();
