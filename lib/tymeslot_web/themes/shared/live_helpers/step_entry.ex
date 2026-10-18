@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
+  alias Phoenix.HTML.Form
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
@@ -28,6 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
+    BookingConfig,
     CalendarHelpers,
     NextAvailable,
     OrganizerHelpers
@@ -41,6 +43,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
+
+  # The fields the visitor types into the booking form.
+  @booking_fields Enum.map(BookingConfig.booking_field_spec(), &elem(&1, 0))
 
   @doc """
   Assigns a meeting type based on duration if organizer context is present.
@@ -384,11 +389,27 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       end
 
     socket
-    |> OrganizerHelpers.setup_form_state(form_data, as: :booking)
+    |> OrganizerHelpers.setup_form_state(Map.merge(form_data, typed_fields(socket)), as: :booking)
     |> GuestBooking.assign_seat_cap()
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)
+  end
+
+  # What the visitor typed into the form while it was open earlier in this
+  # page view: the attendee moment closes when the time is forgotten (another
+  # day picked, Back on a paged journey, a taken slot) and opens afresh, and
+  # its name, email and message are carried over the prefill rather than
+  # lost. Only those fields: the token and everything else are made anew.
+  # The booking reaching its confirmation, and a restart, drop the form.
+  defp typed_fields(socket) do
+    case socket.assigns[:form] do
+      %Form{params: params} when is_map(params) ->
+        Map.take(params, @booking_fields)
+
+      _none ->
+        %{}
+    end
   end
 
   @doc """

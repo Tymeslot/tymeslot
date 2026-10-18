@@ -132,6 +132,66 @@ defmodule TymeslotWeb.Live.Themes.FolioJourneyTest do
     assert Date.to_iso8601(DateTime.to_date(meeting.start_time)) == day
   end
 
+  describe "another day picked while the details are open" do
+    test "keeps what was typed, makes a fresh token, and leaves the focus on the calendar",
+         %{conn: conn} do
+      %{profile: profile} = seed_organiser(@theme_id, "folio-new-day")
+      {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat")
+
+      BookingDriver.pick_first_slot(view, on: ahead())
+      assert live_assigns(view).journey_focus == :you
+
+      BookingDriver.fill_attendee(view, %{
+        name: "Mia Laurent",
+        email: "mia@example.com",
+        message: "About the spring issue"
+      })
+
+      first_token = live_assigns(view).submission_token
+
+      BookingDriver.pick_date(view, another_free_date(view, live_assigns(view).selected_date))
+
+      refute has_element?(view, "#you-step")
+      assert has_element?(view, "#when-step[data-moment-state='current']")
+      assert live_assigns(view).journey_focus != :when
+      refute has_element?(view, "#when-heading-current[phx-mounted]")
+
+      BookingDriver.pick_time(view, await_first_time(view))
+
+      assert has_element?(view, "#you-step input[name='booking[name]'][value='Mia Laurent']")
+      assert has_element?(view, "#you-step input[name='booking[email]'][value='mia@example.com']")
+
+      assert has_element?(
+               view,
+               "#you-step textarea[name='booking[message]']",
+               "About the spring issue"
+             )
+
+      assert has_element?(view, "#you-heading-current[phx-mounted]")
+
+      second_token = live_assigns(view).submission_token
+      assert byte_size(second_token) > 0
+      assert second_token != first_token
+    end
+
+    @tag :capture_log
+    test "a booking made and another started opens an empty form", %{conn: conn} do
+      %{profile: profile} = seed_organiser(@theme_id, "folio-new-day-again")
+      {:ok, view, _html} = live(conn, "/#{profile.username}/quick-chat")
+
+      BookingDriver.pick_first_slot(view, on: ahead())
+      BookingDriver.submit(view, %{name: "Mia Laurent", email: "mia@example.com"})
+      await(view, "[data-testid='confirmation-heading']")
+
+      BookingDriver.restart(view)
+      BookingDriver.pick_first_slot(view, on: ahead())
+
+      assert has_element?(view, "#you-step form[data-fact='attendee']")
+      refute has_element?(view, "#you-step input[value='Mia Laurent']")
+      refute has_element?(view, "#you-step input[value='mia@example.com']")
+    end
+  end
+
   @tag :capture_log
   test "asks the meeting type's questions in the details before the form", %{conn: conn} do
     %{user: user, profile: profile} =

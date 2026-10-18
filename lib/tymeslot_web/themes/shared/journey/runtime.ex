@@ -33,8 +33,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   `enter/2` of each collected fact the booking requires, with `params`, the
   URL's or `%{}` for a move inside the page) and lets the navigator settle
   (`settle/1`). The navigators and `BookingFlow` move through it. A fact's
-  or an ambient event settles too, and when that moves `:current_state` the
-  new current moment becomes `:journey_focus`. `clear/2` forgets facts and
+  or an ambient event settles too, and when that moves `:current_state` on to
+  a moment after the one the event came from, the new current moment
+  becomes `:journey_focus`. `clear/2` forgets facts and
   those depending on them. `navigate_to_step/2` is the step indicator's
   click, handed to the navigator's `go_to/3`.
 
@@ -90,8 +91,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   @doc """
   Shows the moment or outcome `key`. A moment is opened (`open_moment/3`),
   then the navigator settles what the booking now reaches (`settle/1`).
+  The confirmation means the booking was made, so the details typed for it
+  (`:form`) are dropped there rather than carried into the next booking.
   """
   @spec transition_to(Socket.t(), atom(), map()) :: Socket.t()
+  def transition_to(socket, :confirmation, _params),
+    do: assign(socket, current_state: :confirmation, form: nil)
+
   def transition_to(socket, key, params) do
     socket = assign(socket, :current_state, key)
 
@@ -232,7 +238,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # the booking just made: kept, the schedule step would reopen the calendar
   # on them, with a time that is no longer free. The answers are the last
   # booker's, and the booking's `meeting_uid` would leave the attendee
-  # known, so the next booking's details moment would open as done. A
+  # known, so the next booking's details moment would open as done. The form
+  # goes too: the details moment carries what was typed into it while the
+  # page stays on one booking (`StepEntry`), never into the next. A
   # reschedule still named in the URL is patched out of it, to the route the
   # booking starts again on, so a reload does not start the move over. That
   # route is also the one the language switch now rebuilds (`:entry_action`).
@@ -247,7 +255,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> forget_payment_wait()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
-    |> assign(selected_date: nil, selected_time: nil)
+    |> assign(selected_date: nil, selected_time: nil, form: nil)
     |> assign(
       journey_opened: MapSet.new(),
       entry_action: route,
@@ -325,18 +333,24 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   defp ambient_event(journey, socket, moment_key, event, data) do
     case visible_moment(journey, socket.assigns, moment_key) do
-      {:ok, _moment, _state} -> socket |> Ambient.handle(event, data) |> after_event()
-      :none -> :unhandled
+      {:ok, _moment, _state} ->
+        socket |> Ambient.handle(event, data) |> after_event(journey, moment_key)
+
+      :none ->
+        :unhandled
     end
   end
 
   defp fact_event(journey, socket, moment_key, event, data) do
     case owner(journey, socket.assigns, moment_key, event) do
       {:ok, fact, :current} ->
-        socket |> fact.handle(event, data) |> after_event()
+        socket |> fact.handle(event, data) |> after_event(journey, moment_key)
 
       {:ok, fact, _answered} ->
-        socket |> fact.handle(event, data) |> forget_dependents(fact, socket) |> after_event()
+        socket
+        |> fact.handle(event, data)
+        |> forget_dependents(fact, socket)
+        |> after_event(journey, moment_key)
 
       :none ->
         :unhandled
@@ -436,18 +450,27 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   defp opened(socket), do: socket.assigns[:journey_opened] || MapSet.new()
 
   # A navigator that reveals moments by itself moves the focus to the moment
-  # an event made current; one that does not leaves `:current_state` alone,
-  # and so the assigns.
-  defp after_event({:noreply, socket}) do
+  # an event made current, when that moment comes after the one the event
+  # was sent from: the visitor is sent on to what is next. One that comes
+  # back to the sender's moment, or stops above it (another day picked while
+  # the details were open, which closes them), leaves the focus where the
+  # visitor is, on the control just pressed. A navigator that does not
+  # reveal moments leaves `:current_state` alone, and so the assigns.
+  defp after_event({:noreply, socket}, journey, moment_key) do
     before = socket.assigns[:current_state]
     settled = settle(socket)
+    now = settled.assigns[:current_state]
 
-    if settled.assigns[:current_state] == before,
-      do: {:noreply, settled},
-      else: {:noreply, assign(settled, :journey_focus, settled.assigns[:current_state])}
+    if now != before and position(journey, now) > position(journey, moment_key),
+      do: {:noreply, assign(settled, :journey_focus, now)},
+      else: {:noreply, settled}
   end
 
-  defp after_event(other), do: other
+  defp after_event(other, _journey, _moment_key), do: other
+
+  # A moment's place in the journey; an outcome comes after every moment.
+  defp position(%Journey{moments: moments}, key),
+    do: Enum.find_index(moments, &(&1.key == key)) || length(moments)
 
   # The fact owning `event` among those `moment_key` collects, when that
   # moment is on screen, this booking needs the owner, and every fact the

@@ -45,14 +45,26 @@ defmodule TymeslotWeb.Themes.Shared.Journey.RuntimeTest do
   defp question(id), do: %{"id" => id, "type" => "short_text", "label" => id, "required" => true}
 
   describe "transition_to/3" do
-    test "showing an outcome only names it" do
-      socket = socket(%{current_state: :booking, meeting_uid: "abc"})
-      shown = Runtime.transition_to(socket, :confirmation, %{})
+    test "showing the payment wait only names it" do
+      form = Component.to_form(%{"name" => "Mia"}, as: :booking)
+      socket = socket(%{current_state: :booking, meeting_uid: "abc", form: form})
+      shown = Runtime.transition_to(socket, :awaiting_payment, %{})
 
-      assert shown.assigns.current_state == :confirmation
+      assert shown.assigns.current_state == :awaiting_payment
 
       assert Map.drop(shown.assigns, [:current_state, :__changed__]) ==
                Map.drop(socket.assigns, [:current_state, :__changed__])
+    end
+
+    test "showing the confirmation names it and drops the booked details' form" do
+      form = Component.to_form(%{"name" => "Mia"}, as: :booking)
+      socket = socket(%{current_state: :booking, meeting_uid: "abc", form: form})
+      shown = Runtime.transition_to(socket, :confirmation, %{})
+
+      assert %{current_state: :confirmation, form: nil} = shown.assigns
+
+      assert Map.drop(shown.assigns, [:current_state, :form, :__changed__]) ==
+               Map.drop(socket.assigns, [:current_state, :form, :__changed__])
     end
 
     test "showing a moment runs what its facts set up" do
