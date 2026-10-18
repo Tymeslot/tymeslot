@@ -1,14 +1,15 @@
 defmodule Tymeslot.CalendarGrid.Changes do
   @moduledoc """
-  Context module for changing calendar events: editing, moving between
-  calendars, deleting (now or behind an undo window), changing an event's
-  video, and the series and timing rules those changes follow.
+  Context module for changing calendar events: creating, blocking time, editing,
+  moving between calendars, deleting (now or behind an undo window),
+  changing an event's video, and the series and timing rules those changes follow.
 
   `Tymeslot.CalendarGrid` keeps reading (ranges, search, sync, colours,
   preferences); every write the grid and the calendar surface make goes
   through this module.
   """
 
+  alias Tymeslot.CalendarGrid.BlockTime
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
@@ -210,6 +211,21 @@ defmodule Tymeslot.CalendarGrid.Changes do
   belongs to. See `SeriesActivity.busy?/2`.
   """
   defdelegate series_busy?(queue, event), to: SeriesActivity, as: :busy?
+
+  @doc """
+  Blocks a stretch from bookings: a busy event on the organiser's default
+  writable calendar that blocks availability, else time off. See
+  `Tymeslot.CalendarGrid.BlockTime.block/4`.
+  """
+  @spec block_time(pos_integer(), DateTime.t(), DateTime.t(), String.t()) ::
+          {:ok, BlockTime.blocked()} | {:error, BlockTime.refusal()}
+  defdelegate block_time(user_id, start_at, end_at, title), to: BlockTime, as: :block
+
+  @doc """
+  Takes back a block, for undo. See `Tymeslot.CalendarGrid.BlockTime.unblock/2`.
+  """
+  @spec unblock_time(pos_integer(), BlockTime.blocked()) :: :ok | {:error, term()}
+  defdelegate unblock_time(user_id, result), to: BlockTime, as: :unblock
 
   @doc """
   Creates an event on one of the organiser's calendars, caches it so both
