@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -268,18 +269,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     )
   end
 
-  @doc """
-  The message shown when Outlook would move a repeating event onto the last
-  day of the months that lack its day (`:day_missing_in_some_months`, see
-  `Outlook.RecurrenceConverter`), so it was not written.
-  """
+  @doc "See `TymeslotWeb.Dashboard.CalendarEditMessages.month_end_refused_message/0`."
   @spec month_end_refused_message() :: String.t()
-  def month_end_refused_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "Outlook can't skip the months that don't have this series' day, and would move those events to the month's last day. Please start the series on the 28th or earlier, or save it to another calendar."
-    )
-  end
+  defdelegate month_end_refused_message, to: CalendarEditMessages
+
+  @doc "See `TymeslotWeb.Dashboard.CalendarEditMessages.rule_not_supported_by_outlook_message/0`."
+  @spec rule_not_supported_by_outlook_message() :: String.t()
+  defdelegate rule_not_supported_by_outlook_message, to: CalendarEditMessages
 
   @doc "The message shown when an organiser has moved events too often in a short while."
   @spec move_rate_limited_message() :: String.t()
@@ -337,15 +333,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
     )
   end
-
-  @doc """
-  The message shown when an event's repeat rule has no Outlook pattern
-  (see `Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter`), so
-  the event was not written.
-  """
-  @spec rule_not_supported_by_outlook_message() :: String.t()
-  def rule_not_supported_by_outlook_message,
-    do: dgettext("dashboard_calendar_events", "This repeat pattern can't be saved to Outlook.")
 
   @doc """
   The message shown when the grid cannot tell which series, or which

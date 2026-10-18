@@ -90,6 +90,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   @spec cancel(socket()) :: socket()
   def cancel(socket), do: assign(socket, :delete_prompt, nil)
 
+  @doc """
+  Takes back an event the organiser has just created (`Creation.undo/2`):
+  it goes at once and nobody is told, since nobody was. It runs through a
+  delete with no undo window, so the event is hidden at once and a refusal
+  from the calendar brings it back with the usual flash. The toast that says
+  so stays when the delete lands (`origin: :undo`).
+  """
+  @spec remove_created(socket(), map()) :: socket()
+  def remove_created(socket, event) do
+    case Changes.schedule_delete(socket.assigns.current_user.id, event, :occurrence, delay: 0) do
+      {:ok, token} ->
+        pending = event |> PendingDeletes.entry(:occurrence, true) |> Map.put(:origin, :undo)
+
+        socket
+        |> assign(:pending_deletes, Map.put(socket.assigns.pending_deletes, token, pending))
+        |> SurfaceData.refilter()
+        |> SurfaceData.push_events(false)
+        |> Toast.show(
+          dgettext("dashboard_calendar", "Removed “%{title}”", title: EventPayload.title(event)),
+          key: {:delete, token}
+        )
+
+      {:error, _reason} ->
+        not_scheduled(socket)
+    end
+  end
+
   @doc "Undoes a delete still inside its undo window."
   @spec undo(socket(), map()) :: socket()
   def undo(socket, %{kind: :delete, token: token, title: title}) do
@@ -343,7 +370,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   # A delete with Undo already said "Deleted"; its Undo has run out now. A
   # confirmed one said "Deleting…" and now names the result.
-  defp report(socket, _token, :deleted, %{origin: :elsewhere}), do: socket
+  # Another tab's delete is announced there; a removed create already said
+  # "Removed" here.
+  defp report(socket, _token, :deleted, %{origin: origin}) when origin in [:elsewhere, :undo],
+    do: socket
 
   defp report(socket, token, :deleted, %{confirmed: true, title: title}),
     do:

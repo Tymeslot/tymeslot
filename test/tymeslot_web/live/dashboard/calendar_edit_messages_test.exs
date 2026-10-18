@@ -25,4 +25,18 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessagesTest do
     assert CalendarEditMessages.delete_failed_message(%{reason: :boom, retry: :not_queued}, false) ==
              "Failed to delete event"
   end
+
+  describe "create_failure_reason/1" do
+    test "names Outlook's repeat refusals" do
+      assert CalendarEditMessages.create_failure_reason(:rule_not_supported_by_outlook) ==
+               "This repeat pattern can't be saved to Outlook."
+
+      assert CalendarEditMessages.create_failure_reason(:day_missing_in_some_months) =~
+               "start the series on the 28th or earlier"
+    end
+
+    test "asks for another try otherwise" do
+      assert CalendarEditMessages.create_failure_reason(:forbidden) == "Please try again."
+    end
+  end
 end

@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
   @moduledoc """
   What both calendar surfaces tell the organiser when a change is refused
-  (`Tymeslot.CalendarGrid.EditGuard`), when a delete fails, and when
+  (`Tymeslot.CalendarGrid.EditGuard`), when a delete or a create fails, and when
   changes made while a whole series was saving were dropped. One copy, so
   the two calendars can never word the same refusal differently.
   """
@@ -115,4 +115,38 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
       count
     )
   end
+
+  @doc """
+  The message shown when an event's repeat rule has no Outlook pattern
+  (see `Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter`), so
+  the event was not written.
+  """
+  @spec rule_not_supported_by_outlook_message() :: String.t()
+  def rule_not_supported_by_outlook_message,
+    do: dgettext("dashboard_calendar_events", "This repeat pattern can't be saved to Outlook.")
+
+  @doc """
+  The message shown when Outlook would move a repeating event onto the last
+  day of the months that lack its day (`:day_missing_in_some_months`, see
+  `Outlook.RecurrenceConverter`), so it was not written.
+  """
+  @spec month_end_refused_message() :: String.t()
+  def month_end_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Outlook can't skip the months that don't have this series' day, and would move those events to the month's last day. Please start the series on the 28th or earlier, or save it to another calendar."
+    )
+  end
+
+  @doc """
+  Why a create failed, as the sentence that follows "Couldn't add …": the
+  calendar's own refusal where it gave one the organiser can act on, else a
+  plain request to try again.
+  """
+  @spec create_failure_reason(term()) :: String.t()
+  def create_failure_reason(:rule_not_supported_by_outlook),
+    do: rule_not_supported_by_outlook_message()
+
+  def create_failure_reason(:day_missing_in_some_months), do: month_end_refused_message()
+  def create_failure_reason(_reason), do: dgettext("dashboard_calendar", "Please try again.")
 end

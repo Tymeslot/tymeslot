@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -156,6 +157,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   # since would be put back over a newer version.
   defp undo_entry(socket, %{kind: :delete} = entry), do: Deletion.undo(socket, entry)
   defp undo_entry(socket, %{kind: :gone} = entry), do: Deletion.too_late(socket, entry)
+  defp undo_entry(socket, %{kind: :create} = entry), do: Creation.undo(socket, entry)
 
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns
@@ -288,7 +290,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
       else: text
   end
 
-  defp when_text(socket, at) do
+  @doc "An instant as the toasts name it, in the organiser's zone and clock: \"Thu 15 Oct, 13:00\"."
+  @spec when_text(socket(), DateTime.t()) :: String.t()
+  def when_text(socket, at) do
     local = DateTime.shift_zone!(at, socket.assigns.timezone)
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
     day = LocaleFormat.format_short_weekday_date(DateTime.to_date(local), locale)

@@ -332,6 +332,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}
 
+  # The reply tells the hook whether its draft was accepted, or which field
+  # was refused and why (see `Creation`).
+  def handle_event("calendar:create", params, socket) do
+    {reply, socket} = Creation.create(socket, params)
+    {:reply, reply, socket}
+  end
+
+  # Quick create's More options (Task 12) opens the side panel, which Task 23
+  # builds; until then it answers that nothing opened, and the popover stays.
+  def handle_event("calendar:more_options", _params, socket),
+    do: {:reply, %{opened: false}, socket}
+
   def handle_event("calendar:undo", _params, socket), do: {:noreply, Manipulation.undo(socket)}
 
   def handle_event("calendar:dismiss_toast", _params, socket),
