@@ -22,10 +22,10 @@ import { beginMove, moveStep, nextFocus } from "../../calendar/keyboard.js";
 import { MINUTES_PER_DAY, dayNumber, formatWall, isoFromDay, normaliseEvent, periodDays } from "../../calendar/time.js";
 
 const BLOCKS = ".cal-col .cal-ev[data-event-id]";
-const MODALS = "#calendar-series-scope, #calendar-delete-confirm";
+export const MODALS = "#calendar-series-scope, #calendar-delete-confirm";
 const MODAL_WATCH_MS = 10_000;
 const REPEAT_ANNOUNCE_MS = 300;
-const TYPING = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
+export const TYPING = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
 
 export const KeysMixin = {
   mountKeys() {

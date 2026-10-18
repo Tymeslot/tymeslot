@@ -303,6 +303,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
            ]
   end
 
+  test "the toolbar's Create opens quick create in the canvas, as C does, and the hint says so",
+       %{conn: conn} do
+    {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(lv, "#calendar-create[aria-keyshortcuts='c']", "Create")
+
+    ops =
+      html
+      |> Floki.parse_document!()
+      |> Floki.find("#calendar-create")
+      |> Floki.attribute("phx-click")
+      |> List.first()
+      |> Jason.decode!()
+
+    assert [["dispatch", %{"event" => "calendar:quick-create", "to" => "#calendar-canvas"}]] =
+             ops
+
+    assert lv |> element("#calendar-keys-hint") |> render() =~
+             "Press C to add an event at the next free time."
+  end
+
   test "the parent re-rendering pushes no events", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 

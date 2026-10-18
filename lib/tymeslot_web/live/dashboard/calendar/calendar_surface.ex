@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <p id="calendar-keys-hint" class="sr-only">
         {dgettext(
           "dashboard_calendar",
-          "Arrow keys move between events. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
+          "Arrow keys move between events. Press C to add an event at the next free time. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
         )}
       </p>
       <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>

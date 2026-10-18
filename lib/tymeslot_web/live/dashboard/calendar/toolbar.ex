@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   @moduledoc """
-  The calendar surface's single toolbar row: Today, previous and next, the
+  The calendar surface's single toolbar row: Create, Today, previous and next, the
   period title (which opens a date picker), the view switch and display
   options. Rare actions (import, refresh, settings) stay out of it, as the
   spec asks.
@@ -51,6 +51,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         phx-target={@target}
         class="hidden md:inline-flex"
       />
+      <.action_button
+        id="calendar-create"
+        variant={:primary}
+        size={:sm}
+        icon="hero-plus"
+        aria-keyshortcuts="c"
+        phx-click={JS.dispatch("calendar:quick-create", to: "#calendar-canvas")}
+      >
+        {dgettext("dashboard_calendar", "Create")}
+      </.action_button>
       <.action_button
         id="calendar-today"
         variant={:secondary}

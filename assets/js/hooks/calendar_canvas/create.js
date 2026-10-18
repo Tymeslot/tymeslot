@@ -20,11 +20,17 @@
  * hands the draft to it. Escape, or a press outside, cancels; Escape
  * returns focus to where it was. Tab cycles inside the popover. A draft
  * being saved cannot be cancelled: the server is already writing it.
+ *
+ * C anywhere on the page but a text field or a dialog, and the toolbar's
+ * Create (which dispatches `calendar:quick-create` on the canvas), open
+ * quick create at the next free slot (calendar/draft.js `nextSlot`).
  */
-import { applyChip, applyText, toPayload } from "../../calendar/draft.js";
+import { applyChip, applyText, draftFromRange, nextSlot, toPayload } from "../../calendar/draft.js";
 import { placePopover } from "../../calendar/popover.js";
 import { renderQuickBody, renderQuickCreate } from "../../calendar/quick_create.js";
 import { MINUTES_PER_DAY, isoFromDay, periodDays } from "../../calendar/time.js";
+import { newDraftId } from "./draft.js";
+import { MODALS, TYPING } from "./keys.js";
 
 const ESTIMATE = { width: 340, height: 320 };
 const FOLLOW_MS = 400;
@@ -47,13 +53,40 @@ export const CreateMixin = {
       this.cancelQuickCreate({ restoreFocus: false });
     };
     this.quickScroll = () => this.placeQuickCreate();
+    this.createKey = (e) => {
+      if ((e.key !== "c" && e.key !== "C") || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented) return;
+      if (this.drag || this.createDrag || this.moving || this.quick) return;
+      const target = e.target;
+      if (target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
+      e.preventDefault();
+      this.quickCreateNext();
+    };
+    this.quickCreateEvent = () => this.quickCreateNext();
     this.el.addEventListener("scroll", this.quickScroll, true);
+    this.el.addEventListener("calendar:quick-create", this.quickCreateEvent);
+    document.addEventListener("keydown", this.createKey);
   },
 
   destroyCreate() {
     this.clearPush();
     this.el.removeEventListener("scroll", this.quickScroll, true);
+    this.el.removeEventListener("calendar:quick-create", this.quickCreateEvent);
+    document.removeEventListener("keydown", this.createKey);
     this.closeQuickCreate();
+  },
+
+  // Quick create at the next free slot of the visible days, or of tomorrow
+  // late in the evening; the grid follows when that day is not in view.
+  quickCreateNext() {
+    if (!this.settings || !this.clock) return;
+    if (this.quick) {
+      this.quickField().focus({ preventScroll: true });
+      return;
+    }
+    const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
+    const range = nextSlot(this.nowMinute(), days, [...this.cache.events.values()]);
+    this.startDraft(draftFromRange(newDraftId(), range, this.defaultCalendar()));
+    this.followDraft(0);
   },
 
   quickState() {

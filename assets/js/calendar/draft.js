@@ -27,6 +27,8 @@ import { MINUTES_PER_DAY, dayNumber, formatWall, isoFromDay, parseWall } from ".
 
 export const DEFAULT_LENGTH = 30;
 const MORNING = 9 * 60;
+const LATEST_START_TODAY = 22 * 60;
+const LEAD = 15; // C never starts an event sooner than this
 
 const floorTo = (minute, step = SNAP) => Math.floor(minute / step) * step;
 const ceilTo = (minute, step = SNAP) => Math.ceil(minute / step) * step;
@@ -203,4 +205,43 @@ export function draftEvent(draft, calendars = []) {
     editable: false,
     movable: false,
   };
+}
+
+/**
+ * Where C (and the toolbar's Create) puts a new draft: `{startMin, endMin}`.
+ * Today, when it is visible and before 22:00, at the next quarter hour at
+ * least 15 minutes ahead; today but later, tomorrow at 09:00; otherwise at
+ * 09:00 on the first visible day. From there it skips past busy timed events
+ * (free ones, all-day ones and drafts do not count) until a gap of `length`
+ * opens; when none opens before midnight the first candidate stands.
+ * `now` is a wall minute, `days` the visible ISO days, `events` normalised.
+ */
+export function nextSlot(now, days, events, length = DEFAULT_LENGTH) {
+  const today = dayOf(now);
+  const visible = days.map(dayNumber);
+  let day = visible[0];
+  let first = MORNING;
+  if (visible.includes(today)) {
+    const minute = now - today * MINUTES_PER_DAY;
+    if (minute < LATEST_START_TODAY) {
+      day = today;
+      first = ceilTo(minute + LEAD);
+    } else {
+      day = today + 1;
+    }
+  }
+
+  const base = day * MINUTES_PER_DAY;
+  const busy = events.filter((e) => !e.long && !e.free && e.kind !== "draft");
+  let at = first;
+  for (;;) {
+    const clash = busy.find((e) => e.startMin < base + at + length && e.endMin > base + at);
+    if (!clash) break;
+    at = ceilTo(clash.endMin - base);
+    if (at + length > MINUTES_PER_DAY) {
+      at = first;
+      break;
+    }
+  }
+  return { startMin: base + at, endMin: base + at + length };
 }
