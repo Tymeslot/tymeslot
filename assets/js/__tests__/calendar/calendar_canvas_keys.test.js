@@ -596,6 +596,26 @@ test("closing the side panel while a text field has focus sends the field's valu
   ]);
 });
 
+test("closing the side panel from a time field blurs it first, so its change is sent before the close", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML = '<button id="calendar-panel-close" type="button">Close</button><input id="calendar-panel-end-time" type="time" value="15:30">';
+  document.body.appendChild(panel);
+  const order = [];
+  const time = panel.querySelector("#calendar-panel-end-time");
+  time.addEventListener("blur", () => order.push("blur"));
+  hook.pushEventTo.mockImplementation((_target, event) => order.push(event));
+
+  time.focus();
+  time.value = "17:00";
+  time.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+
+  expect(order).toEqual(["blur", "panel:close"]);
+  expect(pushes(hook, "panel:close")).toEqual([{}]);
+  expect(document.activeElement).not.toBe(time);
+});
+
 test("a press on the close button saves the field once and its click is swallowed", () => {
   const { hook } = mountHook();
   const panel = document.createElement("aside");

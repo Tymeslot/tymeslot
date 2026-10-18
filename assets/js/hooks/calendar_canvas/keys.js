@@ -140,9 +140,13 @@ export const KeysMixin = {
   },
 
   // Asks the server to close the side panel, with the focused text field and
-  // its value so that what was being typed is saved first (PanelEvents).
+  // its value so that what was being typed is saved first (PanelEvents). Any
+  // other focused panel control is blurred first: the date and time fields
+  // save on blur, and that change must reach the server before the close.
   pushPanelClose() {
     const field = this.focusedPanelField();
+    const active = document.activeElement;
+    if (!field && active?.closest?.("#calendar-panel")) active.blur();
     this.pushEventTo(this.el, "panel:close", field ? { field: field.dataset.panelField, value: field.value } : {});
   },
 
