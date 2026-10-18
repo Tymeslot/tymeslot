@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceSummary do
+defmodule TymeslotWeb.Components.Calendar.RecurrenceSummary do
   @moduledoc """
   How a repeat pattern reads, for the grid's repeat editor and the event
   details: "Repeats monthly on the second Tuesday, 6 times".

@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.ReminderValidation
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
+  alias TymeslotWeb.Components.Calendar.RemindersEditor
   alias TymeslotWeb.Components.Shared.ReminderPicker
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -20,8 +22,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
 
   attr :creating_event, :map, required: true

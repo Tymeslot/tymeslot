@@ -44,10 +44,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
 
   @doc "Stages the pattern the editor's controls now describe."
   @spec handle_update_event_recurrence(map(), Phoenix.LiveView.Socket.t()) ::

@@ -1,10 +1,10 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
+defmodule TymeslotWeb.Components.Calendar.RemindersEditor do
   @moduledoc """
   Reusable reminders editor for the calendar create/detail modals.
 
   Renders the current reminders as removable rows plus an "Add reminder" control
   offering preset lead times and a method (popup/email). The lead times offered
-  are exactly `Shared.reminder_minutes_presets/0`, the list `Shared.parse_reminder/1`
+  are exactly `ReminderForm.reminder_minutes_presets/0`, the list `ReminderForm.parse_reminder/1`
   validates an added reminder against, labelled through `reminder_label/1`'s own
   `minutes_label/1`; there is no second copy of the values to fall out of step.
   Reminders are synced to the calendar provider, which fires the alert on the
@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Reminder
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Components.Calendar.ReminderForm
 
   attr :reminders, :list, default: []
   attr :myself, :any, required: true
@@ -143,6 +143,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   # function that labels a saved reminder. A value added to the whitelist shows
   # up here with a label already; one removed stops being offered.
   defp presets do
-    Enum.map(Shared.reminder_minutes_presets(), &{&1, minutes_label(&1)})
+    Enum.map(ReminderForm.reminder_minutes_presets(), &{&1, minutes_label(&1)})
   end
 end

@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Attendee
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
+  alias TymeslotWeb.Components.Calendar.RemindersEditor
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
@@ -14,8 +16,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
   alias TymeslotWeb.Dashboard.DashboardFormat
 

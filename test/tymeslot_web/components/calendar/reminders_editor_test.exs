@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditorTest do
+defmodule TymeslotWeb.Components.Calendar.RemindersEditorTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditorTest do
 
   import Phoenix.LiveViewTest
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
+  alias TymeslotWeb.Components.Calendar.ReminderForm
+  alias TymeslotWeb.Components.Calendar.RemindersEditor
 
   # The lead-time select's options, as `{minutes, label}`. The method select's
   # options carry non-numeric values, so they never match.
@@ -72,10 +72,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditorTest do
       refute Enum.empty?(offered)
 
       assert Enum.map(offered, fn {minutes, _label} -> minutes end) ==
-               Shared.reminder_minutes_presets()
+               ReminderForm.reminder_minutes_presets()
 
       assert Enum.reject(offered, fn {minutes, _label} ->
-               Shared.parse_reminder(%{"method" => "popup", "minutes" => to_string(minutes)}) ==
+               ReminderForm.parse_reminder(%{
+                 "method" => "popup",
+                 "minutes" => to_string(minutes)
+               }) ==
                  {:ok, %{method: :popup, minutes_before: minutes}}
              end) == []
     end

@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditorTest do
+defmodule TymeslotWeb.Components.Calendar.RecurrenceEditorTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditorTest do
 
   import Phoenix.LiveViewTest
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
 
   # Monday 15 June 2026, 09:00 UTC.
   @monday ~U[2026-06-15 09:00:00Z]
