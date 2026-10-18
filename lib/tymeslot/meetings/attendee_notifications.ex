@@ -88,6 +88,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     end
   end
 
+  @doc """
+  Schedules the debounced update of `event` for its attendees, once the
+  user has confirmed it. Checks nobody's right to send it: the calendar
+  surface reaches it through `Tymeslot.CalendarGrid.Changes.tell_guests/5`,
+  which first asks `EditGuard.guest_update/3` (the event is writable and
+  the user organises it).
+  """
   @spec event_updated_confirm(event, ChangeSummary.t(), [attendee]) ::
           {:ok, :sent} | {:error, term}
   def event_updated_confirm(event, %ChangeSummary{} = _summary, _attendees) do

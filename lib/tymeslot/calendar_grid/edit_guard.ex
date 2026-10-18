@@ -13,23 +13,25 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
       were loaded must count.
     * `rate_limit/1`: the organiser is within the calendar edit rate limit.
 
+  `check/3` asks those three, in that order, for a change about to be made.
+  `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
+  add the one more a change of timing needs: the calendar copy of a booking
+  keeps the booking's time, so it can be deleted from the calendar but not
+  moved or resized.
+
+    * `check_transfer/3`: a move to another calendar, which the copy of a
+      booking refuses as it refuses a change of timing, under the move rate
+      limit (`move_rate_limit/1`) rather than the edit one.
+
   `free_busy_editable?/2` says whether the organiser may change an event's
   Busy/Free: a booking, and the calendar copy of one, follow their meeting
   type's "show as free" setting, so neither may. `free_busy_change/1` is
   the same rule as a refusal, which `EventEdit.update_event/4` asks of every
   change of Busy/Free whatever the caller drew.
 
-  `guest_update/3` says whether the organiser may tell an event's guests
-  about a change: the event is writable, and they organise it.
-
-  `check/3` asks all three, in that order, for a change about to be made.
-  `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
-  add the one more a change of timing needs: the calendar copy of a booking keeps the booking's time, so it can
-  be deleted from the calendar but not moved or resized.
-
-    * `check_transfer/3`: a move to another calendar, which the copy of a
-      booking refuses as it refuses a change of timing, under the move rate
-      limit (`move_rate_limit/1`) rather than the edit one.
+  `guest_update/3` says whether the organiser may email an event's guests
+  (invite, remove, tell them about a change): the event is writable, and
+  they organise it.
   """
 
   alias Tymeslot.CalendarGrid.EventDeletion

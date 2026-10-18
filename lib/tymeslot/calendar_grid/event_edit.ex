@@ -108,9 +108,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   any other key raises `ArgumentError`, as does a `transparency` other than
   `"opaque"` (busy) or `"transparent"` (free). A change of `transparency` to
   a booking or a booking's calendar copy is refused with `:booking` before
-  anything is written (`EditGuard.free_busy_change/1`). Timing follows the event's resulting `all_day`
-  flag: an all-day event keeps its dates and drops its timestamps, a timed
-  event the reverse. A change that flips `all_day` also refits the `UNTIL` of
+  anything is written (`EditGuard.free_busy_change/1`). Timing follows the
+  event's resulting `all_day` flag: an all-day event keeps its dates and
+  drops its timestamps, a timed event the reverse. A change that flips `all_day` also refits the `UNTIL` of
   a recurring event's rule to the value type its new `DTSTART` calls for.
 
   ## Options
