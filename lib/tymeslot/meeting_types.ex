@@ -206,6 +206,18 @@ defmodule Tymeslot.MeetingTypes do
     do: MeetingTypeQueries.list_active_meeting_types(user_id)
 
   @doc """
+  The host's meeting types guests can book now: active and not archived, in
+  the host's order. A pure read, like `get_active_meeting_types/1` (which
+  keeps archived types that are still marked active).
+  """
+  @spec get_bookable_meeting_types(integer()) :: [Ecto.Schema.t()]
+  def get_bookable_meeting_types(user_id) do
+    user_id
+    |> MeetingTypeQueries.list_active_meeting_types()
+    |> Enum.reject(& &1.is_archived)
+  end
+
+  @doc """
   Gets all meeting types for a user (active and inactive). A pure read, like
   `get_active_meeting_types/1`.
   """

@@ -29,6 +29,7 @@
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
  *  - Ctrl + scroll zooms the hours for the visit (see calendar_canvas/zoom.js);
+ *  - B switches the bookable-times layer (see calendar_canvas/bookable.js);
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -37,6 +38,7 @@
  *   data-strings          JSON of translated copy (see ClientStrings)
  */
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
+import { BookableMixin } from "./calendar_canvas/bookable.js";
 import { CreateMixin } from "./calendar_canvas/create.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
@@ -83,6 +85,7 @@ export const CalendarCanvas = {
   ...CreateMixin,
   ...KeysMixin,
   ...ZoomMixin,
+  ...BookableMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -115,6 +118,7 @@ export const CalendarCanvas = {
     this.mountCreate();
     this.mountKeys();
     this.mountZoom();
+    this.mountBookable();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -156,6 +160,7 @@ export const CalendarCanvas = {
     this.destroyCreate();
     this.destroyKeys();
     this.destroyZoom();
+    this.destroyBookable();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);

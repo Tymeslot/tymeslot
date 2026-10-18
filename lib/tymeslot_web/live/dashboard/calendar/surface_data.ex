@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.EventWindow
+  alias Tymeslot.CalendarGrid.LayerPreferences
   alias Tymeslot.CalendarGrid.Period
   alias Tymeslot.CalendarGrid.WorkingHours
   alias Tymeslot.CalendarGrid.WriteQueue
@@ -78,7 +79,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       transfer: nil,
       series_move_prompt: nil,
       remove_guest_prompt: nil,
-      guest_form_key: 0
+      guest_form_key: 0,
+      bookable_types: []
     )
   end
 
@@ -127,7 +129,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
       hidden_integration_ids: preferences.hidden_integration_ids,
       hidden_calendar_keys: Appearance.hidden_keys(appearances),
-      working_hours: WorkingHours.for_profile(socket.assigns[:profile])
+      working_hours: WorkingHours.for_profile(socket.assigns[:profile]),
+      bookable_types: LayerPreferences.meeting_types(user_id)
     )
     |> assign_accounts()
   end

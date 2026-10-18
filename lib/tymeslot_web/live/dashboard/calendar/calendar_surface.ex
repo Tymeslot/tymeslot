@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
   alias TymeslotWeb.Dashboard.Calendar.FreeBusy
+  alias TymeslotWeb.Dashboard.Calendar.LayerChoices
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
@@ -249,6 +250,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           "dashboard_calendar",
           "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
         )}
+        {dgettext("dashboard_calendar_booking", "Press B to show or hide your bookable times.")}
       </p>
       <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>
       <div id="calendar-live" class="sr-only" aria-live="polite" phx-update="ignore"></div>
@@ -282,6 +284,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           syncing_ids={@syncing_ids}
           problem_ids={MapSet.new(@sync_problems, & &1.integration_id)}
           reauth_ids={MapSet.new(for(%{needs_reauth: true, id: id} <- @integrations, do: id))}
+          bookable={LayerChoices.rail(@preferences, @bookable_types)}
           target={@myself}
         />
         <Canvas.canvas
@@ -399,6 +402,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event("calendar:toggle_rail", _params, socket),
     do: {:noreply, assign(socket, :rail_open, !socket.assigns.rail_open)}
+
+  # The rail's Layers section and B (see `LayerChoices`).
+  def handle_event("calendar:bookable_toggle", _params, socket),
+    do: {:noreply, LayerChoices.toggle(socket)}
+
+  def handle_event("calendar:bookable_type", %{"id" => id}, socket),
+    do: {:noreply, LayerChoices.choose_type(socket, id)}
+
+  def handle_event("calendar:bookable_type", _params, socket), do: {:noreply, socket}
 
   def handle_event("calendar:toggle_account", %{"integration-id" => id}, socket),
     do: {:noreply, Visibility.toggle_account(socket, id)}

@@ -6,15 +6,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   status: a spinner while it syncs, a warning while it has a problem
   (explained in the banner), and Sync now.
 
-  Calendar sets and the bookable layer join the rail in later plans. On
-  phones the rail is hidden and the toolbar's filter chip says what is
-  hidden instead.
+  Under the calendars, Layers: the bookable-times switch and the meeting
+  type it shows (see `RailLayers`). Calendar sets join the rail in a later
+  plan. On phones the rail is hidden and the toolbar's filter chip says
+  what is hidden instead; B still works there.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
+  alias TymeslotWeb.Dashboard.Calendar.RailLayers
 
   attr :accounts, :list, required: true
   attr :syncing_ids, :any, default: MapSet.new()
@@ -27,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :today, :any, required: true
   attr :week_start, :atom, required: true
   attr :locale, :string, required: true
+  attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
   attr :target, :any, required: true
 
   @spec rail(map()) :: Phoenix.LiveView.Rendered.t()
@@ -133,6 +136,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
           </ul>
         </div>
       </section>
+      <RailLayers.layers bookable={@bookable} target={@target} />
     </aside>
     """
   end

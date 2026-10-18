@@ -20,6 +20,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
           density: String.t(),
           fold_night: boolean(),
           focus_mode: boolean(),
+          bookable_layer: boolean(),
+          bookable_meeting_type_id: integer() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -41,6 +43,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :density, :string, default: "comfortable"
     field :fold_night, :boolean, default: true
     field :focus_mode, :boolean, default: false
+
+    # The new calendar's bookable-times layer: whether it shows, and the
+    # meeting type it shows (nil: the first active one). See
+    # `Tymeslot.CalendarGrid.LayerPreferences`.
+    field :bookable_layer, :boolean, default: true
+    belongs_to :bookable_meeting_type, Tymeslot.MeetingTypes.MeetingTypeSchema
 
     timestamps(type: :utc_datetime)
   end
@@ -66,7 +74,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     :redesign_enabled,
     :density,
     :fold_night,
-    :focus_mode
+    :focus_mode,
+    :bookable_layer,
+    :bookable_meeting_type_id
   ]
 
   @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -80,5 +90,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     |> validate_inclusion(:density, @valid_densities)
     |> unique_constraint(:user_id)
     |> foreign_key_constraint(:user_id)
+    |> foreign_key_constraint(:bookable_meeting_type_id)
   end
 end
