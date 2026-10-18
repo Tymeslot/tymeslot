@@ -48,11 +48,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
       {:ok, event, changes} ->
         apply_timing(socket, event, changes)
 
-      {:error, _reason} = refusal ->
-        socket |> refuse(refusal) |> SurfaceData.push_events(false)
-
       :ignore ->
         SurfaceData.push_events(socket, false)
+
+      refusal ->
+        socket |> refuse(refusal) |> SurfaceData.push_events(false)
     end
   end
 

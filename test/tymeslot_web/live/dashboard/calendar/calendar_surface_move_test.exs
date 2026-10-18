@@ -322,6 +322,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
       assert %{start: "2026-10-15T11:00"} = snapped_back(lv, "booking-#{meeting.id}")
     end
 
+    test "a move the rate limit refuses", %{lv: lv, user: user, id: id} do
+      for _i <- 1..30, do: RateLimiter.check(:calendar_event_edit, user.id)
+      flush_pushes(lv)
+
+      move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
+
+      assert %{start: "2026-10-14T10:00"} = snapped_back(lv, id)
+      assert render(lv) =~ "Too many edits. Please wait a moment."
+    end
+
     test "an all-day event", %{conn: conn, integration: integration} do
       holiday =
         event(integration, "work", "Holiday", ~U[2026-10-16 00:00:00Z], 1440,
