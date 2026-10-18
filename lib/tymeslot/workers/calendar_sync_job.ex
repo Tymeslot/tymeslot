@@ -17,6 +17,10 @@ defmodule Tymeslot.Workers.CalendarSyncJob do
       once the row is gone), as a job whose integration is gone at the start
       is, recording nothing against a health state that no longer has an
       integration;
+    * broadcasts a failed or discarded verdict on the organiser's calendar
+      topic (`SyncBroadcast.broadcast_sync_failed/2`), so open calendars stop
+      showing the account as syncing; a snooze is still waiting and says
+      nothing;
     * records the verdict against the integration's health state
       (`Tymeslot.Workers.SyncHealth`), after the bound, so a cycle that gave
       up waiting counts as the failure it is;

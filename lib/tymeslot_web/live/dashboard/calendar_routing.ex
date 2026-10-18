@@ -2,8 +2,9 @@ defmodule TymeslotWeb.Dashboard.CalendarRouting do
   @moduledoc """
   Which calendar component a calendar message `DashboardLive` received goes
   to: the old grid or the new surface, whichever the organiser has on
-  screen, or neither once they have left the calendar page or switched
-  surfaces. Then the LiveView's write guardian drives any queued writes
+  screen. After a switch that is the other surface, and only the one
+  switched away from gets nothing; neither gets anything once the organiser
+  has left the calendar page. Then the LiveView's write guardian drives any queued writes
   (`Tymeslot.CalendarGrid.WriteGuardian.detach/0`) and hears every result
   itself, and a calendar component LiveView has yet to delete must not
   drive the same queue a second time.

@@ -5,10 +5,10 @@ defmodule Tymeslot.Dev.Calendar do
   Compiled only in `:dev` (see the `dev/support` entry in `elixirc_paths/1` in
   `mix.exs`) and never bundled into release builds. Opt in by setting
   `DEV_CALENDAR=1` (starts with a realistic recurring weekly pattern) or
-  `DEV_EMPTY_CALENDAR=1` (starts empty — every slot free); both wire it in via
+  `DEV_EMPTY_CALENDAR=1` (starts empty, every slot free); both wire it in via
   `config :tymeslot, :calendar_module` in `config/dev.exs`.
 
-  Unlike a fixed stub, availability is **controllable live from IEx** — block a
+  Unlike a fixed stub, availability is **controllable live from IEx**: block a
   date or add a busy period, refresh the booking page, and see the effect with
   no recompile or restart:
 
@@ -21,14 +21,14 @@ defmodule Tymeslot.Dev.Calendar do
   Events are generated relative to today by `Tymeslot.Integrations.Calendar.DebugSchedule`
   (the shared, pure generator that the `:debug` provider uses too), resolved in
   the organiser's timezone. Rules and in-app events live in the supervised
-  `Tymeslot.Integrations.Calendar.DebugStore` Agent — the single store shared
-  with the dashboard calendar grid — and reset to the configured default pattern
+  `Tymeslot.Integrations.Calendar.DebugStore` Agent, the single store shared
+  with the dashboard calendar grid, and reset to the configured default pattern
   on restart.
 
   Events **created in-app** (e.g. confirming a booking) are accepted too: they
   are recorded in the same in-memory store and immediately occupy their slot, so
   a freshly-booked time shows as busy and cancelling it frees the slot again.
-  Nothing is persisted — a restart clears them along with the rest.
+  Nothing is persisted: a restart clears them along with the rest.
 
   To exercise genuine calendar sync locally, leave both variables unset and the
   real `Calendar.Runtime.Operations` module is used.
