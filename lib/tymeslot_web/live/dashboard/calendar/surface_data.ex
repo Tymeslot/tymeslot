@@ -335,8 +335,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   defp adopt_if_revived(socket) do
     if socket.assigns[:calendar_left] == socket.assigns.writes_adopted_after,
       do: socket,
-      else: socket |> Writes.adopt() |> reload(:events)
+      else: socket |> Writes.adopt() |> reload(:events) |> reset_undoing()
   end
+
+  # While detached the guardian drove the writes, so `Manipulation.settled/2`
+  # and `forget/2` never ran for them; their entries would otherwise leak.
+  defp reset_undoing(socket), do: assign(socket, :undoing, %{})
 
   defp push_period(%{assigns: %{view: view, date: date}} = socket),
     do:

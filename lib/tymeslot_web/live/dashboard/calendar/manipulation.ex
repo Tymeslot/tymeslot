@@ -134,7 +134,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   After the write `ref` failed: forgets the change it made, which was never
   written, and nothing else (a write with no entry of its own, such as one to
   a whole series, forgets nothing). When the write was an undo, the change it
-  was taking back goes on the stack again, since the event still has it.
+  was taking back goes on the stack again, since the event still has it. The
+  restored entry goes on top, whatever was pushed since, so it is the next
+  undo. An undo whose write the queue dropped (`{:dropped, ...}` after a
+  series change) is not restored: the event it described no longer holds
+  that change.
   """
   @spec forget(socket(), WriteQueue.ref()) :: socket()
   def forget(socket, ref) do
