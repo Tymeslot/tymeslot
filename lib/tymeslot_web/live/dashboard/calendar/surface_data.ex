@@ -366,7 +366,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   defp adopt_if_revived(socket) do
     if socket.assigns[:calendar_left] == socket.assigns.writes_adopted_after,
       do: socket,
-      else: socket |> Writes.adopt() |> reload(:events) |> forget_unanswered()
+      else: socket |> Writes.adopt() |> forget_unanswered() |> reload(:events)
   end
 
   # While detached the guardian drove the writes, so their answers never
@@ -374,15 +374,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   # for the undos in flight, the panel never heard about its own writes, and
   # a change whose write failed meanwhile would still sit on the undo stack.
   # Every change that names a write is dropped, as nothing tells which
-  # of them landed.
+  # of them landed. Nor did the answer to a move or a create in flight
+  # reach it (`CalendarRouting` routes them to a surface on screen only),
+  # so the move is no longer waited for and the creates' drafts go; the
+  # reload that follows shows whatever landed.
   defp forget_unanswered(socket) do
     socket
+    |> clear_pending_drafts()
     |> assign(
       undoing: %{},
-      undo: UndoStack.drop(socket.assigns.undo, &Map.has_key?(&1, :ref))
+      undo: UndoStack.drop(socket.assigns.undo, &Map.has_key?(&1, :ref)),
+      transfer: nil,
+      pending_creates: %{}
     )
     |> PanelState.forget_writes()
   end
+
+  defp clear_pending_drafts(socket),
+    do:
+      Enum.reduce(Map.keys(socket.assigns.pending_creates), socket, fn draft, socket ->
+        push_event(socket, "calendar:draft-cleared", %{draft: draft})
+      end)
 
   defp push_period(%{assigns: %{view: view, date: date}} = socket),
     do:

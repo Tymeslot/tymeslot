@@ -72,9 +72,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   @doc """
   Forgets the writes the panel was waiting on, for a surface that missed
   their answers (revived after the organiser left the calendar): a header
-  still saving goes back to its resting line rather than saving for ever.
+  still saving goes back to its resting line rather than saving for ever. A
+  "New event" panel whose create was in flight closes, as the create's
+  answer is lost; the reload shows the event if it was made.
   """
   @spec forget_writes(socket()) :: socket()
+  def forget_writes(%{assigns: %{panel: %{mode: :new, status: :saving}}} = socket),
+    do: close(socket)
+
   def forget_writes(socket),
     do: update(socket, &%{&1 | writes: [], status: settled_status(&1.status)})
 

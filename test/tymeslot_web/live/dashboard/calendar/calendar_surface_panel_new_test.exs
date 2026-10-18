@@ -14,9 +14,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
 
   import Mox
   import TymeslotWeb.CalendarSurfaceHelpers
+  import Phoenix.LiveView, only: [send_update: 3]
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   @task_timeout 5_000
 
@@ -285,6 +287,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     render_submit(new_form(lv), %{"intent" => "create"})
 
     refute_receive {:provider_call, _pid, _call}, 100
+  end
+
+  test "a revive while Create is saving closes the panel, and the draft can be created again", %{
+    lv: lv,
+    integration: integration
+  } do
+    hold_creates(self())
+    more_options(lv, integration)
+    render_submit(new_form(lv), %{"intent" => "create"})
+    assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
+
+    # The organiser left the calendar and came back before the browser
+    # confirmed the surface's removal: the create's answer never reached it.
+    send_update(lv.pid, CalendarSurface, id: "calendar", calendar_left: 1)
+    render(lv)
+
+    refute has_element?(lv, "#calendar-panel")
+    assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+
+    more_options(lv, integration)
+    render_submit(new_form(lv), %{"intent" => "create"})
+    assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
   end
 
   test "More options for a draft that is already saving opens nothing", %{

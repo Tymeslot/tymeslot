@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
   @moduletag :live
 
   import TymeslotWeb.CalendarSurfaceHelpers
+  import Phoenix.LiveView, only: [send_update: 3]
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.CalendarEventDeleteWorker
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   setup %{conn: conn} do
     context = owner(conn)
@@ -214,6 +216,94 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     # It is the event just created that goes.
     assert_received {:created, %{uid: uid}}
     assert job.args["uid"] == uid
+  end
+
+  # The organiser left the calendar and came back before the browser
+  # confirmed the surface's removal: the answers routed meanwhile never
+  # reached it.
+  defp revive(lv) do
+    send_update(lv.pid, CalendarSurface, id: "calendar", calendar_left: 1)
+    render(lv)
+    render(lv)
+  end
+
+  defp undo(lv), do: lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+  describe "a revive while a create is in flight" do
+    setup do
+      test_pid = self()
+
+      Mox.stub(CalendarMock, :create_event, fn event_data, _context ->
+        send(test_pid, {:create_started, self(), event_data})
+
+        receive do
+          :never -> :ok
+        end
+      end)
+
+      :ok
+    end
+
+    test "drops the saving draft, and the same draft can be saved again", %{lv: lv, work: work} do
+      create(lv, lunch(work))
+      assert_reply(lv, %{accepted: true})
+      assert_receive {:create_started, _task, _event_data}, 1_000
+
+      revive(lv)
+
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      refute Enum.any?(reloaded(lv), &(&1.id == "draft-d1"))
+
+      create(lv, lunch(work))
+      assert_reply(lv, %{accepted: true})
+      assert_receive {:create_started, _task, _event_data}, 1_000
+    end
+  end
+
+  describe "while the created event moves to another calendar" do
+    setup %{lv: lv, work: work, integration: integration} do
+      events = created_and_settled(lv, work)
+      %{id: id} = Enum.find(events, &(&1.title == "Lunch"))
+      test_pid = self()
+
+      lv |> element("#calendar-canvas") |> render_hook("calendar:edit", %{"id" => id})
+
+      Mox.stub(CalendarMock, :create_event, fn _event_data, _context ->
+        send(test_pid, {:move_started, self()})
+
+        receive do
+          :release -> {:error, :provider_down}
+        end
+      end)
+
+      lv
+      |> form("#calendar-panel-calendar-form")
+      |> render_change(%{"calendar" => "#{integration.id}:family"})
+
+      assert_receive {:move_started, mover}, 1_000
+      on_exit(fn -> send(mover, :release) end)
+      :ok
+    end
+
+    test "undo of the create is held, and stays on the stack", %{lv: lv} do
+      undo(lv)
+
+      assert render(lv) =~ "moving to another calendar"
+      assert all_enqueued(worker: CalendarEventDeleteWorker) == []
+
+      undo(lv)
+      assert render(lv) =~ "moving to another calendar"
+      refute render(lv) =~ "Nothing to undo."
+    end
+
+    test "after a revive the move is no longer waited for, and undo removes the event",
+         %{lv: lv} do
+      revive(lv)
+      undo(lv)
+
+      refute render(lv) =~ "moving to another calendar"
+      assert [_job] = all_enqueued(worker: CalendarEventDeleteWorker)
+    end
   end
 
   test "undo closes the panel open on the event it removes", %{lv: lv, work: work} do
