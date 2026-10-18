@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   alias Tymeslot.CalendarGrid.Moves
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
 
@@ -149,7 +150,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
          {:ok, free} <- flag(params["free"], :free),
          {:ok, reminders} <- reminders(params["reminders"]),
          {:ok, rule} <- recurrence(params["recurrence_rule"], integration),
-         {:ok, video_id} <- video(params["video_integration_id"]) do
+         {:ok, video_id} <- video(user_id, params["video_integration_id"]) do
       {:ok,
        %{
          location: blank_to_nil(location),
@@ -370,15 +371,24 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
 
   defp recurrence(_rule, _integration), do: {:error, :recurrence_rule, :invalid}
 
-  defp video(nil), do: {:ok, nil}
-  defp video(id) when is_integer(id) and id > 0, do: {:ok, id}
+  # The id must name one of the organiser's own live video integrations: an
+  # unknown one would fail the cache's foreign key after the provider event
+  # was written, and another organiser's must not be stored on this one's row.
+  defp video(_user_id, nil), do: {:ok, nil}
 
-  defp video(id) when is_binary(id) do
+  defp video(user_id, id) when is_binary(id) do
     case Integer.parse(id) do
-      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      {parsed, ""} -> video(user_id, parsed)
       _invalid -> {:error, :video_integration_id, :invalid}
     end
   end
 
-  defp video(_id), do: {:error, :video_integration_id, :invalid}
+  defp video(user_id, id) when is_integer(id) and id > 0 do
+    case Video.fetch_live_integration_for_user(id, user_id) do
+      {:ok, _integration} -> {:ok, id}
+      {:error, :not_found} -> {:error, :video_integration_id, :not_found}
+    end
+  end
+
+  defp video(_user_id, _id), do: {:error, :video_integration_id, :invalid}
 end

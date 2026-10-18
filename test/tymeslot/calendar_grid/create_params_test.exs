@@ -283,12 +283,31 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
                cast(context, %{"calendar" => "3:inbox", "recurrence_rule" => "FREQ=WEEKLY"})
     end
 
-    test "a video integration is an id", context do
-      assert {:ok, %{video_integration_id: 7}} = cast(context, %{"video_integration_id" => 7})
-      assert {:ok, %{video_integration_id: 7}} = cast(context, %{"video_integration_id" => "7"})
+    test "a video integration is the organiser's own, given as an id", context do
+      video = insert(:video_integration, user: context.user)
+
+      assert {:ok, %{video_integration_id: id}} =
+               cast(context, %{"video_integration_id" => video.id})
+
+      assert id == video.id
+
+      assert {:ok, %{video_integration_id: ^id}} =
+               cast(context, %{"video_integration_id" => to_string(video.id)})
 
       assert {:error, :video_integration_id, :invalid} =
                cast(context, %{"video_integration_id" => "seven"})
+    end
+
+    test "a video integration that does not exist is refused", context do
+      assert {:error, :video_integration_id, :not_found} =
+               cast(context, %{"video_integration_id" => 987_654_321})
+    end
+
+    test "another organiser's video integration is refused", context do
+      theirs = insert(:video_integration, user: insert(:user))
+
+      assert {:error, :video_integration_id, :not_found} =
+               cast(context, %{"video_integration_id" => theirs.id})
     end
   end
 
