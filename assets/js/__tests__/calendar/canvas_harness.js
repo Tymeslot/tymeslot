@@ -59,6 +59,11 @@ export const strings = {
   create_refused: "Couldn't save this event. Try again.",
   create_unconfirmed: "Couldn't confirm the save. Check your calendar.",
   dismiss: "Dismiss",
+  bookable: "Bookable",
+  bookable_label: "%{date}: bookable times for %{meeting_type}. Show what this means",
+  next_bookable: "Next bookable time: %{when}",
+  show: "Show",
+  bookable_error: "Couldn't load your bookable times.",
 };
 
 // Writable calendars, as settings.calendars carries them.

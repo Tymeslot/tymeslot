@@ -29,7 +29,8 @@
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
  *  - Ctrl + scroll zooms the hours for the visit (see calendar_canvas/zoom.js);
- *  - B switches the bookable-times layer (see calendar_canvas/bookable.js);
+ *  - the server pushes `calendar:bookable`, the bookable-times layer drawn
+ *    behind the events, and B switches it (see calendar_canvas/bookable.js);
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -58,7 +59,7 @@ export const PENDING_GRACE_MS = 1_500;
 const PREVIEW_ESTIMATE = { width: 320, height: 240 };
 // What a redraw can hand focus back to, most specific first. `day` tells the
 // per-column night buttons apart, which share an empty attribute value.
-const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle"];
+const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle", "data-bookable-label", "data-bookable-show"];
 
 function canvasMeasure() {
   let context = null;
@@ -179,6 +180,8 @@ export const CalendarCanvas = {
     this.settleDrafts();
     this.settle(payload);
     if (payload.settings) this.settings = payload.settings;
+    // Only the calendar:ready reply carries the bookable layer.
+    if (payload.bookable) this.bookable = payload.bookable;
     this.clock = { wall: parseWall(payload.now), at: Date.now() };
     // An open "+N" list is not torn down by a background payload for the period it
     // belongs to; the redraw waits for it to close.
@@ -295,7 +298,8 @@ export const CalendarCanvas = {
     if (this.drag || this.createDrag) return;
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
     const previous = this.el.querySelector("[data-scroll]");
-    if (previous) this.scrollTop = previous.scrollTop;
+    // The note's Show asked for a scroll of its own (see initialScroll).
+    if (previous && this.scrollTarget == null) this.scrollTop = previous.scrollTop;
 
     if (!isLoaded(this.cache, days)) {
       this.dropList();
@@ -322,6 +326,7 @@ export const CalendarCanvas = {
       measureWidth: this.measureWidth,
       nightOpen: this.nightOpen,
       hourHeight: this.hourHeight(),
+      bookable: this.bookable,
     });
     this.el.setAttribute("aria-busy", "false");
     this.applyRoving();
@@ -337,9 +342,15 @@ export const CalendarCanvas = {
     this.placeQuickCreate();
   },
 
-  // First draw: an hour and a half before now when today is in view, else 08:00.
+  // First draw: an hour and a half before now when today is in view, else
+  // 08:00; after the bookable note's Show, an hour before the time it named.
   initialScroll(days, now) {
     const scale = this.currentScale();
+    if (this.scrollTarget != null) {
+      const target = Math.max(scale.firstMinute, this.scrollTarget - 60);
+      this.scrollTarget = null;
+      return Math.max(0, scale.yOf(target) - 4);
+    }
     const today = isoFromDay(Math.floor(now / MINUTES_PER_DAY));
     const target = days.includes(today) ? Math.max(NIGHT_END, (now % MINUTES_PER_DAY) - 90) : 480;
     return Math.max(0, scale.yOf(target) - 4);
@@ -387,6 +398,9 @@ export const CalendarCanvas = {
       this.navigate({ view: "day", date });
       return this.pushEventTo(this.el, "calendar:goto", { view: "day", date });
     }
+
+    const show = target.closest("[data-bookable-show]");
+    if (show) return this.showBookable(show.dataset.bookableShow);
 
     if (target.closest("[data-night-toggle]")) {
       this.nightOpen = !this.nightOpen;

@@ -4,7 +4,8 @@
  * in a dialog, with a modifier or while quick create is open.
  */
 import { afterEach, expect, test, vi } from "vitest";
-import { mountHook, pushes, unmountAll } from "./canvas_harness.js";
+import { addDays, makeScale } from "../../calendar/time.js";
+import { mountHook, payload, pushes, unmountAll } from "./canvas_harness.js";
 
 const press = (target, key, extra = {}) => target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra }));
 
@@ -70,4 +71,89 @@ test("B does nothing while quick create is open", () => {
   expect(document.getElementById("calendar-quick-create")).not.toBeNull();
   press(document.body, "b");
   expect(pushes(hook, "calendar:bookable_toggle")).toEqual([]);
+});
+
+const w = (start, end) => ({ start, end });
+const layer = (overrides = {}) => ({ on: true, meeting_type: { id: 1, name: "Intro call" }, windows: [], next: null, error: false, timezone: "Europe/London", ...overrides });
+const thursday = [w("2026-10-15T09:00", "2026-10-15T17:00")];
+const bands = (el) => [...el.querySelectorAll(".cal-bookable")];
+const column = (el, iso) => el.querySelector(`.cal-col[data-day="${iso}"]`);
+const days = Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k));
+
+test("the layer pushed is drawn on the grid, with its label", () => {
+  const { el, handlers } = mountHook();
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+
+  expect(column(el, "2026-10-15").querySelectorAll(".cal-bookable")).toHaveLength(1);
+  expect(column(el, "2026-10-15").querySelector("[data-bookable-label]").textContent).toBe("Bookable");
+});
+
+test("a calendar:ready reply carrying the layer draws it", () => {
+  const { el } = mountHook(payload({ bookable: layer({ windows: thursday }) }));
+  expect(bands(el)).toHaveLength(1);
+});
+
+test("a later events payload without a layer keeps the one drawn", () => {
+  const { el, handlers } = mountHook();
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+  handlers["calendar:events"](payload({ reset: false }));
+  expect(bands(el)).toHaveLength(1);
+});
+
+test("B hides the bands at once, and shows them again", () => {
+  const { el, handlers, hook } = mountHook();
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+
+  press(document.body, "b");
+  expect(bands(el)).toHaveLength(0);
+  press(document.body, "b");
+  expect(bands(el)).toHaveLength(1);
+  expect(pushes(hook, "calendar:bookable_toggle")).toEqual([{}, {}]);
+});
+
+test("a layer pushed while a +N list is open waits for the list to close", () => {
+  const { el, handlers, hook } = mountHook();
+  const anchor = column(el, "2026-10-14");
+  hook.showList([hook.cache.events.get("event-1")], anchor, "Events at this time");
+
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+  expect(bands(el)).toHaveLength(0);
+
+  hook.closeList();
+  expect(bands(el)).toHaveLength(1);
+});
+
+function pointer(type, target, x, y) {
+  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+  Object.defineProperty(e, "pointerId", { value: 1 });
+  Object.defineProperty(e, "buttons", { value: type === "pointerup" ? 0 : 1 });
+  return target.dispatchEvent(e);
+}
+
+test("a click on an empty slot over a band still drops a draft", () => {
+  const { el, handlers, hook } = mountHook();
+  hook.gridGeometry = () => ({ left: 0, top: 0, colWidth: 100, days, scale: makeScale(52, false) });
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+  // Even if the band were the target (its CSS keeps it out of hit testing).
+  const band = column(el, "2026-10-15").querySelector(".cal-bookable");
+
+  pointer("pointerdown", band, 350, 52 * 10 + 5);
+  pointer("pointerup", band, 350, 52 * 10 + 5);
+  band.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 350, clientY: 52 * 10 + 5 }));
+
+  const draft = el.querySelector("[data-draft-id]");
+  expect(draft).not.toBeNull();
+  expect(draft.closest("[data-day]").dataset.day).toBe("2026-10-15");
+});
+
+test("the note's Show goes to the next bookable time's week", () => {
+  const { el, handlers, hook } = mountHook();
+  handlers["calendar:bookable"](layer({ next: { at: "2026-10-20T09:00", label: "Tue 20 Oct, 09:00" } }));
+  const show = el.querySelector("[data-bookable-show]");
+  expect(el.querySelector(".cal-bookable-note").textContent).toBe("Next bookable time: Tue 20 Oct, 09:00 · Show");
+
+  show.click();
+
+  expect(pushes(hook, "calendar:goto")).toEqual([{ view: "week", date: "2026-10-20" }]);
+  expect(column(el, "2026-10-20")).not.toBeNull();
 });

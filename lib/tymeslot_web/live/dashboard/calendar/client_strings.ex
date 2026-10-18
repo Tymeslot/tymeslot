@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Dashboard.Calendar.BookableStrings
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc """
@@ -17,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
   @spec build(String.t()) :: map()
   def build(locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      locale |> strings() |> Map.merge(request_strings())
+      locale |> strings() |> Map.merge(request_strings()) |> Map.merge(BookableStrings.strings())
     end)
   end
 

@@ -835,3 +835,64 @@
     transition: none;
   }
 }
+
+/* Bookable times (calendar/bookable.js, drawn by render.js): a hatched band
+   behind the events, never in the way of a click on the slot under it; one
+   label per day; the note when none is in view. Colours are refined with
+   the rest of the layer's styles. */
+.cal-bookable {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary-500) 18%, transparent) 0 2px,
+    transparent 2px 8px
+  );
+  pointer-events: none;
+}
+
+.cal-bookable-label {
+  position: absolute;
+  left: 2px;
+  z-index: 1;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--cal-surface);
+  color: var(--color-primary-700);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.cal-bookable-label:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+.cal-bookable-note {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 25;
+  margin: 0;
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-lg);
+  background: var(--cal-surface);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.cal-bookable-show {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary-700);
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -29,6 +29,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceLayersTest do
     assert has_element?(lv, "#calendar-keys-hint", "Press B to show or hide your bookable times.")
   end
 
+  test "the canvas carries the layer's copy for the hook", %{conn: conn} do
+    {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+
+    assert html =~ "Next bookable time: %{when}"
+    assert html =~ "%{date}: bookable times for %{meeting_type}. Show what this means"
+  end
+
   describe "with meeting types" do
     setup %{user: user} do
       intro = insert(:meeting_type, user: user, name: "Intro call", sort_order: 0)

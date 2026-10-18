@@ -8,6 +8,7 @@
  * server renders into `data-strings`; nothing here is hard-coded English.
  */
 import { layoutAllDay } from "./allday.js";
+import { bandsForColumns, bookableInView, labelPlacement, nextInView, windowsForDay } from "./bookable.js";
 import { draggable } from "./drag.js";
 import { LINE_HEIGHT, countLines, isLongWord, layoutColumn } from "./layout.js";
 import {
@@ -18,6 +19,7 @@ import {
   dayNumber,
   formatHour,
   formatMinutes,
+  formatWall,
   isoFromDay,
   isoWeekday,
   makeScale,
@@ -96,7 +98,8 @@ export function renderGrid(model) {
   const timedCount = days.reduce((sum, iso) => sum + segmentsForDay(events, iso).length, 0);
   const empty = timedCount === 0 && allDay.bars.length === 0 && allDay.more.every((count) => count === 0);
   const movingId = model.movingId ?? null;
-  const ctx = { settings, strings, now, scale, fold, colWidth, measureWidth, byId, nowDay, nowMinute, nowShown, movingId };
+  const layer = bookableLayer(model.bookable, days, scale);
+  const ctx = { settings, strings, now, scale, fold, colWidth, measureWidth, byId, nowDay, nowMinute, nowShown, movingId, layer };
 
   return (
     `<div class="cal-grid" data-density="${escapeHtml(settings.density)}" style="--cal-days:${days.length};--cal-axis:${AXIS_WIDTH}px;--cal-hour:${hourHeight}px;--cal-strip:${fold ? NIGHT_STRIP : 0}px">` +
@@ -107,6 +110,7 @@ export function renderGrid(model) {
     `<div class="cal-cols">${days.map((iso) => column(iso, events, ctx)).join("")}</div>` +
     `</div></div>` +
     (empty ? `<p class="cal-empty" role="note">${escapeHtml(emptyText(view, strings))}</p>` : "") +
+    bookableNote(layer, days, now, strings) +
     `</div>`
   );
 }
@@ -194,6 +198,10 @@ function column(iso, events, ctx) {
     html += `<div class="cal-off" style="top:${scale.yOf(from)}px;height:${scale.yOf(to) - scale.yOf(from)}px"></div>`;
   }
 
+  // Bookable times go behind everything that follows (calendar-surface.css
+  // keeps them under the events and out of the way of clicks).
+  html += bookableBands(iso, ctx);
+
   // Drafts are drawn over the column at full width, never folded into a "+N".
   const drafts = segmentsForDay(events.filter((e) => e.kind === "draft"), iso);
   let segments = segmentsForDay(events.filter((e) => e.kind !== "draft"), iso);
@@ -237,6 +245,49 @@ function offHours(hours, first) {
   if (start > first) out.push([first, start]);
   if (end < MINUTES_PER_DAY) out.push([Math.max(end, first), MINUTES_PER_DAY]);
   return out;
+}
+
+// The bookable-times layer for the days drawn (calendar/bookable.js), or
+// null when it is off or has no meeting type. A failed load keeps the layer
+// (for its note) but draws no bands.
+function bookableLayer(bookable, days, scale) {
+  if (!bookable?.on || !bookable.meeting_type) return null;
+  const bands = bookable.error ? [] : bandsForColumns(bookable.windows, days, scale.firstMinute, MINUTES_PER_DAY);
+  return { ...bookable, bands, labels: labelPlacement(bands) };
+}
+
+// The day's bands, then its one label: a button naming the day and the
+// meeting type, carrying the window it sits on for the explainer.
+function bookableBands(iso, { layer, scale, strings }) {
+  if (!layer) return "";
+  let html = "";
+  for (const band of layer.bands) {
+    if (band.day !== iso) continue;
+    html += `<div class="cal-bookable" aria-hidden="true" style="top:${scale.yOf(band.startMin)}px;height:${scale.yOf(band.endMin) - scale.yOf(band.startMin)}px"></div>`;
+  }
+  const label = layer.labels.find((l) => l.day === iso);
+  if (!label) return html;
+  const segment = windowsForDay(layer.windows, iso).find((s) => s.endMin > label.startMin);
+  const dayStart = dayNumber(iso) * MINUTES_PER_DAY;
+  const name = interpolate(strings.bookable_label, { date: dateLabel(iso, strings), meeting_type: layer.meeting_type.name });
+  return (
+    html +
+    `<button type="button" class="cal-bookable-label" data-bookable-label="${iso}" data-start="${formatWall(dayStart + segment.startMin)}" data-end="${formatWall(dayStart + segment.endMin)}" ` +
+    `aria-haspopup="dialog" aria-label="${escapeHtml(name)}" style="top:${scale.yOf(label.startMin)}px">${escapeHtml(strings.bookable)}</button>`
+  );
+}
+
+// With no bookable time in view the layer would look empty by accident, so
+// a quiet note names the next one; a failed load says so instead.
+function bookableNote(layer, days, now, strings) {
+  if (!layer) return "";
+  if (layer.error) return `<p class="cal-bookable-note is-error" role="note">${escapeHtml(strings.bookable_error)}</p>`;
+  if (!layer.next || bookableInView(layer.windows, days, now) || nextInView(layer.next, days)) return "";
+  const text = interpolate(strings.next_bookable, { when: layer.next.label });
+  return (
+    `<p class="cal-bookable-note" role="note">${escapeHtml(text)} · ` +
+    `<button type="button" class="cal-bookable-show" data-bookable-show="${escapeHtml(layer.next.at)}">${escapeHtml(strings.show)}</button></p>`
+  );
 }
 
 // How many title lines fit, and whether the time line still does. A title
