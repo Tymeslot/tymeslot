@@ -5,15 +5,15 @@ defmodule Tymeslot.CalendarGrid.Changes do
   video, and the series and timing rules those changes follow.
 
   `Tymeslot.CalendarGrid` keeps reading (ranges, search, sync, colours,
-  preferences); this module is the entry point for every write the grid
-  and the calendar surface make, and nothing below it is called from the
-  web layer.
+  preferences); every write the grid and the calendar surface make goes
+  through this module.
   """
 
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.Moves
   alias Tymeslot.CalendarGrid.RepeatRefusal
   alias Tymeslot.CalendarGrid.ScheduledDelete
   alias Tymeslot.CalendarGrid.SeriesCarry
@@ -180,6 +180,15 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate repeat_refusal(provider, rule, start_date, timezone),
     to: RepeatRefusal,
     as: :reason
+
+  @doc """
+  The timing a timed event takes when it is drawn from one wall-clock minute
+  to another in `timezone`: a move keeps its real length, a resize takes the
+  drawn end. See `Tymeslot.CalendarGrid.Moves.resolve/4`.
+  """
+  @spec resolve_timing(map(), Moves.wall(), Moves.wall(), String.t()) ::
+          {:ok, %{start_at: DateTime.t(), end_at: DateTime.t()}} | {:error, :invalid_time}
+  defdelegate resolve_timing(event, start_wall, end_wall, timezone), to: Moves, as: :resolve
 
   @doc """
   Whether the write queue is still writing to the series `event` belongs to.

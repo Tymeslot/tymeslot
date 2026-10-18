@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   / all" choice for a member of a repeating series, and undo.
 
   The hook sends the wall-clock start and end it drew (`calendar:move`).
-  The change is checked (`EditGuard.check_timing/3`), shown at once and written
+  The domain's timing rules turn them into instants (`Changes.resolve_timing/4`,
+  see `Tymeslot.CalendarGrid.Moves`), and the change is checked
+  (`EditGuard.check_timing/3`), shown at once and written
   through `Writes`; the hook is sent the window again whatever happens, so a
   refused move snaps back to what the server holds. A change the organiser
   can take back goes on the undo stack and the toast names the result.
@@ -23,7 +25,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.WriteQueue
-  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -34,11 +35,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @type socket :: Phoenix.LiveView.Socket.t()
-
-  # What the grid can draw as one timed event: no longer than a week, and
-  # starting in the years it can show.
-  @max_span_seconds 7 * 86_400
-  @years 1900..2200
 
   @doc "Applies a move or resize the hook drew, or snaps the grid back."
   @spec move(socket(), map()) :: socket()
@@ -72,13 +68,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     %{timezone: timezone, current_user: user, integrations: integrations} = socket.assigns
 
     with {:ok, event} <- timed_event(socket, id),
-         {:ok, start_at} <- wall_to_utc(start, timezone),
-         {:ok, end_at} <- end_at(event, start, finish, start_at, timezone),
-         true <- sensible?(start_at, end_at),
-         true <- changed?(event, start_at, end_at),
+         {:ok, changes} <- Changes.resolve_timing(event, start, finish, timezone),
+         true <- changed?(event, changes.start_at, changes.end_at),
          :ok <- EditGuard.check_timing(user.id, integrations, event) do
-      {:ok, event, %{start_at: start_at, end_at: end_at}}
+      {:ok, event, changes}
     else
+      {:error, :invalid_time} -> :ignore
       refusal when is_tuple(refusal) and elem(refusal, 0) == :error -> refusal
       _unchanged_or_invalid -> :ignore
     end
@@ -320,55 +315,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     end
   end
 
-  # A move keeps the event's length: when the wall-clock span the hook drew
-  # is the span the event has on the wall, the end is the new start plus the
-  # event's own duration, so a clock change in between cannot stretch or
-  # shrink it. A resize resolves its end from the wall clock. An event that
-  # itself spans a clock change keeps its real duration, so on an ordinary
-  # day it shows an hour longer or shorter on the wall.
-  defp end_at(event, start, finish, start_at, timezone)
-       when is_binary(start) and is_binary(finish) do
-    with {:ok, wall_start} <- NaiveDateTime.from_iso8601(start <> ":00"),
-         {:ok, wall_end} <- NaiveDateTime.from_iso8601(finish <> ":00") do
-      if NaiveDateTime.diff(wall_end, wall_start) == wall_length(event, timezone),
-        do: {:ok, DateTime.add(start_at, DateTime.diff(event.end_at, event.start_at))},
-        else: wall_to_utc(finish, timezone)
-    else
-      _invalid -> :error
-    end
-  end
-
-  defp end_at(_event, _start, _finish, _start_at, _timezone), do: :error
-
-  defp wall_length(event, timezone) do
-    NaiveDateTime.diff(
-      event.end_at |> DateTime.shift_zone!(timezone) |> DateTime.to_naive(),
-      event.start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_naive()
-    )
-  end
-
-  defp sensible?(start_at, end_at) do
-    span = DateTime.diff(end_at, start_at)
-    span > 0 and span <= @max_span_seconds and start_at.year in @years
-  end
-
   defp changed?(event, start_at, end_at),
     do: not (same?(start_at, event.start_at) and same?(end_at, event.end_at))
 
   defp same?(a, b), do: DateTime.compare(a, b) == :eq
-
-  # The hook's wall-clock minute ("2026-10-15T11:00") in the organiser's
-  # zone, resolved across a clock change as every other wall-clock
-  # conversion is (`DateTimeUtils.resolve_local/3`).
-  defp wall_to_utc(text, timezone) when is_binary(text) do
-    with {:ok, naive} <- NaiveDateTime.from_iso8601(text <> ":00"),
-         time = Time.new!(naive.hour, naive.minute, 0, {0, 6}),
-         {:ok, local} <- DateTimeUtils.resolve_local(NaiveDateTime.to_date(naive), time, timezone) do
-      {:ok, DateTime.shift_zone!(local, "Etc/UTC")}
-    else
-      _invalid -> :error
-    end
-  end
-
-  defp wall_to_utc(_text, _timezone), do: :error
 end
