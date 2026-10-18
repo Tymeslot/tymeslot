@@ -108,10 +108,19 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   """
   @spec check_transfer(pos_integer(), [map()], map()) :: :ok | refusal()
   def check_transfer(user_id, integrations, event) do
+    with :ok <- transfer_gates(user_id, integrations, event), do: move_rate_limit(user_id)
+  end
+
+  @doc """
+  `check_transfer/3` without the rate limit, which counts a move: for a
+  caller that may still ask the organiser before moving, and counts the
+  move once it goes ahead.
+  """
+  @spec transfer_gates(pos_integer(), [map()], map()) :: :ok | refusal()
+  def transfer_gates(user_id, integrations, event) do
     with :ok <- writable(integrations, event),
          :ok <- not_booking_copy(event),
-         :ok <- seat_lock(user_id, event),
-         do: move_rate_limit(user_id)
+         do: seat_lock(user_id, event)
   end
 
   @doc "The calendar move rate limit for `user_id`, the old calendar's too."

@@ -211,6 +211,20 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
     )
   end
 
+  @doc "A change to an event refused because it is moving to another calendar."
+  @spec moving_message() :: String.t()
+  def moving_message do
+    dgettext(
+      "dashboard_calendar",
+      "This event is moving to another calendar. Please make the change once it has moved."
+    )
+  end
+
+  @doc "A move refused because another event's move has not answered yet."
+  @spec another_moving_message() :: String.t()
+  def another_moving_message,
+    do: dgettext("dashboard_calendar", "Another event is moving. Try again in a moment.")
+
   @doc "An organiser has moved events too often in a short while."
   @spec move_rate_limited_message() :: String.t()
   def move_rate_limited_message,

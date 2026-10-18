@@ -19,20 +19,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelCalendarField do
   attr :value, :string, default: nil, doc: "the chosen calendar's key"
   attr :disabled, :boolean, default: false
 
+  attr :version, :integer,
+    default: 0,
+    doc: "a new version draws the select again, with the server's value"
+
   @spec calendar_field(map()) :: Phoenix.LiveView.Rendered.t()
   def calendar_field(assigns) do
     assigns = assign(assigns, :options, options(assigns.choices))
 
     ~H"""
-    <.input
-      type="select"
-      id="calendar-panel-calendar"
-      name="calendar"
-      label={dgettext("dashboard_calendar", "Calendar")}
-      value={@value}
-      options={@options}
-      disabled={@disabled}
-    />
+    <div id={"calendar-panel-calendar-field-#{@version}"}>
+      <.input
+        type="select"
+        id="calendar-panel-calendar"
+        name="calendar"
+        label={dgettext("dashboard_calendar", "Calendar")}
+        value={@value}
+        options={@options}
+        prompt={if is_nil(@value), do: dgettext("dashboard_calendar", "Not on a listed calendar")}
+        disabled={@disabled}
+      />
+    </div>
     """
   end
 

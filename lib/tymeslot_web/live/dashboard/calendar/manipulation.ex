@@ -71,11 +71,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     %{timezone: timezone, current_user: user, integrations: integrations} = socket.assigns
 
     with {:ok, event} <- timed_event(socket, id),
+         false <- Transfer.moving?(socket, id),
          {:ok, changes} <- Changes.resolve_timing(event, start, finish, timezone),
          true <- changed?(event, changes.start_at, changes.end_at),
          :ok <- EditGuard.check_timing(user.id, integrations, event) do
       {:ok, event, changes}
     else
+      true -> {:error, :moving}
       {:error, reason} when reason in [:invalid_time, :out_of_range] -> :ignore
       refusal when is_tuple(refusal) and elem(refusal, 0) == :error -> refusal
       _unchanged_or_invalid -> :ignore
@@ -309,6 +311,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     |> DateTime.shift_zone!(socket.assigns.timezone)
     |> DateTime.to_time()
     |> TimeFormat.format(socket.assigns.time_format)
+  end
+
+  defp refuse(socket, {:error, :moving}) do
+    send(self(), {:flash, {:warning, CalendarEditMessages.moving_message()}})
+    socket
   end
 
   defp refuse(socket, refusal) do

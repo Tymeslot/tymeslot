@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
+  alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
 
   # Provider writes run in a supervised task; allow for a busy test machine.
   @task_timeout 5_000
@@ -260,6 +261,227 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
 
       refute has_element?(lv, "#calendar-panel")
       refute has_element?(lv, "#calendar-undo")
+    end
+  end
+
+  # A create that waits for the test to let it go, so a move stays in flight.
+  defp hold_creates do
+    test_pid = self()
+
+    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+      send(test_pid, {:provider_call, self(), {:create, payload}})
+
+      receive do
+        :release -> {:ok, CreatedEvent.new(payload.uid)}
+      end
+    end)
+  end
+
+  defp other_account(user) do
+    insert(:calendar_integration,
+      user: user,
+      name: "Other account",
+      provider: "google",
+      is_active: true,
+      calendar_list: [%{"id" => "other", "name" => "Other", "selected" => true}]
+    )
+  end
+
+  defp panel_status(lv),
+    do:
+      lv
+      |> element("#calendar-panel-status")
+      |> render()
+      |> Floki.parse_fragment!()
+      |> Floki.text()
+
+  describe "while a move is in flight" do
+    setup %{conn: conn, user: user, id: id} do
+      other = other_account(user)
+      hold_creates()
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_panel(lv, id)
+      choose_calendar(lv, "#{other.id}:other")
+      assert_receive {:provider_call, task_pid, {:create, _payload}}, @task_timeout
+
+      on_exit(fn -> send(task_pid, :release) end)
+      %{lv: lv, other: other, task_pid: task_pid}
+    end
+
+    test "the panel says Saving and shows the destination chosen", %{lv: lv, other: other} do
+      assert panel_status(lv) =~ "Saving"
+
+      assert has_element?(
+               lv,
+               ~s|#calendar-panel-calendar option[value="#{other.id}:other"][selected]|
+             )
+    end
+
+    test "a panel edit is refused, even across accounts", %{lv: lv} do
+      lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
+
+      assert panel_status(lv) =~ "moving to another calendar"
+    end
+
+    test "a drag on the grid is refused", %{lv: lv, id: id} do
+      canvas = element(lv, "#calendar-canvas")
+
+      render_hook(canvas, "calendar:move", %{
+        "id" => id,
+        "start" => "2026-10-15T11:00",
+        "end" => "2026-10-15T12:00"
+      })
+
+      assert render(lv) =~ "moving to another calendar"
+    end
+
+    test "a delete is refused", %{lv: lv, id: id} do
+      lv |> element("#calendar-canvas") |> render_hook("calendar:delete", %{"id" => id})
+
+      assert render(lv) =~ "moving to another calendar"
+      refute has_element?(lv, "#calendar-toast")
+    end
+
+    test "another event cannot be moved meanwhile", %{lv: lv, integration: integration} do
+      lunch = event(integration, "work", "Lunch", ~U[2026-10-14 12:00:00Z])
+      open_panel(lv, "event-#{lunch.id}")
+      choose_calendar(lv, "#{integration.id}:family")
+
+      assert render(lv) =~ "Another event is moving. Try again in a moment."
+    end
+  end
+
+  test "the select shows a placeholder, not the first calendar, when the event's has no key" do
+    html =
+      render_component(&PanelCalendarField.calendar_field/1,
+        choices: [%{key: "1:work", name: "Work", account: "Acme", colour: "calendar-1"}],
+        value: nil
+      )
+
+    assert html =~ ~s|<option value="">|
+    refute html =~ "selected"
+  end
+
+  describe "a refused or cancelled choice" do
+    test "draws the select again with the server's value", %{conn: conn, integration: integration} do
+      copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: copy.uid)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_panel(lv, "event-#{copy.id}")
+
+      assert has_element?(lv, "#calendar-panel-calendar-field-0")
+      choose_calendar(lv, "#{integration.id}:family")
+
+      refute has_element?(lv, "#calendar-panel-calendar-field-0")
+
+      assert has_element?(
+               lv,
+               ~s|#calendar-panel-calendar-field-1 option[value="#{integration.id}:work"][selected]|
+             )
+    end
+
+    test "a refused series choice does too", %{conn: conn, integration: integration} do
+      standup =
+        event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+          recurring_event_id: "standup-series",
+          uid: "standup-series_20261014T083000Z",
+          provider_event_id: "standup-series_20261014T083000Z"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_panel(lv, "event-#{standup.id}")
+      choose_calendar(lv, "#{integration.id}:family")
+      lv |> element("#calendar-series-move-cancel") |> render_click()
+
+      assert has_element?(
+               lv,
+               ~s|#calendar-panel-calendar-field-1 option[value="#{integration.id}:work"][selected]|
+             )
+    end
+  end
+
+  test "an event moved to a hidden calendar stays in the panel, and Undo moves it back", %{
+    lv: lv,
+    integration: integration,
+    id: id
+  } do
+    lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+    open_panel(lv, id)
+    choose_calendar(lv, "#{integration.id}:family")
+    await_move(lv, 2)
+
+    assert has_element?(
+             lv,
+             ~s|#calendar-panel-calendar option[value="#{integration.id}:family"][selected]|
+           )
+
+    assert has_element?(lv, "#calendar-toast", "Moved to Family")
+    lv |> element("#calendar-undo") |> render_click()
+    await_move(lv, 2)
+    assert rows(integration.id, "Design review") == ["work"]
+  end
+
+  test "a move is refused while a change to the event is still saving", %{
+    lv: lv,
+    integration: integration,
+    id: id
+  } do
+    test_pid = self()
+
+    stub(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context ->
+      send(test_pid, {:updating, self()})
+
+      receive do
+        :release -> :ok
+      end
+    end)
+
+    expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context -> :ok end)
+    open_panel(lv, id)
+    lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
+    assert_receive {:updating, writer}, @task_timeout
+    choose_calendar(lv, "#{integration.id}:family")
+
+    assert render(lv) =~ "still saving"
+    send(writer, :release)
+  end
+
+  describe "a repeating event's confirmed move" do
+    setup %{conn: conn, integration: integration} do
+      standup =
+        event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+          recurring_event_id: "standup-series",
+          uid: "standup-series_20261014T083000Z",
+          provider_event_id: "standup-series_20261014T083000Z"
+        )
+
+      test_pid = self()
+
+      stub(GoogleCalendarAPIMock, :move_event, fn _integration, _from, master_id, _to ->
+        send(test_pid, {:provider_call, self(), {:move_series, master_id}})
+
+        receive do
+          :release -> {:ok, %{"iCalUID" => "standup@example.com", "id" => master_id}}
+        end
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_panel(lv, "event-#{standup.id}")
+      choose_calendar(lv, "#{integration.id}:family")
+      lv |> element("#calendar-series-move-confirm") |> render_click()
+
+      %{lv: lv}
+    end
+
+    test "starts the move, says so, and refuses edits meanwhile", %{lv: lv} do
+      assert_receive {:provider_call, task_pid, {:move_series, "standup-series"}}, @task_timeout
+      on_exit(fn -> send(task_pid, :release) end)
+
+      assert has_element?(lv, "#calendar-toast", "Moving the series to Family")
+      refute has_element?(lv, "#calendar-series-move")
+
+      lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
+      assert panel_status(lv) =~ "moving to another calendar"
     end
   end
 end

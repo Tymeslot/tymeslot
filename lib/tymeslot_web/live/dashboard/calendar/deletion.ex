@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
+  alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
   alias TymeslotWeb.Dashboard.Calendar.Writes
   alias TymeslotWeb.Dashboard.CalendarEditMessages
@@ -267,6 +268,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     %{current_user: user, integrations: integrations} = socket.assigns
 
     with :ok <- EditGuard.check(user.id, integrations, event),
+         :ok <- not_moving(socket, event),
          false <- Writes.saving?(socket, event),
          {:ok, scopes} <- Changes.deletion_scopes(event) do
       case scopes do
@@ -291,6 +293,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
            )}
         )
 
+      {:error, :moving} ->
+        flash(socket, {:warning, CalendarEditMessages.moving_message()})
+
       {:error, :recurring_event} ->
         flash(socket, {:error, CalendarEditMessages.recurring_delete_refused_message()})
 
@@ -298,6 +303,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
         flash(socket, CalendarEditMessages.refusal(refusal))
     end
   end
+
+  defp not_moving(socket, event),
+    do: if(Transfer.moving?(socket, EventPayload.id(event)), do: {:error, :moving}, else: :ok)
 
   defp ask_or_delete(socket, event, scope) do
     case Changes.delete_notice(socket.assigns.current_user.id, event) do

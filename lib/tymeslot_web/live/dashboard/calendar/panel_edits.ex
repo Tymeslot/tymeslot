@@ -61,18 +61,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
         socket
 
       event ->
-        if Transfer.moving?(socket, WriteQueue.key(event)),
-          do: refuse_with(socket, moving_message()),
+        if Transfer.moving?(socket, EventPayload.id(event)),
+          do: refuse_with(socket, CalendarEditMessages.moving_message()),
           else: write_event(socket, event, changes, opts)
     end
   end
-
-  defp moving_message,
-    do:
-      dgettext(
-        "dashboard_calendar",
-        "This event is moving to another calendar. Please make the change once it has moved."
-      )
 
   defp write_event(socket, event, changes, opts) do
     {toast, opts} = Keyword.pop(opts, :toast)

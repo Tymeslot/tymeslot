@@ -71,11 +71,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
     %{current_user: user, integrations: integrations} = socket.assigns
 
     with %{mode: :edit, event_id: id} <- socket.assigns.panel,
-         {:ok, event} <- Map.fetch(socket.assigns.events_by_id, id),
+         {:ok, event} <- lookup(socket, id),
          {:ok, destination} <- destination(socket.assigns, key),
          false <- calendar_key(event, integrations) == key,
          :ok <- idle(socket, event),
-         :ok <- EditGuard.check_transfer(user.id, integrations, event) do
+         :ok <- EditGuard.transfer_gates(user.id, integrations, event) do
       begin(socket, event, destination)
     else
       {:error, _reason} = refusal ->
@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
   defp begin(socket, event, destination) do
     case Changes.ensure_movable(event) do
-      :ok -> start(socket, event, destination, nil)
+      :ok -> single(socket, event, destination)
       {:ok, :series} -> prompt_series(socket, event, destination)
       {:error, reason} -> refuse(socket, CalendarEditMessages.series_move_failed_message(reason))
     end
@@ -102,8 +102,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
   defp refused(socket, {:error, :saving}), do: refuse(socket, still_saving_message())
 
+  defp refused(socket, {:error, :busy}),
+    do: refuse(socket, CalendarEditMessages.another_moving_message())
+
   defp refused(socket, refusal) do
-    socket |> flash(CalendarEditMessages.refusal(refusal)) |> SurfaceData.push_events(false)
+    socket
+    |> redraw_select()
+    |> flash(CalendarEditMessages.refusal(refusal))
+    |> SurfaceData.push_events(false)
+  end
+
+  # One move takes one rate-limit token, taken here for a single event and
+  # at the confirmation for a series.
+  defp single(socket, event, destination) do
+    case EditGuard.move_rate_limit(socket.assigns.current_user.id) do
+      :ok -> start(socket, event, destination, nil)
+      {:error, :rate_limited, _message} = refusal -> refused(socket, refusal)
+    end
   end
 
   @doc "Moves the series the open prompt is for, once nothing of it is saving."
@@ -112,6 +127,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
     socket = assign(socket, :series_move_prompt, nil)
 
     cond do
+      not is_nil(socket.assigns.transfer) ->
+        refuse(socket, CalendarEditMessages.another_moving_message())
+
       Writes.series_busy?(socket, prompt.event) ->
         refuse(socket, still_saving_message())
 
@@ -134,7 +152,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
   @doc "Closes the series prompt; nothing has changed."
   @spec cancel_series(socket()) :: socket()
-  def cancel_series(socket), do: assign(socket, :series_move_prompt, nil)
+  def cancel_series(socket),
+    do: socket |> assign(:series_move_prompt, nil) |> redraw_select()
 
   @doc """
   A single event's move has landed (`:event_moved`): the window reloads, the
@@ -158,6 +177,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   def failed(socket, original) do
     socket
     |> assign(:transfer, nil)
+    |> redraw_select()
     |> SurfaceData.show_event(original)
     |> PanelEdits.put_status(:idle)
     |> SurfaceData.push_events(false)
@@ -198,7 +218,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   def undo(socket, %{kind: :transfer} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns
 
-    with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, entry.id),
+    with {:ok, event} <- lookup(socket, entry.id),
          :ok <- idle(socket, event),
          {:ok, destination} <- destination(socket.assigns, entry.back_to),
          :ok <- EditGuard.check_transfer(user.id, integrations, event) do
@@ -214,6 +234,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
         |> assign(:undo, UndoStack.push(socket.assigns.undo, entry))
         |> refuse(still_saving_message())
 
+      {:error, :busy} ->
+        socket
+        |> assign(:undo, UndoStack.push(socket.assigns.undo, entry))
+        |> refuse(CalendarEditMessages.another_moving_message())
+
       {:error, _reason} = refusal ->
         flash(socket, CalendarEditMessages.refusal(refusal))
 
@@ -225,9 +250,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
     end
   end
 
-  @doc "Whether a move of the event `key` names is in flight."
-  @spec moving?(socket(), WriteQueue.key()) :: boolean()
-  def moving?(%{assigns: %{transfer: %{key: key}}}, key), do: true
+  @doc """
+  Whether a move of the event `id` names is in flight. The id is the grid's
+  (`EventPayload.id/1`), which the optimistic swap to the destination keeps,
+  where the write key (the integration and uid) changes with it.
+  """
+  @spec moving?(socket(), String.t()) :: boolean()
+  def moving?(%{assigns: %{transfer: %{id: id}}}, id), do: true
   def moving?(_socket, _key), do: false
 
   # The calendar `key` names, when it is one the select offers: a writable
@@ -246,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
   # One move at a time, and never over a write still saving: the move copies
   # the event as the provider holds it now.
-  defp idle(%{assigns: %{transfer: %{}}}, _event), do: {:error, :saving}
+  defp idle(%{assigns: %{transfer: %{}}}, _event), do: {:error, :busy}
 
   defp idle(socket, event),
     do: if(Writes.saving?(socket, event), do: {:error, :saving}, else: :ok)
@@ -282,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
     socket
     |> assign(:transfer, %{
-      key: WriteQueue.key(event),
+      id: EventPayload.id(event),
       calendar_name: destination.name,
       series: not is_nil(series_to),
       undo: Keyword.get(opts, :undo, false)
@@ -321,7 +350,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
        )
        when is_map(original) and is_map(found) do
     if id == EventPayload.id(original),
-      do: assign(socket, :panel, %{panel | event_id: EventPayload.id(found)}),
+      do: assign(socket, :panel, %{panel | event_id: EventPayload.id(found), event: found}),
       else: socket
   end
 
@@ -383,7 +412,31 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
         "A change to this event is still saving. Please choose the calendar once it has saved."
       )
 
-  defp refuse(socket, message), do: flash(socket, {:warning, message})
+  defp refuse(socket, message), do: socket |> redraw_select() |> flash({:warning, message})
+
+  # The select shows what the organiser picked; a new id for its wrapper
+  # draws it again with the event's own calendar (as the Repeat select does).
+  defp redraw_select(socket) do
+    PanelState.update(
+      socket,
+      &Map.update(&1, :calendar_version, 1, fn version -> version + 1 end)
+    )
+  end
+
+  # The event as the surface holds it: on the visible grid, or loaded but
+  # filtered out (a move to a hidden calendar lands there).
+  defp lookup(socket, id) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, _event} = found ->
+        found
+
+      :error ->
+        case Enum.find(socket.assigns.window_events, &(EventPayload.id(&1) == id)) do
+          nil -> :error
+          event -> {:ok, event}
+        end
+    end
+  end
 
   defp flash(socket, flash) do
     send(self(), {:flash, flash})

@@ -135,6 +135,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
             choices={@calendar_choices}
             value={Transfer.calendar_key(@event, @context.integrations)}
             disabled={@moving or not @editable}
+            version={@panel.calendar_version}
           />
         </form>
         <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />

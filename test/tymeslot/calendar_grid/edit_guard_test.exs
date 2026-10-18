@@ -146,6 +146,16 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
       assert EditGuard.check_transfer(user.id, [integration], copy) == {:error, :booking}
     end
 
+    test "transfer_gates/3 does not count a move", %{user: user, integration: integration} do
+      for _attempt <- 1..5,
+          do:
+            assert(
+              EditGuard.transfer_gates(user.id, [integration], event(integration, "work")) == :ok
+            )
+
+      assert EditGuard.check_transfer(user.id, [integration], event(integration, "work")) == :ok
+    end
+
     test "counts against the move rate limit", %{user: user, integration: integration} do
       # Three moves a minute (`RateLimiter.Limits`, `:calendar_event_move`).
       for _attempt <- 1..3, do: RateLimiter.check(:calendar_event_move, user.id)
