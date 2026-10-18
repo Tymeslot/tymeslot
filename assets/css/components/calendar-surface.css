@@ -710,10 +710,22 @@
   cursor: grabbing;
 }
 
+/* The new time takes the old one's place, so the block never shows both. */
+.cal-ev.is-dragging .cal-ev-time {
+  display: none;
+}
+
 .cal-drag-time {
-  margin-top: auto;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* On a one-row block the new time keeps its room and the title gives way. */
+.cal-ev.is-short .cal-drag-time {
+  flex-shrink: 0;
 }
 
 /* The block in the keyboard move mode. */
@@ -724,8 +736,11 @@
 }
 
 /* Keyboard focus never lands under the sticky day headers and all-day lane
-   (the hook sets --cal-top-h after each draw). */
+   (the hook sets --cal-top-h after each draw). A press on a block starts a
+   drag, never a text selection. */
 .cal-ev {
+  -webkit-user-select: none;
+  user-select: none;
   scroll-margin-top: calc(var(--cal-top-h, 0px) + 8px);
 }
 
