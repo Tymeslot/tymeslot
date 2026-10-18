@@ -10,8 +10,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   add actions to it that are server writes anyway. The hook only positions it
   (CSS variables on `<html>`) and takes focus back when it closes.
 
-  An event the organiser can change offers Delete (see `Deletion`); editing
-  arrives with the side panel.
+  An event the organiser can change offers Edit (the side panel) and Delete
+  (see `Deletion`), and a Busy/Free toggle unless it is a booking or a
+  booking's calendar copy (`FreeBusy`).
   """
 
   use TymeslotWeb, :html
@@ -63,7 +64,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
       sync_note: sync_note(event, integration),
-      editable: EditGuard.editable?(context.integrations, event)
+      editable: EditGuard.editable?(context.integrations, event),
+      free_busy: free_busy(event, context.integrations),
+      free: Map.get(event, :transparency) == "transparent"
     }
   end
 
@@ -117,8 +120,41 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
         </.row>
         <.row :if={@preview.guests != []} icon="hero-user-group">{guest_text(@preview.guests)}</.row>
         <.row icon="hero-shield-check">
-          <strong class="font-semibold">{@preview.availability.label}</strong>
-          · {@preview.availability.note}
+          <div :if={@preview.free_busy == :editable} class="flex flex-wrap items-center gap-2">
+            <div
+              class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5"
+              role="group"
+              aria-label={dgettext("dashboard_calendar", "Show as")}
+            >
+              <button
+                :for={{free, id, label} <- free_busy_choices()}
+                id={id}
+                type="button"
+                aria-pressed={to_string(@preview.free == free)}
+                phx-click="calendar:set_free"
+                phx-value-id={@preview.id}
+                phx-value-free={to_string(free)}
+                phx-target={@target}
+                class={[
+                  "rounded-token-md px-2.5 py-0.5 text-token-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
+                  if(@preview.free == free,
+                    do: "bg-turquoise-50 font-semibold text-turquoise-800",
+                    else: "text-tymeslot-600 hover:bg-tymeslot-50"
+                  )
+                ]}
+              >
+                {label}
+              </button>
+            </div>
+            <span>{@preview.availability.note}</span>
+          </div>
+          <span :if={@preview.free_busy != :editable}>
+            <strong class="font-semibold">{@preview.availability.label}</strong>
+            · {@preview.availability.note}
+          </span>
+          <span :if={@preview.free_busy == :booking} class="block text-tymeslot-500">
+            {dgettext("dashboard_calendar", "Set in the meeting type")}
+          </span>
         </.row>
         <.row :if={@preview.sync_note} icon="hero-arrow-up-tray">
           <span class="text-amber-800">{@preview.sync_note}</span>
@@ -135,7 +171,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Join")}
         </.link>
       </div>
-      <div :if={@preview.editable} class="mt-4 flex justify-end border-t border-tymeslot-100 pt-3">
+      <div
+        :if={@preview.editable}
+        class="mt-4 flex justify-end gap-2 border-t border-tymeslot-100 pt-3"
+      >
+        <.action_button
+          id="calendar-preview-edit"
+          variant={:secondary}
+          size={:sm}
+          icon="hero-pencil-square"
+          phx-click="calendar:edit"
+          phx-value-id={@preview.id}
+          phx-target={@target}
+        >
+          {dgettext("dashboard_calendar", "Edit")}
+        </.action_button>
         <.action_button
           id="calendar-preview-delete"
           variant={:danger_soft}
@@ -284,6 +334,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           names: names
         )
   end
+
+  # Whether the toggle is offered: a booking and a booking's calendar copy
+  # follow their meeting type; a read-only event shows its state only. An
+  # editable event the toggle refuses is a booking's calendar copy.
+  defp free_busy(%{kind: :booking}, _integrations), do: :booking
+
+  defp free_busy(event, integrations) do
+    cond do
+      EditGuard.free_busy_editable?(integrations, event) -> :editable
+      EditGuard.editable?(integrations, event) -> :booking
+      true -> :read_only
+    end
+  end
+
+  defp free_busy_choices,
+    do: [
+      {false, "calendar-preview-busy", dgettext("dashboard_calendar", "Busy")},
+      {true, "calendar-preview-free", dgettext("dashboard_calendar", "Free")}
+    ]
 
   defp availability(%{kind: :booking}, _integration, _entry), do: busy()
 

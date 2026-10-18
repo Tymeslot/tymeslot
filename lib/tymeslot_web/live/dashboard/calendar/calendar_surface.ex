@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
+  alias TymeslotWeb.Dashboard.Calendar.FreeBusy
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
@@ -240,7 +241,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <p id="calendar-keys-hint" class="sr-only">
         {dgettext(
           "dashboard_calendar",
-          "Arrow keys move between events. Press C to add an event at the next free time. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
+          "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
         )}
       </p>
       <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>
@@ -401,6 +402,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     do: {:noreply, PanelState.open_edit(socket, id)}
 
   def handle_event("calendar:edit", _params, socket), do: {:noreply, socket}
+
+  def handle_event("calendar:set_free", %{"id" => id, "free" => free}, socket)
+      when is_binary(id) and free in ["true", "false"],
+      do: {:noreply, FreeBusy.set(socket, id, free == "true")}
+
+  def handle_event("calendar:set_free", _params, socket), do: {:noreply, socket}
 
   # Everything the side panel sends (see `PanelEvents`).
   def handle_event("panel:" <> name, params, socket),

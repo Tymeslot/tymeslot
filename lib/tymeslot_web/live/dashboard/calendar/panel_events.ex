@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   # calendar copy (the panel does not draw the switch for them either).
   def handle("free", %{"value" => choice}, socket) when choice in ["busy", "free"] do
     with %{} = event <- PanelState.current_event(socket.assigns),
-         true <- EditGuard.movable?(socket.assigns.integrations, event) do
+         true <- EditGuard.free_busy_editable?(socket.assigns.integrations, event) do
       write(socket, %{transparency: PanelFields.transparency(choice)})
     else
       _no_panel_or_not_changeable -> socket

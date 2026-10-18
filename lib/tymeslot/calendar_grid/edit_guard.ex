@@ -13,6 +13,10 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
       were loaded must count.
     * `rate_limit/1`: the organiser is within the calendar edit rate limit.
 
+  `free_busy_editable?/2` says whether the organiser may change an event's
+  Busy/Free: a booking, and the calendar copy of one, follow their meeting
+  type's "show as free" setting, so neither may.
+
   `check/3` asks all three, in that order, for a change about to be made.
   `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
   add the one more a change of timing needs: the calendar copy of a booking keeps the booking's time, so it can
@@ -40,6 +44,15 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   @spec movable?([map()], map()) :: boolean()
   def movable?(integrations, event),
     do: editable?(integrations, event) and not EventDeletion.booking_copy?(event)
+
+  @doc """
+  Whether `event`'s Busy/Free may be changed from the calendar: a writable
+  event that is neither a booking nor a booking's calendar copy, whose
+  state follows the meeting type. The rule `movable?/2` asks, for another
+  reason; one query for the booking copy.
+  """
+  @spec free_busy_editable?([map()], map()) :: boolean()
+  def free_busy_editable?(integrations, event), do: movable?(integrations, event)
 
   @doc """
   The events of `events` that `movable?/2` allows, for drawing a whole window:

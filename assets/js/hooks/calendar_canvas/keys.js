@@ -5,7 +5,9 @@
  * tabindex 0 (the one last focused, else the first) and focus moving
  * between blocks carries it along. On a focused block the arrow keys, Home
  * and End move focus (calendar/keyboard.js) and never change data; M
- * enters the move mode, Delete and Backspace ask the server to delete.
+ * enters the move mode, E asks the server to open the event in the side
+ * panel (not while quick create is open or a modal is), Delete and Backspace
+ * ask the server to delete.
  * In the move mode the arrows move the event, Shift with Up or Down
  * changes its length, Enter saves through the same path as a drop
  * (`commitMove`) and Escape cancels; each step is announced in the live
@@ -167,6 +169,12 @@ export const KeysMixin = {
       return true;
     }
 
+    if ((e.key === "e" || e.key === "E") && event?.editable && this.editKeyAllowed(e)) {
+      e.preventDefault();
+      this.pushEventTo(this.el, "calendar:edit", { id });
+      return true;
+    }
+
     if ((e.key === "Delete" || e.key === "Backspace") && event?.editable) {
       e.preventDefault();
       // Focus goes to a neighbour once the event has left the grid.
@@ -180,6 +188,14 @@ export const KeysMixin = {
     }
 
     return false;
+  },
+
+  // E opens the panel unless something else owns the keyboard: a text field,
+  // a dialog or modal, quick create (open or saving), a drag or a move mode.
+  editKeyAllowed(e) {
+    if (e.isComposing || e.defaultPrevented || this.drag || this.createDrag || this.moving || this.quick) return false;
+    const target = e.target;
+    return !(target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS));
   },
 
   // The blocks as drawn, for calendar/keyboard.js.

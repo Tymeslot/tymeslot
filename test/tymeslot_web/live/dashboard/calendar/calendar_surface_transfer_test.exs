@@ -342,6 +342,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
       refute has_element?(lv, "#calendar-toast")
     end
 
+    test "the preview's Busy/Free toggle is refused", %{lv: lv, id: id} do
+      lv |> element("#calendar-canvas") |> render_hook("calendar:open", %{"id" => id})
+      lv |> element("#calendar-preview-free") |> render_click()
+
+      assert render(lv) =~ "moving to another calendar"
+      refute has_element?(lv, "#calendar-toast")
+    end
+
     test "another event cannot be moved meanwhile", %{lv: lv, integration: integration} do
       lunch = event(integration, "work", "Lunch", ~U[2026-10-14 12:00:00Z])
       open_panel(lv, "event-#{lunch.id}")

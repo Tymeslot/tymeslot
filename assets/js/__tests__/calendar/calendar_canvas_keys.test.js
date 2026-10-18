@@ -73,6 +73,65 @@ test("Delete asks the server to delete the focused event", () => {
   expect(pushes(hook, "calendar:delete")).toEqual([{ id: "event-1" }]);
 });
 
+test("E asks the server to open the focused event in the side panel", () => {
+  const { el, hook } = mountHook();
+  block(el, "event-1").focus();
+
+  press("e");
+
+  expect(pushes(hook, "calendar:edit")).toEqual([{ id: "event-1" }]);
+});
+
+test("E is ignored on an event the organiser cannot change, and with a modifier", () => {
+  const readOnly = payload({ events: [event("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00", { editable: false, movable: false })] });
+  const { el, hook } = mountHook(readOnly);
+  block(el, "event-1").focus();
+
+  press("e");
+  press("e", { ctrlKey: true });
+
+  expect(pushes(hook, "calendar:edit")).toEqual([]);
+
+  unmountAll();
+  const { el: el2, hook: hook2 } = mountHook();
+  block(el2, "event-1").focus();
+  for (const mod of ["ctrlKey", "metaKey", "altKey"]) press("e", { [mod]: true });
+  press("e", { repeat: true });
+  expect(pushes(hook2, "calendar:edit")).toEqual([]);
+});
+
+test("E on a booking's calendar copy still opens the panel", () => {
+  const copy = payload({ events: [event("event-1", "Booked call", "2026-10-14T11:00", "2026-10-14T12:00", { editable: true, movable: false })] });
+  const { el, hook } = mountHook(copy);
+  block(el, "event-1").focus();
+
+  press("E");
+
+  expect(pushes(hook, "calendar:edit")).toEqual([{ id: "event-1" }]);
+});
+
+test("E is ignored while a modal is open, in the move mode, and while quick create is open", () => {
+  const { el, hook } = mountHook();
+  block(el, "event-1").focus();
+
+  const modal = document.createElement("div");
+  modal.id = "calendar-series-scope";
+  document.body.appendChild(modal);
+  press("e");
+  modal.remove();
+
+  press("m");
+  press("e");
+  press("Escape");
+
+  hook.quick = { element: document.createElement("div") };
+  block(el, "event-1").focus();
+  press("e");
+  hook.quick = null;
+
+  expect(pushes(hook, "calendar:edit")).toEqual([]);
+});
+
 test("an event the organiser cannot change ignores M and Delete", () => {
   const readOnly = payload({ events: [event("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00", { editable: false, movable: false })] });
   const { el, hook } = mountHook(readOnly);

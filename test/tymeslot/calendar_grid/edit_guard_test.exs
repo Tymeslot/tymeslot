@@ -164,4 +164,30 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
                EditGuard.check_transfer(user.id, [integration], event(integration, "work"))
     end
   end
+
+  describe "free_busy_editable?/2" do
+    test "an event on a writable calendar may change its Busy/Free", %{integration: integration} do
+      assert EditGuard.free_busy_editable?([integration], event(integration, "work"))
+    end
+
+    test "a booking and an event on a read-only calendar may not", %{integration: integration} do
+      refute EditGuard.free_busy_editable?([integration], %{kind: :booking, id: "booking-1"})
+      refute EditGuard.free_busy_editable?([integration], event(integration, "shared"))
+    end
+
+    test "nor may the calendar copy of a booking, which follows its meeting type", %{
+      user: user,
+      integration: integration
+    } do
+      copy = %{event(integration, "work") | uid: "booked-copy"}
+
+      insert(:meeting,
+        organizer_user: user,
+        calendar_integration_id: integration.id,
+        calendar_uid: "booked-copy"
+      )
+
+      refute EditGuard.free_busy_editable?([integration], copy)
+    end
+  end
 end
