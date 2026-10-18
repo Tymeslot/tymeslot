@@ -740,5 +740,5 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Someone else organises this event, so only they can tell its guests about changes."
+msgid "Someone else organises this event, so only they can email its guests."
 msgstr ""

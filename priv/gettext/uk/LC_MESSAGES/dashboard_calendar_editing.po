@@ -742,5 +742,5 @@ msgstr "Подію «%{title}» збережено тут. Вона з'явит�
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Someone else organises this event, so only they can tell its guests about changes."
-msgstr "Цю подію організовує хтось інший, тож лише ця людина може повідомити гостей про зміни."
+msgid "Someone else organises this event, so only they can email its guests."
+msgstr "Цю подію організовує хтось інший, тож лише ця людина може надсилати листи гостям."

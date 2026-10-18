@@ -742,5 +742,5 @@ msgstr "Událost „%{title}“ je uložena zde a do vašeho kalendáře se dos
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Someone else organises this event, so only they can tell its guests about changes."
-msgstr "Tuto událost pořádá někdo jiný, takže hosty o změnách může informovat jen on."
+msgid "Someone else organises this event, so only they can email its guests."
+msgstr "Tuto událost pořádá někdo jiný, takže hostům může psát jen on."

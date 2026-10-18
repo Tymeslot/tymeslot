@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   written through `Writes.update/5`, to the event the panel shows, as the
   old calendar writes it; neither pushes an undo entry, since the email
   cannot be taken back. Removing asks first (`RemoveGuestModal`). An event a
-  group meeting with live seats sits on refuses both (`EditGuard.check/3`).
+  group meeting with live seats sits on refuses both (`EditGuard.check/3`),
+  as does an event someone else organises (`EditGuard.guest_update/3`).
 
   Panel edits tell nobody on their own. `untold?/2` says whether the event
   has guests and differs, in anything they would see, from the event as the
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
     with {:ok, event} <- panel_event(socket),
          true <- Enum.any?(of(event), &(&1.email == email)),
          :ok <- idle(socket, event),
-         :ok <- EditGuard.writable(socket.assigns.integrations, event),
+         :ok <- guest_gate(socket, event),
          :ok <- EditGuard.seat_lock(socket.assigns.current_user.id, event) do
       assign(socket, :remove_guest_prompt, %{
         email: email,
@@ -183,19 +184,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       )
 
   defp tell_refused(socket, {:error, reason} = refusal)
-       when reason in [:moving, :read_only, :unauthorized, :booking],
+       when reason in [:moving, :read_only, :unauthorized, :booking, :not_organiser],
        do: refuse(socket, refusal)
-
-  defp tell_refused(socket, {:error, :not_organiser}),
-    do:
-      flash(
-        socket,
-        {:warning,
-         dgettext(
-           "dashboard_calendar_editing",
-           "Someone else organises this event, so only they can tell its guests about changes."
-         )}
-      )
 
   defp tell_refused(socket, {:error, _reason}),
     do:
@@ -259,10 +249,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   defp idle(socket, event),
     do: if(Transfer.moving?(socket, EventPayload.id(event)), do: {:error, :moving}, else: :ok)
 
+  # Inviting and removing email the guest concerned, so they are the
+  # organiser's alone, as telling guests is (`EditGuard.guest_update/3`).
   defp gates(socket, event) do
     with :ok <- idle(socket, event),
+         :ok <- guest_gate(socket, event),
          do: EditGuard.check(socket.assigns.current_user.id, socket.assigns.integrations, event)
   end
+
+  defp guest_gate(socket, event),
+    do: EditGuard.guest_update(socket.assigns.current_user.id, socket.assigns.integrations, event)
+
+  @doc "Why the guests of an event someone else organises are not emailed from here."
+  @spec not_organiser_message() :: String.t()
+  def not_organiser_message,
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "Someone else organises this event, so only they can email its guests."
+      )
 
   # The panel's header follows this write like any of its own
   # (`PanelStatus.started/2`, settled by `PanelEdits.settled/3`).
@@ -279,6 +284,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
         socket,
         &PanelStatus.refused(&1, CalendarEditMessages.moving_message())
       )
+
+  defp refuse(socket, {:error, :not_organiser}),
+    do: flash(socket, {:warning, not_organiser_message()})
 
   defp refuse(socket, {:error, _reason} = refusal),
     do: flash(socket, CalendarEditMessages.refusal(refusal))

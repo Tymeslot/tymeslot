@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
        read_only_reason: nil,
        booking_copy: false,
        booking_copy_for: nil,
-       can_tell: false,
+       emails_guests: false,
        untold: false
      )}
   end
@@ -77,12 +77,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   # Asked on every update the panel's event or its starting point changes;
   # the diff is pure, no query. Never drawn for an event whose guests the
-  # organiser may not tell (`can_tell`).
+  # organiser may not email (`emails_guests`).
   defp assign_untold(socket),
     do:
       assign(socket,
         untold:
-          socket.assigns.can_tell and
+          socket.assigns.emails_guests and
             PanelGuests.untold?(socket.assigns.panel[:opened_with], socket.assigns[:event])
       )
 
@@ -107,7 +107,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   # Read once per event: whether it can be changed, whether its timing can
   # (a booking's calendar copy keeps the booking's time), and whether the
-  # organiser may tell its guests (they organise it; a query or two).
+  # organiser may email its guests: invite, remove, tell (they organise
+  # it; a query or two).
   defp opened(socket, event, %{integrations: integrations} = context) do
     writable = EditGuard.writable(integrations, event)
 
@@ -115,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
       editable: writable == :ok,
       movable: EditGuard.movable?(integrations, event),
       read_only_reason: read_only_reason(writable),
-      can_tell: EditGuard.guest_update(context.user_id, integrations, event) == :ok
+      emails_guests: EditGuard.guest_update(context.user_id, integrations, event) == :ok
     )
   end
 
@@ -243,6 +244,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         <PanelGuestsField.guests_row
           :if={@event && @editable}
           guests={PanelGuests.of(@event)}
+          organiser={@emails_guests}
           form_key={@guest_form_key}
           repeating={
             is_binary(Map.get(@event, :recurring_event_id)) or

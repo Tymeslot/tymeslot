@@ -361,40 +361,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     end
 
     # The note is not drawn for these, so the event is forced as a crafted
-    # client would send it; the domain refuses it (`Changes.tell_guests/5`).
-    defp change_and_force_tell(conn, event) do
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-      lv
-      |> element("#calendar-canvas")
-      |> render_hook("calendar:edit", %{"id" => "event-#{event.id}"})
+    # client would send it. The panel shows the changed place, so the event
+    # differs from the one the panel opened on and `tell/1` gets as far as
+    # the domain, which refuses it (`Changes.tell_guests/5`).
+    defp change_and_force_tell(conn, event, refusal) do
+      lv = open_panel(conn, event)
 
       event |> Changeset.change(location: "Room 9") |> Repo.update!()
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
 
+      assert has_element?(lv, ~s|#calendar-panel-location[value="Room 9"]|)
       refute has_element?(lv, "#calendar-panel-untold")
+      refute has_element?(lv, "#app-flash-group", refusal)
+
       lv |> element("#calendar-canvas") |> render_hook("panel:tell_guests", %{})
       lv
     end
 
-    defp nothing_sent do
-      assert all_enqueued(worker: Worker) == []
-      assert all_enqueued(worker: EmailWorker) == []
-    end
-
     test "an event someone else organises offers no note and a forced Tell guests sends nothing",
          %{conn: conn, integration: integration} do
-      theirs =
-        event(integration, "work", "Their standup", ~U[2026-10-15 09:00:00Z], 30,
-          organiser: %{"email" => "boss@elsewhere.example"},
-          attendees: [%{"email" => "boss@elsewhere.example"}, %{"email" => "ada@example.com"}]
-        )
-
-      lv = change_and_force_tell(conn, theirs)
+      lv = change_and_force_tell(conn, theirs(integration), "Someone else organises this event")
 
       nothing_sent()
-      assert render(lv) =~ "Someone else organises this event"
+      assert has_element?(lv, "#app-flash-group", "Someone else organises this event")
       refute has_element?(lv, "#calendar-toast", "Guests will get an update.")
     end
 
@@ -414,11 +404,77 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
           attendees: [%{"email" => "ada@example.com"}]
         )
 
-      lv = change_and_force_tell(conn, shared)
+      lv = change_and_force_tell(conn, shared, "This calendar is read-only.")
 
       nothing_sent()
-      assert render(lv) =~ "This calendar is read-only."
+      assert has_element?(lv, "#app-flash-group", "This calendar is read-only.")
       refute has_element?(lv, "#calendar-toast", "Guests will get an update.")
     end
+  end
+
+  describe "an event someone else organises" do
+    test "lists its guests without Invite or remove", %{conn: conn, integration: integration} do
+      lv = open_panel(conn, theirs(integration))
+
+      assert has_element?(lv, "#calendar-panel-guests li", "ada@example.com")
+      refute has_element?(lv, "#calendar-panel-guest-form")
+      refute has_element?(lv, "#calendar-panel-guests button[phx-value-email]")
+      assert has_element?(lv, "#calendar-panel-guests-not-organiser")
+    end
+
+    test "a forced invite emails nobody and saves nothing", %{
+      conn: conn,
+      integration: integration
+    } do
+      lv = open_panel(conn, theirs(integration))
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("panel:guest_invite", %{"email" => "grace@example.com"})
+
+      nothing_sent()
+      refute_receive {:provider_update, _pid, _payload}, 100
+      assert has_element?(lv, "#app-flash-group", "Someone else organises this event")
+    end
+
+    test "a forced removal asks nothing, emails nobody and saves nothing", %{
+      conn: conn,
+      integration: integration
+    } do
+      lv = open_panel(conn, theirs(integration))
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("panel:guest_remove", %{"email" => "ada@example.com"})
+
+      refute has_element?(lv, "#calendar-remove-guest")
+      lv |> element("#calendar-canvas") |> render_hook("panel:guest_remove_confirm", %{})
+
+      nothing_sent()
+      refute_receive {:provider_update, _pid, _payload}, 100
+      assert has_element?(lv, "#app-flash-group", "Someone else organises this event")
+    end
+  end
+
+  defp theirs(integration),
+    do:
+      event(integration, "work", "Their standup", ~U[2026-10-15 09:00:00Z], 30,
+        organiser: %{"email" => "boss@elsewhere.example"},
+        attendees: [%{"email" => "boss@elsewhere.example"}, %{"email" => "ada@example.com"}]
+      )
+
+  defp open_panel(conn, event) do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:edit", %{"id" => "event-#{event.id}"})
+
+    lv
+  end
+
+  defp nothing_sent do
+    assert all_enqueued(worker: Worker) == []
+    assert all_enqueued(worker: EmailWorker) == []
   end
 end

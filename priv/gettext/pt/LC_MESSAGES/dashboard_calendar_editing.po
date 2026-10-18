@@ -740,5 +740,5 @@ msgstr "“%{title}” está salvo aqui e chegará ao seu calendário na próxim
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Someone else organises this event, so only they can tell its guests about changes."
-msgstr "Outra pessoa organiza este evento, então só ela pode avisar os convidados sobre as alterações."
+msgid "Someone else organises this event, so only they can email its guests."
+msgstr "Outra pessoa organiza este evento, então só ela pode enviar e-mails aos convidados."

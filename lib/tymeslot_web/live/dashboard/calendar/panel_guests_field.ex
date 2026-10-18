@@ -4,16 +4,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   an email field with Invite. In the edit mode (`guests_row/1`) both act at
   once, emailing the guest concerned (`PanelGuests`); in the new-event mode
   (`draft_guests/1`) they only change the draft, and nobody is emailed until
-  "Create and invite". Also the "Guests haven't been told" note
+  "Create and invite". On an event someone else organises the edit mode
+  lists the guests without either control, since both email them. Also the "Guests haven't been told" note
   (`untold_note/1`) the panel shows below its header.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+
   attr :guests, :list, required: true, doc: "normalised attendees"
   attr :form_key, :integer, required: true
   attr :repeating, :boolean, default: false
+  attr :organiser, :boolean, default: true, doc: "whether the user may email the guests"
   attr :surface, :any, required: true
 
   @spec guests_row(map()) :: Phoenix.LiveView.Rendered.t()
@@ -30,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
         >
           <span class="truncate">{guest.display_name || guest.email}</span>
           <button
+            :if={@organiser}
             type="button"
             phx-click="panel:guest_remove"
             phx-value-email={guest.email}
@@ -46,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
         </li>
       </ul>
       <form
+        :if={@organiser}
         id="calendar-panel-guest-form"
         class="flex items-end gap-2"
         phx-submit="panel:guest_invite"
@@ -65,7 +71,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           {dgettext("dashboard_calendar_editing", "Invite")}
         </.action_button>
       </form>
-      <p class="text-token-xs text-tymeslot-500">
+      <p
+        :if={!@organiser}
+        id="calendar-panel-guests-not-organiser"
+        class="text-token-xs text-tymeslot-500"
+      >
+        {PanelGuests.not_organiser_message()}
+      </p>
+      <p :if={@organiser} class="text-token-xs text-tymeslot-500">
         {dgettext("dashboard_calendar_editing", "Invite emails them now.")}
         <span :if={@repeating}>
           {dgettext("dashboard_calendar_editing", "Guests change for this event only.")}
