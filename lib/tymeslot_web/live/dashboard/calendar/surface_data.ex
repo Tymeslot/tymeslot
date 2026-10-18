@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.Calendar.Deletion
+  alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
@@ -365,12 +366,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   defp adopt_if_revived(socket) do
     if socket.assigns[:calendar_left] == socket.assigns.writes_adopted_after,
       do: socket,
-      else: socket |> Writes.adopt() |> reload(:events) |> reset_undoing()
+      else: socket |> Writes.adopt() |> reload(:events) |> forget_unanswered()
   end
 
-  # While detached the guardian drove the writes, so `Manipulation.settled/2`
-  # and `forget/2` never ran for them; their entries would otherwise leak.
-  defp reset_undoing(socket), do: assign(socket, :undoing, %{})
+  # While detached the guardian drove the writes, so their answers never
+  # reached the surface: `Manipulation.settled/2` and `forget/2` never ran
+  # for the undos in flight, the panel never heard about its own writes, and
+  # a change whose write failed meanwhile would still sit on the undo stack.
+  # Every change that names a write is dropped, as nothing tells which
+  # of them landed.
+  defp forget_unanswered(socket) do
+    socket
+    |> assign(
+      undoing: %{},
+      undo: UndoStack.drop(socket.assigns.undo, &Map.has_key?(&1, :ref))
+    )
+    |> PanelState.forget_writes()
+  end
 
   defp push_period(%{assigns: %{view: view, date: date}} = socket),
     do:

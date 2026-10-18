@@ -64,6 +64,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   def close(socket), do: socket
 
+  @doc """
+  Forgets the writes the panel was waiting on, for a surface that missed
+  their answers (revived after the organiser left the calendar): a header
+  still saving goes back to its resting line rather than saving for ever.
+  """
+  @spec forget_writes(socket()) :: socket()
+  def forget_writes(socket),
+    do: update(socket, &%{&1 | writes: [], status: settled_status(&1.status)})
+
+  defp settled_status(:saving), do: :idle
+  defp settled_status(status), do: status
+
   @doc "Closes the panel without moving focus, for the preview taking its place."
   @spec give_way(socket()) :: socket()
   def give_way(%{assigns: %{panel: %{}}} = socket) do

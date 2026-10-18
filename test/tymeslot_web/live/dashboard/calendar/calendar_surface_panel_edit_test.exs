@@ -15,11 +15,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
 
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
+  import Phoenix.LiveView, only: [send_update: 3]
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarMock
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Repo
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   setup %{conn: conn} do
     context = owner(conn)
@@ -306,6 +308,61 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
 
       refute has_element?(lv, "#calendar-series-scope")
       refute_receive {:written, _uid, _payload}, 200
+    end
+  end
+
+  describe "when the surface revives with a write in flight" do
+    setup do
+      test_pid = self()
+
+      Mox.stub(CalendarMock, :update_event, fn _uid, _payload, _context ->
+        send(test_pid, {:writing, self()})
+
+        receive do
+          :release -> :ok
+        end
+      end)
+
+      :ok
+    end
+
+    # The organiser left the calendar and came back before the browser
+    # confirmed the surface's removal: the surface takes its queue back from
+    # the guardian that drove it meanwhile, whose answers it never heard.
+    defp revive(lv) do
+      send_update(lv.pid, CalendarSurface, id: "calendar", calendar_left: 1)
+      render(lv)
+      render(lv)
+    end
+
+    test "the header stops saying Saving", %{lv: lv, review: review} do
+      lv
+      |> edit(review)
+      |> element("#calendar-panel-title")
+      |> render_blur(%{"value" => "Design sync"})
+
+      assert_receive {:writing, writer}, 1_000
+      on_exit(fn -> send(writer, :release) end)
+      assert status(lv) =~ "Saving"
+
+      revive(lv)
+
+      refute status(lv) =~ "Saving"
+    end
+
+    test "the change is no longer on the undo stack", %{lv: lv, review: review} do
+      lv
+      |> edit(review)
+      |> element("#calendar-panel-title")
+      |> render_blur(%{"value" => "Design sync"})
+
+      assert_receive {:writing, writer}, 1_000
+      on_exit(fn -> send(writer, :release) end)
+
+      revive(lv)
+      lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+      assert has_element?(lv, "#calendar-toast", "Nothing to undo.")
     end
   end
 
