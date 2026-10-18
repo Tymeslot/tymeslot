@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   def busy_free(assigns) do
     ~H"""
     <div>
-      <p class="mb-1 text-token-xs font-semibold text-tymeslot-600" aria-hidden="true">
+      <p class="label" aria-hidden="true">
         {dgettext("dashboard_calendar_editing", "Show me as")}
       </p>
       <.segmented_control

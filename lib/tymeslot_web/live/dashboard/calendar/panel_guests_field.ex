@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   def guests_row(assigns) do
     ~H"""
     <section id="calendar-panel-guests" class="space-y-2">
-      <h3 class="text-token-sm font-medium text-tymeslot-700">
+      <h3 class="label mb-0">
         {dgettext("dashboard_calendar_editing", "Guests")}
       </h3>
       <ul :if={@guests != []} class="flex flex-wrap gap-1.5">
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   def draft_guests(assigns) do
     ~H"""
     <section id="calendar-panel-guests" class="space-y-2">
-      <h3 class="text-token-sm font-medium text-tymeslot-700">
+      <h3 class="label mb-0">
         {dgettext("dashboard_calendar_editing", "Guests")}
       </h3>
       <ul :if={@guests != []} class="flex flex-wrap gap-1.5">

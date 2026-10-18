@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
 
     ~H"""
     <section :if={@editable or @link} id="calendar-panel-video" class="space-y-2">
-      <h3 class="text-token-sm font-medium text-tymeslot-700">
+      <h3 class="label mb-0">
         {dgettext("dashboard_calendar_editing", "Video call")}
       </h3>
       <p :if={@booking_copy} class="text-token-sm text-tymeslot-500">
