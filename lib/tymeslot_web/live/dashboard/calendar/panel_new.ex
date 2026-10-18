@@ -287,6 +287,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   # (`pending_creates`), so the panel stops drawing its own.
   defp create(%{assigns: %{panel: %{mode: :new, status: status} = panel}} = socket)
        when status != :saving do
+    if Map.has_key?(socket.assigns.pending_creates, panel.draft_id),
+      do: socket,
+      else: start_create(socket, panel)
+  end
+
+  defp create(socket), do: socket
+
+  defp start_create(socket, panel) do
     with {:ok, create} <- cast_params(socket, panel.form),
          {:ok, socket} <- Creation.start(socket, panel.draft_id, create) do
       socket
@@ -304,8 +312,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         })
     end
   end
-
-  defp create(socket), do: socket
 
   # The draft the payload draws: the form as the domain casts it, or the
   # last accepted one with the reason in the header.

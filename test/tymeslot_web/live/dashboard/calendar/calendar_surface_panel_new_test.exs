@@ -33,26 +33,55 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     Map.merge(context, %{lv: lv})
   end
 
-  defp more_options(lv, integration, extra \\ %{}) do
-    lv
-    |> element("#calendar-canvas")
-    |> render_hook(
-      "calendar:more_options",
-      Map.merge(
-        %{
-          "draft" => "d1",
-          "title" => "Lunch with Ada",
-          "start" => "2026-10-15T13:00",
-          "end" => "2026-10-15T14:00",
-          "all_day" => false,
-          "calendar" => "#{integration.id}:work",
-          "location" => "",
-          "guests" => [],
-          "free" => false
-        },
-        extra
-      )
+  defp draft_params(integration, extra \\ %{}) do
+    Map.merge(
+      %{
+        "draft" => "d1",
+        "title" => "Lunch with Ada",
+        "start" => "2026-10-15T13:00",
+        "end" => "2026-10-15T14:00",
+        "all_day" => false,
+        "calendar" => "#{integration.id}:work",
+        "location" => "",
+        "guests" => [],
+        "free" => false
+      },
+      extra
     )
+  end
+
+  defp more_options(lv, integration, extra \\ %{}),
+    do: hook(lv, "calendar:more_options", draft_params(integration, extra))
+
+  defp hook(lv, event, params),
+    do: lv |> element("#calendar-canvas") |> render_hook(event, params)
+
+  # A provider that takes the create and never answers, so the draft stays
+  # saving until the test settles it.
+  defp hold_creates(test_pid) do
+    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+      send(test_pid, {:provider_call, self(), {:create, payload}})
+
+      receive do
+        :never -> :ok
+      end
+    end)
+  end
+
+  # Every payload the hook was sent since the last call, as event lists.
+  defp drain_events(%{proxy: {ref, _topic, _pid}} = lv, acc \\ []) do
+    receive do
+      {^ref, {:push_event, "calendar:events", %{events: events}}} ->
+        drain_events(lv, [events | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  defp draft_drawn?(payloads, pending?) do
+    Enum.any?(payloads, fn events ->
+      Enum.any?(events, &(&1.id == "draft-d1" and &1.pending == pending?))
+    end)
   end
 
   defp new_form(lv), do: form(lv, "#calendar-panel-new-form")
@@ -208,6 +237,127 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
   end
 
+  test "a failed create keeps the panel open and draws the draft again", %{
+    lv: lv,
+    integration: integration
+  } do
+    test_pid = self()
+
+    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+      send(test_pid, {:provider_call, self(), {:create, payload}})
+      {:error, "boom"}
+    end)
+
+    more_options(lv, integration)
+    drain_events(lv)
+    render_submit(new_form(lv), %{"intent" => "create"})
+    await_create(lv)
+
+    assert has_element?(lv, "#calendar-panel-create")
+    assert has_element?(lv, "#calendar-panel [role=status]", "Couldn't save")
+    assert draft_drawn?(drain_events(lv), false)
+  end
+
+  test "a create that is queued for the calendar closes the panel", %{
+    lv: lv,
+    integration: integration
+  } do
+    hold_creates(self())
+    more_options(lv, integration)
+    render_submit(new_form(lv), %{"intent" => "create"})
+    assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
+
+    send(lv.pid, {:calendar_create_result, "d1", {:error, %{reason: :offline, retry: :queued}}})
+    render(lv)
+
+    refute has_element?(lv, "#calendar-panel")
+  end
+
+  test "a second Create while saving makes no second provider call", %{
+    lv: lv,
+    integration: integration
+  } do
+    hold_creates(self())
+    more_options(lv, integration)
+    render_submit(new_form(lv), %{"intent" => "create"})
+    assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
+
+    render_submit(new_form(lv), %{"intent" => "create"})
+
+    refute_receive {:provider_call, _pid, _call}, 100
+  end
+
+  test "More options for a draft that is already saving opens nothing", %{
+    lv: lv,
+    integration: integration
+  } do
+    hold_creates(self())
+    hook(lv, "calendar:create", draft_params(integration))
+    assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
+
+    more_options(lv, integration)
+
+    assert_reply(lv, %{opened: false})
+    refute has_element?(lv, "#calendar-panel")
+  end
+
+  test "a timed draft's all-day box is unticked, and ticking it converts the times", %{
+    lv: lv,
+    integration: integration
+  } do
+    more_options(lv, integration)
+
+    assert has_element?(lv, "#calendar-panel-new-all-day")
+    refute has_element?(lv, "#calendar-panel-new-all-day[checked]")
+
+    render_change(new_form(lv), %{"_target" => ["all_day"], "all_day" => "true"})
+
+    assert has_element?(lv, "#calendar-panel-new-all-day[checked]")
+    assert has_element?(lv, ~s|#calendar-panel-new-form input[name="start"][value="2026-10-15"]|)
+    assert has_element?(lv, ~s|#calendar-panel-new-form input[name="end"][value="2026-10-15"]|)
+  end
+
+  test "Cancel clears a draft the domain refused on open", %{lv: lv, integration: integration} do
+    more_options(lv, integration, %{"end" => "2026-10-15T12:00"})
+    assert has_element?(lv, "#calendar-panel [role=status]", "Couldn't save")
+
+    lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+    assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+  end
+
+  describe "with another event on the grid" do
+    setup %{conn: conn, integration: integration} do
+      other = event(integration, "work", "Standup", ~U[2026-10-14 09:00:00Z], 30)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      %{lv: lv, other: other}
+    end
+
+    test "opening it in the panel clears the New event draft", %{
+      lv: lv,
+      integration: integration,
+      other: other
+    } do
+      more_options(lv, integration)
+      hook(lv, "calendar:edit", %{"id" => "event-#{other.id}"})
+
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      refute has_element?(lv, "#calendar-panel-new-form")
+    end
+
+    test "opening its preview clears the New event draft", %{
+      lv: lv,
+      integration: integration,
+      other: other
+    } do
+      more_options(lv, integration)
+      hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
+
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      refute has_element?(lv, "#calendar-panel")
+    end
+  end
+
   test "Cancel drops the draft from the grid", %{lv: lv, integration: integration} do
     more_options(lv, integration)
     lv |> element("#calendar-panel-new-cancel") |> render_click()
@@ -243,6 +393,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       assert Map.get(payload, :attendees) in [nil, []]
       refute_enqueued(worker: EmailWorker)
       assert has_element?(lv, "#calendar-undo")
+    end
+
+    test "Duplicate of a repeating event with a call makes a single event without it", %{
+      conn: conn,
+      integration: integration
+    } do
+      weekly =
+        event(integration, "work", "Weekly", ~U[2026-10-14 11:00:00Z], 60,
+          recurrence_rule: "FREQ=WEEKLY",
+          video_link: "https://meet.example.com/weekly"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      hook(lv, "calendar:edit", %{"id" => "event-#{weekly.id}"})
+      lv |> element("#calendar-panel-duplicate") |> render_click()
+
+      payload = await_create(lv)
+      assert payload.summary == "Weekly"
+      assert payload.recurrence_rule == nil
+      assert Map.get(payload, :video_integration_id) == nil
     end
 
     test "Delete hands the event to the delete flow and closes the panel", %{lv: lv} do

@@ -107,12 +107,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def put_error(socket, field, message),
     do: update(socket, &%{&1 | errors: Map.put(&1.errors, field, message)})
 
-  # Leaving a New event panel whose draft is drawn takes the draft off the
-  # hook's grid at once, and the payload that follows no longer carries it.
+  # Leaving a New event panel takes its draft off the hook's grid at once (the
+  # hook holds it even when the domain refused it), and the payload that
+  # follows no longer carries it. A create already saving is the create's.
   defp without_draft(
-         %{assigns: %{panel: %{mode: :new, draft: %{}, draft_id: id}}} = socket,
+         %{assigns: %{panel: %{mode: :new, status: status, draft_id: id}}} = socket,
          leave
-       ) do
+       )
+       when status != :saving do
     socket
     |> push_event("calendar:draft-cleared", %{draft: id})
     |> leave.()

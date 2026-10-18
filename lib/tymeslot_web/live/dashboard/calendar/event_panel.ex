@@ -263,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           phx-blur="panel:notes"
           phx-target={@surface}
         />
-        <PanelActions.edit_actions :if={@event && @editable} surface={@surface} />
+        <PanelActions.edit_actions :if={@event && @editable} movable={@movable} surface={@surface} />
       </div>
       <div :if={@panel.mode == :new} class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <PanelNewForm.new_form

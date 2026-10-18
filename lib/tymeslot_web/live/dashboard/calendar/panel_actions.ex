@@ -6,11 +6,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelActions do
 
   attr :surface, :any, required: true
 
+  attr :movable, :boolean,
+    required: true,
+    doc: "Duplicate is offered only where the timing can be copied"
+
   @spec edit_actions(map()) :: Phoenix.LiveView.Rendered.t()
   def edit_actions(assigns) do
     ~H"""
     <div class="flex justify-between gap-2 border-t border-tymeslot-100 pt-3">
       <.action_button
+        :if={@movable}
         id="calendar-panel-duplicate"
         variant={:secondary}
         size={:sm}
