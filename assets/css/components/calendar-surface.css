@@ -896,3 +896,72 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* The explainer a day's "Bookable" label opens (hooks/calendar_canvas/bookable.js),
+   placed beside the label like the "+N" list. */
+.cal-bookable-pop {
+  position: fixed;
+  z-index: 60;
+  width: 20rem;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-sm);
+}
+
+.cal-bookable-pop-title {
+  margin: 0 0 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.cal-bookable-pop-text,
+.cal-bookable-pop-time,
+.cal-bookable-pop-status,
+.cal-bookable-pop-hint {
+  margin: 0 0 8px;
+}
+
+.cal-bookable-pop-hint,
+.cal-bookable-pop-status {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cal-bookable-pop-status:empty {
+  display: none;
+}
+
+.cal-bookable-pop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cal-bookable-pop-button {
+  padding: 4px 10px;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-md);
+  background: var(--cal-surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-bookable-pop-button:hover {
+  background: var(--cal-hover);
+}
+
+.cal-bookable-pop-button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+.cal-bookable-pop-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}

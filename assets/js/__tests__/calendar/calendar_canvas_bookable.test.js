@@ -188,3 +188,125 @@ test("the note goes when the layer is switched off", () => {
   handlers["calendar:bookable"](layer({ next, on: false }));
   expect(el.querySelector(".cal-bookable-note")).toBeNull();
 });
+
+const explainer = () => document.getElementById("calendar-bookable-explainer");
+const status = () => explainer().querySelector("[data-bookable-status]");
+const label = (el) => column(el, "2026-10-15").querySelector("[data-bookable-label]");
+const replyTo = (hook, name) => hook.pushEventTo.mock.calls.find(([, pushed]) => pushed === name)[3];
+
+function withLayer(windows = thursday) {
+  const mounted = mountHook();
+  mounted.handlers["calendar:bookable"](layer({ windows }));
+  return mounted;
+}
+
+test("the label opens the explainer for its window, focus on its first button", () => {
+  const { el } = withLayer();
+  label(el).click();
+
+  expect(explainer().getAttribute("role")).toBe("dialog");
+  expect(explainer().textContent).toContain("Guests can book Intro call in the hatched times.");
+  expect(explainer().querySelector(".cal-bookable-pop-time").textContent).toBe("Thu 15 Oct, 09:00 to 17:00");
+  expect(document.activeElement.hasAttribute("data-bookable-copy")).toBe(true);
+});
+
+test("a second click on the label closes it", () => {
+  const { el } = withLayer();
+  label(el).click();
+  label(el).click();
+  expect(explainer()).toBeNull();
+});
+
+test("the explainer survives the minute tick and a new layer, which draws once it closes", () => {
+  const { el, handlers, hook } = withLayer();
+  label(el).click();
+
+  hook.tick();
+  handlers["calendar:bookable"](layer({ windows: [w("2026-10-16T09:00", "2026-10-16T17:00")] }));
+  expect(explainer()).not.toBeNull();
+  expect(column(el, "2026-10-16").querySelector(".cal-bookable")).toBeNull();
+
+  press(explainer().querySelector("button"), "Escape");
+
+  expect(explainer()).toBeNull();
+  expect(column(el, "2026-10-16").querySelector(".cal-bookable")).not.toBeNull();
+});
+
+test("Escape closes it and gives focus back to the label", () => {
+  const { el } = withLayer();
+  label(el).click();
+  press(explainer().querySelector("button"), "Escape");
+
+  expect(explainer()).toBeNull();
+  expect(document.activeElement).toBe(label(el));
+});
+
+test("a press outside closes it", () => {
+  const { el } = withLayer();
+  label(el).click();
+  document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  expect(explainer()).toBeNull();
+});
+
+test("a click on an empty slot while it is open only closes it", () => {
+  const { el, hook } = withLayer();
+  hook.gridGeometry = () => ({ left: 0, top: 0, colWidth: 100, days, scale: makeScale(52, false) });
+  label(el).click();
+  const slot = column(el, "2026-10-17");
+
+  pointer("pointerdown", slot, 550, 52 * 10);
+  pointer("pointerup", slot, 550, 52 * 10);
+  slot.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 550, clientY: 52 * 10 }));
+
+  expect(explainer()).toBeNull();
+  expect(el.querySelector("[data-draft-id]")).toBeNull();
+});
+
+test("Copy free times copies the days in view with the time zone", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  const { el } = withLayer();
+  label(el).click();
+
+  explainer().querySelector("[data-bookable-copy]").click();
+
+  await vi.waitFor(() => expect(status().textContent).toBe("Free times for these days copied."));
+  expect(writeText).toHaveBeenCalledWith("Thu 15 Oct: 09:00 to 17:00\nTimes in Europe/London");
+});
+
+test("a refused copy says so", async () => {
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) }, configurable: true });
+  const { el } = withLayer();
+  label(el).click();
+
+  explainer().querySelector("[data-bookable-copy]").click();
+
+  await vi.waitFor(() => expect(status().textContent).toBe("Couldn't copy. Your browser blocked the clipboard."));
+});
+
+test("Block this time sends the labelled window and closes once accepted", () => {
+  const { el, hook } = withLayer();
+  label(el).click();
+  const block = explainer().querySelector("[data-bookable-block]");
+
+  block.click();
+
+  expect(pushes(hook, "calendar:block")).toEqual([{ start: "2026-10-15T09:00", end: "2026-10-15T17:00" }]);
+  expect(status().textContent).toBe("Blocking…");
+  expect(block.disabled).toBe(true);
+
+  replyTo(hook, "calendar:block")({ accepted: true });
+  expect(explainer()).toBeNull();
+});
+
+test("a refused block says why and stays open", () => {
+  const { el, hook } = withLayer();
+  label(el).click();
+  const block = explainer().querySelector("[data-bookable-block]");
+  block.click();
+
+  replyTo(hook, "calendar:block")({ accepted: false, error: "That time can't be blocked." });
+
+  expect(status().textContent).toBe("That time can't be blocked.");
+  expect(block.disabled).toBe(false);
+});

@@ -69,7 +69,7 @@ export const DraftMixin = {
 
   // Whether something is open over the grid that a press should close first.
   hasLayer() {
-    return !!(this.list || this.draft || document.getElementById("calendar-preview"));
+    return !!(this.list || this.explainer || this.draft || document.getElementById("calendar-preview"));
   },
 
   // The day column under `target` when it is an empty part of one.

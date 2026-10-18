@@ -30,7 +30,8 @@
  *    calendar_canvas/keys.js);
  *  - Ctrl + scroll zooms the hours for the visit (see calendar_canvas/zoom.js);
  *  - the server pushes `calendar:bookable`, the bookable-times layer drawn
- *    behind the events, and B switches it (see calendar_canvas/bookable.js);
+ *    behind the events; B switches it, and a day's label opens the explainer
+ *    that pushes `calendar:block` (see calendar_canvas/bookable.js);
  *  - it pushes `calendar:open` (an event was clicked) and `calendar:goto`
  *    (a day header was clicked) back to the component.
  *
@@ -185,7 +186,7 @@ export const CalendarCanvas = {
     this.clock = { wall: parseWall(payload.now), at: Date.now() };
     // An open "+N" list is not torn down by a background payload for the period it
     // belongs to; the redraw waits for it to close.
-    if (this.list && payload.view === this.view && payload.date === this.date) {
+    if (this.overlayOpen() && payload.view === this.view && payload.date === this.date) {
       this.dirty = true;
       return;
     }
@@ -275,7 +276,7 @@ export const CalendarCanvas = {
 
   // The minute tick moves the now line; an open "+N" list must not be torn down for it.
   tick() {
-    if (this.list) {
+    if (this.overlayOpen()) {
       this.dirty = true;
       return;
     }
@@ -306,6 +307,7 @@ export const CalendarCanvas = {
 
     if (!isLoaded(this.cache, days)) {
       this.dropList();
+      this.dropExplainer();
       this.el.innerHTML = renderSkeleton(days, this.strings);
       this.el.setAttribute("aria-busy", "true");
       this.placeQuickCreate();
@@ -316,6 +318,7 @@ export const CalendarCanvas = {
     const now = this.nowMinute();
 
     this.dropList();
+    this.dropExplainer();
     this.lastWidth = this.el.clientWidth;
     this.el.innerHTML = renderGrid({
       view: this.view,
@@ -402,6 +405,13 @@ export const CalendarCanvas = {
       return this.pushEventTo(this.el, "calendar:goto", { view: "day", date });
     }
 
+    const bookableLabel = target.closest("[data-bookable-label]");
+    if (bookableLabel) return this.openExplainer(bookableLabel);
+    if (target.closest("[data-bookable-copy]")) return this.copyFreeTimes();
+    const blockButton = target.closest("[data-bookable-block]");
+    if (blockButton) return this.blockTime(blockButton);
+    if (this.explainer?.contains(target)) return undefined;
+
     const show = target.closest("[data-bookable-show]");
     if (show) return this.showBookable(show.dataset.bookableShow);
 
@@ -423,7 +433,13 @@ export const CalendarCanvas = {
       if (e.target.closest?.(".cal-col .cal-ev[data-event-id]")?.dataset.eventId === this.moving.id) return this.movingKey(e);
       this.cancelMove({ announce: false });
     }
-    if (e.key === "Escape") return e.repeat ? undefined : this.closeList();
+    if (e.key === "Escape") {
+      if (!e.repeat) {
+        this.closeExplainer();
+        this.closeList();
+      }
+      return undefined;
+    }
     const target = e.target.closest?.(".cal-col .cal-ev[data-event-id]");
     if (target && this.el.contains(target) && this.eventKey(e, target)) return undefined;
     if (e.repeat) return undefined;

@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.Calendar.BlockTime
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
@@ -176,6 +177,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   defp undo_entry(socket, %{kind: :edit} = entry), do: PanelEdits.undo(socket, entry)
   defp undo_entry(socket, %{kind: :create} = entry), do: Creation.undo(socket, entry)
   defp undo_entry(socket, %{kind: :transfer} = entry), do: Transfer.undo(socket, entry)
+
+  # A block from the bookable layer names no event, so the moving check
+  # above does not apply (see `BlockTime`).
+  defp undo_entry(socket, %{kind: :block} = entry), do: BlockTime.undo(socket, entry)
 
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns

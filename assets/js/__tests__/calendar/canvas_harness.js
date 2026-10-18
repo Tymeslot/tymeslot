@@ -64,6 +64,19 @@ export const strings = {
   next_bookable: "Next bookable time: %{when}",
   show: "Show",
   bookable_error: "Couldn't load your bookable times.",
+  bookable_title: "Bookable times",
+  bookable_explainer: "Guests can book %{meeting_type} in the hatched times. Busy events, buffers and your notice period are already taken out, so this is exactly what your booking page offers.",
+  bookable_hide_hint: "Press B to hide bookable times.",
+  copy_free_times: "Copy free times",
+  block_this_time: "Block this time",
+  blocking: "Blocking…",
+  block_refused: "Couldn't block that time. Please try again.",
+  copied: "Free times for these days copied.",
+  copy_failed: "Couldn't copy. Your browser blocked the clipboard.",
+  free_times_day: "%{date}: %{times}",
+  free_times_zone: "Times in %{zone}",
+  free_times_none: "No bookable times on these days.",
+  time_range: "%{start} to %{finish}",
 };
 
 // Writable calendars, as settings.calendars carries them.

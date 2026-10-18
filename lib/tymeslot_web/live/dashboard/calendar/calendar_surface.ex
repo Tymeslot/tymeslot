@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   # `calendar:*` events answered by `SurfaceBookingEvents` (every `booking:*`
   # event goes there too).
-  @booking_events ~w(calendar:bookable_toggle calendar:bookable_type)
+  @booking_events ~w(calendar:bookable_toggle calendar:bookable_type calendar:block)
 
   @menus %{"date" => :date, "display" => :display}
 

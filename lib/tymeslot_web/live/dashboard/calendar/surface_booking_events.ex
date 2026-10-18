@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   """
 
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
+  alias TymeslotWeb.Dashboard.Calendar.BlockTime
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
@@ -19,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   @type socket :: Phoenix.LiveView.Socket.t()
 
   @doc "Answers an event as `CalendarSurface.handle_event/3` would."
-  @spec handle(String.t(), map(), socket()) :: {:noreply, socket()}
+  @spec handle(String.t(), map(), socket()) :: {:noreply, socket()} | {:reply, map(), socket()}
   def handle("booking:" <> name, params, socket),
     do: {:noreply, BookingActions.handle(name, params, socket)}
 
@@ -32,6 +33,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
 
   def handle("calendar:bookable_type", _params, socket), do: {:noreply, socket}
 
+  # "Block this time" from the bookable layer's explainer (see `BlockTime`).
+  # The reply only says whether the block was started.
+  def handle("calendar:block", params, socket) do
+    {reply, socket} = BlockTime.start(socket, params)
+    {:reply, reply, socket}
+  end
+
   @doc "Answers work started off the process, as `CalendarSurface.handle_async/3` would."
   @spec async(term(), {:ok, term()} | {:exit, term()}, socket()) :: {:noreply, socket()}
   def async({:answer_request, _meeting_id} = key, result, socket),
@@ -39,4 +47,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
 
   def async(:bookable, result, socket),
     do: {:noreply, BookableLayer.loaded(socket, result)}
+
+  # A block from the layer's explainer, and that block's undo.
+  def async({:block, _n} = key, result, socket),
+    do: {:noreply, BlockTime.blocked(socket, key, result)}
+
+  def async({:unblock, _n}, result, socket),
+    do: {:noreply, BlockTime.unblocked(socket, result)}
 end
