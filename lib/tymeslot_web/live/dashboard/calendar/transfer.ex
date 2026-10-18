@@ -168,6 +168,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
     socket
     |> follow(Map.get(moved, :original_event), found)
+    |> rebase_undo(Map.get(moved, :original_event), found)
     |> PanelEdits.put_status(:saved)
     |> moved_toast(transfer, Map.get(moved, :original_event), found, Map.get(moved, :source))
   end
@@ -355,6 +356,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   end
 
   defp follow(socket, _original, _found), do: socket
+
+  # The changes made to the event before it moved (and held while it moved)
+  # follow it to its new identity, so they can still be undone there.
+  defp rebase_undo(socket, original, found) when is_map(original) and is_map(found) do
+    {from, to, key} = {EventPayload.id(original), EventPayload.id(found), WriteQueue.key(found)}
+
+    stack =
+      UndoStack.map(socket.assigns.undo, fn
+        %{id: ^from} = entry -> %{entry | id: to, key: key}
+        entry -> entry
+      end)
+
+    assign(socket, :undo, stack)
+  end
+
+  defp rebase_undo(socket, _original, _found), do: socket
 
   defp moved_toast(socket, %{undo: true, calendar_name: name}, _original, _found, nil),
     do:

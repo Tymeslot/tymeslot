@@ -37,6 +37,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   @spec drop(t(), (entry() -> boolean())) :: t()
   def drop(stack, fun), do: Enum.reject(stack, fun)
 
+  @doc "Applies `fun` to every entry, keeping its place."
+  @spec map(t(), (entry() -> entry())) :: t()
+  def map(stack, fun), do: Enum.map(stack, fun)
+
   @doc "Replaces every entry `fun` answers true for with `entry`, keeping its place."
   @spec replace(t(), (entry() -> boolean()), entry()) :: t()
   def replace(stack, fun, entry),

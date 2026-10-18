@@ -382,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
 
     defp undo(lv), do: lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
 
-    test "a panel change is not taken back, and stays to undo later", %{
+    test "a panel change is not taken back, and stays on the stack", %{
       lv: lv,
       integration: integration,
       id: id
@@ -402,6 +402,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
       undo(lv)
       assert render(lv) =~ "moving to another calendar"
       refute render(lv) =~ "Nothing to undo."
+    end
+
+    test "a held change follows the event to its new calendar and can be undone there", %{
+      lv: lv,
+      integration: integration,
+      id: id
+    } do
+      open_panel(lv, id)
+      lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
+      assert_receive {:written, _uid, %{summary: "Renamed"}}, @task_timeout
+      eventually(fn -> assert panel_status(lv) =~ "Saved" end)
+
+      hold_creates()
+      choose_calendar(lv, "#{integration.id}:family")
+      assert_receive {:provider_call, creator, {:create, _payload}}, @task_timeout
+      undo(lv)
+      assert render(lv) =~ "moving to another calendar"
+
+      # The move lands; its own Undo is now the newest change.
+      send(creator, :release)
+      assert [{:delete, _uid}] = await_move(lv, 1)
+
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+        send(test_pid, {:provider_call, self(), {:create, payload}})
+        {:ok, CreatedEvent.new(payload.uid)}
+      end)
+
+      undo(lv)
+      await_move(lv, 2)
+      assert rows(integration.id, "Renamed") == ["work"]
+
+      # Beneath it, the title change, on the event as it is now.
+      undo(lv)
+      assert_receive {:written, _uid, %{summary: "Design review"}}, @task_timeout
     end
 
     test "a drag is not taken back", %{lv: lv, integration: integration, id: id} do
