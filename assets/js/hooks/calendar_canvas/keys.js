@@ -11,7 +11,8 @@
  * (`commitMove`) and Escape cancels; each step is announced in the live
  * region the surface renders (#calendar-live), always as text: event
  * titles are user data. Ctrl Z or Cmd Z anywhere on the page but a text
- * field asks the server to undo. None of it runs while a pointer drag is
+ * field (a text input, a textarea, a select) asks the server to undo, in the
+ * side panel too. None of it runs while a pointer drag is
  * live. A series-scope or delete modal makes the server redraw the grid
  * behind it, which strands the focus trap's saved element, so after such a
  * modal closes focus is handed back to the affected block (`watchModal`).
@@ -26,6 +27,11 @@ export const MODALS = "#calendar-series-scope, #calendar-delete-confirm";
 const MODAL_WATCH_MS = 10_000;
 const REPEAT_ANNOUNCE_MS = 300;
 export const TYPING = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
+// Fields with a text undo of their own: Ctrl Z there stays the browser's.
+// Anywhere else (a button, a switch, a checkbox, the side panel) it undoes
+// the last change.
+const TEXT_ENTRY =
+  'textarea, select, [contenteditable=""], [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="range"]):not([type="color"]):not([type="file"])';
 
 export const KeysMixin = {
   mountKeys() {
@@ -40,7 +46,7 @@ export const KeysMixin = {
       if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
       if (e.key?.toLowerCase() !== "z" && e.code !== "KeyZ") return;
       const target = e.target;
-      if (target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
+      if (target?.isContentEditable || target?.closest?.(`${TEXT_ENTRY}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
       e.preventDefault();
       this.pushEventTo(this.el, "calendar:undo", {});
     };

@@ -163,6 +163,26 @@ test("the preview closing hands focus back to the event", () => {
   expect(document.activeElement.dataset.eventId).toBe("event-1");
 });
 
+test("the side panel closing hands focus back to its event", () => {
+  const { reply, handlers } = mountHook();
+  reply(payload());
+  handlers["calendar:panel"]({ open: false, focus: "event-1" });
+  expect(document.activeElement.dataset.eventId).toBe("event-1");
+});
+
+test("the side panel opening focuses the element it marks", () => {
+  const { reply, handlers } = mountHook();
+  reply(payload());
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML = '<input id="calendar-panel-title" data-panel-focus="true">';
+  document.body.appendChild(panel);
+
+  handlers["calendar:panel"]({ open: true });
+
+  expect(document.activeElement.id).toBe("calendar-panel-title");
+});
+
 test("the folded night opens on click", () => {
   const { el, reply } = mountHook();
   reply(payload({ events: [event("event-3", "Gym", "2026-10-14T05:00", "2026-10-14T06:00")] }));

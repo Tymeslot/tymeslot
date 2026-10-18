@@ -125,6 +125,7 @@ export const CalendarCanvas = {
       this.render();
     });
     this.handleEvent("calendar:preview-closed", () => this.previewClosed());
+    this.handleEvent("calendar:panel", (change) => this.panelChanged(change));
 
     if (typeof ResizeObserver !== "undefined") {
       this.resizer = new ResizeObserver(() => this.resized());
@@ -445,6 +446,14 @@ export const CalendarCanvas = {
     const returnTo = this.returnTo;
     this.returnTo = null;
     if (!this.focusBy(returnTo) && this.lastOpened) this.focusBy({ attr: "data-event-id", value: this.lastOpened });
+  },
+
+  // The side panel opened or closed beside the grid: the grid's width
+  // changed, and focus moves into the panel or back to the event it was for.
+  panelChanged({ open, focus }) {
+    this.resized();
+    if (open) document.querySelector("#calendar-panel [data-panel-focus]")?.focus();
+    else if (focus) this.focusBy({ attr: "data-event-id", value: focus });
   },
 
   // A description of the focused control that survives a redraw.

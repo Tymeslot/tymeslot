@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       rail_open: true,
       open_menu: nil,
       preview: nil,
+      panel: nil,
       event_writes: WriteQueue.new(),
       writes_adopted_after: nil,
       undo: UndoStack.new(),

@@ -26,8 +26,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.DeleteConfirmModal
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
+  alias TymeslotWeb.Dashboard.Calendar.EventPanel
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
+  alias TymeslotWeb.Dashboard.Calendar.PanelEvents
+  alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
@@ -185,6 +188,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       assign(assigns,
         locale: Gettext.get_locale(TymeslotWeb.Gettext),
         days: SurfaceData.days(assigns),
+        panel_event: PanelState.current_event(assigns),
+        panel_context: PanelState.context(assigns),
         sync_problems:
           SyncProblems.list(
             assigns.integrations,
@@ -242,6 +247,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           locale={@locale}
           strings={ClientStrings.build(@locale)}
           target={@myself}
+        />
+        <.live_component
+          :if={@panel}
+          module={EventPanel}
+          id="calendar-panel"
+          panel={@panel}
+          event={@panel_event}
+          context={@panel_context}
+          surface={@myself}
         />
       </div>
       <Preview.preview :if={@preview} preview={@preview} target={@myself} />
@@ -322,12 +336,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     case Map.fetch(socket.assigns.events_by_id, id) do
       {:ok, event} ->
         preview = Preview.build(event, Preview.context(socket.assigns))
-        {:reply, %{opened: true}, assign(socket, preview: preview, open_menu: nil)}
+
+        {:reply, %{opened: true},
+         socket |> PanelState.give_way() |> assign(preview: preview, open_menu: nil)}
 
       :error ->
         {:reply, %{opened: false}, assign(socket, :preview, nil)}
     end
   end
+
+  # Opens the side panel on a loaded event: from the hook (E on a focused
+  # event) or the preview's Edit button.
+  def handle_event("calendar:edit", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, PanelState.open_edit(socket, id)}
+
+  def handle_event("calendar:edit", _params, socket), do: {:noreply, socket}
+
+  # Everything the side panel sends (see `PanelEvents`).
+  def handle_event("panel:" <> name, params, socket),
+    do: {:noreply, PanelEvents.handle(name, params, socket)}
 
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}

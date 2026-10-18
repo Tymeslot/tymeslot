@@ -112,6 +112,32 @@ test("Ctrl Z asks to undo anywhere but in a text field", () => {
   expect(pushes(hook, "calendar:undo")).toEqual([{}]);
 });
 
+test("Ctrl Z inside the side panel undoes like on the grid, except in a text field", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML =
+    '<button id="free" type="button">Free</button>' +
+    '<button id="all-day" type="button" role="switch" aria-checked="false"></button>' +
+    '<input id="check" type="checkbox">' +
+    '<input id="title" type="text" value="Design review">' +
+    '<textarea id="notes"></textarea>' +
+    '<select id="reminder"><option value="none">None</option></select>';
+  document.body.appendChild(panel);
+  const z = (id, extra = {}) =>
+    panel.querySelector(`#${id}`).dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true, ...extra }));
+
+  z("free");
+  z("all-day", { ctrlKey: false, metaKey: true });
+  z("check");
+  expect(pushes(hook, "calendar:undo")).toEqual([{}, {}, {}]);
+
+  z("title");
+  z("notes");
+  z("reminder");
+  expect(pushes(hook, "calendar:undo")).toEqual([{}, {}, {}]);
+});
+
 test("a payload arriving while a block is focused keeps focus on it, and one tab stop", () => {
   const { el, handlers } = mountHook();
   block(el, "event-2").focus();
