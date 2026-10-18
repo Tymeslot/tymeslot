@@ -33,6 +33,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStackTest do
     assert stack == [%{id: 2, key: :b}]
   end
 
+  test "drops only the newest change that matches" do
+    stack =
+      UndoStack.new()
+      |> UndoStack.push(%{id: 1, key: :a})
+      |> UndoStack.push(%{id: 2, key: :b})
+      |> UndoStack.push(%{id: 3, key: :a})
+      |> UndoStack.drop_newest(&(&1.key == :a))
+
+    assert stack == [%{id: 2, key: :b}, %{id: 1, key: :a}]
+    assert UndoStack.drop_newest(stack, &(&1.key == :c)) == stack
+  end
+
   test "replaces a matching change in place" do
     stack =
       UndoStack.new()

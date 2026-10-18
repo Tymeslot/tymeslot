@@ -280,6 +280,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
     end
   end
 
+  describe "when a later write of the same event fails" do
+    test "the earlier, written change stays undoable", %{lv: lv, review: review, id: id} do
+      move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
+      assert_receive {:written, _uid, _first}
+      render(lv)
+
+      Mox.stub(CalendarMock, :update_event, fn _uid, _payload, _context ->
+        {:error, :provider_down}
+      end)
+
+      flush_pushes(lv)
+      move(lv, id, "2026-10-16T11:00", "2026-10-16T12:00")
+      await_original(lv, id, "2026-10-15T11:00")
+      render(lv)
+
+      test_pid = self()
+
+      Mox.stub(CalendarMock, :update_event, fn uid, payload, _context ->
+        send(test_pid, {:written, uid, payload})
+        :ok
+      end)
+
+      lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+      uid = review.uid
+      assert_receive {:written, ^uid, payload}, 1_000
+      assert same?(payload.start_time, ~U[2026-10-14 09:00:00Z])
+    end
+  end
+
   describe "a change the calendar refuses snaps back and writes nothing" do
     # The event `id` as the snap-back push draws it; nothing was written.
     defp snapped_back(lv, id) do
@@ -532,10 +562,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   end
 
   # Waits for the push that draws `id` back at 10:00, where it began.
-  defp await_original(lv, id) do
+  defp await_original(lv, id, start \\ "2026-10-14T10:00") do
     assert_push_event(lv, "calendar:events", %{events: events}, 1_000)
 
-    unless match?(%{start: "2026-10-14T10:00"}, Enum.find(events, &(&1.id == id))),
-      do: await_original(lv, id)
+    unless match?(%{start: ^start}, Enum.find(events, &(&1.id == id))),
+      do: await_original(lv, id, start)
   end
 end

@@ -129,10 +129,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     end
   end
 
-  @doc "Forgets the undoable changes of the event a failed write was for."
+  @doc """
+  Forgets the failed write's own undoable change: the newest on the stack
+  for its event. Older changes to the event were written and stay undoable.
+  """
   @spec forget(socket(), WriteQueue.key()) :: socket()
   def forget(socket, key),
-    do: assign(socket, :undo, UndoStack.drop(socket.assigns.undo, &(Map.get(&1, :key) == key)))
+    do:
+      assign(
+        socket,
+        :undo,
+        UndoStack.drop_newest(socket.assigns.undo, &(Map.get(&1, :key) == key))
+      )
 
   # Undoing writes the timing the change replaced, so it only runs while the
   # event still has the timing the change gave it; an event moved or synced
