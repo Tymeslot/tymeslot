@@ -65,6 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       series_prompt: nil,
       delete_prompt: nil,
       pending_deletes: %{},
+      pending_creates: %{},
       syncing_ids: MapSet.new(),
       failure_counts: %{},
       sync_refs: %{}

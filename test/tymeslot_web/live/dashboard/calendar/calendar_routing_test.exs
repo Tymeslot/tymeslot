@@ -116,4 +116,55 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
       refute_received {:phoenix, :send_update, _update}
     end
   end
+
+  describe "a create's result, in the dashboard" do
+    @failed {:error, %{reason: :forbidden, retry: :not_queued}}
+
+    test "reaches the new calendar, which drops a failed draft", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      settled(lv)
+
+      send(lv.pid, {:calendar_create_result, "d1", @failed})
+      settled(lv)
+
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+    end
+
+    test "reaches the new calendar, which reloads to show a created event",
+         %{conn: conn} do
+      %{conn: conn, integration: integration} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      settled(lv)
+
+      # The domain caches a created event before it answers.
+      event(integration, "work", "Lunch", ~U[2026-10-15 12:00:00Z])
+      send(lv.pid, {:calendar_create_result, "d1", {:ok, %{event: nil, invited: []}}})
+      settled(lv)
+
+      assert_push_event(lv, "calendar:events", %{reset: true, events: events})
+      assert Enum.any?(events, &(&1.title == "Lunch"))
+    end
+
+    test "is ignored by the old calendar", %{conn: conn} do
+      %{conn: conn} = owner(conn, redesign_enabled: false)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:calendar_create_result, "d1", @failed})
+
+      assert settled(lv) =~ "calendar-grid"
+      refute_push_event(lv, "calendar:draft-cleared", %{}, 100)
+    end
+
+    test "is taken quietly off the calendar page", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
+
+      send(lv.pid, {:calendar_create_result, "d1", @failed})
+      settled(lv)
+
+      assert Process.alive?(lv.pid)
+      refute_push_event(lv, "calendar:draft-cleared", %{}, 100)
+    end
+  end
 end

@@ -25,4 +25,21 @@ defmodule Tymeslot.CalendarGrid.WriteTaskTest do
       assert_receive {:event_update_result, {:error, :crashed}}
     end)
   end
+
+  test "a {tag, ref} tag answers with the ref, so many of one kind can run at once" do
+    assert :ok = WriteTask.start({:calendar_create_result, "d1"}, fn -> {:ok, :one} end, :crashed)
+    assert :ok = WriteTask.start({:calendar_create_result, "d2"}, fn -> {:ok, :two} end, :crashed)
+
+    assert_receive {:calendar_create_result, "d1", {:ok, :one}}
+    assert_receive {:calendar_create_result, "d2", {:ok, :two}}
+  end
+
+  test "a {tag, ref} tag answers with the ref and the crash result when the write raises" do
+    capture_log(fn ->
+      assert :ok =
+               WriteTask.start({:calendar_create_result, "d1"}, fn -> raise "boom" end, :crashed)
+
+      assert_receive {:calendar_create_result, "d1", :crashed}
+    end)
+  end
 end
