@@ -9,6 +9,7 @@ defmodule Tymeslot.CalendarGrid.Changes do
   through this module.
   """
 
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
@@ -205,7 +206,7 @@ defmodule Tymeslot.CalendarGrid.Changes do
   calendars show it at once, and invites its guests. See
   `Tymeslot.CalendarGrid.NewEvent.create/2`.
   """
-  @spec create_event(pos_integer(), map()) ::
+  @spec create_event(pos_integer(), CreateParams.t() | map()) ::
           {:ok, NewEvent.created()} | {:error, NewEvent.failure()}
   defdelegate create_event(user_id, payload), to: NewEvent, as: :create
 

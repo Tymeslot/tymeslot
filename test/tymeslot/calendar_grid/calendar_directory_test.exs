@@ -84,4 +84,33 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectoryTest do
     assert [%{calendars: [], colour: "calendar-fallback"}] = accounts
     assert CalendarDirectory.hidden_count(accounts) == 1
   end
+
+  describe "calendar keys" do
+    test "a key names the account and the calendar, and reads back" do
+      key = CalendarDirectory.key(1, "work")
+
+      assert key == "1:work"
+      assert CalendarDirectory.parse_key(key) == {:ok, 1, "work"}
+    end
+
+    test "a calendar id may itself hold a colon" do
+      assert CalendarDirectory.parse_key("1:team:2026") == {:ok, 1, "team:2026"}
+    end
+
+    test "anything else does not read" do
+      for key <- ["work", "x:work", "1:", ":work", nil, 1] do
+        assert CalendarDirectory.parse_key(key) == :error
+      end
+    end
+  end
+
+  describe "writable_calendars/1" do
+    test "keeps an account's synced calendars that take writes" do
+      assert [%{id: "work"}] = CalendarDirectory.writable_calendars(@google)
+    end
+
+    test "is empty for a provider that takes no writes" do
+      assert CalendarDirectory.writable_calendars(@feed) == []
+    end
+  end
 end

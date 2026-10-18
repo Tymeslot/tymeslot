@@ -16,6 +16,7 @@ defmodule Tymeslot.CalendarGrid.ChangesCreateTest do
   import Tymeslot.Factory
 
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -192,5 +193,39 @@ defmodule Tymeslot.CalendarGrid.ChangesCreateTest do
              Changes.create_event(user.id, payload(integration))
 
     assert Repo.all(ProviderCalendarEventSchema) == []
+  end
+
+  test "creates from a checked quick-create intent", %{user: user, integration: integration} do
+    written()
+
+    integration = %{
+      integration
+      | calendar_list: [
+          %Tymeslot.Integrations.Calendar.CalendarEntry{id: "work", name: "Work", selected: true}
+        ]
+    }
+
+    {:ok, params} =
+      CreateParams.cast(
+        user.id,
+        [integration],
+        %{
+          "title" => "Lunch",
+          "start" => "2026-10-15T13:00",
+          "end" => "2026-10-15T14:00",
+          "calendar" => "#{integration.id}:work",
+          "location" => "Café Rose",
+          "free" => true
+        },
+        "Europe/London"
+      )
+
+    assert {:ok, %{event: event}} = Changes.create_event(user.id, params)
+
+    assert_receive {:event_data, event_data}
+    assert event_data.summary == "Lunch"
+    assert event_data.location == "Café Rose"
+    assert event_data.transparency == "transparent"
+    assert cached(integration, event.uid).transparency == "transparent"
   end
 end

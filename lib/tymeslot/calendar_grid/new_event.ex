@@ -12,6 +12,7 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   instead.
   """
 
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.Clock
@@ -38,8 +39,14 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   Creates the event `payload` describes for `user_id`. `payload` is the map
   `EventCreation.run_create_event/1` takes (`:creating`, `:start_at`,
   `:end_at`, optionally `:timezone`); its `:user_id` is always `user_id`.
+  A `%CreateParams{}` the new calendar checked is turned into that payload
+  first.
   """
-  @spec create(pos_integer(), map()) :: {:ok, created()} | {:error, failure()}
+  @spec create(pos_integer(), CreateParams.t() | map()) ::
+          {:ok, created()} | {:error, failure()}
+  def create(user_id, %CreateParams{} = params),
+    do: create(user_id, CreateParams.to_payload(params))
+
   def create(user_id, payload) when is_integer(user_id) and is_map(payload) do
     with {:ok, result} <-
            payload |> Map.put(:user_id, user_id) |> EventCreation.run_create_event() do

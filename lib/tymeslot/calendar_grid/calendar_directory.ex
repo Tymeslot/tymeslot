@@ -9,6 +9,11 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
   whether the organiser has hidden it. `hidden_count/1` is the number the
   filter chip shows when the rail is collapsed, so hidden calendars never go
   unnoticed.
+
+  A calendar is named across the server and the hook by its key,
+  `"<integration id>:<calendar id>"` (`key/2`, `parse_key/1`).
+  `writable_calendars/1` is the one rule for which calendars a new event can
+  be written to.
   """
 
   alias Tymeslot.CalendarGrid.ColourTokens
@@ -96,4 +101,35 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
   end
 
   def synced_entries(_integration), do: []
+
+  @doc "The key a calendar goes by in the payload and in a create."
+  @spec key(integer(), String.t()) :: String.t()
+  def key(integration_id, calendar_id), do: "#{integration_id}:#{calendar_id}"
+
+  @doc """
+  Reads a key back. Only the first colon separates: a calendar id may hold
+  colons of its own.
+  """
+  @spec parse_key(term()) :: {:ok, integer(), String.t()} | :error
+  def parse_key(key) when is_binary(key) do
+    with [id, calendar_id] when calendar_id != "" <- String.split(key, ":", parts: 2),
+         {integration_id, ""} <- Integer.parse(id) do
+      {:ok, integration_id, calendar_id}
+    else
+      _unreadable -> :error
+    end
+  end
+
+  def parse_key(_key), do: :error
+
+  @doc """
+  The calendars of `integration` a new event can be written to: synced, not
+  read-only, on a provider that takes writes.
+  """
+  @spec writable_calendars(map()) :: [CalendarEntry.t()]
+  def writable_calendars(%{provider: provider} = integration) do
+    if ProviderConfig.read_only?(provider),
+      do: [],
+      else: integration |> synced_entries() |> Enum.reject(& &1.read_only)
+  end
 end
