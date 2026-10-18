@@ -97,19 +97,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
 
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
 
-  # Holds the next approval once it has committed, so the test can act while
-  # Accept is still in flight: `Approval.approve/1` logs "Booking request
-  # approved" after its transaction, and a logger handler runs in the logging
-  # process, so the answer task waits there holding no connection. Returns the
-  # ref that `{:held, ref, task}` arrives with.
-  defp hold_answer do
+  # Holds the approval of `meeting` once it has committed, so the test can
+  # act while Accept is still in flight: `Approval.approve/1` logs "Booking
+  # request approved" with the `meeting_id` after its transaction, and a
+  # logger handler runs in the logging process, so the answer task waits
+  # there holding no connection. The handler is global, so it holds only this
+  # meeting's approval, and `on_exit` releases a task still held when the test
+  # ends (the unlinked Agent outlives the test process to say which). Returns
+  # the ref that `{:held, ref, task}` arrives with.
+  defp hold_answer(meeting) do
     ref = make_ref()
-    config = %{test: self(), ref: ref, armed: :atomics.new(1, [])}
+    {:ok, held} = Agent.start(fn -> nil end)
+
+    config = %{
+      test: self(),
+      ref: ref,
+      meeting_id: meeting.id,
+      held: held,
+      armed: :atomics.new(1, [])
+    }
 
     :ok = :logger.add_handler(@hold_handler, __MODULE__.HoldAnswer, %{config: config})
     Logger.put_module_level(Approval, :info)
 
     on_exit(fn ->
+      with task when is_pid(task) <- Agent.get(held, & &1), do: send(task, {:release, ref})
+      Agent.stop(held)
       :logger.remove_handler(@hold_handler)
       Logger.delete_module_level(Approval)
     end)
@@ -362,7 +375,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       meeting = request(user, ~U[2026-10-15 10:00:00Z])
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open(lv, meeting)
-      ref = hold_answer()
+      ref = hold_answer(meeting)
 
       lv |> element("#calendar-preview-accept") |> render_click()
       assert_receive {:held, ^ref, task}, @async_timeout
@@ -379,7 +392,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       meeting = request(user, ~U[2026-10-15 10:00:00Z])
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open(lv, meeting)
-      ref = hold_answer()
+      ref = hold_answer(meeting)
 
       lv |> element("#calendar-preview-accept") |> render_click()
       assert_receive {:held, ^ref, task}, @async_timeout
@@ -396,7 +409,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       meeting = request(user, ~U[2026-10-15 10:00:00Z])
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open(lv, meeting)
-      ref = hold_answer()
+      ref = hold_answer(meeting)
 
       lv |> element("#calendar-preview-accept") |> render_click()
       assert_receive {:held, ^ref, task}, @async_timeout
@@ -418,7 +431,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open(lv, meeting)
       lv |> element("#calendar-preview-decline") |> render_click()
-      ref = hold_answer()
+      ref = hold_answer(meeting)
 
       hook(lv, "booking:accept", %{"id" => meeting.id})
       assert_receive {:held, ^ref, task}, @async_timeout
@@ -546,10 +559,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
     @moduledoc false
 
     @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
-    def log(%{msg: {:string, message}}, %{config: %{test: test, ref: ref, armed: armed}}) do
+    def log(%{msg: {:string, message}, meta: %{meeting_id: meeting_id}}, %{
+          config: %{meeting_id: meeting_id, test: test, ref: ref, held: held, armed: armed}
+        }) do
       if IO.chardata_to_string(message) == "Booking request approved" and
            :atomics.compare_exchange(armed, 1, 0, 1) == :ok do
-        send(test, {:held, ref, self()})
+        task = self()
+        Agent.update(held, fn _nobody -> task end)
+        send(test, {:held, ref, task})
 
         receive do
           {:release, ^ref} -> :ok
