@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
+  alias TymeslotWeb.Dashboard.Calendar.RemoveGuestModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesMoveModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -291,6 +292,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           context={@panel_context}
           calendar_choices={CalendarDirectory.choices(@accounts)}
           video_integrations={@video_integrations}
+          guest_form_key={@guest_form_key}
           moving={not is_nil(@transfer)}
           surface={@myself}
         />
@@ -310,6 +312,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <SeriesMoveModal.series_move_modal
         :if={@series_move_prompt}
         prompt={@series_move_prompt}
+        target={@myself}
+      />
+      <RemoveGuestModal.remove_guest_modal
+        :if={@remove_guest_prompt}
+        prompt={@remove_guest_prompt}
         target={@myself}
       />
     </div>

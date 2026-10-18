@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias Tymeslot.CalendarGrid.EditGuard
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -153,6 +154,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
 
   def handle("video", %{"video_integration_id" => raw}, socket) when is_binary(raw),
     do: PanelVideo.change(socket, raw)
+
+  def handle("guest_invite", %{"email" => email}, socket), do: PanelGuests.invite(socket, email)
+
+  def handle("guest_remove", %{"email" => email}, socket),
+    do: PanelGuests.request_remove(socket, email)
+
+  def handle("guest_remove_confirm", _params, socket), do: PanelGuests.confirm_remove(socket)
+  def handle("guest_remove_cancel", _params, socket), do: PanelGuests.cancel_remove(socket)
+  def handle("tell_guests", _params, socket), do: PanelGuests.tell(socket)
 
   def handle(_name, _params, socket), do: socket
 

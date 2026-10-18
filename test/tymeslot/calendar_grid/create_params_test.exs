@@ -340,4 +340,18 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
              timezone: @zone
            } = CreateParams.to_payload(params)
   end
+
+  describe "guests/2" do
+    test "trims, lower-cases and drops the organiser's own address", %{user: user} do
+      assert {:ok, ["ada@example.com"]} =
+               CreateParams.guests(user.id, ["  Ada@Example.com ", "ORGANISER@example.com"])
+    end
+
+    test "refuses an invalid address and more than the limit", %{user: user} do
+      assert {:error, :guests, :invalid_email} = CreateParams.guests(user.id, ["nope"])
+
+      crowd = for n <- 1..(CreateParams.max_guests() + 1), do: "g#{n}@example.com"
+      assert {:error, :guests, :too_many} = CreateParams.guests(user.id, crowd)
+    end
+  end
 end

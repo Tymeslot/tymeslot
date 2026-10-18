@@ -26,6 +26,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -45,8 +47,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         do: socket,
         else: assign(socket, :repeat, PanelRepeat.field(event, context.timezone))
 
-    {:ok, socket |> assign(assigns) |> assign(:event_id, panel.event_id) |> assign_booking_copy()}
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:event_id, panel.event_id)
+     |> assign_booking_copy()
+     |> assign_untold()}
   end
+
+  # Asked on every update the panel's event or its starting point changes;
+  # the diff is pure, no query.
+  defp assign_untold(socket),
+    do:
+      assign(socket,
+        untold: PanelGuests.untold?(socket.assigns.panel[:opened_with], socket.assigns[:event])
+      )
 
   # Whether the event is the calendar copy of a booking costs a query, so it
   # is asked once per event the panel shows, not on every update.
@@ -108,6 +123,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           phx-target={@surface}
         />
       </div>
+      <PanelGuestsField.untold_note
+        :if={@panel.mode == :edit && @untold}
+        saving={@panel.status == :saving}
+        surface={@surface}
+      />
       <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         <p
           :if={@read_only_reason}
@@ -185,7 +205,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           version={@panel.video_version}
           surface={@surface}
         />
-        <%!-- Guests (Task 22) go here. --%>
+        <PanelGuestsField.guests_row
+          :if={@event && @editable}
+          guests={PanelGuests.of(@event)}
+          form_key={@guest_form_key}
+          repeating={
+            is_binary(Map.get(@event, :recurring_event_id)) or
+              is_binary(Map.get(@event, :recurrence_rule))
+          }
+          surface={@surface}
+        />
         <PanelFields.reminder_field
           reminders={Map.get(@event, :reminders) || []}
           disabled={!@editable}

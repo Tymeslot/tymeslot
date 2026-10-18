@@ -74,7 +74,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       failure_counts: %{},
       sync_refs: %{},
       transfer: nil,
-      series_move_prompt: nil
+      series_move_prompt: nil,
+      remove_guest_prompt: nil,
+      guest_form_key: 0
     )
   end
 

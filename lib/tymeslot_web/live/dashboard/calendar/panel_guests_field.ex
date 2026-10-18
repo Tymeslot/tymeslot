@@ -1,0 +1,161 @@
+defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
+  @moduledoc """
+  The side panel's Guests row: a chip per guest with a remove button, and
+  an email field with Invite. In the edit mode (`guests_row/1`) both act at
+  once, emailing the guest concerned (`PanelGuests`); in the new-event mode
+  (`draft_guests/1`) they only change the draft, and nobody is emailed until
+  "Create and invite". Also the "Guests haven't been told" note
+  (`untold_note/1`) the panel shows below its header.
+  """
+
+  use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  attr :guests, :list, required: true, doc: "normalised attendees"
+  attr :form_key, :integer, required: true
+  attr :repeating, :boolean, default: false
+  attr :surface, :any, required: true
+
+  @spec guests_row(map()) :: Phoenix.LiveView.Rendered.t()
+  def guests_row(assigns) do
+    ~H"""
+    <section id="calendar-panel-guests" class="space-y-2">
+      <h3 class="text-token-sm font-medium text-tymeslot-700">
+        {dgettext("dashboard_calendar", "Guests")}
+      </h3>
+      <ul :if={@guests != []} class="flex flex-wrap gap-1.5">
+        <li
+          :for={guest <- @guests}
+          class="inline-flex max-w-full items-center gap-1 rounded-token-full bg-tymeslot-100 py-0.5 pl-2.5 pr-1 text-token-sm text-tymeslot-800"
+        >
+          <span class="truncate">{guest.display_name || guest.email}</span>
+          <button
+            type="button"
+            phx-click="panel:guest_remove"
+            phx-value-email={guest.email}
+            phx-target={@surface}
+            aria-label={
+              dgettext("dashboard_calendar", "Remove %{guest}",
+                guest: guest.display_name || guest.email
+              )
+            }
+            class="shrink-0 rounded-token-full p-0.5 text-tymeslot-500 hover:bg-tymeslot-200 hover:text-tymeslot-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+          >
+            <.icon name="hero-x-mark-micro" class="h-4 w-4" />
+          </button>
+        </li>
+      </ul>
+      <form
+        id="calendar-panel-guest-form"
+        class="flex items-end gap-2"
+        phx-submit="panel:guest_invite"
+        phx-target={@surface}
+      >
+        <div class="min-w-0 flex-1">
+          <.input
+            type="email"
+            id={"calendar-panel-guest-email-#{@form_key}"}
+            name="email"
+            value=""
+            label={dgettext("dashboard_calendar", "Invite a guest")}
+            placeholder={dgettext("dashboard_calendar", "name@example.com")}
+          />
+        </div>
+        <.action_button id="calendar-panel-guest-invite" type="submit" variant={:secondary} size={:sm}>
+          {dgettext("dashboard_calendar", "Invite")}
+        </.action_button>
+      </form>
+      <p class="text-token-xs text-tymeslot-500">
+        {dgettext("dashboard_calendar", "Invite emails them now.")}
+        <span :if={@repeating}>
+          {dgettext("dashboard_calendar", "Guests change for this event only.")}
+        </span>
+      </p>
+    </section>
+    """
+  end
+
+  attr :guests, :list, required: true, doc: "email strings"
+  attr :form_key, :integer, required: true
+  attr :surface, :any, required: true
+
+  @spec draft_guests(map()) :: Phoenix.LiveView.Rendered.t()
+  def draft_guests(assigns) do
+    ~H"""
+    <section id="calendar-panel-guests" class="space-y-2">
+      <h3 class="text-token-sm font-medium text-tymeslot-700">
+        {dgettext("dashboard_calendar", "Guests")}
+      </h3>
+      <ul :if={@guests != []} class="flex flex-wrap gap-1.5">
+        <li
+          :for={email <- @guests}
+          class="inline-flex max-w-full items-center gap-1 rounded-token-full bg-tymeslot-100 py-0.5 pl-2.5 pr-1 text-token-sm text-tymeslot-800"
+        >
+          <input type="hidden" name="guests[]" value={email} />
+          <span class="truncate">{email}</span>
+          <button
+            type="button"
+            phx-click={JS.push("panel:draft_drop_guest", value: %{email: email}, target: @surface)}
+            aria-label={dgettext("dashboard_calendar", "Remove %{guest}", guest: email)}
+            class="shrink-0 rounded-token-full p-0.5 text-tymeslot-500 hover:bg-tymeslot-200 hover:text-tymeslot-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+          >
+            <.icon name="hero-x-mark-micro" class="h-4 w-4" />
+          </button>
+        </li>
+      </ul>
+      <div class="flex items-end gap-2">
+        <div class="min-w-0 flex-1">
+          <.input
+            type="email"
+            id={"calendar-panel-guest-email-#{@form_key}"}
+            name="guest_email"
+            value=""
+            label={dgettext("dashboard_calendar", "Add a guest")}
+            placeholder={dgettext("dashboard_calendar", "name@example.com")}
+          />
+        </div>
+        <.action_button
+          id="calendar-panel-guest-add"
+          type="submit"
+          name="intent"
+          value="add_guest"
+          variant={:secondary}
+          size={:sm}
+        >
+          {dgettext("dashboard_calendar", "Add")}
+        </.action_button>
+      </div>
+      <p :if={@guests != []} class="text-token-xs text-tymeslot-500">
+        {dgettext("dashboard_calendar", "They'll be invited when you create the event.")}
+      </p>
+    </section>
+    """
+  end
+
+  attr :saving, :boolean, required: true
+  attr :surface, :any, required: true
+
+  @spec untold_note(map()) :: Phoenix.LiveView.Rendered.t()
+  def untold_note(assigns) do
+    ~H"""
+    <div
+      id="calendar-panel-untold"
+      class="flex flex-wrap items-center gap-2 rounded-token-lg bg-amber-50 px-3 py-2 text-token-sm text-amber-900"
+    >
+      <span class="min-w-0 flex-1">
+        {dgettext("dashboard_calendar", "Guests haven't been told about these changes")}
+      </span>
+      <.action_button
+        id="calendar-panel-tell-guests"
+        variant={:secondary}
+        size={:sm}
+        disabled={@saving}
+        phx-click="panel:tell_guests"
+        phx-target={@surface}
+      >
+        {dgettext("dashboard_calendar", "Tell guests")}
+      </.action_button>
+    </div>
+    """
+  end
+end

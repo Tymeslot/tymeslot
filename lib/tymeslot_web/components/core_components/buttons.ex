@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   attr :form, :string, default: nil
   attr :disabled, :boolean, default: false
   attr :class, :any, default: ""
-  attr :rest, :global
+  attr :rest, :global, include: ~w(name value)
 
   slot :inner_block, required: true
 

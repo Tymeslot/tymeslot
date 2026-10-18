@@ -294,13 +294,24 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
 
   # --- guests ---
 
-  defp guests(_user_id, nil), do: {:ok, []}
+  @doc "The most guests an event can have."
+  @spec max_guests() :: pos_integer()
+  def max_guests, do: @max_guests
+
+  @doc """
+  Checks a list of guest addresses for `user_id`, as a create checks its
+  own: each is trimmed and lower-cased, every one must be a valid email,
+  duplicates collapse, the organiser's own address is dropped, and at most
+  50 remain. The side panel uses it for the guests it invites.
+  """
+  @spec guests(pos_integer(), [term()] | nil) :: {:ok, [String.t()]} | {:error, :guests, atom()}
+  def guests(_user_id, nil), do: {:ok, []}
 
   # A list far past the limit is refused before any address is looked at.
-  defp guests(_user_id, emails) when is_list(emails) and length(emails) > 4 * @max_guests,
+  def guests(_user_id, emails) when is_list(emails) and length(emails) > 4 * @max_guests,
     do: {:error, :guests, :too_many}
 
-  defp guests(user_id, emails) when is_list(emails) do
+  def guests(user_id, emails) when is_list(emails) do
     addresses = Enum.map(emails, &normalise_email/1)
 
     if Enum.all?(addresses, &Guests.valid_email?/1) do
@@ -314,7 +325,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
     end
   end
 
-  defp guests(_user_id, _emails), do: {:error, :guests, :invalid}
+  def guests(_user_id, _emails), do: {:error, :guests, :invalid}
 
   defp normalise_email(email) when is_binary(email),
     do: email |> String.trim() |> String.downcase()
