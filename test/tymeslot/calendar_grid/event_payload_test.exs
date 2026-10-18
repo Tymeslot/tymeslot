@@ -165,6 +165,12 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
     assert %{request: false, expired: false} = EventPayload.event(timed([]), @context)
   end
 
+  test "an expired request counts as free time, a live one does not" do
+    assert %{free: true} = EventPayload.event(booking(request: true, expired: true), @context)
+    assert %{free: false} = EventPayload.event(booking(request: true), @context)
+    assert %{free: false} = EventPayload.event(booking([]), @context)
+  end
+
   test "an untitled event says so" do
     assert %{title: "(No title)"} = EventPayload.event(timed(summary: "   "), @context)
     assert %{title: "(No title)"} = EventPayload.event(timed(summary: nil), @context)

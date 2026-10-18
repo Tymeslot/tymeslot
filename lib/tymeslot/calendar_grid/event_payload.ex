@@ -89,7 +89,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         title: title(event),
         colour:
           ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
-        free: Map.get(event, :transparency) == "transparent",
+        free: free?(event),
         attention: Map.get(event, :sync_state, "synced") != "synced",
         editable: EditGuard.editable?(Map.get(context, :integrations, []), event),
         movable: movable?(event, context),
@@ -145,6 +145,10 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   @spec id(map()) :: String.t()
   def id(%{kind: :booking, id: id}), do: id
   def id(%{id: id}), do: "event-#{id}"
+
+  # An expired request holds no time, so it must not block the next free time.
+  defp free?(event),
+    do: Map.get(event, :transparency) == "transparent" or Map.get(event, :expired, false)
 
   @doc "The title the grid and the preview show; a one-to-one booking leads with its guest and names its meeting type, else keeps its own title."
   @spec title(map()) :: String.t()
