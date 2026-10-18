@@ -31,6 +31,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateEditJourneyTest do
 
     Mox.stub(CalendarMock, :create_event, fn payload, _context ->
       send(test_pid, {:created, payload})
+
+      # Lunch is held until the test lets it go, so its draft can be seen
+      # saving.
+      if payload.summary == "Lunch with Sam" do
+        send(test_pid, {:holding, self()})
+
+        receive do
+          :release -> :ok
+        end
+      end
+
       {:ok, CreatedEvent.new(payload.uid, provider_event_id: "g-" <> payload.uid)}
     end)
 
@@ -149,6 +160,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateEditJourneyTest do
     assert sent.location == "Nero"
     assert sent.transparency == "opaque"
 
+    # Until the provider answers, the grid holds the draft, drawn as saving.
+    assert_receive {:holding, task}, 2_000
+
+    assert %{kind: "draft", pending: true} =
+             draft_event = titled(last_pushed(lv), "Lunch with Sam")
+
+    assert draft_event.id == "draft-d1"
+    send(task, :release)
+
     events = last_pushed(lv)
     assert %{id: id, free: false} = titled(events, "Lunch with Sam")
     refute Enum.any?(events, &(&1.id == "draft-d1"))
@@ -157,6 +177,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateEditJourneyTest do
     assert has_element?(lv, "#calendar-toast", "Added: Thu 15 Oct, 13:00")
     assert has_element?(lv, "#calendar-undo")
     lunch_uid = sent.uid
+
+    # The jobs the create left behind (a sync) all succeed.
+    assert %{failure: 0} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     # 2. A refusal keeps the draft open and writes nothing.
     hook(lv, "calendar:create", draft(work, %{"draft" => "d2", "end" => "2026-10-15T12:00"}))
@@ -222,6 +245,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateEditJourneyTest do
 
     assert_receive {:written, ^lunch_uid, %{summary: "Lunch with Sam and Jo"}}, 2_000
     eventually(fn -> assert status(lv) =~ "Saved" end)
+    refute status(lv) =~ "Saving"
 
     # 5. Free: written as transparent, and the grid draws the event as free.
     flush_pushes()
@@ -246,17 +270,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateEditJourneyTest do
     # the event is deleted at once. Planning, which invited Anna, stays.
     hook(lv, "calendar:undo", %{})
     assert has_element?(lv, "#calendar-toast", "Removed “Lunch with Sam”")
+    planning_uid = planning.uid
+
+    # Only the undone create is queued for deletion, and without telling anyone.
+    assert [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+    assert job.args["uid"] == lunch_uid
+    assert job.args["notify_attendees"] == false
     assert %{failure: 0} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
     assert_received {:deleted, ^lunch_uid}
+    refute_received {:deleted, ^planning_uid}
 
     events = last_pushed(lv)
     refute titled(events, "Lunch with Sam")
     assert %{id: planning_id} = titled(events, "Planning")
-    assert all_enqueued(worker: CalendarEventDeleteWorker) == []
+    assert Repo.get(ProviderCalendarEventSchema, String.replace_prefix(planning_id, "event-", ""))
 
     # 8. Closing the panel keeps the text typed in the focused field.
     hook(lv, "calendar:edit", %{"id" => planning_id})
-    planning_uid = planning.uid
 
     hook(lv, "panel:close", %{"field" => "location", "value" => "Room 2"})
     assert_receive {:written, ^planning_uid, %{location: "Room 2"}}, 2_000
