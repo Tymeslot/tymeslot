@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
@@ -44,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       params: %{},
       preferences: %CalendarPreferencesSchema{},
       integrations: [],
+      video_integrations: [],
       integration_tokens: %{},
       calendar_tokens: %{},
       hidden_integration_ids: [],
@@ -116,6 +118,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     |> assign(
       preferences: preferences,
       integrations: integrations,
+      video_integrations: Video.list_active_integrations(user_id),
       integration_tokens: ColourTokens.for_integrations(integrations),
       calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
       hidden_integration_ids: preferences.hidden_integration_ids,

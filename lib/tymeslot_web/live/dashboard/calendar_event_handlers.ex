@@ -500,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     )
 
     {:noreply,
-     put_flash(socket, :info, EditWorkflow.video_changed_message(updated_event.video_link))}
+     result_flash(socket, {:info, EditWorkflow.video_changed_message(updated_event.video_link)})}
   end
 
   def handle_event_video_result({:error, payload}, socket) do

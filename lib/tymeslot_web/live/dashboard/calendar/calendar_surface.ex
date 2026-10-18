@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelEvents
   alias TymeslotWeb.Dashboard.Calendar.PanelState
+  alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SeriesMoveModal
@@ -107,6 +108,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
        |> PanelEdits.settled(ref, outcome)
        |> reload_if_queued(outcome)}
 
+  # A video change landed (see `PanelVideo`).
+  def update(%{action: :video_link_updated, write: ref, updated_event: updated}, socket),
+    do: {:ok, PanelVideo.settled(socket, ref, updated)}
+
   # A failed write is taken back off the grid by the queue; its change can
   # no longer be undone, and the toast that named it (not another event's)
   # gives way to the flash that says it failed.
@@ -117,6 +122,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
        |> Writes.settle(ref, :failed)
        |> Manipulation.forget(ref)
        |> PanelEdits.settled(ref, :failed)
+       |> PanelVideo.reverted(key)
        |> Toast.dismiss(key)}
 
   # A move to another calendar answering (see `Transfer`); a failed single
@@ -279,6 +285,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           event={@panel_event}
           context={@panel_context}
           calendar_choices={CalendarDirectory.choices(@accounts)}
+          video_integrations={@video_integrations}
           moving={not is_nil(@transfer)}
           surface={@myself}
         />

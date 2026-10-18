@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
+  alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.Transfer
 
   # The text fields, by the event each sends (see `PanelFields.text_change/2`).
@@ -149,6 +150,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
 
   def handle("confirm_series_move", _params, socket), do: Transfer.confirm_series(socket)
   def handle("cancel_series_move", _params, socket), do: Transfer.cancel_series(socket)
+
+  def handle("video", %{"video_integration_id" => raw}, socket) when is_binary(raw),
+    do: PanelVideo.change(socket, raw)
 
   def handle(_name, _params, socket), do: socket
 

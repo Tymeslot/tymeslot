@@ -53,6 +53,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
     {socket |> drive(fn _queue -> {queue, effects} end) |> push(), ref}
   end
 
+  @doc """
+  Shows `optimistic` at once and changes the video of `event` to
+  `video_integration_id` (`nil` removes it) through
+  `Tymeslot.CalendarGrid.Changes.change_event_video/3`, now or once its
+  earlier writes have answered. The answer arrives as
+  `{:event_video_result, ...}` at `DashboardLive`, which routes it here as
+  `:video_link_updated`, `:event_write_settled` (nothing changed) or
+  `:revert_event`.
+  """
+  @spec change_video(socket(), map(), map(), pos_integer() | nil) :: socket()
+  def change_video(socket, event, optimistic, video_integration_id) do
+    socket = SurfaceData.show_event(socket, optimistic)
+
+    {queue, effects} =
+      WriteQueue.change_video(socket.assigns.event_writes, event, video_integration_id)
+
+    socket |> drive(fn _queue -> {queue, effects} end) |> push()
+  end
+
   @doc "Records how the write `ref` answered and starts the next one for its event."
   @spec settle(socket(), WriteQueue.ref(), WriteQueue.outcome()) :: socket()
   def settle(socket, ref, outcome),

@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
@@ -28,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
+  alias TymeslotWeb.Dashboard.Calendar.PanelVideoField
   alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
@@ -43,8 +45,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         do: socket,
         else: assign(socket, :repeat, PanelRepeat.field(event, context.timezone))
 
-    {:ok, socket |> assign(assigns) |> assign(:event_id, panel.event_id)}
+    {:ok, socket |> assign(assigns) |> assign(:event_id, panel.event_id) |> assign_booking_copy()}
   end
+
+  # Whether the event is the calendar copy of a booking costs a query, so it
+  # is asked once per event the panel shows, not on every update.
+  defp assign_booking_copy(
+         %{assigns: %{event: %{calendar_integration_id: integration_id} = event}} = socket
+       )
+       when is_integer(integration_id) do
+    id = EventPayload.id(event)
+
+    if socket.assigns[:booking_copy_for] == id,
+      do: socket,
+      else:
+        assign(socket,
+          booking_copy: Changes.ensure_video_changeable(event) != :ok,
+          booking_copy_for: id
+        )
+  end
+
+  defp assign_booking_copy(socket), do: assign(socket, booking_copy: false, booking_copy_for: nil)
 
   # Read once per event: whether it can be changed, and whether its timing
   # can (a booking's calendar copy keeps the booking's time).
@@ -154,7 +175,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           phx-key="Enter"
           phx-target={@surface}
         />
-        <%!-- Video (Task 21) and guests (Task 22) go here. --%>
+        <PanelVideoField.video_row
+          :if={@event && @editable}
+          event={@event}
+          video_integrations={@video_integrations}
+          booking_copy={@booking_copy}
+          saving={@panel.status == :saving}
+          version={@panel.video_version}
+          surface={@surface}
+        />
+        <%!-- Guests (Task 22) go here. --%>
         <PanelFields.reminder_field
           reminders={Map.get(@event, :reminders) || []}
           disabled={!@editable}

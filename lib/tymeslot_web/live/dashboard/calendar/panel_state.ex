@@ -112,7 +112,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       writes: [],
       errors: %{},
       repeat: %{custom_open: false, draft: nil, version: 0},
-      calendar_version: 0
+      calendar_version: 0,
+      video_version: 0
     }
   end
 
