@@ -492,9 +492,28 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       |> Changeset.cast(attrs, @local_edit_fields)
       |> ProviderCalendarEventSchema.validate_timing()
       |> Changeset.foreign_key_constraint(:video_integration_id)
+      |> put_written_show_as(event)
       |> Repo.update()
     end
   end
+
+  # A changed free/busy replaces the provider's own state kept in the row's
+  # `provider_metadata["showAs"]` (Outlook), so a later edit does not write the
+  # old one back (`Tymeslot.CalendarGrid.ProviderPayload.put_show_as/3`).
+  defp put_written_show_as(changeset, %{provider_metadata: %{"showAs" => _show_as} = metadata}) do
+    case Changeset.get_change(changeset, :transparency) do
+      "transparent" ->
+        Changeset.put_change(changeset, :provider_metadata, %{metadata | "showAs" => "free"})
+
+      "opaque" ->
+        Changeset.put_change(changeset, :provider_metadata, %{metadata | "showAs" => "busy"})
+
+      _unchanged ->
+        changeset
+    end
+  end
+
+  defp put_written_show_as(changeset, _event), do: changeset
 
   @doc """
   Deletes a single event identified by its integration and uid.

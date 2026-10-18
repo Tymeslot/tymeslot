@@ -418,7 +418,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
     end
   end
 
-  # Every payload here has a rule Graph can express, or none.
   defp timed(attrs) do
     Map.merge(
       %{
@@ -430,6 +429,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
     )
   end
 
+  # Every payload here has a rule Graph can express, or none.
   defp format(event_data) do
     {:ok, body} = EventMapper.format_event_data(event_data)
     body

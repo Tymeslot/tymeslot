@@ -153,4 +153,22 @@ defmodule Tymeslot.CalendarGrid.EventEditOutlookShowAsTest do
     assert {:ok, _busy} = Changes.update_event(user.id, free, %{transparency: "opaque"})
     assert graph_body()["showAs"] == "busy"
   end
+
+  test "a rename after oof, free, busy before the next sync writes busy", %{
+    user: user,
+    integration: integration
+  } do
+    row = synced_row(integration, "oof")
+    expect_graph_update()
+    expect_graph_update()
+    expect_graph_update()
+
+    assert {:ok, free} = Changes.update_event(user.id, row, %{transparency: "transparent"})
+    assert {:ok, busy} = Changes.update_event(user.id, free, %{transparency: "opaque"})
+    assert graph_body()["showAs"] == "free"
+    assert graph_body()["showAs"] == "busy"
+
+    assert {:ok, _renamed} = Changes.update_event(user.id, busy, %{summary: "Away, back Monday"})
+    assert graph_body()["showAs"] == "busy"
+  end
 end
