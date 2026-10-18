@@ -251,6 +251,16 @@ defmodule Tymeslot.Meetings.MeetingState do
     where(query, [m], m.status == @awaiting_approval)
   end
 
+  @doc """
+  Composes onto `query` a filter matching only booking requests that expired
+  unanswered. Status `"expired"` also marks an abandoned paid checkout, which
+  was never a request, so the request time must be set too.
+  """
+  @spec where_expired_request(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_expired_request(query) do
+    where(query, [m], m.status == @expired and not is_nil(m.approval_requested_at))
+  end
+
   @doc "Query-side negation of `awaiting_approval?/1`."
   @spec where_not_awaiting_approval(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_not_awaiting_approval(query) do

@@ -178,8 +178,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
     {start_dt, end_dt} = EventWindow.utc_range(window.first, window.last, timezone)
 
+    # Bookings are drawn as themselves rather than as their calendar copies,
+    # and requests that expired unanswered are drawn too (see `EventWindow`).
     window_events =
-      EventWindow.list_events(user.id, socket.assigns.integrations, start_dt, end_dt)
+      EventWindow.list_events(user.id, socket.assigns.integrations, start_dt, end_dt,
+        bookings: :prefer,
+        include_expired: true
+      )
 
     socket |> assign(window: window, window_events: window_events) |> filter_events()
   end

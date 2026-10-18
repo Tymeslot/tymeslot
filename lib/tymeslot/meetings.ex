@@ -342,6 +342,17 @@ defmodule Tymeslot.Meetings do
     to: MeetingListQueries,
     as: :list_for_organizer_in_range
 
+  @doc """
+  Lists the organiser's booking requests that expired unanswered and overlap
+  the `[from, to)` window, ordered by start time. The redesigned calendar
+  draws them, so a request nobody answered does not vanish without a trace.
+  """
+  @spec list_expired_requests_in_range_for_organizer(pos_integer(), DateTime.t(), DateTime.t()) ::
+          [MeetingSchema.t()]
+  defdelegate list_expired_requests_in_range_for_organizer(organizer_user_id, from, to),
+    to: MeetingListQueries,
+    as: :list_expired_requests_for_organizer_in_range
+
   @doc "Every meeting id `user_id` organises, past and future."
   @spec list_meeting_ids_for_organizer(pos_integer()) :: [Ecto.UUID.t()]
   defdelegate list_meeting_ids_for_organizer(user_id),

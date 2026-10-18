@@ -45,7 +45,8 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
       %BookingEvent{
         id: "booking-abc",
         meeting_id: "abc",
-        summary: "Intro call",
+        summary: "Intro call with Anna Kowalski",
+        meeting_type: "Intro call",
         start_at: ~U[2026-10-16 12:00:00Z],
         end_at: ~U[2026-10-16 12:30:00Z],
         attendee_name: "Anna Kowalski"
@@ -83,7 +84,9 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              movable: false,
              calendar: "7:work",
              recurring: false,
-             guests: 0
+             guests: 0,
+             request: false,
+             expired: false
            }
   end
 
@@ -139,9 +142,27 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
   end
 
   test "a group booking keeps its own title, having no single guest" do
-    event = booking(participants: [%{name: "Ada", email: "ada@example.com"}])
+    event = booking(participants: [%{name: "Ada", email: "ada@example.com"}], summary: "Workshop")
 
-    assert %{title: "Intro call"} = EventPayload.event(event, @context)
+    assert %{title: "Workshop"} = EventPayload.event(event, @context)
+  end
+
+  test "a booking missing its meeting type or its guest's name keeps its own title" do
+    assert %{title: "Intro call with Anna Kowalski"} =
+             EventPayload.event(booking(meeting_type: nil), @context)
+
+    assert %{title: "Intro call with Anna Kowalski"} =
+             EventPayload.event(booking(attendee_name: nil), @context)
+  end
+
+  test "a booking says whether it is a request and whether it expired; an event is neither" do
+    assert %{request: false, expired: false} = EventPayload.event(booking([]), @context)
+    assert %{request: true, expired: false} = EventPayload.event(booking(request: true), @context)
+
+    assert %{request: true, expired: true} =
+             EventPayload.event(booking(request: true, expired: true), @context)
+
+    assert %{request: false, expired: false} = EventPayload.event(timed([]), @context)
   end
 
   test "an untitled event says so" do

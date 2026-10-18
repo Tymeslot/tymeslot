@@ -55,11 +55,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePreviewTest do
     assert has_element?(lv, "#calendar-preview", "Guests can book this time")
   end
 
-  test "a booking leads with the guest's name", %{conn: conn, user: user} do
+  test "a booking leads with the guest's name and names its meeting type", %{
+    conn: conn,
+    user: user
+  } do
     meeting =
       insert(:meeting,
         organizer_user: user,
-        title: "Intro call",
+        title: "Intro call with Anna Kowalski",
+        meeting_type: "Intro call",
         attendee_name: "Anna Kowalski",
         start_time: ~U[2026-10-15 10:00:00Z],
         end_time: ~U[2026-10-15 10:30:00Z],
@@ -71,6 +75,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePreviewTest do
 
     assert has_element?(lv, "#calendar-preview-title", "Anna Kowalski · Intro call")
     assert has_element?(lv, "#calendar-preview", "Tymeslot booking")
+  end
+
+  test "a booking with a calendar copy is drawn once, as the booking, naming the copy's calendar",
+       %{conn: conn, user: user, integration: integration} do
+    copy =
+      event(integration, "work", "Intro call with Anna Kowalski", ~U[2026-10-15 10:00:00Z], 30)
+
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        title: "Intro call with Anna Kowalski",
+        meeting_type: "Intro call",
+        attendee_name: "Anna Kowalski",
+        start_time: ~U[2026-10-15 10:00:00Z],
+        end_time: ~U[2026-10-15 10:30:00Z],
+        status: "confirmed",
+        calendar_integration_id: integration.id,
+        calendar_uid: copy.uid
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+    assert_reply(lv, %{events: events})
+
+    ids = Enum.map(events, & &1.id)
+    assert "booking-#{meeting.id}" in ids
+    refute "event-#{copy.id}" in ids
+
+    open(lv, "event-#{copy.id}")
+    assert_reply(lv, %{opened: false})
+
+    open(lv, "booking-#{meeting.id}")
+    assert has_element?(lv, "#calendar-preview", "Tymeslot booking · Work")
   end
 
   test "an event waiting to sync says where it is waiting to go", %{

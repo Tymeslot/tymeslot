@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
   """
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.PreferredBookings
   alias Tymeslot.Integrations.Calendar.Selection
 
   @doc """
@@ -37,23 +38,44 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
 
   @doc """
   The events overlapping `[start_dt, end_dt)` for `user_id`: cached provider
-  events from `integrations` that the calendar selection keeps, followed by
-  the user's bookings that have no synced copy among them.
+  events from `integrations` that the calendar selection keeps, and the
+  user's bookings.
 
-  Bookings are deduplicated against every cached row, not only the visible
-  ones: a booking whose synced copy sits on a deselected calendar must stay
-  out rather than reappear through its projection.
+  How a booking and the calendar copy Tymeslot wrote for it meet depends on
+  `bookings:`. `:dedupe` (the default, the old grid's rule) keeps the copy
+  and drops the booking, matching against every cached row, not only the
+  visible ones: a booking whose synced copy sits on a deselected calendar
+  stays out rather than reappear through its projection. `:prefer` (the
+  redesigned calendar) keeps the booking and drops the copy, recording on
+  the booking which calendar the copy is in (`PreferredBookings`).
+  `include_expired: true` adds the requests that expired unanswered.
   """
-  @spec list_events(pos_integer(), [map()], DateTime.t(), DateTime.t()) :: [map()]
-  def list_events(user_id, integrations, start_dt, end_dt) do
+  @spec list_events(pos_integer(), [map()], DateTime.t(), DateTime.t(), keyword()) :: [map()]
+  def list_events(user_id, integrations, start_dt, end_dt, opts \\ []) do
     cached =
       integrations
       |> Enum.map(& &1.id)
       |> CalendarGrid.list_events_for_range(start_dt, end_dt)
 
-    bookings = CalendarGrid.list_booking_events_for_range(user_id, start_dt, end_dt, cached)
+    visible = Selection.visible_events(cached, integrations)
+    include_expired = Keyword.get(opts, :include_expired, false)
 
-    Selection.visible_events(cached, integrations) ++ bookings
+    case Keyword.get(opts, :bookings, :dedupe) do
+      :prefer ->
+        bookings =
+          CalendarGrid.list_booking_events_for_range(user_id, start_dt, end_dt, cached,
+            include_expired: include_expired,
+            keep_mirrored: true
+          )
+
+        PreferredBookings.merge(visible, cached, bookings, integrations)
+
+      :dedupe ->
+        visible ++
+          CalendarGrid.list_booking_events_for_range(user_id, start_dt, end_dt, cached,
+            include_expired: include_expired
+          )
+    end
   end
 
   @doc """

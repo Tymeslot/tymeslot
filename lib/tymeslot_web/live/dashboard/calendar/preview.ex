@@ -228,6 +228,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
 
   defp entries(_integration), do: []
 
+  defp source_label(%{kind: :booking, copy: %{calendar_name: name}}, _integration, _entry)
+       when is_binary(name) and name != "",
+       do:
+         dgettext("dashboard_calendar_booking", "Tymeslot booking · %{calendar}", calendar: name)
+
   defp source_label(%{kind: :booking}, _integration, _entry),
     do: dgettext("dashboard_calendar", "Tymeslot booking")
 

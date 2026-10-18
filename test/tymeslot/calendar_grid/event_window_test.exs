@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
   @moduletag :calendar
   @moduletag :unit
 
+  alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.EventWindow
 
   defp google_account(user) do
@@ -111,6 +112,102 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
                ~U[2026-10-12 00:00:00Z],
                ~U[2026-10-19 00:00:00Z]
              ) == []
+    end
+  end
+
+  describe "list_events/5 with bookings: :prefer" do
+    test "draws a booking in place of its calendar copy, naming the copy's calendar" do
+      user = insert(:user)
+      integration = google_account(user)
+
+      cached(integration, "work", "Intro call with Anna Kowalski", ~U[2026-10-15 10:00:00Z],
+        provider_event_id: "evt-intro"
+      )
+
+      cached(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          title: "Intro call with Anna Kowalski",
+          meeting_type: "Intro call",
+          attendee_name: "Anna Kowalski",
+          start_time: ~U[2026-10-15 10:00:00Z],
+          end_time: ~U[2026-10-15 10:30:00Z],
+          status: "confirmed",
+          provider_event_id: "evt-intro"
+        )
+
+      assert [%{summary: "Design review"}, %BookingEvent{} = booking] =
+               EventWindow.list_events(
+                 user.id,
+                 [integration],
+                 ~U[2026-10-12 00:00:00Z],
+                 ~U[2026-10-19 00:00:00Z],
+                 bookings: :prefer
+               )
+
+      assert booking.meeting_id == meeting.id
+
+      assert booking.copy == %{
+               calendar_integration_id: integration.id,
+               provider_calendar_id: "work",
+               calendar_name: "Work"
+             }
+    end
+
+    test "keeps a booking whose copy sits on a deselected calendar" do
+      user = insert(:user)
+      integration = google_account(user)
+
+      cached(integration, "old", "Intro call", ~U[2026-10-15 10:00:00Z],
+        provider_event_id: "evt-intro"
+      )
+
+      insert(:meeting,
+        organizer_user: user,
+        title: "Intro call",
+        start_time: ~U[2026-10-15 10:00:00Z],
+        end_time: ~U[2026-10-15 10:30:00Z],
+        status: "confirmed",
+        provider_event_id: "evt-intro"
+      )
+
+      assert [%BookingEvent{copy: %{calendar_name: "Old"}}] =
+               EventWindow.list_events(
+                 user.id,
+                 [integration],
+                 ~U[2026-10-12 00:00:00Z],
+                 ~U[2026-10-19 00:00:00Z],
+                 bookings: :prefer
+               )
+    end
+
+    test "a booking with no copy has none, and expired requests come only when asked" do
+      user = insert(:user)
+      integration = google_account(user)
+
+      insert(:meeting,
+        organizer_user: user,
+        title: "Lapsed request",
+        start_time: ~U[2026-10-16 10:00:00Z],
+        end_time: ~U[2026-10-16 10:30:00Z],
+        status: "expired",
+        approval_requested_at: ~U[2026-10-13 10:00:00Z],
+        approval_resolved_at: ~U[2026-10-14 07:00:00Z],
+        cancelled_at: ~U[2026-10-14 07:00:00Z]
+      )
+
+      range = [user.id, [integration], ~U[2026-10-12 00:00:00Z], ~U[2026-10-19 00:00:00Z]]
+
+      assert apply(EventWindow, :list_events, range ++ [[bookings: :prefer]]) == []
+
+      assert [%BookingEvent{summary: "Lapsed request", expired: true, copy: nil}] =
+               apply(
+                 EventWindow,
+                 :list_events,
+                 range ++ [[bookings: :prefer, include_expired: true]]
+               )
     end
   end
 

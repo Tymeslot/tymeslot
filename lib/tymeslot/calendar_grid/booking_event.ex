@@ -10,10 +10,18 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
   on the grid (no drag, resize or inline edit) and open a booking detail
   modal instead of the provider-event editor.
 
-  Bookings already mirrored into a connected calendar are deduplicated at load
-  time against the synced copy, so this struct chiefly represents bookings
-  with no provider-side counterpart — most importantly every booking of a
-  user with no calendar integration at all.
+  How a booking meets the calendar copy Tymeslot wrote for it depends on
+  the surface (`Tymeslot.CalendarGrid.EventWindow`): the old grid keeps the
+  copy and drops this projection, so there it chiefly represents bookings
+  with no provider-side counterpart; the redesigned calendar keeps this
+  projection and drops the copy, recording in `copy` which calendar the copy
+  sits in (`%{calendar_integration_id, provider_calendar_id, calendar_name}`).
+
+  `meeting_type` is the meeting type's name as booked, the second half of
+  the grid's "Anna Kowalski · Intro call". `request` says the booking is a
+  request still awaiting the organiser's answer, and `expired` that it can
+  no longer be answered (the deadline or its start has passed, or the sweep
+  has already expired it), with `approval_deadline_at` beside them.
 
   A group meeting has no attendee: its people are its live participants,
   carried in `participants` (empty for a one-to-one booking), with its
@@ -34,6 +42,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
     :attendee_email,
     :join_url,
     :provider_event_id,
+    :meeting_type,
+    :approval_deadline_at,
     participants: [],
     capacity: 1,
     seats_taken: 0,
@@ -44,7 +54,10 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
     status: "confirmed",
     transparency: "opaque",
     created_by_tymeslot: true,
-    kind: :booking
+    kind: :booking,
+    request: false,
+    expired: false,
+    copy: nil
   ]
 
   @type t :: %__MODULE__{
@@ -59,6 +72,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
           attendee_email: String.t() | nil,
           join_url: String.t() | nil,
           provider_event_id: String.t() | nil,
+          meeting_type: String.t() | nil,
+          approval_deadline_at: DateTime.t() | nil,
           participants: [%{name: String.t() | nil, email: String.t()}],
           capacity: pos_integer(),
           seats_taken: non_neg_integer(),
@@ -69,6 +84,15 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
           status: String.t(),
           transparency: String.t(),
           created_by_tymeslot: true,
-          kind: :booking
+          kind: :booking,
+          request: boolean(),
+          expired: boolean(),
+          copy:
+            nil
+            | %{
+                calendar_integration_id: pos_integer(),
+                provider_calendar_id: String.t() | nil,
+                calendar_name: String.t() | nil
+              }
         }
 end

@@ -116,8 +116,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   } do
     copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
 
+    # Cancelled, with its calendar copy not yet removed: the one case where a
+    # booking's copy still reaches the grid, since a live booking replaces it.
     insert(:meeting,
       organizer_user: user,
+      status: "cancelled",
       calendar_integration_id: integration.id,
       calendar_uid: copy.uid
     )
@@ -136,8 +139,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   } do
     copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
 
+    # Cancelled, with its calendar copy not yet removed: the one case where a
+    # booking's copy still reaches the grid, since a live booking replaces it.
     insert(:meeting,
       organizer_user: user,
+      status: "cancelled",
       calendar_integration_id: integration.id,
       calendar_uid: copy.uid
     )
@@ -174,27 +180,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
     user: user,
     integration: integration
   } do
-    meeting =
-      insert(:meeting,
-        organizer_user: user,
-        organizer_user_id: user.id,
-        capacity: 2,
-        start_time: ~U[2026-10-15 10:00:00Z],
-        end_time: ~U[2026-10-15 11:00:00Z]
-      )
+    copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
 
-    insert(:participant, meeting: meeting)
-
-    workshop =
-      event(integration, "work", "Group workshop", ~U[2026-10-15 10:00:00Z], 60,
-        uid: meeting.calendar_uid
-      )
+    # Cancelled, with its calendar copy not yet removed: the one case where a
+    # booking's copy still reaches the grid, since a live booking replaces it.
+    insert(:meeting,
+      organizer_user: user,
+      status: "cancelled",
+      calendar_integration_id: integration.id,
+      calendar_uid: copy.uid
+    )
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    open(lv, "event-#{workshop.id}")
-    lv |> element("#calendar-preview-free") |> render_click()
 
-    assert render(lv) =~ "This is a group booking."
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:set_free", %{"id" => "event-#{copy.id}", "free" => "true"})
+
+    assert render(lv) =~ "Busy or free is set in the meeting type"
     refute has_element?(lv, "#calendar-toast")
     refute_receive {:provider_update, _pid, _payload}, 100
   end

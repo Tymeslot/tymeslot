@@ -312,6 +312,25 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
+  Returns the organiser's booking requests that expired unanswered and
+  overlap the `[from_utc, to_utc)` window, ordered by start time.
+  """
+  @spec list_expired_requests_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t()) ::
+          [Meeting.t()]
+  def list_expired_requests_for_organizer_in_range(
+        organizer_user_id,
+        %DateTime{} = from_utc,
+        %DateTime{} = to_utc
+      ) do
+    Meeting
+    |> MeetingState.where_expired_request()
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.start_time < ^to_utc and m.end_time > ^from_utc)
+    |> order_by_start_asc()
+    |> Repo.all()
+  end
+
+  @doc """
   Get every upcoming meeting the organiser holds, whatever its status, soonest
   first.
   """

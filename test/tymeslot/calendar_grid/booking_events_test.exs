@@ -178,4 +178,94 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
     assert [%{summary: "Meeting"}] =
              CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
   end
+
+  describe "requests and meeting types" do
+    test "carries the meeting type, whether it is a request, and its deadline" do
+      user = insert(:user)
+      deadline = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+
+      insert_meeting(user, %{
+        status: "awaiting_approval",
+        meeting_type: "Intro call",
+        approval_requested_at: DateTime.utc_now(:second),
+        approval_deadline_at: deadline
+      })
+
+      {start_dt, end_dt} = window()
+
+      assert [event] = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+      assert event.meeting_type == "Intro call"
+      assert event.request == true
+      assert event.expired == false
+      assert event.approval_deadline_at == deadline
+    end
+
+    test "a request held past its deadline is expired, though the sweep has not reached it" do
+      user = insert(:user)
+
+      insert_meeting(user, %{
+        status: "awaiting_approval",
+        approval_requested_at: DateTime.add(DateTime.utc_now(:second), -7200, :second),
+        approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -60, :second)
+      })
+
+      {start_dt, end_dt} = window()
+
+      assert [%BookingEvent{request: true, expired: true}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+    end
+
+    test "a confirmed booking is neither a request nor expired" do
+      user = insert(:user)
+      insert_meeting(user, %{meeting_type: "  "})
+
+      {start_dt, end_dt} = window()
+
+      assert [%BookingEvent{request: false, expired: false, meeting_type: nil, copy: nil}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+    end
+
+    test "requests that expired unanswered load only when asked for, abandoned checkouts never" do
+      user = insert(:user)
+      now = DateTime.utc_now(:second)
+
+      lapsed =
+        insert_meeting(user, %{
+          status: "expired",
+          title: "Lapsed request",
+          approval_requested_at: DateTime.add(now, -7200, :second),
+          approval_deadline_at: DateTime.add(now, -60, :second),
+          approval_resolved_at: DateTime.add(now, -30, :second),
+          cancelled_at: DateTime.add(now, -30, :second)
+        })
+
+      insert_meeting(user, %{status: "expired", title: "Abandoned checkout"})
+
+      {start_dt, end_dt} = window()
+
+      assert CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt) == []
+
+      assert [%BookingEvent{request: false, expired: true} = event] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, [],
+                 include_expired: true
+               )
+
+      assert event.meeting_id == lapsed.id
+    end
+
+    test "keep_mirrored keeps a booking whose synced copy is cached" do
+      user = insert(:user)
+      synced = insert_meeting(user, %{provider_event_id: "prov-event-1"})
+
+      {start_dt, end_dt} = window()
+      cached = [cached_event(provider_event_id: "prov-event-1", uid: "prov-event-1@google.com")]
+
+      assert [%BookingEvent{meeting_id: id}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached,
+                 keep_mirrored: true
+               )
+
+      assert id == synced.id
+    end
+  end
 end

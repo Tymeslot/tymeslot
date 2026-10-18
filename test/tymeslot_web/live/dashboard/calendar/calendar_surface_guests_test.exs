@@ -159,7 +159,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     assert has_element?(lv, "#calendar-toast", "Removed ada@example.com.")
   end
 
-  defp open_group_workshop(conn, user, integration) do
+  # A live group booking is drawn as the booking, never as its calendar copy,
+  # so the copy (and the seat lock that guards it) is out of reach here; the
+  # lock itself is covered in `EditGuardTest`.
+  defp group_booking(conn, user, integration) do
     meeting =
       insert(:meeting,
         organizer_user: user,
@@ -178,40 +181,48 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       )
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+    assert_reply(lv, %{events: events})
+
+    {lv, meeting, workshop, events}
+  end
+
+  test "a live group booking is drawn as the booking, not its calendar copy", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    {_lv, meeting, workshop, events} = group_booking(conn, user, integration)
+
+    assert %{kind: "booking"} = Enum.find(events, &(&1.id == "booking-#{meeting.id}"))
+    refute Enum.any?(events, &(&1.id == "event-#{workshop.id}"))
+  end
+
+  test "a live group booking offers no guest editing or panel", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    {lv, meeting, workshop, _events} = group_booking(conn, user, integration)
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:open", %{"id" => "booking-#{meeting.id}"})
+
+    assert has_element?(lv, "#calendar-preview")
+    refute has_element?(lv, "#calendar-preview-edit")
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:edit", %{"id" => "booking-#{meeting.id}"})
+
+    refute has_element?(lv, "#calendar-panel-guests")
 
     lv
     |> element("#calendar-canvas")
     |> render_hook("calendar:edit", %{"id" => "event-#{workshop.id}"})
 
-    lv
-  end
-
-  test "a group booking's seats lock its guests", %{
-    conn: conn,
-    user: user,
-    integration: integration
-  } do
-    lv = open_group_workshop(conn, user, integration)
-
-    invite(lv, "grace@example.com")
-
-    assert render(lv) =~ "This is a group booking."
-    refute_enqueued(worker: EmailWorker)
-  end
-
-  test "a group booking's seats refuse a removal before asking", %{
-    conn: conn,
-    user: user,
-    integration: integration
-  } do
-    lv = open_group_workshop(conn, user, integration)
-
-    lv
-    |> element(~s|#calendar-panel-guests button[phx-value-email="seat-holder@example.com"]|)
-    |> render_click()
-
-    assert render(lv) =~ "This is a group booking."
-    refute has_element?(lv, "#calendar-remove-guest")
+    refute has_element?(lv, "#calendar-panel-guests")
     refute_enqueued(worker: EmailWorker)
   end
 

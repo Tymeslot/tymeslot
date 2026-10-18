@@ -81,6 +81,27 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
     assert EditGuard.check(user.id, [integration], event) == {:error, :group_booking}
   end
 
+  test "seat_lock/2 refuses a group meeting's copy only while seats are live", %{
+    user: user,
+    integration: integration
+  } do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        capacity: 4,
+        calendar_uid: "group-uid-2"
+      )
+
+    event = %{event(integration, "work") | uid: "group-uid-2"}
+
+    assert EditGuard.seat_lock(user.id, event) == :ok
+
+    insert(:participant, meeting: meeting)
+
+    assert EditGuard.seat_lock(user.id, event) == {:error, :group_booking}
+  end
+
   test "check/3 refuses once the organiser is past the edit rate limit", %{
     user: user,
     integration: integration

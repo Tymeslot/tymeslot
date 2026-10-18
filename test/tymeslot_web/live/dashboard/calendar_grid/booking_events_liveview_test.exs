@@ -255,5 +255,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert html =~ "Discovery call (synced)"
       refute html =~ ~s(data-event-id="booking-#{meeting.id}")
     end
+
+    test "the old grid still leaves out requests that expired unanswered",
+         %{conn: conn, user: user} do
+      insert_booking(user, %{
+        title: "Lapsed request",
+        status: "expired",
+        approval_requested_at: DateTime.add(DateTime.utc_now(:second), -7200, :second),
+        approval_resolved_at: DateTime.utc_now(:second),
+        cancelled_at: DateTime.utc_now(:second)
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+
+      refute html =~ "Lapsed request"
+    end
   end
 end
