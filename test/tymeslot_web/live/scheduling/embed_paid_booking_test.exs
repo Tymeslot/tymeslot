@@ -31,13 +31,16 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.JourneyFixtureHelpers, only: [seed_organiser: 3]
 
   alias Phoenix.LiveViewTest
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
 
   setup :verify_on_exit!
@@ -384,6 +387,41 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     end
   end
 
+  describe "the organiser above the wait" do
+    @tag :capture_log
+    test "Folio draws its slim masthead with the organiser above the shared wait", %{conn: conn} do
+      profile = seed_embed_organiser(:folio, "paidfolio")
+      view = book_embedded(conn, profile, "cs_folio_wait")
+      avatar = Profiles.avatar_url(profile, :original)
+
+      [wait] =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("[data-testid='folio-payment-wait']")
+
+      assert [masthead, awaiting] = Floki.children(wait)
+      assert Floki.attribute(masthead, "class") == ["folio-masthead folio-masthead--slim"]
+      assert Floki.attribute(awaiting, "data-testid") == ["awaiting-payment"]
+
+      assert [_portrait] = Floki.find(masthead, "img.folio-portrait[src='#{avatar}']")
+      assert masthead |> Floki.find(".folio-identity__name") |> Floki.text() == "Mia Laurent"
+    end
+
+    for key <- [:quill, :paper] do
+      @tag :capture_log
+      test "#{key}'s wait stays without the organiser's portrait or name", %{conn: conn} do
+        key = unquote(key)
+        profile = seed_embed_organiser(key, "paid#{key}")
+        view = book_embedded(conn, profile, "cs_#{key}_wait")
+
+        assert has_element?(view, "[data-testid='awaiting-payment']")
+        refute has_element?(view, "img[src='#{Profiles.avatar_url(profile, :original)}']")
+        refute render(view) =~ "Mia Laurent"
+      end
+    end
+  end
+
   describe "non-embed (control)" do
     @tag :capture_log
     test "top-level booker still redirects directly to Stripe Checkout",
@@ -417,6 +455,53 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
       # default is shorter than a real booking round-trip.
       assert_redirect(view, checkout_url, 5_000)
     end
+  end
+
+  # An organiser named "Mia Laurent" on the theme `key`, embeddable on
+  # embedder.test, with one paid meeting type and a Stripe account that
+  # takes charges.
+  defp seed_embed_organiser(key, username) do
+    {:ok, theme_id} = Catalog.key_to_id(key)
+
+    %{user: user, profile: profile} =
+      seed_organiser(theme_id, username,
+        profile: [full_name: "Mia Laurent", allowed_embed_domains: ["embedder.test"]],
+        types: [
+          [name: "Paid Consult", duration_minutes: 30, payment_required: true, price_cents: 5000]
+        ]
+      )
+
+    insert(:connect_account,
+      user: user,
+      stripe_account_id: "acct_#{username}",
+      default_currency: "usd",
+      charges_enabled: true
+    )
+
+    profile
+  end
+
+  # Books the paid meeting type in the embedded booker through the markup
+  # contract and returns the view once it shows the payment wait.
+  defp book_embedded(conn, profile, session_id) do
+    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+      {:ok, %{id: session_id, url: "https://checkout.stripe.com/#{session_id}"}}
+    end)
+
+    conn = put_req_header(conn, "referer", "https://embedder.test/page")
+    {:ok, view, _html} = live(conn, "/#{profile.username}?embed=1&timezone=UTC")
+
+    BookingDriver.book(view, meeting_type: "paid-consult", until: :attendee)
+
+    view
+    |> form("form[data-fact='attendee']", %{
+      "booking" => %{"name" => "Pay Pat", "email" => "pat@example.com", "message" => ""}
+    })
+    |> render_submit()
+
+    _drain = :sys.get_state(view.pid)
+    assert has_element?(view, "[data-testid='awaiting-payment']")
+    view
   end
 
   defp navigate_to_booking_form_embedded(conn, profile, meeting_type) do

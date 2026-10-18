@@ -18,7 +18,8 @@
 }
 
 .journey--continuous .folio-portrait,
-.folio-outcome-page .folio-portrait {
+.folio-outcome-page .folio-portrait,
+.folio-plain-page .folio-portrait {
   border-color: var(--theme-canvas);
   background: var(--theme-canvas);
 }

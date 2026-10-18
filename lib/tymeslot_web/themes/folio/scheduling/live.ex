@@ -4,11 +4,13 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Live do
   `Navigators.Continuous`. The masthead (with the summary bar of what is
   chosen), the ways to work with the organiser, the calendar once one is
   chosen, the details once a time is; each opens below the last by itself.
-  The confirmation replaces everything below the masthead. Folio has no
-  events of its own.
+  The confirmation replaces everything below the masthead; the payment wait
+  of an embedded paid booking replaces the whole page with the slim
+  masthead above the shared wait. Folio has no events of its own.
   """
 
   alias TymeslotWeb.Themes.Folio.Scheduling.Components.{
+    AwaitingPaymentComponent,
     ConfirmationComponent,
     MastheadMoment,
     OfferMoment,
@@ -29,6 +31,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Live do
         {:when, collects: [:slot], component: WhenMoment},
         {:you, collects: [:answers, :attendee], component: YouMoment}
       ],
-      outcomes: %{confirmation: ConfirmationComponent, awaiting_payment: :shared}
+      outcomes: %{
+        confirmation: ConfirmationComponent,
+        awaiting_payment: AwaitingPaymentComponent
+      }
     ]
 end

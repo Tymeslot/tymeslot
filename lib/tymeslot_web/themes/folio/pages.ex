@@ -4,8 +4,9 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
   body (`Shared.DefaultPages`): the meeting and poll pages in one card with
   a slim cover band at its top, the payment pages, which follow a booking on
   the card-less page, with the band edge to edge and the body in the reading
-  column. The pages have no organiser profile, so the band carries no
-  portrait or name.
+  column. The masthead carries the organiser's portrait and name below the
+  band when the page has their profile, and the band alone when it does
+  not (a payment page's dead render, before the profile is read).
   """
   use Phoenix.Component
 
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
 
   attr :page, :atom, required: true
   attr :theme_tokens, :any, default: nil
+  attr :organizer_profile, :map, default: nil
   attr :locale, :string, default: nil
   attr :language_dropdown_open, :boolean, default: nil
   slot :inner_block, required: true
@@ -40,7 +42,11 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
         ]}
         data-page={@page}
       >
-        <Masthead.masthead variant={:slim} theme_tokens={@theme_tokens} />
+        <Masthead.masthead
+          variant={:slim}
+          theme_tokens={@theme_tokens}
+          organizer_profile={@organizer_profile}
+        />
         <div class={if @plain, do: "folio-section folio-plain-page__body", else: "folio-card__body"}>
           {render_slot(@inner_block)}
         </div>

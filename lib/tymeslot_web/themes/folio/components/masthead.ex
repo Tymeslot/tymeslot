@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Themes.Folio.Components.Masthead do
   `:full` (the booking page and its confirmation) has the tall band, the
   large portrait, the name as the page's `h1`, and the headline and bio (the
   shared `ProfileIntro`); `:slim` has a short band, a small portrait and the
-  name as text. Without an organiser profile (the meeting, poll and payment
-  pages) only the band is drawn.
+  name as text. Without an organiser profile (a payment page's dead render)
+  only the band is drawn.
 
   The cover is the tokens' `media[:cover]`; its crop per preset is CSS
   (`.folio-cover[data-cover="<id>"]` in `masthead.css`). With no cover, the

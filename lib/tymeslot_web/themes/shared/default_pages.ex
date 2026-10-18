@@ -8,9 +8,13 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   The shell is a function component. It receives `page` (`:reschedule`,
   `:cancel`, `:cancel_confirmed`, `:poll`, `:payment_processing`,
   `:payment_cancelled`), the page's `theme_tokens` (`nil` on a payment
-  page's dead render, which reads no data), `locale` and
-  `language_dropdown_open`, and the body as its inner block; it draws the theme's wrapper and card (with the
-  `booker-card` hook class) around it.
+  page's dead render, which reads no data), the organiser's
+  `organizer_profile` (`nil` on that dead render too), `locale` and
+  `language_dropdown_open`, and the body as its inner block; it draws the
+  theme's wrapper and card (with the `booker-card` hook class) around it. A
+  shell is free to ignore any of them but `page`: only Folio's draws the
+  organiser, so a shell that has no use for the profile declares no attr
+  for it.
 
   Every body sits in `<div class="manage-page manage-page--<page>"
   data-testid="<theme key>-<page>">`, so the payment pages carry the
@@ -69,6 +73,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       page_shell={@page_shell}
       page={@page}
       theme_tokens={assigns[:theme_tokens]}
+      organizer_profile={@organizer_profile}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
     >
