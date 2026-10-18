@@ -16,6 +16,7 @@ defmodule Tymeslot.Availability.DateOverridesTest do
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.DateOverrides
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.Test.ClockHelpers
   alias Tymeslot.TestMocks
 
   setup do
@@ -96,6 +97,26 @@ defmodule Tymeslot.Availability.DateOverridesTest do
       assert {:ok, nil} = DateOverrides.get(other.profile_id, other.schedule_id, host.saturday)
     end
 
+    test "reads today on the owner's clock, not UTC's" do
+      # 20:00 UTC on the 10th is already 05:00 on the 11th in Tokyo.
+      ClockHelpers.freeze_clock(~U[2030-06-10 20:00:00Z])
+      tokyo = create_bookable_profile(timezone: "Asia/Tokyo")
+
+      assert {:error, :in_past} =
+               DateOverrides.upsert(
+                 tokyo.profile_id,
+                 tokyo.schedule_id,
+                 custom(~D[2030-06-10], ~T[10:00:00], ~T[12:00:00])
+               )
+
+      assert {:ok, %AvailabilityOverrideSchema{}} =
+               DateOverrides.upsert(
+                 tokyo.profile_id,
+                 tokyo.schedule_id,
+                 custom(~D[2030-06-11], ~T[10:00:00], ~T[12:00:00])
+               )
+    end
+
     test "refuses a date already gone in the owner's timezone", host do
       yesterday = Date.add(Date.utc_today(), -1)
 
@@ -119,8 +140,50 @@ defmodule Tymeslot.Availability.DateOverridesTest do
     end
   end
 
+  describe "put_back/3" do
+    test "writes for a date already gone, and only on an owned schedule", host do
+      ClockHelpers.freeze_clock(
+        DateTime.new!(Date.add(host.saturday, 1), ~T[00:30:00], "Etc/UTC")
+      )
+
+      assert {:ok, %AvailabilityOverrideSchema{start_time: ~T[10:00:00]}} =
+               DateOverrides.put_back(
+                 host.profile_id,
+                 host.schedule_id,
+                 custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
+               )
+
+      other = create_bookable_profile()
+
+      assert {:error, :not_found} =
+               DateOverrides.put_back(
+                 host.profile_id,
+                 other.schedule_id,
+                 custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
+               )
+    end
+
+    test "the booking page sees it at once", host do
+      request = %{profile: host.profile, user_timezone: "Etc/UTC"}
+      day = Date.to_iso8601(host.saturday)
+
+      {:ok, _override} =
+        DateOverrides.put_back(
+          host.profile_id,
+          host.schedule_id,
+          custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
+        )
+
+      assert {:ok, %{^day => true}} =
+               Offer.days_in_range(request, host.saturday, host.saturday, 30)
+    end
+  end
+
   describe "get/3 and delete/3" do
     test "delete removes the date's override and is idempotent", host do
+      request = %{profile: host.profile, user_timezone: "Etc/UTC"}
+      day = Date.to_iso8601(host.saturday)
+
       {:ok, _override} =
         DateOverrides.upsert(
           host.profile_id,
@@ -128,7 +191,14 @@ defmodule Tymeslot.Availability.DateOverridesTest do
           custom(host.saturday, ~T[10:00:00], ~T[12:00:00])
         )
 
+      assert {:ok, %{^day => true}} =
+               Offer.days_in_range(request, host.saturday, host.saturday, 30)
+
       assert :ok = DateOverrides.delete(host.profile_id, host.schedule_id, host.saturday)
+
+      assert {:ok, %{^day => false}} =
+               Offer.days_in_range(request, host.saturday, host.saturday, 30)
+
       assert {:ok, nil} = DateOverrides.get(host.profile_id, host.schedule_id, host.saturday)
       assert :ok = DateOverrides.delete(host.profile_id, host.schedule_id, host.saturday)
     end

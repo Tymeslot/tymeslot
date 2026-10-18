@@ -51,6 +51,21 @@ defmodule Tymeslot.Availability.DateOverrides do
   end
 
   @doc """
+  As `upsert/3`, without the refusal of a past date. For putting back an
+  override that was there before a change (an undo): after midnight the date
+  may be gone on the owner's clock, but what it held is still the truth.
+  """
+  @spec put_back(integer(), integer(), map()) ::
+          {:ok, AvailabilityOverrideSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def put_back(profile_id, schedule_id, %{date: %Date{} = date} = attrs) do
+    with {:ok, schedule} <- owned_schedule(profile_id, schedule_id),
+         {:ok, override} <- write(schedule.id, date, attrs) do
+      Availability.changed(schedule)
+      {:ok, override}
+    end
+  end
+
+  @doc """
   Removes the schedule's override on `date`. Nothing to remove is not an
   error, so an undo that arrives twice is harmless. Allowed for a past date:
   it changes nothing a guest can book.
@@ -64,16 +79,39 @@ defmodule Tymeslot.Availability.DateOverrides do
     end
   end
 
-  defp write(schedule_id, date, attrs) do
+  defp write(schedule_id, date, attrs, retry? \\ true) do
     attrs =
       @blank
       |> Map.merge(Map.take(attrs, [:date, :override_type | Map.keys(@blank)]))
       |> Map.put(:schedule_id, schedule_id)
 
     case AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule_id, date) do
-      nil -> AvailabilityOverrideQueries.create_override(attrs)
-      existing -> AvailabilityOverrideQueries.update_override(existing, attrs)
+      nil ->
+        attrs
+        |> AvailabilityOverrideQueries.create_override()
+        |> retry_on_conflict(schedule_id, date, attrs, retry?)
+
+      existing ->
+        AvailabilityOverrideQueries.update_override(existing, attrs)
     end
+  end
+
+  # Two writes for one date can both find nothing and both insert; the loser
+  # reads the winner's row once more and updates it.
+  defp retry_on_conflict(
+         {:error, %Ecto.Changeset{} = changeset} = error,
+         schedule_id,
+         date,
+         attrs,
+         true
+       ) do
+    if unique_conflict?(changeset), do: write(schedule_id, date, attrs, false), else: error
+  end
+
+  defp retry_on_conflict(result, _schedule_id, _date, _attrs, _retry?), do: result
+
+  defp unique_conflict?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn {_field, {_message, opts}} -> opts[:constraint] == :unique end)
   end
 
   defp owned_schedule(profile_id, schedule_id)

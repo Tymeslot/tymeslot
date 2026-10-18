@@ -177,6 +177,17 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   end
 
   @doc """
+  Writes a day's row exactly as given (`:is_available` and its hours),
+  leaving its breaks alone. For putting a day back as it was.
+  """
+  @spec restore_day(integer(), integer(), integer(), map()) :: {:ok, term()} | {:error, term()}
+  def restore_day(profile_id, schedule_id, day, attrs) when is_map(attrs) do
+    with_owned_schedule(profile_id, schedule_id, fn ->
+      WeeklySchedule.upsert_day_availability(schedule_id, day, attrs)
+    end)
+  end
+
+  @doc """
   Clears all settings for a specific day (sets to unavailable and removes all breaks).
   """
   @spec clear_day_settings(integer(), integer(), integer()) :: {:ok, term()} | {:error, term()}
