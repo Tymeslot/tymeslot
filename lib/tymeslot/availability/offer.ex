@@ -26,6 +26,7 @@ defmodule Tymeslot.Availability.Offer do
   capture it whole and nothing here depends on the web layer.
   """
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, TimeSlots}
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
@@ -382,12 +383,16 @@ defmodule Tymeslot.Availability.Offer do
     end
   end
 
+  # The fresh read gets the bookability rule the cached one is stored with.
   defp range_events(%{profile: %{user_id: user_id}} = request, start_date, :fresh) do
-    CalendarEvents.get_calendar_events_from_context(
-      start_date,
-      user_id,
-      calendar_context(request)
-    )
+    with {:ok, events} <-
+           CalendarEvents.get_calendar_events_from_context(
+             start_date,
+             user_id,
+             calendar_context(request)
+           ) do
+      {:ok, Bookability.apply_to_window(events, user_id)}
+    end
   end
 
   defp range_events(request, start_date, :cached), do: booking_window_events(request, start_date)
@@ -499,15 +504,22 @@ defmodule Tymeslot.Availability.Offer do
   # empty for the TTL. `Tymeslot.Availability.changed/1` drops this
   # entry with the folded maps, so a calendar sync cannot leave the two
   # disagreeing about how fresh they are.
+  #
+  # The events are cached with the bookability rule already applied
+  # (`Tymeslot.Availability.Bookability`): an override and a calendar's
+  # settings both call `changed/1`, which drops this entry.
   defp booking_window_events(%{profile: %{user_id: user_id}} = request, start_date) do
     AvailabilityCache.get_or_compute_events(
       AvailabilityCache.booking_window_events_key(user_id),
       fn ->
-        CalendarEvents.get_calendar_events_from_context(
-          start_date,
-          user_id,
-          calendar_context(request)
-        )
+        with {:ok, events} <-
+               CalendarEvents.get_calendar_events_from_context(
+                 start_date,
+                 user_id,
+                 calendar_context(request)
+               ) do
+          {:ok, Bookability.apply_to_window(events, user_id)}
+        end
       end
     )
   end
