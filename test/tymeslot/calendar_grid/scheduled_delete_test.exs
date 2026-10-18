@@ -477,6 +477,24 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       assert Changes.delete_notice(user.id, event) == {:notifies, :booking}
     end
 
+    for status <- ["cancelled", "expired"] do
+      test "the copy of a #{status} meeting deletes like a plain event", %{
+        user: user,
+        caldav: caldav,
+        event: event
+      } do
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          calendar_integration_id: caldav.id,
+          calendar_uid: event.uid,
+          status: unquote(status)
+        )
+
+        assert Changes.delete_notice(user.id, event) == :silent
+      end
+    end
+
     test "an event linked to a meeting by provider event id cancels it", %{
       user: user,
       caldav: caldav,

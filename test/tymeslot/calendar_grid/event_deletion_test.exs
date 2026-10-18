@@ -114,6 +114,29 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       assert_received {:deleted, _uid, _context, [calendar_id: "/cal/"]}
     end
 
+    test "leaves a meeting that is no longer live alone, and says it cancelled nothing", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_event(caldav)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: caldav.id,
+          provider_event_id: event.provider_event_id,
+          attendee_email: "guest@example.com",
+          status: "cancelled"
+        )
+
+      expect_delete(:ok)
+
+      assert {:ok, %{linked_meeting: :none}} = Changes.delete_event(user.id, event)
+
+      {:ok, untouched} = MeetingQueries.get_meeting(meeting.id)
+      assert untouched.status == "cancelled"
+      assert untouched.calendar_sync_status == meeting.calendar_sync_status
+    end
+
     test "cancels the meeting the event was booked as", %{user: user, caldav: caldav} do
       TestMocks.setup_email_mocks()
       event = insert_event(caldav)

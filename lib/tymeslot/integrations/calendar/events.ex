@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
 
@@ -250,7 +251,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
         {integration_id, _user_id} = context,
         opts
       ) do
-    linked_meeting = Sync.find_meeting(integration_id, provider_event_id, uid)
+    linked_meeting = live_linked_meeting(integration_id, provider_event_id, uid)
 
     with {:ok, deleted} <- deleted(delete_event(uid, context, opts)) do
       reconcile_result = reconcile_deleted(integration_id, provider_event_id, uid)
@@ -266,6 +267,17 @@ defmodule Tymeslot.Integrations.Calendar.Events do
         {:ok, meeting} -> {:ok, Map.put(result, :meeting_attendee_email, meeting.attendee_email)}
         {:error, :not_found} -> {:ok, result}
       end
+    end
+  end
+
+  # Only a meeting that still expects its calendar event is cancelled by the
+  # delete; the copy of a cancelled, declined, expired or voided one is a
+  # plain event.
+  defp live_linked_meeting(integration_id, provider_event_id, uid) do
+    with {:ok, meeting} <- Sync.find_meeting(integration_id, provider_event_id, uid) do
+      if MeetingState.expects_calendar_event?(meeting),
+        do: {:ok, meeting},
+        else: {:error, :not_found}
     end
   end
 

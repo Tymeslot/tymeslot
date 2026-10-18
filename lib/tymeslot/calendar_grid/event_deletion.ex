@@ -80,6 +80,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Meetings.MeetingState
 
   @type event :: %{
           required(:uid) => String.t(),
@@ -136,20 +137,35 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   @doc """
   Whether deleting `event` would tell anyone, asked before the calendar
   offers a delete without a confirmation: `{:notifies, :booking}` when it is
-  the calendar copy of a Tymeslot booking, whose meeting the delete cancels;
+  the calendar copy of a live Tymeslot booking, whose meeting the delete
+  cancels (the copy of a cancelled, declined, expired or voided meeting
+  deletes like a plain event);
   `{:notifies, {:attendees, count}}` when `user_id` organises it and it has
   attendees with an address; `:silent` otherwise.
   """
   @spec notice(pos_integer(), map()) ::
           :silent | {:notifies, :booking | {:attendees, pos_integer()}}
   def notice(user_id, event) do
-    if booking_copy?(event) do
+    if live_booking_copy?(event) do
       {:notifies, :booking}
     else
       case AttendeeNotifications.event_deleted(event, addressed_attendees(event), user_id) do
         {:needs_confirmation, count} -> {:notifies, {:attendees, count}}
         {:ok, _nobody} -> :silent
       end
+    end
+  end
+
+  # The copy of a meeting that still expects its calendar event; deleting one
+  # cancels the meeting, deleting any other leaves the meeting alone.
+  defp live_booking_copy?(event) do
+    case Meetings.find_meeting_by_calendar_event(
+           event.calendar_integration_id,
+           Map.get(event, :provider_event_id),
+           event.uid
+         ) do
+      {:ok, meeting} -> MeetingState.expects_calendar_event?(meeting)
+      {:error, :not_found} -> false
     end
   end
 

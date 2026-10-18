@@ -444,6 +444,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
       refute has_element?(lv, "#calendar-undo")
     end
 
+    test "the copy of a cancelled booking is deleted like a plain event, with Undo", %{
+      conn: conn,
+      integration: integration
+    } do
+      copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
+
+      insert(:meeting,
+        calendar_integration_id: integration.id,
+        calendar_uid: copy.uid,
+        attendee_email: "guest@example.com",
+        status: "cancelled"
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:delete", %{"id" => "event-#{copy.id}"})
+
+      refute has_element?(lv, "#calendar-delete-confirm")
+      assert has_element?(lv, "#calendar-undo")
+    end
+
     test "a confirmation answer that is neither true nor false deletes nothing", %{
       conn: conn,
       integration: integration
