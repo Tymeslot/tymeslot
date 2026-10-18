@@ -8,14 +8,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
 
   use TymeslotWeb.LiveCase, async: true
 
+  import Tymeslot.Factory
+
   @moduletag :calendar
   @moduletag :live
 
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
-
+  alias Ecto.Changeset
   alias Tymeslot.CalendarMock
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     context = owner(conn)
@@ -147,6 +151,49 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
       |> render_hook("panel:close", %{"field" => "title", "value" => String.duplicate("a", 501)})
 
       assert has_element?(lv, "#calendar-panel", "That's too long. Keep it to 500 characters.")
+      refute_receive {:written, _uid, _payload}, 200
+    end
+
+    test "a refusal shown in the header keeps the panel open", %{
+      conn: conn,
+      integration: integration
+    } do
+      integration
+      |> Changeset.change(
+        calendar_list: [
+          %{"id" => "work", "name" => "Work", "selected" => true},
+          %{"id" => "shared", "name" => "Shared", "selected" => true, "read_only" => true}
+        ]
+      )
+      |> Repo.update!()
+
+      shared = event(integration, "shared", "Team offsite", ~U[2026-10-16 09:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      edit(lv, shared)
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("panel:close", %{"field" => "title", "value" => "Offsite"})
+
+      assert has_element?(lv, "#calendar-panel")
+      assert status(lv) =~ "Couldn't save"
+      refute_receive {:written, _uid, _payload}, 200
+    end
+  end
+
+  describe "Busy and Free on a booking's calendar copy" do
+    test "a hand-crafted change writes nothing", %{
+      conn: conn,
+      integration: integration
+    } do
+      copy = event(integration, "work", "Intro call", ~U[2026-10-16 10:00:00Z])
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: copy.uid)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      edit(lv, copy)
+      refute has_element?(lv, "#calendar-panel-free")
+
+      lv |> element("#calendar-canvas") |> render_hook("panel:free", %{"value" => "free"})
+
       refute_receive {:written, _uid, _payload}, 200
     end
   end

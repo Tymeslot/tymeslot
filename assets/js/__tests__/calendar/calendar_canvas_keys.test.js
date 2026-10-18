@@ -537,6 +537,51 @@ test("closing the side panel while a text field has focus sends the field's valu
   ]);
 });
 
+test("a press on the close button saves the field once and its click is swallowed", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML =
+    '<button id="calendar-panel-close" type="button">Close</button><input id="calendar-panel-title" data-panel-field="title" value="">';
+  document.body.appendChild(panel);
+  const reached = vi.fn();
+  window.addEventListener("click", reached);
+
+  const title = panel.querySelector("#calendar-panel-title");
+  const close = panel.querySelector("#calendar-panel-close");
+  title.focus();
+  title.value = "Design sync";
+  close.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }));
+  close.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  window.removeEventListener("click", reached);
+
+  expect(pushes(hook, "panel:close")).toEqual([{ field: "title", value: "Design sync" }]);
+  expect(reached).not.toHaveBeenCalled();
+
+  // Only that one click is swallowed.
+  const later = vi.fn();
+  window.addEventListener("click", later);
+  close.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  window.removeEventListener("click", later);
+  expect(later).toHaveBeenCalledTimes(1);
+});
+
+test("only the primary button's press on the close button saves the field", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML =
+    '<button id="calendar-panel-close" type="button">Close</button><input id="calendar-panel-title" data-panel-field="title" value="x">';
+  document.body.appendChild(panel);
+  panel.querySelector("#calendar-panel-title").focus();
+
+  panel
+    .querySelector("#calendar-panel-close")
+    .dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 2 }));
+
+  expect(pushes(hook, "panel:close")).toEqual([]);
+});
+
 test("closing the side panel with no text field focused sends a plain close, once", () => {
   const { hook } = mountHook();
   const panel = document.createElement("aside");
@@ -549,8 +594,8 @@ test("closing the side panel with no text field focused sends a plain close, onc
   close.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
   close.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }));
 
-  // Escape closes through the hook; the button's own click closes on press, so
-  // the pointer press adds nothing.
+  // Escape closes through the hook; with no text field focused the pointer
+  // press adds nothing (the button's own click closes the panel).
   expect(pushes(hook, "panel:close")).toEqual([{}]);
 });
 

@@ -15,8 +15,8 @@
  * the side panel too. Escape inside the side panel closes it
  * (`closePanelOnEscape`), unless a modal is open over it; so does a press on
  * its close button while a text field has focus (`closePanelOnPress`). Either
- * sends that field's value with the close, so what was being typed is saved. None of it runs
- * while a pointer drag is live. A series-scope or delete modal makes the
+ * sends that field's value with the close, so what was being typed is saved.
+ * None of it runs while a pointer drag is live. A series-scope or delete modal makes the
  * server redraw the grid behind it, which strands the focus trap's saved
  * element, so after such a modal closes focus is handed back to the
  * affected block (`watchModal`).
@@ -30,6 +30,7 @@ const BLOCKS = ".cal-col .cal-ev[data-event-id]";
 export const MODALS = "#calendar-series-scope, #calendar-delete-confirm";
 const MODAL_WATCH_MS = 10_000;
 const REPEAT_ANNOUNCE_MS = 300;
+const SWALLOW_CLICK_MS = 1000;
 export const TYPING = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
 // Fields with a text undo of their own: Ctrl Z there stays the browser's.
 // Anywhere else (a button, a switch, a checkbox, the side panel) it undoes
@@ -66,14 +67,29 @@ export const KeysMixin = {
     };
     // A press on the panel's close button while a text field has focus: the
     // field would be gone before its blur reached the server, so the close
-    // goes from here with the field's value, in the capture phase and before
-    // the field blurs. With no text field focused the button's own click
+    // goes from here with the field's value, before the field blurs (a later
+    // blur is a no-op on the server). The click that follows the press is
+    // swallowed once (`swallowCloseClick`): its own plain close would shut
+    // the panel even when the server kept it open for a refused value or a
+    // series question. With no text field focused the button's own click
     // closes the panel.
     this.closePanelOnPress = (e) => {
+      this.swallowClick = false;
+      clearTimeout(this.swallowTimer);
+      if ((e.button ?? 0) !== 0) return;
       if (!e.target?.closest?.("#calendar-panel-close") || !this.focusedPanelField()) return;
       e.preventDefault();
       e.stopPropagation();
       this.pushPanelClose();
+      this.swallowClick = true;
+      this.swallowTimer = setTimeout(() => (this.swallowClick = false), SWALLOW_CLICK_MS);
+    };
+    this.swallowCloseClick = (e) => {
+      if (!this.swallowClick || !e.target?.closest?.("#calendar-panel-close")) return;
+      this.swallowClick = false;
+      clearTimeout(this.swallowTimer);
+      e.preventDefault();
+      e.stopPropagation();
     };
     // Focus leaving for another part of the page ends a move mode; a null
     // target is only a redraw replacing the focused block.
@@ -95,6 +111,7 @@ export const KeysMixin = {
     document.addEventListener("keydown", this.undoKey);
     document.addEventListener("keydown", this.closePanelOnEscape);
     document.addEventListener("pointerdown", this.closePanelOnPress, true);
+    document.addEventListener("click", this.swallowCloseClick, true);
     document.addEventListener("click", this.previewDelete);
     this.el.addEventListener("focus", this.focusIn, true);
     this.el.addEventListener("focusout", this.focusOut);
@@ -104,6 +121,8 @@ export const KeysMixin = {
     document.removeEventListener("keydown", this.undoKey);
     document.removeEventListener("keydown", this.closePanelOnEscape);
     document.removeEventListener("pointerdown", this.closePanelOnPress, true);
+    document.removeEventListener("click", this.swallowCloseClick, true);
+    clearTimeout(this.swallowTimer);
     document.removeEventListener("click", this.previewDelete);
     this.el.removeEventListener("focus", this.focusIn, true);
     this.el.removeEventListener("focusout", this.focusOut);

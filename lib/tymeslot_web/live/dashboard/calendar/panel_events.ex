@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   changes nothing, and parameters are client input, matched before use.
   """
 
+  alias Tymeslot.CalendarGrid.EditGuard
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -25,11 +26,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   # screen, either of which keeps it open.
   def handle("close", %{"field" => field, "value" => value}, socket)
       when field in @text_fields and is_binary(value) do
-    socket = handle(field, %{"value" => value}, socket)
+    socket = socket |> clear_failure() |> then(&handle(field, %{"value" => value}, &1))
 
     case socket.assigns do
       %{panel: %{errors: %{^field => _message}}} -> socket
       %{series_prompt: %{kind: :panel}} -> socket
+      %{panel: %{status: {:failed, _reason}}} -> socket
       _saved_or_unchanged -> PanelState.close(socket)
     end
   end
@@ -45,8 +47,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
-  def handle("free", %{"value" => choice}, socket) when choice in ["busy", "free"],
-    do: write(socket, %{transparency: PanelFields.transparency(choice)})
+  # Free or busy is not the organiser's to change on a booking or a booking's
+  # calendar copy (the panel does not draw the switch for them either).
+  def handle("free", %{"value" => choice}, socket) when choice in ["busy", "free"] do
+    with %{} = event <- PanelState.current_event(socket.assigns),
+         true <- EditGuard.movable?(socket.assigns.integrations, event) do
+      write(socket, %{transparency: PanelFields.transparency(choice)})
+    else
+      _no_panel_or_not_changeable -> socket
+    end
+  end
 
   def handle("reminder", %{"reminder" => choice}, socket) when is_binary(choice) do
     with %{} = event <- PanelState.current_event(socket.assigns),
@@ -58,6 +68,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   end
 
   def handle(_name, _params, socket), do: socket
+
+  # An older failure must not read as this attempt's refusal.
+  defp clear_failure(socket),
+    do:
+      PanelState.update(
+        socket,
+        &if(match?({:failed, _}, &1.status), do: %{&1 | status: :idle}, else: &1)
+      )
 
   # Writes to the panel's own event; with no panel open, nothing.
   defp write(socket, changes, opts \\ [])
