@@ -105,7 +105,7 @@ msgstr "Selecione um horário"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Sending…"
-msgstr "A enviar…"
+msgstr "Enviando…"
 
 #: lib/tymeslot_web/themes/folio/voice.ex
 #, elixir-autogen, elixir-format
@@ -213,7 +213,7 @@ msgstr "Horários disponíveis"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "I have read this"
-msgstr "Li o texto"
+msgstr "Li e estou ciente"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format
@@ -267,4 +267,4 @@ msgstr "Seu pedido foi enviado."
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Your request to %{organizer} has been sent."
-msgstr "Seu pedido para %{organizer} foi enviado."
+msgstr "Seu pedido foi enviado para %{organizer}."

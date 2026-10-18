@@ -207,7 +207,7 @@ msgstr "Kdy se vám to hodí?"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Available times"
-msgstr "Dostupné časy"
+msgstr "Volné termíny"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format
@@ -267,4 +267,4 @@ msgstr "Vaše žádost byla odeslána."
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Your request to %{organizer} has been sent."
-msgstr "Vaše žádost pro %{organizer} byla odeslána."
+msgstr "Vaše žádost byla odeslána hostiteli %{organizer}."

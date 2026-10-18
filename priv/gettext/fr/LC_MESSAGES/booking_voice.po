@@ -267,4 +267,4 @@ msgstr "Votre demande a été envoyée."
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Your request to %{organizer} has been sent."
-msgstr "Votre demande à %{organizer} a été envoyée."
+msgstr "Votre demande a été envoyée à %{organizer}."

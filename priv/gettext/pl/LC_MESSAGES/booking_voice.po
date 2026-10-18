@@ -267,4 +267,4 @@ msgstr "Twoja prośba została wysłana."
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Your request to %{organizer} has been sent."
-msgstr "Prośba została wysłana (odbiorca: %{organizer})."
+msgstr "Twoja prośba została wysłana do organizatora %{organizer}."

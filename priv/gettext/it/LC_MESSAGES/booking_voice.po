@@ -213,7 +213,7 @@ msgstr "Orari disponibili"
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "I have read this"
-msgstr "Ho letto il testo"
+msgstr "Ho preso visione"
 
 #: lib/tymeslot_web/themes/paper/voice.ex
 #, elixir-autogen, elixir-format
@@ -267,4 +267,4 @@ msgstr "La tua richiesta è stata inviata."
 #, elixir-autogen, elixir-format
 msgctxt "paper"
 msgid "Your request to %{organizer} has been sent."
-msgstr "La tua richiesta a %{organizer} è stata inviata."
+msgstr "La tua richiesta è stata inviata a %{organizer}."
