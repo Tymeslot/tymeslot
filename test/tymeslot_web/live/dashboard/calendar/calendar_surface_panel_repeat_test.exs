@@ -286,6 +286,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelRepeatTest do
       refute has_element?(lv, "#calendar-scope-this_only")
     end
 
+    test "the answer to a rule change is not kept for later field edits", %{
+      lv: lv,
+      standup: standup
+    } do
+      lv |> edit(standup) |> choose("daily")
+      lv |> element("#calendar-scope-all") |> render_click()
+      uid = standup.uid
+      assert_receive {:written, ^uid, %{recurrence_rule: "FREQ=DAILY"}}
+      eventually(fn -> assert status(lv) =~ "Saved" end)
+
+      lv
+      |> element("#calendar-panel-location")
+      |> render_keydown(%{"key" => "Enter", "value" => "Room 4"})
+
+      assert has_element?(lv, "#calendar-series-scope")
+      assert has_element?(lv, "#calendar-scope-this_only")
+      refute_receive {:written, ^uid, %{location: "Room 4"}}, 200
+    end
+
     test "the answer to a rule change does not replace this event only", %{
       lv: lv,
       standup: standup

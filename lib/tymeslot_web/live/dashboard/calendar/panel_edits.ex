@@ -140,14 +140,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
 
   def choose_scope(socket, _scope), do: assign(socket, :series_prompt, nil)
 
-  # The answer holds for the panel's later changes, except that a rule
-  # change's answer replaces no "This event" the organiser chose for them.
-  defp keep_scope(socket, :panel_repeat, scope) do
-    case socket.assigns.panel do
-      %{scope: :this_only} -> socket
-      _other -> PanelState.update(socket, &%{&1 | scope: scope})
-    end
-  end
+  # The answer to a field change's question holds for the panel's later
+  # changes. The answer to a rule change's question is for that change
+  # alone: a later field edit asks its own, rather than reach several events
+  # unasked.
+  defp keep_scope(socket, :panel_repeat, _scope), do: socket
 
   defp keep_scope(socket, _kind, scope), do: PanelState.update(socket, &%{&1 | scope: scope})
 
