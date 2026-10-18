@@ -158,6 +158,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
           :day_missing_in_some_months
           | :rule_not_supported_by_outlook
           | :removal
+          | :not_supported
           | :ends_before
           | :start_unknown
           | :until_before_start
@@ -173,6 +174,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
         "dashboard_calendar_events",
         "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
       )
+
+  def repeat_refusal(:not_supported),
+    do: dgettext("dashboard_calendar", "This calendar doesn't take repeat rules from Tymeslot.")
 
   def repeat_refusal(:ends_before),
     do:

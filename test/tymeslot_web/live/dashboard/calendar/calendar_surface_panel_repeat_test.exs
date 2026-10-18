@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelRepeatTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.CalendarMock
+  alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
 
   setup %{conn: conn} do
     context = owner(conn)
@@ -143,12 +144,55 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelRepeatTest do
     refute_receive {:written, _uid, _payload}, 200
   end
 
+  test "a calendar that takes no repeat rules refuses a pushed repeat change", %{
+    conn: conn,
+    user: user
+  } do
+    exchange =
+      insert(:calendar_integration,
+        user: user,
+        name: "Exchange account",
+        provider: "exchange",
+        is_active: true,
+        calendar_list: [%{"id" => "ex", "name" => "Calendar", "selected" => true}]
+      )
+
+    sync = event(exchange, "ex", "Sync", ~U[2026-10-14 11:00:00Z], 60, provider: "exchange")
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-14")
+
+    lv |> edit(sync) |> choose("daily")
+
+    assert status(lv) =~ "This calendar doesn't take repeat rules from Tymeslot."
+    refute_receive {:written, _uid, _payload}, 200
+  end
+
+  test "undoing a rule given to a one-off writes nothing", %{lv: lv, review: review} do
+    lv |> edit(review) |> choose("weekly")
+    uid = review.uid
+    assert_receive {:written, ^uid, %{recurrence_rule: "FREQ=WEEKLY"}}
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+    assert has_element?(lv, "#calendar-toast", "Nothing to undo.")
+    refute_receive {:written, ^uid, %{recurrence_rule: nil}}, 200
+  end
+
   describe "a member of a repeating series" do
     setup %{conn: conn, integration: integration} do
       standup =
         event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+          uid: "standup-series_20261014T083000Z",
+          provider_event_id: "standup-series_20261014T083000Z",
           recurring_event_id: "standup-series"
         )
+
+      # The series' own start, which a rule for all of it is written against.
+      {:ok, _row} =
+        SeriesRuleQueries.put(integration.id, "standup-series", %{
+          rule: "FREQ=DAILY",
+          master_start: ~U[2026-10-01 08:30:00Z],
+          fetched_at: DateTime.utc_now()
+        })
 
       # Mounted after the series member exists, so the grid holds it.
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -190,6 +234,83 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelRepeatTest do
                "A repeat rule can only be changed for all events, or this and following events"
 
       refute_receive {:written, _uid, _payload}, 200
+    end
+
+    test "removing the rule puts the select back to what the event has", %{
+      lv: lv,
+      standup: standup
+    } do
+      lv |> edit(standup) |> choose("none")
+
+      assert has_element?(lv, "#calendar-panel-repeat-preset option[value='keep'][selected]")
+      refute has_element?(lv, "#calendar-panel-repeat-preset option[value='none'][selected]")
+      # A new id makes the browser draw the select again with that value.
+      assert has_element?(lv, "#calendar-panel-repeat-field-1")
+      refute has_element?(lv, "#calendar-panel-repeat-field-0")
+    end
+
+    test "this and following is written from where the series put the event", %{
+      lv: lv,
+      standup: standup
+    } do
+      lv |> edit(standup) |> choose("daily")
+      lv |> element("#calendar-scope-following") |> render_click()
+
+      uid = standup.uid
+      assert_receive {:written, ^uid, %{recurrence_rule: "FREQ=DAILY"} = payload}
+
+      assert %{
+               scope: :following,
+               slot: ~U[2026-10-14 08:30:00Z],
+               master_id: "standup-series",
+               until_timezone: "Europe/London",
+               changes: %{recurrence_rule: "FREQ=DAILY"}
+             } = payload.occurrence
+    end
+
+    test "a rule change asks again when the panel holds this event only", %{
+      lv: lv,
+      standup: standup
+    } do
+      lv
+      |> edit(standup)
+      |> element("#calendar-panel-title")
+      |> render_blur(%{"value" => "Stand-up"})
+
+      lv |> element("#calendar-scope-this_only") |> render_click()
+      refute has_element?(lv, "#calendar-series-scope")
+
+      choose(lv, "daily")
+
+      assert has_element?(lv, "#calendar-series-scope")
+      refute has_element?(lv, "#calendar-scope-this_only")
+    end
+
+    test "the answer to a rule change does not replace this event only", %{
+      lv: lv,
+      standup: standup
+    } do
+      lv
+      |> edit(standup)
+      |> element("#calendar-panel-title")
+      |> render_blur(%{"value" => "Stand-up"})
+
+      lv |> element("#calendar-scope-this_only") |> render_click()
+      uid = standup.uid
+      assert_receive {:written, ^uid, %{summary: "Stand-up"}}
+
+      choose(lv, "daily")
+      lv |> element("#calendar-scope-all") |> render_click()
+      assert_receive {:written, ^uid, %{recurrence_rule: "FREQ=DAILY"}}
+      eventually(fn -> assert status(lv) =~ "Saved" end)
+
+      lv
+      |> element("#calendar-panel-location")
+      |> render_keydown(%{"key" => "Enter", "value" => "Room 4"})
+
+      refute has_element?(lv, "#calendar-series-scope")
+      assert_receive {:written, ^uid, %{location: "Room 4"} = payload}
+      refute Map.has_key?(payload, :occurrence)
     end
   end
 end

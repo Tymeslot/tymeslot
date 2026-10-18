@@ -92,9 +92,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   # change of timing.
   defp repeat_event(socket, event, spec) do
     case guard(socket, event, %{recurrence_rule: nil}) do
-      :ok -> repeat_in_scope(socket, event, spec)
+      :ok -> repeat_if_written(socket, event, spec)
       refusal -> refuse(socket, refusal)
     end
+  end
+
+  # The select is disabled for a calendar that takes no repeat rules, but
+  # the event arrives from the client all the same.
+  defp repeat_if_written(socket, event, spec) do
+    if Changes.repeatable_provider?(Map.get(event, :provider)),
+      do: repeat_in_scope(socket, event, spec),
+      else: refuse_with(socket, CalendarEditMessages.repeat_refusal(:not_supported))
   end
 
   defp repeat_in_scope(socket, event, spec) do
@@ -122,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
       {:ok, scope} ->
         socket
         |> assign(:series_prompt, nil)
-        |> PanelState.update(&%{&1 | scope: scope})
+        |> keep_scope(prompt.kind, scope)
         |> run(prompt.event, prompt, scope)
 
       :error ->
@@ -131,6 +139,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   end
 
   def choose_scope(socket, _scope), do: assign(socket, :series_prompt, nil)
+
+  # The answer holds for the panel's later changes, except that a rule
+  # change's answer replaces no "This event" the organiser chose for them.
+  defp keep_scope(socket, :panel_repeat, scope) do
+    case socket.assigns.panel do
+      %{scope: :this_only} -> socket
+      _other -> PanelState.update(socket, &%{&1 | scope: scope})
+    end
+  end
+
+  defp keep_scope(socket, _kind, scope), do: PanelState.update(socket, &%{&1 | scope: scope})
 
   @doc "After the write `ref` answered `outcome`: the panel's header follows its own writes."
   @spec settled(socket(), WriteQueue.ref(), WriteQueue.outcome()) :: socket()
@@ -242,7 +261,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
     opts = opts ++ scope_opts(scope)
     optimistic = Map.merge(event, changes)
     {socket, ref} = Writes.update(socket, event, optimistic, changes, opts)
-    undoable? = scope in [nil, :this_only]
+    # A rule given to a one-off cannot be taken back: Outlook's PATCH drops a
+    # nil rule, so the entry would say "undone" and change nothing.
+    undoable? = scope in [nil, :this_only] and not Map.has_key?(changes, :recurrence_rule)
 
     # `ref` names the write, so a failure of it forgets this entry alone
     # (`Manipulation.forget/2`).

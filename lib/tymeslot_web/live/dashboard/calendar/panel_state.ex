@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       status: opening_status(assigns.integrations, event),
       writes: [],
       errors: %{},
-      repeat: %{custom_open: false, draft: nil}
+      repeat: %{custom_open: false, draft: nil, version: 0}
     }
   end
 

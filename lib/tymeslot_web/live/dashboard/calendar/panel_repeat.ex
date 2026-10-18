@@ -253,6 +253,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
   attr :disabled, :boolean, default: false
   attr :custom_open, :boolean, default: false
   attr :draft, :map, default: nil
+  attr :version, :integer, default: 0
   attr :target, :any, required: true
 
   @doc "The Repeat select, its summary, and the custom editor behind Custom…."
@@ -261,15 +262,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
     ~H"""
     <div class="space-y-1">
       <form id="calendar-panel-repeat" phx-change="panel:repeat" phx-target={@target}>
-        <.input
-          id="calendar-panel-repeat-preset"
-          name="preset"
-          type="select"
-          label={dgettext("dashboard_calendar", "Repeat")}
-          value={@repeat.current}
-          options={@repeat.options}
-          disabled={@disabled or not @repeat.writable}
-        />
+        <%!-- A new id draws the select again, with the server's value. --%>
+        <div id={"calendar-panel-repeat-field-#{@version}"}>
+          <.input
+            id="calendar-panel-repeat-preset"
+            name="preset"
+            type="select"
+            label={dgettext("dashboard_calendar", "Repeat")}
+            value={@repeat.current}
+            options={@repeat.options}
+            disabled={@disabled or not @repeat.writable}
+          />
+        </div>
       </form>
       <p
         :if={@repeat.summary}
@@ -279,7 +283,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
         {@repeat.summary}
       </p>
       <p :if={not @repeat.writable} class="text-token-xs text-tymeslot-500">
-        {dgettext("dashboard_calendar", "This calendar doesn't take repeat rules from Tymeslot.")}
+        {CalendarEditMessages.repeat_refusal(:not_supported)}
       </p>
       <button
         :if={@repeat.current == "custom" and not @disabled and @repeat.writable}

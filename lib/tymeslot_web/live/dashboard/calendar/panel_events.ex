@@ -112,10 +112,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
 
   def handle("repeat", %{"preset" => preset}, socket) when is_binary(preset) do
     if PanelRepeat.preset?(preset),
-      do:
-        socket
-        |> put_repeat(custom_open: false, draft: nil)
-        |> PanelEdits.repeat({:preset, preset}),
+      do: change_preset(socket, preset),
       else: socket
   end
 
@@ -163,6 +160,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     event = PanelState.current_event(socket.assigns)
     if event && EditGuard.movable?(socket.assigns.integrations, event), do: event
   end
+
+  # The select shows what the client chose. When the event's rule is the
+  # same afterwards (refused, or waiting on the series question), the select
+  # is drawn again so it shows the server's value.
+  defp change_preset(socket, preset) do
+    before = PanelState.current_event(socket.assigns)
+
+    socket =
+      socket
+      |> put_repeat(custom_open: false, draft: nil)
+      |> PanelEdits.repeat({:preset, preset})
+
+    if rule(PanelState.current_event(socket.assigns)) == rule(before),
+      do:
+        PanelState.update(
+          socket,
+          &%{&1 | repeat: Map.update!(&1.repeat, :version, fn v -> v + 1 end)}
+        ),
+      else: socket
+  end
+
+  defp rule(nil), do: nil
+  defp rule(event), do: Map.get(event, :recurrence_rule)
 
   defp put_repeat(socket, values),
     do: PanelState.update(socket, &%{&1 | repeat: Map.merge(&1.repeat, Map.new(values))})

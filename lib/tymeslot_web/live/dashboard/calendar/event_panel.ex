@@ -120,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           disabled={!@editable}
           custom_open={@panel.repeat.custom_open}
           draft={@panel.repeat.draft}
+          version={@panel.repeat.version}
           target={@surface}
         />
         <%!-- Calendar (Task 20) goes here. --%>
