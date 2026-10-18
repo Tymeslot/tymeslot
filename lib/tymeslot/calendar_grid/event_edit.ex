@@ -267,6 +267,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
            payload
            |> maybe_put_conference(Keyword.get(opts, :conference_data))
            |> ProviderPayload.put_series_zone(Keyword.get(opts, :timezone))
+           |> ProviderPayload.put_show_as(stored, changes)
            |> put_stored_document(stored)
            |> scope_attendees(event, changes)
            |> address.() do
