@@ -17,7 +17,8 @@
  * Added to the sketch: the fold is decided per moment, not per group. An
  * event is hidden only if, at some point in its life, more events than there
  * are columns run at once and it ranks below them: one that needs attention
- * (sync pending or failed) ranks first, then the longer one. Each chip covers
+ * (sync pending or failed, or a request waiting for an answer; see
+ * `segmentsForDay` in time.js) ranks first, then the longer one. Each chip covers
  * only the stretch where something is hidden, and a chip still hiding an
  * attention item is marked `warn`.
  *

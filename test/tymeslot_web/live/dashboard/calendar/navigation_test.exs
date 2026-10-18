@@ -79,6 +79,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
       assert keys -- Map.keys(ClientStrings.build("en")) == []
     end
 
+    test "carries the words a booking request is drawn with" do
+      strings = ClientStrings.build("en")
+
+      assert strings.request == "Request"
+      assert strings.request_expired == "Expired"
+      assert strings.request_aria == "request waiting for your answer"
+      assert strings.request_expired_aria == "request expired without an answer"
+      assert strings.request_waiting == "a request waiting for your answer"
+    end
+
     test "the move mode's strings keep their placeholders for the hook" do
       strings = ClientStrings.build("en")
 

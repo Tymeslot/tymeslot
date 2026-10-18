@@ -133,9 +133,19 @@ export function normaliseEvent(raw) {
 }
 
 /**
+ * Whether `event` is a booking request still waiting for the organiser's
+ * answer: one that expired unanswered (`expired`) waits for nothing.
+ */
+export function needsAnswer(event) {
+  return Boolean(event.request) && !event.expired;
+}
+
+/**
  * The part of each timed event that falls on `iso`, as minutes from that
  * day's midnight. Every segment is drawn at least fifteen minutes tall so it
- * can be seen and clicked, ending by midnight at the latest.
+ * can be seen and clicked, ending by midnight at the latest. `attention`
+ * (kept out of "+N" first, see layout.js) covers a pending or failed sync
+ * and a request waiting for an answer.
  */
 export function segmentsForDay(events, iso) {
   const start = dayNumber(iso) * MINUTES_PER_DAY;
@@ -146,6 +156,6 @@ export function segmentsForDay(events, iso) {
     .map((e) => {
       const s = Math.max(e.startMin, start) - start;
       const finish = Math.min(e.endMin, end) - start;
-      return { id: e.id, title: e.title, attention: !!e.attention, s, e: Math.min(MINUTES_PER_DAY, Math.max(finish, s + 15)) };
+      return { id: e.id, title: e.title, attention: !!e.attention || needsAnswer(e), s, e: Math.min(MINUTES_PER_DAY, Math.max(finish, s + 15)) };
     });
 }

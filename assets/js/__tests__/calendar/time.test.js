@@ -14,6 +14,7 @@ import {
   isoFromDay,
   isoWeekday,
   makeScale,
+  needsAnswer,
   normaliseEvent,
   parseWall,
   periodDays,
@@ -147,5 +148,12 @@ describe("segmentsForDay", () => {
   test("leaves long events to the all-day lane", () => {
     const trip = normaliseEvent({ id: "event-6", title: "Trip", all_day: true, start: "2026-10-16", end: "2026-10-18" });
     expect(segmentsForDay([trip], "2026-10-16")).toEqual([]);
+  });
+  test("a request waiting for an answer needs attention; an expired one and a booking do not", () => {
+    const at = (id, extra) => normaliseEvent({ id, title: id, all_day: false, start: "2026-10-16T09:00", end: "2026-10-16T10:00", kind: "booking", ...extra });
+    const segments = segmentsForDay([at("open", { request: true }), at("lapsed", { request: true, expired: true }), at("swept", { expired: true }), at("plain", {})], "2026-10-16");
+    expect(Object.fromEntries(segments.map((g) => [g.id, g.attention]))).toEqual({ open: true, lapsed: false, swept: false, plain: false });
+    expect(needsAnswer({ request: true })).toBe(true);
+    expect(needsAnswer({ request: true, expired: true })).toBe(false);
   });
 });

@@ -346,6 +346,9 @@
   --cal-now: var(--color-error-strong);
   --cal-on-now: #ffffff;
   --cal-warn: var(--color-warning);
+  /* A booking request's edge and flag: amber, because it needs an answer. */
+  --cal-request: var(--color-warning);
+  --cal-on-request: var(--color-neutral-900);
 }
 
 /* Dark Mode Overrides */

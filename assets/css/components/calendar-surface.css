@@ -402,6 +402,60 @@
   color: var(--cal-text-past);
 }
 
+/* A booking request: the booking's turquoise with an amber striped edge and
+   a "Request" flag opening its title, the loudest item on the grid because
+   it needs an answer. Expired, it goes quiet: the past tint, a grey edge and
+   an "Expired" flag. */
+.cal-ev.is-request {
+  padding-left: 11px;
+  border-color: var(--cal-request);
+}
+
+.cal-ev.is-request::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cal-request) 0 3px,
+    color-mix(in srgb, var(--cal-request) 30%, var(--cal-surface)) 3px 6px
+  );
+  content: "";
+}
+
+.cal-ev-request {
+  display: inline-block;
+  margin-right: 2px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  line-height: 14px;
+  vertical-align: baseline;
+}
+
+.cal-ev.is-request.is-expired {
+  border-color: color-mix(in srgb, var(--cal-booking) 22%, var(--cal-line));
+  background: color-mix(in srgb, var(--cal-booking) 8%, var(--cal-surface));
+  box-shadow: none;
+  color: var(--cal-text-past);
+}
+
+.cal-ev.is-request.is-expired::before {
+  background: var(--cal-line-strong);
+}
+
+.cal-ev.is-expired .cal-ev-request,
+.cal-list-flag.is-expired {
+  background: var(--cal-chip);
+  box-shadow: inset 0 0 0 1px var(--cal-line-strong);
+  color: var(--cal-text-past);
+}
+
 .cal-ev.is-attention {
   padding-right: 14px;
   border-color: var(--cal-warn);
@@ -589,6 +643,17 @@
   height: 10px;
   border-radius: var(--radius-full);
   background: var(--cal-ev);
+}
+
+.cal-list-flag {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  line-height: 16px;
 }
 
 .cal-list-title {

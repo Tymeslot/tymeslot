@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
   """
   @spec build(String.t()) :: map()
   def build(locale) do
-    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> strings(locale) end)
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      locale |> strings() |> Map.merge(request_strings())
+    end)
   end
 
   defp strings(locale) do
@@ -106,6 +108,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       create_unconfirmed:
         dgettext("dashboard_calendar_editing", "Couldn't confirm the save. Check your calendar."),
       dismiss: dgettext("dashboard_calendar", "Dismiss")
+    }
+  end
+
+  # What a booking request is drawn with: its flag, its accessible names, and
+  # what the "+N" chip's warning dot stands for.
+  defp request_strings do
+    %{
+      request: dgettext("dashboard_calendar_booking", "Request"),
+      request_expired: dgettext("dashboard_calendar_booking", "Expired"),
+      request_aria: dgettext("dashboard_calendar_booking", "request waiting for your answer"),
+      request_expired_aria:
+        dgettext("dashboard_calendar_booking", "request expired without an answer"),
+      request_waiting: dgettext("dashboard_calendar_booking", "a request waiting for your answer")
     }
   end
 end

@@ -21,6 +21,7 @@ import {
   isoFromDay,
   isoWeekday,
   makeScale,
+  needsAnswer,
   segmentsForDay,
 } from "./time.js";
 
@@ -269,16 +270,19 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   const tf = settings.time_format;
   const short = item.height < 38;
   const past = event.endMin <= now;
+  const flag = requestFlag(event, strings);
+  // The flag opens the title's first line, so it is measured with the title.
+  const shown = flag ? `${flag} ${event.title}` : event.title;
   const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
   const range = `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
-  const fit = short ? null : textFit(item, event.title, !item.hideTime, measureWidth);
-  const shortWithoutTime = short && !shortRowFits(item, event.title, start, measureWidth);
+  const fit = short ? null : textFit(item, shown, !item.hideTime, measureWidth);
+  const shortWithoutTime = short && !shortRowFits(item, shown, start, measureWidth);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", event.attention && "is-attention", movingId === event.id && "is-moving"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
     .filter(Boolean)
     .join(" ");
-  const label = [event.title, dateLabel(isoFromDay(event.startDay), strings), range, event.free && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
+  const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
     .filter(Boolean)
     .join(", ");
   const style =
@@ -286,16 +290,28 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
     (fit ? `;--cal-lines:${fit.lines}` : "") +
     (tiny ? `;--cal-lh:${Math.max(8, Math.floor(item.height - 2))}px` : "");
   const timeHtml = time ? `<span class="cal-ev-time"${item.timeGap ? ` style="margin-top:${Math.round(item.timeGap)}px"` : ""}>${escapeHtml(time)}</span>` : "";
+  const flagHtml = flag ? `<span class="cal-ev-request">${escapeHtml(flag)}</span> ` : "";
 
   // tabindex -1: the hook makes one block the grid's only tab stop and the
   // arrow keys move between them.
   return (
     `<div class="${classes}" role="button" tabindex="-1" data-event-id="${escapeHtml(event.id)}"${editable ? " data-editable" : ""} aria-label="${escapeHtml(label)}" aria-describedby="calendar-keys-hint" style="${style}">` +
-    `<span class="cal-ev-title">${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - TITLE_INSET, measureWidth)}</span>${timeHtml}` +
+    `<span class="cal-ev-title">${flagHtml}${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - TITLE_INSET, measureWidth)}</span>${timeHtml}` +
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
     (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`
   );
+}
+
+// A booking request's flag: "Request" while it waits for the organiser's
+// answer, "Expired" once it can no longer be answered; none on anything else.
+function requestFlag(event, strings) {
+  if (event.expired) return strings.request_expired;
+  return event.request ? strings.request : "";
+}
+
+function requestAria(event, strings) {
+  return event.expired ? strings.request_expired_aria : strings.request_aria;
 }
 
 // The draft quick create is editing, or one waiting for the server. Not a
@@ -331,8 +347,15 @@ function draftBar(bar, event, strings) {
 }
 
 function chip(item, byId, strings) {
-  const titles = item.hidden.map((id) => byId.get(id)?.title).filter(Boolean).join(", ");
-  const label = interpolate(strings.also_here, { titles }) + (item.warn ? `, ${strings.waiting_to_sync}` : "");
+  const hidden = item.hidden.map((id) => byId.get(id)).filter(Boolean);
+  const titles = hidden
+    .map((e) => e.title)
+    .filter(Boolean)
+    .join(", ");
+  // What the warning dot stands for: a request waiting for an answer, an
+  // event waiting to sync, or both.
+  const notes = [hidden.some(needsAnswer) && strings.request_waiting, hidden.some((e) => e.attention) && strings.waiting_to_sync].filter(Boolean);
+  const label = [interpolate(strings.also_here, { titles }), ...notes].join(", ");
   return (
     `<button type="button" class="cal-more${item.warn ? " is-warn" : ""}" data-more="${escapeHtml(item.ids.join(","))}" data-hidden="${escapeHtml(item.hidden.join(","))}" ` +
     `aria-label="${escapeHtml(label)}" style="top:${item.top}px;height:${item.height}px;--l:${item.left + 1}px;--w:${item.width - 2}px;--z:${2 * item.z}">` +
@@ -351,15 +374,18 @@ export function renderSkeleton(days, strings) {
 
 export function renderList(events, { strings, timeFormat, label }) {
   const items = events
-    .map(
-      (e) =>
+    .map((e) => {
+      const flag = requestFlag(e, strings);
+      return (
         `<button type="button" class="cal-list-item" data-event-id="${escapeHtml(e.id)}" style="--cal-ev:${colour(e.colour)}">` +
         `<span class="cal-list-swatch" aria-hidden="true"></span>` +
+        (flag ? `<span class="cal-list-flag${e.expired ? " is-expired" : ""}">${escapeHtml(flag)}</span>` : "") +
         `<span class="cal-list-title">${escapeHtml(e.title)}</span>` +
         `<span class="cal-list-time">${escapeHtml(e.all_day ? strings.all_day : formatMinutes(e.startMin % MINUTES_PER_DAY, timeFormat))}</span>` +
         (e.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
-        `</button>`,
-    )
+        `</button>`
+      );
+    })
     .join("");
   return `<div class="cal-list" role="dialog" aria-label="${escapeHtml(label)}">${items}</div>`;
 }

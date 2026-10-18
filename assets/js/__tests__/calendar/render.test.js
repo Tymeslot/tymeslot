@@ -15,6 +15,11 @@ const strings = {
   shown_as_free: "shown as free",
   ended: "ended",
   waiting_to_sync: "waiting to sync",
+  request: "Request",
+  request_expired: "Expired",
+  request_aria: "request waiting for your answer",
+  request_expired_aria: "request expired without an answer",
+  request_waiting: "a request waiting for your answer",
   early_hours: "Before %{time}: %{count}",
   show_early_hours: "Show the hours before %{time}",
   fold_early_hours: "Fold the hours before %{time}",
@@ -272,6 +277,60 @@ describe("renderGrid", () => {
   test("compact density uses 38px hours", () => {
     expect(draw({ settings: { ...settings, density: "compact" } }).querySelector(".cal-grid").getAttribute("style")).toContain("--cal-hour:38px");
   });
+  test("a request carries its own class, a Request flag and says it waits for an answer", () => {
+    const grid = draw({
+      events: [timed("booking-1", "Anna · Intro", "2026-10-15T11:00", "2026-10-15T12:00", { kind: "booking", colour: "booking", request: true })],
+    });
+    const block = grid.querySelector('[data-event-id="booking-1"]');
+    expect(block.classList.contains("is-booking")).toBe(true);
+    expect(block.classList.contains("is-request")).toBe(true);
+    expect(block.classList.contains("is-expired")).toBe(false);
+    expect(block.querySelector(".cal-ev-title .cal-ev-request").textContent).toBe("Request");
+    expect(block.getAttribute("aria-label")).toBe("Anna · Intro, request waiting for your answer, Thu 15 Oct, 11:00–12:00");
+  });
+
+  test("an expired request is marked expired, flagged so and says it was never answered", () => {
+    const grid = draw({
+      events: [timed("booking-2", "Ben · Intro", "2026-10-15T13:00", "2026-10-15T14:00", { kind: "booking", colour: "booking", expired: true })],
+    });
+    const block = grid.querySelector('[data-event-id="booking-2"]');
+    expect(block.classList.contains("is-request")).toBe(true);
+    expect(block.classList.contains("is-expired")).toBe(true);
+    expect(block.querySelector(".cal-ev-request").textContent).toBe("Expired");
+    expect(block.getAttribute("aria-label")).toContain("request expired without an answer");
+    expect(block.getAttribute("aria-label")).not.toContain("waiting for your answer");
+  });
+
+  test("a plain booking has no flag", () => {
+    const grid = draw({ events: [timed("booking-3", "Cleo · Intro", "2026-10-15T15:00", "2026-10-15T16:00", { kind: "booking", colour: "booking" })] });
+    expect(grid.querySelector('[data-event-id="booking-3"] .cal-ev-request')).toBeNull();
+  });
+
+  test("a request in a crowd stays on the grid while plain events fold behind the chip", () => {
+    const plain = ["a", "b", "c", "d"].map((id) => timed(`event-${id}`, `Meeting ${id}`, "2026-10-14T13:00", "2026-10-14T14:00"));
+    // "z-request" sorts last by id, so without its request it would be the first to fold.
+    const request = timed("z-request", "Zoe · Intro", "2026-10-14T13:00", "2026-10-14T14:00", { kind: "booking", colour: "booking", request: true });
+    const grid = draw({ events: [...plain, request] });
+    const chip = grid.querySelector(".cal-more");
+    expect(chip).not.toBeNull();
+    expect(chip.dataset.hidden.split(",")).not.toContain("z-request");
+    expect(grid.querySelector('.cal-col [data-event-id="z-request"]')).not.toBeNull();
+    expect(chip.classList.contains("is-warn")).toBe(false);
+  });
+
+  test("requests forced behind the chip mark it and say a request is waiting", () => {
+    const requests = ["a", "b", "c", "d", "e"].map((id) => timed(`booking-${id}`, `Guest ${id}`, "2026-10-14T13:00", "2026-10-14T14:00", { kind: "booking", colour: "booking", request: true }));
+    const chip = draw({ events: requests }).querySelector(".cal-more");
+    expect(chip.classList.contains("is-warn")).toBe(true);
+    expect(chip.getAttribute("aria-label")).toContain("a request waiting for your answer");
+    expect(chip.getAttribute("aria-label")).not.toContain("waiting to sync");
+  });
+
+  test("expired requests fold like any event and leave the chip unmarked", () => {
+    const expired = ["a", "b", "c", "d", "e"].map((id) => timed(`booking-${id}`, `Guest ${id}`, "2026-10-14T13:00", "2026-10-14T14:00", { kind: "booking", colour: "booking", expired: true }));
+    const chip = draw({ events: expired }).querySelector(".cal-more");
+    expect(chip.classList.contains("is-warn")).toBe(false);
+  });
 });
 
 test("renderSkeleton is a labelled status with one column per day", () => {
@@ -288,4 +347,14 @@ test("renderList lists events as buttons that open them", () => {
   expect(item.textContent).toContain("Standup");
   expect(item.textContent).toContain("09:00");
   expect(container.querySelector('[role="dialog"]').getAttribute("aria-label")).toBe("Events at this time");
+});
+
+test("renderList flags a request", () => {
+  const container = document.createElement("div");
+  container.innerHTML = renderList(
+    [timed("booking-1", "Anna · Intro", "2026-10-14T09:00", "2026-10-14T09:30", { kind: "booking", request: true }), timed("event-1", "Standup", "2026-10-14T10:00", "2026-10-14T10:15")],
+    { strings, timeFormat: "24h", label: "Events at this time" },
+  );
+  expect(container.querySelector('[data-event-id="booking-1"] .cal-list-flag').textContent).toBe("Request");
+  expect(container.querySelector('[data-event-id="event-1"] .cal-list-flag')).toBeNull();
 });
