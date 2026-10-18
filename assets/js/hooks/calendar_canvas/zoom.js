@@ -24,7 +24,12 @@ export const ZoomMixin = {
   },
 
   zoom(e) {
-    if (!(e.ctrlKey || (e.metaKey && onMac())) || !this.settings || this.drag) return;
+    if (!(e.ctrlKey || (e.metaKey && onMac())) || !this.settings) return;
+    // A live drag keeps its scale, and the browser must not zoom the page under it either.
+    if (this.drag) {
+      e.preventDefault();
+      return;
+    }
     const cols = this.el.querySelector(".cal-cols");
     const scroller = this.el.querySelector("[data-scroll]");
     if (!cols) return;

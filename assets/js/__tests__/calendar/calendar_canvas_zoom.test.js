@@ -108,11 +108,22 @@ test("the time under the pointer stays under the pointer", () => {
   expect(Math.abs(after - before)).toBeLessThan(1);
 });
 
-test("a live drag is not zoomed under", () => {
+test("a live drag is not zoomed under, and the browser does not zoom the page either", () => {
   const { el, hook } = mountHook();
   hook.drag = {};
 
   const event = wheel(el, -100, { ctrlKey: true });
+
+  expect(hour(el)).toBe(52);
+  expect(event.defaultPrevented).toBe(true);
+  hook.drag = null;
+});
+
+test("plain scrolling during a live drag is left to the browser", () => {
+  const { el, hook } = mountHook();
+  hook.drag = {};
+
+  const event = wheel(el, -100);
 
   expect(hour(el)).toBe(52);
   expect(event.defaultPrevented).toBe(false);
