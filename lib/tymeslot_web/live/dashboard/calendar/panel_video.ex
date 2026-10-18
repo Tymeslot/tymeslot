@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideo do
       do:
         PanelEdits.put_status(
           socket,
-          {:failed, dgettext("dashboard_calendar", "The change was put back.")}
+          {:failed, dgettext("dashboard_calendar_editing", "The change was put back.")}
         ),
       else: socket
   end

@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
     <aside
       id="calendar-panel"
       class="cal-panel flex flex-col"
-      aria-label={dgettext("dashboard_calendar", "Event details")}
+      aria-label={dgettext("dashboard_calendar_editing", "Event details")}
     >
       <div class="flex items-center gap-2 border-b border-tymeslot-100 px-4 py-2">
         <h2
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           id="calendar-panel-heading"
           class="shrink-0 text-token-sm font-semibold text-tymeslot-900"
         >
-          {dgettext("dashboard_calendar", "New event")}
+          {dgettext("dashboard_calendar_editing", "New event")}
         </h2>
         <p
           id="calendar-panel-status"
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           id="calendar-panel-close"
           icon="hero-x-mark"
           size={:sm}
-          label={dgettext("dashboard_calendar", "Close details")}
+          label={dgettext("dashboard_calendar_editing", "Close details")}
           data-panel-focus={!@editable && "true"}
           phx-click="panel:close"
           phx-target={@surface}
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           id="calendar-panel-title"
           name="title"
           type="text"
-          label={dgettext("dashboard_calendar", "Title")}
+          label={dgettext("dashboard_calendar_editing", "Title")}
           value={title_value(@event)}
           disabled={!@editable}
           errors={List.wrap(@panel.errors["title"])}
@@ -213,8 +213,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           id="calendar-panel-location"
           name="location"
           type="text"
-          label={dgettext("dashboard_calendar", "Place")}
-          placeholder={dgettext("dashboard_calendar", "Add a place or room")}
+          label={dgettext("dashboard_calendar_editing", "Place")}
+          placeholder={dgettext("dashboard_calendar_editing", "Add a place or room")}
           value={Map.get(@event, :location) || ""}
           disabled={!@editable}
           errors={List.wrap(@panel.errors["location"])}
@@ -254,8 +254,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           name="description"
           type="textarea"
           rows={4}
-          label={dgettext("dashboard_calendar", "Notes")}
-          placeholder={dgettext("dashboard_calendar", "Agenda, links, anything else")}
+          label={dgettext("dashboard_calendar_editing", "Notes")}
+          placeholder={dgettext("dashboard_calendar_editing", "Agenda, links, anything else")}
           value={Map.get(@event, :description) || ""}
           disabled={!@editable}
           errors={List.wrap(@panel.errors["notes"])}
@@ -280,7 +280,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   end
 
   defp status_text(%{mode: :new, status: :idle}),
-    do: dgettext("dashboard_calendar", "Nothing is saved until you create it")
+    do: dgettext("dashboard_calendar_editing", "Nothing is saved until you create it")
 
   defp status_text(%{status: status}), do: PanelStatus.text(status)
 

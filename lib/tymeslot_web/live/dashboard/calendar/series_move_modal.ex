@@ -26,11 +26,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesMoveModal do
       size={:small}
       icon="hero-arrow-path"
       confirm_variant={:primary}
-      title={dgettext("dashboard_calendar", "Move a repeating event")}
+      title={dgettext("dashboard_calendar_editing", "Move a repeating event")}
       on_cancel={JS.push("panel:cancel_series_move", target: @target)}
     >
       <p>
-        {dgettext("dashboard_calendar", "Move every event in this series to %{calendar}?",
+        {dgettext("dashboard_calendar_editing", "Move every event in this series to %{calendar}?",
           calendar: @prompt.destination.name
         )}
       </p>
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesMoveModal do
         <li :for={note <- @prompt.notes}>{SeriesNotes.text(note)}</li>
       </ul>
       <p class="text-tymeslot-500">
-        {dgettext("dashboard_calendar", "Moving a series can't be undone here.")}
+        {dgettext("dashboard_calendar_editing", "Moving a series can't be undone here.")}
       </p>
       <:actions>
         <.action_button
@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesMoveModal do
           phx-click="panel:cancel_series_move"
           phx-target={@target}
         >
-          {dgettext("dashboard_calendar", "Cancel")}
+          {dgettext("dashboard_calendar_editing", "Cancel")}
         </.action_button>
         <.action_button
           id="calendar-series-move-confirm"
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesMoveModal do
           phx-click="panel:confirm_series_move"
           phx-target={@target}
         >
-          {dgettext("dashboard_calendar", "Move series")}
+          {dgettext("dashboard_calendar_editing", "Move series")}
         </.action_button>
       </:actions>
     </Modal.confirm_modal>

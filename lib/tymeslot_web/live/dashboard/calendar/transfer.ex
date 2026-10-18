@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
         |> Writes.series_moving(prompt.event)
         |> start(prompt.event, prompt.destination, prompt.destination.name)
         |> Toast.show(
-          dgettext("dashboard_calendar", "Moving the series to %{calendar}…",
+          dgettext("dashboard_calendar_editing", "Moving the series to %{calendar}…",
             calendar: prompt.destination.name
           )
         )
@@ -245,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
       _gone ->
         Toast.show(
           socket,
-          dgettext("dashboard_calendar", "That change can't be undone any more.")
+          dgettext("dashboard_calendar_editing", "That change can't be undone any more.")
         )
     end
   end
@@ -365,7 +365,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
     do:
       Toast.show(
         socket,
-        dgettext("dashboard_calendar", "Moved back to %{calendar}", calendar: name)
+        dgettext("dashboard_calendar_editing", "Moved back to %{calendar}", calendar: name)
       )
 
   defp moved_toast(socket, %{calendar_name: name}, original, %{} = found, nil)
@@ -380,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
     socket
     |> assign(:undo, UndoStack.push(socket.assigns.undo, entry))
-    |> Toast.show(dgettext("dashboard_calendar", "Moved to %{calendar}", calendar: name),
+    |> Toast.show(dgettext("dashboard_calendar_editing", "Moved to %{calendar}", calendar: name),
       undo: not is_nil(entry.back_to),
       key: entry.key
     )
@@ -401,14 +401,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
     Toast.show(
       socket,
-      message <> " " <> dgettext("dashboard_calendar", "Moving a series can't be undone here.")
+      message <>
+        " " <> dgettext("dashboard_calendar_editing", "Moving a series can't be undone here.")
     )
   end
 
   defp still_saving_message,
     do:
       dgettext(
-        "dashboard_calendar",
+        "dashboard_calendar_editing",
         "A change to this event is still saving. Please choose the calendar once it has saved."
       )
 

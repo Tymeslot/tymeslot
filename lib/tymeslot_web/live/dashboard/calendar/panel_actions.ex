@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelActions do
         phx-click="panel:duplicate"
         phx-target={@surface}
       >
-        {dgettext("dashboard_calendar", "Duplicate")}
+        {dgettext("dashboard_calendar_editing", "Duplicate")}
       </.action_button>
       <.action_button
         id="calendar-panel-delete"
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelActions do
         phx-click="panel:delete"
         phx-target={@surface}
       >
-        {dgettext("dashboard_calendar", "Delete")}
+        {dgettext("dashboard_calendar_editing", "Delete")}
       </.action_button>
     </div>
     """

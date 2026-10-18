@@ -748,11 +748,6 @@ msgstr "Du %{from} au %{to}"
 msgid "All events"
 msgstr "Tous les événements"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
-#, elixir-autogen, elixir-format
-msgid "Arrow keys move between events. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
-msgstr "Les touches fléchées permettent de passer d’un événement à l’autre. Appuyez sur M pour déplacer l’événement sélectionné : les touches fléchées le décalent alors, Maj avec les touches fléchées modifie sa durée, Entrée valide et Échap annule. Appuyez sur Suppr pour supprimer l’événement et sur Ctrl Z (Cmd Z sur Mac) pour annuler la dernière action."
-
 #: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Change a repeating event"
@@ -969,3 +964,63 @@ msgstr "« %{title} » se répète. Quels événements voulez-vous modifier ?"
 #, elixir-autogen, elixir-format
 msgid "Too late to undo: “%{title}” has already been deleted."
 msgstr "Trop tard pour annuler : l’événement « %{title} » a déjà été supprimé."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Another event is moving. Try again in a moment."
+msgstr "Un autre événement est en cours de déplacement. Réessayez dans un instant."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#, elixir-autogen, elixir-format
+msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
+msgstr "Les touches fléchées permettent de passer d’un événement à l’autre. Appuyez sur C pour ajouter un événement au prochain créneau libre. Appuyez sur Enter pour ouvrir l’événement sélectionné, sur E pour le modifier et sur M pour le déplacer : les touches fléchées le décalent alors, Maj avec les touches fléchées modifie sa durée, Enter valide et Escape annule. Appuyez sur Delete pour supprimer l’événement et sur Ctrl Z (Cmd Z sur Mac) pour annuler."
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Create"
+msgstr "Créer"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Modifier"
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Please try again."
+msgstr "Veuillez réessayer."
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Removed “%{title}”"
+msgstr "Événement « %{title} » retiré"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Set in the meeting type"
+msgstr "Défini dans le type de réunion"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Show as"
+msgstr "Afficher comme"
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar doesn't take repeat rules from Tymeslot."
+msgstr "Ce calendrier n’accepte pas les règles de répétition de Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This event is moving to another calendar. Please make the change once it has moved."
+msgstr "Cet événement est en cours de déplacement vers un autre calendrier. Veuillez effectuer la modification une fois le déplacement terminé."
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Should the new pattern apply to this and the following events, or to all of them?"
+msgstr "« %{title} » se répète. Le nouveau modèle doit-il s’appliquer à cet événement et aux suivants, ou à tous ?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details."
+msgstr "« %{title} » se répète. À quels événements vos modifications doivent-elles s’appliquer ? Votre réponse reste valable jusqu’à la fermeture des détails."

@@ -205,7 +205,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
           | draft: draft,
             status:
               {:failed,
-               dgettext("dashboard_calendar", "The event wasn't created. Check it and try again.")}
+               dgettext(
+                 "dashboard_calendar_editing",
+                 "The event wasn't created. Check it and try again."
+               )}
         })
         |> SurfaceData.push_events(false)
     end
@@ -355,17 +358,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       {:ok, []} ->
         warn(
           socket,
-          dgettext("dashboard_calendar", "You're the organiser, so you're already invited.")
+          dgettext(
+            "dashboard_calendar_editing",
+            "You're the organiser, so you're already invited."
+          )
         )
 
       {:error, :guests, :too_many} ->
         warn(socket, Creation.refusal_message(:guests, :too_many))
 
       {:error, :guests, _invalid} ->
-        warn(socket, dgettext("dashboard_calendar", "Enter a valid email address."))
+        warn(socket, dgettext("dashboard_calendar_editing", "Enter a valid email address."))
 
       {:error, :already_a_guest, email} ->
-        warn(socket, dgettext("dashboard_calendar", "%{email} is already a guest.", email: email))
+        warn(
+          socket,
+          dgettext("dashboard_calendar_editing", "%{email} is already a guest.", email: email)
+        )
     end
   end
 
@@ -493,7 +502,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   defp untitled(title) do
     case String.trim(title || "") do
-      "" -> dgettext("dashboard_calendar", "New event")
+      "" -> dgettext("dashboard_calendar_editing", "New event")
       trimmed -> trimmed
     end
   end

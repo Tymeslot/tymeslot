@@ -37,8 +37,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         id="calendar-panel-new-title"
         name="title"
         value={@values["title"]}
-        label={dgettext("dashboard_calendar", "Title")}
-        placeholder={dgettext("dashboard_calendar", "New event")}
+        label={dgettext("dashboard_calendar_editing", "Title")}
+        placeholder={dgettext("dashboard_calendar_editing", "New event")}
         data-panel-focus="true"
       />
       <.input
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         id="calendar-panel-new-all-day"
         name="all_day"
         value={@values["all_day"]}
-        label={dgettext("dashboard_calendar", "All day")}
+        label={dgettext("dashboard_calendar_editing", "All day")}
       />
       <div class="grid grid-cols-2 gap-2">
         <.input
@@ -54,14 +54,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           id="calendar-panel-new-start"
           name="start"
           value={@values["start"]}
-          label={dgettext("dashboard_calendar", "Starts")}
+          label={dgettext("dashboard_calendar_editing", "Starts")}
         />
         <.input
           type={if @values["all_day"], do: "date", else: "datetime-local"}
           id="calendar-panel-new-end"
           name="end"
           value={@shown_end}
-          label={dgettext("dashboard_calendar", "Ends")}
+          label={dgettext("dashboard_calendar_editing", "Ends")}
         />
       </div>
       <PanelCalendarField.calendar_field choices={@calendar_choices} value={@values["calendar"]} />
@@ -70,24 +70,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           type="select"
           id="calendar-panel-new-free"
           name="free"
-          label={dgettext("dashboard_calendar", "Show as")}
+          label={dgettext("dashboard_calendar_editing", "Show as")}
           value={to_string(@values["free"])}
           options={[
-            {dgettext("dashboard_calendar", "Busy"), "false"},
-            {dgettext("dashboard_calendar", "Free"), "true"}
+            {dgettext("dashboard_calendar_editing", "Busy"), "false"},
+            {dgettext("dashboard_calendar_editing", "Free"), "true"}
           ]}
         />
         <p class="mt-1 text-token-xs text-tymeslot-500">
           {if @values["free"],
-            do: dgettext("dashboard_calendar", "Guests can book this time"),
-            else: dgettext("dashboard_calendar", "Guests can't book this time")}
+            do: dgettext("dashboard_calendar_editing", "Guests can book this time"),
+            else: dgettext("dashboard_calendar_editing", "Guests can't book this time")}
         </p>
       </div>
       <.input
         id="calendar-panel-new-location"
         name="location"
         value={@values["location"]}
-        label={dgettext("dashboard_calendar", "Place")}
+        label={dgettext("dashboard_calendar_editing", "Place")}
       />
       <PanelVideoField.video_choice
         video_integrations={@video_integrations}
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         id="calendar-panel-new-description"
         name="description"
         value={@values["description"]}
-        label={dgettext("dashboard_calendar", "Notes")}
+        label={dgettext("dashboard_calendar_editing", "Notes")}
       />
       <div class="flex justify-end gap-2 border-t border-tymeslot-100 pt-3">
         <.action_button
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           phx-click="panel:draft_cancel"
           phx-target={@surface}
         >
-          {dgettext("dashboard_calendar", "Cancel")}
+          {dgettext("dashboard_calendar_editing", "Cancel")}
         </.action_button>
         <.action_button
           id="calendar-panel-create"
@@ -124,8 +124,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           disabled={@saving}
         >
           {if @values["guests"] == [],
-            do: dgettext("dashboard_calendar", "Create"),
-            else: dgettext("dashboard_calendar", "Create and invite")}
+            do: dgettext("dashboard_calendar_editing", "Create"),
+            else: dgettext("dashboard_calendar_editing", "Create and invite")}
         </.action_button>
       </div>
     </form>

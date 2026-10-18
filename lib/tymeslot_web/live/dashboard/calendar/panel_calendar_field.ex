@@ -33,10 +33,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelCalendarField do
         type="select"
         id="calendar-panel-calendar"
         name="calendar"
-        label={dgettext("dashboard_calendar", "Calendar")}
+        label={dgettext("dashboard_calendar_editing", "Calendar")}
         value={@value}
         options={@options}
-        prompt={if is_nil(@value), do: dgettext("dashboard_calendar", "Not on a listed calendar")}
+        prompt={
+          if is_nil(@value), do: dgettext("dashboard_calendar_editing", "Not on a listed calendar")
+        }
         disabled={@disabled}
       />
     </div>

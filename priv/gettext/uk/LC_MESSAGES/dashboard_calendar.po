@@ -757,11 +757,6 @@ msgstr "З %{from} до %{to}"
 msgid "All events"
 msgstr "Усі події"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
-#, elixir-autogen, elixir-format
-msgid "Arrow keys move between events. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
-msgstr "Клавіші зі стрілками переміщують між подіями. Натисніть M, щоб перемістити вибрану подію: після цього стрілки зсувають її, Shift зі стрілками змінює тривалість, Enter підтверджує, а Esc скасовує. Натисніть Delete, щоб видалити подію, і Ctrl Z (Cmd Z на Mac), щоб скасувати дію."
-
 #: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Change a repeating event"
@@ -979,3 +974,63 @@ msgstr "Подія «%{title}» повторюється. Які події зм
 #, elixir-autogen, elixir-format
 msgid "Too late to undo: “%{title}” has already been deleted."
 msgstr "Скасувати вже запізно: подію «%{title}» вже видалено."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Another event is moving. Try again in a moment."
+msgstr "Інша подія саме переміщується. Спробуйте ще раз за мить."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#, elixir-autogen, elixir-format
+msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
+msgstr "Клавіші зі стрілками переходять між подіями. Натисніть C, щоб додати подію на найближчий вільний час. Натисніть Enter, щоб відкрити вибрану подію, E, щоб її редагувати, і M, щоб перемістити: тоді стрілки зсувають її, Shift зі стрілками змінює тривалість, Enter підтверджує, а Escape скасовує. Натисніть Delete, щоб видалити подію, і Ctrl Z (Cmd Z на Mac), щоб скасувати дію."
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Create"
+msgstr "Створити"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Редагувати"
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Please try again."
+msgstr "Спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Removed “%{title}”"
+msgstr "Подію «%{title}» прибрано"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Set in the meeting type"
+msgstr "Задається в типі зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Show as"
+msgstr "Показувати як"
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar doesn't take repeat rules from Tymeslot."
+msgstr "Цей календар не приймає правила повторення з Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This event is moving to another calendar. Please make the change once it has moved."
+msgstr "Ця подія переміщується до іншого календаря. Внесіть зміну, коли переміщення завершиться."
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Should the new pattern apply to this and the following events, or to all of them?"
+msgstr "Подія «%{title}» повторюється. Застосувати новий шаблон до цієї й наступних подій чи до всіх?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details."
+msgstr "Подія «%{title}» повторюється. До яких подій застосувати ваші зміни? Вибір діятиме, доки ви не закриєте деталі."

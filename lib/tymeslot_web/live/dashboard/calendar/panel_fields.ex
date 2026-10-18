@@ -46,10 +46,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   defp text_error(value, max_length) do
     if String.length(value) > max_length,
       do:
-        dgettext("dashboard_calendar", "That's too long. Keep it to %{count} characters.",
+        dgettext("dashboard_calendar_editing", "That's too long. Keep it to %{count} characters.",
           count: max_length
         ),
-      else: dgettext("dashboard_calendar", "That contains characters that can't be saved.")
+      else:
+        dgettext("dashboard_calendar_editing", "That contains characters that can't be saved.")
   end
 
   @doc "The `transparency` a Busy/Free choice writes."
@@ -107,23 +108,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
     ~H"""
     <div>
       <p class="mb-1 text-token-xs font-semibold text-tymeslot-600" aria-hidden="true">
-        {dgettext("dashboard_calendar", "Show me as")}
+        {dgettext("dashboard_calendar_editing", "Show me as")}
       </p>
       <.segmented_control
         id="calendar-panel-free"
         value={if @free, do: "free", else: "busy"}
         on_change="panel:free"
         target={@target}
-        aria_label={dgettext("dashboard_calendar", "Show me as")}
+        aria_label={dgettext("dashboard_calendar_editing", "Show me as")}
         size={:sm}
       >
-        <:option value="busy" label={dgettext("dashboard_calendar", "Busy")} />
-        <:option value="free" label={dgettext("dashboard_calendar", "Free")} />
+        <:option value="busy" label={dgettext("dashboard_calendar_editing", "Busy")} />
+        <:option value="free" label={dgettext("dashboard_calendar_editing", "Free")} />
       </.segmented_control>
       <p class="mt-1 text-token-xs text-tymeslot-500">
         {if @free,
-          do: dgettext("dashboard_calendar", "Guests can book this time"),
-          else: dgettext("dashboard_calendar", "Guests can't book this time")}
+          do: dgettext("dashboard_calendar_editing", "Guests can book this time"),
+          else: dgettext("dashboard_calendar_editing", "Guests can't book this time")}
       </p>
     </div>
     """
@@ -149,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
         id="calendar-panel-reminder-choice"
         name="reminder"
         type="select"
-        label={dgettext("dashboard_calendar", "Reminder")}
+        label={dgettext("dashboard_calendar_editing", "Reminder")}
         value={@choice}
         options={@options}
         disabled={@disabled}
@@ -158,7 +159,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
         :if={@others != []}
         id="calendar-panel-other-reminders"
         class="mt-1 space-y-0.5 text-token-xs text-tymeslot-500"
-        aria-label={dgettext("dashboard_calendar", "Other reminders")}
+        aria-label={dgettext("dashboard_calendar_editing", "Other reminders")}
       >
         <li :for={reminder <- @others}>{RemindersEditor.reminder_label(reminder)}</li>
       </ul>
@@ -168,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
 
   defp reminder_options do
     [
-      {dgettext("dashboard_calendar", "None"), "none"}
+      {dgettext("dashboard_calendar_editing", "None"), "none"}
       | Enum.map(
           ReminderForm.reminder_minutes_presets(),
           &{RemindersEditor.minutes_label(&1), Integer.to_string(&1)}

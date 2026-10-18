@@ -24,12 +24,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.RemoveGuestModal do
       size={:small}
       icon="hero-user-minus"
       confirm_variant={:danger}
-      title={dgettext("dashboard_calendar", "Remove a guest")}
+      title={dgettext("dashboard_calendar_editing", "Remove a guest")}
       on_cancel={JS.push("panel:guest_remove_cancel", target: @target)}
     >
-      <p>{dgettext("dashboard_calendar", "Remove %{email}?", email: @prompt.email)}</p>
+      <p>{dgettext("dashboard_calendar_editing", "Remove %{email}?", email: @prompt.email)}</p>
       <p class="text-tymeslot-500">
-        {dgettext("dashboard_calendar", "They'll get an email saying they're no longer invited.")}
+        {dgettext(
+          "dashboard_calendar_editing",
+          "They'll get an email saying they're no longer invited."
+        )}
       </p>
       <:actions>
         <.action_button
@@ -38,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.RemoveGuestModal do
           phx-click="panel:guest_remove_cancel"
           phx-target={@target}
         >
-          {dgettext("dashboard_calendar", "Cancel")}
+          {dgettext("dashboard_calendar_editing", "Cancel")}
         </.action_button>
         <.action_button
           id="calendar-remove-guest-confirm"
@@ -46,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.RemoveGuestModal do
           phx-click="panel:guest_remove_confirm"
           phx-target={@target}
         >
-          {dgettext("dashboard_calendar", "Remove")}
+          {dgettext("dashboard_calendar_editing", "Remove")}
         </.action_button>
       </:actions>
     </Modal.confirm_modal>

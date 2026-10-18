@@ -748,11 +748,6 @@ msgstr "De %{from} a %{to}"
 msgid "All events"
 msgstr "Todos os eventos"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
-#, elixir-autogen, elixir-format
-msgid "Arrow keys move between events. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
-msgstr "Use as teclas de seta para navegar entre os eventos. Pressione M para mover o evento selecionado: as setas passam a deslocá-lo, Shift com as setas altera a duração, Enter confirma e Esc cancela. Pressione Delete para excluir o evento e Ctrl Z (Cmd Z no Mac) para desfazer."
-
 #: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Change a repeating event"
@@ -969,3 +964,63 @@ msgstr "“%{title}” se repete. Quais eventos devem ser alterados?"
 #, elixir-autogen, elixir-format
 msgid "Too late to undo: “%{title}” has already been deleted."
 msgstr "Tarde demais para desfazer: o evento “%{title}” já foi excluído."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Another event is moving. Try again in a moment."
+msgstr "Outro evento está sendo movido. Tente novamente em instantes."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#, elixir-autogen, elixir-format
+msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
+msgstr "As setas navegam entre os eventos. Pressione C para adicionar um evento no próximo horário livre. Pressione Enter para abrir o evento em foco, E para editá-lo e M para movê-lo: as setas o deslocam, Shift com as setas altera a duração, Enter confirma e Escape cancela. Pressione Delete para excluir o evento e Ctrl Z (Cmd Z no Mac) para desfazer."
+
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Create"
+msgstr "Criar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Editar"
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Please try again."
+msgstr "Tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Removed “%{title}”"
+msgstr "Evento “%{title}” removido"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Set in the meeting type"
+msgstr "Definido no tipo de reunião"
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Show as"
+msgstr "Mostrar como"
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar doesn't take repeat rules from Tymeslot."
+msgstr "Este calendário não aceita regras de repetição do Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This event is moving to another calendar. Please make the change once it has moved."
+msgstr "Este evento está sendo movido para outro calendário. Faça a alteração depois que ele for movido."
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Should the new pattern apply to this and the following events, or to all of them?"
+msgstr "“%{title}” se repete. O novo padrão deve valer para este e os eventos seguintes, ou para todos?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details."
+msgstr "“%{title}” se repete. A quais eventos suas alterações devem se aplicar? Sua resposta vale até você fechar os detalhes."

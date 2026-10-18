@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
     ~H"""
     <section id="calendar-panel-guests" class="space-y-2">
       <h3 class="text-token-sm font-medium text-tymeslot-700">
-        {dgettext("dashboard_calendar", "Guests")}
+        {dgettext("dashboard_calendar_editing", "Guests")}
       </h3>
       <ul :if={@guests != []} class="flex flex-wrap gap-1.5">
         <li
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             phx-value-email={guest.email}
             phx-target={@surface}
             aria-label={
-              dgettext("dashboard_calendar", "Remove %{guest}",
+              dgettext("dashboard_calendar_editing", "Remove %{guest}",
                 guest: guest.display_name || guest.email
               )
             }
@@ -57,18 +57,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="email"
             value=""
-            label={dgettext("dashboard_calendar", "Invite a guest")}
-            placeholder={dgettext("dashboard_calendar", "name@example.com")}
+            label={dgettext("dashboard_calendar_editing", "Invite a guest")}
+            placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}
           />
         </div>
         <.action_button id="calendar-panel-guest-invite" type="submit" variant={:secondary} size={:sm}>
-          {dgettext("dashboard_calendar", "Invite")}
+          {dgettext("dashboard_calendar_editing", "Invite")}
         </.action_button>
       </form>
       <p class="text-token-xs text-tymeslot-500">
-        {dgettext("dashboard_calendar", "Invite emails them now.")}
+        {dgettext("dashboard_calendar_editing", "Invite emails them now.")}
         <span :if={@repeating}>
-          {dgettext("dashboard_calendar", "Guests change for this event only.")}
+          {dgettext("dashboard_calendar_editing", "Guests change for this event only.")}
         </span>
       </p>
     </section>
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
     ~H"""
     <section id="calendar-panel-guests" class="space-y-2">
       <h3 class="text-token-sm font-medium text-tymeslot-700">
-        {dgettext("dashboard_calendar", "Guests")}
+        {dgettext("dashboard_calendar_editing", "Guests")}
       </h3>
       <ul :if={@guests != []} class="flex flex-wrap gap-1.5">
         <li
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           <button
             type="button"
             phx-click={JS.push("panel:draft_drop_guest", value: %{email: email}, target: @surface)}
-            aria-label={dgettext("dashboard_calendar", "Remove %{guest}", guest: email)}
+            aria-label={dgettext("dashboard_calendar_editing", "Remove %{guest}", guest: email)}
             class="shrink-0 rounded-token-full p-0.5 text-tymeslot-500 hover:bg-tymeslot-200 hover:text-tymeslot-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
           >
             <.icon name="hero-x-mark-micro" class="h-4 w-4" />
@@ -110,8 +110,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="guest_email"
             value=""
-            label={dgettext("dashboard_calendar", "Add a guest")}
-            placeholder={dgettext("dashboard_calendar", "name@example.com")}
+            label={dgettext("dashboard_calendar_editing", "Add a guest")}
+            placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}
           />
         </div>
         <.action_button
@@ -122,11 +122,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           variant={:secondary}
           size={:sm}
         >
-          {dgettext("dashboard_calendar", "Add")}
+          {dgettext("dashboard_calendar_editing", "Add")}
         </.action_button>
       </div>
       <p :if={@guests != []} class="text-token-xs text-tymeslot-500">
-        {dgettext("dashboard_calendar", "They'll be invited when you create the event.")}
+        {dgettext("dashboard_calendar_editing", "They'll be invited when you create the event.")}
       </p>
     </section>
     """
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
       class="flex flex-wrap items-center gap-2 rounded-token-lg bg-amber-50 px-3 py-2 text-token-sm text-amber-900"
     >
       <span class="min-w-0 flex-1">
-        {dgettext("dashboard_calendar", "Guests haven't been told about these changes")}
+        {dgettext("dashboard_calendar_editing", "Guests haven't been told about these changes")}
       </span>
       <.action_button
         id="calendar-panel-tell-guests"
@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
         phx-click="panel:tell_guests"
         phx-target={@surface}
       >
-        {dgettext("dashboard_calendar", "Tell guests")}
+        {dgettext("dashboard_calendar_editing", "Tell guests")}
       </.action_button>
     </div>
     """

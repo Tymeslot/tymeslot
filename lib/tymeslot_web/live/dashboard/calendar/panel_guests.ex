@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       socket
       |> write(event, guests)
       |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
-      |> Toast.show(dgettext("dashboard_calendar", "Invited %{email}.", email: email))
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Invited %{email}.", email: email))
     else
       {:invalid, message} -> flash(socket, {:warning, message})
       refusal -> refuse(socket, refusal)
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
       socket
       |> write(event, kept)
-      |> Toast.show(dgettext("dashboard_calendar", "Removed %{email}.", email: email))
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Removed %{email}.", email: email))
     else
       {[], _kept} -> socket
       {:error, _reason} = refusal -> refuse(socket, refusal)
@@ -150,13 +150,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          :ok <- send_update(socket, panel, opened_with, event) do
       socket
       |> assign(:panel, %{panel | opened_with: event})
-      |> Toast.show(dgettext("dashboard_calendar", "Guests will get an update."))
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Guests will get an update."))
     else
       true ->
         flash(
           socket,
           {:warning,
-           dgettext("dashboard_calendar", "Still saving. Tell guests once it has saved.")}
+           dgettext("dashboard_calendar_editing", "Still saving. Tell guests once it has saved.")}
         )
 
       {:error, :moving} = refusal ->
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
         flash(
           socket,
           {:warning,
-           dgettext("dashboard_calendar", "Couldn't tell guests. Your changes are saved.")}
+           dgettext("dashboard_calendar_editing", "Couldn't tell guests. Your changes are saved.")}
         )
 
       _nothing_to_tell ->
@@ -214,12 +214,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       {:ok, []} ->
         {:invalid,
          dgettext(
-           "dashboard_calendar",
+           "dashboard_calendar_editing",
            "You're the organiser, so there's no need to invite yourself."
          )}
 
       {:error, :guests, _reason} ->
-        {:invalid, dgettext("dashboard_calendar", "Enter a valid email address.")}
+        {:invalid, dgettext("dashboard_calendar_editing", "Enter a valid email address.")}
     end
   end
 
@@ -228,7 +228,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   defp new_guest(event, email) do
     if Enum.any?(of(event), &(is_binary(&1.email) and String.downcase(&1.email) == email)),
       do:
-        {:invalid, dgettext("dashboard_calendar", "%{email} is already a guest.", email: email)},
+        {:invalid,
+         dgettext("dashboard_calendar_editing", "%{email} is already a guest.", email: email)},
       else: :ok
   end
 
@@ -239,7 +240,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       do:
         {:invalid,
          dngettext(
-           "dashboard_calendar",
+           "dashboard_calendar_editing",
            "An event can have at most %{count} guest.",
            "An event can have at most %{count} guests.",
            max

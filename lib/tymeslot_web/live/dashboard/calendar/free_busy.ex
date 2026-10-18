@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
       else:
         {:error,
          dgettext(
-           "dashboard_calendar",
+           "dashboard_calendar_editing",
            "Busy or free is set in the meeting type for bookings and their calendar copies."
          )}
   end
@@ -57,16 +57,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
 
     case {value, after_change.availability.kind} do
       {"transparent", :free} ->
-        dgettext("dashboard_calendar", "Shown as free. Guests can book this time.")
+        dgettext("dashboard_calendar_editing", "Shown as free. Guests can book this time.")
 
       {"opaque", :busy} ->
-        dgettext("dashboard_calendar", "Shown as busy. Guests can't book this time.")
+        dgettext("dashboard_calendar_editing", "Shown as busy. Guests can't book this time.")
 
       {"transparent", _other} ->
-        dgettext("dashboard_calendar", "Shown as free.")
+        dgettext("dashboard_calendar_editing", "Shown as free.")
 
       {"opaque", _other} ->
-        dgettext("dashboard_calendar", "Shown as busy.")
+        dgettext("dashboard_calendar_editing", "Shown as busy.")
     end
   end
 end

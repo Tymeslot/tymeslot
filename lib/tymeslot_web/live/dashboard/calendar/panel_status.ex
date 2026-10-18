@@ -45,21 +45,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelStatus do
 
   @doc "The words for `status`."
   @spec text(t()) :: String.t()
-  def text(:idle), do: dgettext("dashboard_calendar", "Changes save automatically")
-  def text(:saving), do: dgettext("dashboard_calendar", "Saving…")
-  def text(:saved), do: dgettext("dashboard_calendar", "Saved")
+  def text(:idle), do: dgettext("dashboard_calendar_editing", "Changes save automatically")
+  def text(:saving), do: dgettext("dashboard_calendar_editing", "Saving…")
+  def text(:saved), do: dgettext("dashboard_calendar_editing", "Saved")
 
   def text({:waiting, account}),
     do:
-      dgettext("dashboard_calendar", "Saved here, waiting to reach %{account}", account: account)
+      dgettext("dashboard_calendar_editing", "Saved here, waiting to reach %{account}",
+        account: account
+      )
 
-  def text(:read_only), do: dgettext("dashboard_calendar", "Read only")
+  def text(:read_only), do: dgettext("dashboard_calendar_editing", "Read only")
 
   def text({:failed, reason}),
-    do: dgettext("dashboard_calendar", "Couldn't save. %{reason}", reason: reason)
+    do: dgettext("dashboard_calendar_editing", "Couldn't save. %{reason}", reason: reason)
 
   defp after_write(:failed, _left, _account),
-    do: {:failed, dgettext("dashboard_calendar", "The change was put back.")}
+    do: {:failed, dgettext("dashboard_calendar_editing", "The change was put back.")}
 
   defp after_write(:queued, _left, account), do: {:waiting, account}
   defp after_write(_answered, [], _account), do: :saved

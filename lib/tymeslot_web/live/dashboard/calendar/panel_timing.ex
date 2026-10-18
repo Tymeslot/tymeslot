@@ -195,18 +195,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
   end
 
   defp end_before_start(:time),
-    do: dgettext("dashboard_calendar", "The end is before the start. Pick a later end time.")
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The end is before the start. Pick a later end time."
+      )
 
   defp end_before_start(:date),
-    do: dgettext("dashboard_calendar", "The end is before the start. Pick a later end date.")
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The end is before the start. Pick a later end date."
+      )
 
   defp out_of_range,
-    do: dgettext("dashboard_calendar", "Pick a date between 1900 and 2200.")
+    do: dgettext("dashboard_calendar_editing", "Pick a date between 1900 and 2200.")
 
   defp too_long_all_day,
-    do: dgettext("dashboard_calendar", "An all-day event can last up to 366 days.")
+    do: dgettext("dashboard_calendar_editing", "An all-day event can last up to 366 days.")
 
-  defp too_long, do: dgettext("dashboard_calendar", "An event can last up to 7 days.")
+  defp too_long, do: dgettext("dashboard_calendar_editing", "An event can last up to 7 days.")
 
   defp hour_minute(at), do: at |> DateTime.to_time() |> Calendar.strftime("%H:%M")
 
@@ -233,7 +241,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
     <div class="space-y-3">
       <div class="flex items-center justify-between gap-3">
         <span class="text-token-sm font-medium text-tymeslot-700" aria-hidden="true">
-          {dgettext("dashboard_calendar", "All day")}
+          {dgettext("dashboard_calendar_editing", "All day")}
         </span>
         <StatusSwitch.status_switch
           id="calendar-panel-all-day"
@@ -242,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
           target={@target}
           size={:small}
           disabled={@disabled}
-          aria_label={dgettext("dashboard_calendar", "All day")}
+          aria_label={dgettext("dashboard_calendar_editing", "All day")}
         />
       </div>
       <form id="calendar-panel-timing" phx-change="panel:timing" phx-target={@target}>
@@ -252,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
               id="calendar-panel-start-date"
               name="start_date"
               type="date"
-              label={dgettext("dashboard_calendar", "Starts")}
+              label={dgettext("dashboard_calendar_editing", "Starts")}
               value={@timing.start_date}
               phx-debounce="blur"
             />
@@ -262,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
               name="start_time"
               type="time"
               step="300"
-              label={dgettext("dashboard_calendar", "Start time")}
+              label={dgettext("dashboard_calendar_editing", "Start time")}
               value={@timing.start_time}
               phx-debounce="blur"
             />
@@ -272,7 +280,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
               id="calendar-panel-end-date"
               name="end_date"
               type="date"
-              label={dgettext("dashboard_calendar", "Ends")}
+              label={dgettext("dashboard_calendar_editing", "Ends")}
               value={@timing.end_date}
               errors={List.wrap(@error)}
               phx-debounce="blur"
@@ -283,7 +291,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
               name="end_time"
               type="time"
               step="300"
-              label={dgettext("dashboard_calendar", "End time")}
+              label={dgettext("dashboard_calendar_editing", "End time")}
               value={@timing.end_time}
               phx-debounce="blur"
             />

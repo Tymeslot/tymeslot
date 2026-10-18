@@ -209,32 +209,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
 
   defp options(date, current) do
     labels = %{
-      "none" => dgettext("dashboard_calendar", "Does not repeat"),
-      "daily" => dgettext("dashboard_calendar", "Every day"),
-      "weekdays" => dgettext("dashboard_calendar", "Every weekday"),
-      "weekly" => dgettext("dashboard_calendar", "Every week on %{day}", day: weekday_name(date)),
+      "none" => dgettext("dashboard_calendar_editing", "Does not repeat"),
+      "daily" => dgettext("dashboard_calendar_editing", "Every day"),
+      "weekdays" => dgettext("dashboard_calendar_editing", "Every weekday"),
+      "weekly" =>
+        dgettext("dashboard_calendar_editing", "Every week on %{day}", day: weekday_name(date)),
       "monthly" =>
-        dgettext("dashboard_calendar", "Every month %{on}",
+        dgettext("dashboard_calendar_editing", "Every month %{on}",
           on: RecurrenceSummary.on_phrase(nth_weekday(date), :monthly, date)
         ),
       "yearly" =>
-        dgettext("dashboard_calendar", "Every year %{on}",
+        dgettext("dashboard_calendar_editing", "Every year %{on}",
           on: RecurrenceSummary.on_phrase(:day, :yearly, date)
         )
     }
 
     presets = for key <- offered(date), do: {Map.fetch!(labels, key), key}
-    custom = [{dgettext("dashboard_calendar", "Custom…"), "custom"}]
+    custom = [{dgettext("dashboard_calendar_editing", "Custom…"), "custom"}]
 
     keep =
-      if current == "keep", do: [{dgettext("dashboard_calendar", "Repeats"), "keep"}], else: []
+      if current == "keep",
+        do: [{dgettext("dashboard_calendar_editing", "Repeats"), "keep"}],
+        else: []
 
     keep ++ presets ++ custom
   end
 
   defp summary(event, rule, start) do
     if rule in [nil, ""] and Series.member?(event),
-      do: dgettext("dashboard_calendar", "Repeats"),
+      do: dgettext("dashboard_calendar_editing", "Repeats"),
       else: RecurrenceEditor.summary(rule, start)
   end
 
@@ -268,7 +271,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
             id="calendar-panel-repeat-preset"
             name="preset"
             type="select"
-            label={dgettext("dashboard_calendar", "Repeat")}
+            label={dgettext("dashboard_calendar_editing", "Repeat")}
             value={@repeat.current}
             options={@repeat.options}
             disabled={@disabled or not @repeat.writable}
@@ -296,8 +299,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
         class="text-token-xs font-semibold text-turquoise-700 hover:text-turquoise-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
       >
         {if @custom_open,
-          do: dgettext("dashboard_calendar", "Hide custom pattern"),
-          else: dgettext("dashboard_calendar", "Edit custom pattern")}
+          do: dgettext("dashboard_calendar_editing", "Hide custom pattern"),
+          else: dgettext("dashboard_calendar_editing", "Edit custom pattern")}
       </button>
       <div :if={@custom_open} id="calendar-panel-repeat-custom">
         <RecurrenceEditor.recurrence_editor

@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
       socket
       |> assign(:undoing, Map.put(socket.assigns.undoing, ref, entry))
       |> track(entry.id, ref, Map.merge(event, entry.before))
-      |> Toast.show(dgettext("dashboard_calendar", "Change undone"), key: entry.key)
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Change undone"), key: entry.key)
     else
       {:error, :rate_limited, _message} = refusal ->
         socket |> assign(:undo, UndoStack.push(socket.assigns.undo, entry)) |> flash(refusal)
@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
       _gone_or_changed ->
         Toast.show(
           socket,
-          dgettext("dashboard_calendar", "That change can't be undone any more.")
+          dgettext("dashboard_calendar_editing", "That change can't be undone any more.")
         )
     end
   end
@@ -352,7 +352,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
 
     case Enum.find(assigns.integrations, &(&1.id == id)) do
       %{name: name} -> name
-      nil -> dgettext("dashboard_calendar", "your calendar")
+      nil -> dgettext("dashboard_calendar_editing", "your calendar")
     end
   end
 end

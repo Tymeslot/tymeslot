@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     end
   end
 
-  defp new_event, do: dgettext("dashboard_calendar", "New event")
+  defp new_event, do: dgettext("dashboard_calendar_editing", "New event")
 
   @doc """
   Starts writing `params` for the draft `draft`, within the calendar edit
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     |> SurfaceData.reload(:events)
     |> toast(params, fn params ->
       dgettext(
-        "dashboard_calendar",
+        "dashboard_calendar_editing",
         "“%{title}” is saved here and will reach your calendar at its next sync.",
         title: params.title
       )
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     |> push_event("calendar:draft-cleared", %{draft: draft})
     |> SurfaceData.push_events(false)
     |> toast(params, fn params ->
-      dgettext("dashboard_calendar", "Couldn't add “%{title}”. %{reason}",
+      dgettext("dashboard_calendar_editing", "Couldn't add “%{title}”. %{reason}",
         title: params.title,
         reason: CalendarEditMessages.create_failure_reason(Map.get(failure, :reason))
       )
@@ -191,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     Toast.show(
       socket,
       dngettext(
-        "dashboard_calendar",
+        "dashboard_calendar_editing",
         "Added and invited %{count} guest",
         "Added and invited %{count} guests",
         length(invited)
@@ -214,7 +214,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     }
 
   defp added_text(socket, params),
-    do: dgettext("dashboard_calendar", "Added: %{when}", when: when_text(socket, params))
+    do: dgettext("dashboard_calendar_editing", "Added: %{when}", when: when_text(socket, params))
 
   defp when_text(_socket, %CreateParams{all_day: true, start_at: %Date{} = day}),
     do: LocaleFormat.format_short_weekday_date(day, Gettext.get_locale(TymeslotWeb.Gettext))
@@ -245,7 +245,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
         |> keep(entry)
         |> flash(
           {:warning,
-           dgettext("dashboard_calendar", "This event is still saving. Undo once it has saved.")}
+           dgettext(
+             "dashboard_calendar_editing",
+             "This event is still saving. Undo once it has saved."
+           )}
         )
 
       {:error, :rate_limited, _message} = refusal ->
@@ -277,63 +280,80 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   """
   @spec refusal_message(CreateParams.field(), atom()) :: String.t()
   def refusal_message(:title, :blank),
-    do: dgettext("dashboard_calendar", "Give the event a title.")
+    do: dgettext("dashboard_calendar_editing", "Give the event a title.")
 
   def refusal_message(:title, :too_long),
-    do: dgettext("dashboard_calendar", "The title is too long. Keep it under 500 characters.")
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The title is too long. Keep it under 500 characters."
+      )
 
   def refusal_message(:title, _invalid),
-    do: dgettext("dashboard_calendar", "The title contains characters that can't be saved.")
+    do:
+      dgettext("dashboard_calendar_editing", "The title contains characters that can't be saved.")
 
   def refusal_message(:start, :out_of_range),
-    do: dgettext("dashboard_calendar", "Pick a date between 1900 and 2200.")
+    do: dgettext("dashboard_calendar_editing", "Pick a date between 1900 and 2200.")
 
   def refusal_message(field, :invalid) when field in [:start, :end],
-    do: dgettext("dashboard_calendar", "That date or time can't be read.")
+    do: dgettext("dashboard_calendar_editing", "That date or time can't be read.")
 
   def refusal_message(:end, :before_start),
-    do: dgettext("dashboard_calendar", "The event must end after it starts.")
+    do: dgettext("dashboard_calendar_editing", "The event must end after it starts.")
 
   def refusal_message(:end, :longer_than_a_week),
-    do: dgettext("dashboard_calendar", "An event with times can last at most 7 days.")
+    do: dgettext("dashboard_calendar_editing", "An event with times can last at most 7 days.")
 
   def refusal_message(:end, :longer_than_a_year),
-    do: dgettext("dashboard_calendar", "An all-day event can last at most a year.")
+    do: dgettext("dashboard_calendar_editing", "An all-day event can last at most a year.")
 
   def refusal_message(:calendar, :read_only),
-    do: dgettext("dashboard_calendar", "That calendar is read-only. Choose another one.")
+    do: dgettext("dashboard_calendar_editing", "That calendar is read-only. Choose another one.")
 
   def refusal_message(:calendar, _not_found),
-    do: dgettext("dashboard_calendar", "Choose one of your calendars.")
+    do: dgettext("dashboard_calendar_editing", "Choose one of your calendars.")
 
   def refusal_message(:location, :too_long),
-    do: dgettext("dashboard_calendar", "The place is too long. Keep it under 1,000 characters.")
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The place is too long. Keep it under 1,000 characters."
+      )
 
   def refusal_message(:description, :too_long),
     do:
-      dgettext("dashboard_calendar", "The notes are too long. Keep them under 5,000 characters.")
+      dgettext(
+        "dashboard_calendar_editing",
+        "The notes are too long. Keep them under 5,000 characters."
+      )
 
   def refusal_message(field, _invalid) when field in [:location, :description],
-    do: dgettext("dashboard_calendar", "That text contains characters that can't be saved.")
+    do:
+      dgettext("dashboard_calendar_editing", "That text contains characters that can't be saved.")
 
   def refusal_message(:guests, :too_many),
-    do: dgettext("dashboard_calendar", "You can invite at most 50 guests at once.")
+    do: dgettext("dashboard_calendar_editing", "You can invite at most 50 guests at once.")
 
   def refusal_message(:guests, _invalid),
-    do: dgettext("dashboard_calendar", "One of the guest addresses isn't a valid email address.")
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "One of the guest addresses isn't a valid email address."
+      )
 
   def refusal_message(:reminders, _invalid),
-    do: dgettext("dashboard_calendar", "Those reminders can't be saved.")
+    do: dgettext("dashboard_calendar_editing", "Those reminders can't be saved.")
 
   def refusal_message(:recurrence_rule, :not_repeatable),
-    do: dgettext("dashboard_calendar", "Events on that calendar can't repeat.")
+    do: dgettext("dashboard_calendar_editing", "Events on that calendar can't repeat.")
 
   def refusal_message(:recurrence_rule, _invalid),
-    do: dgettext("dashboard_calendar", "That repeat rule can't be read.")
+    do: dgettext("dashboard_calendar_editing", "That repeat rule can't be read.")
 
   def refusal_message(:video_integration_id, _invalid),
-    do: dgettext("dashboard_calendar", "That video call can't be added.")
+    do: dgettext("dashboard_calendar_editing", "That video call can't be added.")
 
   def refusal_message(_field, _reason),
-    do: dgettext("dashboard_calendar", "Couldn't add the event. Please try again.")
+    do: dgettext("dashboard_calendar_editing", "Couldn't add the event. Please try again.")
 end

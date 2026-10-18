@@ -31,10 +31,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
     ~H"""
     <section :if={@editable or @link} id="calendar-panel-video" class="space-y-2">
       <h3 class="text-token-sm font-medium text-tymeslot-700">
-        {dgettext("dashboard_calendar", "Video call")}
+        {dgettext("dashboard_calendar_editing", "Video call")}
       </h3>
       <p :if={@booking_copy} class="text-token-sm text-tymeslot-500">
-        {dgettext("dashboard_calendar", "The video call belongs to the booking.")}
+        {dgettext("dashboard_calendar_editing", "The video call belongs to the booking.")}
       </p>
       <div :if={@link} class="flex flex-wrap items-center gap-2">
         <.link
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
           class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-700 px-3 py-1.5 text-token-sm font-semibold text-white hover:bg-turquoise-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
         >
           <.icon name="hero-video-camera-mini" class="h-4 w-4" />
-          {dgettext("dashboard_calendar", "Join")}
+          {dgettext("dashboard_calendar_editing", "Join")}
         </.link>
         <.action_button
           :if={@editable and !@booking_copy}
@@ -56,15 +56,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
           phx-value-video_integration_id=""
           phx-target={@surface}
         >
-          {dgettext("dashboard_calendar", "Remove link")}
+          {dgettext("dashboard_calendar_editing", "Remove link")}
         </.action_button>
       </div>
       <p :if={@editable && !@booking_copy && @creating} class="text-token-sm text-tymeslot-500">
-        {dgettext("dashboard_calendar", "Creating the video call…")}
+        {dgettext("dashboard_calendar_editing", "Creating the video call…")}
       </p>
       <div :if={@editable && !@booking_copy && !@link && !@creating}>
         <p :if={@video_integrations == []} class="text-token-sm text-tymeslot-500">
-          {dgettext("dashboard_calendar", "No video integration connected.")}
+          {dgettext("dashboard_calendar_editing", "No video integration connected.")}
         </p>
         <.action_button
           :if={match?([_only], @video_integrations)}
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
           phx-value-video_integration_id={hd(@video_integrations).id}
           phx-target={@surface}
         >
-          {dgettext("dashboard_calendar", "Add video call")}
+          {dgettext("dashboard_calendar_editing", "Add video call")}
         </.action_button>
         <form
           :if={match?([_first, _second | _rest], @video_integrations)}
@@ -89,8 +89,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
               type="select"
               id="calendar-panel-video-choice"
               name="video_integration_id"
-              label={dgettext("dashboard_calendar", "Add video call")}
-              prompt={dgettext("dashboard_calendar", "Choose a provider")}
+              label={dgettext("dashboard_calendar_editing", "Add video call")}
+              prompt={dgettext("dashboard_calendar_editing", "Choose a provider")}
               options={for vi <- @video_integrations, do: {vi.name, vi.id}}
               value=""
             />
@@ -112,8 +112,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
       type="select"
       id="calendar-panel-new-video"
       name="video_integration_id"
-      label={dgettext("dashboard_calendar", "Video call")}
-      prompt={dgettext("dashboard_calendar", "No video call")}
+      label={dgettext("dashboard_calendar_editing", "Video call")}
+      prompt={dgettext("dashboard_calendar_editing", "No video call")}
       options={for vi <- @video_integrations, do: {vi.name, vi.id}}
       value={@value}
     />
