@@ -200,18 +200,40 @@ defmodule Tymeslot.CalendarGrid.EventEditTransparencyTest do
       assert row.transparency == "opaque"
     end
 
-    test "refuses it whatever series scope is asked", %{user: user, event: event} do
-      assert {:error, %{reason: :booking}} =
-               Changes.update_event(user.id, event, %{transparency: "transparent"},
-                 recurrence_scope: :all
-               )
-    end
-
     test "still takes a change that leaves Busy/Free alone", %{user: user, event: event} do
       expect_provider_update()
 
       assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Booked call"})
       assert updated.summary == "Booked call"
+    end
+  end
+
+  describe "a member of a booked series" do
+    test "refuses a change of Busy/Free to all its events", %{
+      user: user,
+      integration: integration
+    } do
+      member =
+        insert_event(integration, %{
+          uid: "booked-series",
+          provider_event_id: "booked-series_20260601T090000Z",
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
+          recurring_event_id: "booked-series"
+        })
+
+      insert(:meeting,
+        organizer_user: user,
+        calendar_integration_id: integration.id,
+        calendar_uid: "booked-series"
+      )
+
+      assert {:error, %{reason: :booking, retry: :not_queued}} =
+               Changes.update_event(user.id, member, %{transparency: "transparent"},
+                 recurrence_scope: :all
+               )
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, member.uid)
+      assert row.transparency == "opaque"
     end
   end
 end
