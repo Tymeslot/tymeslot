@@ -23,9 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   @sync_state_locally_deleted "locally_deleted"
 
   # The columns a dashboard edit may change on a cached row: what a user can
-  # edit on an event, plus the video room an edit can attach to it.
+  # edit on an event (free/busy included), plus the video room an edit can
+  # attach to it.
   @local_edit_fields ~w(summary description location start_at end_at all_day start_date end_date
-                        reminders recurrence_rule colour attendees video_link video_integration_id)a
+                        reminders recurrence_rule colour attendees transparency video_link
+                        video_integration_id)a
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.

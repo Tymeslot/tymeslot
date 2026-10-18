@@ -212,6 +212,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       :recurrence_rule,
       :colour,
       :attendees,
+      :transparency,
       :provider_calendar_id,
       :timezone
     ])
@@ -332,10 +333,14 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       colour: Map.get(raw, :colour),
       attendees: Enum.map(Map.get(raw, :attendees) || [], &Attendee.normalise/1),
       status: :confirmed,
-      transparency: :opaque,
+      transparency: transparency(Map.get(raw, :transparency)),
       created_by_tymeslot: Map.get(raw, :created_by_tymeslot, false)
     }
   end
+
+  # A grid write stores the cache's string; anything else, or nothing, is busy.
+  defp transparency(value) when value in ["transparent", :transparent], do: :transparent
+  defp transparency(_value), do: :opaque
 
   defp timing_attrs(%{all_day: true, start_time: %Date{} = start_date} = raw) do
     %{

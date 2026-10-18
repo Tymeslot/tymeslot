@@ -196,4 +196,56 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
              ) == []
     end
   end
+
+  describe "free/busy" do
+    test "a one-off event keeps it through a create and an update" do
+      create = %{
+        uid: "evt-free",
+        summary: "Lunch",
+        all_day: false,
+        start_time: ~U[2026-06-18 12:00:00Z],
+        end_time: ~U[2026-06-18 13:00:00Z],
+        transparency: "transparent"
+      }
+
+      DebugCalendarProvider.create_event(@client, create)
+      assert %CalendarEvent{transparency: :transparent} = normalised_for("evt-free")
+
+      assert :ok =
+               DebugCalendarProvider.update_event(
+                 @client,
+                 "evt-free",
+                 Map.put(create, :transparency, "opaque")
+               )
+
+      assert %CalendarEvent{transparency: :opaque} = normalised_for("evt-free")
+    end
+
+    test "an event created without it is busy" do
+      DebugCalendarProvider.create_event(@client, %{
+        uid: "evt-busy",
+        summary: "Review",
+        all_day: false,
+        start_time: ~U[2026-06-18 15:00:00Z],
+        end_time: ~U[2026-06-18 16:00:00Z]
+      })
+
+      assert %CalendarEvent{transparency: :opaque} = normalised_for("evt-busy")
+    end
+
+    test "a repeating event carries it in its document" do
+      DebugCalendarProvider.create_event(@client, %{
+        uid: "evt-free-series",
+        summary: "Gym",
+        all_day: false,
+        start_time: ~U[2026-06-15 07:00:00Z],
+        end_time: ~U[2026-06-15 08:00:00Z],
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
+        transparency: "transparent"
+      })
+
+      assert %CalendarEvent{transparency: :transparent} =
+               normalised_for("evt-free-series_20260615T070000")
+    end
+  end
 end

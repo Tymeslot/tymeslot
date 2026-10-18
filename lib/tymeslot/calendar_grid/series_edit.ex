@@ -152,7 +152,15 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # The fields of a series member an edit can change, in the cache's
   # vocabulary, which the payload shares for these; timing is written when
   # the edit changed it (`changed_fields/3`).
-  @override_fields [:summary, :description, :location, :colour, :reminders, :attendees]
+  @override_fields [
+    :summary,
+    :description,
+    :location,
+    :colour,
+    :reminders,
+    :attendees,
+    :transparency
+  ]
 
   # The cache fields an edit moves an occurrence or resizes it by.
   @timing_fields [:start_at, :end_at, :start_date, :end_date]

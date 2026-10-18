@@ -10,9 +10,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
   occurrence rather than the master.
 
     * **Plain fields** (`:summary`, `:description`, `:location`,
-      `:reminders`, `:attendees`) are sent under their Graph keys, mapped as
-      `EventMapper` maps them. Outlook events carry no colour Tymeslot
-      writes, so `:colour` is not sent.
+      `:reminders`, `:attendees`, `:transparency`) are sent under their Graph
+      keys, mapped as `EventMapper` maps them (`:transparency` as `showAs`).
+      Outlook events carry no colour Tymeslot writes, so `:colour` is not
+      sent.
     * **A move** of the occurrence moves the master's `start` and `end` by
       as much, on the wall clock of the zone the series was created in
       (`originalStartTimeZone`, which is also the label they are written
@@ -55,7 +56,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
     description: ["body"],
     location: ["location"],
     reminders: ["isReminderOn", "reminderMinutesBeforeStart"],
-    attendees: ["attendees"]
+    attendees: ["attendees"],
+    transparency: ["showAs"]
   }
 
   # `EventMapper` drops an empty subject, which a patch has to send to clear.

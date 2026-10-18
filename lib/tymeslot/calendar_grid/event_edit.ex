@@ -86,7 +86,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   require Logger
 
-  @editable_fields ~w(summary description location start_at end_at all_day start_date end_date reminders recurrence_rule colour attendees)a
+  @editable_fields ~w(summary description location start_at end_at all_day start_date end_date reminders recurrence_rule colour attendees transparency)a
+
+  # Whether the event blocks the organiser's time, in the cache's vocabulary.
+  @transparencies ~w(opaque transparent)
 
   @typedoc "An allowlisted map of cache fields to their new values."
   @type changes :: %{optional(atom()) => term()}
@@ -101,7 +104,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   provider, and records the edit on the cached row.
 
   `changes` may only carry #{Enum.map_join(@editable_fields, ", ", &"`#{&1}`")};
-  any other key raises `ArgumentError`. Timing follows the event's resulting `all_day`
+  any other key raises `ArgumentError`, as does a `transparency` other than
+  `"opaque"` (busy) or `"transparent"` (free). Timing follows the event's resulting `all_day`
   flag: an all-day event keeps its dates and drops its timestamps, a timed
   event the reverse. A change that flips `all_day` also refits the `UNTIL` of
   a recurring event's rule to the value type its new `DTSTART` calls for.
@@ -391,7 +395,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp ensure_known_fields!(changes) do
     case Map.keys(changes) -- @editable_fields do
       [] ->
-        :ok
+        ensure_transparency!(changes)
 
       unknown ->
         raise ArgumentError,
@@ -399,6 +403,14 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
                 "editable fields are #{inspect(@editable_fields)}"
     end
   end
+
+  defp ensure_transparency!(%{transparency: transparency})
+       when transparency not in @transparencies do
+    raise ArgumentError,
+          "transparency must be one of #{inspect(@transparencies)}, got: #{inspect(transparency)}"
+  end
+
+  defp ensure_transparency!(_changes), do: :ok
 
   defp apply_changes(event, changes, opts) do
     event
