@@ -44,11 +44,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   @doc """
   Opens the panel on the draft `params` describe (`calendar:more_options`).
   Answers whether it opened, for the hook's reply: a draft id the hook could
-  not have made, or one whose create is already saving, opens nothing.
+  not have made, or one whose create is saving or has landed, opens nothing.
   """
   @spec open(socket(), map()) :: {boolean(), socket()}
   def open(socket, %{"draft" => draft_id} = params) when is_binary(draft_id) do
-    if Creation.draft_id?(draft_id) and not Map.has_key?(socket.assigns.pending_creates, draft_id),
+    if Creation.draft_id?(draft_id) and not Creation.taken?(socket, draft_id),
       do: {true, open_draft(socket, draft_id, params)},
       else: {false, socket}
   end

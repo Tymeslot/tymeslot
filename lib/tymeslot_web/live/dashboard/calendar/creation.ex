@@ -58,17 +58,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   @spec draft_id?(term()) :: boolean()
   def draft_id?(id), do: is_binary(id) and Regex.match?(@draft_id, id)
 
+  # How many landed drafts `created_drafts` remembers.
+  @remembered 50
+
+  @doc """
+  Whether the draft `draft` already belongs to a create: one still saving,
+  or one of the last #{@remembered} that landed (created, or saved here for
+  the next sync). A failed create is not remembered, so the side panel can
+  try it again under the same id.
+  """
+  @spec taken?(socket(), String.t()) :: boolean()
+  def taken?(socket, draft),
+    do:
+      Map.has_key?(socket.assigns.pending_creates, draft) or
+        draft in socket.assigns.created_drafts
+
   @doc """
   A draft the hook asks to save. Returns the reply for the hook and the
   socket: the draft pending and pushed as saving, or unchanged after a
-  refusal. The same draft id sent again while it is saving is accepted
-  without a second create.
+  refusal. A draft id sent again while its create is saving, or after it
+  landed (a reply the hook lost, then Save offered again), is accepted
+  without a second create, so guests are never invited twice; after it
+  landed the payload is pushed again so the hook draws the event in place
+  of its draft.
   """
   @spec create(socket(), map()) :: {reply(), socket()}
   def create(socket, %{"draft" => draft} = params) when is_binary(draft) do
     cond do
       not draft_id?(draft) -> {refused(:params, :invalid), socket}
       Map.has_key?(socket.assigns.pending_creates, draft) -> {%{accepted: true}, socket}
+      taken?(socket, draft) -> {%{accepted: true}, SurfaceData.push_events(socket, false)}
       true -> cast_and_start(socket, draft, params)
     end
   end
@@ -141,8 +160,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
 
     socket
     |> assign(:pending_creates, pending)
+    |> remember(draft, result)
     |> settle(draft, params || title, result)
   end
+
+  defp remember(socket, draft, result) do
+    if landed?(result),
+      do:
+        assign(
+          socket,
+          :created_drafts,
+          Enum.take([draft | socket.assigns.created_drafts], @remembered)
+        ),
+      else: socket
+  end
+
+  defp landed?({:ok, _created}), do: true
+  defp landed?({:error, %{retry: :queued}}), do: true
+  defp landed?(_failed), do: false
 
   @doc """
   What a create's result says where no surface holds its draft: the flash

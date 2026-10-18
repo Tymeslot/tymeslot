@@ -434,6 +434,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     reloaded(lv)
   end
 
+  # The hook lost the first reply and offered Save again: the event exists,
+  # so a second create would duplicate it (and invite its guests twice).
+  test "a draft sent again after its create landed is not created twice", %{lv: lv, work: work} do
+    events = created_and_settled(lv, work)
+    assert_receive {:created, _event_data}
+    assert Enum.count(events, &(&1.title == "Lunch")) == 1
+
+    create(lv, lunch(work))
+    assert_reply(lv, %{accepted: true})
+
+    refute_receive {:created, _event_data}, 100
+    # The payload goes again, so the hook draws the event in its draft's place.
+    assert Enum.count(pushed(lv), &(&1.title == "Lunch")) == 1
+  end
+
+  test "a draft whose create landed cannot be opened in the side panel", %{lv: lv, work: work} do
+    created_and_settled(lv, work)
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:more_options", lunch(work))
+
+    assert_reply(lv, %{opened: false})
+    refute has_element?(lv, "#calendar-panel")
+  end
+
+  test "a draft whose create failed can be saved again", %{lv: lv, work: work} do
+    calendar_refuses()
+    create(lv, lunch(work))
+    assert_reply(lv, %{accepted: true})
+    assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"}, 1_000)
+
+    calendar_writes()
+    create(lv, lunch(work))
+    assert_reply(lv, %{accepted: true})
+    assert_receive {:created, _event_data}, 1_000
+  end
+
   test "a draft id the hook would not have made is refused, and nothing is written",
        %{lv: lv, work: work} do
     calendar_writes()
