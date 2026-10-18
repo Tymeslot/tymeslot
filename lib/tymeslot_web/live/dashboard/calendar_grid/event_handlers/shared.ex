@@ -123,10 +123,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   @spec valid_email?(term()) :: boolean()
   def valid_email?(email), do: Guests.valid_email?(email)
 
-  @doc "See `ReminderForm.reminder_minutes_presets/0`."
-  @spec reminder_minutes_presets() :: [pos_integer()]
-  defdelegate reminder_minutes_presets(), to: ReminderForm
-
   @doc "See `ReminderForm.parse_reminder/1`."
   @spec parse_reminder(map()) :: {:ok, %{method: atom(), minutes_before: pos_integer()}} | :error
   defdelegate parse_reminder(params), to: ReminderForm

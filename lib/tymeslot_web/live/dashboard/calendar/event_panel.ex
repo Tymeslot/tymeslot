@@ -88,22 +88,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   # Whether the event is the calendar copy of a booking costs a query, so it
   # is asked once per event the panel shows, not on every update.
-  defp assign_booking_copy(
-         %{assigns: %{event: %{calendar_integration_id: integration_id} = event}} = socket
-       )
-       when is_integer(integration_id) do
+  defp assign_booking_copy(%{assigns: %{event: %{} = event}} = socket) do
     id = EventPayload.id(event)
 
     if socket.assigns[:booking_copy_for] == id,
       do: socket,
-      else:
-        assign(socket,
-          booking_copy: Changes.ensure_video_changeable(event) != :ok,
-          booking_copy_for: id
-        )
+      else: assign(socket, booking_copy: booking_copy?(event), booking_copy_for: id)
   end
 
   defp assign_booking_copy(socket), do: assign(socket, booking_copy: false, booking_copy_for: nil)
+
+  defp booking_copy?(%{calendar_integration_id: integration_id} = event)
+       when is_integer(integration_id),
+       do: Changes.ensure_video_changeable(event) != :ok
+
+  defp booking_copy?(_event), do: false
 
   # Read once per event: whether it can be changed, whether its timing can
   # (a booking's calendar copy keeps the booking's time), and whether the

@@ -625,7 +625,7 @@ msgstr "Si ripete"
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
 #, elixir-autogen, elixir-format
 msgid "Saved here, waiting to reach %{account}"
-msgstr "Salvato qui, in attesa di essere inviato a %{account}"
+msgstr "Salvato qui, in attesa di sincronizzazione con %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
