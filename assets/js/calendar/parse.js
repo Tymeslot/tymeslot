@@ -19,7 +19,8 @@
  *    "until" or "till" between them ("sat sun", "fri-sun", "20-22 oct"). All
  *    day across them unless a time is given.
  *  - a time: "14:00", "14.30", "2pm", "2:30 p.m.", "noon", "midnight",
- *    "at 2" (24-hour, so 02:00; "at 2pm" for the afternoon).
+ *    "at 2" (a bare hour from 1 to 6 with no leading zero is the afternoon, so
+ *    14:00, as in Google Calendar; "02:00" and "2am" stay in the morning).
  *  - a range: "14:00-15:30", "2-3pm", "10am to noon", "9-17",
  *    "from 9 to 5", "22:00-02:00" (ends the next day). An end without am or
  *    pm that reads as a 12-hour clock ("2", "2:00", not "02:00" or "14:00")
@@ -46,11 +47,11 @@ import { MINUTES_PER_DAY, dayNumber, formatWall, isoFromDay, isoWeekday } from "
 
 const ROLLOVER_DAYS = 30;
 const YEARS = [1900, 2200];
-const MARK = ""; // stands where a consumed token was
-const QUOTE_OPEN = "";
-const QUOTE_CLOSE = "";
+const MARK = "\uE002"; // stands where a consumed token was
+const QUOTE_OPEN = "\uE000";
+const QUOTE_CLOSE = "\uE001";
 
-const B = "(?<![\\p{L}\\d./:-])"; // not inside a word, a number or a date
+const B = "(?<![\\p{L}\\d./:£€$-])"; // not inside a word, a number or a date
 const E = "(?![\\p{L}\\d])";
 const MONTH = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
 const ORD = "(?:st|nd|rd|th)?";
@@ -58,7 +59,7 @@ const ON = "(?:on\\s+)?";
 const FULL_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const WEEKDAY = "(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues|tue|weds|wed|thurs|thur|thu|fri|sat|sun)";
 const AMPM = "(am|pm|a\\.m\\.|p\\.m\\.)";
-const SIDE = `(noon|midday|midnight|(\\d{1,2})(?:[:.](\\d{2}))?\\s*${AMPM}?)`;
+const SIDE = `(noon|midday|midnight|(\\d{1,2})(?:[:.](\\d{2})(?!\\.\\d))?\\s*${AMPM}?)`;
 const DASH = "(?:-|–|—|to|until|till)";
 
 // What may follow an abbreviated weekday for it to count as a day.
@@ -115,7 +116,7 @@ const SINGLE_DAYS = [
     read: (m, ctx) => (/^(today|tonight)$/i.test(m[1]) ? ctx.today : ctx.today + 1),
   },
   {
-    source: `${B}(?:(on)\\s+)?(?:(next)\\s+)?${WEEKDAY}${E}`,
+    source: `${B}(?<!\\b(?:every|each)\\s+)(?:(on)\\s+)?(?:(next)\\s+)?${WEEKDAY}${E}`,
     read: (m, ctx, after) => weekdayFrom(m[3], !!m[2] || after !== undefined, after ?? ctx.today),
     abbreviated: (m) => !m[1] && !m[2] && !FULL_WEEKDAYS.includes(m[3].toLowerCase()),
   },
@@ -145,10 +146,10 @@ const SINGLE_DAYS = [
 const DAY_RANGE = new RegExp(`${B}${ON}(\\d{1,2})${ORD}\\s*[-–—]\\s*(\\d{1,2})${ORD}\\s+${MONTH}(?:\\s+(\\d{4}))?${E}`, "giu");
 const SPAN_JOIN = /^\s*(?:[-–—]|(?:to|until|till)(?![\p{L}]))?\s*/iu;
 
-function readSingle(pattern, m, ctx, after, rest) {
+function readSingle(pattern, m, ctx, after, rest, dashed = false) {
   const day = pattern.read(m, ctx, after);
   if (day === null || Number.isNaN(day)) return null;
-  if (pattern.abbreviated?.(m) && !FOLLOW.test(rest)) return null;
+  if (!dashed && pattern.abbreviated?.(m) && !FOLLOW.test(rest)) return null;
   return day;
 }
 
@@ -190,7 +191,7 @@ function extendSpan(t, found, ctx) {
   for (const pattern of SINGLE_DAYS) {
     const m = rest.match(pattern.anchored);
     if (!m) continue;
-    const day = readSingle(pattern, m, ctx, found.first, rest.slice(m[0].length));
+    const day = readSingle(pattern, m, ctx, found.first, rest.slice(m[0].length), join.trim() !== "");
     if (day === null || day <= found.first) continue;
     found.last = day;
     found.length += join.length + m[0].length;
@@ -199,7 +200,7 @@ function extendSpan(t, found, ctx) {
 }
 
 // One side of a time range, or a single time.
-function side(word, hourText, minuteText, ampm) {
+function side(word, hourText, minuteText, ampm, raw = false) {
   if (word && /^(noon|midday)$/i.test(word)) return { minute: 720, word: true };
   if (word && /^midnight$/i.test(word)) return { minute: 0, word: true, midnight: true };
   let hour = Number(hourText);
@@ -210,6 +211,8 @@ function side(word, hourText, minuteText, ampm) {
     hour = (hour % 12) + (/^p/i.test(ampm) ? 12 : 0);
   } else if (hour > 23) {
     return null;
+  } else if (!raw && hour >= 1 && hour <= 6 && !/^0/.test(hourText)) {
+    hour += 12; // a bare 1 to 6 reads as the afternoon, as Google Calendar does
   }
   return { minute: hour * 60 + minute, hourText, hasMinutes: minuteText !== undefined, ampm: ampm || null };
 }
@@ -228,7 +231,7 @@ function readRange(m) {
   const bare = !word1 && !word2 && m1 === undefined && m2 === undefined && !a1 && !a2;
   if (bare && !from && Number(h1) < 13 && Number(h2) < 13) return null;
 
-  const b = side(word2, h2, m2, a2);
+  const b = side(word2, h2, m2, a2, true);
   if (!b) return null;
   let a = side(word1, h1, m1, a1);
   // "2-3pm": the start takes the end's am or pm when that keeps it earlier.
@@ -246,7 +249,7 @@ function readRange(m) {
 }
 
 const SINGLE_TIMES = [
-  { re: new RegExp(`${B}(?:at\\s+)?(\\d{1,2})[:.](\\d{2})\\s*${AMPM}?${E}`, "iu"), read: (m) => side(null, m[1], m[2], m[3]) },
+  { re: new RegExp(`${B}(?:at\\s+)?(\\d{1,2})[:.](\\d{2})\\s*${AMPM}?(?!\\.\\d)${E}`, "iu"), read: (m) => side(null, m[1], m[2], m[3]) },
   { re: new RegExp(`${B}(?:at\\s+)?(\\d{1,2})\\s*${AMPM}${E}`, "iu"), read: (m) => side(null, m[1], undefined, m[2]) },
   { re: new RegExp(`${B}(?:at\\s+)?(noon|midday|midnight)${E}`, "iu"), read: (m) => side(m[1]) },
   { re: new RegExp(`${B}at\\s+(\\d{1,2})(?![\\p{L}\\d:./])`, "iu"), read: (m) => side(null, m[1], undefined, undefined) },
