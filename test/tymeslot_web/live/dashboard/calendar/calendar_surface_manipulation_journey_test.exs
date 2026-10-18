@@ -149,9 +149,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
     assert Map.has_key?(pushed(lv), dentist_id)
     assert has_element?(lv, "#calendar-toast", "“Dentist” is back")
     refute_enqueued(worker: CalendarEventDeleteWorker)
-
-    # Nothing is left for the queue to run, so nothing reaches the provider.
-    assert all_enqueued(worker: CalendarEventDeleteWorker) == []
     refute_received {:deleted, _uid}
 
     # Delete it with the Delete key, and let the delete run for good.
@@ -170,12 +167,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
     dentist_uid = dentist.uid
     assert_received {:deleted, ^dentist_uid}
 
-    assert Repo.get(ProviderCalendarEventSchema, dentist.id) ==
-             nil
+    refute Repo.get(ProviderCalendarEventSchema, dentist.id)
 
     # The grid follows the delete. Ctrl Z has no delete left to bring back: it
     # takes back the earlier move of Design review, and the dentist stays gone.
-    render(lv)
     render(lv)
     hook(lv, "calendar:undo", %{})
 
