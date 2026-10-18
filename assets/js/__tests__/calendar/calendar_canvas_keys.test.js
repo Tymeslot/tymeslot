@@ -504,3 +504,33 @@ test("destroying the hook clears a pending announcement", () => {
     vi.useRealTimers();
   }
 });
+
+test("Escape inside the side panel asks the server to close it, unless a modal is open", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML = '<input id="title" type="text"><button id="close" type="button"></button>';
+  document.body.appendChild(panel);
+  const esc = (id, extra = {}) => {
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true, ...extra });
+    panel.querySelector(`#${id}`).dispatchEvent(event);
+    return event;
+  };
+
+  expect(esc("title").defaultPrevented).toBe(true);
+  esc("close");
+  expect(pushes(hook, "panel:close")).toEqual([{}, {}]);
+
+  esc("title", { repeat: true });
+  expect(pushes(hook, "panel:close")).toEqual([{}, {}]);
+
+  const modal = document.createElement("div");
+  modal.id = "calendar-series-scope";
+  document.body.appendChild(modal);
+  esc("title");
+  expect(pushes(hook, "panel:close")).toEqual([{}, {}]);
+
+  document.body.removeChild(modal);
+  document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  expect(pushes(hook, "panel:close")).toEqual([{}, {}]);
+});

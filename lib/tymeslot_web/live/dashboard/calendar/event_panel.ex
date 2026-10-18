@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   flex row, so the grid narrows rather than being covered; the hook lays the
   grid out again when it opens or closes (`calendar:panel`) and moves focus
   to the element marked `data-panel-focus` on open, back to the event on
-  close. Escape inside the panel closes it.
+  close. Escape inside the panel closes it (the hook reads it, `closePanelOnEscape`).
 
   The component only draws. Its controls send `panel:<name>` events to the
   surface (`surface` is the surface's target), which handles them
@@ -58,9 +58,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
       id="calendar-panel"
       class="cal-panel flex w-88 shrink-0 flex-col border-l border-tymeslot-200 bg-white"
       aria-label={dgettext("dashboard_calendar", "Event details")}
-      phx-keydown="panel:close"
-      phx-key="Escape"
-      phx-target={@surface}
     >
       <div class="flex items-center gap-2 border-b border-tymeslot-100 px-4 py-2">
         <p

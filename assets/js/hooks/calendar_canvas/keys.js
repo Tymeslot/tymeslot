@@ -11,11 +11,13 @@
  * (`commitMove`) and Escape cancels; each step is announced in the live
  * region the surface renders (#calendar-live), always as text: event
  * titles are user data. Ctrl Z or Cmd Z anywhere on the page but a text
- * field (a text input, a textarea, a select) asks the server to undo, in the
- * side panel too. None of it runs while a pointer drag is
- * live. A series-scope or delete modal makes the server redraw the grid
- * behind it, which strands the focus trap's saved element, so after such a
- * modal closes focus is handed back to the affected block (`watchModal`).
+ * field (a text input, a textarea, a select) asks the server to undo, in
+ * the side panel too. Escape inside the side panel closes it
+ * (`closePanelOnEscape`), unless a modal is open over it. None of it runs
+ * while a pointer drag is live. A series-scope or delete modal makes the
+ * server redraw the grid behind it, which strands the focus trap's saved
+ * element, so after such a modal closes focus is handed back to the
+ * affected block (`watchModal`).
  */
 import { cancelledText, movingText, rangeText, savingText } from "../../calendar/announce.js";
 import { draggable } from "../../calendar/drag.js";
@@ -50,6 +52,16 @@ export const KeysMixin = {
       e.preventDefault();
       this.pushEventTo(this.el, "calendar:undo", {});
     };
+    // LiveView only fires a phx-keydown on the element that has focus, and
+    // focus in the panel is always on a field or button, so Escape is read
+    // here for anything inside the panel.
+    this.closePanelOnEscape = (e) => {
+      if (e.key !== "Escape" || e.repeat || e.defaultPrevented || e.isComposing) return;
+      if (!e.target?.closest?.("#calendar-panel") || document.querySelector(MODALS)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.pushEventTo(this.el, "panel:close", {});
+    };
     // Focus leaving for another part of the page ends a move mode; a null
     // target is only a redraw replacing the focused block.
     this.focusOut = (e) => {
@@ -68,6 +80,7 @@ export const KeysMixin = {
       target.tabIndex = 0;
     };
     document.addEventListener("keydown", this.undoKey);
+    document.addEventListener("keydown", this.closePanelOnEscape);
     document.addEventListener("click", this.previewDelete);
     this.el.addEventListener("focus", this.focusIn, true);
     this.el.addEventListener("focusout", this.focusOut);
@@ -75,6 +88,7 @@ export const KeysMixin = {
 
   destroyKeys() {
     document.removeEventListener("keydown", this.undoKey);
+    document.removeEventListener("keydown", this.closePanelOnEscape);
     document.removeEventListener("click", this.previewDelete);
     this.el.removeEventListener("focus", this.focusIn, true);
     this.el.removeEventListener("focusout", this.focusOut);

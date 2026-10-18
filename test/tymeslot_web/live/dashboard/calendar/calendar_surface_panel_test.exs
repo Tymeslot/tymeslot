@@ -48,9 +48,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTest do
     assert_push_event(lv, "calendar:panel", %{open: false, focus: ^id})
   end
 
-  test "Escape inside the panel closes it", %{lv: lv, id: id} do
+  test "the hook's panel:close (Escape inside the panel) closes it", %{lv: lv, id: id} do
     edit(lv, id)
-    lv |> element("#calendar-panel") |> render_keydown(%{"key" => "Escape"})
+    lv |> element("#calendar-canvas") |> render_hook("panel:close", %{})
 
     refute has_element?(lv, "#calendar-panel")
     assert_push_event(lv, "calendar:panel", %{open: false, focus: ^id})
