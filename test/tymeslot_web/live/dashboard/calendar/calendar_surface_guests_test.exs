@@ -82,7 +82,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
     assert_enqueued(
       worker: EmailWorker,
-      args: %{"action" => "send_calendar_invitation", "attendee_email" => "grace@example.com"}
+      args: %{
+        "action" => "send_calendar_invitation",
+        "attendee_email" => "grace@example.com",
+        "method" => "request"
+      }
     )
 
     payload = await_provider_update(lv)
@@ -129,7 +133,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
     assert_enqueued(
       worker: EmailWorker,
-      args: %{"action" => "send_calendar_invitation", "attendee_email" => "ada@example.com"}
+      args: %{
+        "action" => "send_calendar_invitation",
+        "attendee_email" => "ada@example.com",
+        "method" => "cancel"
+      }
     )
 
     payload = await_provider_update(lv)
@@ -138,11 +146,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     assert has_element?(lv, "#calendar-toast", "Removed ada@example.com.")
   end
 
-  test "a group booking's seats lock its guests", %{
-    conn: conn,
-    user: user,
-    integration: integration
-  } do
+  defp open_group_workshop(conn, user, integration) do
     meeting =
       insert(:meeting,
         organizer_user: user,
@@ -166,9 +170,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     |> element("#calendar-canvas")
     |> render_hook("calendar:edit", %{"id" => "event-#{workshop.id}"})
 
+    lv
+  end
+
+  test "a group booking's seats lock its guests", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    lv = open_group_workshop(conn, user, integration)
+
     invite(lv, "grace@example.com")
 
     assert render(lv) =~ "This is a group booking."
+    refute_enqueued(worker: EmailWorker)
+  end
+
+  test "a group booking's seats refuse a removal before asking", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    lv = open_group_workshop(conn, user, integration)
+
+    lv
+    |> element(~s|#calendar-panel-guests button[phx-value-email="seat-holder@example.com"]|)
+    |> render_click()
+
+    assert render(lv) =~ "This is a group booking."
+    refute has_element?(lv, "#calendar-remove-guest")
     refute_enqueued(worker: EmailWorker)
   end
 
@@ -297,6 +327,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
       refute has_element?(lv, "#calendar-panel-untold")
       assert has_element?(lv, "#calendar-toast", "Guests will get an update.")
+    end
+
+    test "a later change brings the note back after Tell guests cleared it", %{
+      lv: lv,
+      review: review
+    } do
+      review |> Changeset.change(location: "Room 9") |> Repo.update!()
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
+      lv |> element("#calendar-panel-tell-guests") |> render_click()
+      refute has_element?(lv, "#calendar-panel-untold")
+
+      lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Design review, moved"})
+
+      assert has_element?(lv, "#calendar-panel-untold", "Guests haven't been told")
     end
 
     test "an event without guests never shows the note", %{conn: conn, integration: integration} do

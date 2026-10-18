@@ -302,7 +302,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   Checks a list of guest addresses for `user_id`, as a create checks its
   own: each is trimmed and lower-cased, every one must be a valid email,
   duplicates collapse, the organiser's own address is dropped, and at most
-  50 remain. The side panel uses it for the guests it invites.
+  `max_guests/0` remain. The side panel uses it for the guests it invites.
   """
   @spec guests(pos_integer(), [term()] | nil) :: {:ok, [String.t()]} | {:error, :guests, atom()}
   def guests(_user_id, nil), do: {:ok, []}
