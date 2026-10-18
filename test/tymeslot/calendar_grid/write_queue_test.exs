@@ -51,6 +51,20 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       assert {^key, second_seq} = second.ref
       assert second_seq > first_seq
     end
+
+    # The caller keeps the reference to recognise the write's own answer,
+    # whether the write starts at once or waits behind another.
+    test "update_ref/5 answers the reference of the write it took" do
+      {queue, [{:start, first, _event}], first_ref} =
+        WriteQueue.update_ref(WriteQueue.new(), @event, %{summary: "A"}, [])
+
+      assert first_ref == first.ref
+
+      {queue, [], waiting_ref} = WriteQueue.update_ref(queue, @event, %{summary: "B"}, [])
+      {_queue, [{:start, second, _event}]} = WriteQueue.settle(queue, first_ref, {:ok, @event})
+
+      assert waiting_ref == second.ref
+    end
   end
 
   describe "WriteHandOver.plans/1" do

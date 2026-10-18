@@ -35,15 +35,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   @spec drop(t(), (entry() -> boolean())) :: t()
   def drop(stack, fun), do: Enum.reject(stack, fun)
 
-  @doc "Removes the newest entry `fun` answers true for, and no other."
-  @spec drop_newest(t(), (entry() -> boolean())) :: t()
-  def drop_newest(stack, fun) do
-    case Enum.split_while(stack, &(not fun.(&1))) do
-      {newer, [_match | older]} -> newer ++ older
-      {_all, []} -> stack
-    end
-  end
-
   @doc "Replaces every entry `fun` answers true for with `entry`, keeping its place."
   @spec replace(t(), (entry() -> boolean()), entry()) :: t()
   def replace(stack, fun, entry),

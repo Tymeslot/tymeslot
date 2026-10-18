@@ -37,18 +37,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
   Shows `optimistic` at once and writes `changes` to `event` through
   `Tymeslot.CalendarGrid.update_event/4`, now or once its earlier writes
   have answered. `opts` go to the write (`recurrence_scope:`; a `:notify`
-  key is dropped, see below). The answer
-  arrives as `{:event_update_result, ...}` at `DashboardLive`, which hands
-  it to `settle/3` through `CalendarRouting`.
+  key is dropped, see below). Answers the socket and the reference of the
+  write, which its answer names. The answer arrives as
+  `{:event_update_result, ...}` at `DashboardLive`, which hands it to
+  `settle/3` through `CalendarRouting`.
   """
-  @spec update(socket(), map(), map(), map(), keyword()) :: socket()
+  @spec update(socket(), map(), map(), map(), keyword()) :: {socket(), WriteQueue.ref()}
   def update(socket, event, optimistic, changes, opts) do
     opts = Keyword.delete(opts, :notify)
+    socket = SurfaceData.show_event(socket, optimistic)
 
-    socket
-    |> SurfaceData.show_event(optimistic)
-    |> drive(&WriteQueue.update(&1, event, changes, opts, nil))
-    |> push()
+    {queue, effects, ref} =
+      WriteQueue.update_ref(socket.assigns.event_writes, event, changes, opts)
+
+    {socket |> drive(fn _queue -> {queue, effects} end) |> push(), ref}
   end
 
   @doc "Records how the write `ref` answered and starts the next one for its event."

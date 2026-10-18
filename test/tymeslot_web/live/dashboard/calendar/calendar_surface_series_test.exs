@@ -74,6 +74,53 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesTest do
     refute html =~ ~s(id="calendar-undo")
   end
 
+  test "a failed change to the whole series leaves an earlier move of the event undoable", %{
+    lv: lv,
+    standup: standup,
+    id: id
+  } do
+    uid = standup.uid
+    lv |> element("#calendar-scope-this_only") |> render_click()
+    assert_receive {:written, ^uid, _moved}
+    render(lv)
+
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context ->
+      {:error, :provider_down}
+    end)
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:move", %{
+      "id" => id,
+      "start" => "2026-10-14T11:00",
+      "end" => "2026-10-14T11:15"
+    })
+
+    lv |> element("#calendar-scope-all") |> render_click()
+    await_start(lv, id, "2026-10-14T10:00")
+    render(lv)
+
+    test_pid = self()
+
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, payload, _context ->
+      send(test_pid, {:written, uid, payload})
+      :ok
+    end)
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+    assert_receive {:written, ^uid, undone}, 1_000
+    assert DateTime.compare(undone.start_time, ~U[2026-10-14 08:30:00Z]) == :eq
+  end
+
+  # Waits for the push that draws the event at `start` again.
+  defp await_start(lv, id, start) do
+    assert_push_event(lv, "calendar:events", %{events: events}, 1_000)
+
+    unless match?(%{start: ^start}, Enum.find(events, &(&1.id == id))),
+      do: await_start(lv, id, start)
+  end
+
   test "this and following events is written with that scope", %{lv: lv} do
     lv |> element("#calendar-scope-following") |> render_click()
 

@@ -186,11 +186,14 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   """
   @spec update(t(), map(), map(), keyword(), map() | nil) :: {t(), [effect()]}
   def update(queue, event, changes, opts, notify \\ nil),
-    do:
-      run(
-        queue,
-        &submit(&1, event, %{kind: :update, changes: changes, opts: opts, notify: notify})
-      )
+    do: queue |> update_ref(event, changes, opts, notify) |> Tuple.delete_at(2)
+
+  @doc "`update/5`, also answering the reference of the write it took."
+  @spec update_ref(t(), map(), map(), keyword(), map() | nil) :: {t(), [effect()], ref()}
+  def update_ref(queue, event, changes, opts, notify \\ nil) do
+    write = %{kind: :update, changes: changes, opts: opts, notify: notify, ref: ref(event)}
+    queue |> run(&submit(&1, event, write)) |> Tuple.insert_at(2, write.ref)
+  end
 
   @doc """
   Queues a change of the video of `event` through
@@ -402,8 +405,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   defp submit({queue, effects}, event, write) do
     key = key(event)
     series = series_key(event)
-    seq = System.unique_integer([:positive, :monotonic])
-    write = write |> Map.put(:ref, {key, seq}) |> tag_series_wide(series)
+    write = write |> Map.put_new_lazy(:ref, fn -> ref(event) end) |> tag_series_wide(series)
     lent_series = {:series, series}
 
     case {queue.elsewhere, queue.holds} do
@@ -426,6 +428,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
         enqueue({hold_for(queue, write, event), effects}, key, series, event, write)
     end
   end
+
+  defp ref(event), do: {key(event), System.unique_integer([:positive, :monotonic])}
 
   defp put_waiting({queue, effects}, key, waiting),
     do: {%{queue | elsewhere: Map.put(queue.elsewhere, key, waiting)}, effects}

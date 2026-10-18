@@ -312,6 +312,47 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
     end
   end
 
+  describe "when an undo's write fails" do
+    test "the change it was taking back can be undone again, and the older one after it", %{
+      lv: lv,
+      review: review,
+      id: id
+    } do
+      uid = review.uid
+      move(lv, id, "2026-10-15T11:00", "2026-10-15T12:00")
+      assert_receive {:written, ^uid, _first}
+      render(lv)
+      move(lv, id, "2026-10-16T11:00", "2026-10-16T12:00")
+      assert_receive {:written, ^uid, _second}
+      render(lv)
+
+      Mox.stub(CalendarMock, :update_event, fn _uid, _payload, _context ->
+        {:error, :provider_down}
+      end)
+
+      flush_pushes(lv)
+      lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+      await_original(lv, id, "2026-10-16T11:00")
+      render(lv)
+
+      test_pid = self()
+
+      Mox.stub(CalendarMock, :update_event, fn uid, payload, _context ->
+        send(test_pid, {:written, uid, payload})
+        :ok
+      end)
+
+      lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+      assert_receive {:written, ^uid, retried}, 1_000
+      assert same?(retried.start_time, ~U[2026-10-15 10:00:00Z])
+      render(lv)
+
+      lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+      assert_receive {:written, ^uid, older}, 1_000
+      assert same?(older.start_time, ~U[2026-10-14 09:00:00Z])
+    end
+  end
+
   describe "a change the calendar refuses snaps back and writes nothing" do
     # The event `id` as the snap-back push draws it; nothing was written.
     defp snapped_back(lv, id) do

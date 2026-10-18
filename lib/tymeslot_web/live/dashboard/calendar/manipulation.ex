@@ -8,14 +8,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   through `Writes`; the hook is sent the window again whatever happens, so a
   refused move snaps back to what the server holds. A change the organiser
   can take back goes on the undo stack and the toast names the result.
-  Undo writes the previous timing the same way, and is not itself undoable.
+  Undo writes the previous timing the same way, and is not itself undoable;
+  an undo whose write fails puts its change back on the stack.
 
   A move never tells the event's guests; the toast says so when it has any.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EditGuard
@@ -130,17 +131,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   end
 
   @doc """
-  Forgets the failed write's own undoable change: the newest on the stack
-  for its event. Older changes to the event were written and stay undoable.
+  After the write `ref` failed: forgets the change it made, which was never
+  written, and nothing else (a write with no entry of its own, such as one to
+  a whole series, forgets nothing). When the write was an undo, the change it
+  was taking back goes on the stack again, since the event still has it.
   """
-  @spec forget(socket(), WriteQueue.key()) :: socket()
-  def forget(socket, key),
-    do:
-      assign(
-        socket,
-        :undo,
-        UndoStack.drop_newest(socket.assigns.undo, &(Map.get(&1, :key) == key))
-      )
+  @spec forget(socket(), WriteQueue.ref()) :: socket()
+  def forget(socket, ref) do
+    {undone, undoing} = Map.pop(socket.assigns.undoing, ref)
+    stack = UndoStack.drop(socket.assigns.undo, &(Map.get(&1, :ref) == ref))
+
+    assign(socket,
+      undo: if(undone, do: UndoStack.push(stack, undone), else: stack),
+      undoing: undoing
+    )
+  end
+
+  @doc "After the write `ref` answered other than by failing: an undo it made is done."
+  @spec settled(socket(), WriteQueue.ref()) :: socket()
+  def settled(socket, ref),
+    do: assign(socket, :undoing, Map.delete(socket.assigns.undoing, ref))
 
   # Undoing writes the timing the change replaced, so it only runs while the
   # event still has the timing the change gave it; an event moved or synced
@@ -154,13 +164,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, entry.id),
          true <- unchanged_since?(event, entry),
          :ok <- EditGuard.check(user.id, integrations, event) do
+      {socket, ref} =
+        Writes.update(
+          socket,
+          event,
+          Map.merge(event, entry.before),
+          entry.before,
+          scope_opts(entry.scope)
+        )
+
       socket
-      |> Writes.update(
-        event,
-        Map.merge(event, entry.before),
-        entry.before,
-        scope_opts(entry.scope)
-      )
+      |> assign(:undoing, Map.put(socket.assigns.undoing, ref, entry))
       |> Toast.show(change_text(socket, event, entry.before, :moved_back), key: entry.key)
     else
       {:error, :rate_limited, _message} = refusal ->
@@ -204,9 +218,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   defp write_timing(socket, event, changes, scope) do
     undoable? = scope in [nil, :this_only]
 
+    {socket, ref} =
+      Writes.update(socket, event, Map.merge(event, changes), changes, scope_opts(scope))
+
+    # `ref` names the write, so a failure of it forgets this entry alone.
     entry = %{
       kind: :timing,
       key: WriteQueue.key(event),
+      ref: ref,
       id: EventPayload.id(event),
       before: Map.take(event, [:start_at, :end_at]),
       after: Map.take(changes, [:start_at, :end_at]),
@@ -214,7 +233,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     }
 
     socket
-    |> Writes.update(event, Map.merge(event, changes), changes, scope_opts(scope))
     |> remember(undoable?, entry)
     |> Toast.show(timing_message(socket, event, changes, scope),
       undo: undoable?,

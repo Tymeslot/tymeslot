@@ -90,7 +90,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # A write's answer, routed here by `CalendarRouting` (see `Writes`). A
   # failed write is taken back off the grid by the queue itself.
   def update(%{action: :event_write_settled, write: ref, outcome: outcome}, socket),
-    do: {:ok, socket |> Writes.settle(ref, outcome) |> reload_if_queued(outcome)}
+    do:
+      {:ok,
+       socket
+       |> Writes.settle(ref, outcome)
+       |> Manipulation.settled(ref)
+       |> reload_if_queued(outcome)}
 
   # A failed write is taken back off the grid by the queue; its change can
   # no longer be undone, and the toast that named it (not another event's)
@@ -98,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :revert_event, write: {key, _seq} = ref}, socket),
     do:
       {:ok,
-       socket |> Writes.settle(ref, :failed) |> Manipulation.forget(key) |> Toast.dismiss(key)}
+       socket |> Writes.settle(ref, :failed) |> Manipulation.forget(ref) |> Toast.dismiss(key)}
 
   def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
     do: {:ok, Deletion.settled(socket, token, outcome)}
