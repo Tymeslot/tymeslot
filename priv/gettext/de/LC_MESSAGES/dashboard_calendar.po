@@ -703,3 +703,264 @@ msgstr "wartet auf Synchronisierung"
 #, elixir-autogen, elixir-format
 msgid "Choose a date, %{period}"
 msgstr "Datum auswählen, %{period}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "%{account} isn't responding. %{count} change is saved here and will be sent automatically."
+msgid_plural "%{account} isn't responding. %{count} changes are saved here and will be sent automatically."
+msgstr[0] "%{account} antwortet nicht. %{count} Änderung ist hier gespeichert und wird automatisch übertragen."
+msgstr[1] "%{account} antwortet nicht. %{count} Änderungen sind hier gespeichert und werden automatisch übertragen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "%{account} isn't responding. Its events may be out of date."
+msgstr "%{account} antwortet nicht. Die Ereignisse dieses Kontos sind möglicherweise nicht aktuell."
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "%{account} isn't responding. Your change to “%{title}” is saved here and will be sent automatically."
+msgstr "%{account} antwortet nicht. Ihre Änderung an „%{title}“ ist hier gespeichert und wird automatisch übertragen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "%{account} needs you to sign in again. Until you do, its events may be out of date."
+msgstr "Sie müssen sich bei %{account} erneut anmelden. Bis dahin sind die Ereignisse dieses Kontos möglicherweise nicht aktuell."
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} change is saved here and will be sent to %{account} automatically."
+msgid_plural "%{count} changes are saved here and will be sent to %{account} automatically."
+msgstr[0] "%{count} Änderung ist hier gespeichert und wird automatisch an %{account} übertragen."
+msgstr[1] "%{count} Änderungen sind hier gespeichert und werden automatisch an %{account} übertragen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, %{start} to %{finish}"
+msgstr "%{date}, %{start} bis %{finish}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{from} to %{to}"
+msgstr "%{from} bis %{to}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr "Alle Ereignisse"
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#, elixir-autogen, elixir-format
+msgid "Arrow keys move between events. Press M to move the focused event: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
+msgstr "Mit den Pfeiltasten wechseln Sie zwischen Ereignissen. Drücken Sie M, um das ausgewählte Ereignis zu verschieben: Die Pfeiltasten verschieben es dann, die Umschalttaste mit den Pfeiltasten ändert seine Dauer, die Eingabetaste bestätigt und Esc bricht ab. Drücken Sie Entf, um das Ereignis zu löschen, und Strg Z (Cmd Z auf dem Mac), um die letzte Aktion rückgängig zu machen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change a repeating event"
+msgstr "Wiederkehrendes Ereignis ändern"
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't delete the event. Please try again."
+msgstr "Das Ereignis konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete a repeating event"
+msgstr "Wiederkehrendes Ereignis löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/delete_confirm_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete and cancel the booking"
+msgstr "Löschen und Buchung absagen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/delete_confirm_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete and tell guests"
+msgstr "Löschen und Gäste benachrichtigen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/delete_confirm_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete without telling them"
+msgstr "Löschen ohne Benachrichtigung"
+
+#: lib/tymeslot_web/live/dashboard/calendar/delete_confirm_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete “%{title}”?"
+msgstr "„%{title}“ löschen?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted “%{title}”"
+msgstr "„%{title}“ gelöscht"
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting “%{title}”…"
+msgstr "„%{title}“ wird gelöscht…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/toast.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss"
+msgstr "Schließen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Guests haven't been told."
+msgstr "Die Gäste wurden nicht benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/delete_confirm_modal.ex
+#, elixir-autogen, elixir-format
+msgid "It has %{count} guest. Do you want to send them a cancellation?"
+msgid_plural "It has %{count} guests. Do you want to send them a cancellation?"
+msgstr[0] "Zu diesem Ereignis gibt es %{count} Gast. Möchten Sie eine Absage senden?"
+msgstr[1] "Zu diesem Ereignis gibt es %{count} Gäste. Möchten Sie ihnen eine Absage senden?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Move cancelled. %{title} stays at %{when}."
+msgstr "Verschieben abgebrochen. %{title} bleibt unverändert: %{when}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Moved back to %{when}"
+msgstr "Zurückverschoben auf %{when}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Moved to %{when}"
+msgstr "Verschoben auf %{when}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Moving %{title}, %{when}. Arrow keys move it, Shift with Up or Down changes how long it lasts, Enter saves, Escape cancels."
+msgstr "%{title} wird verschoben, %{when}. Die Pfeiltasten verschieben es, die Umschalttaste mit Pfeil nach oben oder unten ändert die Dauer, die Eingabetaste speichert, Esc bricht ab."
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to undo."
+msgstr "Es gibt nichts rückgängig zu machen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Now ends at %{time}"
+msgstr "Endet jetzt um %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Now starts at %{time}"
+msgstr "Beginnt jetzt um %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Only “This event” can be undone."
+msgstr "Nur „Dieses Ereignis“ lässt sich rückgängig machen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Erneut verbinden"
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "Retry"
+msgstr "Erneut versuchen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Saving %{title} at %{when}."
+msgstr "%{title} wird gespeichert: %{when}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "Series changed. Changes to several events can't be undone here."
+msgstr "Serie geändert. Änderungen an mehreren Ereignissen lassen sich hier nicht rückgängig machen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Sync %{account} now"
+msgstr "%{account} jetzt synchronisieren"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Sync problem"
+msgstr "Synchronisierungsproblem"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing"
+msgstr "Wird synchronisiert"
+
+#: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
+#, elixir-autogen, elixir-format
+msgid "That change can't be undone any more."
+msgstr "Diese Änderung lässt sich nicht mehr rückgängig machen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This and following events"
+msgstr "Dieses und folgende Ereignisse"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event"
+msgstr "Dieses Ereignis"
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "This event is still saving. Delete it once it has saved."
+msgstr "Dieses Ereignis wird noch gespeichert. Löschen Sie es, sobald es gespeichert ist."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This is a booking. Reschedule or cancel it from Bookings."
+msgstr "Dies ist eine Buchung. Sie können sie unter Buchungen verschieben oder absagen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/delete_confirm_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This is the calendar copy of a booking. Deleting it cancels the booking and tells the guest."
+msgstr "Dies ist die Kalenderkopie einer Buchung. Wenn Sie sie löschen, wird die Buchung abgesagt und der Gast benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/toast.ex
+#, elixir-autogen, elixir-format
+msgid "Undo"
+msgstr "Rückgängig"
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_status.ex
+#, elixir-autogen, elixir-format
+msgid "You've asked for several syncs recently. Try again in a few minutes."
+msgstr "Sie haben in letzter Zeit mehrere Synchronisierungen angefordert. Versuchen Sie es in ein paar Minuten erneut."
+
+#: lib/tymeslot_web/live/dashboard/calendar/sync_banner.ex
+#, elixir-autogen, elixir-format
+msgid "Your change to “%{title}” is saved here and will be sent to %{account} automatically."
+msgstr "Ihre Änderung an „%{title}“ ist hier gespeichert und wird automatisch an %{account} übertragen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "calendar"
+msgstr "Kalender"
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” is already being deleted."
+msgstr "„%{title}“ wird bereits gelöscht."
+
+#: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” is back"
+msgstr "„%{title}“ ist wiederhergestellt"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should be deleted?"
+msgstr "„%{title}“ wiederholt sich. Welche Ereignisse sollen gelöscht werden?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_scope_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” repeats. Which events should change?"
+msgstr "„%{title}“ wiederholt sich. Welche Ereignisse sollen geändert werden?"

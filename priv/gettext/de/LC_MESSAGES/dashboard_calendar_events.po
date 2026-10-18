@@ -325,7 +325,7 @@ msgstr "Ereignisdetails"
 msgid "Failed to create event"
 msgstr "Ereignis konnte nicht erstellt werden"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to delete event"
 msgstr "Ereignis konnte nicht gelöscht werden"
@@ -599,8 +599,8 @@ msgstr "Titel"
 msgid "Toggle this help"
 msgstr "Diese Hilfe ein-/ausblenden"
 
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
 msgid "Too many edits. Please wait a moment."
 msgstr "Zu viele Bearbeitungen. Bitte warten Sie einen Moment."
@@ -671,7 +671,7 @@ msgstr "Ja, senden"
 msgid "You don't have permission to delete this event"
 msgstr "Sie haben keine Berechtigung, dieses Ereignis zu löschen"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
 msgstr "Sie haben keine Berechtigung, dieses Ereignis zu bearbeiten"
@@ -691,7 +691,7 @@ msgstr "Möchten Sie %{title} wirklich löschen?"
 msgid "Create failed - queued to retry on next sync"
 msgstr "Erstellung fehlgeschlagen - wird bei der nächsten Synchronisierung erneut versucht"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Delete failed - queued to retry on next sync"
 msgstr "Löschen fehlgeschlagen - wird bei der nächsten Synchronisierung erneut versucht"
@@ -777,7 +777,7 @@ msgstr "Sie können sich nicht selbst als Gast hinzufügen. Verwenden Sie eine "
 msgid "before the event"
 msgstr "vor dem Termin"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
 msgstr "Dieser Kalender ist schreibgeschützt. Ereignisse darin können nicht über Tymeslot geändert werden."
@@ -867,7 +867,7 @@ msgstr "Dieses Ereignis löschen"
 msgid "Deleted events are also removed from your calendar provider."
 msgstr "Gelöschte Ereignisse werden auch von Ihrem Kalenderanbieter entfernt."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
 msgstr "Wiederkehrende Exchange-Ereignisse können hier noch nicht gelöscht werden. Bitte löschen Sie dieses Ereignis in Ihrer Kalender-App."
@@ -882,7 +882,7 @@ msgstr "Wiederkehrendes Ereignis gelöscht."
 msgid "Recurring event deleted. Attendees have been notified."
 msgstr "Wiederkehrendes Ereignis gelöscht. Teilnehmer wurden benachrichtigt."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This event could not be deleted here. Please delete it in your calendar app."
 msgstr "Dieses Ereignis konnte hier nicht gelöscht werden. Bitte löschen Sie es in Ihrer Kalender-App."
@@ -908,7 +908,7 @@ msgstr "Diese Änderung ist für die gewählten Ereignisse nicht möglich. Eine 
 msgid "That choice is not available for this event, so nothing was changed."
 msgstr "Diese Auswahl ist für dieses Ereignis nicht verfügbar, daher wurde nichts geändert."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_writes.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The series was updated, but a change you made while it was saving was not applied. Please make it again."
 msgid_plural "The series was updated, but %{count} changes you made while it was saving were not applied. Please make them again."
@@ -1040,14 +1040,14 @@ msgstr "Die Serie wurde nach %{calendar} kopiert, aber die ursprüngliche Serie 
 msgid "The series was moved to %{calendar}."
 msgstr "Die Serie wurde nach %{calendar} verschoben."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_writes.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The series was moved, but a change you made while it was moving was not applied. Please make it again."
 msgid_plural "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again."
 msgstr[0] "Die Serie wurde verschoben, aber eine Änderung, die Sie währenddessen vorgenommen haben, wurde nicht übernommen. Bitte nehmen Sie sie erneut vor."
 msgstr[1] "Die Serie wurde verschoben, aber %{count} Änderungen, die Sie währenddessen vorgenommen haben, wurden nicht übernommen. Bitte nehmen Sie sie erneut vor."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "A change to this series is still saving. Please make this change once it has saved."
 msgstr "Eine Änderung an dieser Serie wird noch gespeichert. Bitte nehmen Sie diese Änderung vor, sobald sie gespeichert ist."
@@ -1057,7 +1057,7 @@ msgstr "Eine Änderung an dieser Serie wird noch gespeichert. Bitte nehmen Sie d
 msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
 msgstr "Einzeln geänderte oder abgesagte spätere Ereignisse behalten das nur an Tagen, die das neue Muster noch enthält."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Delete failed - queued to retry on next sync. Attendees have not been notified."
 msgstr "Löschen fehlgeschlagen - wird bei der nächsten Synchronisierung erneut versucht. Die Teilnehmer wurden nicht benachrichtigt."
@@ -1304,7 +1304,7 @@ msgstr "Der Import konnte nicht abgeschlossen werden. Einige seiner Ereignisse s
 msgid "The import stopped because your calendar is not responding. Please try again later."
 msgstr "Der Import wurde angehalten, weil Ihr Kalender nicht antwortet. Bitte versuchen Sie es später erneut."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Dies ist eine Gruppenbuchung. Verschieben, absagen oder ändern Sie die Teilnehmenden stattdessen über das Meeting."
