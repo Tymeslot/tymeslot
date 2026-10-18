@@ -83,3 +83,21 @@ test("a zoomed hour height overrides the density's", () => {
   expect(container.querySelector(".cal-grid").getAttribute("style")).toContain("--cal-hour:80px");
   expect(block(container).style.top).toBe("880px");
 });
+
+test("the grips are hidden from assistive technology", () => {
+  const grips = [...block(draw()).querySelectorAll("[data-grip]")];
+  expect(grips).toHaveLength(2);
+  for (const grip of grips) expect(grip.getAttribute("aria-hidden")).toBe("true");
+});
+
+test("an editable event that cannot be dragged is not marked editable", () => {
+  const multiDay = draw({ events: [review({ start: "2026-10-14T23:00", end: "2026-10-15T01:00" })] });
+  const blocks = multiDay.querySelectorAll('[data-event-id="event-1"]');
+  expect(blocks.length).toBeGreaterThan(0);
+  for (const el of blocks) expect(el.hasAttribute("data-editable")).toBe(false);
+
+  const allDay = draw({ events: [review({ all_day: true, start: "2026-10-14", end: "2026-10-15" })] });
+  const bars = allDay.querySelectorAll('[data-event-id="event-1"]');
+  expect(bars.length).toBeGreaterThan(0);
+  for (const el of bars) expect(el.hasAttribute("data-editable")).toBe(false);
+});
