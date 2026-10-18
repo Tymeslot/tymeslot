@@ -85,6 +85,9 @@ test("place and guests show as chips; guests turn Save into Save and invite", ()
   const texts = [...popover.querySelectorAll(".cal-qc-chip.is-parsed")].map((c) => c.textContent);
   expect(texts).toContain("Place: Room 4");
   expect(texts).toContain("Guests: anna@example.com");
+  // A chip too long for the popover is cut with an ellipsis; its title keeps the whole text.
+  const titles = [...popover.querySelectorAll("span.cal-qc-chip")].map((c) => c.getAttribute("title"));
+  expect(titles).toEqual(expect.arrayContaining(["Room 4", "anna@example.com"]));
   expect(popover.querySelector("[data-qc-save]").textContent).toBe("Save and invite");
   expect(view(base()).querySelector("[data-qc-save]").textContent).toBe("Save");
 });

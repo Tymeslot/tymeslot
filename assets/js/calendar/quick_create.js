@@ -57,7 +57,7 @@ function calendarChip({ draft, strings, calendars }) {
 }
 
 function textChip(chip, label, text, error) {
-  return `<span class="cal-qc-chip is-parsed"${invalid(chip, error)}><span class="sr-only">${escapeHtml(label)}: </span>${escapeHtml(text)}</span>`;
+  return `<span class="cal-qc-chip is-parsed" title="${escapeHtml(text)}"${invalid(chip, error)}><span class="sr-only">${escapeHtml(label)}: </span>${escapeHtml(text)}</span>`;
 }
 
 function chips(state) {

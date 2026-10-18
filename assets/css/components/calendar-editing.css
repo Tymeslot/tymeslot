@@ -105,7 +105,10 @@
 }
 
 /* Place and guests are shown, not edited, here. */
+/* A block, not a flex box: an ellipsis only shows on text in a block. */
 span.cal-qc-chip {
+  display: inline-block;
+  line-height: 22px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
