@@ -968,4 +968,4 @@ msgstr "“%{title}” se repete. Quais eventos devem ser alterados?"
 #: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
 #, elixir-autogen, elixir-format
 msgid "Too late to undo: “%{title}” has already been deleted."
-msgstr ""
+msgstr "Tarde demais para desfazer: o evento “%{title}” já foi excluído."

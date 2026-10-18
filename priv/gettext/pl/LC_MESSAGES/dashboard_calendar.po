@@ -974,4 +974,4 @@ msgstr "Wydarzenie „%{title}” się powtarza. Które wydarzenia zmienić?"
 #: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
 #, elixir-autogen, elixir-format
 msgid "Too late to undo: “%{title}” has already been deleted."
-msgstr ""
+msgstr "Za późno na cofnięcie: „%{title}” zostało już usunięte."

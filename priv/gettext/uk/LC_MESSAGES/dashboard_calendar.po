@@ -978,4 +978,4 @@ msgstr "Подія «%{title}» повторюється. Які події зм
 #: lib/tymeslot_web/live/dashboard/calendar/deletion.ex
 #, elixir-autogen, elixir-format
 msgid "Too late to undo: “%{title}” has already been deleted."
-msgstr ""
+msgstr "Скасувати вже запізно: подію «%{title}» вже видалено."
