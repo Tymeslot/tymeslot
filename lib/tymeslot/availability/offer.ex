@@ -337,7 +337,7 @@ defmodule Tymeslot.Availability.Offer do
        ) do
     moving = moving_meeting(request)
 
-    with {:ok, events} <- range_events(request, start_date, events_source) do
+    with {:ok, events} <- range_events(request, {start_date, end_date}, events_source) do
       duration_minutes = bounded_duration(duration)
       meeting_type = request[:meeting_type]
       limit_checker = limit_checker(request, moving_uid(moving), start_date, end_date)
@@ -384,18 +384,23 @@ defmodule Tymeslot.Availability.Offer do
   end
 
   # The fresh read gets the bookability rule the cached one is stored with.
-  defp range_events(%{profile: %{user_id: user_id}} = request, start_date, :fresh) do
+  defp range_events(
+         %{profile: %{user_id: user_id}} = request,
+         {start_date, _end_date} = dates,
+         :fresh
+       ) do
     with {:ok, events} <-
            CalendarEvents.get_calendar_events_from_context(
              start_date,
              user_id,
              calendar_context(request)
            ) do
-      {:ok, Bookability.apply_to_window(events, user_id)}
+      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
     end
   end
 
-  defp range_events(request, start_date, :cached), do: booking_window_events(request, start_date)
+  defp range_events(request, {start_date, _end_date}, :cached),
+    do: booking_window_events(request, start_date)
 
   # `day_result` for every day of the range, keyed by `key.(date)`; the first
   # day that fails fails the range.

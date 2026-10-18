@@ -34,6 +34,9 @@ defmodule Tymeslot.Repo.Migrations.CreateEventBookabilityOverrides do
              [:user_id, :calendar_integration_id, :provider_uid],
              name: :event_bookability_overrides_user_event_index
            )
+
+    # For the integration's cascade delete.
+    create index(:event_bookability_overrides, [:calendar_integration_id])
   end
 
   def down do

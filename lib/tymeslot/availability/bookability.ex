@@ -18,9 +18,10 @@ defmodule Tymeslot.Availability.Bookability do
   whatever this rule says.
 
   The slot engine applies the rule through `apply_to_window/2` (the booking
-  page's cached booking-window read, which `bookable_windows` shares) and
-  `apply_to_busy/3` (the submit's own re-read), so the page, the calendar
-  and the submit agree. The live fetch carries no calendar on its events,
+  page's cached booking-window read, which `bookable_windows` shares),
+  `apply_to_dates/3` (the guest week view's fresh read) and `apply_to_busy/3`
+  (the submit's own re-read), so the page, the week view, the calendar and
+  the submit agree. The live fetch carries no calendar on its events,
   so the rule is decided on the user's cached all-day rows: one the rule
   makes busy but its calendar marks free is added to the busy set, and a
   live event an override frees is dropped from it. Overrides on timed
@@ -124,6 +125,20 @@ defmodule Tymeslot.Availability.Bookability do
   end
 
   @doc """
+  `apply_to_busy/3` over the booker dates `first..last` and the owner dates
+  a slot listed under them can reach (`Reach.owner_days/0` either side): the
+  guest week view's fresh read, which covers a week rather than the whole
+  booking window. The cached rows are dated in the owner's zone, so the pad
+  is the owner reach rather than the UTC one.
+  """
+  @spec apply_to_dates([map()], integer(), {Date.t(), Date.t()}) :: [map()]
+  def apply_to_dates(events, user_id, {%Date{} = first, %Date{} = last}) do
+    days = Reach.owner_days()
+
+    apply_to_busy(events, user_id, {Date.add(first, -days), Date.add(last, days)})
+  end
+
+  @doc """
   The calendar `events` the slot engine weighs, with the rule applied over
   the dates `from..to`: the user's cached all-day events the rule makes busy
   but their calendar marks free are added, and live events an override
@@ -145,7 +160,9 @@ defmodule Tymeslot.Availability.Bookability do
       |> Enum.map(& &1.id)
       |> CalendarEventQueries.all_day_in_range(range, AvailabilityView.rules(integrations))
       |> Enum.reduce({[], []}, fn row, {added, freed} ->
-        read_only? = read_only?(row, Map.fetch!(by_id, row.calendar_integration_id))
+        integration = Map.fetch!(by_id, row.calendar_integration_id)
+        row = as_presented(row, integration)
+        read_only? = read_only?(row, integration)
 
         case {busy_for_bookings?(row, read_only?, overrides), CalendarEvent.blocking?(row)} do
           {true, false} -> {[busy_period(row) | added], freed}
@@ -158,6 +175,12 @@ defmodule Tymeslot.Availability.Bookability do
     |> Enum.reject(fn event -> Enum.any?(freed, &same_event?(event, &1)) end)
     |> Enum.concat(added)
   end
+
+  # The row as the live fetch presents it: a subscription that counts every
+  # event as busy hands out its events busy (as `Tymeslot.FreeBusy` reads
+  # its cache), so a free cached row is a busy live one.
+  defp as_presented(row, %{all_events_busy: true}), do: CalendarEvent.as_busy(row)
+  defp as_presented(row, _integration), do: row
 
   # The plain shape the live fetch returns, with neither `status` nor
   # `transparency`, so `CalendarEvent.blocking?/1` counts it, and the dates
@@ -174,9 +197,14 @@ defmodule Tymeslot.Availability.Bookability do
 
   # A live event is the cached row when one of the identifiers its provider
   # family shares with the cache matches (Google and Outlook hand out their
-  # own id live and cache under the iCal uid) and the two cover the same time.
+  # own id live and cache under the iCal uid; a CalDAV occurrence is cached
+  # as `<UID>_<suffix>` at its series' href, which the live event carries)
+  # and the two cover the same time.
   defp same_event?(event, row) do
-    ids = for key <- [:uid, :ical_uid, :provider_event_id], id = Map.get(event, key), do: id
+    ids =
+      for key <- [:uid, :ical_uid, :provider_event_id, :href],
+          id = Map.get(event, key),
+          do: id
 
     Enum.any?(ids, &(&1 in [row.uid, row.provider_event_id])) and overlapping?(event, row)
   end

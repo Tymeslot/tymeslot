@@ -62,8 +62,9 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     }
   end
 
-  # An all-day event as the sync caches it, and as the live fetch returns it.
-  defp holiday(ctx, attrs \\ %{}) do
+  # An all-day event as the sync caches it, and as the live fetch returns it
+  # (`live_attrs` for where a provider presents it differently).
+  defp holiday(ctx, attrs \\ %{}, live_attrs \\ %{}) do
     defaults = %{
       calendar_integration: ctx.integration,
       uid: "holiday-1",
@@ -81,16 +82,20 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
 
     row = insert(:provider_calendar_event, Map.merge(defaults, attrs))
 
-    live = %{
-      uid: row.provider_event_id,
-      ical_uid: row.uid,
-      summary: row.summary,
-      all_day: row.all_day,
-      start_time: row.start_date || row.start_at,
-      end_time: row.end_date || row.end_at,
-      status: "confirmed",
-      transparency: row.transparency
-    }
+    live =
+      Map.merge(
+        %{
+          uid: row.provider_event_id,
+          ical_uid: row.uid,
+          summary: row.summary,
+          all_day: row.all_day,
+          start_time: row.start_date || row.start_at,
+          end_time: row.end_date || row.end_at,
+          status: "confirmed",
+          transparency: row.transparency
+        },
+        live_attrs
+      )
 
     stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
       {:ok, [live]}
@@ -110,9 +115,9 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     Map.fetch!(days, Date.to_iso8601(date))
   end
 
-  defp probe(ctx) do
-    start = DateTime.new!(ctx.date, ~T[11:00:00], "Etc/UTC")
+  defp probe(ctx), do: probe_at(ctx, DateTime.new!(ctx.date, ~T[11:00:00], "Etc/UTC"))
 
+  defp probe_at(ctx, start) do
     CalendarCheck.probe(
       %{
         organizer_user_id: ctx.user.id,
@@ -235,5 +240,88 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end -> {:ok, []} end)
 
     assert "11:00 AM" in page(ctx, ctx.date)
+  end
+
+  test "Treat as Free opens a day a feed counting every event as busy closes", ctx do
+    feed =
+      insert(:calendar_integration,
+        user: ctx.user,
+        provider: "ics_url",
+        is_active: true,
+        all_events_busy: true
+      )
+
+    # The feed marks the day free in the cache; the live read presents it busy.
+    row =
+      holiday(%{ctx | integration: feed}, %{provider: "ics_url", provider_calendar_id: "feed"}, %{
+        transparency: "opaque"
+      })
+
+    assert page(ctx, ctx.date) == []
+
+    :ok = Bookability.set(ctx.user.id, feed.id, row.uid, false)
+
+    assert "11:00 AM" in page(ctx, ctx.date)
+
+    assert {:ok, [_window | _rest]} =
+             Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
+
+    assert :ok = probe(ctx)
+  end
+
+  test "Treat as Free opens a day a recurring CalDAV occurrence closes", ctx do
+    caldav = insert(:calendar_integration, user: ctx.user, provider: "caldav", is_active: true)
+
+    # The cache keys each occurrence as `<UID>_<suffix>` at the series' href;
+    # the live read hands out the series' own uid and the href.
+    row =
+      holiday(
+        %{ctx | integration: caldav},
+        %{
+          provider: "caldav",
+          provider_calendar_id: "/calendars/work/",
+          uid: "series-1_#{Date.to_iso8601(ctx.date, :basic)}",
+          provider_event_id: "/calendars/work/series-1.ics",
+          transparency: "opaque"
+        },
+        %{uid: "series-1", ical_uid: nil, href: "/calendars/work/series-1.ics"}
+      )
+
+    assert page(ctx, ctx.date) == []
+
+    :ok = Bookability.set(ctx.user.id, caldav.id, row.uid, false)
+
+    assert "11:00 AM" in page(ctx, ctx.date)
+    assert :ok = probe(ctx)
+  end
+
+  test "an owner east of UTC: the re-check refuses the early hours of their holiday", ctx do
+    %{user: user, profile: profile} =
+      create_bookable_profile(timezone: "Pacific/Auckland", days: Enum.to_list(1..7))
+
+    integration =
+      insert(:calendar_integration,
+        user: user,
+        provider: "google",
+        is_active: true,
+        calendar_list: [
+          %{"id" => "holidays", "name" => "Holidays", "selected" => true, "read_only" => true}
+        ]
+      )
+
+    owner = %{ctx | user: user, profile: profile, integration: integration}
+    row = holiday(owner)
+
+    # 01:00 in Auckland falls on the previous UTC date.
+    start = DateTime.new!(owner.date, ~T[01:00:00], "Pacific/Auckland")
+
+    assert Date.compare(DateTime.to_date(DateTime.shift_zone!(start, "Etc/UTC")), owner.date) ==
+             :lt
+
+    assert {:error, :slot_unavailable} = probe_at(owner, start)
+
+    :ok = Bookability.set(user.id, integration.id, row.uid, false)
+
+    assert :ok = probe_at(owner, start)
   end
 end
