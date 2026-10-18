@@ -51,4 +51,29 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
     |> AvailabilityOverrideSchema.changeset(attrs)
     |> Repo.insert()
   end
+
+  @doc """
+  Updates an availability override.
+  """
+  @spec update_override(AvailabilityOverrideSchema.t(), map()) ::
+          {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_override(%AvailabilityOverrideSchema{} = override, attrs) when is_map(attrs) do
+    override
+    |> AvailabilityOverrideSchema.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a schedule's override on `date`, if it has one. Returns how many
+  rows went (0 or 1).
+  """
+  @spec delete_by_schedule_and_date(integer(), Date.t()) :: non_neg_integer()
+  def delete_by_schedule_and_date(schedule_id, date) do
+    {count, _rows} =
+      AvailabilityOverrideSchema
+      |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
+      |> Repo.delete_all()
+
+    count
+  end
 end
