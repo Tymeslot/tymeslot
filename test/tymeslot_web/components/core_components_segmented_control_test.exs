@@ -71,6 +71,26 @@ defmodule TymeslotWeb.Components.CoreComponentsSegmentedControlTest do
     assert attr_of(doc, "#range-7d", "phx-value-value") == []
   end
 
+  # A click sends the button's own `value` under "value", over phx-value-value,
+  # so the default parameter only arrives if the button carries it.
+  test "each button carries its option's value, for the default parameter" do
+    assigns = %{}
+
+    doc =
+      ~H"""
+      <Navigation.segmented_control id="show" value="busy" on_change="set" aria_label="Show me as">
+        <:option value="busy" label="Busy" />
+        <:option value="free" label="Free" />
+      </Navigation.segmented_control>
+      """
+      |> rendered_to_string()
+      |> Floki.parse_fragment!()
+
+    assert attr_of(doc, "#show-free", "value") == ["free"]
+    assert attr_of(doc, "#show-free", "phx-value-value") == ["free"]
+    assert attr_of(doc, "#show-busy", "value") == ["busy"]
+  end
+
   test "sends its fixed values with every option, beside the chosen one" do
     doc = render_control("30d", %{values: %{group: "background", range: "ignored"}})
 
