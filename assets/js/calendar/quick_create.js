@@ -101,7 +101,7 @@ export function renderQuickBody(state) {
     (draft.error ? `<p id="calendar-qc-error" class="cal-qc-error" role="alert">${escapeHtml(draft.error.message)}</p>` : "") +
     `<div class="cal-qc-foot">` +
     `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${locked ? " disabled" : ""}>${escapeHtml(strings.more_options)}</button>` +
-    `<button type="button" class="cal-qc-save" data-qc-save data-qc-key="save"${locked ? " disabled" : ""}>${escapeHtml(saveLabel(state))}</button>` +
+    `<button type="button" class="cal-qc-save action-button action-button--primary action-button--sm" data-qc-save data-qc-key="save"${locked ? " disabled" : ""}>${escapeHtml(saveLabel(state))}</button>` +
     `</div>` +
     `<p id="calendar-qc-hint" class="cal-qc-hint">${escapeHtml(strings.quick_create_hint)}</p>`
   );

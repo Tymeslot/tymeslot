@@ -262,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         target={@myself}
       />
       <SyncBanner.sync_banner problems={@sync_problems} syncing_ids={@syncing_ids} target={@myself} />
-      <div class="flex min-h-0 flex-1">
+      <div class="relative flex min-h-0 flex-1">
         <Rail.rail
           :if={@rail_open}
           accounts={@accounts}
