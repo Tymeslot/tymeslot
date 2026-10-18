@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTimingTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.CalendarMock
@@ -199,6 +200,59 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTimingTest do
 
       refute_receive {:written, _uid, _payload}, 200
     end
+
+    test "a stay of more than 366 days is refused", %{lv: lv, offsite: offsite} do
+      lv
+      |> edit(offsite)
+      |> change_timing("end_date", %{"start_date" => "2026-10-14", "end_date" => "2027-10-16"})
+
+      assert has_element?(lv, "#calendar-panel", "An all-day event can last up to 366 days.")
+      refute_receive {:written, _uid, _payload}, 200
+    end
+
+    test "a year the calendar cannot show is refused in its own words", %{
+      lv: lv,
+      offsite: offsite
+    } do
+      lv
+      |> edit(offsite)
+      |> change_timing("start_date", %{"start_date" => "2201-01-01", "end_date" => "2026-10-15"})
+
+      assert has_element?(lv, "#calendar-panel", "Pick a date between 1900 and 2200.")
+      refute has_element?(lv, "#calendar-panel", "up to 7 days")
+      refute_receive {:written, _uid, _payload}, 200
+    end
+
+    test "All day off gives the day its working hours", %{lv: lv, offsite: offsite} do
+      lv |> edit(offsite) |> element("#calendar-panel-all-day") |> render_click()
+
+      uid = offsite.uid
+      assert_receive {:written, ^uid, payload}
+      refute payload.all_day
+      # 09:00 on the first day to 10:00 on the last, London summer time.
+      assert same?(payload.start_time, ~U[2026-10-14 08:00:00Z])
+      assert same?(payload.end_time, ~U[2026-10-15 09:00:00Z])
+    end
+
+    test "a stay too long for a timed event cannot be switched to times", %{
+      conn: conn,
+      integration: integration
+    } do
+      trip =
+        event(integration, "work", "Trip", ~U[2026-10-14 00:00:00Z], 60,
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: ~D[2026-10-14],
+          end_date: ~D[2026-10-26]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> edit(trip) |> element("#calendar-panel-all-day") |> render_click()
+
+      assert has_element?(lv, "#calendar-panel", "An event can last up to 7 days.")
+      refute_receive {:written, _uid, _payload}, 200
+    end
   end
 
   test "All day turns a timed event into a day", %{lv: lv, review: review} do
@@ -209,5 +263,71 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTimingTest do
     assert payload.all_day
     assert payload.start_time == ~D[2026-10-14]
     assert payload.end_time == ~D[2026-10-15]
+  end
+
+  test "undo after a start move writes both original instants back", %{lv: lv, review: review} do
+    lv
+    |> edit(review)
+    |> change_timing("start_time", timed("2026-10-14", "11:30", "2026-10-14", "11:00"))
+
+    uid = review.uid
+    assert_receive {:written, ^uid, _moved}
+    render(lv)
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+    assert_receive {:written, ^uid, payload}, 1_000
+    assert same?(payload.start_time, ~U[2026-10-14 09:00:00Z])
+    assert same?(payload.end_time, ~U[2026-10-14 10:00:00Z])
+  end
+
+  describe "an event whose timing cannot change" do
+    defp hand_crafted(lv) do
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("panel:timing", %{
+        "_target" => ["start_time"],
+        "start_date" => "2026-10-16",
+        "start_time" => "12:00",
+        "end_date" => "2026-10-16",
+        "end_time" => "13:00"
+      })
+
+      render_hook(element(lv, "#calendar-canvas"), "panel:all_day", %{})
+    end
+
+    test "a booking writes nothing", %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          title: "Intro call",
+          start_time: ~U[2026-10-16 10:00:00Z],
+          end_time: ~U[2026-10-16 10:30:00Z],
+          status: "confirmed"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:edit", %{"id" => "booking-#{meeting.id}"})
+
+      assert has_element?(lv, "fieldset[disabled] #calendar-panel-start-date")
+
+      hand_crafted(lv)
+
+      refute_receive {:written, _uid, _payload}, 200
+    end
+
+    test "a booking's calendar copy writes nothing", %{conn: conn, integration: integration} do
+      copy = event(integration, "work", "Intro call", ~U[2026-10-16 10:00:00Z])
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: copy.uid)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      edit(lv, copy)
+      hand_crafted(lv)
+
+      refute_receive {:written, _uid, _payload}, 200
+    end
   end
 end

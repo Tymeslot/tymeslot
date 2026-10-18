@@ -96,8 +96,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
         socket
 
       event ->
-        {changes, opts} = PanelTiming.toggle_all_day(event, socket.assigns.timezone)
-        socket |> PanelState.put_error("timing", nil) |> write(changes, opts)
+        case PanelTiming.toggle_all_day(event, socket.assigns.timezone) do
+          {:ok, changes, opts} ->
+            socket |> PanelState.put_error("timing", nil) |> write(changes, opts)
+
+          {:error, message} ->
+            PanelState.put_error(socket, "timing", message)
+        end
     end
   end
 

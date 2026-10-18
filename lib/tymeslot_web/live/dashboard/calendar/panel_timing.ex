@@ -76,13 +76,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
 
   def change(_event, _params, _timezone), do: :unchanged
 
-  @doc "The change toggling all day makes to `event`, and the write's options."
-  @spec toggle_all_day(map(), String.t()) :: {map(), keyword()}
+  @doc """
+  The change toggling all day makes to `event`, and the write's options; an
+  all-day event longer than a timed one may be cannot become timed.
+  """
+  @spec toggle_all_day(map(), String.t()) :: {:ok, map(), keyword()} | {:error, String.t()}
   def toggle_all_day(event, timezone) do
     zone = RepeatForm.all_day_timezone(event, timezone)
     toggled = EventEdit.toggle_all_day(event, zone)
 
-    {EventEdit.timing_changes(toggled), [timezone: zone]}
+    case toggled do
+      %{start_at: %DateTime{} = start_at, end_at: %DateTime{} = end_at} ->
+        if Moves.sensible?(start_at, end_at),
+          do: {:ok, EventEdit.timing_changes(toggled), timezone: zone},
+          else: {:error, too_long()}
+
+      _all_day ->
+        {:ok, EventEdit.timing_changes(toggled), timezone: zone}
+    end
   end
 
   defp change_times(event, target, params, timezone) do
@@ -99,6 +110,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
     else
       :incomplete -> :unchanged
       {:error, :end_before_start} -> {:error, end_before_start(:time)}
+      {:error, :out_of_range} -> {:error, out_of_range()}
       {:error, _invalid_time} -> {:error, too_long()}
     end
   end
@@ -142,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
     with {:ok, first} <- Date.from_iso8601(params["start_date"] || ""),
          {:ok, last} <- Date.from_iso8601(params["end_date"] || ""),
          {:ok, first, exclusive_end} <- days(target, first, last, event),
-         true <- first.year in Moves.years() and exclusive_end.year in Moves.years() do
+         :ok <- day_span(first, exclusive_end) do
       if first == event.start_date and exclusive_end == EventPayload.exclusive_end(event),
         do: :unchanged,
         else:
@@ -150,8 +162,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
            [timezone: RepeatForm.all_day_timezone(event, timezone)]}
     else
       {:error, :end_before_start} -> {:error, end_before_start(:date)}
-      false -> {:error, too_long()}
+      {:error, :out_of_range} -> {:error, out_of_range()}
+      {:error, :too_long} -> {:error, too_long_all_day()}
       {:error, _incomplete} -> :unchanged
+    end
+  end
+
+  defp day_span(first, exclusive_end) do
+    cond do
+      first.year not in Moves.years() or exclusive_end.year not in Moves.years() ->
+        {:error, :out_of_range}
+
+      Moves.sensible_days?(first, exclusive_end) ->
+        :ok
+
+      true ->
+        {:error, :too_long}
     end
   end
 
@@ -173,6 +199,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
 
   defp end_before_start(:date),
     do: dgettext("dashboard_calendar", "The end is before the start. Pick a later end date.")
+
+  defp out_of_range,
+    do: dgettext("dashboard_calendar", "Pick a date between 1900 and 2200.")
+
+  defp too_long_all_day,
+    do: dgettext("dashboard_calendar", "An all-day event can last up to 366 days.")
 
   defp too_long, do: dgettext("dashboard_calendar", "An event can last up to 7 days.")
 

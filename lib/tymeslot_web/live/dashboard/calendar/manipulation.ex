@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
          :ok <- EditGuard.check_timing(user.id, integrations, event) do
       {:ok, event, changes}
     else
-      {:error, :invalid_time} -> :ignore
+      {:error, reason} when reason in [:invalid_time, :out_of_range] -> :ignore
       refusal when is_tuple(refusal) and elem(refusal, 0) == :error -> refusal
       _unchanged_or_invalid -> :ignore
     end

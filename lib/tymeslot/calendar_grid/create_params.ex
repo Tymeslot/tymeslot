@@ -32,9 +32,6 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   # Four weeks.
   @max_reminder_minutes 40_320
   @max_rule 500
-  # A timed event is held to `Moves.max_span_seconds/0` (one drawable block);
-  # an all-day one may run for a year (a holiday, a term).
-  @max_all_day_days 366
   @reminder_methods %{"popup" => :popup, "email" => :email}
 
   @enforce_keys [:integration_id, :calendar_id, :title, :start_at, :end_at, :timezone]
@@ -213,9 +210,8 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
     with {:ok, first} <- date(start, :start),
          {:ok, after_last} <- date(finish, :end),
          :ok <- within_years(first.year),
-         days = Date.diff(after_last, first),
-         :ok <- ordered(days),
-         :ok <- at_most(days, @max_all_day_days, :longer_than_a_year) do
+         :ok <- ordered(Date.diff(after_last, first)),
+         :ok <- all_day_span(first, after_last) do
       {:ok, first, after_last}
     end
   end
@@ -246,6 +242,12 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
 
   defp ordered(span) when span > 0, do: :ok
   defp ordered(_span), do: {:error, :end, :before_start}
+
+  # A timed event is held to `Moves.max_span_seconds/0` (one drawable block);
+  # an all-day one may run for a year (a holiday, a term).
+  defp all_day_span(first, after_last) do
+    if Moves.sensible_days?(first, after_last), do: :ok, else: {:error, :end, :longer_than_a_year}
+  end
 
   defp at_most(span, max, _reason) when span <= max, do: :ok
   defp at_most(_span, _max, reason), do: {:error, :end, reason}

@@ -71,6 +71,33 @@ defmodule Tymeslot.CalendarGrid.MovesTest do
     end
   end
 
+  describe "sensible_days?/2" do
+    test "one day, and a year and a day, can be drawn" do
+      assert Moves.sensible_days?(~D[2026-10-15], ~D[2026-10-16])
+      assert Moves.sensible_days?(~D[2026-01-01], ~D[2027-01-02])
+    end
+
+    test "a day more than that cannot" do
+      refute Moves.sensible_days?(~D[2026-01-01], ~D[2027-01-03])
+    end
+
+    test "no days, or fewer, cannot" do
+      refute Moves.sensible_days?(~D[2026-10-15], ~D[2026-10-15])
+      refute Moves.sensible_days?(~D[2026-10-15], ~D[2026-10-14])
+    end
+
+    test "the first and last years can be drawn in, the years either side cannot" do
+      assert Moves.sensible_days?(~D[1900-01-01], ~D[1900-01-02])
+      assert Moves.sensible_days?(~D[2200-12-30], ~D[2200-12-31])
+      refute Moves.sensible_days?(~D[1899-12-30], ~D[1899-12-31])
+      refute Moves.sensible_days?(~D[2201-01-01], ~D[2201-01-02])
+    end
+
+    test "an end past the last year cannot" do
+      refute Moves.sensible_days?(~D[2200-12-31], ~D[2201-01-01])
+    end
+  end
+
   describe "resolve/4" do
     test "a move across the October change keeps the hour the event lasts" do
       # 09:00 to 10:00 on Saturday 24 October (BST), drawn on Monday 26 October (GMT).
@@ -137,7 +164,7 @@ defmodule Tymeslot.CalendarGrid.MovesTest do
       event = %{start_at: ~U[2026-10-15 08:00:00Z], end_at: ~U[2026-10-15 09:00:00Z]}
 
       assert Moves.resolve(event, "2201-01-01T09:00", "2201-01-01T10:00", "Etc/UTC") ==
-               {:error, :invalid_time}
+               {:error, :out_of_range}
     end
 
     test "an unreadable wall clock is refused" do
