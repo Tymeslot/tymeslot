@@ -121,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
     ~H"""
     <aside
       id="calendar-panel"
-      class="cal-panel flex w-88 shrink-0 flex-col border-l border-tymeslot-200 bg-white"
+      class="cal-panel flex flex-col"
       aria-label={dgettext("dashboard_calendar", "Event details")}
     >
       <div class="flex items-center gap-2 border-b border-tymeslot-100 px-4 py-2">
