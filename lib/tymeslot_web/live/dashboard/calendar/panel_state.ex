@@ -64,6 +64,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   def close(socket), do: socket
 
+  @doc "Closes the panel when it is open on the event `id` names."
+  @spec close_on(socket(), String.t()) :: socket()
+  def close_on(%{assigns: %{panel: %{event_id: id}}} = socket, id), do: close(socket)
+  def close_on(socket, _id), do: socket
+
   @doc """
   Forgets the writes the panel was waiting on, for a surface that missed
   their answers (revived after the organiser left the calendar): a header

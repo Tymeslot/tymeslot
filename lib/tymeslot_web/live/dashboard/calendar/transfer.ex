@@ -195,7 +195,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
     socket
     |> SurfaceData.reload(:events)
-    |> close_panel_on(EventPayload.id(event))
+    |> PanelState.close_on(EventPayload.id(event))
     |> series_toast(calendar, source)
   end
 
@@ -355,11 +355,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   end
 
   defp follow(socket, _original, _found), do: socket
-
-  defp close_panel_on(%{assigns: %{panel: %{event_id: id}}} = socket, id),
-    do: PanelState.close(socket)
-
-  defp close_panel_on(socket, _id), do: socket
 
   defp moved_toast(socket, %{undo: true, calendar_name: name}, _original, _found, nil),
     do:

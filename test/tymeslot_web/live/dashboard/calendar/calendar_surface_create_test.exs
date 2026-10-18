@@ -216,6 +216,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     assert job.args["uid"] == uid
   end
 
+  test "undo closes the panel open on the event it removes", %{lv: lv, work: work} do
+    events = created_and_settled(lv, work)
+    %{id: id} = Enum.find(events, &(&1.title == "Lunch"))
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:edit", %{"id" => id})
+    assert has_element?(lv, "#calendar-panel-title[value='Lunch']")
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+    assert [_job] = all_enqueued(worker: CalendarEventDeleteWorker)
+    refute has_element?(lv, "#calendar-panel")
+    assert_push_event(lv, "calendar:panel", %{open: false})
+  end
+
   test "undo while the created event is still saving keeps the entry and says so",
        %{lv: lv, work: work} do
     events = created_and_settled(lv, work)

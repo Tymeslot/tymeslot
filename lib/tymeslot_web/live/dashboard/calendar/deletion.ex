@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Clock
+  alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -106,6 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
         socket
         |> assign(:pending_deletes, Map.put(socket.assigns.pending_deletes, token, pending))
+        |> PanelState.close_on(EventPayload.id(event))
         |> SurfaceData.refilter()
         |> SurfaceData.push_events(false)
         |> Toast.show(
