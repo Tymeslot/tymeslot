@@ -15,9 +15,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
 
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
+
   alias Ecto.Changeset
   alias Tymeslot.CalendarMock
-  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Repo
 
