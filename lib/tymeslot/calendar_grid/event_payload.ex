@@ -13,7 +13,9 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
 
   `editable` says whether the organiser can change the event from the calendar
   (`EditGuard.editable?/2`); the hook offers dragging, resizing and deleting
-  only on those, and the server checks again on every change.
+  only on those, and the server checks again on every change. `movable`
+  narrows that to the events whose time may change (`EditGuard.movable?/2`);
+  `build/1` works it out for the whole window at once.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -26,6 +28,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
           required(:integration_tokens) => map(),
           required(:calendar_tokens) => map(),
           optional(:integrations) => [map()],
+          optional(:movable_ids) => MapSet.t(String.t()),
           optional(atom()) => term()
         }
 
@@ -36,6 +39,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   """
   @spec build(map()) :: map()
   def build(%{view: view, date: date, window: window, now: now, timezone: timezone} = input) do
+    context = with_movable_ids(input)
+
     %{
       view: Atom.to_string(view),
       date: Date.to_iso8601(date),
@@ -43,8 +48,15 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
       now: format(local(now, timezone)),
       reset: input.reset,
       settings: input.settings,
-      events: Enum.map(input.events, &event(&1, input))
+      events: Enum.map(input.events, &event(&1, context))
     }
+  end
+
+  # Which events may be moved is asked of the whole window at once, so the
+  # booking-copy lookup behind it costs one query rather than one per event.
+  defp with_movable_ids(input) do
+    movable = EditGuard.movable(Map.get(input, :integrations, []), input.events)
+    Map.put(input, :movable_ids, MapSet.new(movable, &id/1))
   end
 
   @doc "One event in the payload's shape."
@@ -60,7 +72,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         free: Map.get(event, :transparency) == "transparent",
         attention: Map.get(event, :sync_state, "synced") != "synced",
         editable: EditGuard.editable?(Map.get(context, :integrations, []), event),
-        movable: EditGuard.movable?(Map.get(context, :integrations, []), event)
+        movable: movable?(event, context)
       },
       timing(event, context.timezone)
     )
@@ -94,6 +106,11 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
       _none -> Date.add(first, 1)
     end
   end
+
+  defp movable?(event, %{movable_ids: ids}), do: MapSet.member?(ids, id(event))
+
+  defp movable?(event, context),
+    do: EditGuard.movable?(Map.get(context, :integrations, []), event)
 
   defp untitled, do: dgettext("dashboard_calendar", "(No title)")
 

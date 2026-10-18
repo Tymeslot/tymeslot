@@ -14,8 +14,8 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
     * `rate_limit/1`: the organiser is within the calendar edit rate limit.
 
   `check/3` asks all three, in that order, for a change about to be made.
-  `movable?/2` and `check_timing/3` add the one more a change of timing
-  needs: the calendar copy of a booking keeps the booking's time, so it can
+  `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
+  add the one more a change of timing needs: the calendar copy of a booking keeps the booking's time, so it can
   be deleted from the calendar but not moved or resized.
   """
 
@@ -36,6 +36,18 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   @spec movable?([map()], map()) :: boolean()
   def movable?(integrations, event),
     do: editable?(integrations, event) and not EventDeletion.booking_copy?(event)
+
+  @doc """
+  The events of `events` that `movable?/2` allows, for drawing a whole window:
+  the booking copies among them are found in one query, not one per event.
+  """
+  @spec movable([map()], [map()]) :: [map()]
+  def movable(integrations, events) do
+    editable = Enum.filter(events, &editable?(integrations, &1))
+    copies = editable |> EventDeletion.booking_copies() |> MapSet.new()
+
+    Enum.reject(editable, &MapSet.member?(copies, &1))
+  end
 
   @doc "Whether `event` sits on a writable calendar of one of `integrations`."
   @spec writable([map()], map()) :: :ok | {:error, :booking | :unauthorized | :read_only}

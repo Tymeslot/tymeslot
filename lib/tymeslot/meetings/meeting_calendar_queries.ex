@@ -86,6 +86,31 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   end
 
   @doc """
+  The calendar links of the meetings on any of `integration_ids` whose
+  provider event id is one of `provider_event_ids` or whose `calendar_uid` is
+  one of `uids`, as `{calendar_integration_id, provider_event_id,
+  calendar_uid}`: one query for what `get_by_provider_event_id/2` and
+  `get_by_calendar_uid_and_integration/2` answer one event at a time. The
+  caller pairs each link with its event by integration.
+  """
+  @spec list_calendar_links([integer()], [String.t()], [String.t()]) :: [
+          {integer(), String.t() | nil, String.t() | nil}
+        ]
+  def list_calendar_links([], _provider_event_ids, _uids), do: []
+  def list_calendar_links(_integration_ids, [], []), do: []
+
+  def list_calendar_links(integration_ids, provider_event_ids, uids) do
+    Meeting
+    |> where(
+      [m],
+      m.calendar_integration_id in ^integration_ids and
+        (m.provider_event_id in ^provider_event_ids or m.calendar_uid in ^uids)
+    )
+    |> select([m], {m.calendar_integration_id, m.provider_event_id, m.calendar_uid})
+    |> Repo.all()
+  end
+
+  @doc """
   Finds a meeting by the UID its calendar event carries (`calendar_uid`) and
   its calendar integration.
 

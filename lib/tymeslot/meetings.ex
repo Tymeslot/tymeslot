@@ -528,6 +528,14 @@ defmodule Tymeslot.Meetings do
     as: :list_by_calendar_identifiers
 
   @doc """
+  `find_meeting_by_calendar_event/3` for many events in one query: the
+  `{calendar_integration_id, provider_event_id, calendar_uid}` of every
+  meeting on `integration_ids` matching one of the provider event ids or uids.
+  """
+  defdelegate list_calendar_links(integration_ids, provider_event_ids, uids),
+    to: MeetingCalendarQueries
+
+  @doc """
   Returns the non-blank identifiers by which `record` — a meeting or a cached
   provider calendar event — is matched to its counterpart on the other side.
   """

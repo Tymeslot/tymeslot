@@ -78,6 +78,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.AttendeeNotifications
 
   @type event :: %{
@@ -159,6 +160,49 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
       event.calendar_integration_id,
       Map.get(event, :provider_event_id),
       event.uid
+    )
+  end
+
+  @doc """
+  The events of `events` that are booking copies, by the rule `booking_copy?/1`
+  asks of one (a meeting on the same integration with the event's provider
+  event id, or with the event's uid as its `calendar_uid`), in one query for
+  them all.
+  """
+  @spec booking_copies([map()]) :: [map()]
+  def booking_copies([]), do: []
+
+  def booking_copies(events) do
+    links =
+      Meetings.list_calendar_links(
+        events |> Enum.map(& &1.calendar_integration_id) |> Enum.uniq(),
+        present(events, &Map.get(&1, :provider_event_id)),
+        present(events, & &1.uid)
+      )
+
+    keys =
+      links
+      |> Enum.flat_map(fn {integration_id, provider_event_id, calendar_uid} ->
+        [
+          {integration_id, :provider_event_id, provider_event_id},
+          {integration_id, :uid, calendar_uid}
+        ]
+      end)
+      |> MapSet.new()
+
+    Enum.filter(events, &linked?(&1, keys))
+  end
+
+  defp present(events, field),
+    do: events |> Enum.map(field) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+  # A nil identifier links nothing, as `booking_copy?/1` looks neither up.
+  defp linked?(event, keys) do
+    Enum.any?(
+      [provider_event_id: Map.get(event, :provider_event_id), uid: event.uid],
+      fn {field, value} ->
+        value != nil and MapSet.member?(keys, {event.calendar_integration_id, field, value})
+      end
     )
   end
 
