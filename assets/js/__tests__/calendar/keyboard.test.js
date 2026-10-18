@@ -31,6 +31,16 @@ describe("focus", () => {
     expect(go(at("D", 3), "ArrowRight")).toBe(null);
   });
 
+  test("left and right pick the first listed event when two in the next column are equally near", () => {
+    const tied = [
+      { id: "A", day: 0, minute: 600, order: 0 },
+      { id: "L", day: 1, minute: 540, order: 1 },
+      { id: "M", day: 1, minute: 660, order: 2 },
+    ];
+    expect(nextFocus(tied, at("A", 0), "ArrowRight")?.id).toBe("L");
+    expect(nextFocus([tied[0], tied[2], tied[1]], at("A", 0), "ArrowRight")?.id).toBe("M");
+  });
+
   test("home and end go to the day's first and last event", () => {
     expect(go(at("B", 0), "Home")).toBe("A");
     expect(go(at("A", 0), "End")).toBe("B");
@@ -51,6 +61,17 @@ describe("move mode", () => {
     expect(step(range, "ArrowDown")).toEqual({ startMin: day + 555, endMin: day + 615 });
     expect(step({ startMin: day, endMin: day + 60 }, "ArrowUp")).toEqual({ startMin: day, endMin: day + 60 });
     expect(step({ startMin: day + 1380, endMin: day + 1440 }, "ArrowDown")).toEqual({ startMin: day + 1380, endMin: day + 1440 });
+  });
+
+  test("an off-grid event snaps to the grid on its first step", () => {
+    const off = { startMin: day + 547, endMin: day + 607 };
+    expect(step(off, "ArrowUp")).toEqual({ startMin: day + 525, endMin: day + 585 });
+    expect(step(off, "ArrowDown")).toEqual({ startMin: day + 555, endMin: day + 615 });
+  });
+
+  test("shift with left or right changes nothing", () => {
+    expect(step(range, "ArrowLeft", true)).toEqual(range);
+    expect(step(range, "ArrowRight", true)).toEqual(range);
   });
 
   test("shift with up and down changes the length, never below a quarter hour", () => {
