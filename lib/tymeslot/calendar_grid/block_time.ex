@@ -12,9 +12,11 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
   subscribed or show-only ones) it is a part-day time off period, which the
   booking page honours with no calendar at all.
 
-  A failed or queued event write is reported as it is; it never falls back
-  to time off, which would block the time twice once the write lands.
-  `unblock/2` takes either kind back, for undo.
+  A failed event write is reported as it is, and one queued for a retry as
+  `{:error, {:queued, reason}}`; neither falls back to time off, which would
+  block the time twice once the write lands. A write that succeeds but leaves
+  no cached row is `{:error, :not_cached}`. `unblock/2` takes either kind
+  back, for undo; a delete queued for a retry is `{:error, {:queued, reason}}`.
   """
 
   alias Tymeslot.Availability.TimeOff
@@ -40,6 +42,9 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
           | :invalid_range
           | :in_past
           | :too_long
+          | :too_far
+          | :not_cached
+          | {:queued, term()}
           | :limit_reached
           | :not_found
           | :invalid
@@ -82,6 +87,7 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
       :ok
     else
       false -> {:error, :not_found}
+      {:error, %{reason: reason, retry: :queued}} -> {:error, {:queued, reason}}
       {:error, %{reason: reason}} -> {:error, reason}
       {:error, _reason} = error -> error
     end
@@ -150,7 +156,9 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
     }
 
     case NewEvent.create(user_id, payload) do
-      {:ok, %{event: event}} -> {:ok, %{kind: :event, event: event}}
+      {:ok, %{event: %{} = event}} -> {:ok, %{kind: :event, event: event}}
+      {:ok, _no_cached_row} -> {:error, :not_cached}
+      {:error, %{reason: reason, retry: :queued}} -> {:error, {:queued, reason}}
       {:error, %{reason: reason}} -> {:error, reason}
     end
   end
@@ -187,9 +195,19 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
   defp period_end(local_end),
     do: {DateTime.to_date(local_end), local_end |> DateTime.to_time() |> Time.truncate(:second)}
 
+  # A horizon error carries its `count`; any other date error on either end
+  # is a day that has gone.
   defp time_off_refusal(%Ecto.Changeset{errors: errors}) do
-    if Keyword.has_key?(errors, :starts_on) or Keyword.has_key?(errors, :ends_on),
-      do: :in_past,
-      else: :invalid
+    cond do
+      horizon?(Keyword.get(errors, :ends_on)) -> :too_far
+      past?(Keyword.get(errors, :ends_on)) -> :in_past
+      true -> :invalid
+    end
   end
+
+  defp horizon?({_message, opts}) when is_list(opts), do: Keyword.has_key?(opts, :count)
+  defp horizon?(_error), do: false
+
+  defp past?({"must not be in the past", _opts}), do: true
+  defp past?(_error), do: false
 end

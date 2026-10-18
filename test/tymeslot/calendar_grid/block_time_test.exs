@@ -72,6 +72,7 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
       assert_receive {:event_data, event_data}
       assert event_data.transparency == "opaque"
       assert event_data.summary == "Focus"
+      assert Map.get(event_data, :attendees, []) == []
 
       assert event.calendar_integration_id == integration.id
       assert event.provider_calendar_id == "work"
@@ -92,6 +93,34 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
 
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, result.event.uid)
+    end
+
+    test "a write queued for a retry is reported as queued, not turned into time off", host do
+      insert(:calendar_integration,
+        user: host.user,
+        provider: "caldav",
+        is_active: true,
+        calendar_paths: ["/cal/"],
+        calendar_list: [%{"id" => "/cal/", "name" => "Work", "selected" => true}]
+      )
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:error, :network_error}
+      end)
+
+      assert {:error, {:queued, :network_error}} =
+               Changes.block_time(host.user.id, host.start_at, host.end_at, "Focus")
+
+      assert periods(host) == []
+    end
+
+    test "undo of another user's event block is refused", host do
+      google(host, [%{"id" => "work", "name" => "Work", "selected" => true}])
+      expect_create()
+      {:ok, result} = Changes.block_time(host.user.id, host.start_at, host.end_at, "Focus")
+      %{user: other} = create_bookable_profile()
+
+      assert {:error, :not_found} = Changes.unblock_time(other.id, result)
     end
 
     test "a failed write is reported, not turned into time off", host do
@@ -155,6 +184,37 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
       assert period.ends_on == date
       assert period.start_time == ~T[20:00:00]
       assert period.end_time == nil
+    end
+
+    test "a block already under way starts now", host do
+      start_at = DateTime.add(DateTime.utc_now(), -3600, :second)
+      end_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      assert {:ok, %{kind: :time_off, period: period}} =
+               Changes.block_time(host.user.id, start_at, end_at, "Focus")
+
+      {:ok, profile} = Tymeslot.Profiles.get_profile_by_user_id(host.user.id)
+      zone = Tymeslot.Profiles.timezone(profile)
+      now = DateTime.shift_zone!(DateTime.utc_now(), zone)
+
+      assert period.start_time != DateTime.to_time(DateTime.shift_zone!(start_at, zone))
+
+      assert period.starts_on == DateTime.to_date(now)
+      assert abs(Time.diff(period.start_time, DateTime.to_time(now))) < 120
+    end
+
+    test "a block years away is too far ahead", host do
+      start_at = DateTime.add(host.start_at, 20 * 365, :day)
+
+      assert {:error, :too_far} =
+               Changes.block_time(
+                 host.user.id,
+                 start_at,
+                 DateTime.add(start_at, 3600, :second),
+                 "Focus"
+               )
+
+      assert periods(host) == []
     end
 
     test "undo removes the time off, and the page offers the time again", host do
