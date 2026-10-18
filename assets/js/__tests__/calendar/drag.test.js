@@ -70,6 +70,11 @@ test("only single-day timed events the organiser can change are draggable", () =
   expect(draggable(normaliseEvent({ id: "a", title: "Trip", all_day: true, start: "2026-10-14", end: "2026-10-15", editable: true }))).toBe(false);
 });
 
+test("a zero-length event is not draggable, the server would refuse its range", () => {
+  expect(draggable(event("2026-10-14T11:00", "2026-10-14T11:00"))).toBe(false);
+  expect(draggable(event("2026-10-14T11:00", "2026-10-14T10:00"))).toBe(false);
+});
+
 test("previewBox is where a range is drawn in its column", () => {
   expect(previewBox({ startMin: wed + 660, endMin: wed + 720 }, scale)).toEqual({ top: 572, height: 52 });
   expect(previewBox({ startMin: wed + 660, endMin: wed + 663 }, scale).height).toBe(12);

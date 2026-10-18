@@ -23,10 +23,10 @@ export function snap(minute, step = SNAP) {
 }
 
 // Whether the organiser can drag `event` (a normalised payload event): one
-// they can change, timed, and inside one day. All-day bars and events that
+// they can change, timed, with a length, and inside one day. All-day bars and events that
 // cross midnight still open and delete; they do not drag.
 export function draggable(event) {
-  return !!event.editable && !event.long && event.endDay - event.startDay === 1;
+  return !!event.editable && !event.long && event.endMin > event.startMin && event.endDay - event.startDay === 1;
 }
 
 // The day column and minute under a pointer. `geometry` is the columns'
