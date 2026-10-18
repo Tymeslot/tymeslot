@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest 
     hook(lv, "calendar:undo", %{})
 
     assert %{start: "2026-10-15T11:00", end: "2026-10-15T12:00"} = pushed(lv)[review_id]
-    assert has_element?(lv, "#calendar-toast", "Moved back")
+    assert has_element?(lv, "#calendar-toast", "Now ends at 12:00")
     payload = written(review, ~U[2026-10-15 10:00:00Z], ~U[2026-10-15 11:00:00Z])
     assert at?(payload.end_time, ~U[2026-10-15 11:00:00Z])
 

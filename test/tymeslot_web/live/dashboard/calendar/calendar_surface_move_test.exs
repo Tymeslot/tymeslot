@@ -108,6 +108,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
     assert has_element?(lv, "#calendar-toast", "Moved back to Wed 14 Oct, 10:00")
   end
 
+  test "undoing a resize of the end says when it ends again", %{lv: lv, review: review, id: id} do
+    move(lv, id, "2026-10-14T10:00", "2026-10-14T11:30")
+    assert_receive {:written, _uid, _resized}
+    render(lv)
+
+    lv |> element("#calendar-undo") |> render_click()
+
+    uid = review.uid
+    assert_receive {:written, ^uid, payload}, 1_000
+    assert same?(payload.end_time, ~U[2026-10-14 10:00:00Z])
+    assert has_element?(lv, "#calendar-toast", "Now ends at 11:00")
+    refute has_element?(lv, "#calendar-toast", "Moved back")
+  end
+
+  test "undoing a resize of the start says when it starts again", %{
+    lv: lv,
+    review: review,
+    id: id
+  } do
+    move(lv, id, "2026-10-14T10:30", "2026-10-14T11:00")
+    assert_receive {:written, _uid, _resized}
+    render(lv)
+
+    lv |> element("#calendar-undo") |> render_click()
+
+    uid = review.uid
+    assert_receive {:written, ^uid, payload}, 1_000
+    assert same?(payload.start_time, ~U[2026-10-14 09:00:00Z])
+    assert has_element?(lv, "#calendar-toast", "Now starts at 10:00")
+    refute has_element?(lv, "#calendar-toast", "Moved back")
+  end
+
   test "Ctrl Z with nothing to undo says so", %{lv: lv} do
     lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
 

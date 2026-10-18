@@ -153,12 +153,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
         entry.before,
         scope_opts(entry.scope)
       )
-      |> Toast.show(
-        dgettext("dashboard_calendar", "Moved back to %{when}",
-          when: when_text(socket, entry.before.start_at)
-        ),
-        key: entry.key
-      )
+      |> Toast.show(change_text(socket, event, entry.before, :moved_back), key: entry.key)
     else
       {:error, :rate_limited, _message} = refusal ->
         socket |> assign(:undo, UndoStack.push(socket.assigns.undo, entry)) |> refuse(refusal)
@@ -237,21 +232,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
         "Series changed. Changes to several events can't be undone here."
       )
 
-  defp timing_text(socket, event, changes, _scope) do
+  defp timing_text(socket, event, changes, _scope),
+    do: change_text(socket, event, changes, :moved)
+
+  # Names what changed: only the end, only the start, else the whole move.
+  # Forward (`:moved`) and undo (`:moved_back`) share the rule.
+  defp change_text(socket, from, to, kind) do
     cond do
-      same?(changes.start_at, event.start_at) ->
-        dgettext("dashboard_calendar", "Now ends at %{time}",
-          time: time_text(socket, changes.end_at)
-        )
+      same?(to.start_at, from.start_at) ->
+        dgettext("dashboard_calendar", "Now ends at %{time}", time: time_text(socket, to.end_at))
 
-      same?(changes.end_at, event.end_at) ->
+      same?(to.end_at, from.end_at) ->
         dgettext("dashboard_calendar", "Now starts at %{time}",
-          time: time_text(socket, changes.start_at)
+          time: time_text(socket, to.start_at)
         )
 
-      true ->
-        dgettext("dashboard_calendar", "Moved to %{when}",
-          when: when_text(socket, changes.start_at)
+      kind == :moved ->
+        dgettext("dashboard_calendar", "Moved to %{when}", when: when_text(socket, to.start_at))
+
+      kind == :moved_back ->
+        dgettext("dashboard_calendar", "Moved back to %{when}",
+          when: when_text(socket, to.start_at)
         )
     end
   end
