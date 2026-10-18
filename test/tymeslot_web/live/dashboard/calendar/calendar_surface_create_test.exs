@@ -74,6 +74,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     events
   end
 
+  # Answers the held write `task` and waits until the LiveView has taken the
+  # answer in: the task reports to the LiveView before it exits, and the
+  # LiveView hands it on to the surface with `send_update`, which the second
+  # render waits behind.
+  defp settled(lv, task) do
+    ref = Process.monitor(task)
+    send(task, {:answer, :ok})
+    assert_receive {:DOWN, ^ref, :process, ^task, _reason}, 5_000
+    render(lv)
+    render(lv)
+  end
+
   defp created_and_settled(lv, work, changes \\ %{}) do
     calendar_writes()
     create(lv, lunch(work, changes))
@@ -231,9 +243,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
 
     send(task, {:answer, :ok})
     assert_receive {:write_started, task}, 1_000
-    send(task, {:answer, :ok})
-    render(lv)
-    render(lv)
+    settled(lv, task)
 
     # The create's entry stayed on the stack.
     lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
