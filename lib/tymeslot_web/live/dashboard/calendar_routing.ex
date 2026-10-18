@@ -61,6 +61,18 @@ defmodule TymeslotWeb.Dashboard.CalendarRouting do
   end
 
   @doc """
+  The organiser's availability changed (`Tymeslot.Availability.changed/1`):
+  the new surface reloads its bookable layer. The old grid has no layer.
+  """
+  @spec bookable_changed(Phoenix.LiveView.Socket.t()) :: :ok
+  def bookable_changed(socket) do
+    if surface_on_screen?(socket),
+      do: send_update(CalendarSurface, id: @id, action: :bookable_changed)
+
+    :ok
+  end
+
+  @doc """
   An integration's sync failed or was discarded. The old grid counts it as
   finished, which ends its "Syncing" banner; the new surface marks the
   account.

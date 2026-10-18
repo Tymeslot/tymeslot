@@ -52,6 +52,13 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   def handle_info({:calendar_sync_failed, _user_id, integration_id}, socket),
     do: CalendarEventHandlers.handle_calendar_sync_failed(socket, integration_id)
 
+  # `Tymeslot.Availability.changed/1` broadcasts on the organiser's topic
+  # (subscribed by `DashboardLive` on the calendar page).
+  def handle_info({:availability_changed, _user_id}, socket) do
+    CalendarRouting.bookable_changed(socket)
+    {:noreply, socket}
+  end
+
   def handle_info({:calendar_delete_result, _user_id, token, outcome}, socket),
     do: CalendarEventHandlers.handle_calendar_delete_result(socket, token, outcome)
 

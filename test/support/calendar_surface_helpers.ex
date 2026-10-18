@@ -7,6 +7,10 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   The clock is frozen at 08:00 UTC on Wednesday 14 October 2026 (09:00 in
   London), so "this week" is 12 to 18 October in every test that does not
   name a date. The frozen clock reaches the LiveView through `$callers`.
+
+  Calendar fetches for availability answer "no events"
+  (`TestMocks.stub_no_calendar_events/0`), so an organiser with an active
+  meeting type gets its bookable layer computed without further stubs.
   """
 
   import Tymeslot.AuthTestHelpers
@@ -16,6 +20,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Test.ClockHelpers
+  alias Tymeslot.TestMocks
 
   @now ~U[2026-10-14 08:00:00.000000Z]
 
@@ -31,6 +36,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   @spec owner(Conn.t(), keyword()) :: %{conn: Conn.t(), user: map(), integration: map()}
   def owner(conn, opts \\ []) do
     ClockHelpers.freeze_clock(@now)
+    TestMocks.stub_no_calendar_events()
 
     user = insert(:user, onboarding_completed_at: @now)
     insert(:profile, user: user, timezone: Keyword.get(opts, :timezone, "Europe/London"))

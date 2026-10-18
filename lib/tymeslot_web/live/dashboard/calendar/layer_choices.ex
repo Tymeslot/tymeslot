@@ -4,14 +4,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.LayerChoices do
   off and choosing the meeting type it shows. Each choice is rate limited,
   saved to the organiser's calendar preferences (see
   `Tymeslot.CalendarGrid.LayerPreferences`, which refuses a meeting type
-  that is not the organiser's own) and recorded in the assigns the rail
-  draws from.
+  that is not the organiser's own), recorded in the assigns the rail
+  draws from, and the layer reloads (see `BookableLayer`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.LayerPreferences
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -39,7 +40,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.LayerChoices do
 
     with :ok <- RateLimiter.check(:calendar_visibility, user_id),
          {:ok, _preferences} <- LayerPreferences.set_layer(user_id, on) do
-      SurfaceData.put_preference(socket, :bookable_layer, on)
+      socket |> SurfaceData.put_preference(:bookable_layer, on) |> BookableLayer.load()
     else
       refusal -> refuse(socket, refusal)
     end
@@ -52,7 +53,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.LayerChoices do
 
     with :ok <- RateLimiter.check(:calendar_visibility, user_id),
          {:ok, choice} <- LayerPreferences.choose_meeting_type(user_id, id) do
-      SurfaceData.put_preference(socket, :bookable_meeting_type_id, choice.id)
+      socket
+      |> SurfaceData.put_preference(:bookable_meeting_type_id, choice.id)
+      |> BookableLayer.load()
     else
       {:error, :not_found} -> socket
       refusal -> refuse(socket, refusal)

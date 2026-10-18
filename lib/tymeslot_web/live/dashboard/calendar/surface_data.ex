@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
@@ -80,7 +81,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       series_move_prompt: nil,
       remove_guest_prompt: nil,
       guest_form_key: 0,
-      bookable_types: []
+      bookable_types: [],
+      bookable: nil,
+      bookable_pending: false
     )
   end
 
@@ -172,7 +175,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     )
   end
 
-  @doc "Loads the events for the period plus one period either side."
+  @doc "Loads the events for the period plus one period either side. The bookable layer is loaded for the same window (see BookableLayer)."
   @spec load_window(socket()) :: socket()
   def load_window(socket) do
     %{current_user: user, timezone: timezone} = socket.assigns
@@ -189,7 +192,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         include_expired: true
       )
 
-    socket |> assign(window: window, window_events: window_events) |> filter_events()
+    socket
+    |> assign(window: window, window_events: window_events)
+    |> filter_events()
+    |> BookableLayer.load()
   end
 
   # Applies the hidden choices to the window's unfiltered events, so a toggle

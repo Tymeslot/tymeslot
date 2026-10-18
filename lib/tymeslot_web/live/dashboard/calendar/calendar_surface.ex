@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.Period
   alias Tymeslot.CalendarGrid.SyncProblems
-  alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
+  alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.BookingCancelModal
   alias TymeslotWeb.Dashboard.Calendar.BookingDeclineModal
@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.RemoveGuestModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesMoveModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.SyncBanner
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
@@ -57,6 +58,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Writes
 
   @reload_delay 250
+
+  # `calendar:*` events answered by `SurfaceBookingEvents` (every `booking:*`
+  # event goes there too).
+  @booking_events ~w(calendar:bookable_toggle calendar:bookable_type)
 
   @menus %{"date" => :date, "display" => :display}
 
@@ -105,6 +110,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do: {:ok, SurfaceData.reload(socket, scope)},
       else: {:ok, socket}
   end
+
+  # The organiser's availability changed (`CalendarRouting.bookable_changed/1`).
+  # A schedule edit or a booking can broadcast several times in a row; they
+  # are coalesced into one reload of the layer after `@reload_delay`.
+  def update(%{action: :bookable_changed}, %{assigns: %{ready?: true}} = socket),
+    do: {:ok, schedule_bookable(socket)}
+
+  def update(%{action: :bookable_reload}, socket),
+    do: {:ok, socket |> assign(:bookable_pending, false) |> BookableLayer.reload()}
 
   # A write's answer, routed here by `CalendarRouting` (see `Writes`). A
   # failed write is taken back off the grid by the queue itself.
@@ -186,6 +200,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   defp schedule_reload(%{assigns: %{pending_reload: scope}} = socket, action),
     do: assign(socket, :pending_reload, widest(scope, scope(action)))
+
+  defp schedule_bookable(%{assigns: %{bookable_pending: true}} = socket), do: socket
+
+  defp schedule_bookable(socket) do
+    send_update_after(
+      __MODULE__,
+      [id: socket.assigns.id, action: :bookable_reload],
+      @reload_delay
+    )
+
+    assign(socket, :bookable_pending, true)
+  end
 
   defp failed_sync(socket, id) do
     case SyncStatus.failed(socket, id) do
@@ -364,8 +390,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   end
 
   @impl Phoenix.LiveComponent
+  # The reply carries the bookable layer as last pushed (nil until the first
+  # load answers), so a hook mounted after that push still draws it.
   def handle_event("calendar:ready", _params, socket),
-    do: {:reply, SurfaceData.payload(socket.assigns, true), socket}
+    do:
+      {:reply,
+       Map.put(SurfaceData.payload(socket.assigns, true), :bookable, socket.assigns.bookable),
+       socket}
 
   def handle_event("calendar:goto", %{"view" => view, "date" => date}, socket) do
     %{view: current_view, date: current_date} = socket.assigns
@@ -402,15 +433,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event("calendar:toggle_rail", _params, socket),
     do: {:noreply, assign(socket, :rail_open, !socket.assigns.rail_open)}
-
-  # The rail's Layers section and B (see `LayerChoices`).
-  def handle_event("calendar:bookable_toggle", _params, socket),
-    do: {:noreply, LayerChoices.toggle(socket)}
-
-  def handle_event("calendar:bookable_type", %{"id" => id}, socket),
-    do: {:noreply, LayerChoices.choose_type(socket, id)}
-
-  def handle_event("calendar:bookable_type", _params, socket), do: {:noreply, socket}
 
   def handle_event("calendar:toggle_account", %{"integration-id" => id}, socket),
     do: {:noreply, Visibility.toggle_account(socket, id)}
@@ -460,9 +482,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("panel:" <> name, params, socket),
     do: {:noreply, PanelEvents.handle(name, params, socket)}
 
-  # The preview's actions on a booking (see `BookingActions`).
-  def handle_event("booking:" <> name, params, socket),
-    do: {:noreply, BookingActions.handle(name, params, socket)}
+  # The preview's booking actions and the bookable layer's events (see
+  # `SurfaceBookingEvents`).
+  def handle_event("booking:" <> _name = event, params, socket),
+    do: SurfaceBookingEvents.handle(event, params, socket)
+
+  def handle_event(event, params, socket) when event in @booking_events,
+    do: SurfaceBookingEvents.handle(event, params, socket)
 
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}
@@ -539,8 +565,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       else: {:noreply, push_event(socket, "calendar:preview-closed", %{})}
   end
 
-  # A request's answer, run off this process (see `BookingActions`).
+  # Work run off this process (`start_async/3`): a request's answer and the
+  # bookable layer's load (see `SurfaceBookingEvents`).
   @impl Phoenix.LiveComponent
-  def handle_async({:answer_request, _meeting_id} = key, result, socket),
-    do: RequestActions.handle_answer(socket, key, result)
+  def handle_async(key, result, socket), do: SurfaceBookingEvents.async(key, result, socket)
 end

@@ -28,6 +28,7 @@ defmodule TymeslotWeb.DashboardLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Dashboard.DashboardContext
@@ -141,6 +142,7 @@ defmodule TymeslotWeb.DashboardLive do
 
         Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user_id}")
         Meetings.subscribe_to_guest_rsvp_updates(user_id)
+        Availability.subscribe(user_id)
 
         assign(socket, :calendar_pubsub_subscribed, true)
       else
