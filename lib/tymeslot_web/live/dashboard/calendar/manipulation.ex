@@ -126,9 +126,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   def undo(socket) do
     case UndoStack.pop(socket.assigns.undo) do
       {nil, _stack} -> Toast.show(socket, dgettext("dashboard_calendar", "Nothing to undo."))
-      {entry, stack} -> socket |> assign(:undo, stack) |> undo_entry(entry)
+      {entry, stack} -> socket |> assign(:undo, stack) |> undo_unless_moving(entry)
     end
   end
+
+  # An event moving to another calendar takes no change until it has moved,
+  # undos included: the change stays on the stack for once it has. A move's
+  # own undo has its own check (`Transfer.undo/2`).
+  defp undo_unless_moving(socket, %{kind: kind, id: id} = entry)
+       when kind in [:timing, :edit, :create] do
+    if Transfer.moving?(socket, id),
+      do: socket |> remember(true, entry) |> refuse({:error, :moving}),
+      else: undo_entry(socket, entry)
+  end
+
+  defp undo_unless_moving(socket, entry), do: undo_entry(socket, entry)
 
   @doc """
   After the write `ref` failed: forgets the change it made, which was never

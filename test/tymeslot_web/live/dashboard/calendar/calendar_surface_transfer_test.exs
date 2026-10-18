@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
   import Mox
   import Phoenix.LiveView, only: [send_update: 3]
   import Tymeslot.Factory, only: [insert: 2]
+  import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -356,6 +357,72 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
       choose_calendar(lv, "#{integration.id}:family")
 
       assert render(lv) =~ "Another event is moving. Try again in a moment."
+    end
+  end
+
+  describe "undo while a move is in flight" do
+    setup do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :update_event, fn uid, payload, _context ->
+        send(test_pid, {:written, uid, payload})
+        :ok
+      end)
+
+      :ok
+    end
+
+    # Starts the move to the Family calendar and holds it until the test ends.
+    defp start_held_move(lv, integration) do
+      hold_creates()
+      choose_calendar(lv, "#{integration.id}:family")
+      assert_receive {:provider_call, task_pid, {:create, _payload}}, @task_timeout
+      on_exit(fn -> send(task_pid, :release) end)
+    end
+
+    defp undo(lv), do: lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+
+    test "a panel change is not taken back, and stays to undo later", %{
+      lv: lv,
+      integration: integration,
+      id: id
+    } do
+      open_panel(lv, id)
+      lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
+      assert_receive {:written, _uid, %{summary: "Renamed"}}, @task_timeout
+      eventually(fn -> assert panel_status(lv) =~ "Saved" end)
+
+      start_held_move(lv, integration)
+      undo(lv)
+
+      assert render(lv) =~ "moving to another calendar"
+      refute_receive {:written, _uid, _payload}, 200
+
+      # Still on the stack: asked again, it is refused again rather than gone.
+      undo(lv)
+      assert render(lv) =~ "moving to another calendar"
+      refute render(lv) =~ "Nothing to undo."
+    end
+
+    test "a drag is not taken back", %{lv: lv, integration: integration, id: id} do
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:move", %{
+        "id" => id,
+        "start" => "2026-10-14T11:00",
+        "end" => "2026-10-14T12:00"
+      })
+
+      assert_receive {:written, _uid, _payload}, @task_timeout
+      render(lv)
+      render(lv)
+
+      open_panel(lv, id)
+      start_held_move(lv, integration)
+      undo(lv)
+
+      assert render(lv) =~ "moving to another calendar"
+      refute_receive {:written, _uid, _payload}, 200
     end
   end
 
