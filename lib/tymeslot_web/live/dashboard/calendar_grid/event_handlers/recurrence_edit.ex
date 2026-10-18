@@ -21,16 +21,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   the editor shows and builds the pattern from that start
   (`Shared.series_anchor/3`). "This and following events" splits the series
   where the series put the opened occurrence, its original start
-  (`CalendarGrid.occurrence_slot/1`), whether or not it was moved on its
+  (`Changes.occurrence_slot/1`), whether or not it was moved on its
   own since, and starts a new series there; so the same fields are built
   again from that start, which may name another day (monthly "on day 30"
   is "on day 14" from a 14 October occurrence). A `COUNT` there counts what
   is left of the series: the occurrences before the split stay, and are
   taken off it, counted again from the series as it is when the change is
-  written (`CalendarGrid.following_rule/3`).
+  written (`Changes.following_rule/3`).
 
   The scope prompt shows each scope's pattern as it will be written. A
-  scope whose calendar would refuse its rule (`CalendarGrid.repeat_refusal/4`)
+  scope whose calendar would refuse its rule (`Changes.repeat_refusal/4`)
   is listed with the reason, and one whose new end comes before the split
   with that reason, neither with a button. All events is left out for a
   series whose first start was never read.
@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   defp staged_notice(event, rule, {start, known?}, timezone) do
     cond do
       not EditWorkflow.series_edit?(event) ->
-        case CalendarGrid.repeat_refusal(
+        case Changes.repeat_refusal(
                Map.get(event, :provider),
                rule,
                date_of(start),
@@ -243,7 +243,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
     timezone = Shared.recurrence_timezone(event, tz)
     start = Shared.recurrence_start(event, tz)
 
-    case CalendarGrid.repeat_refusal(Map.get(event, :provider), rule, date_of(start), timezone) do
+    case Changes.repeat_refusal(Map.get(event, :provider), rule, date_of(start), timezone) do
       nil ->
         socket =
           socket
@@ -333,7 +333,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   # events with a `COUNT`: the prompt shows what is left of the series now,
   # while the count as given for the whole series is sent, and what is left
   # of it is counted again when it is written, from the series as it is then
-  # (`CalendarGrid.following_rule/3`).
+  # (`Changes.following_rule/3`).
   defp scope_rules(socket, event, draft) do
     tz = socket.assigns.user_timezone
     {series_start, known?} = Shared.series_anchor(event, socket.assigns[:recurrence_edit], tz)
@@ -355,11 +355,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   end
 
   defp following_rule(event, draft, tz) do
-    with %{} = at <- CalendarGrid.occurrence_slot(event),
+    with %{} = at <- Changes.occurrence_slot(event),
          slot = Shared.in_recurrence_zone(at, event, tz),
          rule when is_binary(rule) <- compose(draft.params, event, slot, tz),
          {:ok, left} <-
-           CalendarGrid.following_rule(event, rule, Shared.recurrence_timezone(event, tz)) do
+           Changes.following_rule(event, rule, Shared.recurrence_timezone(event, tz)) do
       :following |> scope_rule(left, slot, event, tz) |> Map.put(:written_rule, rule)
     else
       {:error, :until_before_start} -> unavailable(:following, :ends_before)
@@ -377,8 +377,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
       rule: rule,
       written_rule: rule,
       summary: RecurrenceEditor.summary(rule, start),
-      refusal:
-        CalendarGrid.repeat_refusal(Map.get(event, :provider), rule, date_of(start), timezone),
+      refusal: Changes.repeat_refusal(Map.get(event, :provider), rule, date_of(start), timezone),
       unavailable: nil
     }
   end

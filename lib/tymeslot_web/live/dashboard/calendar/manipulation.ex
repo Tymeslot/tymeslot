@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.RecurrenceScope
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
     do: same?(event.start_at, start_at) and same?(event.end_at, end_at)
 
   defp apply_timing(socket, event, changes) do
-    case CalendarGrid.edit_scopes(event) do
+    case Changes.edit_scopes(event) do
       {:ok, :series} ->
         socket
         |> SurfaceData.show_event(Map.merge(event, changes))

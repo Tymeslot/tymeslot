@@ -3,10 +3,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove do
   Moving a whole recurring series to another calendar from the detail modal.
 
   Choosing another calendar for a member of a series whose provider can move
-  a series (`Tymeslot.CalendarGrid.ensure_movable/1` answers `{:ok,
+  a series (`Tymeslot.CalendarGrid.Changes.ensure_movable/1` answers `{:ok,
   :series}`) moves every event in it, so the organiser confirms it first in
   `ConfirmSeriesMoveModal`, which also says what the move will not carry
-  (`Tymeslot.CalendarGrid.series_move_notes/2`). A move the series cannot
+  (`Tymeslot.CalendarGrid.Changes.series_move_notes/2`). A move the series cannot
   make is refused there and then, without the modal.
 
   Nothing on the grid changes until the move has answered: the series is
@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def prompt(socket, event, integration_id, calendar_id) do
     with %{} = integration <- Enum.find(socket.assigns.integrations, &(&1.id == integration_id)),
-         {:ok, notes} <- CalendarGrid.series_move_notes(event, integration) do
+         {:ok, notes} <- Changes.series_move_notes(event, integration) do
       prompt = %{
         event: event,
         integration: integration,

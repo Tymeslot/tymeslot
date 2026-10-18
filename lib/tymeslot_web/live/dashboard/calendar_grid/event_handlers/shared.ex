@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
@@ -234,7 +234,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   @doc """
   What the repeat editor keeps for the event open in the details: the first
-  start of its series (`CalendarGrid.series_start/1`), read once when the
+  start of its series (`Changes.series_start/1`), read once when the
   event is opened, and the pattern staged in the editor and not yet saved
   (`:draft`, `%{params: fields, rule: rule}`, or `nil`).
 
@@ -242,8 +242,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   """
   @spec recurrence_edit(map() | nil) :: map() | nil
   def recurrence_edit(%{id: id} = event) do
-    if CalendarGrid.repeatable_provider?(Map.get(event, :provider)),
-      do: %{event_id: id, series_start: CalendarGrid.series_start(event), draft: nil}
+    if Changes.repeatable_provider?(Map.get(event, :provider)),
+      do: %{event_id: id, series_start: Changes.series_start(event), draft: nil}
   end
 
   def recurrence_edit(_no_event), do: nil

@@ -180,7 +180,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   @doc """
   Queues a write of `changes` to `event` through
-  `Tymeslot.CalendarGrid.update_event/4`. `notify`, when given, is
+  `Tymeslot.CalendarGrid.Changes.update_event/4`. `notify`, when given, is
   `%{original: event, saved_message: message}`: once the write is accepted
   the queue asks the driver to tell the attendees (`{:notify, ...}`).
   """
@@ -197,7 +197,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   @doc """
   Queues a change of the video of `event` through
-  `Tymeslot.CalendarGrid.change_event_video/3`.
+  `Tymeslot.CalendarGrid.Changes.change_event_video/3`.
   """
   @spec change_video(t(), map(), pos_integer() | nil) :: {t(), [effect()]}
   def change_video(queue, event, video_integration_id),

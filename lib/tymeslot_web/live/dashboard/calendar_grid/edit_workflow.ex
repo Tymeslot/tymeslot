@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.WriteTask
@@ -135,13 +135,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   series it applies to: this event, this and following, or all of them.
 
   Only a member of a series whose provider can write each of those scopes is
-  asked (`Tymeslot.CalendarGrid.edit_scopes/1` answers `:series`): Google,
+  asked (`Tymeslot.CalendarGrid.Changes.edit_scopes/1` answers `:series`): Google,
   Outlook and the CalDAV family. An event outside a series, and a member of a
   series whose provider writes only the one event (Exchange), are written
   straight away, as that one event.
   """
   @spec series_edit?(map()) :: boolean()
-  def series_edit?(event), do: CalendarGrid.edit_scopes(event) == {:ok, :series}
+  def series_edit?(event), do: Changes.edit_scopes(event) == {:ok, :series}
 
   @doc """
   Runs `fun` in a supervised Task and sends `{tag, result}` back to this
@@ -166,11 +166,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   Writes `changes` to `event` in the background through
-  `Tymeslot.CalendarGrid.update_event/4`, after any write to the same event
+  `Tymeslot.CalendarGrid.Changes.update_event/4`, after any write to the same event
   still in flight. See `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`, which
   also describes the `{:event_update_result, result}` message it answers with.
 
-  `opts` are passed through to `CalendarGrid.update_event/4`, except
+  `opts` are passed through to `Changes.update_event/4`, except
   `:notify`: `%{original: event, saved_message: message}` runs the
   attendee-notification decision (`apply_notify_result/5`) once the write
   succeeds, diffing the event it wrote against `original`.
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @doc """
   Gives `event` a room on the video integration `video_integration_id`, or
   removes its video link when that is `nil`, in the background through
-  `Tymeslot.CalendarGrid.change_event_video/3`, after any write to the same
+  `Tymeslot.CalendarGrid.Changes.change_event_video/3`, after any write to the same
   event still in flight.
 
   Reports back with `{:event_video_result, result}`; a successful change
@@ -207,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   Moves `event` to `integration` (on `calendar_id`, or its default calendar
-  when `nil`) in the background through `Tymeslot.CalendarGrid.move_event/3`.
+  when `nil`) in the background through `Tymeslot.CalendarGrid.Changes.move_event/3`.
 
   Reports back with `{:event_move_result, {:ok, uid: uid, integration_id: id,
   source: source, original_event: event}}`, where `source` is `nil` when the
@@ -231,7 +231,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       socket,
       :event_move_result,
       fn ->
-        case CalendarGrid.move_event(user_id, event, destination) do
+        case Changes.move_event(user_id, event, destination) do
           {:ok, moved} ->
             {:ok,
              [
@@ -288,8 +288,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   The message shown when a recurring series could not be moved, for each
-  reason `Tymeslot.CalendarGrid.move_event/3` and
-  `Tymeslot.CalendarGrid.series_move_notes/2` give. Every one of them means
+  reason `Tymeslot.CalendarGrid.Changes.move_event/3` and
+  `Tymeslot.CalendarGrid.Changes.series_move_notes/2` give. Every one of them means
   the series is still where it was.
   """
   @spec series_move_failed_message(term()) :: String.t()

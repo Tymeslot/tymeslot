@@ -14,7 +14,7 @@ defmodule Tymeslot.CalendarGrid.DebugSeriesDomainTest do
 
   import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
   alias Tymeslot.Integrations.Calendar.DebugStore
@@ -90,7 +90,7 @@ defmodule Tymeslot.CalendarGrid.DebugSeriesDomainTest do
   } do
     occurrence = row(integration, "standup_20261019T090000")
 
-    assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, occurrence, :occurrence)
+    assert {:ok, _deleted} = Changes.delete_event(user.id, occurrence, :occurrence)
 
     refute cached?(integration, "standup_20261019T090000")
     sibling = row(integration, "standup_20261026T090000")
@@ -119,7 +119,7 @@ defmodule Tymeslot.CalendarGrid.DebugSeriesDomainTest do
     occurrence = row(integration, "standup_20261019T090000")
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(user.id, occurrence, %{summary: "Planning"},
+             Changes.update_event(user.id, occurrence, %{summary: "Planning"},
                recurrence_scope: :following
              )
 
@@ -137,7 +137,7 @@ defmodule Tymeslot.CalendarGrid.DebugSeriesDomainTest do
 
     # Monday 09:00 to Tuesday 10:00, Warsaw summer time.
     assert {:ok, _updated} =
-             CalendarGrid.update_event(
+             Changes.update_event(
                user.id,
                occurrence,
                %{start_at: ~U[2026-10-20 08:00:00Z], end_at: ~U[2026-10-20 08:15:00Z]},

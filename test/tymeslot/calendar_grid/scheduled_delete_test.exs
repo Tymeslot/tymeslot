@@ -15,7 +15,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.ScheduledDelete
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -50,7 +50,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   end
 
   test "schedules the delete behind the undo window", %{user: user, event: event} do
-    assert {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+    assert {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
 
     assert_enqueued(
       worker: CalendarEventDeleteWorker,
@@ -62,17 +62,17 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   end
 
   test "undo cancels it before anything reaches the calendar", %{user: user, event: event} do
-    {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
 
-    assert CalendarGrid.cancel_scheduled_delete(user.id, token) == :ok
+    assert Changes.cancel_scheduled_delete(user.id, token) == :ok
     refute_enqueued(worker: CalendarEventDeleteWorker)
     assert %{success: 0} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
   end
 
   test "only the organiser who deleted can undo", %{user: user, event: event} do
-    {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
 
-    assert CalendarGrid.cancel_scheduled_delete(insert(:user).id, token) == {:error, :too_late}
+    assert Changes.cancel_scheduled_delete(insert(:user).id, token) == {:error, :too_late}
     assert_enqueued(worker: CalendarEventDeleteWorker)
   end
 
@@ -82,14 +82,14 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     event: event
   } do
     expect(Tymeslot.CalendarMock, :delete_event, fn "dentist-1", _context, _opts -> :ok end)
-    {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
 
     assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     user_id = user.id
     assert_receive {:calendar_delete_result, ^user_id, ^token, :deleted}
     assert ProviderCalendarEventQueries.get_by_uid(caldav.id, "dentist-1") == {:error, :not_found}
-    assert CalendarGrid.cancel_scheduled_delete(user.id, token) == {:error, :too_late}
+    assert Changes.cancel_scheduled_delete(user.id, token) == {:error, :too_late}
   end
 
   test "a delete the calendar refuses is queued for the next sync and says so", %{
@@ -100,7 +100,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       {:error, :forbidden}
     end)
 
-    {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, delay: 0)
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, delay: 0)
     Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     assert_receive {:calendar_delete_result, _user_id, ^token, {:queued, :forbidden}}
@@ -114,7 +114,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       {:error, :unauthorized}
     end)
 
-    {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, delay: 0)
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, delay: 0)
     Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :unauthorized}}
@@ -134,7 +134,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
         provider: "caldav"
       )
 
-    {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, delay: 0)
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, delay: 0)
     assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :group_booking}}
@@ -151,11 +151,11 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       third = insert(:provider_calendar_event, calendar_integration: caldav, provider: "caldav")
       other = insert(:user)
 
-      {:ok, first_token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
-      {:ok, second_token} = CalendarGrid.schedule_delete(user.id, second, :series, [])
-      {:ok, _other_token} = CalendarGrid.schedule_delete(other.id, third, :occurrence, [])
+      {:ok, first_token} = Changes.schedule_delete(user.id, event, :occurrence, [])
+      {:ok, second_token} = Changes.schedule_delete(user.id, second, :series, [])
+      {:ok, _other_token} = Changes.schedule_delete(other.id, third, :occurrence, [])
 
-      pending = CalendarGrid.pending_deletes(user.id)
+      pending = Changes.pending_deletes(user.id)
       assert Enum.sort(Enum.map(pending, & &1.token)) == Enum.sort([first_token, second_token])
 
       first = Enum.find(pending, &(&1.token == first_token))
@@ -167,18 +167,18 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
 
       assert Enum.find(pending, &(&1.token == second_token)).scope == :series
 
-      assert CalendarGrid.cancel_scheduled_delete(user.id, first_token) == :ok
-      assert [%{token: ^second_token}] = CalendarGrid.pending_deletes(user.id)
+      assert Changes.cancel_scheduled_delete(user.id, first_token) == :ok
+      assert [%{token: ^second_token}] = Changes.pending_deletes(user.id)
 
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
       Oban.drain_queue(queue: :calendar_events, with_scheduled: true, queue_opts: [])
-      assert CalendarGrid.pending_deletes(user.id) == []
+      assert Changes.pending_deletes(user.id) == []
     end
   end
 
   describe "telling the organiser's other calendars" do
     test "scheduling a delete announces its address and scope", %{user: user, event: event} do
-      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :series, [])
+      {:ok, token} = Changes.schedule_delete(user.id, event, :series, [])
 
       assert_receive {:calendar_delete_scheduled, user_id, ^token, address, :series}
       assert user_id == user.id
@@ -188,63 +188,63 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     end
 
     test "undoing it announces the cancellation", %{user: user, event: event} do
-      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+      {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
 
-      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == :ok
+      assert Changes.cancel_scheduled_delete(user.id, token) == :ok
       assert_receive {:calendar_delete_cancelled, user_id, ^token}
       assert user_id == user.id
     end
 
     test "a refused or repeated undo announces nothing", %{user: user, event: event} do
-      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
-      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == :ok
+      {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
+      assert Changes.cancel_scheduled_delete(user.id, token) == :ok
       assert_receive {:calendar_delete_cancelled, _user_id, ^token}
 
-      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == {:error, :cancelled}
+      assert Changes.cancel_scheduled_delete(user.id, token) == {:error, :cancelled}
       refute_receive {:calendar_delete_cancelled, _user_id, ^token}
 
-      {:ok, other} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
-      assert CalendarGrid.cancel_scheduled_delete(insert(:user).id, other) == {:error, :too_late}
+      {:ok, other} = Changes.schedule_delete(user.id, event, :occurrence, [])
+      assert Changes.cancel_scheduled_delete(insert(:user).id, other) == {:error, :too_late}
       refute_receive {:calendar_delete_cancelled, _user_id, ^other}
     end
 
     test "a job that never existed is too late", %{user: user} do
-      assert CalendarGrid.cancel_scheduled_delete(user.id, 0) == {:error, :too_late}
+      assert Changes.cancel_scheduled_delete(user.id, 0) == {:error, :too_late}
     end
   end
 
   describe "pending_deletes/1 for a confirmed delete" do
     test "is never undoable, even after the job is put back to wait", %{user: user, event: event} do
       {:ok, token} =
-        CalendarGrid.schedule_delete(user.id, event, :occurrence,
+        Changes.schedule_delete(user.id, event, :occurrence,
           delay: 0,
           notify_attendees: true
         )
 
-      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+      assert [%{token: ^token, undoable?: false}] = Changes.pending_deletes(user.id)
 
       # A rate-limited run is snoozed: back to "scheduled", still not undoable.
       Repo.update_all(from(j in Oban.Job, where: j.id == ^token), set: [state: "scheduled"])
-      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+      assert [%{token: ^token, undoable?: false}] = Changes.pending_deletes(user.id)
     end
 
     test "a retryable delete is still pending, and not undoable", %{user: user, event: event} do
-      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
+      {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
       Repo.update_all(from(j in Oban.Job, where: j.id == ^token), set: [state: "retryable"])
 
-      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
+      assert [%{token: ^token, undoable?: false}] = Changes.pending_deletes(user.id)
     end
   end
 
   describe "pending_deletes/1 while a delete runs" do
     test "lists it, but no longer as undoable", %{user: user, event: event} do
-      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, :occurrence, [])
-      assert [%{undoable?: true}] = CalendarGrid.pending_deletes(user.id)
+      {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, [])
+      assert [%{undoable?: true}] = Changes.pending_deletes(user.id)
 
       Repo.update_all(from(j in Oban.Job, where: j.id == ^token), set: [state: "executing"])
 
-      assert [%{token: ^token, undoable?: false}] = CalendarGrid.pending_deletes(user.id)
-      assert CalendarGrid.cancel_scheduled_delete(user.id, token) == {:error, :too_late}
+      assert [%{token: ^token, undoable?: false}] = Changes.pending_deletes(user.id)
+      assert Changes.cancel_scheduled_delete(user.id, token) == {:error, :too_late}
     end
   end
 
@@ -252,7 +252,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     defp run_delete(user, event, attempt, opts \\ []) do
       meta = Keyword.get(opts, :meta, %{})
       scope = Keyword.get(opts, :scope, :occurrence)
-      {:ok, token} = CalendarGrid.schedule_delete(user.id, event, scope, [])
+      {:ok, token} = Changes.schedule_delete(user.id, event, scope, [])
       job = Repo.get!(Oban.Job, token)
       job = %{job | attempt: attempt, max_attempts: 3, meta: meta}
       {token, ScheduledDelete.perform(job)}
@@ -442,7 +442,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
 
   describe "delete_notice/2" do
     test "a plain event tells nobody", %{user: user, event: event} do
-      assert CalendarGrid.delete_notice(user.id, event) == :silent
+      assert Changes.delete_notice(user.id, event) == :silent
     end
 
     test "an event with guests the organiser invited would tell them", %{
@@ -459,7 +459,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
           ]
         )
 
-      assert CalendarGrid.delete_notice(user.id, event) == {:notifies, {:attendees, 2}}
+      assert Changes.delete_notice(user.id, event) == {:notifies, {:attendees, 2}}
     end
 
     test "an event linked to a meeting by uid cancels it", %{
@@ -474,7 +474,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
         calendar_uid: event.uid
       )
 
-      assert CalendarGrid.delete_notice(user.id, event) == {:notifies, :booking}
+      assert Changes.delete_notice(user.id, event) == {:notifies, :booking}
     end
 
     test "an event linked to a meeting by provider event id cancels it", %{
@@ -489,7 +489,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
         provider_event_id: event.provider_event_id
       )
 
-      assert CalendarGrid.delete_notice(user.id, event) == {:notifies, :booking}
+      assert Changes.delete_notice(user.id, event) == {:notifies, :booking}
     end
   end
 end

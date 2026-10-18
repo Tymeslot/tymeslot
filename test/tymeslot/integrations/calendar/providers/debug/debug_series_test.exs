@@ -12,7 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
 
   import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
@@ -340,6 +340,6 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.SeriesTest do
     occurrence = %{provider: "debug", recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"}
 
     assert Occurrence.series_family(occurrence) == :caldav
-    assert CalendarGrid.repeatable_provider?("debug")
+    assert Changes.repeatable_provider?("debug")
   end
 end

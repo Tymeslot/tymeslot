@@ -6,13 +6,13 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
   process drives the queue.
 
   A write is a map with a `:ref` and a `:kind`: `:update` carries `:changes`
-  and `:opts` for `Tymeslot.CalendarGrid.update_event/4`, `:video` a
-  `:video_integration_id` for `Tymeslot.CalendarGrid.change_event_video/3`.
+  and `:opts` for `Tymeslot.CalendarGrid.Changes.update_event/4`, `:video` a
+  `:video_integration_id` for `Tymeslot.CalendarGrid.Changes.change_event_video/3`.
   """
 
   require Logger
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -77,14 +77,14 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
   def crash_result(%{kind: :video, ref: ref}, event), do: video_failure(ref, event, :crashed)
 
   defp do_perform(user_id, %{kind: :update, ref: ref} = write, event) do
-    case CalendarGrid.update_event(user_id, event, write.changes, write.opts) do
+    case Changes.update_event(user_id, event, write.changes, write.opts) do
       {:ok, updated} -> {:ok, write: ref, updated_event: updated}
       {:error, %{reason: reason, retry: retry}} -> update_failure(ref, event, reason, retry)
     end
   end
 
   defp do_perform(user_id, %{kind: :video, ref: ref, video_integration_id: video_id}, event) do
-    case CalendarGrid.change_event_video(user_id, event, video_id) do
+    case Changes.change_event_video(user_id, event, video_id) do
       {:ok, :unchanged} ->
         {:unchanged, write: ref}
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
         {:ok,
          write: ref,
          original_event: event,
-         updated_event: CalendarGrid.changed_event(user_id, event, video_id, url)}
+         updated_event: Changes.changed_event(user_id, event, video_id, url)}
 
       {:error, reason} ->
         video_failure(ref, event, reason)

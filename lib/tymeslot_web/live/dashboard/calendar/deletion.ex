@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Clock
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   @doc "Undoes a delete still inside its undo window."
   @spec undo(socket(), map()) :: socket()
   def undo(socket, %{kind: :delete, token: token, title: title}) do
-    case CalendarGrid.cancel_scheduled_delete(socket.assigns.current_user.id, token) do
+    case Changes.cancel_scheduled_delete(socket.assigns.current_user.id, token) do
       :ok ->
         socket
         |> assign(:pending_deletes, Map.delete(socket.assigns.pending_deletes, token))
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   def prune(socket) do
     tokens =
       socket.assigns.current_user.id
-      |> CalendarGrid.pending_deletes()
+      |> Changes.pending_deletes()
       |> MapSet.new(& &1.token)
 
     assign(
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   """
   @spec resume(socket()) :: socket()
   def resume(socket) do
-    jobs = CalendarGrid.pending_deletes(socket.assigns.current_user.id)
+    jobs = Changes.pending_deletes(socket.assigns.current_user.id)
     pending = PendingDeletes.from_jobs(jobs)
     socket = assign(socket, :pending_deletes, Map.merge(pending, socket.assigns.pending_deletes))
 
@@ -241,7 +241,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
     with :ok <- EditGuard.check(user.id, integrations, event),
          false <- Writes.saving?(socket, event),
-         {:ok, scopes} <- CalendarGrid.deletion_scopes(event) do
+         {:ok, scopes} <- Changes.deletion_scopes(event) do
       case scopes do
         :series ->
           assign(socket, :series_prompt, %{
@@ -273,7 +273,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   end
 
   defp ask_or_delete(socket, event, scope) do
-    case CalendarGrid.delete_notice(socket.assigns.current_user.id, event) do
+    case Changes.delete_notice(socket.assigns.current_user.id, event) do
       :silent ->
         delete_with_undo(socket, event, scope)
 
@@ -290,7 +290,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   defp delete_with_undo(socket, event, scope) do
     title = EventPayload.title(event)
 
-    case CalendarGrid.schedule_delete(socket.assigns.current_user.id, event, scope, []) do
+    case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, []) do
       {:ok, token} ->
         socket
         |> hide(token, event, scope, false)
@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   defp delete_now(socket, event, scope, notify?) do
     opts = [delay: 0, notify_attendees: notify?]
 
-    case CalendarGrid.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
+    case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
       {:ok, token} ->
         socket
         |> hide(token, event, scope, true)

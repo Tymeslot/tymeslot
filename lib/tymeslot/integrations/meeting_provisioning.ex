@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   * `{:separate, video_id}` — any other combination. The video provider is called
     independently and the resulting URL is written into the event description.
 
-  An edit follows the same plan: `Tymeslot.CalendarGrid.change_event_video/3`
+  An edit follows the same plan: `Tymeslot.CalendarGrid.Changes.change_event_video/3`
   sends `conferenceData` with `conferenceDataVersion=1` on the update when the
   plan is `:inline`, and reads the event back for the link Google made, since
   the update's own answer does not reach it. On `:attach` it has the Teams

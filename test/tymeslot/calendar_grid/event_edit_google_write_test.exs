@@ -21,7 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -106,7 +106,7 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "sprintreview"})}}
       end)
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert updated.summary == "Renamed"
 
       assert_received {:put, url, body}
@@ -147,7 +147,7 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
       new_attendees = event.attendees ++ [Attendee.new(email: "alan@example.com")]
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{attendees: new_attendees})
+               Changes.update_event(user.id, event, %{attendees: new_attendees})
 
       assert_received {:put, body}
       sent = Jason.decode!(body)

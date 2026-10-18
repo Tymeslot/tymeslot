@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   import TymeslotWeb.Components.UI.LocaleButton
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
@@ -492,7 +492,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   defp repeatable?(creating_event, integrations) do
     case Enum.find(integrations, &(&1.id == creating_event[:integration_id])) do
       nil -> true
-      integration -> CalendarGrid.repeatable_provider?(integration.provider)
+      integration -> Changes.repeatable_provider?(integration.provider)
     end
   end
 
@@ -504,7 +504,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
            Enum.find(integrations, &(&1.id == creating_event[:integration_id])),
          start_date = creating_event |> recurrence_start(timezone) |> start_date(),
          reason when is_atom(reason) and reason != nil <-
-           CalendarGrid.repeat_refusal(provider, rule, start_date, timezone) do
+           Changes.repeat_refusal(provider, rule, start_date, timezone) do
       RecurrenceEdit.refusal_message(reason)
     else
       _accepted -> nil

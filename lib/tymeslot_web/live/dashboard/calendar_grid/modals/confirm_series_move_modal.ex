@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
 
   `prompt` is the one `EventHandlers.SeriesMove.prompt/4` builds: the
   destination calendar's name and the notes
-  `Tymeslot.CalendarGrid.series_move_notes/2` gave for it. Confirming sends
+  `Tymeslot.CalendarGrid.Changes.series_move_notes/2` gave for it. Confirming sends
   `confirm_series_move`, cancelling `cancel_series_move`.
   """
 

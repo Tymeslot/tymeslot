@@ -24,7 +24,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -77,7 +77,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
         {:ok, google_event(conference: @meet_url)}
       end)
 
-      assert {:ok, @meet_url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.meet.id)
+      assert {:ok, @meet_url} = Changes.change_event_video(ctx.user.id, event, ctx.meet.id)
 
       assert_received {:update, payload}
 
@@ -102,7 +102,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
       end)
 
       assert {:error, :meet_link_pending} =
-               CalendarGrid.change_event_video(ctx.user.id, event, ctx.meet.id)
+               Changes.change_event_video(ctx.user.id, event, ctx.meet.id)
 
       row = reload(event)
       assert {row.video_link, row.video_integration_id} == {nil, ctx.meet.id}
@@ -125,7 +125,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
     test "to None, takes the conference off the event", ctx do
       expect_update()
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(ctx.user.id, ctx.event, nil)
+      assert {:ok, nil} = Changes.change_event_video(ctx.user.id, ctx.event, nil)
 
       assert_received {:update, payload}
       assert payload.conference_data == ConferenceData.remove()
@@ -144,7 +144,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
       expect_update()
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
+               Changes.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
 
       assert_received {:update, payload}
       assert payload.conference_data == ConferenceData.remove()
@@ -170,7 +170,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
 
       expect_update()
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(ctx.user.id, event, nil)
+      assert {:ok, nil} = Changes.change_event_video(ctx.user.id, event, nil)
 
       assert_received {:update, payload}
       assert payload.description == "Agenda"

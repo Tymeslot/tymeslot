@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
   end
 
   @doc """
-  The entries for `jobs`, as `CalendarGrid.pending_deletes/1` lists them. A
+  The entries for `jobs`, as `Changes.pending_deletes/1` lists them. A
   delete that is already running cannot be undone, so it counts as confirmed.
   The title is the cached row's, which exists until the delete has run: one
   cached-row query per pending job, and an organiser has a handful at most.

@@ -20,7 +20,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
@@ -180,9 +180,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
       expect_puts(1)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, @two_hours_later,
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, occurrence, @two_hours_later, recurrence_scope: :all)
 
       # Before the sync: nothing to give the video to yet, so the job waits.
       assert [{:snooze, _seconds}] = run_video_jobs()
@@ -210,9 +208,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
       expect_puts(1)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, @two_hours_later,
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, occurrence, @two_hours_later, recurrence_scope: :all)
 
       assert colours(user) == %{
                {:external, integration.id, "weekly-standup_20260922T110000"} => "grape"
@@ -245,7 +241,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
       expect_puts(1)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -271,7 +267,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
       expect_puts(2)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, @two_hours_later,
+               Changes.update_event(user.id, occurrence, @two_hours_later,
                  recurrence_scope: :following
                )
 
@@ -313,7 +309,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
       expect_puts(2)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, @two_hours_later,
+               Changes.update_event(user.id, occurrence, @two_hours_later,
                  recurrence_scope: :following
                )
 
@@ -333,7 +329,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryCalDAVTest do
       video: video
     } do
       :ok =
-        CalendarGrid.cache_created_event(%{
+        Changes.cache_created_event(%{
           uid: "new-series",
           calendar_integration_id: integration.id,
           provider: "caldav",

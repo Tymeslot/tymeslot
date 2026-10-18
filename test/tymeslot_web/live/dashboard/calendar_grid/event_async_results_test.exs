@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       #
       # 1. CreateExecution.handle_create_result/2 looked up integrations on the
       #    parent LiveView socket, which never carries the :integrations assign.
-      # 2. CalendarGrid.cache_created_event/1 received second-precision
+      # 2. Changes.cache_created_event/1 received second-precision
       #    DateTimes built from DateTime.new!, but the schema requires
       #    microsecond precision.
       integration = insert(:calendar_integration, user: user, is_active: true)

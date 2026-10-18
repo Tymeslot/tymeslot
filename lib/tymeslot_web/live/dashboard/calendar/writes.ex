@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
 
   @doc """
   Shows `optimistic` at once and writes `changes` to `event` through
-  `Tymeslot.CalendarGrid.update_event/4`, now or once its earlier writes
+  `Tymeslot.CalendarGrid.Changes.update_event/4`, now or once its earlier writes
   have answered. `opts` go to the write (`recurrence_scope:`; a `:notify`
   key is dropped, see below). Answers the socket and the reference of the
   write, which its answer names. The answer arrives as
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
   """
   @spec series_busy?(socket(), map()) :: boolean()
   def series_busy?(socket, event),
-    do: CalendarGrid.series_busy?(socket.assigns.event_writes, event)
+    do: Changes.series_busy?(socket.assigns.event_writes, event)
 
   @doc "Whether `event` has a write running or waiting."
   @spec saving?(socket(), map()) :: boolean()

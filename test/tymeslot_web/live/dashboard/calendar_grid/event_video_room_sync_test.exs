@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     end)
 
     assert {:ok, _result} =
-             CalendarGrid.delete_event(user.id, %{
+             Changes.delete_event(user.id, %{
                uid: event.uid,
                provider_event_id: nil,
                calendar_integration_id: calendar.id
@@ -111,7 +112,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     end)
 
     assert {:error, %{reason: _reason}} =
-             CalendarGrid.delete_event(user.id, %{
+             Changes.delete_event(user.id, %{
                uid: event.uid,
                provider_event_id: nil,
                calendar_integration_id: calendar.id
@@ -137,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     end)
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(user.id, event, %{start_at: new_start, end_at: new_end})
+             Changes.update_event(user.id, event, %{start_at: new_start, end_at: new_end})
 
     assert %{lobby_opens_at: ^new_start, ends_at: ^new_end} = Repo.reload!(room)
 
@@ -162,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     end)
 
     assert {:error, %{reason: :server_error}} =
-             CalendarGrid.update_event(user.id, event, %{
+             Changes.update_event(user.id, event, %{
                start_at: new_start,
                end_at: event.end_at
              })
@@ -194,7 +195,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     end)
 
     assert {:ok, %{integration_id: _id}} =
-             CalendarGrid.move_event(user.id, event, %{integration: destination})
+             Changes.move_event(user.id, event, %{integration: destination})
 
     # Written under a new uid, which the destination calendar answered with
     # its own identifier.
@@ -232,7 +233,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       :ok
     end)
 
-    assert {:ok, _url} = CalendarGrid.change_event_video(user.id, event, talk.id)
+    assert {:ok, _url} = Changes.change_event_video(user.id, event, talk.id)
 
     assert [
              %EventVideoRoomSchema{
@@ -284,7 +285,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, synced, %{start_at: new_start, end_at: new_end})
+               Changes.update_event(user.id, synced, %{start_at: new_start, end_at: new_end})
 
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
       assert_received {:nextcloud, :put, lobby_url, %{"timer" => timer}}
@@ -295,7 +296,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert {:ok, _result} =
-               CalendarGrid.delete_event(
+               Changes.delete_event(
                  user.id,
                  NotificationFlows.build_delete_payload(synced, user.id, false)
                )
@@ -357,7 +358,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  second,
                  %{start_at: new_start, end_at: ~U[2026-10-04 10:00:00Z]}

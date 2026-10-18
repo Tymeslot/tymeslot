@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
   Builds the payload used to dispatch `{:execute_delete_event, payload}` from
   either the rate-limit-gated confirm path or the notify-prompt branches.
   `scope` is how much of a series the delete takes (see
-  `Tymeslot.CalendarGrid.delete_event/3`).
+  `Tymeslot.CalendarGrid.Changes.delete_event/3`).
   """
   @spec build_delete_payload(map(), integer(), boolean(), :occurrence | :series) :: map()
   def build_delete_payload(event, user_id, notify_on_delete, scope \\ :occurrence) do

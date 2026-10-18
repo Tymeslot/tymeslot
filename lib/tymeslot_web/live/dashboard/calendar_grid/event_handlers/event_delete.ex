@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.AttendeeNotifications
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       event ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_seat_lock(socket, event),
-             {:ok, scopes} <- CalendarGrid.deletion_scopes(event) do
+             {:ok, scopes} <- Changes.deletion_scopes(event) do
           linked_to_booking =
             CalendarEvents.event_linked_to_booking?(
               event.calendar_integration_id,

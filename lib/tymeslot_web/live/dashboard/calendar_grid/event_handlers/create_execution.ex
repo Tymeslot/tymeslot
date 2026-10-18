@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -277,7 +277,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
     timing = cache_timing(all_day, start_at, end_at)
 
-    CalendarGrid.cache_created_event(
+    Changes.cache_created_event(
       Map.merge(timing, %{
         uid: uid,
         calendar_integration_id: creating.integration_id,
@@ -346,7 +346,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   defp repeatable_destination?(creating, socket) do
     case Enum.find(socket.assigns[:integrations] || [], &(&1.id == creating[:integration_id])) do
       nil -> true
-      integration -> CalendarGrid.repeatable_provider?(integration.provider)
+      integration -> Changes.repeatable_provider?(integration.provider)
     end
   end
 

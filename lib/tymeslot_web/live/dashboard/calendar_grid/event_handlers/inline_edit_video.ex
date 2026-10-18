@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
   calendar copy of a booking, whose room belongs to the meeting.
   """
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
         with {:ok, new_id} <- parse_video_choice(params["video_integration_id"]),
              false <- already_chosen?(event, new_id),
              :ok <- EditWorkflow.assert_event_writable(socket, event),
-             :ok <- CalendarGrid.ensure_video_changeable(event),
+             :ok <- Changes.ensure_video_changeable(event),
              :ok <- assert_owns_video_integration(socket, new_id),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = Map.put(event, :video_integration_id, new_id)

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -579,7 +580,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
   @doc """
   Deletes the event `payload` names, in the scope it names, in the background
-  through `Tymeslot.CalendarGrid.delete_event/3`, reporting back with
+  through `Tymeslot.CalendarGrid.Changes.delete_event/3`, reporting back with
   `{:delete_event_result, result}`.
 
   Every way the grid confirms a delete (with or without notifying the
@@ -606,7 +607,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     |> EditWorkflow.run_async(
       :delete_event_result,
       fn ->
-        CalendarGrid.delete_event(payload.user_id, payload, payload.scope,
+        Changes.delete_event(payload.user_id, payload, payload.scope,
           notify_attendees: payload.notify_on_delete
         )
       end,

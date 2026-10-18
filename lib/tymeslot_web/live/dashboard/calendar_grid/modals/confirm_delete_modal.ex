@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
   @moduledoc """
   Confirmation modal for deleting a calendar event.
 
-  `scopes` is what `Tymeslot.CalendarGrid.deletion_scopes/1` answered for the
+  `scopes` is what `Tymeslot.CalendarGrid.Changes.deletion_scopes/1` answered for the
   event: a single event gets one Delete button, and a member of a series gets
   the choice between its one occurrence and the whole series, sent as the
   `scope` value of `confirm_delete_event`.

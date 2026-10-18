@@ -16,7 +16,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitNotOrganiserTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -151,7 +151,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitNotOrganiserTest do
     end)
 
     assert {:error, %{reason: :not_organiser}} =
-             CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+             Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                recurrence_scope: :following
              )
 

@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventTimingTest do
   import Tymeslot.Factory
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
   setup do
@@ -82,7 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventTimingTest do
   } do
     row = Map.delete(timed_attrs(i, %{}), :all_day)
 
-    CalendarGrid.cache_created_event(row)
+    Changes.cache_created_event(row)
 
     assert {:ok, %{all_day: false, end_at: %DateTime{}}} =
              ProviderCalendarEventQueries.get_by_uid(i.id, row.uid)
@@ -91,7 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventTimingTest do
   test "the dashboard's create path does not cache an event without an end", %{integration: i} do
     half = timed_attrs(i, %{end_at: nil})
 
-    capture_log(fn -> CalendarGrid.cache_created_event(half) end)
+    capture_log(fn -> Changes.cache_created_event(half) end)
 
     assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(i.id, half.uid)
   end

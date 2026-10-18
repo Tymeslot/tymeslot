@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Attendee
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -431,7 +431,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
     end
   end
 
-  defp repeatable?(event), do: CalendarGrid.repeatable_provider?(Map.get(event, :provider))
+  defp repeatable?(event), do: Changes.repeatable_provider?(Map.get(event, :provider))
 
   # Cached attendees come back from JSONB string-keyed, while one the organiser
   # has just added is still atom-keyed in memory, so the editor reads them all

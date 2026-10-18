@@ -20,7 +20,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesTransfer
@@ -196,7 +196,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
       serve(google())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{start_at: ~U[2026-11-02 09:00:00Z], end_at: ~U[2026-11-02 10:00:00Z]},
@@ -233,7 +233,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
       serve(google())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{
@@ -367,7 +367,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
       serve(outlook())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 

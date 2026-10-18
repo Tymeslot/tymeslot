@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
@@ -281,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       {event, {:ok, new_id}} ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- EditWorkflow.assert_owns_integration(socket, new_id),
-             :ok <- CalendarGrid.ensure_movable(event),
+             :ok <- Changes.ensure_movable(event),
              :ok <- Shared.check_move_rate_limit(socket) do
           {:noreply, start_move(socket, event, new_id, cal_id)}
         else
