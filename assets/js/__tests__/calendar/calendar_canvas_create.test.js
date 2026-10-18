@@ -346,6 +346,45 @@ test("reconnecting while a draft is saving drops it and asks the organiser to ch
   expect(notice()).toBeNull();
 });
 
+test("the notice goes once the server settles that draft after all", () => {
+  vi.useFakeTimers();
+  const { hook, handlers } = open();
+  type("Lunch");
+  key(field(), "Enter");
+  const [{ draft }] = pushes(hook, "calendar:create");
+  vi.advanceTimersByTime(15000);
+  expect(notice()).not.toBeNull();
+
+  // Another draft's answer leaves it.
+  handlers["calendar:create-settled"]({ draft: "dother" });
+  expect(notice()).not.toBeNull();
+
+  handlers["calendar:create-settled"]({ draft });
+  expect(notice()).toBeNull();
+});
+
+test("Escape dismisses the notice", () => {
+  const { hook } = open();
+  type("Lunch");
+  key(field(), "Enter");
+  hook.reconnected();
+  expect(notice()).not.toBeNull();
+
+  key(document.body, "Escape");
+  expect(notice()).toBeNull();
+});
+
+test("the notice goes with the hook", () => {
+  const { hook } = open();
+  type("Lunch");
+  key(field(), "Enter");
+  hook.reconnected();
+  expect(notice()).not.toBeNull();
+
+  hook.destroyed();
+  expect(notice()).toBeNull();
+});
+
 test("a refused create still reopens Save with the server's message", () => {
   const { hook } = open();
   type("Lunch");

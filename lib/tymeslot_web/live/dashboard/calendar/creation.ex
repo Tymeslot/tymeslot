@@ -158,9 +158,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   def settled(socket, draft, title, result) do
     {params, pending} = Map.pop(socket.assigns.pending_creates, draft)
 
+    # The hook may have given up waiting for this draft's reply and said it
+    # couldn't confirm the save; the toast below now says how it ended.
     socket
     |> assign(:pending_creates, pending)
     |> remember(draft, result)
+    |> push_event("calendar:create-settled", %{draft: draft})
     |> settle(draft, params || title, result)
   end
 

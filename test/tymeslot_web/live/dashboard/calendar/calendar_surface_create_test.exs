@@ -440,6 +440,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     events = created_and_settled(lv, work)
     assert_receive {:created, _event_data}
     assert Enum.count(events, &(&1.title == "Lunch")) == 1
+    # The hook hears the draft is settled, and drops any doubt it voiced.
+    assert_push_event(lv, "calendar:create-settled", %{draft: "d1"})
 
     create(lv, lunch(work))
     assert_reply(lv, %{accepted: true})

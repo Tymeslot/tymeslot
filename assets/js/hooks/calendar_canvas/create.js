@@ -70,6 +70,14 @@ export const CreateMixin = {
       this.quickCreateNext();
     };
     this.quickCreateEvent = () => this.quickCreateNext();
+    this.noticeKey = (e) => {
+      if (e.key === "Escape" && this.notice) this.closeNotice();
+    };
+    // The server answered the create after all: its toast names the result
+    // (with Undo where it can), so the doubt the notice voiced is over.
+    this.handleEvent("calendar:create-settled", ({ draft }) => {
+      if (this.notice && this.notice.dataset.draft === draft) this.closeNotice();
+    });
     this.el.addEventListener("scroll", this.quickScroll, true);
     this.el.addEventListener("calendar:quick-create", this.quickCreateEvent);
     document.addEventListener("keydown", this.createKey);
@@ -351,17 +359,20 @@ export const CreateMixin = {
     this.draft = null;
     this.render();
     this.restoreQuickFocus(returnTo);
-    this.showNotice(this.strings.create_unconfirmed);
+    this.showNotice(this.strings.create_unconfirmed, id);
   },
 
   // A message of the hook's own, shaped like the surface's toast, for news
-  // the server cannot deliver (its connection is in doubt). Appended to
-  // <body>, as the popover is, so no redraw removes it.
-  showNotice(text) {
+  // the server cannot deliver (its connection is in doubt), about the draft
+  // `draft`. Appended to <body>, as the popover is, so no redraw removes it.
+  // It leaves on its own, with its button, with Escape, or once the server
+  // settles that draft after all.
+  showNotice(text, draft) {
     this.closeNotice();
     const notice = document.createElement("div");
     notice.id = "calendar-notice";
     notice.className = "cal-notice";
+    notice.dataset.draft = draft;
     notice.setAttribute("role", "alert");
     const message = document.createElement("span");
     message.className = "cal-notice-text";
@@ -379,11 +390,13 @@ export const CreateMixin = {
     document.body.append(notice);
     this.notice = notice;
     this.noticeTimer = setTimeout(() => this.closeNotice(), NOTICE_MS);
+    document.addEventListener("keydown", this.noticeKey);
   },
 
   closeNotice() {
     clearTimeout(this.noticeTimer);
     this.noticeTimer = null;
+    document.removeEventListener("keydown", this.noticeKey);
     this.notice?.remove();
     this.notice = null;
   },
