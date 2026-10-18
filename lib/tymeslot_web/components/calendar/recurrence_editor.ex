@@ -57,6 +57,10 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
   attr :myself, :any, required: true
   attr :change_event, :string, required: true
 
+  attr :key, :string,
+    default: nil,
+    doc: "names the editor's element ids; defaults to `change_event`"
+
   attr :pending, :boolean,
     default: false,
     doc: "whether the rule shown is staged and not yet saved, which offers to save or discard it"
@@ -104,8 +108,8 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
             if(read == :custom, do: :custom, else: elem(read, 1)),
             start_date
           ),
-        form_id: "recurrence-editor-form-#{assigns.change_event}",
-        custom_id: "recurrence-custom-#{assigns.change_event}"
+        form_id: "recurrence-editor-form-#{assigns.key || assigns.change_event}",
+        custom_id: "recurrence-custom-#{assigns.key || assigns.change_event}"
       )
 
     ~H"""

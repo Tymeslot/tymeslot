@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.WriteQueue
+  alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -69,6 +70,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
     else
       false -> socket
       refusal -> refuse(socket, refusal)
+    end
+  end
+
+  @doc """
+  Writes the repeat rule `spec` makes (`{:preset, key}` or `{:custom,
+  fields}`, see `PanelRepeat`) to the panel's event. On a member of a series
+  the rule is written to this and the following events or to all of them,
+  asked unless the panel already holds one of those two; removing it from a
+  series is refused without asking.
+  """
+  @spec repeat(socket(), PanelRepeat.spec()) :: socket()
+  def repeat(socket, spec) do
+    case PanelState.current_event(socket.assigns) do
+      nil -> socket
+      event -> repeat_event(socket, event, spec)
+    end
+  end
+
+  # `%{recurrence_rule: nil}` only picks the guard: a rule change is no
+  # change of timing.
+  defp repeat_event(socket, event, spec) do
+    case guard(socket, event, %{recurrence_rule: nil}) do
+      :ok -> repeat_in_scope(socket, event, spec)
+      refusal -> refuse(socket, refusal)
+    end
+  end
+
+  defp repeat_in_scope(socket, event, spec) do
+    case {Changes.edit_scopes(event), spec} do
+      {{:ok, :series}, {:preset, "none"}} ->
+        refuse_with(socket, CalendarEditMessages.repeat_refusal(:removal))
+
+      _single_or_scoped ->
+        in_scope(socket, event, %{kind: :panel_repeat, spec: spec})
     end
   end
 
@@ -155,11 +190,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
     end
   end
 
-  # Asked once; the answer holds until the panel closes.
+  # Asked once; the answer holds until the panel closes. A rule change is
+  # written to this and the following events or to all of them, so a panel
+  # holding "This event" asks again.
   defp series_scope(socket, event, pending) do
-    case socket.assigns.panel do
-      %{scope: scope} when scope != nil -> run(socket, event, pending, scope)
-      _no_answer_yet -> ask(socket, event, pending)
+    case {socket.assigns.panel, pending.kind} do
+      {%{scope: scope}, :panel_repeat} when scope in [:following, :all] ->
+        run(socket, event, pending, scope)
+
+      {_panel, :panel_repeat} ->
+        ask(socket, event, pending)
+
+      {%{scope: scope}, _kind} when scope != nil ->
+        run(socket, event, pending, scope)
+
+      _no_answer_yet ->
+        ask(socket, event, pending)
     end
   end
 
@@ -177,6 +223,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
     if scope in [:following, :all] and Writes.series_busy?(socket, event),
       do: refuse_with(socket, CalendarEditMessages.series_saving_message()),
       else: write_now(socket, event, pending, scope)
+  end
+
+  defp run(socket, event, %{kind: :panel_repeat, spec: spec}, scope) do
+    case PanelRepeat.rule_for(spec, event, scope, socket.assigns.timezone) do
+      {:ok, rule, opts} ->
+        run(socket, event, %{kind: :panel, changes: %{recurrence_rule: rule}, opts: opts}, scope)
+
+      :unchanged ->
+        socket
+
+      {:error, message} ->
+        refuse_with(socket, message)
+    end
   end
 
   defp write_now(socket, event, %{changes: changes, opts: opts} = pending, scope) do

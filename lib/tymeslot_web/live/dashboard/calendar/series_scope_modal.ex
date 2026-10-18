@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
 
   The side panel asks the timing question once for all of its changes
   (`:panel`), with a question that says the answer holds until the details
-  are closed.
+  are closed. A change of the repeat rule offers only this and the following
+  events or all events (`:panel_repeat`), the scopes a rule change takes.
   """
 
   use TymeslotWeb, :html
@@ -68,7 +69,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
       {"series", dgettext("dashboard_calendar", "All events")}
     ]
 
-  defp title(kind) when kind in [:timing, :panel],
+  defp choices(:panel_repeat),
+    do: [
+      {"following", dgettext("dashboard_calendar", "This and following events")},
+      {"all", dgettext("dashboard_calendar", "All events")}
+    ]
+
+  defp title(kind) when kind in [:timing, :panel, :panel_repeat],
     do: dgettext("dashboard_calendar", "Change a repeating event")
 
   defp title(:delete), do: dgettext("dashboard_calendar", "Delete a repeating event")
@@ -78,6 +85,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
       dgettext(
         "dashboard_calendar",
         "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details.",
+        title: title
+      )
+
+  defp question(%{kind: :panel_repeat, title: title}),
+    do:
+      dgettext(
+        "dashboard_calendar",
+        "“%{title}” repeats. Should the new pattern apply to this and the following events, or to all of them?",
         title: title
       )
 

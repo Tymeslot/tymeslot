@@ -284,12 +284,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   @doc "What the organiser is told when a repeat rule would end before the event starts."
   @spec until_before_start_message() :: String.t()
-  def until_before_start_message,
-    do:
-      dgettext(
-        "dashboard_calendar_events",
-        "The recurrence end date must be on or after the event start."
-      )
+  def until_before_start_message, do: CalendarEditMessages.repeat_refusal(:until_before_start)
 
   # ---------------------------------------------------------------------------
   # Refactor 3 — optional int parsing and reminder-list helpers

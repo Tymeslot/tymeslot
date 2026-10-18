@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Calendar.RecurrenceEditor
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -264,16 +265,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   # rule is what makes the events one series, and removing it from some of
   # them is not something any scope can write.
   defp refuse_rule_removal(socket) do
-    send(
-      self(),
-      {:flash,
-       {:error,
-        dgettext(
-          "dashboard_calendar_events",
-          "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
-        )}}
-    )
-
+    send(self(), {:flash, {:error, CalendarEditMessages.repeat_refusal(:removal)}})
     {:noreply, socket}
   end
 
@@ -418,24 +410,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit do
   occurrence a change of it and the following ones would start from.
   """
   @spec ends_before_message() :: String.t()
-  def ends_before_message do
-    dgettext(
-      "dashboard_calendar_repeat",
-      "Not available: the new end comes before this event, so there are no following events to change."
-    )
-  end
+  def ends_before_message, do: CalendarEditMessages.repeat_refusal(:ends_before)
 
   @doc """
   What the organiser is told when what is left of a series' `COUNT` cannot
   be counted, its first start never having been read from the calendar.
   """
   @spec start_unknown_message() :: String.t()
-  def start_unknown_message do
-    dgettext(
-      "dashboard_calendar_repeat",
-      "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
-    )
-  end
+  def start_unknown_message, do: CalendarEditMessages.repeat_refusal(:start_unknown)
 
   defp date_of(%DateTime{} = at), do: DateTime.to_date(at)
   defp date_of(%Date{} = date), do: date

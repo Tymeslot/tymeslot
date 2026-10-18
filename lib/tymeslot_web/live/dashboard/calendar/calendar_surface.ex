@@ -57,6 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # What each prompt can send; the module that acts on it parses it again.
   @timing_scopes ~w(this_only following all)
   @delete_scopes ~w(occurrence series)
+  @repeat_scopes ~w(following all)
 
   @impl Phoenix.LiveComponent
   def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
@@ -391,6 +392,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         {:noreply, Manipulation.choose_scope(socket, scope)}
 
       %{kind: :panel} when scope in @timing_scopes ->
+        {:noreply, PanelEdits.choose_scope(socket, scope)}
+
+      %{kind: :panel_repeat} when scope in @repeat_scopes ->
         {:noreply, PanelEdits.choose_scope(socket, scope)}
 
       %{kind: :delete} when scope in @delete_scopes ->

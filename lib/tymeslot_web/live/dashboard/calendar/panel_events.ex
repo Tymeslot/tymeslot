@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias Tymeslot.CalendarGrid.EditGuard
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
+  alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
 
@@ -106,6 +107,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
+  def handle("repeat", %{"preset" => "custom"}, socket),
+    do: put_repeat(socket, custom_open: true)
+
+  def handle("repeat", %{"preset" => preset}, socket) when is_binary(preset) do
+    if PanelRepeat.preset?(preset),
+      do:
+        socket
+        |> put_repeat(custom_open: false, draft: nil)
+        |> PanelEdits.repeat({:preset, preset}),
+      else: socket
+  end
+
+  def handle("repeat_toggle", _params, %{assigns: %{panel: %{repeat: repeat}}} = socket),
+    do: put_repeat(socket, custom_open: !repeat.custom_open)
+
+  def handle("repeat_custom", params, socket) do
+    case PanelState.current_event(socket.assigns) do
+      nil ->
+        socket
+
+      event ->
+        put_repeat(socket, draft: PanelRepeat.stage(event, params, socket.assigns.timezone))
+    end
+  end
+
+  def handle(
+        "repeat_save",
+        _params,
+        %{assigns: %{panel: %{repeat: %{draft: %{notice: nil} = draft}}}} = socket
+      ),
+      do: socket |> put_repeat(draft: nil) |> PanelEdits.repeat({:custom, draft.params})
+
+  def handle("repeat_discard", _params, socket), do: put_repeat(socket, draft: nil)
+
   def handle(_name, _params, socket), do: socket
 
   # An older failure must not read as this attempt's refusal.
@@ -128,4 +163,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     event = PanelState.current_event(socket.assigns)
     if event && EditGuard.movable?(socket.assigns.integrations, event), do: event
   end
+
+  defp put_repeat(socket, values),
+    do: PanelState.update(socket, &%{&1 | repeat: Map.merge(&1.repeat, Map.new(values))})
 end

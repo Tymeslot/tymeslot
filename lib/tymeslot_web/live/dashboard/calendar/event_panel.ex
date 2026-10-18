@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
+  alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
   alias TymeslotWeb.Dashboard.CalendarEditMessages
@@ -34,6 +35,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
       if socket.assigns[:event_id] == panel.event_id,
         do: socket,
         else: opened(socket, event, context.integrations)
+
+    socket =
+      if socket.assigns[:event] == event,
+        do: socket,
+        else: assign(socket, :repeat, PanelRepeat.field(event, context.timezone))
 
     {:ok, socket |> assign(assigns) |> assign(:event_id, panel.event_id)}
   end
@@ -109,7 +115,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           error={@panel.errors["timing"]}
           target={@surface}
         />
-        <%!-- Repeat (Task 19) goes here. --%>
+        <PanelRepeat.repeat_field
+          repeat={@repeat}
+          disabled={!@editable}
+          custom_open={@panel.repeat.custom_open}
+          draft={@panel.repeat.draft}
+          target={@surface}
+        />
         <%!-- Calendar (Task 20) goes here. --%>
         <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />
         <.input

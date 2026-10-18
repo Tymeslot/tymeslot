@@ -149,4 +149,49 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
 
   def create_failure_reason(:day_missing_in_some_months), do: month_end_refused_message()
   def create_failure_reason(_reason), do: dgettext("dashboard_calendar", "Please try again.")
+
+  @doc """
+  Why a repeat rule was not written: a reason the calendar gives
+  (`Tymeslot.CalendarGrid.RepeatRefusal`), or one the editor finds first.
+  """
+  @spec repeat_refusal(
+          :day_missing_in_some_months
+          | :rule_not_supported_by_outlook
+          | :removal
+          | :ends_before
+          | :start_unknown
+          | :until_before_start
+        ) :: String.t()
+  def repeat_refusal(:day_missing_in_some_months), do: month_end_refused_message()
+
+  def repeat_refusal(:rule_not_supported_by_outlook),
+    do: rule_not_supported_by_outlook_message()
+
+  def repeat_refusal(:removal),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
+      )
+
+  def repeat_refusal(:ends_before),
+    do:
+      dgettext(
+        "dashboard_calendar_repeat",
+        "Not available: the new end comes before this event, so there are no following events to change."
+      )
+
+  def repeat_refusal(:start_unknown),
+    do:
+      dgettext(
+        "dashboard_calendar_repeat",
+        "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
+      )
+
+  def repeat_refusal(:until_before_start),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "The recurrence end date must be on or after the event start."
+      )
 end
