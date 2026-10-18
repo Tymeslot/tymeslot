@@ -20,6 +20,12 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   `{:calendar_delete_result, user_id, token, outcome}`: `:deleted`,
   `{:queued, reason}` when the delete will be replayed on the next sync, or
   `{:failed, reason}`.
+
+  A rate-limited or circuit-open delete snoozes instead of failing, and both
+  kinds of snooze count towards one cap of five snoozes, after which the
+  delete is reported as failed. A provider that says the event is already
+  gone counts as deleted, once its cached row (or, for a series delete, the
+  series' rows) has been purged.
   """
 
   require Logger
@@ -238,13 +244,33 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
            EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
       :deleted
     else
-      {:error, :group_booking} -> {:failed, :group_booking}
-      {:error, %{reason: reason, retry: retry}} -> classify(reason, retry, event)
+      {:error, :group_booking} ->
+        {:failed, :group_booking}
+
+      # The calendar says it is gone already; the cached row has to follow it
+      # or the event would reappear until the next sync.
+      {:error, %{reason: :not_found, retry: retry}} when retry != :queued ->
+        purge_cached(event, scope(args))
+        :deleted
+
+      {:error, %{reason: reason, retry: retry}} ->
+        classify(reason, retry, event)
     end
   end
 
+  defp purge_cached(event, :series) do
+    case Occurrence.series_address(event) do
+      {:ok, address} -> EventDeletion.delete_series_rows(event.calendar_integration_id, address)
+      {:error, _unaddressable} -> purge_row(event)
+    end
+  end
+
+  defp purge_cached(event, _occurrence), do: purge_row(event)
+
+  defp purge_row(event),
+    do: ProviderCalendarEventQueries.delete_by_uid(event.calendar_integration_id, event.uid)
+
   defp classify(reason, :queued, _event), do: {:queued, reason}
-  defp classify(:not_found, _retry, _event), do: :deleted
 
   defp classify({:rate_limited, seconds}, _retry, _event),
     do: {:snooze, :rate_limited, snooze(seconds)}

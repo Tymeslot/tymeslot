@@ -382,7 +382,8 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     end
 
     test "not found means it is already gone, on any attempt", %{user: user, event: event} do
-      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts ->
+      # The first attempt purges the row, so a later one never asks again.
+      expect(Tymeslot.CalendarMock, :delete_event, 1, fn _uid, _context, _opts ->
         {:error, :not_found}
       end)
 
@@ -391,6 +392,41 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
 
       {token, :ok} = run_delete(user, event, 1)
       assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
+    end
+
+    test "not found purges the cached row, so the event does not come back", %{
+      user: user,
+      caldav: caldav,
+      event: event
+    } do
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :not_found}
+      end)
+
+      {token, :ok} = run_delete(user, event, 1)
+
+      assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
+
+      assert ProviderCalendarEventQueries.get_by_uid(caldav.id, "dentist-1") ==
+               {:error, :not_found}
+    end
+
+    test "not found on a series delete purges the series' rows", %{user: user} do
+      clicked = google_occurrence(user)
+      sibling = google_occurrence(user, "20260608T090000Z")
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :not_found}
+      end)
+
+      {token, :ok} = run_delete(user, clicked, 1, scope: :series)
+
+      assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
+
+      for row <- [clicked, sibling] do
+        assert ProviderCalendarEventQueries.get_by_uid(row.calendar_integration_id, row.uid) ==
+                 {:error, :not_found}
+      end
     end
 
     test "an event whose cached row is gone counts as deleted", %{
