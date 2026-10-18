@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.Period
   alias Tymeslot.CalendarGrid.SyncProblems
   alias TymeslotWeb.Dashboard.Calendar.Canvas
@@ -34,12 +35,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
+  alias TymeslotWeb.Dashboard.Calendar.SeriesMoveModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.SyncBanner
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
+  alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.Calendar.Visibility
   alias TymeslotWeb.Dashboard.Calendar.Writes
 
@@ -115,6 +118,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
        |> Manipulation.forget(ref)
        |> PanelEdits.settled(ref, :failed)
        |> Toast.dismiss(key)}
+
+  # A move to another calendar answering (see `Transfer`); a failed single
+  # move is a revert that names no write.
+  def update(%{action: :revert_event, original_event: %{} = event}, socket),
+    do: {:ok, Transfer.failed(socket, event)}
+
+  def update(%{action: :event_moved} = moved, socket), do: {:ok, Transfer.moved(socket, moved)}
+
+  def update(%{action: :series_moved, moved_event: event} = moved, socket),
+    do: {:ok, Transfer.series_moved(socket, event, moved[:source])}
+
+  def update(%{action: :series_move_failed, moved_event: event}, socket),
+    do: {:ok, Transfer.series_failed(socket, event)}
 
   def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
     do: {:ok, Deletion.settled(socket, token, outcome)}
@@ -262,6 +278,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           panel={@panel}
           event={@panel_event}
           context={@panel_context}
+          calendar_choices={CalendarDirectory.choices(@accounts)}
+          moving={not is_nil(@transfer)}
           surface={@myself}
         />
       </div>
@@ -275,6 +293,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <DeleteConfirmModal.delete_confirm_modal
         :if={@delete_prompt}
         prompt={@delete_prompt}
+        target={@myself}
+      />
+      <SeriesMoveModal.series_move_modal
+        :if={@series_move_prompt}
+        prompt={@series_move_prompt}
         target={@myself}
       />
     </div>

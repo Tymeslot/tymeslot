@@ -64,6 +64,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
     do: socket |> drive(&WriteQueue.resume(&1, release)) |> push_if_changed()
 
   @doc """
+  Holds every write to an event of `event`'s series while the series moves
+  to another calendar (`WriteQueue.series_moving/2`), mirrored to the
+  guardian before the move starts, so a change made meanwhile waits for it.
+  """
+  @spec series_moving(socket(), map()) :: socket()
+  def series_moving(socket, event) do
+    {socket, _effects} =
+      drive(socket, &{WriteQueue.series_moving(&1, event), []})
+
+    socket
+  end
+
+  @doc "The series has moved: what was held for it is dropped, and the window reloads."
+  @spec series_moved(socket(), map()) :: socket()
+  def series_moved(socket, event),
+    do: socket |> drive(&WriteQueue.series_moved(&1, event)) |> push()
+
+  @doc "The series' move failed: what was held for it is written now."
+  @spec series_move_failed(socket(), map()) :: socket()
+  def series_move_failed(socket, event),
+    do: socket |> drive(&WriteQueue.series_move_failed(&1, event)) |> push_if_changed()
+
+  @doc """
   The queue the surface starts from: this LiveView's own, taken back from
   its guardian, and waiting for whatever any other guardian of the
   organiser is still writing (see `WriteGuardian.adopt/2`). Records the

@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesNotes do
+defmodule TymeslotWeb.Components.Calendar.SeriesNotes do
   @moduledoc """
   The wording of what a write to a recurring series will not carry, which
   the organiser reads before confirming it: the notes of a move to another

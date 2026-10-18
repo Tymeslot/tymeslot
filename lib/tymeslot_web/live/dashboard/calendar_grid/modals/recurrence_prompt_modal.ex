@@ -27,8 +27,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias TymeslotWeb.Components.Calendar.SeriesNotes
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
-  alias TymeslotWeb.Dashboard.CalendarGrid.SeriesNotes
 
   attr :recurrence_prompt, :map, required: true
   attr :myself, :any, required: true

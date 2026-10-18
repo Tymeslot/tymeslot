@@ -123,4 +123,35 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
       assert EditGuard.check_timing(user.id, [integration], event(integration, "work")) == :ok
     end
   end
+
+  describe "check_transfer/3" do
+    test "lets an event on a writable calendar move", %{user: user, integration: integration} do
+      assert EditGuard.check_transfer(user.id, [integration], event(integration, "work")) == :ok
+    end
+
+    test "refuses an event on a read-only calendar", %{user: user, integration: integration} do
+      assert EditGuard.check_transfer(user.id, [integration], event(integration, "shared")) ==
+               {:error, :read_only}
+    end
+
+    test "refuses the calendar copy of a booking", %{user: user, integration: integration} do
+      copy = %{event(integration, "work") | uid: "booked-copy"}
+
+      insert(:meeting,
+        organizer_user: user,
+        calendar_integration_id: integration.id,
+        calendar_uid: "booked-copy"
+      )
+
+      assert EditGuard.check_transfer(user.id, [integration], copy) == {:error, :booking}
+    end
+
+    test "counts against the move rate limit", %{user: user, integration: integration} do
+      # Three moves a minute (`RateLimiter.Limits`, `:calendar_event_move`).
+      for _attempt <- 1..3, do: RateLimiter.check(:calendar_event_move, user.id)
+
+      assert {:error, :rate_limited, _message} =
+               EditGuard.check_transfer(user.id, [integration], event(integration, "work"))
+    end
+  end
 end

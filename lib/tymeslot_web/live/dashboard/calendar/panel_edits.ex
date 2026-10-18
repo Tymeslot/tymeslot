@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.Toast
+  alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
   alias TymeslotWeb.Dashboard.Calendar.Writes
   alias TymeslotWeb.Dashboard.CalendarEditMessages
@@ -50,15 +51,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   `toast:`, a message shown in a toast once the write is sent (with Undo
   when the change can be undone). The values the event already has are
   dropped first; when nothing is left, nothing is written. A refused change
-  says why in the panel's header.
+  says why in the panel's header. While the event moves to another calendar
+  (`Transfer.moving?/2`) the change is refused in the header.
   """
   @spec write(socket(), String.t(), map(), keyword()) :: socket()
   def write(socket, event_id, changes, opts) do
     case target_event(socket.assigns, event_id) do
-      nil -> socket
-      event -> write_event(socket, event, changes, opts)
+      nil ->
+        socket
+
+      event ->
+        if Transfer.moving?(socket, WriteQueue.key(event)),
+          do: refuse_with(socket, moving_message()),
+          else: write_event(socket, event, changes, opts)
     end
   end
+
+  defp moving_message,
+    do:
+      dgettext(
+        "dashboard_calendar",
+        "This event is moving to another calendar. Please make the change once it has moved."
+      )
 
   defp write_event(socket, event, changes, opts) do
     {toast, opts} = Keyword.pop(opts, :toast)

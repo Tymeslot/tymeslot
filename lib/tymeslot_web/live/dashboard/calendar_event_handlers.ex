@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport
@@ -252,31 +253,40 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   it succeeds the grid reloads, as
   after any write to a whole series, since the series' rows are gone from
   the source until the destination's sync brings them back.
+
+  On the new calendar a successful move is named by the surface's toast
+  instead of a flash.
   """
   @spec handle_event_move_result(
           {:ok, keyword()} | {:error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_move_result({:ok, new_event_info}, socket) do
+    source = new_event_info[:source]
+
     case new_event_info[:series_to] do
       nil ->
         CalendarRouting.to_mounted(socket,
           action: :event_moved,
           new_event_uid: new_event_info[:uid],
-          new_event_integration_id: new_event_info[:integration_id]
+          new_event_integration_id: new_event_info[:integration_id],
+          original_event: new_event_info[:original_event],
+          source: source
         )
 
-        {level, message} = moved_flash(new_event_info[:source])
-        {:noreply, put_flash(socket, level, message)}
+        {:noreply, result_flash(socket, CalendarEditMessages.moved_message(source))}
 
       calendar ->
         CalendarRouting.to_mounted(socket,
           action: :series_moved,
-          moved_event: new_event_info[:original_event]
+          moved_event: new_event_info[:original_event],
+          source: source
         )
 
-        {level, message} = series_moved_flash(new_event_info[:source], calendar)
-        {:noreply, socket |> clear_flash(:info) |> put_flash(level, message)}
+        {:noreply,
+         socket
+         |> clear_flash(:info)
+         |> result_flash(CalendarEditMessages.series_moved_message(source, calendar))}
     end
   end
 
@@ -288,7 +298,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           original_event: payload[:original_event]
         )
 
-        {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+        {:noreply,
+         put_flash(socket, :error, CalendarEditMessages.move_failed_message(payload[:reason]))}
 
       _calendar ->
         CalendarRouting.to_mounted(socket,
@@ -296,63 +307,18 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           moved_event: payload[:original_event]
         )
 
-        message = EditWorkflow.series_move_failed_message(payload[:reason])
+        message = CalendarEditMessages.series_move_failed_message(payload[:reason])
         {:noreply, socket |> clear_flash(:info) |> put_flash(:error, message)}
     end
   end
 
-  defp moved_flash(nil),
-    do: {:info, dgettext("dashboard_calendar_events", "Event moved to the new calendar.")}
-
-  defp moved_flash(:queued_delete) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "Event copied to the new calendar. The original will be removed on the next sync."
-     )}
-  end
-
-  defp moved_flash(:left_behind) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
-     )}
-  end
-
-  # Something failed once the new calendar had accepted the event, so it is
-  # there, and whether the original is too cannot be said.
-  defp moved_flash(:unknown) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
-     )}
-  end
-
-  defp series_moved_flash(nil, calendar) do
-    {:info,
-     dgettext("dashboard_calendar_events", "The series was moved to %{calendar}.",
-       calendar: calendar
-     )}
-  end
-
-  defp series_moved_flash(:left_behind, calendar) do
-    {:warning,
-     dgettext(
-       "dashboard_calendar_events",
-       "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar.",
-       calendar: calendar
-     )}
-  end
-
-  defp move_failed_message(:recurring_event), do: EditWorkflow.recurring_move_refused_message()
-
-  defp move_failed_message(_reason) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Could not move the event. It is still on its original calendar."
-    )
+  # The new calendar names a change's result itself (a move in its toast,
+  # with Undo when it can be taken back; a video change in the panel's
+  # header), so a flash beside it would say it twice.
+  defp result_flash(socket, {level, message}) do
+    if CalendarRouting.surface_on_screen?(socket),
+      do: socket,
+      else: put_flash(socket, level, message)
   end
 
   @doc "Spawns a supervised task to create a calendar event."
@@ -555,7 +521,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   defp video_failed_message(:linked_to_booking),
-    do: EditWorkflow.booking_video_refused_message()
+    do: CalendarEditMessages.booking_video_refused_message()
 
   defp video_failed_message(:missing_meeting_url) do
     dgettext(

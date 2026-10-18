@@ -226,48 +226,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   def move_event_async(socket, event, integration, calendar_id, opts \\ []) do
     user_id = socket.assigns.current_user.id
     destination = %{integration: integration, calendar_id: calendar_id}
-    series = Keyword.take(opts, [:series_to])
+    series_to = Keyword.get(opts, :series_to)
 
     run_async(
       socket,
       :event_move_result,
-      fn ->
-        case Changes.move_event(user_id, event, destination) do
-          {:ok, moved} ->
-            {:ok,
-             [
-               uid: moved.uid,
-               integration_id: moved.integration_id,
-               source: moved[:source],
-               original_event: event
-             ] ++ series}
-
-          {:error, reason} ->
-            move_failure(event, reason, series)
-        end
-      end,
-      move_failure(event, :crashed, series),
+      fn -> Changes.move_event_reported(user_id, event, destination, series_to) end,
+      Changes.move_crash_report(event, series_to),
       # A whole-series move holds the series' other writes until it
       # answers (see `EventWrites.series_moving/2`), so its answer goes to
       # their guardian too.
-      report_to_guardian: series != []
+      report_to_guardian: not is_nil(series_to)
     )
   end
 
-  defp move_failure(event, reason, series),
-    do: {:error, [original_event: event, reason: reason] ++ series}
-
-  @doc """
-  The message shown when an organiser tries to move a recurring event whose
-  calendar provider cannot move a whole series (Exchange).
-  """
-  @spec recurring_move_refused_message() :: String.t()
-  def recurring_move_refused_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "Recurring events on this calendar cannot be moved to another calendar. Only single events can be moved."
-    )
-  end
+  # One copy of each message for both calendars (see `CalendarEditMessages`).
+  defdelegate recurring_move_refused_message, to: CalendarEditMessages
+  defdelegate move_rate_limited_message, to: CalendarEditMessages
+  defdelegate series_move_failed_message(reason), to: CalendarEditMessages
+  defdelegate not_organiser_message, to: CalendarEditMessages
+  defdelegate unmatched_series_message, to: CalendarEditMessages
+  defdelegate booking_video_refused_message, to: CalendarEditMessages
 
   @doc "See `TymeslotWeb.Dashboard.CalendarEditMessages.month_end_refused_message/0`."
   @spec month_end_refused_message() :: String.t()
@@ -276,87 +255,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @doc "See `TymeslotWeb.Dashboard.CalendarEditMessages.rule_not_supported_by_outlook_message/0`."
   @spec rule_not_supported_by_outlook_message() :: String.t()
   defdelegate rule_not_supported_by_outlook_message, to: CalendarEditMessages
-
-  @doc "The message shown when an organiser has moved events too often in a short while."
-  @spec move_rate_limited_message() :: String.t()
-  def move_rate_limited_message,
-    do: dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")
-
-  @doc """
-  The message shown when a recurring series could not be moved, for each
-  reason `Tymeslot.CalendarGrid.Changes.move_event/3` and
-  `Tymeslot.CalendarGrid.Changes.series_move_notes/2` give. Every one of them means
-  the series is still where it was.
-  """
-  @spec series_move_failed_message(term()) :: String.t()
-  def series_move_failed_message(:recurring_event), do: recurring_move_refused_message()
-
-  def series_move_failed_message(:cross_provider_series) do
-    dgettext(
-      "dashboard_calendar_events",
-      "A recurring event can only be moved to a calendar of the same kind of account: Google to Google, Outlook to Outlook, or CalDAV to CalDAV."
-    )
-  end
-
-  def series_move_failed_message(reason)
-      when reason in [:unaddressable_series, :not_recurring, :unreadable_timing],
-      do: unmatched_series_message()
-
-  def series_move_failed_message(:not_organiser), do: not_organiser_message()
-
-  def series_move_failed_message(:same_calendar),
-    do: dgettext("dashboard_calendar_events", "The series is already on that calendar.")
-
-  def series_move_failed_message(:no_destination_calendar) do
-    dgettext(
-      "dashboard_calendar_events",
-      "That calendar cannot be written to. Please choose another calendar."
-    )
-  end
-
-  def series_move_failed_message(_reason) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Could not move the series. It is still on its original calendar."
-    )
-  end
-
-  @doc """
-  The message shown when a write to a series is refused because someone
-  else organises it: moving or splitting a series re-creates it, which only
-  its organiser may do.
-  """
-  @spec not_organiser_message() :: String.t()
-  def not_organiser_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
-    )
-  end
-
-  @doc """
-  The message shown when the grid cannot tell which series, or which
-  occurrence of it, an event is.
-  """
-  @spec unmatched_series_message() :: String.t()
-  def unmatched_series_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "This event could not be matched to its series. Refresh your calendars and try again."
-    )
-  end
-
-  @doc """
-  The message shown when an organiser tries to change the video of an event
-  that is the calendar copy of a booking.
-  """
-  @spec booking_video_refused_message() :: String.t()
-  def booking_video_refused_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
-    )
-  end
 
   @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
   def assert_owns_event(socket, event) do

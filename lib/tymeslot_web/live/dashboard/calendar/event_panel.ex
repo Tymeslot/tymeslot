@@ -23,10 +23,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
+  alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   @impl Phoenix.LiveComponent
@@ -123,7 +125,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           version={@panel.repeat.version}
           target={@surface}
         />
-        <%!-- Calendar (Task 20) goes here. --%>
+        <form
+          :if={@event}
+          id="calendar-panel-calendar-form"
+          phx-change="panel:transfer"
+          phx-target={@surface}
+        >
+          <PanelCalendarField.calendar_field
+            choices={@calendar_choices}
+            value={Transfer.calendar_key(@event, @context.integrations)}
+            disabled={@moving or not @editable}
+          />
+        </form>
         <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />
         <.input
           id="calendar-panel-location"

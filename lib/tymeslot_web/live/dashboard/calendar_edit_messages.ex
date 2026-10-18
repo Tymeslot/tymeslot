@@ -198,4 +198,153 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
         "dashboard_calendar_events",
         "The recurrence end date must be on or after the event start."
       )
+
+  @doc """
+  An organiser tried to move a repeating event whose provider cannot move a
+  whole series (Exchange).
+  """
+  @spec recurring_move_refused_message() :: String.t()
+  def recurring_move_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Recurring events on this calendar cannot be moved to another calendar. Only single events can be moved."
+    )
+  end
+
+  @doc "An organiser has moved events too often in a short while."
+  @spec move_rate_limited_message() :: String.t()
+  def move_rate_limited_message,
+    do: dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")
+
+  @doc """
+  A write to a series refused because someone else organises it: moving or
+  splitting a series re-creates it, which only its organiser may do.
+  """
+  @spec not_organiser_message() :: String.t()
+  def not_organiser_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
+    )
+  end
+
+  @doc "The cached row could not be matched to the series it belongs to."
+  @spec unmatched_series_message() :: String.t()
+  def unmatched_series_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event could not be matched to its series. Refresh your calendars and try again."
+    )
+  end
+
+  @doc """
+  Why a series could not be moved, for each reason `Changes.move_event/3`
+  and `Changes.series_move_notes/2` give. Every one means the series is
+  still where it was.
+  """
+  @spec series_move_failed_message(term()) :: String.t()
+  def series_move_failed_message(:recurring_event), do: recurring_move_refused_message()
+
+  def series_move_failed_message(:cross_provider_series) do
+    dgettext(
+      "dashboard_calendar_events",
+      "A recurring event can only be moved to a calendar of the same kind of account: Google to Google, Outlook to Outlook, or CalDAV to CalDAV."
+    )
+  end
+
+  def series_move_failed_message(reason)
+      when reason in [:unaddressable_series, :not_recurring, :unreadable_timing],
+      do: unmatched_series_message()
+
+  def series_move_failed_message(:not_organiser), do: not_organiser_message()
+
+  def series_move_failed_message(:same_calendar),
+    do: dgettext("dashboard_calendar_events", "The series is already on that calendar.")
+
+  def series_move_failed_message(:no_destination_calendar) do
+    dgettext(
+      "dashboard_calendar_events",
+      "That calendar cannot be written to. Please choose another calendar."
+    )
+  end
+
+  def series_move_failed_message(_reason) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Could not move the series. It is still on its original calendar."
+    )
+  end
+
+  @doc """
+  What a single event's move to another calendar left behind, by the
+  `:source` note `Changes.move_event/3` gave: `nil` for a clean move.
+  """
+  @spec moved_message(nil | :queued_delete | :left_behind | :unknown) ::
+          {:info | :warning, String.t()}
+  def moved_message(nil),
+    do: {:info, dgettext("dashboard_calendar_events", "Event moved to the new calendar.")}
+
+  def moved_message(:queued_delete) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "Event copied to the new calendar. The original will be removed on the next sync."
+     )}
+  end
+
+  def moved_message(:left_behind) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
+     )}
+  end
+
+  # Something failed once the new calendar had accepted the event, so it is
+  # there, and whether the original is too cannot be said.
+  def moved_message(:unknown) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+     )}
+  end
+
+  @doc "What a whole series' move to `calendar` left behind, as `moved_message/1`."
+  @spec series_moved_message(nil | :left_behind, String.t()) :: {:info | :warning, String.t()}
+  def series_moved_message(:left_behind, calendar) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar.",
+       calendar: calendar
+     )}
+  end
+
+  def series_moved_message(_source, calendar) do
+    {:info,
+     dgettext("dashboard_calendar_events", "The series was moved to %{calendar}.",
+       calendar: calendar
+     )}
+  end
+
+  @doc "Why a single event's move to another calendar failed."
+  @spec move_failed_message(term()) :: String.t()
+  def move_failed_message(:recurring_event), do: recurring_move_refused_message()
+
+  def move_failed_message(_reason) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Could not move the event. It is still on its original calendar."
+    )
+  end
+
+  @doc "The video of a booking's calendar copy belongs to the booking."
+  @spec booking_video_refused_message() :: String.t()
+  def booking_video_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+    )
+  end
 end

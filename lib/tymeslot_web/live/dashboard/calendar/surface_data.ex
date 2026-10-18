@@ -70,7 +70,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       pending_creates: %{},
       syncing_ids: MapSet.new(),
       failure_counts: %{},
-      sync_refs: %{}
+      sync_refs: %{},
+      transfer: nil,
+      series_move_prompt: nil
     )
   end
 

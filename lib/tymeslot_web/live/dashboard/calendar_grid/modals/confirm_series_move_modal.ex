@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Dashboard.CalendarGrid.SeriesNotes
+  alias TymeslotWeb.Components.Calendar.SeriesNotes
 
   attr :prompt, :map, required: true
   attr :myself, :any, required: true

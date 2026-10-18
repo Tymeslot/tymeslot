@@ -5,6 +5,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   name here. Each one reads the panel's event from the surface
   (`PanelState.current_event/1`), so an event arriving with no panel open
   changes nothing, and parameters are client input, matched before use.
+  Moving to another calendar, video, guests and the new-event form act
+  through modules of their own (`Transfer`, `PanelVideo`, `PanelGuests`,
+  `PanelNew`).
   """
 
   alias Tymeslot.CalendarGrid.EditGuard
@@ -13,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
+  alias TymeslotWeb.Dashboard.Calendar.Transfer
 
   # The text fields, by the event each sends (see `PanelFields.text_change/2`).
   @text_fields ~w(title location notes)
@@ -137,6 +141,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
       do: socket |> put_repeat(draft: nil) |> PanelEdits.repeat({:custom, draft.params})
 
   def handle("repeat_discard", _params, socket), do: put_repeat(socket, draft: nil)
+
+  # Moving the event to another calendar (see `Transfer`, which checks the
+  # key against the calendars the select offered).
+  def handle("transfer", %{"calendar" => key}, socket) when is_binary(key),
+    do: Transfer.request(socket, key)
+
+  def handle("confirm_series_move", _params, socket), do: Transfer.confirm_series(socket)
+  def handle("cancel_series_move", _params, socket), do: Transfer.cancel_series(socket)
 
   def handle(_name, _params, socket), do: socket
 

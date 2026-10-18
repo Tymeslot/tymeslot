@@ -41,6 +41,14 @@ defmodule Tymeslot.CalendarGrid.Changes do
           {:ok, EventMove.moved()} | {:error, term()}
   defdelegate move_event(user_id, event, destination), to: EventMove
 
+  @doc "See `Tymeslot.CalendarGrid.EventMove.reported/4`."
+  defdelegate move_event_reported(user_id, event, destination, series_to),
+    to: EventMove,
+    as: :reported
+
+  @doc "See `Tymeslot.CalendarGrid.EventMove.crash_report/2`."
+  defdelegate move_crash_report(event, series_to), to: EventMove, as: :crash_report
+
   @doc """
   Gives an event a room on the organiser's video integration, or removes its
   video link when the integration is `nil`, on both the provider event and the

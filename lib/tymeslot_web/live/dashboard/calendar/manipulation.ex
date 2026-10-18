@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
+  alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
   alias TymeslotWeb.Dashboard.Calendar.Writes
   alias TymeslotWeb.Dashboard.CalendarEditMessages
@@ -160,6 +161,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   defp undo_entry(socket, %{kind: :gone} = entry), do: Deletion.too_late(socket, entry)
   defp undo_entry(socket, %{kind: :edit} = entry), do: PanelEdits.undo(socket, entry)
   defp undo_entry(socket, %{kind: :create} = entry), do: Creation.undo(socket, entry)
+  defp undo_entry(socket, %{kind: :transfer} = entry), do: Transfer.undo(socket, entry)
 
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns

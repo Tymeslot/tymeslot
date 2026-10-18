@@ -17,7 +17,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Test.ClockHelpers
 
-  @now ~U[2026-10-14 08:00:00Z]
+  @now ~U[2026-10-14 08:00:00.000000Z]
 
   @doc "The frozen instant."
   @spec now() :: DateTime.t()

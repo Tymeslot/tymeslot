@@ -17,6 +17,10 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
   add the one more a change of timing needs: the calendar copy of a booking keeps the booking's time, so it can
   be deleted from the calendar but not moved or resized.
+
+    * `check_transfer/3`: a move to another calendar, which the copy of a
+      booking refuses as it refuses a change of timing, under the move rate
+      limit (`move_rate_limit/1`) rather than the edit one.
   """
 
   alias Tymeslot.CalendarGrid.EventDeletion
@@ -94,6 +98,29 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
     with :ok <- writable(integrations, event),
          :ok <- not_booking_copy(event),
          do: check(user_id, integrations, event)
+  end
+
+  @doc """
+  The gates a move of `event` to another calendar passes: it is writable,
+  not the copy of a booking, not held by live seats, and the organiser is
+  within the move rate limit. The destination is checked by the caller
+  against the calendars it offered.
+  """
+  @spec check_transfer(pos_integer(), [map()], map()) :: :ok | refusal()
+  def check_transfer(user_id, integrations, event) do
+    with :ok <- writable(integrations, event),
+         :ok <- not_booking_copy(event),
+         :ok <- seat_lock(user_id, event),
+         do: move_rate_limit(user_id)
+  end
+
+  @doc "The calendar move rate limit for `user_id`, the old calendar's too."
+  @spec move_rate_limit(pos_integer()) :: :ok | {:error, :rate_limited, String.t()}
+  def move_rate_limit(user_id) do
+    case RateLimiter.check(:calendar_event_move, user_id) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, :rate_limited, message}
+    end
   end
 
   defp not_booking_copy(event),
