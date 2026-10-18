@@ -19,6 +19,7 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Profiles
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -193,8 +194,8 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
       assert {:ok, %{kind: :time_off, period: period}} =
                Changes.block_time(host.user.id, start_at, end_at, "Focus")
 
-      {:ok, profile} = Tymeslot.Profiles.get_profile_by_user_id(host.user.id)
-      zone = Tymeslot.Profiles.timezone(profile)
+      {:ok, profile} = Profiles.get_profile_by_user_id(host.user.id)
+      zone = Profiles.timezone(profile)
       now = DateTime.shift_zone!(DateTime.utc_now(), zone)
 
       assert period.start_time != DateTime.to_time(DateTime.shift_zone!(start_at, zone))
