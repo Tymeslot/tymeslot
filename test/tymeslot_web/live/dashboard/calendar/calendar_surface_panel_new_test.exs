@@ -446,6 +446,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       assert Map.get(payload, :video_integration_id) == nil
     end
 
+    test "Duplicate keeps the notes but not the old call's join line", %{
+      conn: conn,
+      integration: integration
+    } do
+      call =
+        event(integration, "work", "Call", ~U[2026-10-14 11:00:00Z], 60,
+          description: "Agenda\n\nJoin video call: https://meet.example.com/old",
+          video_link: "https://meet.example.com/old"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      hook(lv, "calendar:edit", %{"id" => "event-#{call.id}"})
+      lv |> element("#calendar-panel-duplicate") |> render_click()
+
+      payload = await_create(lv)
+      assert payload.description == "Agenda"
+    end
+
     test "Delete hands the event to the delete flow and closes the panel", %{lv: lv} do
       lv |> element("#calendar-panel-delete") |> render_click()
 

@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias Tymeslot.CalendarGrid.EventVideo
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -356,25 +357,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
     else
       {:ok, []} ->
-        warn(
-          socket,
-          dgettext(
-            "dashboard_calendar_editing",
-            "You're the organiser, so you're already invited."
-          )
-        )
+        warn(socket, Creation.guest_message(:organiser))
 
       {:error, :guests, :too_many} ->
         warn(socket, Creation.refusal_message(:guests, :too_many))
 
       {:error, :guests, _invalid} ->
-        warn(socket, dgettext("dashboard_calendar_editing", "Enter a valid email address."))
+        warn(socket, Creation.guest_message(:invalid))
 
       {:error, :already_a_guest, email} ->
-        warn(
-          socket,
-          dgettext("dashboard_calendar_editing", "%{email} is already a guest.", email: email)
-        )
+        warn(socket, Creation.guest_message({:duplicate, email}))
     end
   end
 
@@ -486,7 +478,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       "all_day" => event.all_day,
       "calendar" => Transfer.calendar_key(event, integrations),
       "location" => Map.get(event, :location) || "",
-      "description" => Map.get(event, :description) || "",
+      "description" => EventVideo.strip_join_links(Map.get(event, :description)) || "",
       "free" => Map.get(event, :transparency) == "transparent",
       "guests" => []
     })

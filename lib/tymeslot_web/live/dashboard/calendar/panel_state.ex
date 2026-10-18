@@ -27,6 +27,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   # when it closes.
   @panel_prompts [:panel, :panel_repeat]
 
+  @doc "Whether `prompt` is a series question the panel asked."
+  @spec panel_prompt?(map() | nil) :: boolean()
+  def panel_prompt?(%{kind: kind}), do: kind in @panel_prompts
+  def panel_prompt?(_prompt), do: false
+
   @doc """
   Opens the panel on the loaded event `id`, closing the preview and any
   menu, and tells the hook the grid narrowed. An id that is not a loaded
@@ -38,6 +43,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       {:ok, event} ->
         without_draft(socket, fn socket ->
           socket
+          |> drop_prompts()
           |> assign(panel: new_panel(socket.assigns, event), preview: nil, open_menu: nil)
           |> push_event("calendar:panel", %{open: true})
         end)
@@ -57,7 +63,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def close(%{assigns: %{panel: %{event_id: id}}} = socket) do
     without_draft(socket, fn socket ->
       socket
-      |> assign(panel: nil, series_prompt: without_panel_prompt(socket.assigns.series_prompt))
+      |> drop_prompts()
+      |> assign(panel: nil)
       |> push_event("calendar:panel", %{open: false, focus: id})
     end)
   end
@@ -91,7 +98,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def give_way(%{assigns: %{panel: %{}}} = socket) do
     without_draft(socket, fn socket ->
       socket
-      |> assign(panel: nil, series_prompt: without_panel_prompt(socket.assigns.series_prompt))
+      |> drop_prompts()
+      |> assign(panel: nil)
       |> push_event("calendar:panel", %{open: false})
     end)
   end
@@ -168,6 +176,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   defp opening_status(integrations, event),
     do: if(EditGuard.editable?(integrations, event), do: :idle, else: :read_only)
 
-  defp without_panel_prompt(%{kind: kind}) when kind in @panel_prompts, do: nil
-  defp without_panel_prompt(prompt), do: prompt
+  # What the panel asked about its event goes when the panel leaves that
+  # event: the series question, the question about moving a series to another
+  # calendar and the one about removing a guest (the panel is the only place
+  # they are asked), since an answer would act on an event no longer shown.
+  # The grid's own series question (a drag or resize) stays.
+  defp drop_prompts(socket) do
+    assign(socket,
+      series_prompt:
+        if(panel_prompt?(socket.assigns.series_prompt),
+          do: nil,
+          else: socket.assigns.series_prompt
+        ),
+      series_move_prompt: nil,
+      remove_guest_prompt: nil
+    )
+  end
 end

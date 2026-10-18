@@ -41,9 +41,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   # of a booking also refuses (`EditGuard.check_timing/3`).
   @timing_fields [:all_day, :start_at, :end_at, :start_date, :end_date]
 
-  # The series questions the panel asks (see `SeriesScopeModal`).
-  @panel_prompts [:panel, :panel_repeat]
-
   @doc """
   Writes `changes` (fields `Tymeslot.CalendarGrid.EventEdit` takes) to the
   event `event_id`: a loaded event, or the panel's own when a reload has
@@ -131,21 +128,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   chosen, and keeps the scope for the panel's later changes.
   """
   @spec choose_scope(socket(), String.t()) :: socket()
-  def choose_scope(%{assigns: %{series_prompt: %{kind: kind} = prompt}} = socket, scope)
-      when kind in @panel_prompts do
-    case RecurrenceScope.parse(scope) do
-      {:ok, scope} ->
-        socket
-        |> assign(:series_prompt, nil)
-        |> keep_scope(prompt.kind, scope)
-        |> run(prompt.event, prompt, scope)
-
-      :error ->
-        assign(socket, :series_prompt, nil)
+  def choose_scope(%{assigns: %{series_prompt: prompt}} = socket, scope) do
+    with true <- PanelState.panel_prompt?(prompt),
+         {:ok, scope} <- RecurrenceScope.parse(scope) do
+      socket
+      |> assign(:series_prompt, nil)
+      |> keep_scope(prompt.kind, scope)
+      |> run(prompt.event, prompt, scope)
+    else
+      _no_panel_question_or_scope -> assign(socket, :series_prompt, nil)
     end
   end
-
-  def choose_scope(socket, _scope), do: assign(socket, :series_prompt, nil)
 
   # The answer to a field change's question holds for the panel's later
   # changes. The answer to a rule change's question is for that change

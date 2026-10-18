@@ -11,8 +11,7 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already a guest."
 msgstr "%{email} už je mezi hosty."
@@ -74,8 +73,8 @@ msgstr "Celodenní událost může trvat nejvýše rok."
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
 #, elixir-autogen, elixir-format
-msgid "An all-day event can last up to 366 days."
-msgstr "Celodenní událost může trvat nejvýše 366 dní."
+msgid "An all-day event can last up to %{count} days."
+msgstr "Celodenní událost může trvat nejvýše %{count} dní."
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
@@ -223,8 +222,7 @@ msgstr "Čas konce"
 msgid "Ends"
 msgstr "Konec"
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Zadejte platnou e-mailovou adresu."
@@ -516,7 +514,7 @@ msgstr "Uloženo"
 #: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
 #, elixir-autogen, elixir-format
 msgid "Saved here, waiting to reach %{account}"
-msgstr "Uloženo zde, čeká na odeslání: %{account}"
+msgstr "Uloženo zde, čeká na odeslání do %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
@@ -588,11 +586,6 @@ msgstr "Tento kalendář je jen pro čtení. Vyberte jiný."
 msgid "That change can't be undone any more."
 msgstr "Tuto změnu už nelze vrátit zpět."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "That contains characters that can't be saved."
-msgstr "Text obsahuje znaky, které nelze uložit."
-
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #, elixir-autogen, elixir-format
 msgid "That date or time can't be read."
@@ -612,11 +605,6 @@ msgstr "Text obsahuje znaky, které nelze uložit."
 #, elixir-autogen, elixir-format
 msgid "That video call can't be added."
 msgstr "Tento videohovor nelze přidat."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "That's too long. Keep it to %{count} characters."
-msgstr "Text je příliš dlouhý. Použijte nejvýše %{count} znaků."
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_video.ex
@@ -707,18 +695,13 @@ msgstr "Videohovor"
 
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #, elixir-autogen, elixir-format
-msgid "You can invite at most 50 guests at once."
-msgstr "Najednou můžete pozvat nejvýše 50 hostů."
+msgid "You can invite at most %{count} guests at once."
+msgstr "Najednou můžete pozvat nejvýše %{count} hostů."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #, elixir-autogen, elixir-format
 msgid "You're the organiser, so there's no need to invite yourself."
 msgstr "Událost pořádáte vy, takže sebe zvát nemusíte."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
-#, elixir-autogen, elixir-format
-msgid "You're the organiser, so you're already invited."
-msgstr "Událost pořádáte vy, takže pozvánku nepotřebujete."
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #, elixir-autogen, elixir-format

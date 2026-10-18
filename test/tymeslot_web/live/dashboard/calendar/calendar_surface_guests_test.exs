@@ -124,6 +124,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     refute_enqueued(worker: EmailWorker)
   end
 
+  test "closing the panel drops the removal question", %{lv: lv} do
+    lv
+    |> element(~s|#calendar-panel-guests button[phx-value-email="ada@example.com"]|)
+    |> render_click()
+
+    assert has_element?(lv, "#calendar-remove-guest")
+
+    lv |> element("#calendar-canvas") |> render_hook("panel:close", %{})
+
+    refute has_element?(lv, "#calendar-remove-guest")
+    refute_enqueued(worker: EmailWorker)
+  end
+
   test "confirming the removal tells the guest and saves the shorter list", %{lv: lv} do
     lv
     |> element(~s|#calendar-panel-guests button[phx-value-email="ada@example.com"]|)

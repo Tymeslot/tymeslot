@@ -24,9 +24,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
 
-  @max_title 500
-  @max_location 1_000
-  @max_description 5_000
+  @max_text %{title: 500, location: 1_000, description: 5_000}
   @max_guests 50
   @max_reminders 5
   # Four weeks.
@@ -92,8 +90,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   @spec cast(pos_integer(), [map()], map(), String.t()) ::
           {:ok, t()} | {:error, field(), atom()}
   def cast(user_id, integrations, params, timezone) when is_map(params) do
-    with {:ok, title} <- text(params["title"], :title, @max_title),
-         :ok <- present(title),
+    with {:ok, title} <- clean_text(:title, params["title"]),
          {:ok, all_day} <- flag(params["all_day"], :all_day),
          {:ok, start_at, end_at} <- timing(all_day, params["start"], params["end"], timezone),
          {:ok, integration, calendar_id} <- calendar(user_id, integrations, params["calendar"]),
@@ -141,8 +138,8 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
 
   # The optional fields, as the struct's keys.
   defp details(user_id, integration, params) do
-    with {:ok, location} <- text(params["location"], :location, @max_location),
-         {:ok, description} <- text(params["description"], :description, @max_description),
+    with {:ok, location} <- clean_text(:location, params["location"]),
+         {:ok, description} <- clean_text(:description, params["description"]),
          {:ok, guests} <- guests(user_id, params["guests"]),
          {:ok, free} <- flag(params["free"], :free),
          {:ok, reminders} <- reminders(params["reminders"]),
@@ -162,6 +159,24 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   end
 
   # --- text ---
+
+  @doc """
+  The text rule every create and panel edit shares: `value` for `field`
+  (`:title`, `:location` or `:description`) is trimmed, sanitised and held to
+  the field's limit, and a title must not be blank. `nil` is no text (a
+  blank title for `:title`). The panel's text fields use it, so a field
+  refuses what a create would.
+  """
+  @spec clean_text(:title | :location | :description, term()) ::
+          {:ok, String.t() | nil} | {:error, field(), :blank | :too_long | :invalid}
+  def clean_text(:title, value) do
+    with {:ok, title} <- text(value, :title, @max_text.title),
+         :ok <- present(title),
+         do: {:ok, title}
+  end
+
+  def clean_text(field, value) when field in [:location, :description],
+    do: text(value, field, Map.fetch!(@max_text, field))
 
   defp text(nil, _field, _max), do: {:ok, nil}
 

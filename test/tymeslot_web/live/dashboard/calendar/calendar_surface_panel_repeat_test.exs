@@ -225,6 +225,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelRepeatTest do
       refute_received {:written, _uid, _payload}
     end
 
+    test "closing the panel drops the series question, and opening another event does too", %{
+      lv: lv,
+      standup: standup,
+      review: review
+    } do
+      lv |> edit(standup) |> choose("daily")
+      assert has_element?(lv, "#calendar-series-scope")
+
+      lv |> element("#calendar-canvas") |> render_hook("panel:close", %{})
+      refute has_element?(lv, "#calendar-series-scope")
+
+      lv |> edit(standup) |> choose("daily")
+      assert has_element?(lv, "#calendar-series-scope")
+
+      edit(lv, review)
+      refute has_element?(lv, "#calendar-series-scope")
+      refute_receive {:written, _uid, _payload}, 200
+    end
+
     test "removing the rule is refused without asking", %{lv: lv, standup: standup} do
       lv |> edit(standup) |> choose("none")
 

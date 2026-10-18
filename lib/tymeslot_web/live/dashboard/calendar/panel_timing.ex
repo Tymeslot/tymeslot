@@ -212,7 +212,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
     do: dgettext("dashboard_calendar_editing", "Pick a date between 1900 and 2200.")
 
   defp too_long_all_day,
-    do: dgettext("dashboard_calendar_editing", "An all-day event can last up to 366 days.")
+    do:
+      dgettext("dashboard_calendar_editing", "An all-day event can last up to %{count} days.",
+        count: Moves.max_all_day_days()
+      )
 
   defp too_long, do: dgettext("dashboard_calendar_editing", "An event can last up to 7 days.")
 

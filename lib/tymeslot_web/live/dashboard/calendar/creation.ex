@@ -305,6 +305,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   end
 
   @doc """
+  What the panel says about one guest address it will not take: `:invalid`
+  (not an email), `:organiser` (the organiser's own) or `{:duplicate, email}`.
+  The New event state and an existing event's guest field share the words.
+  """
+  @spec guest_message(:invalid | :organiser | {:duplicate, String.t()}) :: String.t()
+  def guest_message(:invalid),
+    do: dgettext("dashboard_calendar_editing", "Enter a valid email address.")
+
+  def guest_message(:organiser),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "You're the organiser, so there's no need to invite yourself."
+      )
+
+  def guest_message({:duplicate, email}),
+    do: dgettext("dashboard_calendar_editing", "%{email} is already a guest.", email: email)
+
+  @doc """
   What a refusal from `CreateParams.cast/4` says, for the field it names.
   The side panel's "New event" state shows the same words.
   """
@@ -363,7 +382,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
       dgettext("dashboard_calendar_editing", "That text contains characters that can't be saved.")
 
   def refusal_message(:guests, :too_many),
-    do: dgettext("dashboard_calendar_editing", "You can invite at most 50 guests at once.")
+    do:
+      dgettext("dashboard_calendar_editing", "You can invite at most %{count} guests at once.",
+        count: CreateParams.max_guests()
+      )
 
   def refusal_message(:guests, _invalid),
     do:

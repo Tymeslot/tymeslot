@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -208,14 +209,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
         {:ok, email}
 
       {:ok, []} ->
-        {:invalid,
-         dgettext(
-           "dashboard_calendar_editing",
-           "You're the organiser, so there's no need to invite yourself."
-         )}
+        {:invalid, Creation.guest_message(:organiser)}
 
       {:error, :guests, _reason} ->
-        {:invalid, dgettext("dashboard_calendar_editing", "Enter a valid email address.")}
+        {:invalid, Creation.guest_message(:invalid)}
     end
   end
 
@@ -223,9 +220,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   # the same whatever its case.
   defp new_guest(event, email) do
     if Enum.any?(of(event), &(is_binary(&1.email) and String.downcase(&1.email) == email)),
-      do:
-        {:invalid,
-         dgettext("dashboard_calendar_editing", "%{email} is already a guest.", email: email)},
+      do: {:invalid, Creation.guest_message({:duplicate, email})},
       else: :ok
   end
 

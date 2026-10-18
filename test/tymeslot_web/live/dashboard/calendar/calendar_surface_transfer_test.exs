@@ -236,6 +236,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
              )
     end
 
+    test "closing the panel drops the question", %{lv: lv, integration: integration} do
+      choose_calendar(lv, "#{integration.id}:family")
+      assert has_element?(lv, "#calendar-series-move")
+
+      lv |> element("#calendar-canvas") |> render_hook("panel:close", %{})
+
+      refute has_element?(lv, "#calendar-series-move")
+    end
+
     test "cancelling leaves the series where it was", %{lv: lv, integration: integration} do
       choose_calendar(lv, "#{integration.id}:family")
       lv |> element("#calendar-series-move-cancel") |> render_click()

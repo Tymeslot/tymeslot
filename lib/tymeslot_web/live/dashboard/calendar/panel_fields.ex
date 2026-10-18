@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   The side panel's plain fields: what a title, place or notes edit writes,
   the Busy/Free switch, and the reminder choice.
 
-  Text is sanitised and trimmed with the old calendar's limits (title 500,
-  place 1,000, notes 5,000 characters). The reminder field offers None and
+  Text goes through `CreateParams.clean_text/2`, the rule a create uses (title
+  500, place 1,000, notes 5,000 characters, a title never blank). The reminder field offers None and
   the lead times `ReminderForm` allows, as one notification; every other
   alarm the event carries (an email, a lead time another app set, a second
   notification) is kept as it is and listed under the field.
@@ -13,15 +13,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.Integrations.Calendar.Reminder
-  alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Components.Calendar.ReminderForm
   alias TymeslotWeb.Components.Calendar.RemindersEditor
+  alias TymeslotWeb.Dashboard.Calendar.Creation
 
   @text_fields %{
-    "title" => {:summary, 500},
-    "location" => {:location, 1000},
-    "notes" => {:description, 5000}
+    "title" => {:summary, :title},
+    "location" => {:location, :location},
+    "notes" => {:description, :description}
   }
 
   @doc """
@@ -30,27 +31,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   """
   @spec text_change(String.t(), String.t()) :: {:ok, map()} | {:error, String.t()}
   def text_change(field, value) when is_binary(value) do
-    {key, max_length} = Map.fetch!(@text_fields, field)
+    {key, create_field} = Map.fetch!(@text_fields, field)
 
-    case UniversalSanitizer.sanitize_and_validate(value,
-           mode: :plain_text,
-           max_length: max_length
-         ) do
-      {:ok, clean} -> {:ok, %{key => String.trim(clean)}}
-      {:error, _reason} -> {:error, text_error(value, max_length)}
+    case CreateParams.clean_text(create_field, value) do
+      {:ok, clean} -> {:ok, %{key => clean}}
+      {:error, _field, reason} -> {:error, Creation.refusal_message(create_field, reason)}
     end
-  end
-
-  # The sanitiser's reason is translated text, so the two cases are told
-  # apart by the input itself.
-  defp text_error(value, max_length) do
-    if String.length(value) > max_length,
-      do:
-        dgettext("dashboard_calendar_editing", "That's too long. Keep it to %{count} characters.",
-          count: max_length
-        ),
-      else:
-        dgettext("dashboard_calendar_editing", "That contains characters that can't be saved.")
   end
 
   @doc "The `transparency` a Busy/Free choice writes."

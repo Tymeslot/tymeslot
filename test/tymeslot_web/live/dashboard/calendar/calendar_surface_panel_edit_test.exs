@@ -108,7 +108,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
     |> element("#calendar-panel-title")
     |> render_blur(%{"value" => String.duplicate("a", 501)})
 
-    assert has_element?(lv, "#calendar-panel", "That's too long. Keep it to 500 characters.")
+    assert has_element?(
+             lv,
+             "#calendar-panel",
+             "The title is too long. Keep it under 500 characters."
+           )
+
+    refute_receive {:written, _uid, _payload}, 200
+  end
+
+  test "a blank title is refused in the field, as a create refuses it", %{
+    lv: lv,
+    review: review
+  } do
+    lv
+    |> edit(review)
+    |> element("#calendar-panel-title")
+    |> render_blur(%{"value" => "   "})
+
+    assert has_element?(lv, "#calendar-panel", "Give the event a title.")
     refute_receive {:written, _uid, _payload}, 200
   end
 
@@ -152,7 +170,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
       |> element("#calendar-canvas")
       |> render_hook("panel:close", %{"field" => "title", "value" => String.duplicate("a", 501)})
 
-      assert has_element?(lv, "#calendar-panel", "That's too long. Keep it to 500 characters.")
+      assert has_element?(
+               lv,
+               "#calendar-panel",
+               "The title is too long. Keep it under 500 characters."
+             )
+
       refute_receive {:written, _uid, _payload}, 200
     end
 
