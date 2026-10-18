@@ -43,10 +43,12 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
   end
 
   defp with_copy(booking, copies, integrations) do
-    booking
-    |> Meetings.calendar_event_identifiers()
-    |> Enum.find_value(&Map.get(copies, &1))
-    |> case do
+    row =
+      booking
+      |> Meetings.calendar_event_identifiers()
+      |> Enum.find_value(&Map.get(copies, &1))
+
+    case row do
       nil -> booking
       row -> %{booking | copy: copy(row, integrations)}
     end
