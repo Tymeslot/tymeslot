@@ -4,11 +4,14 @@ defmodule Tymeslot.Availability.BookableWindows do
   type, and the first of them ahead.
 
   A window is the union of the meetings the booking page offers: every start
-  `Tymeslot.Availability.Offer.starts_in_range/4` lists, held for the meeting
+  `Tymeslot.Availability.Offer.starts_in_range/5` lists, held for the meeting
   type's duration, merged where they touch or overlap. The booking page labels
   the same starts, so a time inside a window is a time a guest can book, and
   nothing a guest can book lies outside one. A free stretch too short for the
-  meeting, or off the slot grid, is in no window.
+  meeting, or off the slot grid, is in no window. The starts are read with
+  the cached booking-window events (`events: :cached`), the read the booking
+  page's day and month views share, so a window is never fresher or staler
+  than the page.
 
   Dates are the organiser's (their profile's timezone); windows come back in
   UTC. The meeting type must be the user's, active and not archived.
@@ -22,7 +25,7 @@ defmodule Tymeslot.Availability.BookableWindows do
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
 
-  # The longest range `Offer.starts_in_range/4` answers, which is also the
+  # The longest range `Offer.starts_in_range/5` answers, which is also the
   # step `next/3` searches in.
   @step_days 42
   @utc "Etc/UTC"

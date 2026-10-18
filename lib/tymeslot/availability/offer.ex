@@ -304,11 +304,12 @@ defmodule Tymeslot.Availability.Offer do
     end
   end
 
-  # `free_slots/3` for every day of a range, labelled from `range_starts/4`.
-  # Everything that does not depend on the day read once: the calendar (whose fetch covers the whole
-  # booking window whatever date it is given), the proven reschedule meeting,
-  # the booking-limit counts over the range, and the schedule's weekly hours,
-  # overrides and time off for the range and a day either side, which
+  # `free_slots/3` for every day of a range, labelled from `range_starts/5`.
+  # Everything that does not depend on the day read once: the calendar (whose
+  # fetch covers the whole booking window whatever date it is given), the
+  # proven reschedule meeting, the booking-limit counts over the range, and
+  # the schedule's weekly hours, overrides and time off for the range and a
+  # day either side, which
   # `Calculate.available_starts/6` then finds already in the config. The busy
   # set is merged over the range, so each day sees every booking and event
   # that `free_slots/3` would merge for it alone.
@@ -380,6 +381,16 @@ defmodule Tymeslot.Availability.Offer do
       end
     end
   end
+
+  defp range_events(%{profile: %{user_id: user_id}} = request, start_date, :fresh) do
+    CalendarEvents.get_calendar_events_from_context(
+      start_date,
+      user_id,
+      calendar_context(request)
+    )
+  end
+
+  defp range_events(request, start_date, :cached), do: booking_window_events(request, start_date)
 
   # `day_result` for every day of the range, keyed by `key.(date)`; the first
   # day that fails fails the range.
@@ -488,16 +499,6 @@ defmodule Tymeslot.Availability.Offer do
   # empty for the TTL. `Tymeslot.Availability.changed/1` drops this
   # entry with the folded maps, so a calendar sync cannot leave the two
   # disagreeing about how fresh they are.
-  defp range_events(%{profile: %{user_id: user_id}} = request, start_date, :fresh) do
-    CalendarEvents.get_calendar_events_from_context(
-      start_date,
-      user_id,
-      calendar_context(request)
-    )
-  end
-
-  defp range_events(request, start_date, :cached), do: booking_window_events(request, start_date)
-
   defp booking_window_events(%{profile: %{user_id: user_id}} = request, start_date) do
     AvailabilityCache.get_or_compute_events(
       AvailabilityCache.booking_window_events_key(user_id),

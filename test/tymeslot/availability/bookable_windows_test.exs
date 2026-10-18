@@ -272,6 +272,42 @@ defmodule Tymeslot.Availability.BookableWindowsTest do
       assert {:ok, nil} = Availability.next_bookable(user.id, meeting_type.id, DateTime.utc_now())
     end
 
+    test "skips starts before after_at, on the slot grid" do
+      %{user: user} = create_bookable_profile(days: [3])
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+      monday = Date.utc_today() |> Date.beginning_of_week(:monday) |> Date.add(14)
+      wednesday = Date.add(monday, 2)
+
+      assert {:ok, next} =
+               Availability.next_bookable(user.id, meeting_type.id, at(wednesday, ~T[13:10:00]))
+
+      assert DateTime.compare(next, at(wednesday, ~T[13:30:00])) == :eq
+    end
+
+    test "moves to the next open day when after_at is past the day's last start" do
+      %{user: user} = create_bookable_profile(days: [3])
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+      monday = Date.utc_today() |> Date.beginning_of_week(:monday) |> Date.add(14)
+      wednesday = Date.add(monday, 2)
+
+      assert {:ok, next} =
+               Availability.next_bookable(user.id, meeting_type.id, at(wednesday, ~T[17:00:00]))
+
+      assert DateTime.compare(next, at(Date.add(wednesday, 7), ~T[11:00:00])) == :eq
+    end
+
+    test "an archived or inactive meeting type is not found" do
+      %{user: user} = create_bookable_profile()
+      archived = insert(:meeting_type, user: user, is_archived: true)
+      inactive = insert(:meeting_type, user: user, is_active: false)
+
+      assert {:error, :not_found} =
+               Availability.next_bookable(user.id, archived.id, DateTime.utc_now())
+
+      assert {:error, :not_found} =
+               Availability.next_bookable(user.id, inactive.id, DateTime.utc_now())
+    end
+
     test "another user's meeting type is not found" do
       %{user: user} = create_bookable_profile()
 
