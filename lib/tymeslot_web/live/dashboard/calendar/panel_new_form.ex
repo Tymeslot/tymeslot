@@ -48,7 +48,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         value={@values["all_day"]}
         label={dgettext("dashboard_calendar_editing", "All day")}
       />
-      <div class="grid grid-cols-2 gap-2">
+      <%!-- A date and time does not fit half the panel's width: one per row. --%>
+      <div
+        id="calendar-panel-new-span"
+        class={["grid gap-2", if(@values["all_day"], do: "grid-cols-2", else: "grid-cols-1")]}
+      >
         <.input
           type={if @values["all_day"], do: "date", else: "datetime-local"}
           id="calendar-panel-new-start"

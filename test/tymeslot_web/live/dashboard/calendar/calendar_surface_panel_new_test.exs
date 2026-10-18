@@ -309,10 +309,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
 
     assert has_element?(lv, "#calendar-panel-new-all-day")
     refute has_element?(lv, "#calendar-panel-new-all-day[checked]")
+    # A date and time is too wide for half the panel: Starts and Ends stack.
+    assert has_element?(lv, "#calendar-panel-new-span.grid-cols-1")
 
     render_change(new_form(lv), %{"_target" => ["all_day"], "all_day" => "true"})
 
     assert has_element?(lv, "#calendar-panel-new-all-day[checked]")
+    assert has_element?(lv, "#calendar-panel-new-span.grid-cols-2")
     assert has_element?(lv, ~s|#calendar-panel-new-form input[name="start"][value="2026-10-15"]|)
     assert has_element?(lv, ~s|#calendar-panel-new-form input[name="end"][value="2026-10-15"]|)
   end
