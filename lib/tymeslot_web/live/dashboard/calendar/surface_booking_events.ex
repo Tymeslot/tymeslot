@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   @type socket :: Phoenix.LiveView.Socket.t()
 
   @doc "Answers an event as `CalendarSurface.handle_event/3` would."
-  @spec handle(String.t(), map(), socket()) :: {:noreply, socket()} | {:reply, map(), socket()}
+  @spec handle(String.t(), map(), socket()) :: {:noreply, socket()}
   def handle("booking:" <> name, params, socket),
     do: {:noreply, BookingActions.handle(name, params, socket)}
 

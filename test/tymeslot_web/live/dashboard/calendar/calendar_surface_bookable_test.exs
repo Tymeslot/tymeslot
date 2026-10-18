@@ -162,6 +162,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookableTest do
       refute on_day?(layer, "2026-10-15")
     end
 
+    # With the layer off every reload pushes at once (and computes nothing),
+    # so the pushes count the reloads exactly; with it on, a second load
+    # cancels the first, which hides whether it ran.
+    test "changes in quick succession reload the layer once", %{conn: conn, user: user} do
+      {:ok, _preferences} = CalendarPreferencesQueries.upsert(user.id, %{bookable_layer: false})
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      await_bookable(lv, &(&1.on == false))
+
+      Availability.changed(user.id)
+      Availability.changed(user.id)
+
+      assert_push_event(lv, "calendar:bookable", %{on: false}, 1_000)
+      refute_push_event(lv, "calendar:bookable", _payload, 500)
+    end
+
     test "switching the layer off clears it, and on loads it again", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       await_bookable(lv, &on_day?(&1, "2026-10-15"))

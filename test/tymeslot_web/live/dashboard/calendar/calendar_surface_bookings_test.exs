@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
 
   import Mox
 
-  require Logger
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 

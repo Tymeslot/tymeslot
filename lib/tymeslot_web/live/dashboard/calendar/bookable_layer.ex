@@ -24,12 +24,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
   """
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [push_event: 3, start_async: 3]
+  import Phoenix.LiveView, only: [cancel_async: 2, push_event: 3, start_async: 3]
+
+  require Logger
 
   alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.BookablePayload
   alias Tymeslot.CalendarGrid.LayerPreferences
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
 
@@ -52,14 +55,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
         today = socket.assigns.today
         now = Clock.utc_now()
 
-        start_async(
-          socket,
+        # Stop a load still in flight: its answer would be dropped anyway,
+        # and it may be waiting on a calendar provider.
+        socket
+        |> cancel_async(:bookable)
+        |> start_async(
           :bookable,
           Tasks.with_context(fn -> compute(user.id, type_id, range, today, now) end)
         )
 
       {on, type} ->
-        push(socket, %{on: on, meeting_type: shown(type), windows: [], next: nil, error: false})
+        socket
+        |> cancel_async(:bookable)
+        |> push(%{on: on, meeting_type: shown(type), windows: [], next: nil, error: false})
     end
   end
 
@@ -89,7 +97,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
           error: false
         })
 
-      {true, %{} = type, _failed} ->
+      {true, %{} = type, failed} ->
+        log_failure(socket, type, failed)
         push(socket, %{on: true, meeting_type: shown(type), windows: [], next: nil, error: true})
 
       _off_or_no_type ->
@@ -119,8 +128,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
     end
   end
 
+  defp log_failure(socket, type, failed) do
+    reason =
+      case failed do
+        {:ok, {:error, reason}} -> reason
+        {:exit, reason} -> {:exit, reason}
+        other -> other
+      end
+
+    Logger.warning("Bookable layer failed to load",
+      user_id: socket.assigns.current_user.id,
+      meeting_type_id: type.id,
+      reason: LogFormat.reason(reason)
+    )
+  end
+
   # The loaded window from today on, since nothing before now is bookable,
   # and at most @max_days long; nil when the whole window is in the past.
+  # The surface's longest view is a week (loaded with a week either side),
+  # so the clamp never bites today; a future month view should anchor the
+  # range on the visible period rather than the loaded window's first day.
   defp range(%{window: %Date.Range{first: first, last: last}, today: today}) do
     from = Enum.max([first, today], Date)
 
