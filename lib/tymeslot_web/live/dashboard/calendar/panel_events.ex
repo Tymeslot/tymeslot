@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelState
+  alias TymeslotWeb.Dashboard.Calendar.PanelTiming
 
   # The text fields, by the event each sends (see `PanelFields.text_change/2`).
   @text_fields ~w(title location notes)
@@ -67,6 +68,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
+  # Timing is changed only on an event whose timing can change: not a
+  # booking, not a booking's calendar copy (the fields are disabled there,
+  # but parameters are client input).
+  def handle("timing", params, socket) do
+    case movable_event(socket) do
+      nil ->
+        socket
+
+      event ->
+        case PanelTiming.change(event, params, socket.assigns.timezone) do
+          {:ok, changes, opts} ->
+            socket |> PanelState.put_error("timing", nil) |> write(changes, opts)
+
+          :unchanged ->
+            PanelState.put_error(socket, "timing", nil)
+
+          {:error, message} ->
+            PanelState.put_error(socket, "timing", message)
+        end
+    end
+  end
+
+  def handle("all_day", _params, socket) do
+    case movable_event(socket) do
+      nil ->
+        socket
+
+      event ->
+        {changes, opts} = PanelTiming.toggle_all_day(event, socket.assigns.timezone)
+        socket |> PanelState.put_error("timing", nil) |> write(changes, opts)
+    end
+  end
+
   def handle(_name, _params, socket), do: socket
 
   # An older failure must not read as this attempt's refusal.
@@ -84,4 +118,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelEdits.write(socket, id, changes, opts)
 
   defp write(socket, _changes, _opts), do: socket
+
+  defp movable_event(socket) do
+    event = PanelState.current_event(socket.assigns)
+    if event && EditGuard.movable?(socket.assigns.integrations, event), do: event
+  end
 end

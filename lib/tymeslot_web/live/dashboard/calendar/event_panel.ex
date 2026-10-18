@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
+  alias TymeslotWeb.Dashboard.Calendar.PanelTiming
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   @impl Phoenix.LiveComponent
@@ -101,6 +102,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           phx-key="Enter"
           phx-target={@surface}
         />
+        <PanelTiming.timing_fields
+          :if={timed_or_all_day?(@event)}
+          timing={PanelTiming.fields(@event, @context.timezone)}
+          disabled={!@movable}
+          error={@panel.errors["timing"]}
+          target={@surface}
+        />
+        <%!-- Repeat (Task 19) goes here. --%>
         <%!-- Calendar (Task 20) goes here. --%>
         <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />
         <.input
@@ -145,6 +154,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   defp title_value(%{kind: :booking} = booking), do: EventPayload.title(booking)
   defp title_value(event), do: Map.get(event, :summary) || ""
+
+  defp timed_or_all_day?(%{all_day: true, start_date: %Date{}}), do: true
+  defp timed_or_all_day?(%{start_at: %DateTime{}, end_at: %DateTime{}}), do: true
+  defp timed_or_all_day?(_event), do: false
 
   defp free?(event), do: Map.get(event, :transparency) == "transparent"
 
