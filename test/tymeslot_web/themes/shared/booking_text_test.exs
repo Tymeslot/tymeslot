@@ -45,6 +45,44 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
 
       assert BookingText.greeting(profile, nil) == "Hi! I'm the team."
     end
+
+    # Blank means unsaid: the theme's default must not stand in for it, or a
+    # cleared line would come straight back on the page.
+    test "leaves a blank greeting or instruction unsaid on every theme" do
+      profile = customized(booking_greeting: nil, booking_instruction: nil)
+
+      for key <- [:quill, :rhythm, :paper, :folio] do
+        assert BookingText.greeting(profile, "Sam", key) == nil
+        assert BookingText.instruction(profile, key) == nil
+      end
+    end
+  end
+
+  describe "a voice's unsaid line" do
+    test "comes back as nil, so a theme renders nothing for it" do
+      profile = build(:profile, booking_text_enabled: false)
+
+      assert BookingText.greeting(profile, "Sam", :paper) == nil
+      assert BookingText.instruction(profile, :folio) == nil
+    end
+
+    test "seeds the dashboard's field blank, named or not" do
+      assert BookingText.seed_greeting("Sam", :paper) == ""
+      assert BookingText.seed_greeting(nil, :paper) == ""
+      assert BookingText.default_instruction(:folio) == ""
+    end
+
+    # The trap: Quill and Rhythm's greeting was required because an empty
+    # intro looked broken there, so their seed stays a greeting.
+    test "leaves Quill and Rhythm seeding, and then rendering, their greeting" do
+      for key <- [:quill, :rhythm] do
+        assert BookingText.seed_greeting("Sam", key) == "Hi! I'm Sam."
+        assert BookingText.seed_greeting(nil, key) == "Hi there!"
+
+        seeded = customized(booking_greeting: BookingText.seed_greeting("Sam", key))
+        assert BookingText.greeting(seeded, "Sam", key) == "Hi! I'm Sam."
+      end
+    end
   end
 
   describe "defaults" do
@@ -78,10 +116,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
 
     test "seed a greeting even for a nameless profile, which the default drops" do
       # The switch writes all three lines at once, so a profile with no name
-      # still needs something to start from; "on but blank" is a state the
-      # changeset refuses and a form with no save button could never leave.
-      # Asserting through the changeset is the point: a seed the changeset
-      # rejects would strand the switch, whatever its type.
+      # starts from a friendly line it can keep, edit or clear. Asserting
+      # through the changeset is the point: a seed the changeset rejects
+      # would strand the switch, whatever its type.
       assert BookingText.default_greeting(nil) == nil
 
       changeset =

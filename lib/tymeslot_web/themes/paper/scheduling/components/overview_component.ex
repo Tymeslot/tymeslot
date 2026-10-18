@@ -73,8 +73,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.OverviewComponent do
         <header class="paper-intro">
           <Components.avatar :if={is_nil(@logo)} profile={@organizer_profile} size={:lg} />
           <h1 class="paper-title">{@heading}</h1>
-          <p :if={@greeting not in [nil, ""]} class="paper-intro__greeting">{@greeting}</p>
-          <p class="paper-intro__instruction">{@instruction}</p>
+          <p :if={@greeting} class="paper-intro__greeting">{@greeting}</p>
+          <p :if={@instruction} class="paper-intro__instruction">{@instruction}</p>
         </header>
 
         <div class="paper-choices">

@@ -26,6 +26,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    profile = assigns.organizer_profile
+
+    # Either line may be unsaid (`nil`), and then is not rendered at all.
+    assigns =
+      assign(assigns,
+        greeting: BookingText.greeting(profile, Profiles.display_name(profile), :rhythm),
+        instruction: BookingText.instruction(profile, :rhythm)
+      )
+
     ~H"""
     <div
       class="scheduling-box booker-card"
@@ -56,17 +65,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   <.icon name="hero-check-mini" class="avatar-checkmark__icon" />
                 </div>
               </div>
-              <div class="organizer-info">
-                <p class="organizer-greeting">
-                  {BookingText.greeting(
-                    @organizer_profile,
-                    Profiles.display_name(@organizer_profile),
-                    :rhythm
-                  )}
-                </p>
-                <p class="organizer-instruction">
-                  {BookingText.instruction(@organizer_profile, :rhythm)}
-                </p>
+              <div :if={@greeting || @instruction} class="organizer-info">
+                <p :if={@greeting} class="organizer-greeting">{@greeting}</p>
+                <p :if={@instruction} class="organizer-instruction">{@instruction}</p>
               </div>
             </div>
 

@@ -591,6 +591,25 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     assert has_element?(view, ".paper-intro__greeting", "I am Ana.")
   end
 
+  test "the organiser's blank greeting and instruction leave no paragraph behind",
+       %{conn: conn, profile: profile} do
+    profile
+    |> Changeset.change(%{
+      booking_text_enabled: true,
+      booking_heading: "Ready to grow your business?",
+      booking_greeting: nil,
+      booking_instruction: nil
+    })
+    |> Repo.update!()
+
+    {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+
+    assert has_element?(view, ".paper-title", "Ready to grow your business?")
+    refute has_element?(view, ".paper-intro__greeting")
+    # Blank means unsaid: Paper's own instruction does not stand in for it.
+    refute has_element?(view, ".paper-intro__instruction")
+  end
+
   test "the dashboard's and the onboarding wizard's pickers offer Paper" do
     assert {"Paper", "3"} in ThemeInfo.theme_options()
   end

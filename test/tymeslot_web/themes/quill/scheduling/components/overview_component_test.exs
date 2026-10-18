@@ -101,6 +101,27 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       refute html =~ ~r/overview-description[^>]*>\s*<br/
     end
 
+    test "leaves out a greeting the organiser left blank, with no line break before the instruction" do
+      html = render_overview(organizer_profile: customised(nil, "Please select a meeting type."))
+
+      assert html =~ ~r/overview-description[^>]*>\s*Please select a meeting type\.\s*<\/p>/
+      refute html =~ "Hi! I&#39;m"
+    end
+
+    test "leaves out an instruction the organiser left blank, with no line break after the greeting" do
+      html = render_overview(organizer_profile: customised("Feel free to book.", nil))
+
+      assert html =~ ~r/overview-description[^>]*>\s*Feel free to book\.\s*<\/p>/
+      refute html =~ "Pick an option to get started."
+    end
+
+    test "renders no description at all when the organiser left both lines blank" do
+      html = render_overview(organizer_profile: customised(nil, nil))
+
+      assert html =~ "Book a call"
+      refute html =~ "overview-description"
+    end
+
     test "keeps the theme's wording when the organiser has switched the customisation off" do
       profile =
         build(:profile,
@@ -180,6 +201,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     }
 
     render_component(OverviewComponent, Map.merge(base, Map.new(overrides)))
+  end
+
+  defp customised(greeting, instruction) do
+    build(:profile,
+      full_name: "Sarah Rodriguez",
+      booking_text_enabled: true,
+      booking_heading: "Book a call",
+      booking_greeting: greeting,
+      booking_instruction: instruction
+    )
   end
 
   defp duration_option_count(html) do

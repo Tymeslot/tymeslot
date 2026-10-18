@@ -57,6 +57,39 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponentTest 
       assert html =~ ~r/organizer-instruction[^>]*>\s*Choose a session\./
     end
 
+    test "leaves out a greeting the organiser left blank rather than an empty paragraph" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: true,
+          booking_heading: "Book a call",
+          booking_greeting: nil,
+          booking_instruction: "Choose a session."
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ ~r/organizer-instruction[^>]*>\s*Choose a session\./
+      refute html =~ "organizer-greeting"
+      refute html =~ "Hi! I&#39;m"
+    end
+
+    test "drops the welcome block when the organiser left both lines blank" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: true,
+          booking_heading: "Book a call",
+          booking_greeting: nil,
+          booking_instruction: nil
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ "Book a call"
+      refute html =~ "organizer-info"
+    end
+
     test "keeps the theme's wording when the organiser has switched the customisation off" do
       profile =
         build(:profile,

@@ -81,6 +81,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    profile = assigns.organizer_profile
+
+    # Either line may be unsaid (`nil`), and then is not rendered at all.
+    assigns =
+      assign(assigns,
+        greeting: BookingText.greeting(profile, Profiles.display_name(profile), :quill),
+        instruction: BookingText.instruction(profile, :quill)
+      )
+
     ~H"""
     <div
       class="container quill-container flex-1"
@@ -121,11 +130,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                     <%!-- Greeting and instruction are separate settings, often
                          separate thoughts; each starts on its own line, as the
                          Rhythm theme shows them. --%>
-                    <p class="overview-description text-glass-primary">
-                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile), :quill) do %>
-                        {greeting}<br />
-                      <% end %>
-                      {BookingText.instruction(@organizer_profile, :quill)}
+                    <p
+                      :if={@greeting || @instruction}
+                      class="overview-description text-glass-primary"
+                    >
+                      {@greeting}<br :if={@greeting && @instruction} />{@instruction}
                     </p>
 
                     <div class="overview-duration-list">

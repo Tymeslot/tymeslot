@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.OfferMoment do
       >
         {@heading}
       </JourneyComponents.moment_heading>
-      <p :if={@instruction not in [nil, ""]} class="folio-muted">{@instruction}</p>
+      <p :if={@instruction} class="folio-muted">{@instruction}</p>
 
       <%= cond do %>
         <% @locked -> %>

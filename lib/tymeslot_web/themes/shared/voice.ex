@@ -49,14 +49,25 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   | `:answer_no` | none | "No" (a yes/no question) |
   | `:acknowledge` | none | "I acknowledge the above" (a note question's checkbox) |
 
+  So `c:text/2` has three answers: `nil` keeps the shared wording, a string
+  is the theme's wording, and `""` says nothing: the line is dropped where it
+  is optional. Only the `:greeting` and the `:instruction` are optional
+  (`BookingText`); every other line must be said. A `""` must not depend on
+  the bindings, as the dashboard asks a `:greeting` with an empty name to
+  learn whether the theme greets at all (`BookingText.seed_greeting/2`).
+
   The organiser's own wording (`booking_text_enabled`) still wins over any
-  voice, as it wins over the shared wording.
+  voice, as it wins over the shared wording, and seeds from the voice's
+  lines, `""` included.
   """
 
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
-  @doc "The line for `key` in the theme's words, or `nil` to keep the shared wording."
+  @doc """
+  The line for `key` in the theme's words, `nil` to keep the shared wording,
+  or `""` to say nothing for an optional line.
+  """
   @callback text(key :: atom(), bindings :: map()) :: String.t() | nil
 
   @keys %{

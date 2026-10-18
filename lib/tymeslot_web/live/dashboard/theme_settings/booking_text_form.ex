@@ -156,23 +156,21 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
               <.input
                 field={@form[:booking_greeting]}
                 type="text"
-                required={enabled?(@form)}
                 disabled={not enabled?(@form)}
                 phx-debounce="600"
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Greeting")}
-                placeholder={default_for(:booking_greeting, @profile)}
+                placeholder={placeholder_for(:booking_greeting, @profile)}
               />
 
               <.input
                 field={@form[:booking_instruction]}
                 type="text"
-                required={enabled?(@form)}
                 disabled={not enabled?(@form)}
                 phx-debounce="600"
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Instruction")}
-                placeholder={default_for(:booking_instruction, @profile)}
+                placeholder={placeholder_for(:booking_instruction, @profile)}
               />
 
               <.info_box variant={:info}>
@@ -309,26 +307,20 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   defp default_for(:booking_heading, profile),
     do: BookingText.default_heading(current_theme_key(profile), name(profile))
 
+  # The greeting and the instruction seed from the current theme's own line,
+  # blank included: a voice may say nothing for either (Paper greets nobody,
+  # Folio gives no instruction), and switching the customisation on must not
+  # put a line back on its page. Both are optional, so a blank seed saves.
   defp default_for(:booking_greeting, profile),
-    do:
-      seeded(
-        BookingText.seed_greeting(name(profile), current_theme_key(profile)),
-        fn -> BookingText.seed_greeting(name(profile)) end
-      )
+    do: BookingText.seed_greeting(name(profile), current_theme_key(profile))
 
   defp default_for(:booking_instruction, profile),
-    do:
-      seeded(
-        BookingText.default_instruction(current_theme_key(profile)),
-        &BookingText.default_instruction/0
-      )
+    do: BookingText.default_instruction(current_theme_key(profile))
 
-  # A voice may say nothing for a line (Paper greets nobody, Folio gives no
-  # instruction label). The field is required while the customisation is on,
-  # so it starts from the shared wording, which the organiser edits or keeps.
-  defp seeded(text, shared) do
-    if String.trim(text) != "", do: text, else: shared.()
-  end
+  # The shared wording, shown only as a placeholder: a hint at what the line
+  # is for, which the organiser may leave blank.
+  defp placeholder_for(:booking_greeting, profile), do: BookingText.seed_greeting(name(profile))
+  defp placeholder_for(:booking_instruction, _profile), do: BookingText.default_instruction()
 
   # Clearing on the way in is what makes a newer edit replace a held one: this
   # attempt supersedes it, and only a throttle puts anything back.

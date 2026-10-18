@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
   import Ecto.Changeset, only: [change: 2]
   import Tymeslot.DashboardTestHelpers
 
+  alias Tymeslot.Factory
   alias Tymeslot.Repo
 
   setup :setup_dashboard_user_with_theme
@@ -82,8 +83,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       {:ok, view, html} = live(conn, ~p"/dashboard/theme")
 
       assert html =~ ~s(placeholder="Book a time")
-      assert html =~ ~s(placeholder="Hello, Sarah here.")
-      assert html =~ ~s(placeholder="Choose a meeting to start.")
+      # The greeting and instruction placeholders are the shared wording; the
+      # voice's own lines are what the fields are seeded with.
+      assert html =~ ~s(placeholder="Hi! I&#39;m Sarah.")
+      assert html =~ ~s(placeholder="Pick an option to get started.")
 
       toggle(view)
 
@@ -93,26 +96,26 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       assert saved.booking_instruction == "Choose a meeting to start."
     end
 
-    # Pins today's behaviour: the form cannot yet keep a voice's empty line,
-    # so it seeds the shared wording instead. Not the intended end state.
-    test "seeds the shared greeting on Paper, whose voice greets nobody", %{
+    # Switching on must not put a line back on a page whose voice leaves it
+    # unsaid: Paper greets nobody, so the greeting is seeded blank.
+    test "keeps Paper's greeting blank, showing the shared wording only as a placeholder", %{
       conn: conn,
       profile: profile
     } do
       profile |> change(%{booking_theme: "3"}) |> Repo.update!()
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
-      toggle(view)
+      html = toggle(view)
 
       saved = Repo.reload!(profile)
       assert saved.booking_text_enabled
       assert saved.booking_heading == "Book a meeting with Sarah"
-      assert saved.booking_greeting == "Hi! I'm Sarah."
+      assert saved.booking_greeting == nil
+      assert saved.booking_instruction == "Select a meeting type"
+      assert html =~ ~s(placeholder="Hi! I&#39;m Sarah.")
     end
 
-    # Pins today's behaviour: the form cannot yet keep a voice's empty line,
-    # so it seeds the shared wording instead. Not the intended end state.
-    test "seeds the shared instruction on Folio, whose voice gives no instruction label", %{
+    test "keeps Folio's instruction blank, as its voice gives no instruction label", %{
       conn: conn,
       profile: profile
     } do
@@ -124,7 +127,51 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
       saved = Repo.reload!(profile)
       assert saved.booking_text_enabled
       assert saved.booking_heading == "Ways to work with me"
-      assert saved.booking_instruction == "Pick an option to get started."
+      assert saved.booking_instruction == nil
+    end
+
+    test "lets Paper's organiser clear a greeting, which the booking page then leaves out", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      # A calendar is what makes the booking page ready to show its overview.
+      Factory.insert(:calendar_integration, user: user, is_active: true)
+
+      profile
+      |> change(%{
+        booking_theme: "3",
+        booking_text_enabled: true,
+        booking_heading: "Book a meeting with Sarah",
+        booking_greeting: "Hi! I'm Sarah.",
+        booking_instruction: "Select a meeting type"
+      })
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      html =
+        edit(view, %{
+          "booking_text_enabled" => "true",
+          "booking_heading" => "Book a meeting with Sarah",
+          "booking_greeting" => "",
+          "booking_instruction" => "Select a meeting type"
+        })
+
+      assert html =~ "All changes saved"
+      assert Repo.reload!(profile).booking_greeting == nil
+
+      # The page the dashboard's live preview shows.
+      [preview_path] =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("iframe[title='Booking page preview']")
+        |> LazyHTML.attribute("src")
+
+      {:ok, page, _html} = live(conn, preview_path)
+      assert has_element?(page, ".paper-intro__instruction", "Select a meeting type")
+      refute has_element?(page, ".paper-intro__greeting")
+      refute render(page) =~ "Hi! I&#39;m Sarah."
     end
 
     test "switching off resets the wording to the built-in defaults", %{
