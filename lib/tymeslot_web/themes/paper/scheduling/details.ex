@@ -172,6 +172,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
             value={question.value}
             myself={@target}
             autofocus={false}
+            theme_key={:paper}
           />
         </div>
 

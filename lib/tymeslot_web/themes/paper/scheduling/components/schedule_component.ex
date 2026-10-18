@@ -11,7 +11,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
 
   A month (`data-calendar-view="month"`): the timezone picker, then the month
   calendar and the chosen day's times (the shared `SlotList`): the visitor
-  sees the zone before any time. The card lays them
+  sees the zone before any time. The times' heading and prompt are in
+  Paper's voice, and a month with no free day drops the prompt, so its
+  "No times available this month" stands alone. The card lays them
   out by its own width (`schedule.css`): one column, then the details beside
   the picker, then details, calendar and times side by side.
 
@@ -166,6 +168,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
             booking_window_days={@booking_window_days}
             landing_week={CalendarHelpers.landing_week(assigns)}
             target={@myself}
+            theme_key={:paper}
             heading_tag="h2"
             meeting_type={@meeting_type}
           >
@@ -215,6 +218,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
               expanded_hour={@expanded_hour}
               meeting_type={@meeting_type}
               target={@myself}
+              theme_key={:paper}
+              prompt={not @month_empty}
               heading_tag="h2"
               period_tag="h3"
             />

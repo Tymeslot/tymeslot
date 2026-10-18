@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   arranged), where the
   confirmation went, the guest's answers, and the calendar file and a new
   booking. Which status applies is `ConfirmationText`'s; the wording
-  of the headline and of the fresh start is Paper's own, in its neutral voice.
+  of the headline, the message and the fresh start is Paper's own, in its
+  neutral voice, which names the organiser and never the guest.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -153,22 +154,33 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
     end
   end
 
+  # Paper addresses nobody: the message names the organiser, never the guest,
+  # and a profile with no name to give drops the organiser too.
   defp message(assigns) do
     case ConfirmationText.status(assigns) do
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :paper)
 
-      :rescheduled ->
-        dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.",
-          name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :paper)
-        )
-
-      :confirmed ->
-        dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
-          name: assigns[:name],
-          organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :paper)
-        )
+      status ->
+        meeting_message(status, Profiles.display_name(assigns[:organizer_profile]))
     end
   end
+
+  defp meeting_message(:rescheduled, organizer) when is_binary(organizer),
+    do:
+      dpgettext("booking_voice", "paper", "Your meeting with %{organizer} has been rescheduled.",
+        organizer: organizer
+      )
+
+  defp meeting_message(:rescheduled, _no_organizer),
+    do: dpgettext("booking_voice", "paper", "Your meeting has been rescheduled.")
+
+  defp meeting_message(:confirmed, organizer) when is_binary(organizer),
+    do:
+      dpgettext("booking_voice", "paper", "Your meeting with %{organizer} is confirmed.",
+        organizer: organizer
+      )
+
+  defp meeting_message(:confirmed, _no_organizer),
+    do: dpgettext("booking_voice", "paper", "Your meeting is confirmed.")
 end

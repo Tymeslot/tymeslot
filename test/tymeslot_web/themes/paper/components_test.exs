@@ -308,6 +308,34 @@ defmodule TymeslotWeb.Themes.Paper.ComponentsTest do
       assert text(doc(html), "[data-testid='confirmation-heading']") == "Request sent"
     end
 
+    # Paper addresses nobody: each message names the organiser, never the guest.
+    for {label, overrides, expected} <- [
+          {"a booking", [], "Your meeting with Jane Organizer is confirmed."},
+          {"a reschedule", [is_rescheduling: true],
+           "Your meeting with Jane Organizer has been rescheduled."},
+          {"a request", [meeting_status: "awaiting_approval"],
+           "Your request to Jane Organizer has been sent."}
+        ] do
+      test "says #{label} is settled without the guest's name" do
+        html = confirmation(unquote(overrides))
+
+        assert text(doc(html), ".paper-confirmation__message") == unquote(expected)
+        refute html =~ "Alice"
+      end
+    end
+
+    for {label, overrides, expected} <- [
+          {"a booking", [], "Your meeting is confirmed."},
+          {"a reschedule", [is_rescheduling: true], "Your meeting has been rescheduled."},
+          {"a request", [meeting_status: "awaiting_approval"], "Your request has been sent."}
+        ] do
+      test "says #{label} is settled without an organiser name to give" do
+        html = confirmation([organizer_profile: nil] ++ unquote(overrides))
+
+        assert text(doc(html), ".paper-confirmation__message") == unquote(expected)
+      end
+    end
+
     test "the way to another booking reads 'Book another meeting'" do
       html = confirmation([])
 

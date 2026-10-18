@@ -13,7 +13,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   `period_tag`, whether "Morning" and "Afternoon" are headings. The loading,
   error and fully-booked states render plain default markup; a theme that
   shows them with core components passes its own through the `:loading`,
-  `:error` (receives the message) and `:empty` slots.
+  `:error` (receives the message) and `:empty` slots. The heading and the
+  prompt before a day is chosen are voice lines (`:slot_heading`,
+  `:slot_prompt`), worded by the theme `theme_key` names; `prompt={false}`
+  leaves the prompt out, shown and announced.
 
   Clicks go to `target`: `select_time` with `phx-value-time`, and
   `toggle_hour` with `phx-value-hour`. The `AutoScrollToSlots` hook in
@@ -35,11 +38,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SlotGrouping
+  alias TymeslotWeb.Themes.Shared.Voice
 
   attr :selected_date, :string, default: nil
   attr :selected_time, :string, default: nil
@@ -55,6 +60,17 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
     doc: "the hour the visitor opened (0..23), `:none` after a deliberate collapse, or nil"
 
   attr :target, :any, required: true
+
+  attr :theme_key, :atom,
+    default: nil,
+    doc: "the rendering theme's catalogue key, whose voice words the heading and the prompt"
+
+  attr :prompt, :boolean,
+    default: true,
+    doc:
+      "whether to ask for a day before one is chosen; false for a page that already says " <>
+        "no day can be chosen, so its notice stands alone"
+
   attr :heading_tag, :string, default: "h2", values: ~w(h2 h3)
   attr :period_tag, :string, default: "div", values: ~w(div h3 h4)
 
@@ -79,7 +95,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
         slots: slots,
         grouping: grouping,
         open_hour: SlotGrouping.effective_expanded_hour(assigns.expanded_hour, grouping),
-        selected_hour: SlotGrouping.selected_hour(grouping, assigns.selected_time)
+        selected_hour: SlotGrouping.selected_hour(grouping, assigns.selected_time),
+        heading: heading(assigns.theme_key),
+        prompt_text: if(assigns.prompt, do: prompt(assigns.theme_key))
       )
 
     ~H"""
@@ -90,18 +108,18 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
       data-auto-scroll={if !@auto_scroll, do: "off"}
     >
       <.dynamic_tag tag_name={@heading_tag} class="slot-list__heading" tabindex="-1">
-        {dgettext("booking", "Available Times")}
+        {@heading}
       </.dynamic_tag>
       <%!-- Concise, screen-reader-only announcement of the slot-loading state
             so keyboard/AT users hear the result of picking a date. --%>
       <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {status_text(@selected_date, @loading_slots, @calendar_error, @slots)}
+        {status_text(@selected_date, @loading_slots, @calendar_error, @slots, @heading, @prompt_text)}
       </div>
       <div class="slot-list__body booker-scroll">
         <%= cond do %>
           <% is_nil(@selected_date) -> %>
-            <div class="slot-list__prompt">
-              <p>{dgettext("booking", "Please select a date to see available times")}</p>
+            <div :if={@prompt_text} class="slot-list__prompt">
+              <p>{@prompt_text}</p>
             </div>
           <% @loading_slots -> %>
             <%= if @loading == [] do %>
@@ -245,14 +263,34 @@ defmodule TymeslotWeb.Themes.Shared.Components.SlotList do
   # The status line's precedence: no date, then loading, then an error, then
   # what the day holds. Stale slots left over from the previous date must not
   # be announced while the new ones load.
-  defp status_text(selected_date, loading_slots, calendar_error, slots) do
+  # A hidden prompt (`prompt_text` nil) announces nothing either.
+  defp status_text(selected_date, loading_slots, calendar_error, slots, heading, prompt_text) do
     cond do
-      is_nil(selected_date) -> dgettext("booking", "Please select a date to see available times")
+      is_nil(selected_date) -> prompt_text || ""
       loading_slots -> dgettext("booking", "Loading available times...")
       calendar_error -> calendar_error
-      slots != [] -> dgettext("booking", "Available Times")
+      slots != [] -> heading
       true -> dgettext("booking", "This date is fully booked")
     end
+  end
+
+  @doc """
+  The panel's heading, "Available Times", in the voice of the theme with key
+  `theme_key` where it has one. `WeekGrid` announces it too.
+  """
+  @spec heading(Catalog.theme_key() | nil) :: String.t()
+  def heading(theme_key) do
+    Voice.line(Voice.of(theme_key), :slot_heading, %{}, fn ->
+      dgettext("booking", "Available Times")
+    end)
+  end
+
+  @doc "The prompt before a day is chosen, in the theme's voice where it has one."
+  @spec prompt(Catalog.theme_key() | nil) :: String.t()
+  def prompt(theme_key) do
+    Voice.line(Voice.of(theme_key), :slot_prompt, %{}, fn ->
+      dgettext("booking", "Please select a date to see available times")
+    end)
   end
 
   defp hour_label_for_screen_readers(hour, count) do

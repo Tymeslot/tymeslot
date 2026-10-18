@@ -6,14 +6,19 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
   glyph that highlights when selected. The native radio inputs are
   hidden visually but remain keyboard- and screen-reader-accessible.
 
-  Themes style `.custom-question-yes-no*` to match their look.
+  Themes style `.custom-question-yes-no*` to match their look. The two
+  answers are the `:answer_yes` and `:answer_no` voice lines, worded by the
+  theme `theme_key` names.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Themes.Shared.Voice
+
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :theme_key, :atom, default: nil, doc: "the rendering theme's catalogue key"
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
@@ -52,7 +57,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
             <polyline points="4 12 10 18 20 6" />
           </svg>
         </span>
-        <span class="custom-question-yes-no-label">{dgettext("booking", "Yes")}</span>
+        <span class="custom-question-yes-no-label">{yes(@theme_key)}</span>
       </label>
 
       <label class={[
@@ -87,9 +92,15 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
             <line x1="18" y1="6" x2="6" y2="18" />
           </svg>
         </span>
-        <span class="custom-question-yes-no-label">{dgettext("booking", "No")}</span>
+        <span class="custom-question-yes-no-label">{no(@theme_key)}</span>
       </label>
     </fieldset>
     """
   end
+
+  defp yes(theme_key),
+    do: Voice.line(Voice.of(theme_key), :answer_yes, %{}, fn -> dgettext("booking", "Yes") end)
+
+  defp no(theme_key),
+    do: Voice.line(Voice.of(theme_key), :answer_no, %{}, fn -> dgettext("booking", "No") end)
 end

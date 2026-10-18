@@ -9,7 +9,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer do
 
   Themes are responsible for the surrounding chrome (cards, progress,
   back/next buttons, error message). This component renders only the
-  field itself.
+  field itself. A theme with a voice passes its `theme_key`, which words
+  the inputs' own lines (the select's empty choice, Yes and No, the note's
+  acknowledgement); without one they keep the shared wording.
   """
   use Phoenix.Component
 
@@ -19,6 +21,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer do
   attr :value, :any, required: true
   attr :myself, :any, required: true
   attr :autofocus, :boolean, default: true
+
+  attr :theme_key, :atom,
+    default: nil,
+    doc: "the rendering theme's catalogue key, whose voice words the inputs' own lines"
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(%{definition: %{"type" => "short_text"}} = assigns) do
@@ -88,11 +94,25 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer do
   end
 
   def render(%{definition: %{"type" => "yes_no"}} = assigns) do
-    ~H"<Inputs.YesNo.render definition={@definition} value={@value} myself={@myself} />"
+    ~H"""
+    <Inputs.YesNo.render
+      definition={@definition}
+      value={@value}
+      myself={@myself}
+      theme_key={@theme_key}
+    />
+    """
   end
 
   def render(%{definition: %{"type" => "single_select"}} = assigns) do
-    ~H"<Inputs.SingleSelect.render definition={@definition} value={@value} myself={@myself} />"
+    ~H"""
+    <Inputs.SingleSelect.render
+      definition={@definition}
+      value={@value}
+      myself={@myself}
+      theme_key={@theme_key}
+    />
+    """
   end
 
   def render(%{definition: %{"type" => "multi_select"}} = assigns) do
@@ -100,6 +120,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer do
   end
 
   def render(%{definition: %{"type" => "note"}} = assigns) do
-    ~H"<Inputs.Note.render definition={@definition} value={@value} myself={@myself} />"
+    ~H"""
+    <Inputs.Note.render
+      definition={@definition}
+      value={@value}
+      myself={@myself}
+      theme_key={@theme_key}
+    />
+    """
   end
 end

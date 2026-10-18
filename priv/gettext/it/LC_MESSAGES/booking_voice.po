@@ -202,3 +202,69 @@ msgstr "Grazie. Risponderò presto alla tua richiesta."
 msgctxt "folio"
 msgid "When suits you?"
 msgstr "Quando ti va bene?"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Available times"
+msgstr "Orari disponibili"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "I have read this"
+msgstr "Ho letto il testo"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Reschedule meeting"
+msgstr "Sposta l'incontro"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date"
+msgstr "Seleziona una data"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select an option"
+msgstr "Seleziona un'opzione"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting has been rescheduled."
+msgstr "Il tuo incontro è stato spostato."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting is confirmed."
+msgstr "Il tuo incontro è confermato."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} has been rescheduled."
+msgstr "Il tuo incontro con %{organizer} è stato spostato."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} is confirmed."
+msgstr "Il tuo incontro con %{organizer} è confermato."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request has been sent."
+msgstr "La tua richiesta è stata inviata."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request to %{organizer} has been sent."
+msgstr "La tua richiesta a %{organizer} è stata inviata."

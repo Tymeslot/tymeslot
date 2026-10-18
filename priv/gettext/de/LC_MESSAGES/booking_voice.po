@@ -202,3 +202,69 @@ msgstr "Danke. Ich antworte bald auf Ihre Anfrage."
 msgctxt "folio"
 msgid "When suits you?"
 msgstr "Wann passt es Ihnen?"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Available times"
+msgstr "Verfügbare Zeiten"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "I have read this"
+msgstr "Ich habe dies gelesen"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Reschedule meeting"
+msgstr "Termin verschieben"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date"
+msgstr "Datum auswählen"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select an option"
+msgstr "Option auswählen"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting has been rescheduled."
+msgstr "Ihr Termin wurde verschoben."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting is confirmed."
+msgstr "Ihr Termin ist bestätigt."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} has been rescheduled."
+msgstr "Ihr Termin mit %{organizer} wurde verschoben."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} is confirmed."
+msgstr "Ihr Termin mit %{organizer} ist bestätigt."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request has been sent."
+msgstr "Ihre Anfrage wurde gesendet."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request to %{organizer} has been sent."
+msgstr "Ihre Anfrage an %{organizer} wurde gesendet."

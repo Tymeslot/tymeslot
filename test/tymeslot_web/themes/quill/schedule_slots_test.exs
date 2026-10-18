@@ -219,6 +219,19 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
       assert times |> Enum.map(&TimeSlots.parse_time_slot(&1).hour) |> Enum.uniq() |> length() > 1,
              "expected the flat grid to show every hour's slots at once"
     end
+
+    # Paper words these lines in its own voice; Quill keeps the shared ones.
+    @tag :capture_log
+    test "keeps the shared heading and status", %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+      doc = document(view)
+
+      assert doc |> Floki.find(".slot-list__heading") |> Floki.text() |> String.trim() ==
+               "Available Times"
+
+      assert doc |> Floki.find(".slot-list [role='status']") |> Floki.text() |> String.trim() ==
+               "Available Times"
+    end
   end
 
   defp reach_loaded_slots(conn, profile) do

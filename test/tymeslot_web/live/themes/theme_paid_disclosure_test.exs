@@ -82,6 +82,10 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
   defp request_label(:folio), do: "Request this time"
   defp request_label(_shared), do: "Request meeting"
 
+  # The submit of a reschedule: Paper words its own, the rest share one.
+  defp reschedule_label(:paper), do: "Reschedule meeting"
+  defp reschedule_label(_shared), do: "Reschedule Meeting"
+
   # The submit's `aria-describedby` and the price element's id, as rendered.
   defp described_by(view) do
     view |> element("[data-testid='submit-booking']") |> render() |> attribute("aria-describedby")
@@ -181,7 +185,12 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
 
       BookingDriver.book(view, until: :attendee)
 
-      assert has_element?(view, "[data-testid='submit-booking']", "Reschedule Meeting")
+      assert has_element?(
+               view,
+               "[data-testid='submit-booking']",
+               reschedule_label(unquote(theme.key))
+             )
+
       refute has_element?(view, "[data-testid='submit-price']")
       assert described_by(view) == nil
     end

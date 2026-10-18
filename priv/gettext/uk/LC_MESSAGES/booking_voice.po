@@ -202,3 +202,69 @@ msgstr "Дякую. Я скоро відповім на ваш запит."
 msgctxt "folio"
 msgid "When suits you?"
 msgstr "Коли вам зручно?"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Available times"
+msgstr "Доступний час"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "I have read this"
+msgstr "Беру до відома"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Reschedule meeting"
+msgstr "Перенести зустріч"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select a date"
+msgstr "Виберіть дату"
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Select an option"
+msgstr "Виберіть варіант"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting has been rescheduled."
+msgstr "Вашу зустріч перенесено."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting is confirmed."
+msgstr "Вашу зустріч підтверджено."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} has been rescheduled."
+msgstr "Вашу зустріч з %{organizer} перенесено."
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your meeting with %{organizer} is confirmed."
+msgstr "Вашу зустріч з %{organizer} підтверджено."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request has been sent."
+msgstr "Ваш запит надіслано."
+
+#: lib/tymeslot_web/themes/paper/voice.ex
+#, elixir-autogen, elixir-format
+msgctxt "paper"
+msgid "Your request to %{organizer} has been sent."
+msgstr "Ваш запит до %{organizer} надіслано."

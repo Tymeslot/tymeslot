@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, CalendarNavigation}
   alias TymeslotWeb.Themes.Shared.Components.SeatBadge
+  alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :week_start, Date, required: true, doc: "the Monday of the week shown"
@@ -83,6 +84,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
     doc: "the week the page landed the booker on (`CalendarHelpers.landing_week/1`)"
 
   attr :target, :any, required: true
+
+  attr :theme_key, :atom,
+    default: nil,
+    doc: "the rendering theme's catalogue key, whose voice words the loaded week's status"
+
   attr :heading_tag, :string, default: "h3", values: ~w(h2 h3 h4)
 
   slot :before_days,
@@ -144,7 +150,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
       </div>
       {render_slot(@before_days)}
       <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {status_text(@state, @error)}
+        {status_text(@state, @error, @theme_key)}
       </div>
       <%= case @state do %>
         <% :error -> %>
@@ -254,9 +260,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   defp state(%{loading: true, week_slots: slots}) when map_size(slots) == 0, do: :loading
   defp state(_assigns), do: :loaded
 
-  defp status_text(:error, error), do: error
-  defp status_text(:loading, _error), do: dgettext("booking", "Loading available times...")
-  defp status_text(:loaded, _error), do: dgettext("booking", "Available Times")
+  # The loaded week says what `SlotList`'s heading says, in the same voice.
+  defp status_text(:error, error, _theme_key), do: error
+
+  defp status_text(:loading, _error, _theme_key),
+    do: dgettext("booking", "Loading available times...")
+
+  defp status_text(:loaded, _error, theme_key), do: SlotList.heading(theme_key)
 
   defp selected?(selected_date, selected_time, date, slot),
     do: selected_date == date and selected_time == slot

@@ -10,7 +10,9 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   The select is `appearance-none`, so its chevron is drawn by the
   `custom-question-select` wrapper (`shared/components/custom-questions.css`).
   The wrapper holds the select alone (the input gets no label and no
-  errors here), so the chevron centres on the select itself.
+  errors here), so the chevron centres on the select itself. Its empty
+  choice is the `:select_prompt` voice line, worded by the theme `theme_key`
+  names.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -18,12 +20,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   use TymeslotWeb.Components.CoreComponents
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard
+  alias TymeslotWeb.Themes.Shared.Voice
 
   @radio_threshold 5
 
   attr :definition, :map, required: true
   attr :value, :any, required: true
   attr :myself, :any, required: true
+  attr :theme_key, :atom, default: nil, doc: "the rendering theme's catalogue key"
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(%{definition: %{"options" => options}} = assigns)
@@ -66,11 +70,15 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
           name="value"
           value={@value}
           options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
-          prompt={dgettext("booking", "Select…")}
+          prompt={select_prompt(@theme_key)}
           aria-label={@definition["label"]}
         />
       </div>
     </form>
     """
+  end
+
+  defp select_prompt(theme_key) do
+    Voice.line(Voice.of(theme_key), :select_prompt, %{}, fn -> dgettext("booking", "Select…") end)
   end
 end

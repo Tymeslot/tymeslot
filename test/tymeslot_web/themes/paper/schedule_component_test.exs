@@ -125,6 +125,33 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
       assert Floki.find(doc, "[data-testid='paper-month-empty']") == []
     end
 
+    test "heads the times and asks for a date in its own voice" do
+      open = Map.new(Date.range(~D[2030-02-20], ~D[2030-04-10]), &{Date.to_iso8601(&1), true})
+      doc = schedule(month_availability_map: open)
+
+      assert text(doc, ".paper-slots .slot-list__heading") == "Available times"
+      assert text(doc, ".paper-slots .slot-list__prompt") == "Select a date"
+      assert text(doc, ".paper-slots [role='status']") == "Select a date"
+    end
+
+    test "announces a day's times under its own heading" do
+      doc = schedule(selected_date: @wednesday, available_slots: ["10:00 AM"])
+
+      assert text(doc, ".paper-slots [role='status']") == "Available times"
+    end
+
+    test "leaves the empty month's notice alone, asking for no date" do
+      closed =
+        Map.new(Date.range(~D[2030-02-20], ~D[2030-04-10]), &{Date.to_iso8601(&1), false})
+
+      doc = schedule(month_availability_map: closed, availability_status: :loaded)
+
+      assert [_notice] = Floki.find(doc, "[data-testid='paper-month-empty']")
+      assert Floki.find(doc, ".slot-list__prompt") == []
+      assert text(doc, ".paper-slots [role='status']") == ""
+      assert text(doc, ".paper-slots .slot-list__heading") == "Available times"
+    end
+
     test "names the timezone before the calendar and the times" do
       doc = schedule([])
 
@@ -184,6 +211,12 @@ defmodule TymeslotWeb.Themes.Paper.ScheduleComponentTest do
 
       assert Floki.find(doc, "[data-testid='calendar-day']") == []
       assert Floki.find(doc, ".paper-calendar") == []
+    end
+
+    test "announces a loaded week in its own voice" do
+      doc = schedule(theme_tokens: tokens("week"), week_slots: week_slots())
+
+      assert text(doc, "[data-testid='week-grid'] [role='status']") == "Available times"
     end
 
     test "asks for its week while none is in, and shows no times" do
