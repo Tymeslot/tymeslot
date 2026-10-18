@@ -130,7 +130,9 @@ test("the time chips' inputs move the draft, the end following the start", () =>
   input.value = "11:00";
   input.dispatchEvent(new Event("change", { bubbles: true }));
 
-  expect(drawn(el).querySelector(".cal-ev-time").textContent).toBe("11:00–11:30");
+  // A 30-minute draft is one row: it shows its start, as an event does.
+  expect(drawn(el).querySelector(".cal-ev-time").textContent).toBe("11:00");
+  expect(popover().querySelector('[data-qc-input="end"]').value).toBe("11:30");
 });
 
 test("a chip opens the native picker, or shows the input where there is none", () => {

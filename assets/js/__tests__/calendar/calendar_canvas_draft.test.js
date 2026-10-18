@@ -50,7 +50,8 @@ test("a click on an empty slot drops a 30-minute draft on the quarter hour under
   const [draft] = drafts(el);
   expect(draft.closest("[data-day]").dataset.day).toBe("2026-10-15");
   expect(draft.querySelector(".cal-ev-title").textContent).toBe("New event");
-  expect(draft.querySelector(".cal-ev-time").textContent).toBe("09:00–09:30");
+  // One row tall: the start only, as an event block of that height shows.
+  expect(draft.querySelector(".cal-ev-time").textContent).toBe("09:00");
   expect(draft.getAttribute("aria-hidden")).toBe("true");
   expect(draft.style.getPropertyValue("--cal-ev")).toBe("var(--color-calendar-3)");
   expect(hook.draft).toMatchObject({ calendar: "7:work", status: "editing" });

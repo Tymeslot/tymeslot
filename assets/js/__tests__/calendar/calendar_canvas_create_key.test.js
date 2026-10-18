@@ -20,7 +20,7 @@ test("C opens quick create at the next free quarter hour today", () => {
   press(document.body, "c");
 
   expect(popover()).not.toBeNull();
-  expect(drawnTime(el)).toBe("08:45–09:15");
+  expect(drawnTime(el)).toBe("08:45");
   expect(el.querySelector("[data-draft-id]").closest("[data-day]").dataset.day).toBe("2026-10-14");
   expect(document.activeElement.id).toBe("calendar-qc-field");
 });
@@ -29,13 +29,13 @@ test("C skips past a busy event", () => {
   const { el } = mountHook(payload({ now: "2026-10-14T10:50" }));
   press(document.body, "C");
   // Design review runs 11:00 to 12:00.
-  expect(drawnTime(el)).toBe("12:00–12:30");
+  expect(drawnTime(el)).toBe("12:00");
 });
 
 test("the toolbar's Create dispatches calendar:quick-create and gets the same", () => {
   const { el } = mountHook();
   el.dispatchEvent(new CustomEvent("calendar:quick-create", { bubbles: true }));
-  expect(drawnTime(el)).toBe("08:45–09:15");
+  expect(drawnTime(el)).toBe("08:45");
 });
 
 const nothingOpens = (el) => {
@@ -110,7 +110,7 @@ test("C closes an open preview without a refocus, then opens quick create", () =
 
   expect(pushes(hook, "calendar:close_preview")).toEqual([{ refocus: "false" }]);
   expect(popover()).not.toBeNull();
-  expect(drawnTime(el)).toBe("08:45–09:15");
+  expect(drawnTime(el)).toBe("08:45");
 });
 
 test("C pushes no close when no preview is open", () => {

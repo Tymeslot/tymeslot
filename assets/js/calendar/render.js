@@ -301,16 +301,22 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
 // The draft quick create is editing, or one waiting for the server. Not a
 // control: the quick-create popover is its accessible form, so the block is
 // hidden from assistive technology and carries no event id.
-function draftBlock(segment, event, { strings, settings, scale, colWidth }, z) {
+function draftBlock(segment, event, { strings, settings, scale, colWidth, measureWidth }, z) {
   const tf = settings.time_format;
   const top = scale.yOf(Math.max(segment.s, scale.firstMinute));
   const height = Math.max(scale.yOf(Math.max(segment.e, scale.firstMinute)) - top, 12);
-  const time = `${formatMinutes(event.startMin % MINUTES_PER_DAY, tf)}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
-  const classes = ["cal-ev", "is-draft", event.pending && "is-pending", event.free && "is-free", height < 38 && "is-short"].filter(Boolean).join(" ");
+  const width = Math.max(colWidth - 9, 12);
+  const title = event.title || strings.new_event;
+  const short = height < 38;
+  const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
+  // A one-row draft keeps its title readable as an event block does: the
+  // start time only, and none when the title would lose its room to it.
+  const time = !short ? `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}` : shortRowFits({ width }, title, start, measureWidth) ? start : "";
+  const classes = ["cal-ev", "is-draft", event.pending && "is-pending", event.free && "is-free", short && "is-short"].filter(Boolean).join(" ");
   return (
-    `<div class="${classes}" data-draft-id="${escapeHtml(event.id)}" aria-hidden="true" style="top:${top}px;height:${height}px;--l:1px;--w:${Math.max(colWidth - 9, 12)}px;--z:${z};--cal-ev:${colour(event.colour)}">` +
-    `<span class="cal-ev-title">${escapeHtml(event.title || strings.new_event)}</span>` +
-    `<span class="cal-ev-time">${escapeHtml(time)}</span>` +
+    `<div class="${classes}" data-draft-id="${escapeHtml(event.id)}" aria-hidden="true" style="top:${top}px;height:${height}px;--l:1px;--w:${width}px;--z:${z};--cal-ev:${colour(event.colour)}">` +
+    `<span class="cal-ev-title">${escapeHtml(title)}</span>` +
+    (time ? `<span class="cal-ev-time">${escapeHtml(time)}</span>` : "") +
     (event.pending ? `<span class="cal-ev-saving">${escapeHtml(strings.saving_draft)}</span>` : "") +
     `</div>`
   );

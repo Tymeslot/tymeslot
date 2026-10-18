@@ -107,3 +107,15 @@ test("an editable event that cannot be dragged is not marked editable", () => {
   expect(bars.length).toBeGreaterThan(0);
   for (const el of bars) expect(el.hasAttribute("data-editable")).toBe(false);
 });
+
+test("a one-row draft shows its start, as an event does, and drops it in a column too narrow for both", () => {
+  const draft = (title) => normaliseEvent({ id: "draft-1", kind: "draft", title, all_day: false, start: "2026-10-14T11:00", end: "2026-10-14T11:30", colour: "calendar-2" });
+  const wide = draw({ events: [draft("Board prep")] }).querySelector('[data-draft-id="draft-1"]');
+  expect(wide.querySelector(".cal-ev-title").textContent).toBe("Board prep");
+  expect(wide.querySelector(".cal-ev-time").textContent).toBe("11:00");
+
+  document.body.innerHTML = "";
+  const narrow = draw({ events: [draft("Board prep")], width: 480 }).querySelector('[data-draft-id="draft-1"]');
+  expect(narrow.querySelector(".cal-ev-title").textContent).toBe("Board prep");
+  expect(narrow.querySelector(".cal-ev-time")).toBeNull();
+});
