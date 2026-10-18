@@ -310,6 +310,43 @@ describe("renderGrid", () => {
     expect(block.getAttribute("aria-label")).not.toContain("shown as free");
   });
 
+  test("an all-day request has the flag, the class and the aria word; its +N says a request waits", () => {
+    const day = (id, extra = {}) => normaliseEvent({ id, kind: "booking", title: id, all_day: true, start: "2026-10-14", end: "2026-10-15", colour: "booking", ...extra });
+    const grid = draw({ events: [day("booking-r", { request: true }), day("booking-x", { expired: true })] });
+    const bar = grid.querySelector('.cal-adbar[data-event-id="booking-r"]');
+    expect(bar.classList.contains("is-request")).toBe(true);
+    expect(bar.querySelector(".cal-ev-request").textContent).toBe("Request");
+    expect(bar.getAttribute("aria-label")).toContain("request waiting for your answer");
+    const lapsed = grid.querySelector('.cal-adbar[data-event-id="booking-x"]');
+    expect(lapsed.classList.contains("is-expired")).toBe(true);
+    expect(lapsed.querySelector(".cal-ev-request").textContent).toBe("Expired");
+
+    const crowd = ["a", "b", "c", "d"].map((id) => day(`booking-${id}`, { request: true }));
+    const more = draw({ events: crowd }).querySelector(".cal-admore");
+    expect(more.classList.contains("is-warn")).toBe(true);
+    expect(more.getAttribute("aria-label")).toContain("a request waiting for your answer");
+  });
+
+  test("a request that also expired says only that it expired", () => {
+    const grid = draw({ events: [timed("booking-6", "Eve · Intro", "2026-10-15T09:00", "2026-10-15T10:00", { kind: "booking", colour: "booking", request: true, expired: true })] });
+    const label = grid.querySelector('[data-event-id="booking-6"]').getAttribute("aria-label");
+    expect(label).toContain("request expired without an answer");
+    expect(label).not.toContain("waiting for your answer");
+  });
+
+  test("a request's flag and wider edge count against its title's room", () => {
+    const grid = (extra) =>
+      draw({ width: 1000, events: [timed("booking-7", "Guest with a long name", "2026-10-15T09:00", "2026-10-15T10:15", { kind: "booking", colour: "booking", ...extra })] }).querySelector(
+        '[data-event-id="booking-7"]',
+      );
+    // Without the flag the title takes two lines and the time row still fits.
+    expect(grid({}).querySelector(".cal-ev-time")).not.toBeNull();
+    // The flag and the wider edge push it to three lines, which leaves no room for the time.
+    const request = grid({ request: true });
+    expect(request.querySelector(".cal-ev-time")).toBeNull();
+    expect(request.style.getPropertyValue("--cal-lines")).toBe("3");
+  });
+
   test("a plain booking has no flag", () => {
     const grid = draw({ events: [timed("booking-3", "Cleo · Intro", "2026-10-15T15:00", "2026-10-15T16:00", { kind: "booking", colour: "booking" })] });
     expect(grid.querySelector('[data-event-id="booking-3"] .cal-ev-request')).toBeNull();

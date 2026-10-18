@@ -46,7 +46,7 @@ test("an event only on hidden weekend days drops out", () => {
 
 test("timed events stay out of the lane", () => {
   const meeting = normaliseEvent({ id: "m", title: "Meeting", all_day: false, start: "2026-10-14T09:00", end: "2026-10-14T10:00" });
-  expect(layoutAllDay([meeting], week, { maxLanes: 3 })).toEqual({ bars: [], more: [0, 0, 0, 0, 0, 0, 0], rows: 0 });
+  expect(layoutAllDay([meeting], week, { maxLanes: 3 })).toEqual({ bars: [], more: [0, 0, 0, 0, 0, 0, 0], warn: [false, false, false, false, false, false, false], rows: 0 });
 });
 
 test("an event that began before the week is cut at the start", () => {
@@ -64,4 +64,23 @@ test("with weekends hidden mid-view, a weekend event drops out and a spanning on
   expect(layoutAllDay([allDay("sat", "2026-10-17", "2026-10-19")], days, { maxLanes: 3 }).bars).toEqual([]);
   const { bars } = layoutAllDay([allDay("trip", "2026-10-16", "2026-10-20")], days, { maxLanes: 3 });
   expect(bars[0]).toMatchObject({ startIndex: 2, endIndex: 3, cutStart: false, cutEnd: false });
+});
+
+test("a request waiting for an answer keeps its lane while plain events fold", () => {
+  const plain = ["a", "b", "c"].map((id) => allDay(id, "2026-10-14", "2026-10-15"));
+  const request = normaliseEvent({ id: "z-request", title: "Zoe", all_day: true, start: "2026-10-14", end: "2026-10-15", kind: "booking", request: true });
+  const { bars, more, warn } = layoutAllDay([...plain, request], week, { maxLanes: 3 });
+  expect(bars.map((bar) => bar.id)).toContain("z-request");
+  expect(more).toEqual([0, 0, 2, 0, 0, 0, 0]);
+  expect(warn.some(Boolean)).toBe(false);
+});
+
+test("an expired request folds like any event; requests forced behind the +N mark that day", () => {
+  const expired = normaliseEvent({ id: "z-expired", title: "Ex", all_day: true, start: "2026-10-14", end: "2026-10-15", kind: "booking", request: true, expired: true });
+  const plain = ["b", "c", "d"].map((id) => allDay(id, "2026-10-14", "2026-10-15"));
+  expect(layoutAllDay([expired, ...plain], week, { maxLanes: 3 }).bars.map((bar) => bar.id)).not.toContain("z-expired");
+
+  const requests = ["a", "b", "c", "d"].map((id) => normaliseEvent({ id: `r-${id}`, title: id, all_day: true, start: "2026-10-14", end: "2026-10-15", kind: "booking", request: true }));
+  const { warn } = layoutAllDay(requests, week, { maxLanes: 3 });
+  expect(warn).toEqual([false, false, true, false, false, false, false]);
 });

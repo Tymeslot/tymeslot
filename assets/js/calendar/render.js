@@ -35,6 +35,10 @@ const TIME_LINE = 16;
 // The room a title's text has inside a block `width` wide: the block's inset,
 // border and padding. countLines and the long-word marks share it.
 const TITLE_INSET = 15;
+// A request block's wider left padding (11px against 6px), and the padding and
+// margin around its flag's text.
+const REQUEST_EDGE = 5;
+const FLAG_CHROME = 10;
 // Below this a one-row block's title is a letter or two: the time beside it
 // gives way. The time is 10px against the 12px the title is measured at.
 const SHORT_TITLE_ROOM = 40;
@@ -122,7 +126,7 @@ function head(days, { strings, nowDay }) {
   return `<div class="cal-head"><div class="cal-head-corner"></div>${cells}</div>`;
 }
 
-function allDayLane({ bars, more, rows }, days, { strings, now, byId }) {
+function allDayLane({ bars, more, warn, rows }, days, { strings, now, byId }) {
   const template = rows ? `repeat(${rows}, ${ALL_DAY_ROW}px)` : "8px";
   let html = `<div class="cal-allday" style="grid-template-rows:${template}"><div class="cal-allday-label" style="grid-row:1 / -1">${rows ? escapeHtml(strings.all_day) : ""}</div>`;
 
@@ -134,19 +138,20 @@ function allDayLane({ bars, more, rows }, days, { strings, now, byId }) {
     }
     const first = dateLabel(isoFromDay(e.startDay), strings);
     const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
-    const label = [e.title, strings.all_day, span, e.endMin <= now && strings.ended].filter(Boolean).join(", ");
-    const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking"]
+    const flag = requestFlag(e, strings);
+    const label = [e.title, flag && requestAria(e, strings), strings.all_day, span, e.endMin <= now && strings.ended].filter(Boolean).join(", ");
+    const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired"]
       .filter(Boolean)
       .join(" ");
     html +=
       `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" aria-label="${escapeHtml(label)}" ` +
-      `style="grid-column:${bar.startIndex + 2} / ${bar.endIndex + 3};grid-row:${bar.lane + 1};--cal-ev:${colour(e.colour)}">${escapeHtml(e.title)}</button>`;
+      `style="grid-column:${bar.startIndex + 2} / ${bar.endIndex + 3};grid-row:${bar.lane + 1};--cal-ev:${colour(e.colour)}">${flag ? `<span class="cal-ev-request">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}</button>`;
   }
 
   more.forEach((count, i) => {
     if (!count) return;
-    const label = interpolate(strings.allday_more, { count, date: dateLabel(days[i], strings) });
-    html += `<button type="button" class="cal-admore" data-allday-more="${days[i]}" aria-label="${escapeHtml(label)}" style="grid-column:${i + 2};grid-row:${rows}">+${count}</button>`;
+    const label = [interpolate(strings.allday_more, { count, date: dateLabel(days[i], strings) }), warn[i] && strings.request_waiting].filter(Boolean).join(", ");
+    html += `<button type="button" class="cal-admore${warn[i] ? " is-warn" : ""}" data-allday-more="${days[i]}" aria-label="${escapeHtml(label)}" style="grid-column:${i + 2};grid-row:${rows}">+${count}</button>`;
   });
 
   return `${html}</div>`;
@@ -238,10 +243,10 @@ function offHours(hours, first) {
 // that wants more lines than fit above the time line keeps them and drops the
 // time, which the block's position on the axis already tells; nothing is ever
 // drawn taller than the block, so no line is cut through.
-function textFit(item, title, wantsTime, measureWidth) {
+function textFit(item, title, wantsTime, measureWidth, inset = TITLE_INSET) {
   const inner = item.height - EVENT_CHROME;
   const cap = item.lineClamp ?? 4;
-  const wanted = Math.min(cap, countLines(title, Math.max(1, item.width - TITLE_INSET), measureWidth));
+  const wanted = Math.min(cap, countLines(title, Math.max(1, item.width - inset), measureWidth));
   const withTime = Math.max(1, Math.floor((inner - TIME_LINE - (item.timeGap || 0)) / LINE_HEIGHT));
   const without = Math.max(1, Math.floor(inner / LINE_HEIGHT));
   if (!wantsTime) return { lines: Math.min(cap, without), time: false };
@@ -251,8 +256,8 @@ function textFit(item, title, wantsTime, measureWidth) {
 
 // Whether a one-row block keeps its start time beside the title: only while
 // the title keeps enough room to be recognised, or all the room it needs.
-function shortRowFits(item, title, time, measureWidth) {
-  const room = item.width - TITLE_INSET - SHORT_GAP - measureWidth(time) * TIME_SCALE;
+function shortRowFits(item, title, time, measureWidth, inset = TITLE_INSET) {
+  const room = item.width - inset - SHORT_GAP - measureWidth(time) * TIME_SCALE;
   return room >= Math.min(SHORT_TITLE_ROOM, measureWidth(title));
 }
 
@@ -271,12 +276,16 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   const short = item.height < 38;
   const past = event.endMin <= now;
   const flag = requestFlag(event, strings);
-  // The flag opens the title's first line, so it is measured with the title.
+  // The flag opens the title's first line, so it is measured with the title,
+  // at the pill's own width (10px bold, 8px padding, 2px margin), and the
+  // block's extra left padding narrows the text's room.
   const shown = flag ? `${flag} ${event.title}` : event.title;
+  const measure = flag ? (text) => (text === flag ? measureWidth(flag) * TIME_SCALE + FLAG_CHROME : measureWidth(text)) : measureWidth;
+  const inset = flag ? TITLE_INSET + REQUEST_EDGE : TITLE_INSET;
   const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
   const range = `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
-  const fit = short ? null : textFit(item, shown, !item.hideTime, measureWidth);
-  const shortWithoutTime = short && !shortRowFits(item, shown, start, measureWidth);
+  const fit = short ? null : textFit(item, shown, !item.hideTime, measure, inset);
+  const shortWithoutTime = short && !shortRowFits(item, shown, start, measure, inset);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
   const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
@@ -296,7 +305,7 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   // arrow keys move between them.
   return (
     `<div class="${classes}" role="button" tabindex="-1" data-event-id="${escapeHtml(event.id)}"${editable ? " data-editable" : ""} aria-label="${escapeHtml(label)}" aria-describedby="calendar-keys-hint" style="${style}">` +
-    `<span class="cal-ev-title">${flagHtml}${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - TITLE_INSET, measureWidth)}</span>${timeHtml}` +
+    `<span class="cal-ev-title">${flagHtml}${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - inset, measure)}</span>${timeHtml}` +
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
     (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`

@@ -4,7 +4,7 @@
  * a multi-day event as one bar, and past `maxLanes` lanes folds the rest into
  * a "+N" per day.
  */
-import { dayNumber } from "./time.js";
+import { dayNumber, needsAnswer } from "./time.js";
 
 export function layoutAllDay(events, days, { maxLanes }) {
   const dayNums = days.map(dayNumber);
@@ -13,8 +13,9 @@ export function layoutAllDay(events, days, { maxLanes }) {
 
   const long = events
     .filter((e) => e.long && e.startDay <= last && e.endDay > first)
-    // A draft takes the first lane, so it is never folded into a "+N".
-    .sort((a, b) => (b.kind === "draft") - (a.kind === "draft") || a.startDay - b.startDay || b.endDay - b.startDay - (a.endDay - a.startDay) || (a.id < b.id ? -1 : 1));
+    // A draft takes the first lane, then a request waiting for an answer, so
+    // neither is folded into a "+N" while a plain event can give way.
+    .sort((a, b) => (b.kind === "draft") - (a.kind === "draft") || needsAnswer(b) - needsAnswer(a) || a.startDay - b.startDay || b.endDay - b.startDay - (a.endDay - a.startDay) || (a.id < b.id ? -1 : 1));
 
   const laneEnds = [];
   const placed = [];
@@ -52,9 +53,15 @@ export function layoutAllDay(events, days, { maxLanes }) {
   const used = laneEnds.length;
   const shown = used > maxLanes ? maxLanes - 1 : used;
   const more = days.map(() => 0);
+  // Whether a "+N" hides a request waiting for an answer, which marks it.
+  const warn = days.map(() => false);
+  const waiting = new Set(long.filter(needsAnswer).map((e) => e.id));
   for (const bar of placed.filter((p) => p.lane >= shown)) {
-    for (let i = bar.startIndex; i <= bar.endIndex; i += 1) more[i] += 1;
+    for (let i = bar.startIndex; i <= bar.endIndex; i += 1) {
+      more[i] += 1;
+      if (waiting.has(bar.id)) warn[i] = true;
+    }
   }
 
-  return { bars: placed.filter((p) => p.lane < shown), more, rows: shown + (more.some(Boolean) ? 1 : 0) };
+  return { bars: placed.filter((p) => p.lane < shown), more, warn, rows: shown + (more.some(Boolean) ? 1 : 0) };
 }

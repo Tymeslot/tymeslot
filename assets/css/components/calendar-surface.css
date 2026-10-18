@@ -170,6 +170,13 @@
   background: var(--cal-hover);
 }
 
+/* A "+N" that hides a request waiting for an answer. */
+.cal-admore.is-warn {
+  color: var(--cal-on-request);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--cal-request);
+}
+
 /* Time axis and columns */
 .cal-body {
   position: relative;
@@ -647,6 +654,7 @@
 
 .cal-list-flag {
   flex: 0 0 auto;
+  margin-inline: var(--spacing-1);
   padding: 0 4px;
   border-radius: var(--radius-sm);
   background: var(--cal-request);
