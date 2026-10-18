@@ -20,6 +20,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
   @moduletag :live
 
   import Mox
+
+  require Logger
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
@@ -29,6 +31,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
   alias Tymeslot.Security.RateLimiter
 
   @async_timeout 1_000
+  # One at a time: the module runs `async: false`.
+  @hold_handler :calendar_surface_bookings_hold_answer
 
   setup %{conn: conn} do
     stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
@@ -92,6 +96,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
   end
 
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
+
+  # Holds the next approval once it has committed, so the test can act while
+  # Accept is still in flight: `Approval.approve/1` logs "Booking request
+  # approved" after its transaction, and a logger handler runs in the logging
+  # process, so the answer task waits there holding no connection. Returns the
+  # ref that `{:held, ref, task}` arrives with.
+  defp hold_answer do
+    ref = make_ref()
+    config = %{test: self(), ref: ref, armed: :atomics.new(1, [])}
+
+    :ok = :logger.add_handler(@hold_handler, __MODULE__.HoldAnswer, %{config: config})
+    Logger.put_module_level(Approval, :info)
+
+    on_exit(fn ->
+      :logger.remove_handler(@hold_handler)
+      Logger.delete_module_level(Approval)
+    end)
+
+    ref
+  end
 
   describe "a request" do
     test "offers Accept and Decline, nothing else", %{conn: conn, user: user} do
@@ -162,6 +186,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
 
       refute has_element?(lv, "#decline-request-form")
       assert reload(meeting).status == "awaiting_approval"
+      assert_push_event(lv, "calendar:preview-closed", %{})
     end
 
     test "answered elsewhere meanwhile, Accept reports it and changes nothing", %{
@@ -258,6 +283,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       assert render(lv) =~ "reached the limit"
       assert reload(meeting).status == "confirmed"
     end
+
+    test "rescheduling is refused once the per-host limit is exhausted", %{
+      conn: conn,
+      user: user
+    } do
+      meeting = booking(user, ~U[2026-10-15 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+      lv |> element("#calendar-preview-reschedule") |> render_click()
+
+      for _i <- 1..20, do: assert(:ok = RateLimiter.check(:dashboard_reschedule, user.id))
+
+      lv |> element("#calendar-reschedule-booking button", "Send Request") |> render_click()
+
+      assert render(lv) =~ "reached the limit"
+      assert is_nil(reload(meeting).reschedule_requested_at)
+    end
   end
 
   describe "once the moment has passed" do
@@ -312,6 +354,85 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
     end
   end
 
+  describe "an answer in flight" do
+    # The held approval logs at info level; keep it off the console.
+    @describetag :capture_log
+
+    test "a second Accept answers once", %{conn: conn, user: user} do
+      meeting = request(user, ~U[2026-10-15 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+      ref = hold_answer()
+
+      lv |> element("#calendar-preview-accept") |> render_click()
+      assert_receive {:held, ^ref, task}, @async_timeout
+      hook(lv, "booking:accept", %{"id" => meeting.id})
+      send(task, {:release, ref})
+      render_async(lv, @async_timeout)
+
+      html = render(lv)
+      assert html =~ "Booking confirmed. The invitee has been told."
+      refute html =~ "That request had already been answered."
+    end
+
+    test "the same id in another case is the same request", %{conn: conn, user: user} do
+      meeting = request(user, ~U[2026-10-15 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+      ref = hold_answer()
+
+      lv |> element("#calendar-preview-accept") |> render_click()
+      assert_receive {:held, ^ref, task}, @async_timeout
+      hook(lv, "booking:accept", %{"id" => String.upcase(meeting.id)})
+      send(task, {:release, ref})
+      render_async(lv, @async_timeout)
+
+      html = render(lv)
+      assert html =~ "Booking confirmed. The invitee has been told."
+      refute html =~ "That request had already been answered."
+    end
+
+    test "a forged Decline does nothing while Accept runs", %{conn: conn, user: user} do
+      meeting = request(user, ~U[2026-10-15 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+      ref = hold_answer()
+
+      lv |> element("#calendar-preview-accept") |> render_click()
+      assert_receive {:held, ^ref, task}, @async_timeout
+      hook(lv, "booking:decline", %{"id" => meeting.id})
+      refute has_element?(lv, "#calendar-decline-request")
+      send(task, {:release, ref})
+      render_async(lv, @async_timeout)
+
+      html = render(lv)
+      assert html =~ "Booking confirmed. The invitee has been told."
+      refute html =~ "That request had already been answered."
+    end
+
+    test "confirming a Decline while Accept runs does not drop the Accept", %{
+      conn: conn,
+      user: user
+    } do
+      meeting = request(user, ~U[2026-10-15 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+      lv |> element("#calendar-preview-decline") |> render_click()
+      ref = hold_answer()
+
+      hook(lv, "booking:accept", %{"id" => meeting.id})
+      assert_receive {:held, ^ref, task}, @async_timeout
+      lv |> form("#decline-request-form", %{"reason" => "Away"}) |> render_submit()
+      send(task, {:release, ref})
+      render_async(lv, @async_timeout)
+
+      assert reload(meeting).status == "confirmed"
+      html = render(lv)
+      assert html =~ "Booking confirmed. The invitee has been told."
+      refute html =~ "That request had already been answered."
+    end
+  end
+
   describe "client input is never trusted" do
     @describetag :cross_tenant
 
@@ -339,6 +460,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       refute has_element?(lv, "#calendar-cancel-booking")
       refute has_element?(lv, "#calendar-reschedule-booking")
       refute has_element?(lv, "#calendar-decline-request")
+    end
+
+    test "a forged cancel of the host's own ended meeting is refused", %{conn: conn, user: user} do
+      meeting = booking(user, ~U[2026-10-13 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      hook(lv, "booking:cancel", %{"id" => meeting.id})
+
+      assert render(lv) =~ "Cannot cancel a meeting that has already occurred"
+      refute has_element?(lv, "#calendar-cancel-booking")
+      assert reload(meeting).status == "confirmed"
     end
 
     test "a confirm with no dialog open does nothing", %{conn: conn, user: user} do
@@ -392,5 +524,41 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       assert render(lv) =~ "reached the limit"
       assert reload(meeting).status == "awaiting_approval"
     end
+
+    test "declining is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
+      meeting = request(user, ~U[2026-10-15 10:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+      lv |> element("#calendar-preview-decline") |> render_click()
+
+      for _i <- 1..20,
+          do: assert(:ok = RateLimiter.check(:meeting_approval, "dashboard:#{user.id}"))
+
+      lv |> form("#decline-request-form", %{"reason" => "Away"}) |> render_submit()
+      render_async(lv, @async_timeout)
+
+      assert render(lv) =~ "reached the limit"
+      assert reload(meeting).status == "awaiting_approval"
+    end
+  end
+
+  defmodule HoldAnswer do
+    @moduledoc false
+
+    @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
+    def log(%{msg: {:string, message}}, %{config: %{test: test, ref: ref, armed: armed}}) do
+      if IO.chardata_to_string(message) == "Booking request approved" and
+           :atomics.compare_exchange(armed, 1, 0, 1) == :ok do
+        send(test, {:held, ref, self()})
+
+        receive do
+          {:release, ^ref} -> :ok
+        end
+      end
+
+      :ok
+    end
+
+    def log(_event, _config), do: :ok
   end
 end

@@ -14,14 +14,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.MeetingState
+
   @type state :: nil | :answer | :manage | {:note, String.t()}
 
   @doc "What the preview of `event` offers at `now`; nil for anything but a booking."
   @spec state(map(), DateTime.t()) :: state()
-  def state(%{kind: :booking, expired: true}, _now),
-    do: {:note, dgettext("dashboard_calendar_booking", "This request expired without an answer")}
+  def state(%{kind: :booking, expired: true}, _now), do: expired_note()
 
-  def state(%{kind: :booking, request: true}, _now), do: :answer
+  # `expired` is decided when the window loads; a request left on screen past
+  # its start or its approval deadline can no longer be answered either.
+  def state(%{kind: :booking, request: true, start_at: %DateTime{} = start_at} = event, now) do
+    if DateTime.compare(start_at, now) != :gt or
+         MeetingState.approval_deadline_passed?(event, now),
+       do: expired_note(),
+       else: :answer
+  end
 
   def state(
         %{kind: :booking, start_at: %DateTime{} = start_at, end_at: %DateTime{} = end_at},
@@ -115,4 +123,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
   end
 
   defp note({:note, text}), do: text
+
+  defp expired_note,
+    do: {:note, dgettext("dashboard_calendar_booking", "This request expired without an answer")}
 end

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.LiveView, only: [push_event: 3]
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.MeetingPayments
@@ -59,38 +60,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   @doc "Handles the `booking:` event `name`. Unknown names and malformed params change nothing."
   @spec handle(String.t(), map(), socket()) :: socket()
   def handle("accept", %{"id" => id}, socket) when is_binary(id) do
-    if socket.assigns.answering_request == id,
-      do: socket,
-      else: with_limit(socket, :meeting_approval, approval_key(socket), &accept(&1, id))
-  end
-
-  def handle("decline", %{"id" => id}, socket) when is_binary(id) do
-    case RequestActions.fetch_held_request(socket, %{"id" => id}) do
-      {:ok, meeting} ->
-        socket |> assign(:preview, nil) |> ModalHook.show_modal(:decline_request, meeting)
-
-      {:error, message} ->
-        socket |> RequestActions.flash_and_stay(message) |> SurfaceData.reload(:events)
-    end
-  end
-
-  def handle("confirm_decline", params, socket) do
-    with_limit(socket, :meeting_approval, approval_key(socket), fn socket ->
-      case socket.assigns.decline_request_modal_data do
-        nil ->
-          socket
-
-        meeting ->
-          reason = RequestActions.decline_reason(Map.get(params, "reason"))
-
-          socket
-          |> ModalHook.hide_modal(:decline_request)
-          |> answer(meeting.id, &Approval.decline(&1, reason),
-            success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
-            failure: dgettext("dashboard_bookings", "That request could not be declined.")
-          )
-      end
+    with_idle_request(socket, id, fn socket, id ->
+      with_limit(socket, :meeting_approval, approval_key(socket), &accept(&1, id))
     end)
+  end
+
+  def handle("decline", %{"id" => id}, socket) when is_binary(id),
+    do: with_idle_request(socket, id, &open_decline/2)
+
+  # Declining while this request's Accept is in flight would restart its
+  # answer under the same async name and drop the Accept's result.
+  def handle("confirm_decline", params, socket) do
+    answering = socket.assigns.answering_request
+
+    case socket.assigns.decline_request_modal_data do
+      nil ->
+        socket
+
+      %{id: ^answering} ->
+        socket
+
+      meeting ->
+        with_limit(socket, :meeting_approval, approval_key(socket), &decline(&1, meeting, params))
+    end
   end
 
   def handle("cancel", %{"id" => id}, socket) when is_binary(id) do
@@ -154,10 +146,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
     end)
   end
 
+  # Focus goes back to the event the dialog was opened from, as when the
+  # preview itself closes.
   def handle("close", %{"modal" => modal}, socket) when is_map_key(@modals, modal) do
     socket
     |> ModalHook.hide_modal(Map.fetch!(@modals, modal))
     |> assign(:cancel_booking_payment, nil)
+    |> push_event("calendar:preview-closed", %{})
   end
 
   def handle(_name, _params, socket), do: socket
@@ -171,6 +166,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
         success: dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
         failure: dgettext("dashboard_bookings", "That request could not be approved.")
       )
+
+  # The id as stored (`Ecto.UUID.cast/1` lowercases it), so a request whose
+  # answer is already in flight is recognised however its id is spelt; an id
+  # that is not a UUID changes nothing.
+  defp with_idle_request(socket, id, fun) do
+    answering = socket.assigns.answering_request
+
+    case Ecto.UUID.cast(id) do
+      {:ok, ^answering} -> socket
+      {:ok, id} -> fun.(socket, id)
+      :error -> socket
+    end
+  end
+
+  defp open_decline(socket, id) do
+    case RequestActions.fetch_held_request(socket, %{"id" => id}) do
+      {:ok, meeting} ->
+        socket |> assign(:preview, nil) |> ModalHook.show_modal(:decline_request, meeting)
+
+      {:error, message} ->
+        socket |> RequestActions.flash_and_stay(message) |> SurfaceData.reload(:events)
+    end
+  end
+
+  defp decline(socket, meeting, params) do
+    reason = RequestActions.decline_reason(Map.get(params, "reason"))
+
+    socket
+    |> ModalHook.hide_modal(:decline_request)
+    |> answer(meeting.id, &Approval.decline(&1, reason),
+      success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
+      failure: dgettext("dashboard_bookings", "That request could not be declined.")
+    )
+  end
 
   defp answer(socket, id, action, messages) do
     {:noreply, socket} =
