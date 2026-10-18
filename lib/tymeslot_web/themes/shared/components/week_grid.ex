@@ -15,6 +15,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   an attribute because it is document semantics: the level of each day's
   heading in the page outline.
 
+  Where a narrow grid scrolls sideways, the `WeekGridScroll` hook
+  (`assets/js/hooks/week_grid_scroll.js`) on `__days` keeps one day in view:
+  the day named in its `data-reveal-date`, which is the chosen day when it
+  falls in the week shown, else today, else the first day with times. The
+  hook moves the row only when that day changes, so a booker browsing the row
+  is not pulled back. The row's `id` is fixed, so a page renders one grid.
+
   A theme that needs markup of its own between the week navigation and the
   days (a day picker for a narrow screen, a notice about the week) passes it
   in the `:before_days` slot. It is rendered inside the grid, so it answers
@@ -96,10 +103,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
 
   @spec week_grid(map()) :: Phoenix.LiveView.Rendered.t()
   def week_grid(assigns) do
+    days = days(assigns.week_start, assigns.week_slots, assigns.today)
+
     assigns =
       assign(assigns,
-        days: days(assigns.week_start, assigns.week_slots, assigns.today),
+        days: days,
         state: state(assigns),
+        reveal_date: reveal_date(days, assigns.selected_date),
         ask: is_nil(assigns.week_slots) && JS.push("load_week", target: assigns.target)
       )
 
@@ -160,7 +170,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
             <span>{dgettext("booking", "Loading available times...")}</span>
           </div>
         <% :loaded -> %>
-          <div class="week-grid__days booker-scroll">
+          <div
+            id="week-grid-days"
+            class="week-grid__days booker-scroll"
+            phx-hook="WeekGridScroll"
+            data-reveal-date={@reveal_date}
+          >
             <section
               :for={day <- @days}
               class={["week-grid__day", day.today && "week-grid__day--today"]}
@@ -259,6 +274,15 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   defp state(%{week_slots: nil}), do: :loading
   defp state(%{loading: true, week_slots: slots}) when map_size(slots) == 0, do: :loading
   defp state(_assigns), do: :loaded
+
+  # The day a narrow grid scrolls into view (`data-reveal-date`, read by the
+  # `WeekGridScroll` hook): the chosen day when it is in this week, else
+  # today, else the first day with times, else none.
+  defp reveal_date(days, selected_date) do
+    Enum.find_value(days, &(&1.iso == selected_date && &1.iso)) ||
+      Enum.find_value(days, &(&1.today && &1.iso)) ||
+      Enum.find_value(days, &(&1.slots != [] && &1.iso))
+  end
 
   # The loaded week says what `SlotList`'s heading says, in the same voice.
   defp status_text(:error, error, _theme_key), do: error

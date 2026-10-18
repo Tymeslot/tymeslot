@@ -374,4 +374,48 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGridTest do
       assert children(render_grid([])) == ["week-grid__nav", "sr-only", "week-grid__days"]
     end
   end
+
+  # The day a narrow grid's `WeekGridScroll` hook scrolls into view.
+  describe "the day kept in view" do
+    @week_with_times %{"2027-03-09" => ["9:00 AM"], "2027-03-12" => ["2:00 PM"]}
+
+    defp reveal_date(overrides) do
+      overrides
+      |> render_grid()
+      |> Floki.find(".week-grid__days")
+      |> attr("data-reveal-date")
+    end
+
+    test "is the chosen time's day, wherever it sits in the week" do
+      assert reveal_date(
+               week_slots: @week_with_times,
+               today: ~D[2027-03-10],
+               selected_date: "2027-03-12",
+               selected_time: "2:00 PM"
+             ) == "2027-03-12"
+    end
+
+    test "is today when nothing in this week is chosen" do
+      assert reveal_date(
+               week_slots: @week_with_times,
+               today: ~D[2027-03-10],
+               selected_date: "2027-03-22"
+             ) == "2027-03-10"
+    end
+
+    test "is the first day with times in a week without today" do
+      assert reveal_date(week_slots: @week_with_times, today: ~D[2027-03-01]) == "2027-03-09"
+    end
+
+    test "is none in a week with no times, no today and nothing chosen" do
+      assert reveal_date(week_slots: %{}, today: ~D[2027-03-01]) == nil
+    end
+
+    test "is read by the hook on the scrolling row" do
+      [days] = Floki.find(render_grid(week_slots: @week_with_times), ".week-grid__days")
+
+      assert attr(days, "phx-hook") == "WeekGridScroll"
+      assert attr(days, "id") == "week-grid-days"
+    end
+  end
 end

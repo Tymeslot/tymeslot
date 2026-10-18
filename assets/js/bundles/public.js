@@ -9,6 +9,7 @@ import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { AutoScrollToSlots } from "../utility_hooks"
 import { PaymentRedirectOpenTab } from "../hooks/payment_redirect_open_tab"
+import { WeekGridScroll } from "../hooks/week_grid_scroll"
 import { installRevealIntoView } from "../reveal_into_view"
 
 // `JS.dispatch("tymeslot:reveal", ...)` from a booking page's templates.
@@ -19,6 +20,8 @@ installRevealIntoView()
 const PublicHooks = {
   AutoScrollToSlots,
   PaymentRedirectOpenTab,
+  // The shared week grid's sideways scroll, on a narrow booking page.
+  WeekGridScroll,
   // Lazy-load video hooks - only load when video elements are mounted
   RhythmVideo: lazyHook("RhythmVideo", () =>
     import("../video_hooks").then(m => m.RhythmVideo)
