@@ -198,6 +198,57 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     [job] = all_enqueued(worker: CalendarEventDeleteWorker)
     assert job.args["undoable"] == false
     assert job.args["notify_attendees"] == false
+
+    # It is the event just created that goes.
+    assert_received {:created, %{uid: uid}}
+    assert job.args["uid"] == uid
+  end
+
+  test "undo while the created event is still saving keeps the entry and says so",
+       %{lv: lv, work: work} do
+    events = created_and_settled(lv, work)
+    %{id: id} = Enum.find(events, &(&1.title == "Lunch"))
+    test_pid = self()
+
+    Mox.stub(CalendarMock, :update_event, fn _uid, _payload, _context ->
+      send(test_pid, {:write_started, self()})
+
+      receive do
+        {:answer, answer} -> answer
+      end
+    end)
+
+    create_move = %{"id" => id, "start" => "2026-10-15T15:00", "end" => "2026-10-15T16:00"}
+    lv |> element("#calendar-canvas") |> render_hook("calendar:move", create_move)
+    assert_receive {:write_started, task}, 1_000
+
+    # The first Undo takes the move back (queued behind the running write); the
+    # second reaches the create while the event is still saving.
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+    assert render(lv) =~ "This event is still saving. Undo once it has saved."
+    assert all_enqueued(worker: CalendarEventDeleteWorker) == []
+
+    send(task, {:answer, :ok})
+    assert_receive {:write_started, task}, 1_000
+    send(task, {:answer, :ok})
+    render(lv)
+    render(lv)
+
+    # The create's entry stayed on the stack.
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+    assert [_job] = all_enqueued(worker: CalendarEventDeleteWorker)
+  end
+
+  test "a repeating create cannot be undone, as no series-wide change can",
+       %{lv: lv, work: work} do
+    created_and_settled(lv, work, %{"recurrence_rule" => "FREQ=WEEKLY"})
+
+    assert has_element?(lv, "#calendar-toast", "Added: Thu 15 Oct, 13:00")
+    refute has_element?(lv, "#calendar-undo")
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:undo", %{})
+    assert has_element?(lv, "#calendar-toast", "Nothing to undo.")
   end
 
   test "the removal landing keeps the toast that said so", %{lv: lv, user: user, work: work} do
@@ -273,7 +324,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
        %{lv: lv, work: work} do
     calendar_writes()
 
-    for bad <- ["", "D1", "x1", "d", "d-1", "d1 ", "../d1"] do
+    for bad <- ["", "D1", "x1", "d", "d-1", "d1 ", "../d1", "d" <> String.duplicate("1", 32)] do
       create(lv, lunch(work, %{"draft" => bad}))
 
       assert_reply(lv, %{

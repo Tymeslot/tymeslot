@@ -4,10 +4,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   first. An entry is a map whose `:kind` says how to undo it (see
   `Manipulation.undo/1`): `:timing` for a move or resize, `:delete` for a
   delete still inside its undo window, `:create` for an event just created
-  (undone by removing it, see `Creation.undo/2`), `:gone` for a delete that has since
-  run (Ctrl Z on it only says it is too late, so it does not reach an older
-  change by mistake). Entries that can no longer be undone (a write that
-  failed) are dropped with `drop/2`.
+  (undone by removing it, see `Creation.undo/2`), `:gone` for a delete that
+  has since run (Ctrl Z on it only says it is too late, so it does not reach
+  an older change by mistake). Entries that can no longer be undone (a write
+  that failed) are dropped with `drop/2`.
   """
 
   @limit 20

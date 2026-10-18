@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
 
   # The hook's draft ids ("d3", "dk2f"); anything else is refused before it is
   # used as a key or sent back in a push.
-  @draft_id ~r/\Ad[0-9a-z]+\z/
+  @draft_id ~r/\Ad[0-9a-z]{1,31}\z/
 
   @doc """
   A draft the hook asks to save. Returns the reply for the hook and the
@@ -196,8 +196,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   end
 
   # A row the cache refused (incomplete timing) cannot be found again, so
-  # there is nothing to undo.
+  # there is nothing to undo; nor is there for a repeating event, as no
+  # series-wide change can be undone here.
   defp undo_entry(nil, _params), do: nil
+  defp undo_entry(_event, %CreateParams{recurrence_rule: rule}) when is_binary(rule), do: nil
 
   defp undo_entry(event, params),
     do: %{
