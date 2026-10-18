@@ -72,6 +72,19 @@
   background: var(--cal-hover);
 }
 
+/* A column too narrow for the weekday and the date (a week beside the side
+   panel) keeps the date; the button's label still names the day. */
+.cal-dayhead {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+@container (max-width: 64px) {
+  .cal-dayhead-name {
+    display: none;
+  }
+}
+
 .cal-dayhead-num {
   color: var(--cal-text);
   font-size: var(--font-size-lg);
