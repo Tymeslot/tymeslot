@@ -310,3 +310,91 @@ test("a refused block says why and stays open", () => {
   expect(status().textContent).toBe("That time can't be blocked.");
   expect(block.disabled).toBe(false);
 });
+
+test("the label says whether its explainer is open", () => {
+  const { el } = withLayer();
+  expect(label(el).getAttribute("aria-expanded")).toBe("false");
+
+  label(el).click();
+  expect(label(el).getAttribute("aria-expanded")).toBe("true");
+
+  label(el).click();
+  expect(label(el).getAttribute("aria-expanded")).toBe("false");
+});
+
+test("B inside the explainer still switches the layer", () => {
+  const { el, hook } = withLayer();
+  label(el).click();
+
+  press(explainer().querySelector("button"), "b");
+
+  expect(pushes(hook, "calendar:bookable_toggle")).toHaveLength(1);
+  expect(explainer()).toBeNull();
+});
+
+test("a reply for an explainer that has closed does not touch the one open now", () => {
+  const { el, hook } = withLayer([w("2026-10-15T09:00", "2026-10-15T17:00"), w("2026-10-16T09:00", "2026-10-16T17:00")]);
+  label(el).click();
+  explainer().querySelector("[data-bookable-block]").click();
+  const reply = replyTo(hook, "calendar:block");
+
+  label(el).click();
+  column(el, "2026-10-16").querySelector("[data-bookable-label]").click();
+  const second = explainer();
+  reply({ accepted: true });
+
+  expect(explainer()).toBe(second);
+});
+
+test("an accepted block gives focus back to the day's label", () => {
+  const { el, hook } = withLayer();
+  label(el).click();
+  explainer().querySelector("[data-bookable-block]").click();
+
+  replyTo(hook, "calendar:block")({ accepted: true });
+
+  expect(explainer()).toBeNull();
+  expect(document.activeElement).toBe(label(el));
+});
+
+test("opening a \"+N\" list closes the explainer", () => {
+  const { el, hook } = withLayer();
+  label(el).click();
+
+  hook.showList([], label(el), "More");
+
+  expect(explainer()).toBeNull();
+});
+
+test("opening an event's preview closes the explainer", () => {
+  const { el, hook } = withLayer();
+  label(el).click();
+
+  hook.open("event-1", label(el));
+
+  expect(explainer()).toBeNull();
+});
+
+test("Copy falls back to the clipboard command when the clipboard API refuses", async () => {
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) }, configurable: true });
+  document.execCommand = vi.fn().mockReturnValue(true);
+  const { el } = withLayer();
+  label(el).click();
+
+  explainer().querySelector("[data-bookable-copy]").click();
+
+  await vi.waitFor(() => expect(status().textContent).toBe("Free times for these days copied."));
+  expect(document.execCommand).toHaveBeenCalledWith("copy");
+  expect(document.querySelector("textarea")).toBeNull();
+});
+
+test("Copy without a clipboard API uses the fallback, and says so when that fails too", async () => {
+  Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+  document.execCommand = vi.fn().mockReturnValue(false);
+  const { el } = withLayer();
+  label(el).click();
+
+  explainer().querySelector("[data-bookable-copy]").click();
+
+  await vi.waitFor(() => expect(status().textContent).toBe("Couldn't copy. Your browser blocked the clipboard."));
+});

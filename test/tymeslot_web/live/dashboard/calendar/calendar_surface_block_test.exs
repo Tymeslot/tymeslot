@@ -150,7 +150,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBlockTest do
           {:ok, {at, at, {:error, {:queued, :timeout}}}}
         )
 
-      assert socket.assigns.toast.message =~ "will reach your calendar once it is reachable again"
+      assert socket.assigns.toast.message ==
+               "Saved. It will block this time once your calendar is reachable again."
+
       refute socket.assigns.toast.undo
       assert socket.assigns.undo == bare_socket().assigns.undo
     end
@@ -158,8 +160,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBlockTest do
     test "a queued undo says so and does not put the block back on the stack" do
       socket = BlockTime.unblocked(bare_socket(), {:ok, {%{}, {:error, {:queued, :timeout}}}})
 
-      assert socket.assigns.toast.message =~ "will reach your calendar once it is reachable again"
+      assert socket.assigns.toast.message ==
+               "Saved. The time will free up once your calendar is reachable again."
+
       assert socket.assigns.undo == bare_socket().assigns.undo
+    end
+
+    test "too far ahead and too many time-off periods have their own flashes" do
+      at = ~U[2026-10-15 08:00:00Z]
+
+      for {reason, text} <- [
+            too_far: "That's too far ahead to block.",
+            limit_reached:
+              "You have too many time-off periods to block more time. Remove some first."
+          ] do
+        BlockTime.blocked(bare_socket(), {:block, 1}, {:ok, {at, at, {:error, reason}}})
+        assert_received {:flash, {:error, ^text}}
+      end
+    end
+
+    test "a failed undo goes back on top of the stack with the error flash" do
+      entry = %{kind: :block, key: {:block, 1}, id: nil, result: :r}
+      socket = BlockTime.unblocked(bare_socket(), {:ok, {entry, {:error, :boom}}})
+
+      assert [^entry | _rest] = socket.assigns.undo
+      assert_received {:flash, {:error, "Couldn't undo the block. Please try again."}}
+    end
+
+    test "an undo of a block that is already gone leaves the stack and says so" do
+      entry = %{kind: :block, key: {:block, 1}, id: nil, result: :r}
+      socket = BlockTime.unblocked(bare_socket(), {:ok, {entry, {:error, :not_found}}})
+
+      assert socket.assigns.undo == bare_socket().assigns.undo
+      assert socket.assigns.toast.message == "That change can't be undone any more."
     end
   end
 end

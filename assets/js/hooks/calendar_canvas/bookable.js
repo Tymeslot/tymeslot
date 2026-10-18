@@ -42,7 +42,8 @@ export const BookableMixin = {
       if ((e.key !== "b" && e.key !== "B") || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented) return;
       if (this.drag || this.createDrag || this.moving || this.quick) return;
       const target = e.target;
-      if (target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
+      const inExplainer = !!target?.closest?.("#calendar-bookable-explainer");
+      if (target?.isContentEditable || (!inExplainer && target?.closest?.(`${TYPING}, [role="dialog"], dialog`)) || document.querySelector(MODALS)) return;
       e.preventDefault();
       this.toggleBookable();
     };
@@ -74,6 +75,7 @@ export const BookableMixin = {
   },
 
   toggleBookable() {
+    this.closeExplainer();
     if (this.bookable) {
       this.bookable = { ...this.bookable, on: !this.bookable.on };
       this.render();
@@ -115,6 +117,7 @@ export const BookableMixin = {
     explainer.style.maxHeight = position.maxHeight ? `${Math.round(position.maxHeight)}px` : "";
     this.explainer = explainer;
     this.explainerDay = day;
+    anchor.setAttribute("aria-expanded", "true");
     document.addEventListener("pointerdown", this.explainerOutside);
     explainer.querySelector("button")?.focus();
   },
@@ -122,6 +125,7 @@ export const BookableMixin = {
   // Forget the explainer without touching focus (a redraw has removed it).
   dropExplainer() {
     document.removeEventListener("pointerdown", this.explainerOutside);
+    this.el.querySelector(`[data-bookable-label="${this.explainerDay}"]`)?.setAttribute("aria-expanded", "false");
     this.explainer = null;
     this.explainerDay = null;
     this.dirty = false;
@@ -146,19 +150,51 @@ export const BookableMixin = {
   async copyFreeTimes() {
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
     const text = formatFreeTimes(this.bookable.windows, days, { timezone: this.bookable.timezone, timeFormat: this.settings.time_format, strings: this.strings });
+    const copied = (await this.writeClipboard(text)) || this.copyWithCommand(text);
+    this.explainerStatus(copied ? this.strings.copied : this.strings.copy_failed);
+  },
+
+  async writeClipboard(text) {
     try {
       await navigator.clipboard.writeText(text);
-      this.explainerStatus(this.strings.copied);
+      return true;
     } catch (_error) {
-      this.explainerStatus(this.strings.copy_failed);
+      return false;
+    }
+  },
+
+  // For browsers without the clipboard API, or that refuse it here: select a
+  // hidden field and use the older copy command.
+  copyWithCommand(text) {
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0";
+    document.body.appendChild(field);
+    const focused = document.activeElement;
+    try {
+      field.select();
+      return !!document.execCommand?.("copy");
+    } catch (_error) {
+      return false;
+    } finally {
+      field.remove();
+      focused?.focus?.({ preventScroll: true });
     }
   },
 
   blockTime(button) {
+    const explainer = this.explainer;
+    const day = this.explainerDay;
     button.disabled = true;
     this.explainerStatus(this.strings.blocking);
     this.pushEventTo(this.el, "calendar:block", { start: button.dataset.start, end: button.dataset.end }, (reply) => {
-      if (reply?.accepted) return this.closeExplainer();
+      // The explainer may have closed, or another opened, while the server worked.
+      if (this.explainer !== explainer) return undefined;
+      if (reply?.accepted) {
+        this.closeExplainer();
+        return this.focusBy({ attr: "data-bookable-label", value: day });
+      }
       button.disabled = false;
       this.explainerStatus(reply?.error || this.strings.block_refused);
       return undefined;

@@ -273,7 +273,7 @@ function bookableBands(iso, { layer, scale, strings }) {
   return (
     html +
     `<button type="button" class="cal-bookable-label" data-bookable-label="${iso}" data-start="${formatWall(dayStart + segment.startMin)}" data-end="${formatWall(dayStart + segment.endMin)}" ` +
-    `aria-haspopup="dialog" aria-label="${escapeHtml(name)}" style="top:${scale.yOf(label.startMin)}px">${escapeHtml(strings.bookable)}</button>`
+    `aria-haspopup="dialog" aria-expanded="false" aria-label="${escapeHtml(name)}" style="top:${scale.yOf(label.startMin)}px">${escapeHtml(strings.bookable)}</button>`
   );
 }
 

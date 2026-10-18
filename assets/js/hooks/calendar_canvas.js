@@ -459,6 +459,7 @@ export const CalendarCanvas = {
     const rect = anchor.getBoundingClientRect();
     this.setPreviewPosition(placePopover(rect, PREVIEW_ESTIMATE, viewport()));
     this.closeList();
+    this.closeExplainer();
     this.pushEventTo(this.el, "calendar:open", { id }, () => this.positionPreview(rect));
   },
 
@@ -521,6 +522,7 @@ export const CalendarCanvas = {
   showList(events, anchor, label) {
     const reopening = this.list && this.listAnchorEl === anchor;
     this.closeList();
+    this.closeExplainer();
     if (reopening) return;
     const holder = document.createElement("div");
     holder.innerHTML = renderList([...events].sort((a, b) => a.startMin - b.startMin), { strings: this.strings, timeFormat: this.settings.time_format, label });

@@ -82,15 +82,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
     |> SurfaceData.reload(:events)
   end
 
-  # The calendar was unreachable: the busy event is written at the next
-  # sync, so there is no result to undo and nothing to retry.
+  # The provider took the write but the event is not cached yet: there is no
+  # result to undo, and the next sync brings it in.
+  def blocked(socket, _key, {:ok, {_start_at, _end_at, {:error, :not_cached}}}) do
+    socket
+    |> Toast.show(
+      dgettext(
+        "dashboard_calendar_booking",
+        "Blocked. It may take a moment to show on your calendar."
+      )
+    )
+    |> SurfaceData.reload(:events)
+  end
+
+  # The calendar was unreachable: nothing is blocked yet, the busy event is
+  # written at the next sync, so there is no result to undo and nothing to retry.
   def blocked(socket, _key, {:ok, {_start_at, _end_at, {:error, {:queued, _reason}}}}),
     do:
       Toast.show(
         socket,
         dgettext(
           "dashboard_calendar_booking",
-          "Blocked here. It will reach your calendar once it is reachable again."
+          "Saved. It will block this time once your calendar is reachable again."
         )
       )
 
@@ -131,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
         socket,
         dgettext(
           "dashboard_calendar_booking",
-          "Unblocked here. It will reach your calendar once it is reachable again."
+          "Saved. The time will free up once your calendar is reachable again."
         )
       )
 
@@ -175,6 +188,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
       accepted: false,
       error: dgettext("dashboard_calendar_booking", "That time can't be blocked.")
     }
+
+  defp refusal(:limit_reached),
+    do:
+      dgettext(
+        "dashboard_calendar_booking",
+        "You have too many time-off periods to block more time. Remove some first."
+      )
 
   defp refusal(:too_far),
     do: dgettext("dashboard_calendar_booking", "That's too far ahead to block.")
