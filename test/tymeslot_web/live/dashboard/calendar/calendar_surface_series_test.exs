@@ -97,6 +97,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesTest do
     })
 
     lv |> element("#calendar-scope-all") |> render_click()
+
+    # Earlier pushes (the first move, the this-only write) also show 10:00, so
+    # skip past them to the optimistic 11:00 and wait for the failed write to
+    # put 10:00 back; only then is it safe to swap the stub.
+    await_start(lv, id, "2026-10-14T11:00")
     await_start(lv, id, "2026-10-14T10:00")
     render(lv)
 
