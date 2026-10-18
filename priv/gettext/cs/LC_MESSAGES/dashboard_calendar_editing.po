@@ -697,7 +697,7 @@ msgstr "Název"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
-msgid "Title, or: lunch tomorrow 13:00 /personal"
+msgid "Title, or: lunch 13:00 /personal"
 msgstr "Název, nebo: oběd 13:00 /osobní"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex

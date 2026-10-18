@@ -34,7 +34,7 @@ export const strings = {
   period_range: "%{from} to %{to}",
   new_event: "New event",
   quick_create_label: "New event",
-  quick_create_placeholder: "Title, or: lunch tomorrow 13:00 /personal",
+  quick_create_placeholder: "Title, or: lunch 13:00 /personal",
   quick_create_hint: "Enter saves, Esc cancels. Type a day and time, /calendar, @email or ;place.",
   save: "Save",
   save_and_invite: "Save and invite",

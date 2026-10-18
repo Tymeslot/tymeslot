@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       new_event: dgettext("dashboard_calendar_editing", "New event"),
       quick_create_label: dgettext("dashboard_calendar_editing", "New event"),
       quick_create_placeholder:
-        dgettext("dashboard_calendar_editing", "Title, or: lunch tomorrow 13:00 /personal"),
+        dgettext("dashboard_calendar_editing", "Title, or: lunch 13:00 /personal"),
       quick_create_hint:
         dgettext(
           "dashboard_calendar_editing",

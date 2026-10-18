@@ -23,7 +23,7 @@ test("the popover is a labelled dialog with one field", () => {
   expect(popover.getAttribute("role")).toBe("dialog");
   expect(popover.querySelector(`#${popover.getAttribute("aria-labelledby")}`).textContent).toBe("New event");
   const field = popover.querySelector("#calendar-qc-field");
-  expect(field.getAttribute("placeholder")).toBe("Title, or: lunch tomorrow 13:00 /personal");
+  expect(field.getAttribute("placeholder")).toBe("Title, or: lunch 13:00 /personal");
   expect(popover.querySelector('label[for="calendar-qc-field"]')).not.toBeNull();
   expect(popover.querySelector("#calendar-qc-hint").textContent).toMatch(/^Enter saves/);
 });
