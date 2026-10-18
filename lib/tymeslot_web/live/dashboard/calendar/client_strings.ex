@@ -76,7 +76,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
         dgettext("dashboard_calendar", "Saving %{title} at %{when}.",
           title: "%{title}",
           when: "%{when}"
-        )
+        ),
+      new_event: dgettext("dashboard_calendar", "New event"),
+      quick_create_label: dgettext("dashboard_calendar", "New event"),
+      quick_create_placeholder:
+        dgettext("dashboard_calendar", "Title, or: lunch tomorrow 13:00 /personal"),
+      quick_create_hint:
+        dgettext(
+          "dashboard_calendar",
+          "Enter saves, Esc cancels. Type a day and time, /calendar, @email or ;place."
+        ),
+      save: dgettext("dashboard_calendar", "Save"),
+      save_and_invite: dgettext("dashboard_calendar", "Save and invite"),
+      more_options: dgettext("dashboard_calendar", "More options"),
+      show_as: dgettext("dashboard_calendar", "Show as"),
+      busy: dgettext("dashboard_calendar", "Busy"),
+      free: dgettext("dashboard_calendar", "Free"),
+      date_chip: dgettext("dashboard_calendar", "Date"),
+      start_chip: dgettext("dashboard_calendar", "Starts"),
+      end_chip: dgettext("dashboard_calendar", "Ends"),
+      time_to: dgettext("dashboard_calendar", "to"),
+      all_day_chip: dgettext("dashboard_calendar", "All day"),
+      calendar_chip: dgettext("dashboard_calendar", "Calendar"),
+      place_chip: dgettext("dashboard_calendar", "Place"),
+      guests_chip: dgettext("dashboard_calendar", "Guests"),
+      saving_draft: dgettext("dashboard_calendar", "Saving…"),
+      create_refused: dgettext("dashboard_calendar", "Couldn't add the event. Please try again.")
     }
   end
 end

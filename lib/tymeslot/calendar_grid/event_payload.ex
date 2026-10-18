@@ -16,12 +16,21 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   only on those, and the server checks again on every change. `movable`
   narrows that to the events whose time may change (`EditGuard.movable?/2`);
   `build/1` works it out for the whole window at once.
+
+  Each event also names its calendar (`calendar`, `"<integration id>:<calendar
+  id>"`, nil for bookings), whether it repeats (`recurring`) and how many
+  guests it has (`guests`). Drafts the organiser has not created yet (a
+  create still saving, or the side panel's unsaved "New event") are drawn as
+  `kind: "draft"` (`draft/4`), never editable or movable.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.ColourTokens
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EditGuard
+  alias Tymeslot.Integrations.Calendar.Attendee
 
   @type context :: %{
           required(:timezone) => String.t(),
@@ -36,6 +45,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   The whole payload: the period, the loaded range (`to` exclusive), the
   organiser's current wall-clock minute, the display settings, whether the
   hook should drop everything it holds first (`reset`), and the events.
+  `drafts` (optional) are `{draft_id, %CreateParams{}, pending?}` and follow
+  the events.
   """
   @spec build(map()) :: map()
   def build(%{view: view, date: date, window: window, now: now, timezone: timezone} = input) do
@@ -48,7 +59,11 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
       now: format(local(now, timezone)),
       reset: input.reset,
       settings: input.settings,
-      events: Enum.map(input.events, &event(&1, context))
+      events:
+        Enum.map(input.events, &event(&1, context)) ++
+          Enum.map(Map.get(input, :drafts, []), fn {id, params, pending?} ->
+            draft(id, params, pending?, context)
+          end)
     }
   end
 
@@ -72,11 +87,52 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         free: Map.get(event, :transparency) == "transparent",
         attention: Map.get(event, :sync_state, "synced") != "synced",
         editable: EditGuard.editable?(Map.get(context, :integrations, []), event),
-        movable: movable?(event, context)
+        movable: movable?(event, context),
+        calendar: calendar_key(event),
+        recurring: recurring?(event),
+        guests: guest_count(event)
       },
       timing(event, context.timezone)
     )
   end
+
+  @doc """
+  A draft the organiser has not created yet, in an event's shape: a create
+  still saving (`pending?` true, drawn "Saving…") or the side panel's unsaved
+  "New event" draft. Its colour is its calendar's.
+  """
+  @spec draft(String.t(), CreateParams.t(), boolean(), context()) :: map()
+  def draft(draft_id, %CreateParams{} = params, pending?, context) do
+    row = %{
+      calendar_integration_id: params.integration_id,
+      provider_calendar_id: params.calendar_id
+    }
+
+    Map.merge(
+      %{
+        id: "draft-" <> draft_id,
+        kind: "draft",
+        title: params.title,
+        colour: ColourTokens.for_event(row, context.integration_tokens, context.calendar_tokens),
+        free: params.free,
+        attention: false,
+        editable: false,
+        movable: false,
+        pending: pending?,
+        calendar: CalendarDirectory.key(params.integration_id, params.calendar_id),
+        recurring: is_binary(params.recurrence_rule),
+        guests: length(params.guests)
+      },
+      draft_timing(params, context.timezone)
+    )
+  end
+
+  @doc "Whether `event` belongs to a repeating series: its master or one occurrence."
+  @spec recurring?(map()) :: boolean()
+  def recurring?(event),
+    do:
+      is_binary(Map.get(event, :recurrence_rule)) or
+        is_binary(Map.get(event, :recurring_event_id))
 
   @doc "The id the hook knows an event by."
   @spec id(map()) :: String.t()
@@ -106,6 +162,32 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
       _none -> Date.add(first, 1)
     end
   end
+
+  defp calendar_key(%{kind: :booking}), do: nil
+
+  defp calendar_key(%{calendar_integration_id: id, provider_calendar_id: calendar_id})
+       when is_integer(id) and is_binary(calendar_id),
+       do: CalendarDirectory.key(id, calendar_id)
+
+  defp calendar_key(_event), do: nil
+
+  defp guest_count(%{kind: :booking, participants: [_first | _rest] = participants}),
+    do: length(participants)
+
+  defp guest_count(%{kind: :booking}), do: 1
+
+  defp guest_count(event) do
+    event
+    |> Map.get(:attendees)
+    |> List.wrap()
+    |> Enum.count(&(Attendee.normalise(&1).email not in [nil, ""]))
+  end
+
+  defp draft_timing(%CreateParams{all_day: true} = params, timezone),
+    do: timing(%{all_day: true, start_date: params.start_at, end_date: params.end_at}, timezone)
+
+  defp draft_timing(%CreateParams{} = params, timezone),
+    do: timing(%{start_at: params.start_at, end_at: params.end_at}, timezone)
 
   defp movable?(event, %{movable_ids: ids}), do: MapSet.member?(ids, id(event))
 

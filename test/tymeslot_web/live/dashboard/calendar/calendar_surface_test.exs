@@ -81,6 +81,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     })
   end
 
+  test "the settings carry the calendars a create can target and the one it starts on",
+       %{conn: conn, integration: integration} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    work = "#{integration.id}:work"
+    family = "#{integration.id}:family"
+
+    assert_reply(lv, %{
+      settings: %{
+        calendars: [
+          %{key: ^work, name: "Work", account: "Work account"},
+          %{key: ^family, name: "Family", account: "Work account"}
+        ],
+        default_calendar: ^work
+      }
+    })
+  end
+
+  test "each event names its calendar", %{conn: conn, integration: integration} do
+    event(integration, "family", "Swimming", ~U[2026-10-14 16:00:00Z])
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{events: events})
+    family = "#{integration.id}:family"
+
+    assert %{calendar: ^family, recurring: false, guests: 0} =
+             Enum.find(events, &(&1.title == "Swimming"))
+  end
+
   test "a URL naming a view and date opens on that period", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=day&date=2026-10-20")
 

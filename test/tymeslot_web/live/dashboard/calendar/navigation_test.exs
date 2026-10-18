@@ -50,6 +50,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
   end
 
   describe "ClientStrings.build/1" do
+    test "carries every key quick create reads" do
+      keys =
+        ~w(new_event quick_create_label quick_create_placeholder quick_create_hint save save_and_invite more_options show_as busy free date_chip start_chip end_chip time_to all_day_chip calendar_chip place_chip guests_chip saving_draft create_refused)a
+
+      assert keys -- Map.keys(ClientStrings.build("en")) == []
+    end
+
+    test "quick create's words" do
+      strings = ClientStrings.build("en")
+
+      assert strings.save_and_invite == "Save and invite"
+      assert strings.saving_draft == "Saving…"
+      assert strings.quick_create_hint =~ "@email"
+    end
+
     test "weekdays run Monday to Sunday, whatever order the locale table keeps" do
       strings = ClientStrings.build("en")
 

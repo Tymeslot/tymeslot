@@ -113,4 +113,32 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectoryTest do
       assert CalendarDirectory.writable_calendars(@feed) == []
     end
   end
+
+  describe "choices/1" do
+    test "lists the calendars a create can target, hidden ones included, in rail order" do
+      accounts = accounts([], MapSet.new([{1, "work"}]))
+
+      assert CalendarDirectory.choices(accounts) == [
+               %{key: "1:work", name: "Work", account: "Work account", colour: "calendar-tomato"}
+             ]
+    end
+  end
+
+  describe "default_calendar/1" do
+    test "is the first account's booking calendar, else its first writable one" do
+      assert CalendarDirectory.default_calendar([@feed, @google]) == "1:work"
+
+      with_booking =
+        Map.merge(@google, %{
+          default_booking_calendar_id: "team",
+          calendar_list: @google.calendar_list ++ [%{"id" => "team", "selected" => true}]
+        })
+
+      assert CalendarDirectory.default_calendar([with_booking]) == "1:team"
+    end
+
+    test "is nil when nothing can be written to" do
+      assert CalendarDirectory.default_calendar([@feed]) == nil
+    end
+  end
 end

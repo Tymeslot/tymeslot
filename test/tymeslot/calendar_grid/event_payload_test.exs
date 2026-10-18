@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
   @moduletag :unit
 
   alias Tymeslot.CalendarGrid.BookingEvent
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -53,6 +54,20 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
     )
   end
 
+  defp draft_params(attrs) do
+    struct!(
+      %CreateParams{
+        integration_id: 7,
+        calendar_id: "work",
+        title: "Lunch",
+        start_at: ~U[2026-10-16 11:00:00Z],
+        end_at: ~U[2026-10-16 12:00:00Z],
+        timezone: "Europe/Warsaw"
+      },
+      attrs
+    )
+  end
+
   test "a timed event carries wall-clock times in the organiser's zone" do
     assert EventPayload.event(timed([]), @context) == %{
              id: "event-42",
@@ -65,7 +80,10 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              free: false,
              attention: false,
              editable: false,
-             movable: false
+             movable: false,
+             calendar: "7:work",
+             recurring: false,
+             guests: 0
            }
   end
 
@@ -149,6 +167,7 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
         integration_tokens: %{},
         calendar_tokens: %{},
         events: [timed([])],
+        drafts: [{"d1", draft_params([]), true}],
         settings: %{density: "compact"},
         reset: true
       })
@@ -159,7 +178,86 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
     assert payload.now == "2026-10-17T00:30"
     assert payload.reset == true
     assert payload.settings == %{density: "compact"}
-    assert [%{id: "event-42"}] = payload.events
+    assert [%{id: "event-42"}, %{id: "draft-d1", kind: "draft"}] = payload.events
+  end
+
+  describe "calendar, repeats and guests" do
+    test "a booking has no calendar of its own" do
+      assert %{calendar: nil} = EventPayload.event(booking([]), @context)
+    end
+
+    test "an event without a calendar id has no key" do
+      assert %{calendar: nil} = EventPayload.event(timed(provider_calendar_id: nil), @context)
+    end
+
+    test "a series master or occurrence repeats" do
+      assert %{recurring: true} =
+               EventPayload.event(timed(recurrence_rule: "FREQ=WEEKLY"), @context)
+
+      assert %{recurring: true} = EventPayload.event(timed(recurring_event_id: "m-1"), @context)
+      assert %{recurring: false} = EventPayload.event(booking([]), @context)
+    end
+
+    test "counts the guests with an address" do
+      attendees = [%{"email" => "anna@example.com"}, %{"email" => "ben@example.com"}, %{}]
+
+      assert %{guests: 2} = EventPayload.event(timed(attendees: attendees), @context)
+    end
+
+    test "a booking's guests are its guest, or each participant of a group" do
+      assert %{guests: 1} = EventPayload.event(booking([]), @context)
+
+      group =
+        booking(
+          participants: [
+            %{name: "Ada", email: "ada@example.com"},
+            %{name: "Bo", email: "bo@example.com"}
+          ]
+        )
+
+      assert %{guests: 2} = EventPayload.event(group, @context)
+    end
+  end
+
+  describe "draft/4" do
+    test "a pending create is drawn as a saving draft in the organiser's wall clock" do
+      assert EventPayload.draft("d1", draft_params([]), true, @context) == %{
+               id: "draft-d1",
+               kind: "draft",
+               title: "Lunch",
+               all_day: false,
+               start: "2026-10-16T13:00",
+               end: "2026-10-16T14:00",
+               colour: "calendar-3",
+               free: false,
+               attention: false,
+               editable: false,
+               movable: false,
+               pending: true,
+               calendar: "7:work",
+               recurring: false,
+               guests: 0
+             }
+    end
+
+    test "the panel's draft is not saving, and says what it will be" do
+      params =
+        draft_params(
+          free: true,
+          guests: ["anna@example.com"],
+          recurrence_rule: "FREQ=WEEKLY"
+        )
+
+      assert %{pending: false, free: true, guests: 1, recurring: true} =
+               EventPayload.draft("panel", params, false, @context)
+    end
+
+    test "an all-day draft carries its dates with the exclusive end" do
+      params = draft_params(all_day: true, start_at: ~D[2026-10-16], end_at: ~D[2026-10-18])
+
+      assert %{all_day: true, start: "2026-10-16", end: "2026-10-18"} =
+               EventPayload.draft("d2", params, true, @context)
+    end
   end
 
   describe "editable" do

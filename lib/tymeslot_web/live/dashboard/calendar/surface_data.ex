@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.ColourTokens
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.EventWindow
   alias Tymeslot.CalendarGrid.Period
@@ -226,7 +227,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       density: preferences.density,
       fold_night: preferences.fold_night,
       time_format: assigns.time_format,
-      working_hours: assigns.working_hours
+      working_hours: assigns.working_hours,
+      calendars: CalendarDirectory.choices(assigns.accounts),
+      default_calendar: CalendarDirectory.default_calendar(assigns.integrations)
     }
   end
 
@@ -243,10 +246,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       calendar_tokens: assigns.calendar_tokens,
       integrations: assigns.integrations,
       events: assigns.events,
+      drafts: drafts(assigns),
       settings: settings(assigns),
       reset: reset
     })
   end
+
+  # Creates still saving, in draft id order, then the side panel's unsaved
+  # "New event" draft (see `EventPayload.draft/4`).
+  defp drafts(assigns) do
+    pending =
+      assigns
+      |> Map.get(:pending_creates, %{})
+      |> Enum.sort()
+      |> Enum.map(fn {id, params} -> {id, params, true} end)
+
+    pending ++ panel_draft(Map.get(assigns, :panel))
+  end
+
+  defp panel_draft(%{mode: :new, draft: %CreateParams{} = params} = panel),
+    do: [{Map.get(panel, :draft_id) || "panel", params, false}]
+
+  defp panel_draft(_panel), do: []
 
   @doc "Pushes the loaded window to the hook."
   @spec push_events(socket(), boolean()) :: socket()

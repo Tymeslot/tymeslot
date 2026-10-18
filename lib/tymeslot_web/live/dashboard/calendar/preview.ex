@@ -57,9 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       source: source_label(event, integration, entry),
       when: when_text(event, context),
       relative: relative(event, context.now),
-      repeats:
-        is_binary(Map.get(event, :recurrence_rule)) or
-          is_binary(Map.get(event, :recurring_event_id)),
+      repeats: EventPayload.recurring?(event),
       location: present(Map.get(event, :location)),
       guests: guests(event),
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),

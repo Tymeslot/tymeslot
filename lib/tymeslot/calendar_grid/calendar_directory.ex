@@ -17,6 +17,7 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
   """
 
   alias Tymeslot.CalendarGrid.ColourTokens
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
@@ -131,5 +132,43 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
     if ProviderConfig.read_only?(provider),
       do: [],
       else: integration |> synced_entries() |> Enum.reject(& &1.read_only)
+  end
+
+  @doc """
+  The calendars a new event can go to, for the quick-create calendar chip:
+  every writable calendar of `accounts` (as `accounts/5` builds them),
+  hidden ones included, in rail order.
+  """
+  @spec choices([account()]) :: [
+          %{key: String.t(), name: String.t(), account: String.t(), colour: String.t()}
+        ]
+  def choices(accounts) do
+    for %{read_only: false} = account <- accounts,
+        %{read_only: false} = calendar <- account.calendars do
+      %{
+        key: key(account.id, calendar.id),
+        name: calendar.name,
+        account: account.name,
+        colour: calendar.colour
+      }
+    end
+  end
+
+  @doc """
+  The calendar quick create starts on: the first account with a writable
+  calendar, on its booking calendar when that is writable, else its primary
+  or first writable one (`Calendar.default_booking_calendar/2`). `nil` when
+  nothing can be written to.
+  """
+  @spec default_calendar([map()]) :: String.t() | nil
+  def default_calendar(integrations) do
+    Enum.find_value(integrations, fn integration ->
+      booking_id = Map.get(integration, :default_booking_calendar_id)
+
+      case Calendar.default_booking_calendar(writable_calendars(integration), booking_id) do
+        nil -> nil
+        entry -> key(integration.id, entry.id)
+      end
+    end)
   end
 end
