@@ -52,6 +52,7 @@ export const DraftMixin = {
       ["pointermove", (e) => this.draftPointerMove(e)],
       ["pointerup", (e) => this.draftPointerUp(e)],
       ["pointercancel", () => this.cancelCreateDrag()],
+      ["contextmenu", () => this.cancelCreateDrag()],
       ["lostpointercapture", () => this.cancelCreateDrag()],
     ];
     for (const [name, listener] of this.draftListeners) this.el.addEventListener(name, listener);
@@ -84,6 +85,8 @@ export const DraftMixin = {
   },
 
   draftPointerDown(e) {
+    // A press whose release was never seen must not start a drag later.
+    this.endCreateDrag();
     this.pressHadLayer = this.hasLayer();
     if (e.button !== 0 || e.pointerType === "touch" || !this.settings || this.drag || this.pressHadLayer) return;
     if (!this.emptyColumn(e.target)) return;

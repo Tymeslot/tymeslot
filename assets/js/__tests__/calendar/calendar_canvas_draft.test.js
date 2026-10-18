@@ -264,3 +264,69 @@ test("a typed title is escaped where the draft is drawn", () => {
   expect(el.querySelector("[data-draft-id] img")).toBeNull();
   expect(drafts(el)[0].querySelector(".cal-ev-title").textContent).toBe('<img src=x onerror="alert(1)">');
 });
+
+test("a press that never saw its release cannot start a create drag later", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", column(el, "2026-10-15"), 350, 52 * 9);
+  // The release was lost; a later press on a layer-free button must not inherit it.
+  pointer("pointerdown", el.querySelector("button") ?? el, 350, 52 * 9, { pointerId: 2 });
+  pointer("pointermove", el, 350, 555, { pointerId: 1 });
+
+  expect(el.querySelector(".is-drawing")).toBeNull();
+});
+
+test("a context menu while drawing a span cancels it", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", column(el, "2026-10-15"), 350, 52 * 9);
+  pointer("pointermove", el, 350, 555);
+  expect(el.querySelector(".is-drawing")).not.toBeNull();
+  el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+
+  expect(el.querySelector(".is-drawing")).toBeNull();
+  expect(hook.createDrag).toBeNull();
+});
+
+test("a server all-day draft is not listed as an event in the all-day \"+N\" list", () => {
+  const holidays = ["a", "b", "c", "d"].map((k) => event(`event-${k}`, `Holiday ${k}`, "2026-10-15", "2026-10-16", { all_day: true }));
+  const serverDraft = event("draft-s1", "Server draft", "2026-10-15", "2026-10-16", { all_day: true, kind: "draft", pending: true, editable: false, movable: false });
+  const { el, hook } = mountHook(payload({ events: [...holidays, serverDraft] }));
+  withGeometry(hook);
+
+  el.querySelector("[data-allday-more]").click();
+
+  const list = el.querySelector(".cal-list");
+  expect(list).not.toBeNull();
+  expect(list.textContent).not.toContain("Server draft");
+});
+
+test("a payload arriving while a local draft is open keeps that draft", () => {
+  const { el, hook, handlers } = mountHook();
+  withGeometry(hook);
+  tap(column(el, "2026-10-15"), 350, 52 * 9 + 10);
+  const id = hook.draft.id;
+
+  handlers["calendar:events"](payload({ reset: false }));
+
+  expect(hook.draft?.id).toBe(id);
+  expect(el.querySelectorAll(`[data-draft-id="draft-${id}"]`)).toHaveLength(1);
+});
+
+test("destroying the hook mid-draw removes the drawing block and later input does not throw", () => {
+  const { el, hook } = mountHook();
+  withGeometry(hook);
+
+  pointer("pointerdown", column(el, "2026-10-15"), 350, 52 * 9);
+  pointer("pointermove", el, 350, 555);
+  expect(el.querySelector(".is-drawing")).not.toBeNull();
+  hook.destroyed();
+
+  expect(el.querySelector(".is-drawing")).toBeNull();
+  expect(() => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    pointer("pointermove", el, 350, 600);
+  }).not.toThrow();
+});

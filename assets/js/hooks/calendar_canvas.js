@@ -362,7 +362,7 @@ export const CalendarCanvas = {
     const allDayMore = target.closest("[data-allday-more]");
     if (allDayMore) {
       const day = dayNumber(allDayMore.dataset.alldayMore);
-      const events = [...this.cache.events.values()].filter((ev) => ev.long && ev.startDay <= day && ev.endDay > day);
+      const events = [...this.cache.events.values()].filter((ev) => ev.long && ev.kind !== "draft" && ev.startDay <= day && ev.endDay > day);
       return this.showList(events, allDayMore, this.strings.all_day);
     }
 
