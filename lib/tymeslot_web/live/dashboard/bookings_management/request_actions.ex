@@ -194,4 +194,24 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     Flash.error(message)
     socket
   end
+
+  @doc """
+  The `:meeting_approval` rate-limit key for answers given from the
+  dashboard, keyed on the host. The emailed link uses the client IP under
+  the same limiter, so the two cannot exhaust each other's budget; the
+  Meetings page and the calendar share this one.
+  """
+  @spec limiter_key(integer()) :: String.t()
+  def limiter_key(user_id), do: "dashboard:#{user_id}"
+
+  @doc """
+  The host's decline note as `Approval.decline/2` may store it. A crafted
+  socket frame can send a non-binary `reason` (a `reason[x]=y` payload
+  arrives as a map) or one containing a null byte, which PostgreSQL rejects
+  even though it is valid UTF-8; anything but a clean string is no reason
+  given, rather than a crash.
+  """
+  @spec decline_reason(term()) :: String.t() | nil
+  def decline_reason(reason) when is_binary(reason), do: String.replace(reason, "\x00", "")
+  def decline_reason(_reason), do: nil
 end

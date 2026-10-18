@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
 
   An event the organiser can change offers Edit (the side panel) and Delete
   (see `Deletion`), and a Busy/Free toggle unless it is a booking or a
-  booking's calendar copy (`FreeBusy`).
+  booking's calendar copy (`FreeBusy`). A booking offers what
+  `BookingPreview` allows: Accept and Decline on a request, Reschedule and
+  Cancel on a booking still ahead, or a quiet line once it has passed.
   """
 
   use TymeslotWeb, :html
@@ -28,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.Calendar.BookingPreview
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @guest_limit 5
@@ -66,12 +69,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       sync_note: sync_note(event, integration),
       editable: EditGuard.editable?(context.integrations, event),
       free_busy: free_busy(event, context.integrations),
-      free: Map.get(event, :transparency) == "transparent"
+      free: Map.get(event, :transparency) == "transparent",
+      meeting_id: Map.get(event, :meeting_id),
+      booking: BookingPreview.state(event, context.now)
     }
   end
 
   attr :preview, :map, required: true
   attr :target, :any, required: true
+  attr :answering, :any, default: nil, doc: "the meeting whose request answer is in flight"
 
   @spec preview(map()) :: Phoenix.LiveView.Rendered.t()
   def preview(assigns) do
@@ -171,6 +177,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Join")}
         </.link>
       </div>
+      <BookingPreview.booking_actions preview={@preview} answering={@answering} target={@target} />
       <div
         :if={@preview.editable}
         class="mt-4 flex justify-end gap-2 border-t border-tymeslot-100 pt-3"

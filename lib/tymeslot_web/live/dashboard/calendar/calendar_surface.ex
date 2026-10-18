@@ -21,6 +21,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.Period
   alias Tymeslot.CalendarGrid.SyncProblems
+  alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
+  alias TymeslotWeb.Dashboard.Calendar.BookingActions
+  alias TymeslotWeb.Dashboard.Calendar.BookingCancelModal
+  alias TymeslotWeb.Dashboard.Calendar.BookingDeclineModal
+  alias TymeslotWeb.Dashboard.Calendar.BookingRescheduleModal
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.Creation
@@ -67,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @repeat_scopes ~w(following all)
 
   @impl Phoenix.LiveComponent
-  def mount(socket), do: {:ok, SurfaceData.defaults(socket)}
+  def mount(socket), do: {:ok, socket |> SurfaceData.defaults() |> BookingActions.defaults()}
 
   # A sync cycle sends several messages in a burst; they are coalesced into
   # one reload after `@reload_delay`. What the reload covers is the widest of
@@ -300,7 +305,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           surface={@myself}
         />
       </div>
-      <Preview.preview :if={@preview} preview={@preview} target={@myself} />
+      <Preview.preview
+        :if={@preview}
+        preview={@preview}
+        answering={@answering_request}
+        target={@myself}
+      />
       <Toast.toast toast={@toast} target={@myself} />
       <SeriesScopeModal.series_scope_modal
         :if={@series_prompt}
@@ -320,6 +330,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <RemoveGuestModal.remove_guest_modal
         :if={@remove_guest_prompt}
         prompt={@remove_guest_prompt}
+        target={@myself}
+      />
+      <BookingDeclineModal.booking_decline_modal
+        :if={@decline_request_modal_data}
+        meeting={@decline_request_modal_data}
+        declining={not is_nil(@answering_request)}
+        timezone={@timezone}
+        time_format={@time_format}
+        target={@myself}
+      />
+      <BookingCancelModal.booking_cancel_modal
+        :if={@cancel_meeting_modal_data}
+        meeting={@cancel_meeting_modal_data}
+        booking_payment={@cancel_booking_payment}
+        timezone={@timezone}
+        time_format={@time_format}
+        target={@myself}
+      />
+      <BookingRescheduleModal.booking_reschedule_modal
+        :if={@reschedule_request_modal_data}
+        meeting={@reschedule_request_modal_data}
+        sending={not is_nil(@sending_reschedule)}
+        timezone={@timezone}
+        time_format={@time_format}
         target={@myself}
       />
     </div>
@@ -414,6 +448,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("panel:" <> name, params, socket),
     do: {:noreply, PanelEvents.handle(name, params, socket)}
 
+  # The preview's actions on a booking (see `BookingActions`).
+  def handle_event("booking:" <> name, params, socket),
+    do: {:noreply, BookingActions.handle(name, params, socket)}
+
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}
 
@@ -488,4 +526,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do: {:noreply, socket},
       else: {:noreply, push_event(socket, "calendar:preview-closed", %{})}
   end
+
+  # A request's answer, run off this process (see `BookingActions`).
+  @impl Phoenix.LiveComponent
+  def handle_async({:answer_request, _meeting_id} = key, result, socket),
+    do: RequestActions.handle_answer(socket, key, result)
 end

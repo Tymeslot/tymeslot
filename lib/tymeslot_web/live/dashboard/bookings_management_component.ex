@@ -6,8 +6,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.Bookings.Refusal
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -24,9 +22,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
   alias TymeslotWeb.Live.Shared.Flash
-
-  require Refusal
-  require Logger
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -372,7 +367,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("confirm_decline_request", params, socket) do
     case RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)) do
       :ok ->
-        reason = sanitize_decline_reason(Map.get(params, "reason"))
+        reason = RequestActions.decline_reason(Map.get(params, "reason"))
 
         ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
           socket
@@ -461,80 +456,29 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # Private functions
 
   defp do_cancel_meeting(socket, meeting, params) do
-    booking_payment = socket.assigns.cancel_booking_payment
-
-    case Meetings.resolve_cancellation_refund(booking_payment, params) do
-      {:ok, refund_action} ->
-        socket
-        |> assign(:cancelling_meeting, meeting.id)
-        |> run_cancellation(meeting, refund_action)
-
-      {:error, reason} ->
-        Flash.error(Cancellation.refund_error_message(reason))
-        {:noreply, socket}
-    end
-  end
-
-  defp run_cancellation(socket, meeting, refund_action) do
-    result =
-      Meetings.cancel_meeting_with_refund(
-        meeting,
+    {outcome, type, message} =
+      Cancellation.cancel(
         socket.assigns.current_user.id,
-        refund_action
+        meeting,
+        socket.assigns.cancel_booking_payment,
+        params
       )
 
-    Cancellation.emit_confirm(socket.assigns.current_user.id, meeting.id, result)
-    handle_cancellation(socket, meeting, refund_action, result)
+    {:noreply, socket |> Flash.put_flash(type, message) |> after_cancel(outcome)}
   end
 
-  defp handle_cancellation(socket, _meeting, refund_action, {:ok, _cancelled}) do
-    Flash.info(Cancellation.success_message(refund_action))
-    {:noreply, close_cancel_modal(socket)}
-  end
+  # Cancelled: close and reload, because the cancellation did happen even if
+  # the refund did not. Refused (the meeting started or ended meanwhile):
+  # close, nothing changed. Otherwise the dialog stays for another try.
+  defp after_cancel(socket, :closed), do: close_cancel_modal(socket)
 
-  # The meeting is cancelled; only the money is outstanding. The modal closes
-  # and the list refreshes as on success, because the cancellation itself did
-  # happen and leaving the dialog open would suggest otherwise.
-  defp handle_cancellation(socket, _meeting, _refund_action, {:error, {:refund_failed, _reason}}) do
-    Flash.error(
-      dgettext(
-        "dashboard_bookings",
-        "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-      )
-    )
+  defp after_cancel(socket, :refused),
+    do:
+      socket
+      |> assign(cancelling_meeting: nil, cancel_booking_payment: nil)
+      |> ModalHook.hide_modal(:cancel_meeting)
 
-    {:noreply, close_cancel_modal(socket)}
-  end
-
-  # The attendee (or a calendar sync) cancelled the meeting while the modal
-  # was open. Nothing is left to do: the cancellation stopped before the
-  # refund step, so the host is told no refund came from this action.
-  defp handle_cancellation(socket, _meeting, refund_action, {:error, :already_cancelled}) do
-    Flash.info(Cancellation.already_cancelled_message(refund_action))
-    {:noreply, close_cancel_modal(socket)}
-  end
-
-  # The meeting started or ended while the modal was open: retrying cannot
-  # help, so the host is told why. Nothing changed, so the list stands.
-  defp handle_cancellation(socket, _meeting, _refund_action, {:error, reason})
-       when Refusal.is_refusal(reason) do
-    Flash.error(ModalMeeting.refusal_message(reason))
-
-    {:noreply,
-     socket
-     |> assign(cancelling_meeting: nil, cancel_booking_payment: nil)
-     |> ModalHook.hide_modal(:cancel_meeting)}
-  end
-
-  defp handle_cancellation(socket, meeting, _refund_action, {:error, reason}) do
-    Logger.error("cancel_meeting_failed",
-      reason: LogFormat.reason(reason),
-      meeting_id: meeting.id
-    )
-
-    Flash.error(dgettext("dashboard_bookings", "Failed to cancel meeting. Please try again."))
-    {:noreply, assign(socket, :cancelling_meeting, nil)}
-  end
+  defp after_cancel(socket, _kept_open), do: assign(socket, :cancelling_meeting, nil)
 
   defp close_cancel_modal(socket) do
     socket
@@ -615,15 +559,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # under a `"dashboard:"`-prefixed identifier keyed on the host, since the
   # dashboard has an authenticated user and no client IP: the two surfaces
   # cannot exhaust each other's budget.
-  defp dashboard_approval_key(socket), do: "dashboard:#{socket.assigns.current_user.id}"
-
-  # A crafted socket frame can send a non-binary `reason` (e.g. a
-  # `reason[x]=y` payload arrives as a map, not a string) or one containing a
-  # null byte, which PostgreSQL rejects even though it is valid UTF-8.
-  # Anything but a clean string is treated as no reason given rather than
-  # reaching `Approval.decline/2` and crashing the LiveView.
-  defp sanitize_decline_reason(reason) when is_binary(reason),
-    do: String.replace(reason, "\x00", "")
-
-  defp sanitize_decline_reason(_reason), do: nil
+  defp dashboard_approval_key(socket),
+    do: RequestActions.limiter_key(socket.assigns.current_user.id)
 end
