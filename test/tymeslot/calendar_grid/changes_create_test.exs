@@ -114,6 +114,52 @@ defmodule Tymeslot.CalendarGrid.ChangesCreateTest do
     assert DateTime.compare(row.start_at, ~U[2026-10-15 12:00:00Z]) == :eq
   end
 
+  test "caches the notes with the call's join line, and the call's room and link",
+       %{user: user, integration: integration} do
+    video_integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+    body =
+      Jason.encode!(%{
+        "room_id" => "room-123",
+        "meeting_url" => "https://video.example.com/join/room-123"
+      })
+
+    stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 200, body: body}}
+    end)
+
+    written()
+
+    {:ok, %{event: event}} =
+      Changes.create_event(
+        user.id,
+        payload(integration, %{
+          description: "Weekly sync",
+          video_integration_id: video_integration.id
+        })
+      )
+
+    row = cached(integration, event.uid)
+    assert row.description =~ "Weekly sync"
+    assert row.description =~ "https://video.example.com/join/room-123"
+    assert row.video_link == "https://video.example.com/join/room-123"
+    assert row.video_integration_id == video_integration.id
+  end
+
+  # A CalDAV server is only obliged to answer a PUT with an ETag when it
+  # stored the document unmodified, so the columns stay null rather than the
+  # create being treated as failed.
+  test "leaves the identity columns null when the provider reported neither",
+       %{user: user, integration: integration} do
+    written()
+
+    {:ok, %{event: event}} = Changes.create_event(user.id, payload(integration))
+
+    row = cached(integration, event.uid)
+    assert is_nil(row.provider_event_id)
+    assert is_nil(row.etag)
+  end
+
   test "a busy event is cached as busy", %{user: user, integration: integration} do
     written()
 
