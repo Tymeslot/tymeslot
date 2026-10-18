@@ -23,7 +23,8 @@
  *  - a drag moves or resizes an event the organiser can change and pushes
  *    `calendar:move` on the drop (see calendar_canvas/drag.js);
  *  - a click or a drag on an empty slot drops a draft for quick create (see
- *    calendar_canvas/draft.js);
+ *    calendar_canvas/draft.js), whose popover pushes `calendar:create` or
+ *    `calendar:more_options` (see calendar_canvas/create.js);
  *  - on a focused event the arrow keys move focus, M moves it from the keyboard,
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
@@ -36,6 +37,7 @@
  *   data-strings          JSON of translated copy (see ClientStrings)
  */
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
+import { CreateMixin } from "./calendar_canvas/create.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
@@ -78,6 +80,7 @@ const viewport = () => ({ width: window.innerWidth, height: window.innerHeight }
 export const CalendarCanvas = {
   ...DragMixin,
   ...DraftMixin,
+  ...CreateMixin,
   ...KeysMixin,
   ...ZoomMixin,
 
@@ -109,6 +112,7 @@ export const CalendarCanvas = {
     for (const [name, listener] of this.listeners) this.el.addEventListener(name, listener);
     this.mountDrag();
     this.mountDraft();
+    this.mountCreate();
     this.mountKeys();
     this.mountZoom();
 
@@ -147,6 +151,7 @@ export const CalendarCanvas = {
     this.closeList();
     this.destroyDrag();
     this.destroyDraft();
+    this.destroyCreate();
     this.destroyKeys();
     this.destroyZoom();
     const style = document.documentElement.style;
@@ -289,6 +294,7 @@ export const CalendarCanvas = {
       this.dropList();
       this.el.innerHTML = renderSkeleton(days, this.strings);
       this.el.setAttribute("aria-busy", "true");
+      this.placeQuickCreate();
       return;
     }
 
@@ -320,6 +326,8 @@ export const CalendarCanvas = {
       this.focusBy(this.pendingFocus);
       this.pendingFocus = null;
     }
+    // The draft may have moved under the quick-create popover.
+    this.placeQuickCreate();
   },
 
   // First draw: an hour and a half before now when today is in view, else 08:00.

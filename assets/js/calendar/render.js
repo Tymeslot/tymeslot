@@ -54,7 +54,7 @@ export function interpolate(template, vars) {
   return String(template ?? "").replace(/%\{(\w+)\}/g, (_match, key) => (key in vars ? String(vars[key]) : ""));
 }
 
-function colour(token) {
+export function colour(token) {
   return TOKEN.test(token || "") ? `var(--color-${token})` : "var(--color-calendar-fallback)";
 }
 
