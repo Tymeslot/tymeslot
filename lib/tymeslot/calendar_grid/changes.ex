@@ -194,7 +194,8 @@ defmodule Tymeslot.CalendarGrid.Changes do
   drawn end. See `Tymeslot.CalendarGrid.Moves.resolve/4`.
   """
   @spec resolve_timing(map(), Moves.wall(), Moves.wall(), String.t()) ::
-          {:ok, %{start_at: DateTime.t(), end_at: DateTime.t()}} | {:error, :invalid_time}
+          {:ok, %{start_at: DateTime.t(), end_at: DateTime.t()}}
+          | {:error, :invalid_time | :out_of_range}
   defdelegate resolve_timing(event, start_wall, end_wall, timezone), to: Moves, as: :resolve
 
   @doc """
