@@ -55,7 +55,7 @@ export const CreateMixin = {
     this.quickScroll = () => this.placeQuickCreate();
     this.createKey = (e) => {
       if ((e.key !== "c" && e.key !== "C") || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented) return;
-      if (this.drag || this.createDrag || this.moving || this.quick) return;
+      if (this.drag || this.createDrag || this.moving) return;
       const target = e.target;
       if (target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
       e.preventDefault();
@@ -84,7 +84,9 @@ export const CreateMixin = {
       return;
     }
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
-    const range = nextSlot(this.nowMinute(), days, [...this.cache.events.values()]);
+    const range = nextSlot(this.nowMinute(), days, [...this.cache.events.values()], undefined, this.currentScale().firstMinute);
+    // The preview (rendered by LiveView) would otherwise stay beside the draft.
+    if (document.getElementById("calendar-preview")) this.pushEventTo(this.el, "calendar:close_preview", { refocus: "false" });
     this.startDraft(draftFromRange(newDraftId(), range, this.defaultCalendar()));
     this.followDraft(0);
   },

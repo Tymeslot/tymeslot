@@ -214,9 +214,10 @@ export function draftEvent(draft, calendars = []) {
  * 09:00 on the first visible day. From there it skips past busy timed events
  * (free ones, all-day ones and drafts do not count) until a gap of `length`
  * opens; when none opens before midnight the first candidate stands.
- * `now` is a wall minute, `days` the visible ISO days, `events` normalised.
+ * `now` is a wall minute, `days` the visible ISO days, `events` normalised,
+ * `floor` the day's first visible minute (a folded night hides the rest).
  */
-export function nextSlot(now, days, events, length = DEFAULT_LENGTH) {
+export function nextSlot(now, days, events, length = DEFAULT_LENGTH, floor = 0) {
   const today = dayOf(now);
   const visible = days.map(dayNumber);
   let day = visible[0];
@@ -231,6 +232,7 @@ export function nextSlot(now, days, events, length = DEFAULT_LENGTH) {
     }
   }
 
+  first = Math.max(first, floor);
   const base = day * MINUTES_PER_DAY;
   const busy = events.filter((e) => !e.long && !e.free && e.kind !== "draft");
   let at = first;

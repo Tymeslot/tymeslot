@@ -9,8 +9,8 @@ import { addDays, formatWall, normaliseEvent, parseWall } from "../../calendar/t
 
 const week = Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k));
 const ev = (start, end, extra = {}) => normaliseEvent({ id: start, kind: "event", title: "x", all_day: false, start, end, free: false, ...extra });
-const slot = (now, days = week, events = []) => {
-  const { startMin, endMin } = nextSlot(parseWall(now), days, events);
+const slot = (now, days = week, events = [], floor = 0) => {
+  const { startMin, endMin } = nextSlot(parseWall(now), days, events, undefined, floor);
   return [formatWall(startMin), formatWall(endMin)];
 };
 
@@ -53,4 +53,11 @@ test("with today out of view, 09:00 on the first visible day, past anything busy
 test("when nothing is free before midnight the first candidate stands", () => {
   const allEvening = [ev("2026-10-14T20:00", "2026-10-15T00:00")];
   expect(slot("2026-10-14T19:50", week, allEvening)).toEqual(["2026-10-14T20:15", "2026-10-14T20:45"]);
+});
+
+test("a folded night is a floor: nothing is drafted in its hidden rows", () => {
+  expect(slot("2026-10-14T02:00", week, [], 360)).toEqual(["2026-10-14T06:00", "2026-10-14T06:30"]);
+  expect(slot("2026-10-14T07:00", week, [], 360)).toEqual(["2026-10-14T07:15", "2026-10-14T07:45"]);
+  const next = Array.from({ length: 7 }, (_, k) => addDays("2026-10-19", k));
+  expect(slot("2026-10-14T08:30", next, [], 600)).toEqual(["2026-10-19T10:00", "2026-10-19T10:30"]);
 });
