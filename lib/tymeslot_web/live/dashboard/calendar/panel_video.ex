@@ -61,36 +61,57 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideo do
   was waiting for this video change: its header says it was put back.
   """
   @spec reverted(socket(), WriteQueue.key()) :: socket()
-  def reverted(%{assigns: %{panel: %{status: :saving, writes: []}}} = socket, key) do
-    case PanelState.current_event(socket.assigns) do
-      %{} = event ->
-        if WriteQueue.key(event) == key,
-          do:
-            PanelEdits.put_status(
-              socket,
-              {:failed, dgettext("dashboard_calendar", "The change was put back.")}
-            ),
-          else: socket
-
-      nil ->
-        socket
-    end
+  def reverted(socket, key) do
+    if waiting_on?(socket, key),
+      do:
+        PanelEdits.put_status(
+          socket,
+          {:failed, dgettext("dashboard_calendar", "The change was put back.")}
+        ),
+      else: socket
   end
 
-  def reverted(socket, _key), do: socket
+  @doc """
+  The video change `ref` answered `:unchanged` (a sync already set the link,
+  or a series' room was kept): nothing was written, so the optimistic event
+  is replaced by the one the surface's cache holds, and a panel waiting on
+  that change says it is saved.
+  """
+  @spec unchanged(socket(), WriteQueue.ref()) :: socket()
+  def unchanged(socket, {key, _seq}) do
+    if waiting_on?(socket, key),
+      do: socket |> SurfaceData.reload(:events) |> PanelEdits.put_status(:saved),
+      else: socket
+  end
 
   @doc """
   The video change `ref` has landed with `updated`, the event as the change
-  wrote it: the queue settles and the panel says it is saved.
+  wrote it: the queue settles and, for a panel open on that event with no
+  writes of its own running, the header says it is saved.
   """
   @spec settled(socket(), WriteQueue.ref(), map()) :: socket()
-  def settled(socket, ref, updated) do
-    socket
-    |> Writes.settle(ref, {:ok, updated})
-    |> show_result(updated)
-    |> Manipulation.settled(ref)
-    |> PanelEdits.put_status(:saved)
+  def settled(socket, {key, _seq} = ref, updated) do
+    socket =
+      socket
+      |> Writes.settle(ref, {:ok, updated})
+      |> show_result(updated)
+      |> Manipulation.settled(ref)
+
+    if waiting_on?(socket, key) and not Writes.saving?(socket, updated),
+      do: PanelEdits.put_status(socket, :saved),
+      else: socket
   end
+
+  # A panel open on the event `key` that says "Saving…" with none of its own
+  # writes running is waiting for a video change.
+  defp waiting_on?(%{assigns: %{panel: %{status: :saving, writes: []}}} = socket, key) do
+    case PanelState.current_event(socket.assigns) do
+      %{} = event -> WriteQueue.key(event) == key
+      nil -> false
+    end
+  end
+
+  defp waiting_on?(_socket, _key), do: false
 
   # The event as the change wrote it replaces the optimistic one, unless a
   # later write to it is still pending, whose own version is the newer.

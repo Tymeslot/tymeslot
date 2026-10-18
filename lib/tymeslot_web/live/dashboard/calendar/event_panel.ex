@@ -176,7 +176,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           phx-target={@surface}
         />
         <PanelVideoField.video_row
-          :if={@event && @editable}
+          :if={@event}
+          editable={@editable}
           event={@event}
           video_integrations={@video_integrations}
           booking_copy={@booking_copy}

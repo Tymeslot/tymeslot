@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceVideoTest do
   import Tymeslot.Factory, only: [insert: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video
@@ -178,7 +179,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceVideoTest do
     assert row.video_integration_id == nil
   end
 
-  test "another organiser's video integration is ignored", %{conn: conn, id: id} do
+  test "another organiser's video integration is ignored", %{conn: conn, user: user, id: id} do
+    insert(:video_integration, user: user, name: "Team rooms", is_active: true)
     stranger = insert(:video_integration, user: insert(:user, []), is_active: true)
     test_pid = self()
 
@@ -195,7 +197,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceVideoTest do
     |> render_hook("panel:video", %{"video_integration_id" => to_string(stranger.id)})
 
     refute_receive :room_requested, 300
-    assert has_element?(lv, "#calendar-panel-video-add")
+    assert has_element?(lv, "#calendar-panel-video-field-1")
+    refute has_element?(lv, "#calendar-panel-video-field-0")
+    refute has_element?(lv, "#calendar-panel-join")
   end
 
   test "the calendar copy of a booking offers no video change", %{
@@ -243,6 +247,109 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceVideoTest do
 
     refute_receive :room_requested, 300
     assert has_element?(lv, "#calendar-panel-video-add")
+  end
+
+  test "the row says the room is being created while the provider answers", %{
+    conn: conn,
+    id: id
+  } do
+    test_pid = self()
+
+    stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      send(test_pid, {:room_requested, self()})
+
+      receive do
+        :release -> {:error, :timeout}
+      end
+    end)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open_panel(lv, id)
+    lv |> element("#calendar-panel-video-add") |> render_click()
+
+    assert_receive {:room_requested, task_pid}, @task_timeout
+    on_exit(fn -> send(task_pid, :release) end)
+
+    assert has_element?(lv, "#calendar-panel-video", "Creating the video call…")
+    assert has_element?(lv, "#calendar-panel-status", "Saving")
+    refute has_element?(lv, "#calendar-panel-video-add")
+  end
+
+  test "a failed room puts the header back to a failure", %{conn: conn, id: id} do
+    stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"room_id" => "room-123"})}}
+    end)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open_panel(lv, id)
+    lv |> element("#calendar-panel-video-add") |> render_click()
+
+    assert_eventually(fn -> render(lv) =~ "The video provider did not return a meeting link" end)
+    assert has_element?(lv, "#calendar-panel-status", "The change was put back.")
+  end
+
+  test "the calendar copy of a booking with a link still offers Join, but no change", %{
+    conn: conn,
+    integration: integration
+  } do
+    link = "https://video.example.com/join/booked"
+
+    copy =
+      event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30,
+        video_link: link,
+        description: "Join video call: #{link}"
+      )
+
+    insert(:meeting, calendar_integration_id: integration.id, calendar_uid: copy.uid)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open_panel(lv, "event-#{copy.id}")
+
+    assert has_element?(lv, ~s|#calendar-panel-join[href="#{link}"]|)
+    assert has_element?(lv, "#calendar-panel-video", "The video call belongs to the booking.")
+    refute has_element?(lv, "#calendar-panel-video-remove")
+    refute has_element?(lv, "#calendar-panel-video-add")
+  end
+
+  test "a series room that is only restored settles the panel and shows the link", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    talk = insert(:video_integration, user: user, provider: "nextcloud_talk", is_active: true)
+    url = "https://talk.example.org/call/room-weekly-sync"
+
+    {:ok, _room} =
+      EventVideoRoomQueries.insert(%{
+        user_id: user.id,
+        video_integration_id: talk.id,
+        provider: "nextcloud_talk",
+        calendar_integration_id: integration.id,
+        event_uid: "series-1@google.com",
+        provider_event_id: "series-1",
+        room_id: "room-weekly-sync",
+        lobby_opens_at: ~U[2026-10-01 08:45:00Z],
+        ends_at: ~U[2026-12-01 10:00:00Z]
+      })
+
+    weekly =
+      event(integration, "work", "Weekly sync", ~U[2026-10-16 09:00:00Z], 60,
+        description: "Agenda\n\nJoin video call: #{url}",
+        uid: "series-1_20261016T090000Z",
+        provider_event_id: "series-1_20261016T090000Z",
+        recurring_event_id: "series-1"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open_panel(lv, "event-#{weekly.id}")
+
+    lv
+    |> form("#calendar-panel-video-form")
+    |> render_change(%{"video_integration_id" => to_string(talk.id)})
+
+    assert_eventually(fn -> has_element?(lv, ~s|#calendar-panel-join[href="#{url}"]|) end)
+    assert has_element?(lv, "#calendar-panel-status", "Saved")
+    refute has_element?(lv, "#calendar-panel-video", "Creating the video call")
   end
 
   describe "while the event moves to another calendar" do

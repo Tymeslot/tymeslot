@@ -15,27 +15,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
   attr :booking_copy, :boolean, required: true
   attr :saving, :boolean, required: true
   attr :surface, :any, required: true
+  attr :editable, :boolean, default: true
   attr :version, :integer, default: 0, doc: "a new version draws the select again"
 
   @spec video_row(map()) :: Phoenix.LiveView.Rendered.t()
   def video_row(assigns) do
     assigns =
       assign(assigns,
-        link: web_url(assigns.event.video_link),
+        link: web_url(Map.get(assigns.event, :video_link) || Map.get(assigns.event, :join_url)),
         creating:
-          assigns.saving and is_integer(assigns.event.video_integration_id) and
-            is_nil(assigns.event.video_link)
+          assigns.saving and is_integer(Map.get(assigns.event, :video_integration_id)) and
+            is_nil(Map.get(assigns.event, :video_link))
       )
 
     ~H"""
-    <section id="calendar-panel-video" class="space-y-2">
+    <section :if={@editable or @link} id="calendar-panel-video" class="space-y-2">
       <h3 class="text-token-sm font-medium text-tymeslot-700">
         {dgettext("dashboard_calendar", "Video call")}
       </h3>
       <p :if={@booking_copy} class="text-token-sm text-tymeslot-500">
         {dgettext("dashboard_calendar", "The video call belongs to the booking.")}
       </p>
-      <div :if={!@booking_copy && @link} class="flex flex-wrap items-center gap-2">
+      <div :if={@link} class="flex flex-wrap items-center gap-2">
         <.link
           id="calendar-panel-join"
           href={@link}
@@ -47,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
           {dgettext("dashboard_calendar", "Join")}
         </.link>
         <.action_button
+          :if={@editable and !@booking_copy}
           id="calendar-panel-video-remove"
           variant={:secondary}
           size={:sm}
@@ -57,10 +59,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
           {dgettext("dashboard_calendar", "Remove link")}
         </.action_button>
       </div>
-      <p :if={!@booking_copy && @creating} class="text-token-sm text-tymeslot-500">
+      <p :if={@editable && !@booking_copy && @creating} class="text-token-sm text-tymeslot-500">
         {dgettext("dashboard_calendar", "Creating the video call…")}
       </p>
-      <div :if={!@booking_copy && !@link && !@creating}>
+      <div :if={@editable && !@booking_copy && !@link && !@creating}>
         <p :if={@video_integrations == []} class="text-token-sm text-tymeslot-500">
           {dgettext("dashboard_calendar", "No video integration connected.")}
         </p>

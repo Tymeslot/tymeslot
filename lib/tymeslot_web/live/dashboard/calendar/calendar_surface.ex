@@ -106,6 +106,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
        |> Writes.settle(ref, outcome)
        |> Manipulation.settled(ref)
        |> PanelEdits.settled(ref, outcome)
+       |> unchanged_video(ref, outcome)
        |> reload_if_queued(outcome)}
 
   # A video change landed (see `PanelVideo`).
@@ -192,6 +193,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     do: schedule_reload(socket, :events_updated)
 
   defp reload_if_queued(socket, _outcome), do: socket
+
+  # A video change that changed nothing (see `PanelVideo.unchanged/2`).
+  defp unchanged_video(socket, ref, :unchanged), do: PanelVideo.unchanged(socket, ref)
+  defp unchanged_video(socket, _ref, _outcome), do: socket
 
   defp shift_mini_cursor(socket, dir) do
     cursor = Date.shift(socket.assigns.mini_cursor, month: step(dir))
