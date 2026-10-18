@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
        read_only_reason: nil,
        booking_copy: false,
        booking_copy_for: nil,
+       can_tell: false,
        untold: false
      )}
   end
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
     socket =
       if socket.assigns[:event_id] == panel.event_id,
         do: socket,
-        else: opened(socket, event, context.integrations)
+        else: opened(socket, event, context)
 
     socket =
       if socket.assigns[:event] == event,
@@ -75,11 +76,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   end
 
   # Asked on every update the panel's event or its starting point changes;
-  # the diff is pure, no query.
+  # the diff is pure, no query. Never drawn for an event whose guests the
+  # organiser may not tell (`can_tell`).
   defp assign_untold(socket),
     do:
       assign(socket,
-        untold: PanelGuests.untold?(socket.assigns.panel[:opened_with], socket.assigns[:event])
+        untold:
+          socket.assigns.can_tell and
+            PanelGuests.untold?(socket.assigns.panel[:opened_with], socket.assigns[:event])
       )
 
   # Whether the event is the calendar copy of a booking costs a query, so it
@@ -101,15 +105,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   defp assign_booking_copy(socket), do: assign(socket, booking_copy: false, booking_copy_for: nil)
 
-  # Read once per event: whether it can be changed, and whether its timing
-  # can (a booking's calendar copy keeps the booking's time).
-  defp opened(socket, event, integrations) do
+  # Read once per event: whether it can be changed, whether its timing can
+  # (a booking's calendar copy keeps the booking's time), and whether the
+  # organiser may tell its guests (they organise it; a query or two).
+  defp opened(socket, event, %{integrations: integrations} = context) do
     writable = EditGuard.writable(integrations, event)
 
     assign(socket,
       editable: writable == :ok,
       movable: EditGuard.movable?(integrations, event),
-      read_only_reason: read_only_reason(writable)
+      read_only_reason: read_only_reason(writable),
+      can_tell: EditGuard.guest_update(context.user_id, integrations, event) == :ok
     )
   end
 

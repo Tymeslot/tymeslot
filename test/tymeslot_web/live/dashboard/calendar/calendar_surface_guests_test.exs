@@ -359,5 +359,66 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
       refute has_element?(lv, "#calendar-panel-untold")
     end
+
+    # The note is not drawn for these, so the event is forced as a crafted
+    # client would send it; the domain refuses it (`Changes.tell_guests/5`).
+    defp change_and_force_tell(conn, event) do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:edit", %{"id" => "event-#{event.id}"})
+
+      event |> Changeset.change(location: "Room 9") |> Repo.update!()
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
+
+      refute has_element?(lv, "#calendar-panel-untold")
+      lv |> element("#calendar-canvas") |> render_hook("panel:tell_guests", %{})
+      lv
+    end
+
+    defp nothing_sent do
+      assert all_enqueued(worker: Worker) == []
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "an event someone else organises offers no note and a forced Tell guests sends nothing",
+         %{conn: conn, integration: integration} do
+      theirs =
+        event(integration, "work", "Their standup", ~U[2026-10-15 09:00:00Z], 30,
+          organiser: %{"email" => "boss@elsewhere.example"},
+          attendees: [%{"email" => "boss@elsewhere.example"}, %{"email" => "ada@example.com"}]
+        )
+
+      lv = change_and_force_tell(conn, theirs)
+
+      nothing_sent()
+      assert render(lv) =~ "Someone else organises this event"
+      refute has_element?(lv, "#calendar-toast", "Guests will get an update.")
+    end
+
+    test "an event on a read-only calendar offers no note and a forced Tell guests sends nothing",
+         %{conn: conn, integration: integration} do
+      integration
+      |> Changeset.change(
+        calendar_list: [
+          %{"id" => "work", "name" => "Work", "selected" => true},
+          %{"id" => "shared", "name" => "Shared", "selected" => true, "read_only" => true}
+        ]
+      )
+      |> Repo.update!()
+
+      shared =
+        event(integration, "shared", "Team offsite", ~U[2026-10-16 09:00:00Z], 60,
+          attendees: [%{"email" => "ada@example.com"}]
+        )
+
+      lv = change_and_force_tell(conn, shared)
+
+      nothing_sent()
+      assert render(lv) =~ "This calendar is read-only."
+      refute has_element?(lv, "#calendar-toast", "Guests will get an update.")
+    end
   end
 end

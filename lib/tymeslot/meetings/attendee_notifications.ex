@@ -52,6 +52,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   @type attendee ::
           Attendee.t() | %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
 
+  @doc """
+  Whether the user `user_id` organises `event`, so that its attendees may be
+  told about it in their name. See `Recipients.organised_by?/2`.
+  """
+  @spec organised_by?(event, pos_integer()) :: boolean()
+  defdelegate organised_by?(event, user_id), to: Recipients
+
   @spec event_created(event, [attendee]) :: {:ok, :sent | :noop}
   def event_created(_event, []), do: {:ok, :noop}
 

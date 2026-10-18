@@ -14,13 +14,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   Panel edits tell nobody on their own. `untold?/2` says whether the event
   has guests and differs, in anything they would see, from the event as the
   panel opened on it (`panel.opened_with`); `tell/1` sends one update for
-  all of it and makes the event as it is now the new starting point.
+  all of it and makes the event as it is now the new starting point. Only
+  the organiser of an event on a calendar they can write may tell its
+  guests; the domain refuses anyone else (`Changes.tell_guests/5`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
@@ -138,7 +141,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   @doc """
   Tells the event's guests about everything changed since the panel opened,
   in one update, and counts from the event as it is now. Waits while a
-  write is saving, since the update reads the saved event.
+  write is saving, since the update reads the saved event. Only the
+  organiser of an event on a calendar they can write may send it
+  (`Changes.tell_guests/5` refuses anything else).
   """
   @spec tell(socket()) :: socket()
   def tell(socket) do
@@ -147,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          %{opened_with: opened_with} = panel <- socket.assigns.panel,
          true <- untold?(opened_with, event),
          false <- Writes.saving?(socket, event),
-         :ok <- send_update(socket, panel, opened_with, event) do
+         {:ok, _sent_or_noop} <- send_update(socket, panel, event) do
       socket
       |> assign(:panel, %{panel | opened_with: event})
       |> Toast.show(dgettext("dashboard_calendar_editing", "Guests will get an update."))
@@ -159,45 +164,46 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
            dgettext("dashboard_calendar_editing", "Still saving. Tell guests once it has saved.")}
         )
 
-      {:error, :moving} = refusal ->
-        refuse(socket, refusal)
-
-      {:error, _reason} ->
-        flash(
-          socket,
-          {:warning,
-           dgettext("dashboard_calendar_editing", "Couldn't tell guests. Your changes are saved.")}
-        )
+      {:error, _reason} = refusal ->
+        tell_refused(socket, refusal)
 
       _nothing_to_tell ->
         socket
     end
   end
 
-  # A series-wide scope's write drops the series' cached rows, which the
-  # debounced update would read, so it is sent at once from both versions.
-  defp send_update(socket, %{scope: scope}, opened_with, event)
-       when scope in [:following, :all] do
-    case AttendeeNotifications.series_updated_confirm(
-           opened_with,
-           event,
-           socket.assigns.current_user.id,
-           scope
-         ) do
-      {:ok, _sent_or_noop} -> :ok
-      {:error, _reason} = error -> error
-    end
-  end
+  defp send_update(socket, panel, event),
+    do:
+      Changes.tell_guests(
+        socket.assigns.current_user.id,
+        socket.assigns.integrations,
+        panel.opened_with,
+        event,
+        Map.get(panel, :scope)
+      )
 
-  defp send_update(_socket, _panel, opened_with, event) do
-    guests = of(event)
+  defp tell_refused(socket, {:error, reason} = refusal)
+       when reason in [:moving, :read_only, :unauthorized, :booking],
+       do: refuse(socket, refusal)
 
-    with {:needs_confirmation, summary} <-
-           AttendeeNotifications.event_updated(opened_with, event, guests),
-         {:ok, :sent} <- AttendeeNotifications.event_updated_confirm(event, summary, guests) do
-      :ok
-    end
-  end
+  defp tell_refused(socket, {:error, :not_organiser}),
+    do:
+      flash(
+        socket,
+        {:warning,
+         dgettext(
+           "dashboard_calendar_editing",
+           "Someone else organises this event, so only they can tell its guests about changes."
+         )}
+      )
+
+  defp tell_refused(socket, {:error, _reason}),
+    do:
+      flash(
+        socket,
+        {:warning,
+         dgettext("dashboard_calendar_editing", "Couldn't tell guests. Your changes are saved.")}
+      )
 
   defp panel_event(%{assigns: %{panel: %{mode: :edit, event_id: id}}} = socket),
     do: Map.fetch(socket.assigns.events_by_id, id)

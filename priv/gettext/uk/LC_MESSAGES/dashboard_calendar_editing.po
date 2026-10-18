@@ -739,3 +739,8 @@ msgstr "ваш календар"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is saved here and will reach your calendar at its next sync."
 msgstr "Подію «%{title}» збережено тут. Вона з'явиться у вашому календарі після наступної синхронізації."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this event, so only they can tell its guests about changes."
+msgstr "Цю подію організовує хтось інший, тож лише ця людина може повідомити гостей про зміни."

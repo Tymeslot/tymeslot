@@ -737,3 +737,8 @@ msgstr "il tuo calendario"
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is saved here and will reach your calendar at its next sync."
 msgstr "«%{title}» è salvato qui e arriverà nel tuo calendario alla prossima sincronizzazione."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this event, so only they can tell its guests about changes."
+msgstr "Questo evento è organizzato da un'altra persona, quindi solo lei può avvisare gli ospiti delle modifiche."

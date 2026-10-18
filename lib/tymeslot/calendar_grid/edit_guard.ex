@@ -19,6 +19,9 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   the same rule as a refusal, which `EventEdit.update_event/4` asks of every
   change of Busy/Free whatever the caller drew.
 
+  `guest_update/3` says whether the organiser may tell an event's guests
+  about a change: the event is writable, and they organise it.
+
   `check/3` asks all three, in that order, for a change about to be made.
   `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
   add the one more a change of timing needs: the calendar copy of a booking keeps the booking's time, so it can
@@ -32,6 +35,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.RateLimiter
 
   @type refusal ::
@@ -63,6 +67,23 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   @spec free_busy_change(map()) :: :ok | {:error, :booking}
   def free_busy_change(%{kind: :booking}), do: {:error, :booking}
   def free_busy_change(event), do: not_booking_copy(event)
+
+  @doc """
+  Whether the user `user_id` may tell `event`'s guests about a change: it
+  sits on a writable calendar of one of `integrations` (`writable/2`), and
+  they organise it (`AttendeeNotifications.organised_by?/2`). An update in
+  their name about an event someone else organises would tell the real
+  organiser's guests of a change that is not theirs to announce.
+  """
+  @spec guest_update(pos_integer(), [map()], map()) ::
+          :ok | {:error, :booking | :unauthorized | :read_only | :not_organiser}
+  def guest_update(user_id, integrations, event) do
+    with :ok <- writable(integrations, event) do
+      if AttendeeNotifications.organised_by?(event, user_id),
+        do: :ok,
+        else: {:error, :not_organiser}
+    end
+  end
 
   @doc """
   The events of `events` that `movable?/2` allows, for drawing a whole window:

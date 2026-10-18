@@ -210,4 +210,25 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
                {:error, :booking}
     end
   end
+
+  describe "guest_update/3" do
+    test "lets the organiser tell the guests of an event on a writable calendar", %{
+      user: user,
+      integration: integration
+    } do
+      assert EditGuard.guest_update(user.id, [integration], event(integration, "work")) == :ok
+    end
+
+    test "refuses an event someone else organises", %{user: user, integration: integration} do
+      event =
+        Map.put(event(integration, "work"), :organiser, %{"email" => "boss@elsewhere.example"})
+
+      assert EditGuard.guest_update(user.id, [integration], event) == {:error, :not_organiser}
+    end
+
+    test "refuses an event on a read-only calendar", %{user: user, integration: integration} do
+      assert EditGuard.guest_update(user.id, [integration], event(integration, "shared")) ==
+               {:error, :read_only}
+    end
+  end
 end

@@ -89,7 +89,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
     do: %{
       timezone: assigns.timezone,
       time_format: assigns.time_format,
-      integrations: assigns.integrations
+      integrations: assigns.integrations,
+      user_id: assigns.current_user.id
     }
 
   @doc "Applies `fun` to the open panel; with no panel open, nothing."

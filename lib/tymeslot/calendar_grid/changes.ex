@@ -14,6 +14,7 @@ defmodule Tymeslot.CalendarGrid.Changes do
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.GuestUpdate
   alias Tymeslot.CalendarGrid.Moves
   alias Tymeslot.CalendarGrid.NewEvent
   alias Tymeslot.CalendarGrid.RepeatRefusal
@@ -222,4 +223,15 @@ defmodule Tymeslot.CalendarGrid.Changes do
   @doc "Caches a newly created event. See `Tymeslot.CalendarGrid.NewEvent.cache/1`."
   @spec cache_created_event(map()) :: :ok
   defdelegate cache_created_event(attrs), to: NewEvent, as: :cache
+
+  @doc """
+  Tells an event's guests what changed since `opened_with`, once the user
+  is found to organise it on a calendar they can write. See
+  `Tymeslot.CalendarGrid.GuestUpdate.tell/5`.
+  """
+  @spec tell_guests(pos_integer(), [map()], map(), map(), atom() | nil) ::
+          {:ok, :sent | :noop} | {:error, GuestUpdate.refusal() | term()}
+  defdelegate tell_guests(user_id, integrations, opened_with, event, scope),
+    to: GuestUpdate,
+    as: :tell
 end
