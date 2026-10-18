@@ -67,19 +67,25 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     do: Series.write(occ)
 
   def update_event(_client, uid, event_data) do
-    updated =
-      case DebugStore.fetch_event(uid) do
-        {:ok, existing} ->
-          case Series.stored_form(existing) do
-            %{raw_ical: _document} = series -> Series.patch(series, event_data)
-            event -> Series.stored_form(Map.merge(event, stored_event_from(event_data, uid)))
-          end
+    case DebugStore.fetch_event(uid) do
+      {:ok, existing} ->
+        DebugStore.put_event(patched(existing, event_data, uid))
 
-        :error ->
-          Series.stored_form(stored_event_from(event_data, uid))
-      end
+      # A write for an event the store does not hold creates it when it says
+      # when it is; a partial one would only be a half-event to overlap-check.
+      :error when is_map_key(event_data, :start_time) ->
+        DebugStore.put_event(Series.stored_form(stored_event_from(event_data, uid)))
 
-    DebugStore.put_event(updated)
+      :error ->
+        {:error, :not_found}
+    end
+  end
+
+  defp patched(existing, event_data, uid) do
+    case Series.stored_form(existing) do
+      %{raw_ical: _document} = series -> Series.patch(series, event_data)
+      event -> Series.stored_form(Map.merge(event, stored_event_from(event_data, uid)))
+    end
   end
 
   # One occurrence is deleted (`opts[:occurrence]`) and answered as the
@@ -218,9 +224,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   shape the interactive dev calendar reads: a one-off event as stored, and
   each occurrence of a repeating one as the live CalDAV busy-time check
   expands it (`DebugCalendarProvider.Series.occurrences/3`), timed ones in
-  UTC and all-day ones by date (the last day they cover). All-day events are
-  projected to day-spanning blocks for the overlap check but returned with
-  their dates.
+  UTC and all-day ones by date with an exclusive end date, as the cache keeps
+  them. All-day events are projected to day-spanning blocks for the overlap
+  check but returned with their dates.
   """
   @spec stored_events_in_range(DateTime.t(), DateTime.t()) :: [map()]
   def stored_events_in_range(range_start, range_end) do
@@ -244,7 +250,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
     Map.merge(occurrence, %{
       all_day: true,
-      end_time: Enum.max([start, Date.add(finish, -1)], Date),
+      end_time: Enum.max([Date.add(start, 1), finish], Date),
       status: "confirmed"
     })
   end
@@ -273,9 +279,10 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
          range_start,
          range_end
        ) do
-    end_date = Map.get(event, :end_time, start_date)
+    # The end date is exclusive, as the cache keeps every all-day event.
+    end_date = Enum.max([Map.get(event, :end_time, start_date), Date.add(start_date, 1)], Date)
     block_start = day_start(start_date)
-    block_end = day_start(Date.add(end_date, 1))
+    block_end = day_start(end_date)
 
     DateTime.compare(block_start, range_end) == :lt and
       DateTime.compare(block_end, range_start) == :gt

@@ -129,4 +129,63 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
     assert :ok = DebugCalendarProvider.delete_event(@client, "evt-del", [])
     assert normalised_for("evt-del") == nil
   end
+
+  test "an update for an unknown event without a start stores nothing" do
+    assert {:error, :not_found} =
+             DebugCalendarProvider.update_event(@client, "evt-unknown", %{summary: "Ghost"})
+
+    assert DebugStore.fetch_event("evt-unknown") == :error
+  end
+
+  test "an update for an unknown event that says when it is creates it" do
+    DebugCalendarProvider.update_event(@client, "evt-upsert", %{
+      summary: "Upserted",
+      start_time: ~U[2026-06-17 12:00:00Z],
+      end_time: ~U[2026-06-17 13:00:00Z]
+    })
+
+    assert %CalendarEvent{uid: "evt-upsert"} = normalised_for("evt-upsert")
+  end
+
+  describe "a one-day all-day event, whose end date is exclusive" do
+    setup do
+      DebugCalendarProvider.create_event(@client, %{
+        uid: "evt-day",
+        summary: "Off",
+        all_day: true,
+        start_time: ~D[2026-06-20],
+        end_time: ~D[2026-06-21]
+      })
+
+      :ok
+    end
+
+    defp uids_between(range_start, range_end) do
+      {:ok, events} =
+        DebugCalendarProvider.list_events(@client, start_time: range_start, end_time: range_end)
+
+      events |> Enum.map(& &1.uid) |> Enum.sort()
+    end
+
+    test "is listed on its own day" do
+      assert uids_between(~U[2026-06-20 00:00:00Z], ~U[2026-06-21 00:00:00Z]) == ["evt-day"]
+    end
+
+    test "does not overlap the next day" do
+      assert uids_between(~U[2026-06-21 00:00:00Z], ~U[2026-06-22 00:00:00Z]) == []
+    end
+
+    test "reaches the dev calendar as a block ending where the next day starts" do
+      assert [%{uid: "evt-day", end_time: ~D[2026-06-21]}] =
+               DebugCalendarProvider.stored_events_in_range(
+                 ~U[2026-06-20 00:00:00Z],
+                 ~U[2026-06-21 00:00:00Z]
+               )
+
+      assert DebugCalendarProvider.stored_events_in_range(
+               ~U[2026-06-21 00:00:00Z],
+               ~U[2026-06-22 00:00:00Z]
+             ) == []
+    end
+  end
 end

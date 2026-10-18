@@ -86,14 +86,17 @@ defmodule Tymeslot.Dev.Calendar do
     {:ok, generate(user_id, range_start, range_end, timezone)}
   end
 
-  # Records the event in-memory so a booking made in-app immediately shows as
-  # busy on the debug calendar. Keyed by the meeting uid carried in event_data,
-  # so later update/delete target the same entry.
+  # Stored through the debug provider, like every other write, so a booking
+  # made in-app immediately shows as busy and a series is kept as an
+  # iCalendar document in a timezone. Keyed by the meeting uid carried in
+  # event_data, so later update/delete target the same entry.
   @impl CalendarBehaviour
   def create_event(event_data, _context) do
-    case record_event(event_data) do
-      {:ok, uid} -> {:ok, CreatedEvent.new(uid)}
-      :ignore -> {:ok, CreatedEvent.new("dev-stub-event")}
+    if recordable?(event_data) do
+      event_data = Map.put_new(event_data, :timezone, @default_timezone)
+      DebugCalendarProvider.create_event(nil, event_data)
+    else
+      {:ok, CreatedEvent.new("dev-stub-event")}
     end
   end
 
@@ -127,16 +130,16 @@ defmodule Tymeslot.Dev.Calendar do
   end
 
   # Projects a rich stored event to the booking busy-block shape. All-day events
-  # span from the start of their first day to the start of the day after their
-  # last day in the resolved timezone, so they still occupy availability.
+  # span from the start of their first day to the start of their (exclusive)
+  # end date in the resolved timezone, so they still occupy availability.
   defp to_busy_block(%{all_day: true, start_time: %Date{} = start_date} = event, timezone) do
-    end_date = Map.get(event, :end_time, start_date)
+    end_date = Enum.max([Map.get(event, :end_time, start_date), Date.add(start_date, 1)], Date)
 
     %{
       uid: event.uid,
       summary: Map.get(event, :summary) || "Booked (dev)",
       start_time: day_start(start_date, timezone),
-      end_time: day_start(Date.add(end_date, 1), timezone),
+      end_time: day_start(end_date, timezone),
       status: Map.get(event, :status, "confirmed")
     }
   end
@@ -154,44 +157,13 @@ defmodule Tymeslot.Dev.Calendar do
     }
   end
 
-  # Stores a created/updated event when it carries the times needed to occupy a
-  # slot. Returns the uid used, or `:ignore` when the payload is unusable.
-  defp record_event(%{uid: uid, start_time: %DateTime{}, end_time: %DateTime{}} = event_data)
-       when is_binary(uid) do
-    store_event(event_data)
-    {:ok, uid}
-  end
+  # Whether an event carries the times needed to occupy a slot.
+  defp recordable?(%{uid: uid, start_time: %DateTime{}, end_time: %DateTime{}})
+       when is_binary(uid),
+       do: true
 
-  defp record_event(%{uid: uid, all_day: true, start_time: %Date{}} = event_data)
-       when is_binary(uid) do
-    store_event(event_data)
-    {:ok, uid}
-  end
-
-  defp record_event(_event_data), do: :ignore
-
-  defp store_event(event_data) do
-    event_data
-    |> Map.take([
-      :uid,
-      :summary,
-      :description,
-      :location,
-      :all_day,
-      :start_time,
-      :end_time,
-      :reminders,
-      :recurrence_rule,
-      :colour,
-      :attendees,
-      :provider_calendar_id
-    ])
-    |> Map.put_new(:summary, "Booked (dev)")
-    |> Map.put_new(:all_day, false)
-    |> Map.put(:status, "confirmed")
-    |> Map.put(:created_by_tymeslot, true)
-    |> DebugStore.put_event()
-  end
+  defp recordable?(%{uid: uid, all_day: true, start_time: %Date{}}) when is_binary(uid), do: true
+  defp recordable?(_event_data), do: false
 
   defp timezone_for(user_id) do
     case ProfileQueries.get_by_user_id(user_id) do

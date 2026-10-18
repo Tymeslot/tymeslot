@@ -25,7 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.Series do
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.ICalParser
 
-  # How far before a range an occurrence may start and still overlap it.
+  # How far before a range an occurrence may start and still overlap it. An
+  # occurrence longer than this that starts before the range is skipped.
   @reach_seconds 7 * 86_400
 
   @typedoc "A scoped write or delete, as `SeriesEdit` and `EventDeletion` address one."
