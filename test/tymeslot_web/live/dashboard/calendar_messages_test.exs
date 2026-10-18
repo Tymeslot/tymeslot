@@ -21,12 +21,15 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
     test "a create's result goes to the new surface with its draft" do
       result = {:error, %{reason: :timeout, retry: :not_queued}}
 
-      assert CalendarMessages.handle_info({:calendar_create_result, "d3", result}, @new_surface) ==
+      assert CalendarMessages.handle_info(
+               {:calendar_create_result, {"d3", "Lunch"}, result},
+               @new_surface
+             ) ==
                {:noreply, @new_surface}
 
       assert_received {:phoenix, :send_update,
                        {{CalendarSurface, "calendar"},
-                        %{action: :create_settled, draft: "d3", result: ^result}}}
+                        %{action: :create_settled, draft: "d3", title: "Lunch", result: ^result}}}
     end
 
     test "a delete scheduled in another tab still reaches the new surface" do
@@ -50,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      send(lv.pid, {:calendar_create_result, "d1", {:error, %{reason: :timeout}}})
+      send(lv.pid, {:calendar_create_result, {"d1", "Lunch"}, {:error, %{reason: :timeout}}})
       send(lv.pid, :not_a_calendar_message)
 
       assert render(lv) =~ "calendar-surface"

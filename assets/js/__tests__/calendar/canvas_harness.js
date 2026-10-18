@@ -52,6 +52,8 @@ export const strings = {
   guests_chip: "Guests",
   saving_draft: "Saving…",
   create_refused: "Couldn't save this event. Try again.",
+  create_unconfirmed: "Couldn't confirm the save. Check your calendar.",
+  dismiss: "Dismiss",
 };
 
 // Writable calendars, as settings.calendars carries them.

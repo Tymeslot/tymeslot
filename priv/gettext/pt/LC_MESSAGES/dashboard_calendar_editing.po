@@ -742,3 +742,13 @@ msgstr "“%{title}” está salvo aqui e chegará ao seu calendário na próxim
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this event, so only they can email its guests."
 msgstr "Outra pessoa organiza este evento, então só ela pode enviar e-mails aos convidados."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added “%{title}”."
+msgstr "Evento “%{title}” adicionado."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't confirm the save. Check your calendar."
+msgstr "Não foi possível confirmar se o evento foi salvo. Confira seu calendário."

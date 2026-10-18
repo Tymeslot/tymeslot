@@ -803,6 +803,7 @@ msgstr "Usunięto „%{title}”"
 msgid "Deleting “%{title}”…"
 msgstr "Usuwanie „%{title}”…"
 
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toast.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"

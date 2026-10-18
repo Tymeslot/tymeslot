@@ -744,3 +744,13 @@ msgstr "Událost „%{title}“ je uložena zde a do vašeho kalendáře se dos
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this event, so only they can email its guests."
 msgstr "Tuto událost pořádá někdo jiný, takže hostům může psát jen on."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added “%{title}”."
+msgstr "Událost „%{title}“ byla přidána."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't confirm the save. Check your calendar."
+msgstr "Uložení se nepodařilo ověřit. Zkontrolujte svůj kalendář."

@@ -807,6 +807,7 @@ msgstr "Událost „%{title}“ byla smazána"
 msgid "Deleting “%{title}”…"
 msgstr "Mazání události „%{title}“…"
 
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toast.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"

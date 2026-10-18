@@ -102,7 +102,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       guests_chip: dgettext("dashboard_calendar_editing", "Guests"),
       saving_draft: dgettext("dashboard_calendar_editing", "Saving…"),
       create_refused:
-        dgettext("dashboard_calendar_editing", "Couldn't add the event. Please try again.")
+        dgettext("dashboard_calendar_editing", "Couldn't add the event. Please try again."),
+      create_unconfirmed:
+        dgettext("dashboard_calendar_editing", "Couldn't confirm the save. Check your calendar."),
+      dismiss: dgettext("dashboard_calendar", "Dismiss")
     }
   end
 end

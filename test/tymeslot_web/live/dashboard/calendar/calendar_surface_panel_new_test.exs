@@ -269,7 +269,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     render_submit(new_form(lv), %{"intent" => "create"})
     assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
 
-    send(lv.pid, {:calendar_create_result, "d1", {:error, %{reason: :offline, retry: :queued}}})
+    send(
+      lv.pid,
+      {:calendar_create_result, {"d1", "Lunch"}, {:error, %{reason: :offline, retry: :queued}}}
+    )
+
     render(lv)
 
     refute has_element?(lv, "#calendar-panel")

@@ -14,7 +14,11 @@
  * reading "Saving…", until the reply: accepted, it closes and the draft is
  * drawn as saving until the server's payload takes over; refused, it shows
  * the server's message (anchored to the refused chip when the reply names
- * a field, on its own when it does not) and stays open. "Save and invite"
+ * a field, on its own when it does not) and stays open. A save whose reply
+ * is lost (the push rejected, unanswered in time, or the socket reconnected)
+ * may still have been written, so Save is never offered again: the draft
+ * goes and a notice asks the organiser to check their calendar, where the
+ * reload shows the event if it landed. "Save and invite"
  * replaces Save when the text names guests, because saving emails them.
  * More options pushes `calendar:more_options` and, once the panel opened,
  * hands the draft to it. Escape, or a press outside, cancels; Escape
@@ -36,6 +40,8 @@ const ESTIMATE = { width: 340, height: 320 };
 const FOLLOW_MS = 400;
 // How long a push may go unanswered before the popover unlocks.
 const REPLY_MS = 15000;
+// How long the notice about an unconfirmed save stays, as the server's toast does.
+const NOTICE_MS = 10000;
 const FOCUSABLE = 'input:not([tabindex="-1"]), select, button:not([disabled]):not([hidden])';
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
@@ -48,6 +54,8 @@ export const CreateMixin = {
     this.followTimer = null;
     this.pushTimer = null;
     this.lostPush = null;
+    this.notice = null;
+    this.noticeTimer = null;
     this.quickOutside = (e) => {
       if (!this.quick || this.quick.element.contains(e.target) || e.target.closest?.("[data-draft-id]")) return;
       this.cancelQuickCreate({ restoreFocus: false });
@@ -73,6 +81,7 @@ export const CreateMixin = {
     this.el.removeEventListener("calendar:quick-create", this.quickCreateEvent);
     document.removeEventListener("keydown", this.createKey);
     this.closeQuickCreate();
+    this.closeNotice();
   },
 
   // Quick create at the next free slot of the visible days, or of tomorrow
@@ -328,7 +337,55 @@ export const CreateMixin = {
     if (this.draft?.status !== "editing") return;
     this.updateDraft({ ...this.draft, status: "saving", error: null });
     const { id } = this.draft;
-    this.pushGuarded("calendar:create", toPayload(this.draft), (reply) => this.createReplied(id, reply), () => this.createReplied(id, { accepted: false, field: null }));
+    this.pushGuarded("calendar:create", toPayload(this.draft), (reply) => this.createReplied(id, reply), () => this.createLost(id));
+  },
+
+  // The save's reply will not come, yet the server may have written the
+  // event (and emailed its guests), so saving again could create it twice.
+  // The draft goes; the reload after a reconnect, or the server's next
+  // payload, shows the event if it landed.
+  createLost(id) {
+    if (this.draft?.id !== id) return;
+    const returnTo = this.quick?.returnTo;
+    this.closeQuickCreate();
+    this.draft = null;
+    this.render();
+    this.restoreQuickFocus(returnTo);
+    this.showNotice(this.strings.create_unconfirmed);
+  },
+
+  // A message of the hook's own, shaped like the surface's toast, for news
+  // the server cannot deliver (its connection is in doubt). Appended to
+  // <body>, as the popover is, so no redraw removes it.
+  showNotice(text) {
+    this.closeNotice();
+    const notice = document.createElement("div");
+    notice.id = "calendar-notice";
+    notice.className = "cal-notice";
+    notice.setAttribute("role", "alert");
+    const message = document.createElement("span");
+    message.className = "cal-notice-text";
+    message.textContent = text;
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "cal-notice-close";
+    close.setAttribute("aria-label", this.strings.dismiss);
+    const icon = document.createElement("span");
+    icon.className = "hero-x-mark-mini cal-notice-icon";
+    icon.setAttribute("aria-hidden", "true");
+    close.append(icon);
+    close.addEventListener("click", () => this.closeNotice());
+    notice.append(message, close);
+    document.body.append(notice);
+    this.notice = notice;
+    this.noticeTimer = setTimeout(() => this.closeNotice(), NOTICE_MS);
+  },
+
+  closeNotice() {
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = null;
+    this.notice?.remove();
+    this.notice = null;
   },
 
   createReplied(id, reply) {

@@ -742,3 +742,13 @@ msgstr "„%{title}“ ist hier gespeichert und wird bei der nächsten Synchroni
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this event, so only they can email its guests."
 msgstr "Diesen Termin organisiert jemand anderes, daher kann nur diese Person den Gästen E-Mails senden."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added “%{title}”."
+msgstr "„%{title}“ wurde hinzugefügt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't confirm the save. Check your calendar."
+msgstr "Das Speichern konnte nicht bestätigt werden. Bitte prüfen Sie Ihren Kalender."

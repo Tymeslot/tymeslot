@@ -9,9 +9,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   field and the reason, so the popover stays open beside it. An accepted
   draft is written in a supervised task (`Changes.create_event/2`) and held
   in `pending_creates`, drawn as "Saving…", until `{:calendar_create_result,
-  draft, result}` comes back through `CalendarRouting` (`settled/3`). The
-  provider gives the event its identity, so nothing stands in for it before
-  then.
+  {draft, title}, result}` comes back through `CalendarRouting`
+  (`settled/4`). The provider gives the event its identity, so nothing
+  stands in for it before then. The title travels with the result so it can
+  still be named where the draft is no longer held: by a surface that forgot
+  it (revived, or mounted since), or by the LiveView's flash when no surface
+  is on screen (`outcome_message/2`).
 
   A created event nobody was invited to can be undone like any other change:
   it is removed at once (`undo/2`), since nobody has been told about it. One
@@ -116,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     with :ok <- EditGuard.rate_limit(user_id) do
       :ok =
         WriteTask.start(
-          {:calendar_create_result, draft},
+          {:calendar_create_result, {draft, params.title}},
           fn -> Changes.create_event(user_id, params) end,
           @crashed
         )
@@ -127,53 +130,89 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   end
 
   @doc """
-  The create for `draft` has answered. The toast names the result only for a
-  draft this surface is holding: a create a surface mounted before this one
-  started is reloaded into view and nothing more.
+  The create for `draft`, titled `title`, has answered. A draft this surface
+  is holding gets the full toast (when it is, Undo); one it no longer holds
+  (it was revived, or mounted since the create started) is reloaded into
+  view and named by its title alone, as the LiveView's flash would name it.
   """
-  @spec settled(socket(), String.t(), term()) :: socket()
-  def settled(socket, draft, result) do
+  @spec settled(socket(), String.t(), String.t(), term()) :: socket()
+  def settled(socket, draft, title, result) do
     {params, pending} = Map.pop(socket.assigns.pending_creates, draft)
 
     socket
     |> assign(:pending_creates, pending)
-    |> settle(draft, params, result)
+    |> settle(draft, params || title, result)
   end
+
+  @doc """
+  What a create's result says where no surface holds its draft: the flash
+  kind and the message, naming the event by `title`.
+  """
+  @spec outcome_message(String.t(), term()) :: {:info | :error, String.t()}
+  def outcome_message(_title, {:ok, %{invited: [_first | _rest] = invited}}),
+    do: {:info, invited_text(invited)}
+
+  def outcome_message(title, {:ok, _created}),
+    do: {:info, dgettext("dashboard_calendar_editing", "Added “%{title}”.", title: title)}
+
+  def outcome_message(title, {:error, %{retry: :queued}}), do: {:info, queued_text(title)}
+
+  def outcome_message(title, {:error, %{} = failure}), do: {:error, failed_text(title, failure)}
+
+  def outcome_message(title, _unexpected), do: {:error, failed_text(title, %{})}
+
+  defp settle(socket, _draft, title, {:ok, _created} = result) when is_binary(title),
+    do: socket |> SurfaceData.reload(:events) |> toast(title, result)
 
   defp settle(socket, _draft, params, {:ok, created}),
     do: socket |> SurfaceData.reload(:events) |> announce(params, created)
 
   # A queued CalDAV create is tagged in the cache by the offline queue, so the
   # reload shows it waiting to sync; it cannot be undone from here.
-  defp settle(socket, draft, params, {:error, %{retry: :queued}}) do
+  defp settle(socket, draft, params, {:error, %{retry: :queued}} = result) do
     socket
     |> push_event("calendar:draft-cleared", %{draft: draft})
     |> SurfaceData.reload(:events)
-    |> toast(params, fn params ->
-      dgettext(
-        "dashboard_calendar_editing",
-        "“%{title}” is saved here and will reach your calendar at its next sync.",
-        title: params.title
-      )
-    end)
+    |> toast(params, result)
   end
 
-  defp settle(socket, draft, params, {:error, failure}) do
+  defp settle(socket, draft, params, result) do
     socket
     |> push_event("calendar:draft-cleared", %{draft: draft})
     |> SurfaceData.push_events(false)
-    |> toast(params, fn params ->
-      dgettext("dashboard_calendar_editing", "Couldn't add “%{title}”. %{reason}",
-        title: params.title,
-        reason: CalendarEditMessages.create_failure_reason(Map.get(failure, :reason))
-      )
-    end)
+    |> toast(params, result)
   end
 
-  defp toast(socket, nil, _text), do: socket
-  defp toast(socket, params, text), do: Toast.show(socket, text.(params))
+  defp toast(socket, %CreateParams{title: title}, result), do: toast(socket, title, result)
 
-  defp announce(socket, nil, _created), do: socket
+  defp toast(socket, title, result) do
+    {_kind, message} = outcome_message(title, result)
+    Toast.show(socket, message)
+  end
+
+  defp queued_text(title),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "“%{title}” is saved here and will reach your calendar at its next sync.",
+        title: title
+      )
+
+  defp failed_text(title, failure),
+    do:
+      dgettext("dashboard_calendar_editing", "Couldn't add “%{title}”. %{reason}",
+        title: title,
+        reason: CalendarEditMessages.create_failure_reason(Map.get(failure, :reason))
+      )
+
+  defp invited_text(invited),
+    do:
+      dngettext(
+        "dashboard_calendar_editing",
+        "Added and invited %{count} guest",
+        "Added and invited %{count} guests",
+        length(invited)
+      )
 
   defp announce(socket, params, %{event: event, invited: []}) do
     case undo_entry(event, params) do
@@ -187,17 +226,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     end
   end
 
-  defp announce(socket, _params, %{invited: invited}) do
-    Toast.show(
-      socket,
-      dngettext(
-        "dashboard_calendar_editing",
-        "Added and invited %{count} guest",
-        "Added and invited %{count} guests",
-        length(invited)
-      )
-    )
-  end
+  defp announce(socket, _params, %{invited: invited}),
+    do: Toast.show(socket, invited_text(invited))
 
   # A row the cache refused (incomplete timing) cannot be found again, so
   # there is nothing to undo; nor is there for a repeating event, as no

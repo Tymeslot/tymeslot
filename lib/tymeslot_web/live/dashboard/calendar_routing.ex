@@ -101,21 +101,27 @@ defmodule TymeslotWeb.Dashboard.CalendarRouting do
   end
 
   @doc """
-  A create the new surface started has an answer for its draft `draft_id`.
-  The old grid never starts one, so only the new surface hears it.
+  A create the new surface started has an answer for its draft `draft_id`,
+  titled `title`. The old grid never starts one, so only the new surface
+  hears it; with no new surface on screen the answer is `:off_screen`, for
+  the LiveView to tell the organiser itself.
   """
-  @spec create_settled(Phoenix.LiveView.Socket.t(), String.t(), term()) :: :ok
-  def create_settled(socket, draft_id, result) do
-    if surface_on_screen?(socket),
-      do:
-        send_update(CalendarSurface,
-          id: @id,
-          action: :create_settled,
-          draft: draft_id,
-          result: result
-        )
+  @spec create_settled(Phoenix.LiveView.Socket.t(), String.t(), String.t(), term()) ::
+          :ok | :off_screen
+  def create_settled(socket, draft_id, title, result) do
+    if surface_on_screen?(socket) do
+      send_update(CalendarSurface,
+        id: @id,
+        action: :create_settled,
+        draft: draft_id,
+        title: title,
+        result: result
+      )
 
-    :ok
+      :ok
+    else
+      :off_screen
+    end
   end
 
   @doc "A delete was scheduled in another tab of the organiser."

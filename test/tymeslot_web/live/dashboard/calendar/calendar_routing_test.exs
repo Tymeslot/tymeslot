@@ -93,17 +93,23 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
     test "reaches the new surface on the calendar page" do
       socket = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
 
-      assert CalendarRouting.create_settled(socket, "d3", {:error, :timeout}) == :ok
+      assert CalendarRouting.create_settled(socket, "d3", "Lunch", {:error, :timeout}) == :ok
 
       assert_received {:phoenix, :send_update,
                        {{CalendarSurface, "calendar"},
-                        %{action: :create_settled, draft: "d3", result: {:error, :timeout}}}}
+                        %{
+                          action: :create_settled,
+                          draft: "d3",
+                          title: "Lunch",
+                          result: {:error, :timeout}
+                        }}}
     end
 
     test "is not sent to the old grid, which never starts one" do
       socket = %{assigns: %{live_action: :calendar, calendar_redesign: false}}
 
-      assert CalendarRouting.create_settled(socket, "d3", {:error, :timeout}) == :ok
+      assert CalendarRouting.create_settled(socket, "d3", "Lunch", {:error, :timeout}) ==
+               :off_screen
 
       refute_received {:phoenix, :send_update, _update}
     end
@@ -111,7 +117,8 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
     test "is not sent off the calendar page" do
       socket = %{assigns: %{live_action: :overview, calendar_redesign: true}}
 
-      assert CalendarRouting.create_settled(socket, "d3", {:error, :timeout}) == :ok
+      assert CalendarRouting.create_settled(socket, "d3", "Lunch", {:error, :timeout}) ==
+               :off_screen
 
       refute_received {:phoenix, :send_update, _update}
     end
@@ -125,10 +132,13 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       settled(lv)
 
-      send(lv.pid, {:calendar_create_result, "d1", @failed})
-      settled(lv)
+      send(lv.pid, {:calendar_create_result, {"d1", "Lunch"}, @failed})
+      html = settled(lv)
 
       assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      # The surface no longer holds the draft (mounted since), so the toast
+      # names it by the title the result carries.
+      assert html =~ "add “Lunch”. Please try again."
     end
 
     test "reaches the new calendar, which reloads to show a created event",
@@ -139,32 +149,77 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
 
       # The domain caches a created event before it answers.
       event(integration, "work", "Lunch", ~U[2026-10-15 12:00:00Z])
-      send(lv.pid, {:calendar_create_result, "d1", {:ok, %{event: nil, invited: []}}})
-      settled(lv)
+
+      send(
+        lv.pid,
+        {:calendar_create_result, {"d1", "Lunch"}, {:ok, %{event: nil, invited: []}}}
+      )
+
+      html = settled(lv)
 
       assert_push_event(lv, "calendar:events", %{reset: true, events: events})
       assert Enum.any?(events, &(&1.title == "Lunch"))
+      assert html =~ "Added “Lunch”."
     end
 
-    test "is ignored by the old calendar", %{conn: conn} do
+    test "is flashed, not routed, while the old calendar is on screen", %{conn: conn} do
       %{conn: conn} = owner(conn, redesign_enabled: false)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      send(lv.pid, {:calendar_create_result, "d1", @failed})
+      send(lv.pid, {:calendar_create_result, {"d1", "Lunch"}, @failed})
 
-      assert settled(lv) =~ "calendar-grid"
+      html = settled(lv)
+      assert html =~ "calendar-grid"
+      assert html =~ "add “Lunch”. Please try again."
       refute_push_event(lv, "calendar:draft-cleared", %{}, 100)
     end
 
-    test "is taken quietly off the calendar page", %{conn: conn} do
+    test "is flashed off the calendar page when it failed", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
 
-      send(lv.pid, {:calendar_create_result, "d1", @failed})
-      settled(lv)
+      send(lv.pid, {:calendar_create_result, {"d1", "Lunch"}, @failed})
+      html = settled(lv)
 
-      assert Process.alive?(lv.pid)
+      assert html =~ "add “Lunch”. Please try again."
       refute_push_event(lv, "calendar:draft-cleared", %{}, 100)
+    end
+
+    test "is flashed off the calendar page when it was added", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
+
+      send(
+        lv.pid,
+        {:calendar_create_result, {"d1", "Lunch"}, {:ok, %{event: nil, invited: []}}}
+      )
+
+      assert settled(lv) =~ "Added “Lunch”."
+    end
+
+    test "names the guests invited when flashed off the calendar page", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
+
+      send(
+        lv.pid,
+        {:calendar_create_result, {"d1", "Lunch"},
+         {:ok, %{event: nil, invited: ["anna@example.com", "ben@example.com"]}}}
+      )
+
+      assert settled(lv) =~ "Added and invited 2 guests"
+    end
+
+    test "is flashed off the calendar page when queued for the next sync", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
+
+      send(
+        lv.pid,
+        {:calendar_create_result, {"d1", "Lunch"}, {:error, %{reason: :offline, retry: :queued}}}
+      )
+
+      assert settled(lv) =~ "“Lunch” is saved here and will reach your calendar at its next sync."
     end
   end
 end

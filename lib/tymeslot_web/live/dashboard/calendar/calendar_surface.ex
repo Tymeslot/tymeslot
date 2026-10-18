@@ -155,10 +155,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # A create this surface started has answered (see `Creation`). A surface
   # mounted since, not yet loaded, has nothing to reload.
   def update(
-        %{action: :create_settled, draft: draft, result: result},
+        %{action: :create_settled, draft: draft, title: title, result: result},
         %{assigns: %{ready?: true}} = socket
       ),
-      do: {:ok, socket |> Creation.settled(draft, result) |> PanelNew.settled(draft, result)}
+      do:
+        {:ok, socket |> Creation.settled(draft, title, result) |> PanelNew.settled(draft, result)}
 
   def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 

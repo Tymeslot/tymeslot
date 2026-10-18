@@ -319,8 +319,57 @@ button.cal-qc-chip:hover,
   cursor: progress;
 }
 
+/* The hook's own notice (a save it could not confirm), shaped like the
+   surface's toast (TymeslotWeb.Dashboard.Calendar.Toast) and in its place. */
+.cal-notice {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(32rem, calc(100vw - 32px));
+  padding: 10px 8px 10px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-tymeslot-900);
+  box-shadow: var(--shadow-lg);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  transform: translateX(-50%);
+}
+
+.cal-notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-notice-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  color: var(--color-tymeslot-300);
+}
+
+.cal-notice-close:hover {
+  color: #fff;
+}
+
+.cal-notice-close:focus-visible {
+  outline: 2px solid var(--color-turquoise-400);
+  outline-offset: 0;
+}
+
+.cal-notice-icon {
+  width: 16px;
+  height: 16px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .cal-qc {
+  .cal-qc,
+  .cal-notice {
     animation: fadeIn 120ms ease-out;
   }
 }

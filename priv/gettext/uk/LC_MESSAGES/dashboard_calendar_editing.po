@@ -744,3 +744,13 @@ msgstr "Подію «%{title}» збережено тут. Вона з'явит�
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this event, so only they can email its guests."
 msgstr "Цю подію організовує хтось інший, тож лише ця людина може надсилати листи гостям."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added “%{title}”."
+msgstr "Подію «%{title}» додано."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't confirm the save. Check your calendar."
+msgstr "Не вдалося підтвердити збереження. Перевірте свій календар."

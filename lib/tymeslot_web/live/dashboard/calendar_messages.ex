@@ -16,9 +16,10 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   up to a minute. The rebuild is a no-op where no agenda is shown.
   """
 
-  import Phoenix.LiveView, only: [send_update: 2]
+  import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias TymeslotWeb.Dashboard.AgendaRefresh
+  alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.CalendarRouting
@@ -65,9 +66,20 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   end
 
   # A create the new surface started (`Tymeslot.CalendarGrid.WriteTask`)
-  # finished: its draft is settled on the surface, if it is still on screen.
-  def handle_info({:calendar_create_result, draft_id, result}, socket) do
-    CalendarRouting.create_settled(socket, draft_id, result)
+  # finished: its draft is settled on the surface if it is still on screen,
+  # and otherwise (the organiser left the calendar or switched to the old
+  # one) the outcome is flashed here, so it is never lost.
+  def handle_info({:calendar_create_result, {draft_id, title}, result}, socket) do
+    socket =
+      case CalendarRouting.create_settled(socket, draft_id, title, result) do
+        :ok ->
+          socket
+
+        :off_screen ->
+          {kind, message} = Creation.outcome_message(title, result)
+          put_flash(socket, kind, message)
+      end
+
     rebuild_agenda({:noreply, socket})
   end
 

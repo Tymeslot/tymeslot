@@ -798,6 +798,7 @@ msgstr "Evento “%{title}” excluído"
 msgid "Deleting “%{title}”…"
 msgstr "Excluindo “%{title}”…"
 
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toast.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"

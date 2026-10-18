@@ -291,40 +291,71 @@ test("the popover does not outlive the hook", () => {
 
 const refusal = "Couldn't save this event. Try again.";
 
-test("a rejected create push returns the popover to editable with the error shown", async () => {
-  const { hook } = open();
+const unconfirmed = "Couldn't confirm the save. Check your calendar.";
+const notice = () => document.getElementById("calendar-notice");
+
+// A lost reply may hide a create that landed, so Save is never offered again.
+function expectDropped(el, hook) {
+  expect(popover()).toBeNull();
+  expect(hook.draft).toBeNull();
+  expect(drawn(el)).toBeNull();
+  expect(notice().getAttribute("role")).toBe("alert");
+  expect(notice().textContent).toBe(unconfirmed);
+  expect(pushes(hook, "calendar:create")).toHaveLength(1);
+}
+
+test("a rejected create push drops the draft and asks the organiser to check", async () => {
+  const { el, hook } = open();
   hook.pushEventTo.mockImplementation(() => Promise.reject(new Error("disconnected")));
   type("Lunch");
   key(field(), "Enter");
   await Promise.resolve();
   await Promise.resolve();
 
-  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
-  expect(popover().querySelector("[data-qc-save]").disabled).toBe(false);
-  expect(hook.draft.status).toBe("editing");
+  expectDropped(el, hook);
 });
 
-test("a create with no reply in time returns the popover to editable", () => {
+test("a create with no reply in time drops the draft and asks the organiser to check", () => {
   vi.useFakeTimers();
-  const { hook } = open();
+  const { el, hook } = open();
   type("Lunch");
   key(field(), "Enter");
   expect(hook.draft.status).toBe("saving");
 
   vi.advanceTimersByTime(15000);
-  expect(hook.draft.status).toBe("editing");
-  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
+  expectDropped(el, hook);
   // A late reply changes nothing.
   reply(hook, "calendar:create", { accepted: true });
-  expect(popover()).not.toBeNull();
+  expect(popover()).toBeNull();
+
+  // The notice leaves on its own, like the server's toast.
+  vi.advanceTimersByTime(10000);
+  expect(notice()).toBeNull();
 });
 
-test("reconnecting while a draft is saving returns the popover to editable", () => {
-  const { hook } = open();
+test("reconnecting while a draft is saving drops it and asks the organiser to check", () => {
+  const { el, hook } = open();
+  type("Lunch");
   key(field(), "Enter");
   hook.reconnected();
+
+  expectDropped(el, hook);
+  expect(document.activeElement).not.toBe(document.body);
+
+  notice().querySelector("button").click();
+  expect(notice()).toBeNull();
+});
+
+test("a refused create still reopens Save with the server's message", () => {
+  const { hook } = open();
+  type("Lunch");
+  key(field(), "Enter");
+  reply(hook, "calendar:create", { accepted: false, field: null, error: "Slow down." });
+
   expect(hook.draft.status).toBe("editing");
-  expect(popover().querySelector("#calendar-qc-error").textContent).toBe(refusal);
+  expect(popover().querySelector("#calendar-qc-error").textContent).toBe("Slow down.");
+  expect(popover().querySelector("[data-qc-save]").disabled).toBe(false);
+  expect(notice()).toBeNull();
 });
 
 test("the fallback native picker keeps focus through its first change", () => {

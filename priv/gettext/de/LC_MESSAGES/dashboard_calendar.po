@@ -798,6 +798,7 @@ msgstr "„%{title}“ gelöscht"
 msgid "Deleting “%{title}”…"
 msgstr "„%{title}“ wird gelöscht…"
 
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toast.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
