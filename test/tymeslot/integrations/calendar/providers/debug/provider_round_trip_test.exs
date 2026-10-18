@@ -135,6 +135,14 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider.RoundTripTest do
              DebugCalendarProvider.update_event(@client, "evt-unknown", %{summary: "Ghost"})
 
     assert DebugStore.fetch_event("evt-unknown") == :error
+
+    assert {:error, :not_found} =
+             DebugCalendarProvider.update_event(@client, "evt-unknown", %{
+               summary: "Ghost",
+               start_time: nil
+             })
+
+    assert DebugStore.fetch_event("evt-unknown") == :error
   end
 
   test "an update for an unknown event that says when it is creates it" do

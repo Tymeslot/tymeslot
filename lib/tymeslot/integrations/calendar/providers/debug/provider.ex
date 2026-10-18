@@ -73,7 +73,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
       # A write for an event the store does not hold creates it when it says
       # when it is; a partial one would only be a half-event to overlap-check.
-      :error when is_map_key(event_data, :start_time) ->
+      :error
+      when is_map_key(event_data, :start_time) and
+             :erlang.map_get(:start_time, event_data) != nil ->
         DebugStore.put_event(Series.stored_form(stored_event_from(event_data, uid)))
 
       :error ->
