@@ -215,6 +215,63 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
                CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
     end
 
+    test "a request whose start has passed is expired though its deadline is ahead" do
+      user = insert(:user)
+      now = DateTime.utc_now(:second)
+      start_time = DateTime.add(now, -600, :second)
+
+      insert_meeting(user, %{
+        status: "awaiting_approval",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 1800, :second),
+        approval_requested_at: DateTime.add(now, -7200, :second),
+        approval_deadline_at: DateTime.add(now, 3600, :second)
+      })
+
+      from = DateTime.add(now, -86_400, :second)
+      to = DateTime.add(now, 86_400, :second)
+
+      assert [%BookingEvent{request: true, expired: true}] =
+               CalendarGrid.list_booking_events_for_range(user.id, from, to)
+    end
+
+    test "expired requests of another organiser or outside the window are not loaded" do
+      user = insert(:user)
+      other = insert(:user)
+      now = DateTime.utc_now(:second)
+
+      expired = fn organiser, offset_days ->
+        start_time =
+          DateTime.add(
+            DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
+            offset_days * 86_400,
+            :second
+          )
+
+        insert_meeting(organiser, %{
+          status: "expired",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1800, :second),
+          approval_requested_at: DateTime.add(now, -7200, :second),
+          approval_resolved_at: DateTime.add(now, -30, :second),
+          cancelled_at: DateTime.add(now, -30, :second)
+        })
+      end
+
+      mine = expired.(user, 1)
+      expired.(other, 1)
+      expired.(user, 30)
+
+      {start_dt, end_dt} = window()
+
+      assert [%BookingEvent{meeting_id: id}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, [],
+                 include_expired: true
+               )
+
+      assert id == mine.id
+    end
+
     test "a confirmed booking is neither a request nor expired" do
       user = insert(:user)
       insert_meeting(user, %{meeting_type: "  "})

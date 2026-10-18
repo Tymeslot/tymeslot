@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     {start_dt, end_dt} = range_for_view(socket.assigns)
 
     # Shared with the redesigned calendar, so the two surfaces load the same
-    # events for the same days (see `EventWindow.list_events/4`).
+    # events for the same days (see `EventWindow.list_events/5`).
     events =
       EventWindow.list_events(
         socket.assigns.current_user.id,

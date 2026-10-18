@@ -183,6 +183,40 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
                )
     end
 
+    test "drops every copy of a booking and names the visible copy's calendar" do
+      user = insert(:user)
+      integration = google_account(user)
+
+      cached(integration, "old", "Intro call", ~U[2026-10-15 10:00:00Z],
+        provider_event_id: "evt-intro",
+        uid: "hidden-uid"
+      )
+
+      cached(integration, "work", "Intro call", ~U[2026-10-15 10:00:00Z],
+        provider_event_id: "evt-intro-2",
+        uid: "intro-uid"
+      )
+
+      insert(:meeting,
+        organizer_user: user,
+        title: "Intro call",
+        start_time: ~U[2026-10-15 10:00:00Z],
+        end_time: ~U[2026-10-15 10:30:00Z],
+        status: "confirmed",
+        provider_event_id: "evt-intro",
+        calendar_uid: "intro-uid"
+      )
+
+      assert [%BookingEvent{copy: %{calendar_name: "Work"}}] =
+               EventWindow.list_events(
+                 user.id,
+                 [integration],
+                 ~U[2026-10-12 00:00:00Z],
+                 ~U[2026-10-19 00:00:00Z],
+                 bookings: :prefer
+               )
+    end
+
     test "a booking with no copy has none, and expired requests come only when asked" do
       user = insert(:user)
       integration = google_account(user)

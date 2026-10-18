@@ -26,7 +26,7 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
   """
   @spec merge([map()], [map()], [BookingEvent.t()], [map()]) :: [map()]
   def merge(visible, cached, bookings, integrations) do
-    copies = index(visible ++ cached)
+    copies = [index(visible), index(cached)]
     bookings = Enum.map(bookings, &with_copy(&1, copies, integrations))
     mirrored = Meetings.calendar_identifier_set(bookings)
 
@@ -42,11 +42,15 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
     end)
   end
 
+  # The first index (visible rows) that knows any of the booking's
+  # identifiers wins, so a visible copy is named before a hidden one.
   defp with_copy(booking, copies, integrations) do
+    identifiers = Meetings.calendar_event_identifiers(booking)
+
     row =
-      booking
-      |> Meetings.calendar_event_identifiers()
-      |> Enum.find_value(&Map.get(copies, &1))
+      Enum.find_value(copies, fn index ->
+        Enum.find_value(identifiers, &Map.get(index, &1))
+      end)
 
     case row do
       nil -> booking
