@@ -4,7 +4,7 @@
  * wall-clock string.
  */
 import { expect, test } from "vitest";
-import { MINUTES_PER_DAY, dayNumber, formatWall, makeScale } from "../../calendar/time.js";
+import { MINUTES_PER_DAY, dayNumber, formatWall, makeScale, parseWall } from "../../calendar/time.js";
 
 test("minuteOf undoes yOf on an unfolded day", () => {
   const scale = makeScale(52, false);
@@ -28,4 +28,23 @@ test("formatWall writes a minute as the payload's wall-clock string", () => {
   const day = dayNumber("2026-10-15") * MINUTES_PER_DAY;
   expect(formatWall(day + 660)).toBe("2026-10-15T11:00");
   expect(formatWall(day + MINUTES_PER_DAY)).toBe("2026-10-16T00:00");
+});
+
+test("formatWall rounds a fractional minute instead of writing an invalid time", () => {
+  const day = dayNumber("2026-10-15") * MINUTES_PER_DAY;
+  expect(formatWall(day + 659.6)).toBe("2026-10-15T11:00");
+  expect(formatWall(day + MINUTES_PER_DAY - 0.4)).toBe("2026-10-16T00:00");
+});
+
+test("formatWall undoes parseWall", () => {
+  for (const text of ["2026-10-15T09:30", "2026-10-15T00:00", "2026-12-31T23:59"]) {
+    expect(formatWall(parseWall(text))).toBe(text);
+  }
+});
+
+test("minuteOf undoes yOf on a folded day, either side of the night strip", () => {
+  const scale = makeScale(52, true);
+  for (const minute of [0, 210, 420, 421, 540, 1000, MINUTES_PER_DAY]) {
+    expect(scale.minuteOf(scale.yOf(minute))).toBeCloseTo(minute, 6);
+  }
 });

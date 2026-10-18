@@ -36,6 +36,7 @@ export function parseWall(text) {
 
 // The inverse of parseWall: a wall-clock minute as "2026-10-15T11:00".
 export function formatWall(minute) {
+  minute = Math.round(minute);
   const day = Math.floor(minute / MINUTES_PER_DAY);
   const rest = minute - day * MINUTES_PER_DAY;
   return `${isoFromDay(day)}T${pad(Math.floor(rest / 60))}:${pad(rest % 60)}`;
