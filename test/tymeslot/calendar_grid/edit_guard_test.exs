@@ -190,4 +190,24 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
       refute EditGuard.free_busy_editable?([integration], copy)
     end
   end
+
+  describe "free_busy_change/1" do
+    test "lets an ordinary event change its Busy/Free", %{integration: integration} do
+      assert EditGuard.free_busy_change(event(integration, "work")) == :ok
+    end
+
+    test "refuses a booking",
+      do: assert(EditGuard.free_busy_change(%{kind: :booking}) == {:error, :booking})
+
+    test "refuses the calendar copy of a booking", %{user: user, integration: integration} do
+      insert(:meeting,
+        organizer_user: user,
+        calendar_integration_id: integration.id,
+        calendar_uid: "free-busy-copy"
+      )
+
+      assert EditGuard.free_busy_change(%{event(integration, "work") | uid: "free-busy-copy"}) ==
+               {:error, :booking}
+    end
+  end
 end

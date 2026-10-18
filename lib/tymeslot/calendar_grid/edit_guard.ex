@@ -15,7 +15,9 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
 
   `free_busy_editable?/2` says whether the organiser may change an event's
   Busy/Free: a booking, and the calendar copy of one, follow their meeting
-  type's "show as free" setting, so neither may.
+  type's "show as free" setting, so neither may. `free_busy_change/1` is
+  the same rule as a refusal, which `EventEdit.update_event/4` asks of every
+  change of Busy/Free whatever the caller drew.
 
   `check/3` asks all three, in that order, for a change about to be made.
   `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
@@ -53,6 +55,14 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   """
   @spec free_busy_editable?([map()], map()) :: boolean()
   def free_busy_editable?(integrations, event), do: movable?(integrations, event)
+
+  @doc """
+  Refuses a change of Busy/Free to a booking or to a booking's calendar
+  copy, whose state follows the meeting type. One query for the copy.
+  """
+  @spec free_busy_change(map()) :: :ok | {:error, :booking}
+  def free_busy_change(%{kind: :booking}), do: {:error, :booking}
+  def free_busy_change(event), do: not_booking_copy(event)
 
   @doc """
   The events of `events` that `movable?/2` allows, for drawing a whole window:

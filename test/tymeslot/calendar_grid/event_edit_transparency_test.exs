@@ -171,4 +171,47 @@ defmodule Tymeslot.CalendarGrid.EventEditTransparencyTest do
       assert row.transparency == "transparent"
     end
   end
+
+  describe "a booking's calendar copy" do
+    # Its Busy/Free follows the meeting type's "show as free" setting, so the
+    # domain refuses a change whatever the caller drew. No provider write is
+    # expected: `verify_on_exit!` fails the test if one is made.
+    setup %{user: user, integration: integration} do
+      event = insert_event(integration, %{uid: "booked-copy"})
+
+      insert(:meeting,
+        organizer_user: user,
+        calendar_integration_id: integration.id,
+        calendar_uid: "booked-copy"
+      )
+
+      %{event: event}
+    end
+
+    test "refuses a change of Busy/Free before anything is written", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:error, %{reason: :booking, retry: :not_queued}} =
+               Changes.update_event(user.id, event, %{transparency: "transparent"})
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.transparency == "opaque"
+    end
+
+    test "refuses it whatever series scope is asked", %{user: user, event: event} do
+      assert {:error, %{reason: :booking}} =
+               Changes.update_event(user.id, event, %{transparency: "transparent"},
+                 recurrence_scope: :all
+               )
+    end
+
+    test "still takes a change that leaves Busy/Free alone", %{user: user, event: event} do
+      expect_provider_update()
+
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Booked call"})
+      assert updated.summary == "Booked call"
+    end
+  end
 end

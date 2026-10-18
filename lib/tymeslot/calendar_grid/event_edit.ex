@@ -71,6 +71,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.AllDay
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -105,7 +106,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   `changes` may only carry #{Enum.map_join(@editable_fields, ", ", &"`#{&1}`")};
   any other key raises `ArgumentError`, as does a `transparency` other than
-  `"opaque"` (busy) or `"transparent"` (free). Timing follows the event's resulting `all_day`
+  `"opaque"` (busy) or `"transparent"` (free). A change of `transparency` to
+  a booking or a booking's calendar copy is refused with `:booking` before
+  anything is written (`EditGuard.free_busy_change/1`). Timing follows the event's resulting `all_day`
   flag: an all-day event keeps its dates and drops its timestamps, a timed
   event the reverse. A change that flips `all_day` also refits the `UNTIL` of
   a recurring event's rule to the value type its new `DTSTART` calls for.
@@ -146,17 +149,30 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     ensure_known_fields!(changes)
     scope = recurrence_scope!(opts)
 
-    # The cache row, read once and used throughout: it is what says whether
-    # the event belongs to a series, since the caller's copy may be an
-    # optimistic one built from a form, and it carries the document the CalDAV
-    # adapters patch.
-    stored = stored_row(event)
+    with :ok <- free_busy_change(event, changes) do
+      # The cache row, read once and used throughout: it is what says whether
+      # the event belongs to a series, since the caller's copy may be an
+      # optimistic one built from a form, and it carries the document the
+      # CalDAV adapters patch.
+      stored = stored_row(event)
 
-    case Occurrence.series_family(stored || event) do
-      :single -> update_single(user_id, event, stored, scope, changes, opts)
-      family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
+      case Occurrence.series_family(stored || event) do
+        :single -> update_single(user_id, event, stored, scope, changes, opts)
+        family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
+      end
     end
   end
+
+  # A booking and a booking's calendar copy follow their meeting type's
+  # "show as free" setting, whatever the caller offered.
+  defp free_busy_change(event, %{transparency: _transparency}) do
+    case EditGuard.free_busy_change(event) do
+      :ok -> :ok
+      {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  defp free_busy_change(_event, _changes), do: :ok
 
   # A change of repeat rule for this and the following events was chosen
   # for a member of a series, with a `COUNT` given for the whole series. A
