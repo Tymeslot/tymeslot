@@ -14,8 +14,11 @@ defmodule TymeslotWeb.Dashboard.AgendaRefresh do
   events created since the last load.
   """
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [connected?: 1]
+
+  alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Profiles
 
   @tick_ms 60_000
 
@@ -24,6 +27,32 @@ defmodule TymeslotWeb.Dashboard.AgendaRefresh do
   def shown?(%{live_action: :overview}), do: true
   def shown?(%{live_action: :calendar} = assigns), do: assigns[:calendar_redesign] != true
   def shown?(_assigns), do: false
+
+  @doc """
+  Loads the data the current section shows: the day's agenda on the
+  overview and the old calendar, nothing elsewhere. The new calendar
+  surface reads its own events, so it loads nothing either.
+  """
+  @spec load(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def load(%{assigns: %{live_action: :calendar, calendar_redesign: true}} = socket), do: socket
+
+  def load(socket) do
+    if user = socket.assigns[:current_user] do
+      timezone = Profiles.timezone(socket.assigns[:profile])
+      action = socket.assigns[:live_action]
+      assign(socket, DashboardContext.get_dashboard_data_for_action(user, timezone, action))
+    else
+      socket
+    end
+  end
+
+  @doc """
+  Rebuilds the agenda when the current section shows it (`shown?/1`), on a
+  tick or after a calendar change; a stale timer that fires after the user
+  has navigated elsewhere is a no-op.
+  """
+  @spec refresh(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def refresh(socket), do: if(shown?(socket.assigns), do: load(socket), else: socket)
 
   @doc """
   Keeps a single `:agenda_tick` timer alive only while a section that shows

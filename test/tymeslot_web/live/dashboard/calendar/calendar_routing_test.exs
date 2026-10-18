@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Workers.CalendarEventDeleteWorker
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
+  alias TymeslotWeb.Dashboard.CalendarRouting
 
   # A message to the LiveView becomes a component update, itself a message
   # queued behind it: the first render lets it through, the second shows it.
@@ -84,6 +86,34 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
 
       refute settled(lv) =~ "Failed to delete event"
       assert Process.alive?(lv.pid)
+    end
+  end
+
+  describe "a create's result" do
+    test "reaches the new surface on the calendar page" do
+      socket = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
+
+      assert CalendarRouting.create_settled(socket, "d3", {:error, :timeout}) == :ok
+
+      assert_received {:phoenix, :send_update,
+                       {{CalendarSurface, "calendar"},
+                        %{action: :create_settled, draft: "d3", result: {:error, :timeout}}}}
+    end
+
+    test "is not sent to the old grid, which never starts one" do
+      socket = %{assigns: %{live_action: :calendar, calendar_redesign: false}}
+
+      assert CalendarRouting.create_settled(socket, "d3", {:error, :timeout}) == :ok
+
+      refute_received {:phoenix, :send_update, _update}
+    end
+
+    test "is not sent off the calendar page" do
+      socket = %{assigns: %{live_action: :overview, calendar_redesign: true}}
+
+      assert CalendarRouting.create_settled(socket, "d3", {:error, :timeout}) == :ok
+
+      refute_received {:phoenix, :send_update, _update}
     end
   end
 end

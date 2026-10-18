@@ -13,7 +13,7 @@ defmodule TymeslotWeb.DashboardLive do
   talk to each other: a child asks for a sibling to be refreshed, or for a flash
   to be shown, by messaging the parent. `handle_info/2` is therefore mostly a
   routing table, with the calendar and meeting-type-form traffic delegated to
-  `TymeslotWeb.Dashboard.CalendarEventHandlers` and
+  `TymeslotWeb.Dashboard.CalendarMessages` and
   `TymeslotWeb.Dashboard.MeetingFormMessages`.
 
   ## Extensions
@@ -33,14 +33,11 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Meetings
   alias Tymeslot.Onboarding
-  alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AgendaRefresh
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
-  alias TymeslotWeb.Dashboard.CalendarEventHandlers
-  alias TymeslotWeb.Dashboard.CalendarGridComponent
-  alias TymeslotWeb.Dashboard.CalendarRouting
+  alias TymeslotWeb.Dashboard.CalendarMessages
   alias TymeslotWeb.Dashboard.CalendarUpNextStrip
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
@@ -78,7 +75,7 @@ defmodule TymeslotWeb.DashboardLive do
       end
 
     # `:agenda` defaults nil so the calendar's Up-next strip can be guarded on
-    # the dead render, before `load_dashboard_data/1` has run.
+    # the dead render, before `AgendaRefresh.load/1` has run.
     # `:calendar_redesign` stays nil until the calendar is first opened, which
     # loads the organiser's switch once for the life of this process.
     {:ok,
@@ -163,7 +160,7 @@ defmodule TymeslotWeb.DashboardLive do
         do: PaymentsHandlers.maybe_enqueue_resync(params, socket),
         else: socket
 
-    socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
+    socket = if connected?(socket), do: AgendaRefresh.load(socket), else: socket
     AgendaRefresh.reschedule(socket)
   end
 
@@ -342,7 +339,7 @@ defmodule TymeslotWeb.DashboardLive do
      socket
      |> handle_saving_animation()
      |> refresh_dashboard_data()
-     |> load_dashboard_data()}
+     |> AgendaRefresh.load()}
   end
 
   @spec handle_info({:flash, {atom(), String.t()}}, Phoenix.LiveView.Socket.t()) ::
@@ -439,100 +436,17 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:poll_slot_health, poll_id, health}, socket),
     do: PollEventHandlers.handle_poll_slot_health(poll_id, health, socket)
 
-  # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
-
-  def handle_info({:guest_rsvp_updated, _meeting_id}, socket) do
-    send_update(
-      CalendarGridComponent,
-      id: ComponentDispatch.component_id(:calendar),
-      action: :refresh_guest_summaries
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_info(:tick, socket),
-    do: CalendarEventHandlers.handle_tick(socket)
-
   def handle_info(:agenda_tick, socket) do
-    {:noreply, socket |> AgendaRefresh.reschedule() |> refresh_agenda()}
+    {:noreply, socket |> AgendaRefresh.reschedule() |> AgendaRefresh.refresh()}
   end
-
-  def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
-    do: socket |> CalendarEventHandlers.handle_calendar_events_updated() |> rebuild_agenda()
-
-  def handle_info({:calendar_sync_complete, _user_id, integration_id}, socket),
-    do: CalendarEventHandlers.handle_calendar_sync_complete(socket, integration_id)
-
-  def handle_info({:calendar_sync_failed, _user_id, integration_id}, socket),
-    do: CalendarEventHandlers.handle_calendar_sync_failed(socket, integration_id)
-
-  def handle_info({:calendar_delete_result, _user_id, token, outcome}, socket),
-    do: CalendarEventHandlers.handle_calendar_delete_result(socket, token, outcome)
-
-  def handle_info({:calendar_delete_scheduled, _user_id, token, address, scope}, socket) do
-    CalendarRouting.delete_scheduled(socket, token, address, scope)
-    {:noreply, socket}
-  end
-
-  def handle_info({:calendar_delete_cancelled, _user_id, token}, socket) do
-    CalendarRouting.delete_cancelled(socket, token)
-    {:noreply, socket}
-  end
-
-  def handle_info(:calendar_sync_flash, socket),
-    do: CalendarEventHandlers.handle_calendar_sync_flash(socket)
-
-  def handle_info(:reset_calendar_sync, socket),
-    do: CalendarEventHandlers.handle_reset_calendar_sync(socket)
-
-  def handle_info({:event_update_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_event_update_result(socket) |> rebuild_agenda()
-
-  def handle_info({:event_move_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_event_move_result(socket) |> rebuild_agenda()
-
-  def handle_info({:event_video_result, result}, socket),
-    do: CalendarEventHandlers.handle_event_video_result(result, socket)
-
-  def handle_info({:event_writes_released, release}, socket),
-    do: CalendarEventHandlers.handle_event_writes_released(release, socket)
-
-  def handle_info({:execute_create_event, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_create_event(payload, socket)
-
-  def handle_info({:create_event_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_create_event_result(socket) |> rebuild_agenda()
-
-  def handle_info({:execute_create_ad_hoc_meeting, params}, socket),
-    do: CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(params, socket)
-
-  def handle_info({:create_ad_hoc_meeting_result, result}, socket),
-    do:
-      result
-      |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(socket)
-      |> rebuild_agenda()
-
-  def handle_info({:execute_ics_import, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_ics_import(payload, socket)
-
-  def handle_info({:ics_import_progress, done}, socket),
-    do: CalendarEventHandlers.handle_ics_import_progress(done, socket)
-
-  def handle_info({:ics_import_result, result}, socket),
-    do: CalendarEventHandlers.handle_ics_import_result(result, socket)
-
-  def handle_info({:execute_delete_event, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)
-
-  def handle_info({:delete_event_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_delete_event_result(socket) |> rebuild_agenda()
 
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info(_msg, socket) do
-    # Silently ignore unhandled messages
-    {:noreply, socket}
+  def handle_info(message, socket) do
+    case CalendarMessages.handle_info(message, socket) do
+      :unhandled -> {:noreply, socket}
+      reply -> reply
+    end
   end
 
   @impl Phoenix.LiveView
@@ -566,7 +480,7 @@ defmodule TymeslotWeb.DashboardLive do
         {:noreply,
          socket
          |> switch_calendar_surface(enabled)
-         |> load_dashboard_data()
+         |> AgendaRefresh.load()
          |> AgendaRefresh.reschedule()}
 
       {:error, _changeset} ->
@@ -608,39 +522,4 @@ defmodule TymeslotWeb.DashboardLive do
       socket
     end
   end
-
-  @spec load_dashboard_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  defp load_dashboard_data(
-         %{assigns: %{live_action: :calendar, calendar_redesign: true}} = socket
-       ),
-       do: socket
-
-  defp load_dashboard_data(socket) do
-    user = socket.assigns[:current_user]
-    action = socket.assigns[:live_action]
-    timezone = Profiles.timezone(socket.assigns[:profile])
-
-    if user do
-      dashboard_data = DashboardContext.get_dashboard_data_for_action(user, timezone, action)
-      assign(socket, dashboard_data)
-    else
-      socket
-    end
-  end
-
-  # Rebuilds only the agenda on a tick; a stale timer that fires after the
-  # user has navigated elsewhere is a no-op.
-  defp refresh_agenda(socket) do
-    if AgendaRefresh.shown?(socket.assigns), do: load_dashboard_data(socket), else: socket
-  end
-
-  # The Up-next strip and the overview agenda run their own query rather than
-  # reading the grid's events, so a mutation the grid applies to itself leaves
-  # them showing the old answer until the next tick — an event deleted from the
-  # grid stayed advertised above it for up to a minute. Wrapped around every
-  # result that can add, move, or remove an entry, including the failure paths:
-  # a rebuild costs one read and is a no-op off the two agenda-bearing actions,
-  # which is cheaper than reasoning per-handler about which outcomes changed
-  # what.
-  defp rebuild_agenda({:noreply, socket}), do: {:noreply, refresh_agenda(socket)}
 end
