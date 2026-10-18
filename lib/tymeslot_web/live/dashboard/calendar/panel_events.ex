@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -45,6 +46,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   end
 
   def handle("close", _params, socket), do: PanelState.close(socket)
+
+  # The New event form (see `PanelNew`).
+  def handle("draft_change", params, socket), do: PanelNew.change(socket, params)
+  def handle("draft_submit", params, socket), do: PanelNew.submit(socket, params)
+
+  def handle("draft_drop_guest", %{"email" => email}, socket),
+    do: PanelNew.drop_guest(socket, email)
+
+  def handle("draft_cancel", _params, socket), do: PanelNew.cancel(socket)
+  def handle("duplicate", _params, socket), do: PanelNew.duplicate(socket)
+  def handle("delete", _params, socket), do: PanelNew.delete(socket)
+
+  # A New event panel has no event: nothing else it could send applies.
+  def handle(_name, _params, %{assigns: %{panel: %{mode: :new}}} = socket), do: socket
 
   def handle(field, %{"value" => value}, socket)
       when field in @text_fields and is_binary(value) do

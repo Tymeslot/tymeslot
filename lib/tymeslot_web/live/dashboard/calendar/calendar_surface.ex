@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelEvents
+  alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.Preview
@@ -156,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         %{action: :create_settled, draft: draft, result: result},
         %{assigns: %{ready?: true}} = socket
       ),
-      do: {:ok, Creation.settled(socket, draft, result)}
+      do: {:ok, socket |> Creation.settled(draft, result) |> PanelNew.settled(draft, result)}
 
   def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 
@@ -415,10 +416,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     {:reply, reply, socket}
   end
 
-  # Quick create's More options (Task 12) opens the side panel, which Task 23
-  # builds; until then it answers that nothing opened, and the popover stays.
-  def handle_event("calendar:more_options", _params, socket),
-    do: {:reply, %{opened: false}, socket}
+  # Quick create's More options: the panel opens in its New event state on
+  # the draft (see `PanelNew`); the hook keeps drawing it until the payload.
+  # Every path replies, so the popover never waits on its timeout.
+  def handle_event("calendar:more_options", params, socket) do
+    {opened, socket} = PanelNew.open(socket, params)
+    {:reply, %{opened: opened}, socket}
+  end
 
   def handle_event("calendar:undo", _params, socket), do: {:noreply, Manipulation.undo(socket)}
 

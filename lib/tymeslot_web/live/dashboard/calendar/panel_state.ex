@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceData
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -35,9 +36,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def open_edit(socket, id) do
     case Map.fetch(socket.assigns.events_by_id, id) do
       {:ok, event} ->
-        socket
-        |> assign(panel: new_panel(socket.assigns, event), preview: nil, open_menu: nil)
-        |> push_event("calendar:panel", %{open: true})
+        without_draft(socket, fn socket ->
+          socket
+          |> assign(panel: new_panel(socket.assigns, event), preview: nil, open_menu: nil)
+          |> push_event("calendar:panel", %{open: true})
+        end)
 
       :error ->
         socket
@@ -46,13 +49,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   @doc """
   Closes the panel and hands focus back to its event. A series question
-  the panel was waiting on goes with it; nothing was written for it.
+  the panel was waiting on goes with it; nothing was written for it. A New
+  event panel's draft is dropped from the grid (`calendar:draft-cleared`,
+  then the payload); one whose create is already saving is the create's.
   """
   @spec close(socket()) :: socket()
   def close(%{assigns: %{panel: %{event_id: id}}} = socket) do
-    socket
-    |> assign(panel: nil, series_prompt: without_panel_prompt(socket.assigns.series_prompt))
-    |> push_event("calendar:panel", %{open: false, focus: id})
+    without_draft(socket, fn socket ->
+      socket
+      |> assign(panel: nil, series_prompt: without_panel_prompt(socket.assigns.series_prompt))
+      |> push_event("calendar:panel", %{open: false, focus: id})
+    end)
   end
 
   def close(socket), do: socket
@@ -60,9 +67,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   @doc "Closes the panel without moving focus, for the preview taking its place."
   @spec give_way(socket()) :: socket()
   def give_way(%{assigns: %{panel: %{}}} = socket) do
-    socket
-    |> assign(panel: nil, series_prompt: without_panel_prompt(socket.assigns.series_prompt))
-    |> push_event("calendar:panel", %{open: false})
+    without_draft(socket, fn socket ->
+      socket
+      |> assign(panel: nil, series_prompt: without_panel_prompt(socket.assigns.series_prompt))
+      |> push_event("calendar:panel", %{open: false})
+    end)
   end
 
   def give_way(socket), do: socket
@@ -97,6 +106,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   def put_error(socket, field, message),
     do: update(socket, &%{&1 | errors: Map.put(&1.errors, field, message)})
+
+  # Leaving a New event panel whose draft is drawn takes the draft off the
+  # hook's grid at once, and the payload that follows no longer carries it.
+  defp without_draft(
+         %{assigns: %{panel: %{mode: :new, draft: %{}, draft_id: id}}} = socket,
+         leave
+       ) do
+    socket
+    |> push_event("calendar:draft-cleared", %{draft: id})
+    |> leave.()
+    |> SurfaceData.push_events(false)
+  end
+
+  defp without_draft(socket, leave), do: leave.(socket)
 
   defp new_panel(assigns, event) do
     %{

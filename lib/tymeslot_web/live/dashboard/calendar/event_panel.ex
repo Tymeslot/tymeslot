@@ -24,10 +24,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.PanelActions
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewForm
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -35,7 +37,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
+  # The New event state draws the draft's form: there is no event to read
+  # a guard or a repeat rule from, and every field can be changed.
   @impl Phoenix.LiveComponent
+  def update(%{panel: %{mode: :new}} = assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(
+       event_id: nil,
+       editable: true,
+       movable: true,
+       read_only_reason: nil,
+       booking_copy: false,
+       booking_copy_for: nil,
+       untold: false
+     )}
+  end
+
   def update(%{panel: panel, event: event, context: context} = assigns, socket) do
     socket =
       if socket.assigns[:event_id] == panel.event_id,
@@ -106,12 +125,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
       aria-label={dgettext("dashboard_calendar", "Event details")}
     >
       <div class="flex items-center gap-2 border-b border-tymeslot-100 px-4 py-2">
+        <h2
+          :if={@panel.mode == :new}
+          id="calendar-panel-heading"
+          class="shrink-0 text-token-sm font-semibold text-tymeslot-900"
+        >
+          {dgettext("dashboard_calendar", "New event")}
+        </h2>
         <p
           id="calendar-panel-status"
           role="status"
           class={["min-w-0 flex-1 text-token-xs", status_class(@panel.status)]}
         >
-          {PanelStatus.text(@panel.status)}
+          {status_text(@panel)}
         </p>
         <.icon_button
           id="calendar-panel-close"
@@ -128,7 +154,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         saving={@panel.status == :saving}
         surface={@surface}
       />
-      <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      <div
+        :if={@panel.mode == :edit}
+        class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
+      >
         <p
           :if={@read_only_reason}
           id="calendar-panel-read-only"
@@ -234,10 +263,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           phx-blur="panel:notes"
           phx-target={@surface}
         />
+        <PanelActions.edit_actions :if={@event && @editable} surface={@surface} />
+      </div>
+      <div :if={@panel.mode == :new} class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <PanelNewForm.new_form
+          values={@panel.form}
+          saving={@panel.status == :saving}
+          calendar_choices={@calendar_choices}
+          video_integrations={@video_integrations}
+          guest_form_key={@guest_form_key}
+          surface={@surface}
+        />
       </div>
     </aside>
     """
   end
+
+  defp status_text(%{mode: :new, status: :idle}),
+    do: dgettext("dashboard_calendar", "Nothing is saved until you create it")
+
+  defp status_text(%{status: status}), do: PanelStatus.text(status)
 
   defp title_value(%{kind: :booking} = booking), do: EventPayload.title(booking)
   defp title_value(event), do: Map.get(event, :summary) || ""

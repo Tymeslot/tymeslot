@@ -51,6 +51,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   # used as a key or sent back in a push.
   @draft_id ~r/\Ad[0-9a-z]{1,31}\z/
 
+  @doc "Whether `id` is a draft id the hook could have made."
+  @spec draft_id?(term()) :: boolean()
+  def draft_id?(id), do: is_binary(id) and Regex.match?(@draft_id, id)
+
   @doc """
   A draft the hook asks to save. Returns the reply for the hook and the
   socket: the draft pending and pushed as saving, or unchanged after a
@@ -60,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   @spec create(socket(), map()) :: {reply(), socket()}
   def create(socket, %{"draft" => draft} = params) when is_binary(draft) do
     cond do
-      not Regex.match?(@draft_id, draft) -> {refused(:params, :invalid), socket}
+      not draft_id?(draft) -> {refused(:params, :invalid), socket}
       Map.has_key?(socket.assigns.pending_creates, draft) -> {%{accepted: true}, socket}
       true -> cast_and_start(socket, draft, params)
     end
