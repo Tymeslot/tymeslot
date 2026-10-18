@@ -249,6 +249,9 @@ export const CalendarCanvas = {
       if (date !== detail.date) this.pushEventTo(this.el, "calendar:goto", { view, date });
     }
 
+    // A scroll asked for by the note's Show applies to its own date only.
+    if (this.scrollTarget != null && date !== this.scrollDate) this.scrollTarget = null;
+
     // The same days again (Today while today shows, the active view, another
     // day of the visible week) need no redraw and no pending answer.
     if (!this.pending && this.sameDays(view, date)) {

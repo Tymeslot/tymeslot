@@ -286,7 +286,7 @@ function bookableNote(layer, days, now, strings) {
   const text = interpolate(strings.next_bookable, { when: layer.next.label });
   return (
     `<p class="cal-bookable-note" role="note">${escapeHtml(text)} · ` +
-    `<button type="button" class="cal-bookable-show" data-bookable-show="${escapeHtml(layer.next.at)}">${escapeHtml(strings.show)}</button></p>`
+    `<button type="button" class="cal-bookable-show" data-bookable-show="${escapeHtml(layer.next.at)}" aria-label="${escapeHtml(`${text}. ${strings.show}`)}">${escapeHtml(strings.show)}</button></p>`
   );
 }
 

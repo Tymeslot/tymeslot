@@ -22,6 +22,7 @@ export const BookableMixin = {
   mountBookable() {
     this.bookable = null;
     this.scrollTarget = null;
+    this.scrollDate = null;
     this.bookableKey = (e) => {
       if ((e.key !== "b" && e.key !== "B") || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented) return;
       if (this.drag || this.createDrag || this.moving || this.quick) return;
@@ -63,6 +64,7 @@ export const BookableMixin = {
   showBookable(at) {
     const date = at.slice(0, 10);
     this.scrollTarget = parseWall(at) % MINUTES_PER_DAY;
+    this.scrollDate = date;
     this.scrollTop = null;
     this.navigate({ view: this.view, date });
     this.pushEventTo(this.el, "calendar:goto", { view: this.view, date });

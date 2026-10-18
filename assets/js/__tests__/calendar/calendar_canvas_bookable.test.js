@@ -157,3 +157,34 @@ test("the note's Show goes to the next bookable time's week", () => {
   expect(pushes(hook, "calendar:goto")).toEqual([{ view: "week", date: "2026-10-20" }]);
   expect(column(el, "2026-10-20")).not.toBeNull();
 });
+
+test("a scroll asked for by Show is dropped when the grid goes elsewhere first", () => {
+  const { handlers, hook } = mountHook();
+  handlers["calendar:bookable"](layer({ next: { at: "2026-10-20T09:00", label: "Tue 20 Oct, 09:00" } }));
+  hook.showBookable("2026-10-20T09:00");
+  hook.navigate({ view: "week", date: "2026-11-03" });
+  expect(hook.scrollTarget).toBe(null);
+});
+
+test("the note's Show button is named with the note's context", () => {
+  const { el, handlers } = mountHook();
+  handlers["calendar:bookable"](layer({ next: { at: "2026-10-20T09:00", label: "Tue 20 Oct, 09:00" } }));
+  expect(el.querySelector("[data-bookable-show]").getAttribute("aria-label")).toBe("Next bookable time: Tue 20 Oct, 09:00. Show");
+});
+
+test("B before any layer arrived only pushes the toggle", () => {
+  const { el, hook } = mountHook();
+  press(document.body, "b");
+  expect(pushes(hook, "calendar:bookable_toggle")).toEqual([{}]);
+  expect(hook.bookable).toBeNull();
+  expect(el.querySelector(".cal-bookable, .cal-bookable-note")).toBeNull();
+});
+
+test("the note goes when the layer is switched off", () => {
+  const { el, handlers } = mountHook();
+  const next = { at: "2026-10-20T09:00", label: "Tue 20 Oct, 09:00" };
+  handlers["calendar:bookable"](layer({ next }));
+  expect(el.querySelector(".cal-bookable-note")).not.toBeNull();
+  handlers["calendar:bookable"](layer({ next, on: false }));
+  expect(el.querySelector(".cal-bookable-note")).toBeNull();
+});
