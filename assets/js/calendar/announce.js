@@ -16,13 +16,13 @@ export function rangeText(range, strings, timeFormat) {
 }
 
 export function movingText(title, range, strings, timeFormat) {
-  return interpolate(strings.moving, { title, when: rangeText(range, strings, timeFormat) });
+  return interpolate(strings.moving, { title: title ?? "", when: rangeText(range, strings, timeFormat) });
 }
 
 export function cancelledText(title, range, strings, timeFormat) {
-  return interpolate(strings.move_cancelled, { title, when: rangeText(range, strings, timeFormat) });
+  return interpolate(strings.move_cancelled, { title: title ?? "", when: rangeText(range, strings, timeFormat) });
 }
 
 export function savingText(title, range, strings, timeFormat) {
-  return interpolate(strings.move_saving, { title, when: rangeText(range, strings, timeFormat) });
+  return interpolate(strings.move_saving, { title: title ?? "", when: rangeText(range, strings, timeFormat) });
 }

@@ -27,3 +27,11 @@ test("entering, cancelling and saving the move name the event and its time", () 
   expect(cancelledText("Review", range, strings, "24h")).toBe("Move cancelled. Review stays at Thu 15 Oct, 11:00 to 12:00.");
   expect(savingText("Review", range, strings, "24h")).toBe("Saving Review at Thu 15 Oct, 11:00 to 12:00.");
 });
+
+test("a missing title reads as empty, never as undefined", () => {
+  for (const text of [movingText(undefined, range, strings, "24h"), cancelledText(null, range, strings, "24h"), savingText(undefined, range, strings, "24h")]) {
+    expect(text).not.toContain("undefined");
+    expect(text).not.toContain("null");
+  }
+  expect(savingText(undefined, range, strings, "24h")).toBe("Saving  at Thu 15 Oct, 11:00 to 12:00.");
+});
