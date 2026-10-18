@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
@@ -92,7 +93,50 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           label={dgettext("dashboard_calendar", "Title")}
           value={title_value(@event)}
           disabled={!@editable}
+          errors={List.wrap(@panel.errors["title"])}
           data-panel-focus={@editable && "true"}
+          data-panel-field="title"
+          phx-blur="panel:title"
+          phx-keydown="panel:title"
+          phx-key="Enter"
+          phx-target={@surface}
+        />
+        <%!-- Calendar (Task 20) goes here. --%>
+        <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />
+        <.input
+          id="calendar-panel-location"
+          name="location"
+          type="text"
+          label={dgettext("dashboard_calendar", "Place")}
+          placeholder={dgettext("dashboard_calendar", "Add a place or room")}
+          value={Map.get(@event, :location) || ""}
+          disabled={!@editable}
+          errors={List.wrap(@panel.errors["location"])}
+          data-panel-field="location"
+          phx-blur="panel:location"
+          phx-keydown="panel:location"
+          phx-key="Enter"
+          phx-target={@surface}
+        />
+        <%!-- Video (Task 21) and guests (Task 22) go here. --%>
+        <PanelFields.reminder_field
+          reminders={Map.get(@event, :reminders) || []}
+          disabled={!@editable}
+          target={@surface}
+        />
+        <.input
+          id="calendar-panel-notes"
+          name="description"
+          type="textarea"
+          rows={4}
+          label={dgettext("dashboard_calendar", "Notes")}
+          placeholder={dgettext("dashboard_calendar", "Agenda, links, anything else")}
+          value={Map.get(@event, :description) || ""}
+          disabled={!@editable}
+          errors={List.wrap(@panel.errors["notes"])}
+          data-panel-field="notes"
+          phx-blur="panel:notes"
+          phx-target={@surface}
         />
       </div>
     </aside>
@@ -101,6 +145,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   defp title_value(%{kind: :booking} = booking), do: EventPayload.title(booking)
   defp title_value(event), do: Map.get(event, :summary) || ""
+
+  defp free?(event), do: Map.get(event, :transparency) == "transparent"
 
   defp status_class({:waiting, _account}), do: "text-amber-800"
   defp status_class({:failed, _reason}), do: "text-red-700"

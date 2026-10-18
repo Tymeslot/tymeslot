@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   @moduledoc """
   The changes the organiser can take back on the calendar surface, newest
   first. An entry is a map whose `:kind` says how to undo it (see
-  `Manipulation.undo/1`): `:timing` for a move or resize, `:delete` for a
+  `Manipulation.undo/1`): `:timing` for a move or resize, `:edit` for a
+  change made in the side panel (`PanelEdits.undo/2`), `:delete` for a
   delete still inside its undo window, `:create` for an event just created
   (undone by removing it, see `Creation.undo/2`), `:gone` for a delete that
   has since run (Ctrl Z on it only says it is too late, so it does not reach

@@ -13,7 +13,9 @@
  * titles are user data. Ctrl Z or Cmd Z anywhere on the page but a text
  * field (a text input, a textarea, a select) asks the server to undo, in
  * the side panel too. Escape inside the side panel closes it
- * (`closePanelOnEscape`), unless a modal is open over it. None of it runs
+ * (`closePanelOnEscape`), unless a modal is open over it; so does a press on
+ * its close button while a text field has focus (`closePanelOnPress`). Either
+ * sends that field's value with the close, so what was being typed is saved. None of it runs
  * while a pointer drag is live. A series-scope or delete modal makes the
  * server redraw the grid behind it, which strands the focus trap's saved
  * element, so after such a modal closes focus is handed back to the
@@ -60,7 +62,18 @@ export const KeysMixin = {
       if (!e.target?.closest?.("#calendar-panel") || document.querySelector(MODALS)) return;
       e.preventDefault();
       e.stopPropagation();
-      this.pushEventTo(this.el, "panel:close", {});
+      this.pushPanelClose();
+    };
+    // A press on the panel's close button while a text field has focus: the
+    // field would be gone before its blur reached the server, so the close
+    // goes from here with the field's value, in the capture phase and before
+    // the field blurs. With no text field focused the button's own click
+    // closes the panel.
+    this.closePanelOnPress = (e) => {
+      if (!e.target?.closest?.("#calendar-panel-close") || !this.focusedPanelField()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.pushPanelClose();
     };
     // Focus leaving for another part of the page ends a move mode; a null
     // target is only a redraw replacing the focused block.
@@ -81,6 +94,7 @@ export const KeysMixin = {
     };
     document.addEventListener("keydown", this.undoKey);
     document.addEventListener("keydown", this.closePanelOnEscape);
+    document.addEventListener("pointerdown", this.closePanelOnPress, true);
     document.addEventListener("click", this.previewDelete);
     this.el.addEventListener("focus", this.focusIn, true);
     this.el.addEventListener("focusout", this.focusOut);
@@ -89,11 +103,26 @@ export const KeysMixin = {
   destroyKeys() {
     document.removeEventListener("keydown", this.undoKey);
     document.removeEventListener("keydown", this.closePanelOnEscape);
+    document.removeEventListener("pointerdown", this.closePanelOnPress, true);
     document.removeEventListener("click", this.previewDelete);
     this.el.removeEventListener("focus", this.focusIn, true);
     this.el.removeEventListener("focusout", this.focusOut);
     clearTimeout(this.announceTimer);
     this.unwatchModal();
+  },
+
+  // The side panel's text field that has focus, if any (marked
+  // data-panel-field; the server saves it as its blur would).
+  focusedPanelField() {
+    const field = document.activeElement?.closest?.("#calendar-panel [data-panel-field]");
+    return field && !field.disabled ? field : null;
+  },
+
+  // Asks the server to close the side panel, with the focused text field and
+  // its value so that what was being typed is saved first (PanelEvents).
+  pushPanelClose() {
+    const field = this.focusedPanelField();
+    this.pushEventTo(this.el, "panel:close", field ? { field: field.dataset.panelField, value: field.value } : {});
   },
 
   // A key on a focused event block; true when it was handled.

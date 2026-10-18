@@ -113,15 +113,17 @@ defmodule TymeslotWeb.Components.Calendar.RemindersEditor do
   defp method_label(:email), do: dgettext("dashboard_calendar_events", "Email")
   defp method_label(_popup_or_other), do: dgettext("dashboard_calendar_events", "Notification")
 
+  @doc ~s(How a lead time reads in a reminder's label, such as "10 minutes before".)
+  @spec minutes_label(term()) :: String.t()
   # A provider alarm whose trigger we could not parse reaches the cache without
   # a lead time. Say so rather than inventing one.
-  defp minutes_label(minutes) when not is_integer(minutes),
+  def minutes_label(minutes) when not is_integer(minutes),
     do: dgettext("dashboard_calendar_events", "before the event")
 
-  defp minutes_label(1440), do: dgettext("dashboard_calendar_events", "1 day before")
-  defp minutes_label(60), do: dgettext("dashboard_calendar_events", "1 hour before")
+  def minutes_label(1440), do: dgettext("dashboard_calendar_events", "1 day before")
+  def minutes_label(60), do: dgettext("dashboard_calendar_events", "1 hour before")
 
-  defp minutes_label(minutes) when minutes >= 60 and rem(minutes, 60) == 0,
+  def minutes_label(minutes) when minutes >= 60 and rem(minutes, 60) == 0,
     do:
       dngettext(
         "dashboard_calendar_events",
@@ -130,7 +132,7 @@ defmodule TymeslotWeb.Components.Calendar.RemindersEditor do
         div(minutes, 60)
       )
 
-  defp minutes_label(minutes),
+  def minutes_label(minutes),
     do:
       dngettext(
         "dashboard_calendar_events",

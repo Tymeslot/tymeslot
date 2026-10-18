@@ -505,6 +505,55 @@ test("destroying the hook clears a pending announcement", () => {
   }
 });
 
+test("closing the side panel while a text field has focus sends the field's value with the close", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML =
+    '<button id="calendar-panel-close" type="button">Close</button>' +
+    '<input id="calendar-panel-title" data-panel-field="title" value="Design review">' +
+    '<textarea id="calendar-panel-notes" data-panel-field="notes"></textarea>';
+  document.body.appendChild(panel);
+
+  const title = panel.querySelector("#calendar-panel-title");
+  title.focus();
+  title.value = "Design sync";
+  title.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+
+  expect(pushes(hook, "panel:close")).toEqual([{ field: "title", value: "Design sync" }]);
+  // One close is pushed, with the value; the plain Escape close is not sent as well.
+  expect(pushes(hook, "panel:close")).toHaveLength(1);
+
+  const notes = panel.querySelector("#calendar-panel-notes");
+  notes.focus();
+  notes.value = "Bring the mock-ups";
+  panel
+    .querySelector("#calendar-panel-close")
+    .dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }));
+
+  expect(pushes(hook, "panel:close")).toEqual([
+    { field: "title", value: "Design sync" },
+    { field: "notes", value: "Bring the mock-ups" },
+  ]);
+});
+
+test("closing the side panel with no text field focused sends a plain close, once", () => {
+  const { hook } = mountHook();
+  const panel = document.createElement("aside");
+  panel.id = "calendar-panel";
+  panel.innerHTML = '<button id="calendar-panel-close" type="button">Close</button>';
+  document.body.appendChild(panel);
+  const close = panel.querySelector("#calendar-panel-close");
+
+  close.focus();
+  close.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+  close.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }));
+
+  // Escape closes through the hook; the button's own click closes on press, so
+  // the pointer press adds nothing.
+  expect(pushes(hook, "panel:close")).toEqual([{}]);
+});
+
 test("Escape inside the side panel asks the server to close it, unless a modal is open", () => {
   const { hook } = mountHook();
   const panel = document.createElement("aside");

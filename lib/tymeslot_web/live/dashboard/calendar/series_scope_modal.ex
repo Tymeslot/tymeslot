@@ -6,6 +6,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
   (`Tymeslot.CalendarGrid.EventDeletion`). Each choice is sent as the
   `scope` of `calendar:choose_scope`; Cancel, Escape and a click outside
   send `calendar:cancel_scope`.
+
+  The side panel asks the timing question once for all of its changes
+  (`:panel`), with a question that says the answer holds until the details
+  are closed.
   """
 
   use TymeslotWeb, :html
@@ -51,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
     """
   end
 
-  defp choices(:timing),
+  defp choices(kind) when kind in [:timing, :panel],
     do: [
       {"this_only", dgettext("dashboard_calendar", "This event")},
       {"following", dgettext("dashboard_calendar", "This and following events")},
@@ -64,8 +68,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
       {"series", dgettext("dashboard_calendar", "All events")}
     ]
 
-  defp title(:timing), do: dgettext("dashboard_calendar", "Change a repeating event")
+  defp title(kind) when kind in [:timing, :panel],
+    do: dgettext("dashboard_calendar", "Change a repeating event")
+
   defp title(:delete), do: dgettext("dashboard_calendar", "Delete a repeating event")
+
+  defp question(%{kind: :panel, title: title}),
+    do:
+      dgettext(
+        "dashboard_calendar",
+        "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details.",
+        title: title
+      )
 
   defp question(%{kind: :timing, title: title}),
     do:

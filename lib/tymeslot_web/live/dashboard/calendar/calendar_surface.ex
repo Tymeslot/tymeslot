@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
+  alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelEvents
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.Preview
@@ -99,6 +100,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
        socket
        |> Writes.settle(ref, outcome)
        |> Manipulation.settled(ref)
+       |> PanelEdits.settled(ref, outcome)
        |> reload_if_queued(outcome)}
 
   # A failed write is taken back off the grid by the queue; its change can
@@ -107,7 +109,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :revert_event, write: {key, _seq} = ref}, socket),
     do:
       {:ok,
-       socket |> Writes.settle(ref, :failed) |> Manipulation.forget(ref) |> Toast.dismiss(key)}
+       socket
+       |> Writes.settle(ref, :failed)
+       |> Manipulation.forget(ref)
+       |> PanelEdits.settled(ref, :failed)
+       |> Toast.dismiss(key)}
 
   def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
     do: {:ok, Deletion.settled(socket, token, outcome)}
@@ -383,6 +389,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     case socket.assigns.series_prompt do
       %{kind: :timing} when scope in @timing_scopes ->
         {:noreply, Manipulation.choose_scope(socket, scope)}
+
+      %{kind: :panel} when scope in @timing_scopes ->
+        {:noreply, PanelEdits.choose_scope(socket, scope)}
 
       %{kind: :delete} when scope in @delete_scopes ->
         {:noreply, Deletion.choose_scope(socket, scope)}
