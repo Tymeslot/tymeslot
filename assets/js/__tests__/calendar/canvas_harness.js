@@ -32,9 +32,35 @@ export const strings = {
   move_saving: "Saving %{title} at %{when}.",
   calendar_role: "calendar",
   period_range: "%{from} to %{to}",
+  new_event: "New event",
+  quick_create_label: "New event",
+  quick_create_placeholder: "Title, or: lunch tomorrow 13:00 /personal",
+  quick_create_hint: "Enter saves, Esc cancels. Type a day and time, /calendar, @email or ;place.",
+  save: "Save",
+  save_and_invite: "Save and invite",
+  more_options: "More options",
+  show_as: "Show as",
+  busy: "Busy",
+  free: "Free",
+  date_chip: "Date",
+  start_chip: "Starts",
+  end_chip: "Ends",
+  time_to: "to",
+  all_day_chip: "All day",
+  calendar_chip: "Calendar",
+  place_chip: "Place",
+  guests_chip: "Guests",
+  saving_draft: "Saving…",
+  create_refused: "Couldn't save this event. Try again.",
 };
 
-export const settings = { week_start: "monday", show_weekends: true, density: "comfortable", fold_night: false, time_format: "24h", working_hours: {} };
+// Writable calendars, as settings.calendars carries them.
+export const calendars = [
+  { key: "7:work", name: "Work", account: "anna@example.com", colour: "calendar-3" },
+  { key: "7:personal", name: "Personal", account: "anna@example.com", colour: "calendar-5" },
+];
+
+export const settings = { week_start: "monday", show_weekends: true, density: "comfortable", fold_night: false, time_format: "24h", working_hours: {}, calendars, default_calendar: "7:work" };
 
 export const event = (id, title, start, end, extra = {}) => ({
   id,

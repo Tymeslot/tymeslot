@@ -13,7 +13,8 @@ export function layoutAllDay(events, days, { maxLanes }) {
 
   const long = events
     .filter((e) => e.long && e.startDay <= last && e.endDay > first)
-    .sort((a, b) => a.startDay - b.startDay || b.endDay - b.startDay - (a.endDay - a.startDay) || (a.id < b.id ? -1 : 1));
+    // A draft takes the first lane, so it is never folded into a "+N".
+    .sort((a, b) => (b.kind === "draft") - (a.kind === "draft") || a.startDay - b.startDay || b.endDay - b.startDay - (a.endDay - a.startDay) || (a.id < b.id ? -1 : 1));
 
   const laneEnds = [];
   const placed = [];

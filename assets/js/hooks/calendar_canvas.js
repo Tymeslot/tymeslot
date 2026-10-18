@@ -22,6 +22,8 @@
  *    drops it, since the server reads the URL again;
  *  - a drag moves or resizes an event the organiser can change and pushes
  *    `calendar:move` on the drop (see calendar_canvas/drag.js);
+ *  - a click or a drag on an empty slot drops a draft for quick create (see
+ *    calendar_canvas/draft.js);
  *  - on a focused event the arrow keys move focus, M moves it from the keyboard,
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
@@ -35,6 +37,7 @@
  */
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
+import { DraftMixin } from "./calendar_canvas/draft.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
@@ -74,6 +77,7 @@ const viewport = () => ({ width: window.innerWidth, height: window.innerHeight }
 
 export const CalendarCanvas = {
   ...DragMixin,
+  ...DraftMixin,
   ...KeysMixin,
   ...ZoomMixin,
 
@@ -104,6 +108,7 @@ export const CalendarCanvas = {
     ];
     for (const [name, listener] of this.listeners) this.el.addEventListener(name, listener);
     this.mountDrag();
+    this.mountDraft();
     this.mountKeys();
     this.mountZoom();
 
@@ -141,6 +146,7 @@ export const CalendarCanvas = {
     this.frame = null;
     this.closeList();
     this.destroyDrag();
+    this.destroyDraft();
     this.destroyKeys();
     this.destroyZoom();
     const style = document.documentElement.style;
@@ -158,6 +164,7 @@ export const CalendarCanvas = {
   // for instance after browser Back, the server leads.
   receive(payload) {
     this.cache = applyPayload(this.cache, payload);
+    this.settleDrafts();
     this.settle(payload);
     if (payload.settings) this.settings = payload.settings;
     this.clock = { wall: parseWall(payload.now), at: Date.now() };
@@ -273,7 +280,7 @@ export const CalendarCanvas = {
   render() {
     if (!this.settings || !this.clock) return;
     // A drag owns the dragged block until the drop; redraw then.
-    if (this.drag) return;
+    if (this.drag || this.createDrag) return;
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
     const previous = this.el.querySelector("[data-scroll]");
     if (previous) this.scrollTop = previous.scrollTop;
@@ -293,7 +300,7 @@ export const CalendarCanvas = {
     this.el.innerHTML = renderGrid({
       view: this.view,
       days,
-      events: this.withMoving(eventsForDays(this.cache, days)),
+      events: this.withDraft(this.withMoving(eventsForDays(this.cache, days))),
       movingId: this.moving?.id ?? null,
       settings: this.settings,
       strings: this.strings,
@@ -372,6 +379,7 @@ export const CalendarCanvas = {
       return this.render();
     }
 
+    if (this.slotClick(e)) return undefined;
     return this.closeList();
   },
 

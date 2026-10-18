@@ -127,6 +127,10 @@ function allDayLane({ bars, more, rows }, days, { strings, now, byId }) {
 
   for (const bar of bars) {
     const e = byId.get(bar.id);
+    if (e.kind === "draft") {
+      html += draftBar(bar, e, strings);
+      continue;
+    }
     const first = dateLabel(isoFromDay(e.startDay), strings);
     const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
     const label = [e.title, strings.all_day, span, e.endMin <= now && strings.ended].filter(Boolean).join(", ");
@@ -184,7 +188,9 @@ function column(iso, events, ctx) {
     html += `<div class="cal-off" style="top:${scale.yOf(from)}px;height:${scale.yOf(to) - scale.yOf(from)}px"></div>`;
   }
 
-  let segments = segmentsForDay(events, iso);
+  // Drafts are drawn over the column at full width, never folded into a "+N".
+  const drafts = segmentsForDay(events.filter((e) => e.kind === "draft"), iso);
+  let segments = segmentsForDay(events.filter((e) => e.kind !== "draft"), iso);
   if (fold) {
     const dayStart = dayNumber(iso) * MINUTES_PER_DAY;
     const isEarly = (g) => (byId.get(g.id)?.endMin ?? dayStart + g.e) - dayStart <= NIGHT_END;
@@ -211,6 +217,7 @@ function column(iso, events, ctx) {
   // above them is free for a narrow event widened on hover (--cal-lift).
   const lift = 2 * Math.max(0, ...laid.map((item) => (item.chip ? item.z : item.z + 1))) - 1;
   for (const item of laid) html += item.chip ? chip(item, byId, strings) : eventBlock(item, byId.get(item.id), ctx);
+  for (const segment of drafts) html += draftBlock(segment, byId.get(segment.id), ctx, lift + 2);
   if (nowShown && iso === nowDay) html += `<div class="cal-now" style="top:${scale.yOf(nowMinute)}px" aria-hidden="true"></div>`;
 
   return `<div class="cal-col${weekday > 5 ? " is-weekend" : ""}" data-day="${iso}" style="--cal-col:${colWidth}px;--cal-lift:${lift}">${html}</div>`;
@@ -288,6 +295,32 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
     (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`
+  );
+}
+
+// The draft quick create is editing, or one waiting for the server. Not a
+// control: the quick-create popover is its accessible form, so the block is
+// hidden from assistive technology and carries no event id.
+function draftBlock(segment, event, { strings, settings, scale, colWidth }, z) {
+  const tf = settings.time_format;
+  const top = scale.yOf(Math.max(segment.s, scale.firstMinute));
+  const height = Math.max(scale.yOf(Math.max(segment.e, scale.firstMinute)) - top, 12);
+  const time = `${formatMinutes(event.startMin % MINUTES_PER_DAY, tf)}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
+  const classes = ["cal-ev", "is-draft", event.pending && "is-pending", event.free && "is-free", height < 38 && "is-short"].filter(Boolean).join(" ");
+  return (
+    `<div class="${classes}" data-draft-id="${escapeHtml(event.id)}" aria-hidden="true" style="top:${top}px;height:${height}px;--l:1px;--w:${Math.max(colWidth - 9, 12)}px;--z:${z};--cal-ev:${colour(event.colour)}">` +
+    `<span class="cal-ev-title">${escapeHtml(event.title || strings.new_event)}</span>` +
+    `<span class="cal-ev-time">${escapeHtml(time)}</span>` +
+    (event.pending ? `<span class="cal-ev-saving">${escapeHtml(strings.saving_draft)}</span>` : "") +
+    `</div>`
+  );
+}
+
+function draftBar(bar, event, strings) {
+  const classes = ["cal-adbar", "is-draft", event.pending && "is-pending", bar.cutStart && "cut-start", bar.cutEnd && "cut-end"].filter(Boolean).join(" ");
+  return (
+    `<div class="${classes}" data-draft-id="${escapeHtml(event.id)}" aria-hidden="true" style="grid-column:${bar.startIndex + 2} / ${bar.endIndex + 3};grid-row:${bar.lane + 1};--cal-ev:${colour(event.colour)}">` +
+    `${escapeHtml(event.title || strings.new_event)}${event.pending ? ` <span class="cal-ev-saving">${escapeHtml(strings.saving_draft)}</span>` : ""}</div>`
   );
 }
 
