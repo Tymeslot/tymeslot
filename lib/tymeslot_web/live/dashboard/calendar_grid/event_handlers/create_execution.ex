@@ -246,71 +246,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   end
 
   @doc false
-  @spec handle_create_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_create_result({:ok, result}, socket) do
-    %{
-      uid: uid,
-      creating: creating,
-      start_at: start_at,
-      end_at: end_at,
-      provider: provider,
-      provider_event_id: provider_event_id,
-      written_calendar_id: written_calendar_id,
-      etag: etag,
-      default_booking_calendar_id: default_booking_calendar_id,
-      attendees: attendees,
-      meeting_url: meeting_url,
-      description: description
-    } = result
-
-    # What the provider actually wrote, before what was asked for. A CalDAV
-    # write falls back to the booking collection when the chosen calendar is
-    # not one the integration lists as writable, and filing the row under the
-    # request instead showed the event on a calendar it is not on until the
-    # next sync corrected it, with every edit addressed by that row aimed at
-    # the wrong collection in the meantime.
-    provider_calendar_id =
-      written_calendar_id || creating[:calendar_id] || default_booking_calendar_id || "primary"
-
-    all_day = Map.get(creating, :all_day, false)
-
-    timing = cache_timing(all_day, start_at, end_at)
-
-    Changes.cache_created_event(
-      Map.merge(timing, %{
-        uid: uid,
-        calendar_integration_id: creating.integration_id,
-        provider: provider,
-        provider_calendar_id: provider_calendar_id,
-        # What the provider said about the event it just wrote. Without these
-        # the row carried no identity until a full sync repaired it: every
-        # conditional update spent a HEAD probe first and then fell back to the
-        # weaker `If-Match: *`, and a write could only be addressed by
-        # rebuilding the URL from whichever calendar the client is scoped to.
-        # Either may be nil (a CalDAV server is not obliged to answer a PUT
-        # with an ETag), and a nil leaves the column as it was.
-        provider_event_id: provider_event_id,
-        etag: etag,
-        summary: creating.title,
-        description: description,
-        all_day: all_day,
-        reminders: Map.get(creating, :reminders, []),
-        recurrence_rule: Map.get(creating, :recurrence_rule),
-        video_link: meeting_url,
-        video_integration_id: creating[:video_integration_id]
-      })
-    )
-
+  @spec handle_create_result(
+          {:ok, Tymeslot.CalendarGrid.NewEvent.created()} | {:error, term()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_create_result({:ok, created}, socket) do
+    # The event is already cached (`Changes.create_event/2`); the grid
+    # reloads to show it.
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_created
     )
 
     socket
-    |> put_flash(:info, flash_for_create(attendees))
-    |> maybe_flash_warning(result[:warning])
-    |> maybe_flash_reauth(result[:reauth_required])
+    |> put_flash(:info, flash_for_create(created.invited))
+    |> maybe_flash_warning(created.warning)
+    |> maybe_flash_reauth(created.reauth_required)
     |> then(&{:noreply, &1})
   end
 
@@ -425,14 +376,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   end
 
   defp same_address?(_guest_email, _organizer_email), do: false
-
-  # All-day events store `start_date`/`end_date` (the cache row leaves
-  # `start_at`/`end_at` null); timed events store `start_at`/`end_at`.
-  defp cache_timing(true, %Date{} = start_date, %Date{} = end_date),
-    do: %{start_date: start_date, end_date: end_date}
-
-  defp cache_timing(_all_day, start_at, end_at),
-    do: %{start_at: start_at, end_at: end_at}
 
   defp maybe_flash_warning(socket, nil), do: socket
   defp maybe_flash_warning(socket, msg), do: put_flash(socket, :warning, msg)

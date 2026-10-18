@@ -32,7 +32,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   defdelegate handle_update_create_attendee_input(params, socket), to: CreateFormState
   defdelegate handle_update_create_video(params, socket), to: CreateFormState
   defdelegate handle_save_event(params, socket), to: CreateExecution
-  defdelegate run_create_event(payload), to: EventCreation
   defdelegate run_create_ad_hoc_meeting(params), to: EventCreation
   defdelegate handle_create_result(result, socket), to: CreateExecution
 

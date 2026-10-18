@@ -14,14 +14,12 @@ defmodule Tymeslot.CalendarGrid.Changes do
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.Moves
+  alias Tymeslot.CalendarGrid.NewEvent
   alias Tymeslot.CalendarGrid.RepeatRefusal
   alias Tymeslot.CalendarGrid.ScheduledDelete
-  alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.CalendarGrid.SeriesStart
   alias Tymeslot.CalendarGrid.WriteQueue.SeriesActivity
-  alias Tymeslot.Clock
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   @doc """
@@ -203,37 +201,15 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate series_busy?(queue, event), to: SeriesActivity, as: :busy?
 
   @doc """
-  Inserts a newly created event into the local cache so it appears
-  immediately without waiting for the next sync cycle.
-
-  Accepts a map with `:uid`, `:calendar_integration_id`, `:title`,
-  `:start_at`, `:end_at`, and optionally `:all_day`. A recurring event's
-  video is handed on to the occurrences its first sync caches
-  (`SeriesCarry.series_created/1`).
+  Creates an event on one of the organiser's calendars, caches it so both
+  calendars show it at once, and invites its guests. See
+  `Tymeslot.CalendarGrid.NewEvent.create/2`.
   """
+  @spec create_event(pos_integer(), map()) ::
+          {:ok, NewEvent.created()} | {:error, NewEvent.failure()}
+  defdelegate create_event(user_id, payload), to: NewEvent, as: :create
+
+  @doc "Caches a newly created event. See `Tymeslot.CalendarGrid.NewEvent.cache/1`."
   @spec cache_created_event(map()) :: :ok
-  def cache_created_event(attrs) do
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
-    SeriesCarry.series_created(attrs)
-  end
-
-  # The cached events schema stores start/end/synced_at as :utc_datetime_usec
-  # and requires synced_at NOT NULL. The dashboard create flow builds datetimes
-  # at second precision and doesn't always supply synced_at; it is writing what
-  # it just committed, so "now" is the correct sync timestamp. synced_at is
-  # upcast unconditionally so a caller-supplied second-precision value does not
-  # fail Ecto's :utc_datetime_usec check.
-  defp normalise_cache_attrs(attrs) do
-    now = Clock.utc_now()
-
-    attrs
-    |> Map.update(:start_at, nil, &to_usec/1)
-    |> Map.update(:end_at, nil, &to_usec/1)
-    |> Map.put_new(:synced_at, now)
-    |> Map.update!(:synced_at, &to_usec/1)
-  end
-
-  defp to_usec(%DateTime{microsecond: {_value, 6}} = dt), do: dt
-  defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
-  defp to_usec(other), do: other
+  defdelegate cache_created_event(attrs), to: NewEvent, as: :cache
 end

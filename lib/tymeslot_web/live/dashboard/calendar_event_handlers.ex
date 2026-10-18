@@ -362,7 +362,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     lv_pid = self()
 
     Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:create_event_result, EventCrud.run_create_event(payload)})
+      send(lv_pid, {:create_event_result, Changes.create_event(payload.user_id, payload)})
     end)
 
     {:noreply, socket}

@@ -32,7 +32,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   setup :verify_on_exit!
 
@@ -97,10 +96,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
     test "caches the Teams link on the grid event", ctx do
       expect_create()
 
-      assert {:ok, result} = EventCreation.run_create_event(create_payload(ctx, ctx.teams))
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, build_socket())
+      assert {:ok, %{event: event}} =
+               Changes.create_event(ctx.user.id, create_payload(ctx, ctx.teams))
 
-      {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(ctx.calendar.id, result.uid)
+      {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(ctx.calendar.id, event.uid)
 
       assert {cached.video_link, cached.video_integration_id} ==
                {join_url(@grid_event_id), ctx.teams.id}
@@ -367,8 +366,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
     {:ok, row} = ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid)
     row
   end
-
-  defp build_socket, do: %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, flash: %{}}}
 
   # A new event is created as the room's own; any other request addresses an
   # existing event by the id at the end of its path.

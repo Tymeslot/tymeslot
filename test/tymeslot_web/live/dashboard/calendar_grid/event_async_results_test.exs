@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Repo
 
   setup %{conn: conn} do
@@ -67,60 +69,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
   end
 
   describe "async event create result" do
-    test "caches new event and refreshes grid when task reports success", %{
-      conn: conn,
-      user: user
-    } do
-      # Regression: the dashboard create flow runs in a Task that sends
-      # {:create_event_result, ...} back to the LiveView pid. Two historical bugs
-      # crashed this path:
-      #
-      # 1. CreateExecution.handle_create_result/2 looked up integrations on the
-      #    parent LiveView socket, which never carries the :integrations assign.
-      # 2. Changes.cache_created_event/1 received second-precision
-      #    DateTimes built from DateTime.new!, but the schema requires
-      #    microsecond precision.
+    test "a create the task reports shows on the grid", %{conn: conn, user: user} do
+      # Regression: the create runs in a Task that sends {:create_event_result,
+      # ...} back to the LiveView pid. The row it reports must be in the cache
+      # (written at microsecond precision from second-precision datetimes)
+      # before the grid reloads.
       integration = insert(:calendar_integration, user: user, is_active: true)
+
+      Mox.stub(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        {:ok, CreatedEvent.new(event_data.uid, provider_event_id: "google-event-id")}
+      end)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      start_at = DateTime.new!(Date.utc_today(), ~T[15:45:00], "Etc/UTC")
-      end_at = DateTime.new!(Date.utc_today(), ~T[16:15:00], "Etc/UTC")
-
-      creating = %{
-        date: Date.to_iso8601(Date.utc_today()),
-        end_date: Date.to_iso8601(Date.utc_today()),
-        title: "Dashboard Created Event",
-        integration_id: integration.id,
-        calendar_id: "primary",
-        attendees: [],
-        attendee_input: "",
-        video_integration_id: nil,
-        start_hour: 15,
-        start_minute: 45,
-        end_hour: 16,
-        end_minute: 15
+      payload = %{
+        creating: %{
+          title: "Dashboard Created Event",
+          integration_id: integration.id,
+          calendar_id: "primary",
+          attendees: []
+        },
+        start_at: DateTime.new!(Date.utc_today(), ~T[15:45:00], "Etc/UTC"),
+        end_at: DateTime.new!(Date.utc_today(), ~T[16:15:00], "Etc/UTC")
       }
 
-      send(
-        lv.pid,
-        {:create_event_result,
-         {:ok,
-          %{
-            uid: "dashboard-created-uid",
-            creating: creating,
-            start_at: start_at,
-            end_at: end_at,
-            provider: "google",
-            provider_event_id: "google-event-id",
-            etag: nil,
-            written_calendar_id: nil,
-            default_booking_calendar_id: "primary",
-            attendees: [],
-            meeting_url: nil,
-            description: nil
-          }}}
-      )
+      send(lv.pid, {:create_event_result, Changes.create_event(user.id, payload)})
 
       # First render flushes handle_info and the send_update to the component;
       # second render processes the event_created action and reloads events.
@@ -128,48 +101,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       assert render(lv) =~ "Dashboard Created Event"
     end
 
-    test "shows reconnect flash when task signals reauth_required", %{conn: conn, user: user} do
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
+    test "shows reconnect flash when task signals reauth_required", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-      start_at = DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC")
-      end_at = DateTime.new!(Date.utc_today(), ~T[10:30:00], "Etc/UTC")
-
-      creating = %{
-        date: Date.to_iso8601(Date.utc_today()),
-        end_date: Date.to_iso8601(Date.utc_today()),
-        title: "Reauth Event",
-        integration_id: integration.id,
-        calendar_id: "primary",
-        attendees: [],
-        attendee_input: "",
-        video_integration_id: nil,
-        start_hour: 10,
-        start_minute: 0,
-        end_hour: 10,
-        end_minute: 30
-      }
 
       send(
         lv.pid,
         {:create_event_result,
-         {:ok,
-          %{
-            uid: "reauth-event-uid",
-            creating: creating,
-            start_at: start_at,
-            end_at: end_at,
-            provider: "google",
-            provider_event_id: "google-event-id",
-            etag: nil,
-            written_calendar_id: nil,
-            default_booking_calendar_id: "primary",
-            attendees: [],
-            meeting_url: nil,
-            description: nil,
-            reauth_required: true
-          }}}
+         {:ok, %{event: nil, invited: [], warning: nil, reauth_required: true}}}
       )
 
       html = render(lv)

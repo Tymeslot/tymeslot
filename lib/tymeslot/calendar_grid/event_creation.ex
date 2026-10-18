@@ -229,7 +229,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     description = build_description(creating[:description], video_context)
 
     raw_base =
-      Map.merge(timing_data(payload), %{
+      payload
+      |> timing_data()
+      |> Map.merge(%{
         uid: uid,
         summary: creating.title,
         reminders: Map.get(creating, :reminders, []),
@@ -237,6 +239,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         calendar_id: creating[:calendar_id],
         description: description
       })
+      |> Map.merge(optional_fields(creating))
 
     base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
 
@@ -244,6 +247,16 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       [] -> base_data
       attendees -> Map.put(base_data, :attendees, attendees)
     end
+  end
+
+  # The place and free/busy are written only when the create gave them, so a
+  # create without them sends what it always has and each provider keeps its
+  # own default (busy). `transparency` is "opaque" or "transparent", which
+  # every provider mapper reads.
+  defp optional_fields(creating) do
+    creating
+    |> Map.take([:location, :transparency])
+    |> Map.reject(fn {_field, value} -> value in [nil, ""] end)
   end
 
   defp finalise_create_result({:ok, %CreatedEvent{} = created}, ctx) do

@@ -1,17 +1,10 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
   @moduledoc """
-  Tests for EventCreate — the presentation layer of the dashboard calendar-grid
-  create flow. `handle_create_result/2` translates the domain orchestration's
-  result map into cache writes, grid updates, and user-facing flashes:
-
-    * persists `video_integration_id` and description to the cache row, and
-      flashes copy that reflects attendee presence,
-    * flashes the "no Meet link" warning when the domain signals one, and
-    * flashes the "reconnect your calendar" error when the domain returns
-      `reauth_required: true`.
-
-  The orchestration itself (`run_create_event/1`) is covered in
-  `Tymeslot.CalendarGrid.EventCreationTest`.
+  The old calendar's create result handler: `handle_create_result/2` turns
+  what `Changes.create_event/2` answered into the grid's reload and the
+  flashes (the invited guests, the "no Meet link" warning, the "reconnect
+  your calendar" error). The caching itself is the domain's, covered in
+  `Tymeslot.CalendarGrid.ChangesCreateTest`.
   """
 
   use Tymeslot.DataCase, async: false
@@ -24,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
   import Tymeslot.Factory
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
@@ -32,136 +26,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
   setup :verify_on_exit!
 
   describe "handle_create_result/2" do
-    test "flashes 'Event created.' when there are no attendees" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
+    test "flashes 'Event created.' when nobody was invited" do
+      {:noreply, socket} =
+        CreateExecution.handle_create_result({:ok, created(invited: [])}, build_socket())
 
-      result = build_result(integration, attendees: [])
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      assert updated_socket.assigns.flash["info"] == "Event created."
+      assert socket.assigns.flash["info"] == "Event created."
     end
 
-    test "flashes 'Event created. Attendees have been invited.' with attendees" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result = build_result(integration, attendees: [%{email: "a@x.com"}])
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      assert updated_socket.assigns.flash["info"] ==
-               "Event created. Attendees have been invited."
-    end
-
-    test "persists reminders on the cached event" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result =
-        build_result(integration,
-          attendees: [],
-          reminders: [%{method: :popup, minutes_before: 10}]
+    test "flashes 'Event created. Attendees have been invited.' when guests were" do
+      {:noreply, socket} =
+        CreateExecution.handle_create_result(
+          {:ok, created(invited: ["a@x.com"])},
+          build_socket()
         )
 
-      socket = build_socket()
-
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
-      assert cached.reminders == [%{method: :popup, minutes_before: 10}]
-    end
-
-    test "persists the recurrence rule on the cached event" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result =
-        build_result(integration,
-          attendees: [],
-          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE"
-        )
-
-      socket = build_socket()
-
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
-      assert cached.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE"
-    end
-
-    test "persists video_integration_id and description on the cached event" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-      video_integration = insert(:video_integration, user: user)
-
-      result =
-        build_result(integration,
-          attendees: [%{email: "a@x.com"}],
-          video_integration_id: video_integration.id,
-          description: "Weekly sync\n\nJoin video call: https://meet.example.com/abc"
-        )
-
-      socket = build_socket()
-
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
-      assert cached.description =~ "https://meet.example.com/abc"
-      assert cached.description =~ "Weekly sync"
-    end
-
-    # The identity the provider reported on the create is the only identity the
-    # row has until a full sync runs. Without it the next conditional write
-    # spends a HEAD probe and falls back to `If-Match: *`, and the colour
-    # write-back has no ETag to condition on at all.
-    test "caches the href and ETag the provider reported, with no sync having run" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result =
-        build_result(integration,
-          attendees: [],
-          provider_event_id: "/calendars/user/personal/created.ics",
-          etag: "abc123"
-        )
-
-      socket = build_socket()
-
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
-      assert cached.provider_event_id == "/calendars/user/personal/created.ics"
-      assert cached.etag == "abc123"
-    end
-
-    # A CalDAV server is only obliged to answer a PUT with an ETag when it
-    # stored the document unmodified, so the columns stay null rather than the
-    # create being treated as failed.
-    test "leaves the identity columns null when the provider reported neither" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result = build_result(integration, attendees: [])
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
-
-      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
-      assert is_nil(cached.provider_event_id)
-      assert is_nil(cached.etag)
-      assert updated_socket.assigns.flash["info"] == "Event created."
+      assert socket.assigns.flash["info"] == "Event created. Attendees have been invited."
     end
   end
 
   describe "drawing an event on the grid, end to end" do
     # The whole point of the create answering with the event's identity is that
-    # it reaches the cache row. The handler tests above stub the domain result
-    # and the CalDAV tests stop at the provider, so only this one proves the
-    # ETag survives `run_create_event/1`'s result map in between.
+    # it reaches the cache row the grid reads back.
     test "files the provider's ETag on the row the grid reads back" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, provider: "caldav", is_active: true)
@@ -186,12 +71,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
         end_at: ~U[2026-04-06 09:30:00Z]
       }
 
-      assert {:ok, result} = EventCreation.run_create_event(payload)
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, build_socket())
+      assert {:ok, %{event: event} = created} = Changes.create_event(user.id, payload)
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, created}, build_socket())
 
-      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
+      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, event.uid)
       assert cached.etag == "server-assigned-1"
-      assert cached.provider_event_id == "/calendars/user/personal/#{result.uid}.ics"
+      assert cached.provider_event_id == "/calendars/user/personal/#{event.uid}.ics"
       # The server's own copy of the document is not echoed back from what we
       # submitted, so it is still the first sync's job to supply it.
       assert is_nil(cached.raw_ical)
@@ -222,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       }
 
       assert {:error, %{reason: :rule_not_supported_by_outlook, retry: :not_queued} = failure} =
-               EventCreation.run_create_event(payload)
+               Changes.create_event(user.id, payload)
 
       {:noreply, socket} = CreateExecution.handle_create_result({:error, failure}, build_socket())
 
@@ -232,32 +117,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
   describe "handle_create_result/2 — no Meet URL warning" do
     test "flashes a warning alongside the success info when :warning key is present" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result =
-        build_result(integration,
-          attendees: [],
-          warning:
-            "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+      {:noreply, updated_socket} =
+        CreateExecution.handle_create_result(
+          {:ok,
+           created(
+             warning:
+               "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+           )},
+          build_socket()
         )
-
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert updated_socket.assigns.flash["warning"] =~ "Meet link"
     end
 
     test "does not flash a warning when :warning key is absent" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result = build_result(integration, attendees: [])
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} =
+        CreateExecution.handle_create_result({:ok, created()}, build_socket())
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert is_nil(updated_socket.assigns.flash["warning"])
@@ -266,13 +142,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
   describe "handle_create_result/2 — reauth required" do
     test "flashes the reconnect error when the domain returns reauth_required: true" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result = build_result(integration, attendees: [], reauth_required: true)
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} =
+        CreateExecution.handle_create_result(
+          {:ok, created(reauth_required: true)},
+          build_socket()
+        )
 
       # The event still saved, so the success info flash is present…
       assert updated_socket.assigns.flash["info"] == "Event created."
@@ -281,13 +155,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     end
 
     test "does not flash a reconnect error when reauth_required is false" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      result = build_result(integration, attendees: [], reauth_required: false)
-      socket = build_socket()
-
-      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} =
+        CreateExecution.handle_create_result(
+          {:ok, created(reauth_required: false)},
+          build_socket()
+        )
 
       assert is_nil(updated_socket.assigns.flash["error"])
     end
@@ -337,40 +209,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
   # Helpers
 
-  defp build_result(integration, opts) do
-    attendees = Keyword.get(opts, :attendees, [])
-    video_integration_id = Keyword.get(opts, :video_integration_id, nil)
-    description = Keyword.get(opts, :description, nil)
-    warning = Keyword.get(opts, :warning, nil)
-    reauth_required = Keyword.get(opts, :reauth_required, false)
-    reminders = Keyword.get(opts, :reminders, [])
-    recurrence_rule = Keyword.get(opts, :recurrence_rule, nil)
-
-    base = %{
-      uid: "uid-" <> Integer.to_string(System.unique_integer([:positive])),
-      creating: %{
-        title: "New Event",
-        integration_id: integration.id,
-        calendar_id: "primary",
-        reminders: reminders,
-        recurrence_rule: recurrence_rule,
-        video_integration_id: video_integration_id
-      },
-      start_at: ~U[2026-04-06 09:00:00Z],
-      end_at: ~U[2026-04-06 09:30:00Z],
-      provider: integration.provider,
-      provider_event_id: Keyword.get(opts, :provider_event_id),
-      etag: Keyword.get(opts, :etag),
-      written_calendar_id: nil,
-      default_booking_calendar_id: nil,
-      reauth_required: reauth_required,
-      attendees: attendees,
-      meeting_url: nil,
-      video_room_id: nil,
-      description: description
+  defp created(opts \\ []) do
+    %{
+      event: nil,
+      invited: Keyword.get(opts, :invited, []),
+      warning: Keyword.get(opts, :warning),
+      reauth_required: Keyword.get(opts, :reauth_required, false)
     }
-
-    if warning, do: Map.put(base, :warning, warning), else: base
   end
 
   defp build_socket do
