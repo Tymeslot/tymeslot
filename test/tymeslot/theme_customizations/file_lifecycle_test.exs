@@ -12,23 +12,14 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.Profiles
   alias Tymeslot.Test.ShowcaseThemeSpec
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.FileLifecycle
-  alias Tymeslot.ThemeCustomizations.Storage
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   setup do
-    upload_root =
-      Path.join(System.tmp_dir!(), "tymeslot_uploads_#{System.unique_integer([:positive])}")
-
-    original_root = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :upload_directory, original_root)
-      File.rm_rf(upload_root)
-    end)
+    upload_root = UploadRoot.isolate("tymeslot_uploads")
 
     user = insert(:user)
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
@@ -38,7 +29,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
 
   # Writes a file at the given stored relative path and returns its absolute path.
   defp touch_stored(relative_path) do
-    absolute = Storage.build_theme_file_path(relative_path)
+    absolute = UploadRoot.path(relative_path)
     File.mkdir_p!(Path.dirname(absolute))
     File.write!(absolute, "data")
     absolute
@@ -53,7 +44,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
 
   defp with_settings(row, changes), do: %{row | settings: Map.merge(row.settings, changes)}
 
-  describe "update_theme_customization/2 file cleanup" do
+  describe "upsert_theme_customization/3 file cleanup" do
     test "deletes the old image when the image path is replaced", %{profile: profile} do
       old_rel = "themes/#{profile.id}/1/images/old.jpg"
       old_abs = touch_stored(old_rel)
@@ -61,7 +52,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
       new_abs = touch_stored(new_rel)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "image",
           "background_value" => "uploaded",
@@ -69,9 +60,13 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
         })
 
       assert {:ok, _updated} =
-               ThemeCustomizations.update_theme_customization(customization, %{
-                 "background_image_path" => new_rel
-               })
+               ThemeCustomizations.upsert_theme_customization(
+                 customization.profile_id,
+                 customization.theme_id,
+                 %{
+                   "background_image_path" => new_rel
+                 }
+               )
 
       refute File.exists?(old_abs)
       assert File.exists?(new_abs)
@@ -82,7 +77,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
       abs = touch_stored(rel)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "image",
           "background_value" => "uploaded",
@@ -90,10 +85,14 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
         })
 
       assert {:ok, _updated} =
-               ThemeCustomizations.update_theme_customization(customization, %{
-                 "background_image_path" => rel,
-                 "color_scheme" => "ocean"
-               })
+               ThemeCustomizations.upsert_theme_customization(
+                 customization.profile_id,
+                 customization.theme_id,
+                 %{
+                   "background_image_path" => rel,
+                   "color_scheme" => "ocean"
+                 }
+               )
 
       assert File.exists?(abs)
     end
@@ -107,7 +106,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
       new_abs = touch_stored(new_rel)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "video",
           "background_value" => "uploaded",
@@ -115,9 +114,13 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
         })
 
       assert {:ok, _updated} =
-               ThemeCustomizations.update_theme_customization(customization, %{
-                 "background_video_path" => new_rel
-               })
+               ThemeCustomizations.upsert_theme_customization(
+                 customization.profile_id,
+                 customization.theme_id,
+                 %{
+                   "background_video_path" => new_rel
+                 }
+               )
 
       refute File.exists?(old_abs)
       Enum.each(variant_abs, fn path -> refute File.exists?(path) end)
@@ -129,7 +132,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
       abs = touch_stored(rel)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "video",
           "background_value" => "custom",
@@ -154,7 +157,7 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
       abs = touch_stored(rel)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "image",
           "background_value" => "custom",
@@ -162,48 +165,90 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
         })
 
       assert {:ok, _updated} =
-               ThemeCustomizations.update_theme_customization(customization, %{
-                 "color_scheme" => "ocean"
-               })
+               ThemeCustomizations.upsert_theme_customization(
+                 customization.profile_id,
+                 customization.theme_id,
+                 %{
+                   "color_scheme" => "ocean"
+                 }
+               )
 
       assert File.exists?(abs)
     end
   end
 
-  describe "delete_theme_customization/1 file cleanup" do
-    test "removes the image file on delete", %{profile: profile} do
-      rel = "themes/#{profile.id}/1/images/bg.jpg"
-      abs = touch_stored(rel)
+  describe "partial updates keep the files the row still references" do
+    setup %{profile: profile} do
+      image_rel = "themes/#{profile.id}/1/images/kept.jpg"
+      video_rel = "themes/#{profile.id}/1/videos/kept.mp4"
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
-          "color_scheme" => "default",
-          "background_type" => "image",
-          "background_value" => "uploaded",
-          "background_image_path" => rel
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "video",
+          "background_value" => "custom",
+          "background_image_path" => image_rel,
+          "background_video_path" => video_rel
         })
 
-      assert {:ok, _deleted} = ThemeCustomizations.delete_theme_customization(customization)
-      refute File.exists?(abs)
+      %{
+        customization: customization,
+        image_rel: image_rel,
+        video_rel: video_rel,
+        image_abs: touch_stored(image_rel),
+        video_abs: touch_stored(video_rel),
+        variant_abs: video_rel |> Transcoder.derive_variant_paths() |> Enum.map(&touch_stored/1)
+      }
     end
 
-    test "removes the video file and its transcoded variants on delete", %{profile: profile} do
-      rel = "themes/#{profile.id}/1/videos/bg.mp4"
-      abs = touch_stored(rel)
-      variant_abs = rel |> Transcoder.derive_variant_paths() |> Enum.map(&touch_stored/1)
+    test "an update that leaves both paths out keeps both files and the video's variants",
+         ctx do
+      assert {:ok, updated} =
+               ThemeCustomizations.upsert_theme_customization(
+                 ctx.customization.profile_id,
+                 ctx.customization.theme_id,
+                 %{
+                   "background_type" => "image",
+                   "background_value" => "custom"
+                 }
+               )
 
-      {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
-          "color_scheme" => "default",
-          "background_type" => "video",
-          "background_value" => "uploaded",
-          "background_video_path" => rel
-        })
+      assert updated.settings["background_image_path"] == ctx.image_rel
+      assert updated.settings["background_video_path"] == ctx.video_rel
+      assert File.exists?(ctx.image_abs)
+      assert File.exists?(ctx.video_abs)
+      assert Enum.all?(ctx.variant_abs, &File.exists?/1)
+    end
 
-      assert {:ok, _deleted} = ThemeCustomizations.delete_theme_customization(customization)
+    test "an explicit nil clears the path and deletes its file", ctx do
+      assert {:ok, updated} =
+               ThemeCustomizations.upsert_theme_customization(
+                 ctx.customization.profile_id,
+                 ctx.customization.theme_id,
+                 %{
+                   "background_image_path" => nil
+                 }
+               )
 
-      refute File.exists?(abs)
-      Enum.each(variant_abs, fn path -> refute File.exists?(path) end)
+      assert updated.settings["background_image_path"] == nil
+      refute File.exists?(ctx.image_abs)
+      assert File.exists?(ctx.video_abs)
+    end
+
+    test "choosing a gradient keeps both uploads and their files", ctx do
+      assert {:ok, updated} =
+               ThemeCustomizations.apply_option(ctx.profile.id, "1", :background, %{
+                 "field" => "gradient",
+                 "value" => "gradient_2"
+               })
+
+      assert updated.settings["background_type"] == "gradient"
+
+      assert {updated.settings["background_image_path"],
+              updated.settings["background_video_path"]} == {ctx.image_rel, ctx.video_rel}
+
+      assert File.exists?(ctx.image_abs)
+      assert File.exists?(ctx.video_abs)
+      assert Enum.all?(ctx.variant_abs, &File.exists?/1)
     end
   end
 
@@ -260,14 +305,6 @@ defmodule Tymeslot.ThemeCustomizations.FileLifecycleTest do
 
       refute File.exists?(background)
       assert File.exists?(logo)
-    end
-
-    test "deleting the customisation deletes every group's files",
-         %{row: row, background: background, logo: logo} do
-      FileLifecycle.cleanup_all_files(ShowcaseThemeSpec, row)
-
-      refute File.exists?(background)
-      refute File.exists?(logo)
     end
   end
 end

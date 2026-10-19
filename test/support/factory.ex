@@ -36,7 +36,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
-  alias Tymeslot.Utils.UnguessableToken
   alias Tymeslot.Venues.VenueSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
@@ -48,8 +47,11 @@ defmodule Tymeslot.Factory do
   @default_password "Password123!"
   @default_password_hash Password.hash_password(@default_password)
 
-  @spec meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
-  def meeting_factory do
+  @spec meeting_factory(map()) :: Tymeslot.Meetings.MeetingSchema.t()
+  # Like a meeting created through its changeset, the calendar is known to show
+  # the meeting's own end until a sync says otherwise; pass
+  # `seen_calendar_end_time: nil` for a meeting that predates that record.
+  def meeting_factory(attrs) do
     start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
     end_time = DateTime.add(start_time, 60, :minute)
 
@@ -78,6 +80,13 @@ defmodule Tymeslot.Factory do
       ical_sequence: 0,
       last_notified_state: %{}
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> then(fn meeting ->
+      if Map.has_key?(attrs, :seen_calendar_end_time),
+        do: meeting,
+        else: %{meeting | seen_calendar_end_time: meeting.end_time}
+    end)
   end
 
   @spec meeting_with_status(String.t()) :: term()
@@ -142,7 +151,7 @@ defmodule Tymeslot.Factory do
       timezone: "Europe/Zurich",
       locale: "en",
       custom_field_answers: %{},
-      management_token: ParticipantSchema.generate_token()
+      management_token: Token.generate(32)
     }
     |> merge_attributes(attrs)
     |> evaluate_lazy_attributes()
@@ -167,7 +176,7 @@ defmodule Tymeslot.Factory do
 
   @spec user_session_factory() :: Tymeslot.Auth.UserSessionSchema.t()
   def user_session_factory do
-    token = Token.generate_session_token()
+    token = Token.generate()
 
     %UserSessionSchema{
       token: token,
@@ -549,7 +558,7 @@ defmodule Tymeslot.Factory do
       duration_minutes: 30,
       timezone: "Etc/UTC",
       status: :open,
-      token: UnguessableToken.generate(),
+      token: Token.generate(24),
       user: build(:user)
     }
     |> merge_attributes(attrs)
@@ -575,7 +584,7 @@ defmodule Tymeslot.Factory do
     %PollParticipantSchema{
       name: sequence(:poll_participant_name, &"Participant #{&1}"),
       email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
-      token: UnguessableToken.generate(),
+      token: Token.generate(24),
       locale: "en",
       poll: build(:poll)
     }

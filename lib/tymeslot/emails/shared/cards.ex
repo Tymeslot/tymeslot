@@ -9,7 +9,6 @@ defmodule Tymeslot.Emails.Shared.Cards do
   """
 
   alias Tymeslot.Emails.Shared.{Sanitise, Stack, Styles, Text}
-  alias Tymeslot.Security.UniversalSanitizer
 
   @type contact_row :: %{
           required(:label) => String.t(),
@@ -100,22 +99,12 @@ defmodule Tymeslot.Emails.Shared.Cards do
 
   @doc """
   A message content card — tinted, with a small kicker title and the body
-  rendered as sanitised text with line breaks preserved.
+  rendered as escaped text with line breaks preserved.
   """
   @spec message_content_card(String.t(), String.t()) :: String.t()
   def message_content_card(title, message) do
     safe_title = Sanitise.sanitize_for_email(title)
-
-    sanitized_message =
-      case UniversalSanitizer.sanitize_and_validate(message,
-             allow_html: true,
-             on_too_long: :truncate
-           ) do
-        {:ok, sanitized} -> sanitized
-        {:error, _reason} -> Sanitise.sanitize_for_email(message)
-      end
-
-    formatted = String.replace(sanitized_message, "\n", "<br>")
+    formatted = Sanitise.sanitize_multiline_for_email(message)
 
     Stack.spaced("""
     <mj-section

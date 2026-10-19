@@ -27,7 +27,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   require Logger
 
   alias Ecto.UUID
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Policy, SeatEffects}
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, MeetingAttributes, SeatEffects}
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Cancellation
@@ -181,7 +181,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
   # The attributes a first booking would give the slot (organiser, location,
   # video integration, reminders, calendar destination), built by the same
-  # `Policy.build_meeting_attributes/1`, then cut back to the slot by
+  # `MeetingAttributes.build/1`, then cut back to the slot by
   # `SeatEffects.slot_attrs/2` as a seat's slot is: a session has no booker.
   defp session_attrs(meeting_type, starts_at, closes_at) do
     duration = meeting_type.duration_minutes
@@ -196,7 +196,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       meeting_type_id: meeting_type.id
     }
     |> BuildParams.new()
-    |> Policy.build_meeting_attributes()
+    |> MeetingAttributes.build()
     |> SeatEffects.slot_attrs(meeting_type.name)
     |> Map.merge(%{
       capacity: meeting_type.max_participants,

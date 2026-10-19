@@ -52,10 +52,26 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
       organiser and whoever booked;
     * any other address, typically a custom domain the account does not list
       as its own: the account's preferred address, the one the server would
-      have added. The server then adds nothing more, and the event shows the
-      organiser, that address once, and whoever booked. Listing the organiser
+      have added, which `ORGANIZER` carries too. Listing the organiser
       instead, as the first fix for #151 did, left the owner added beside
-      them, which put the organiser in the event twice.
+      them, which put the organiser in the event twice; keeping their address
+      as `ORGANIZER` alone, as the second did, still showed them under two
+      addresses, and the server, taking the event for an invitation from
+      someone else, silently ignored every later change to its guests. The
+      organiser's own copy now shows them once, under the account's address,
+      while the booker's invitation, which Tymeslot sends itself, keeps theirs.
+
+  Mailbox.org lists its own aliases in that set, but by the report in #151
+  not a custom-domain address added to the account, so the second case is
+  the usual one for an organiser on their own domain. Measured against a live account on
+  2026-10-19: no event shape keeps the account's address out of an event that
+  has an organiser or any attendee.
+
+  The server also silently drops an update that names a different
+  `ORGANIZER` from the stored one, so `ORGANIZER` is written on create only:
+  the patcher never touches it, and an update with no cached copy reads the
+  server's first (`CalDAV.Events.update_calendar_event/5`). Events created
+  before the change keep the organiser they were created with.
 
   The mode carries the addresses `Discovery.calendar_user_addresses/1`
   answers, read per write; a failed lookup carries none, and the organiser is
@@ -106,6 +122,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
       _other -> :attendee
     end
   end
+
+  @doc """
+  Whether `client` writes to an Open-Xchange server, recognised as
+  `attendee_mode/1` recognises it, without asking the server anything.
+  """
+  @spec open_xchange?(Client.t()) :: boolean()
+  def open_xchange?(client) when is_map(client), do: server(client) == :open_xchange
 
   @doc """
   The address an `{:organiser_attendee, addresses}` event lists for its

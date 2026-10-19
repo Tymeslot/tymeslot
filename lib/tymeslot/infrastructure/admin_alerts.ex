@@ -23,37 +23,20 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   or to share with the project — see `CONTRIBUTING.md` for details.
   """
 
-  @type alert_type ::
-          :unlinked_refund
-          | :refund_processed
-          | :unhandled_webhook
-          | :calendar_sync_error
-          | :integration_health_failure
-          | :integration_health_recovery
-          | :oban_queue_stuck
-          | :oban_jobs_accumulating
-          | :oban_jobs_force_discarded
-          | :circuit_breaker_open
-          | :database_pool_pressure
-          | :stripe_webhook_secret_missing
-          | :new_error
-          | :error_regression
-          | :pubsub_broadcast_failed
-          | :dispute_created
-          | :dispute_lost
-          | :reconciliation_discrepancies
-          | :subscription_not_in_database
-          | :payment_event_enqueue_failed
-          | :payment_event_orphaned
-          | :dunning_stalled
-          | :analytics_tracking_anomaly
-          | atom()
+  @typedoc """
+  An alert type registered in `Tymeslot.Infrastructure.AdminAlerts.AlertTypes`,
+  which holds each one's category and severity. An unregistered type is
+  still sent, as a generic warning, and logged as unregistered.
+  """
+  @type alert_type :: atom()
 
   @callback send_alert(alert_type(), map()) :: :ok | {:error, any()}
 
-  require Logger
-
+  alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliser
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
+  require Logger
 
   @doc """
   Reports an administrative alert using the canonical call shape.
@@ -93,6 +76,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   """
   @spec send_alert(alert_type(), map()) :: :ok | {:error, any()}
   def send_alert(type, metadata) do
+    if is_nil(AlertTypes.get(type)) do
+      # Formatted, not raw: a caller can pass any term here, and the
+      # unregistered ones are exactly the ones nothing has vetted.
+      Logger.warning("Admin alert type is not registered in AlertTypes",
+        alert_type: LogFormat.reason(type)
+      )
+    end
+
     impl().send_alert(type, metadata)
   rescue
     exception ->

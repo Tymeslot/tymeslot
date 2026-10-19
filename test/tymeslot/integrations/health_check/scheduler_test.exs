@@ -9,47 +9,6 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
   alias Tymeslot.Integrations.HealthCheck.Scheduler
   alias Tymeslot.Workers.IntegrationHealthWorker
 
-  describe "due_for_check?/2" do
-    test "returns true for integrations never checked" do
-      health_state = %{last_check_at: nil, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == true
-    end
-
-    test "returns true when backoff period has elapsed" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -6, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == true
-    end
-
-    test "returns false when backoff period has not elapsed" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -3, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == false
-    end
-
-    test "returns true when exactly at backoff boundary" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -5, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == true
-    end
-
-    test "handles longer backoff periods correctly" do
-      last_check_at = DateTime.add(DateTime.utc_now(), -45, :minute)
-      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.hours(1)}
-      now = DateTime.utc_now()
-
-      assert Scheduler.due_for_check?(health_state, now) == false
-    end
-  end
-
   # Reading "now" through the clock is what makes the window exact: measured
   # against a separate `DateTime.utc_now()` in the test, whatever elapsed
   # between the two reads counted as jitter, so a slow run could exceed the

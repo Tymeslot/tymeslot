@@ -20,7 +20,6 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.Validation
 
   # A Wednesday, far enough ahead of `@now` that minimum notice never trims the
@@ -159,18 +158,14 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
     assert :ok =
              Validation.validate_booking_time(
                submitted,
-               "Etc/UTC",
-               Policy.scheduling_config(user.id, evening_type)
+               Schedules.booking_config(user.id, evening_type)
              )
 
-    assert {:error, message} =
+    assert {:error, {:too_far_ahead, _days}} =
              Validation.validate_booking_time(
                submitted,
-               "Etc/UTC",
-               Policy.scheduling_config(user.id, morning_type)
+               Schedules.booking_config(user.id, morning_type)
              )
-
-    assert message =~ "in advance"
   end
 
   test "booking-time policy resolves the same schedule as slot computation", %{
@@ -186,8 +181,8 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
         min_advance_hours: 72
       })
 
-    evening_config = Policy.scheduling_config(user.id, evening_type)
-    morning_config = Policy.scheduling_config(user.id, morning_type)
+    evening_config = Schedules.booking_config(user.id, evening_type)
+    morning_config = Schedules.booking_config(user.id, morning_type)
 
     assert evenings.buffer_before_minutes == 45
     assert evening_config.buffer_before_minutes == 45

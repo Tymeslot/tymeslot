@@ -26,15 +26,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   @original_start_minutes 780
   @moved_start_minutes 840
 
+  # The provider write runs in a Task; allow for a busy test machine.
+  @task_timeout 5_000
+
   @locked_message "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 
+  import TymeslotWeb.RepeatEditorHelpers
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock_midweek: 0]
 
   alias Phoenix.HTML
+  alias Tymeslot.Clock
   alias Tymeslot.Repo
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
 
+  # The grid opens on the week that holds today in the host's zone (Tallinn
+  # by default), and these events sit on today in UTC; late on a Sunday the
+  # two are different weeks. Midweek they are always the same one.
+  setup do: freeze_clock_midweek()
   setup :setup_dashboard_user
 
   setup %{user: user} do
@@ -43,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
 
   # A meeting plus the provider event Tymeslot wrote for it, linked by uid.
   defp booked_event(user, integration, opts) do
-    today = Date.utc_today()
+    today = Clock.utc_today()
 
     meeting =
       insert(:meeting,
@@ -76,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   defp drop_params(event) do
     %{
       "event-id" => to_string(event.id),
-      "new-date" => Date.to_iso8601(Date.utc_today()),
+      "new-date" => Date.to_iso8601(Clock.utc_today()),
       "new-hour" => "14",
       "new-minute" => "0",
       "new-end-hour" => "15",
@@ -135,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       |> element("#calendar-grid")
       |> render_hook("event_resized", %{
         "event-id" => to_string(ctx.event.id),
-        "event-date" => Date.to_iso8601(Date.utc_today()),
+        "event-date" => Date.to_iso8601(Clock.utc_today()),
         "new-end-hour" => "13",
         "new-end-minute" => "0"
       })
@@ -152,9 +162,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       lv
       |> element("#calendar-grid")
       |> render_hook("update_event_time", %{
-        "start-date" => Date.to_iso8601(Date.utc_today()),
+        "start-date" => Date.to_iso8601(Clock.utc_today()),
         "start-time" => "14:00",
-        "end-date" => Date.to_iso8601(Date.utc_today()),
+        "end-date" => Date.to_iso8601(Clock.utc_today()),
         "end-time" => "15:00"
       })
 
@@ -188,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
 
       lv
       |> element("#calendar-grid")
-      |> render_hook("update_event_recurrence", %{
+      |> render_repeat_save(%{
         "freq" => "weekly",
         "interval" => "1",
         "by_day" => ["mo"],
@@ -319,7 +329,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       test_pid = self()
 
       Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, _data, _context ->
-        send(test_pid, {:provider_update, uid})
+        send(test_pid, {:provider_update, self(), uid})
         :ok
       end)
 
@@ -331,8 +341,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
         |> render_hook("event_dropped", drop_params(event))
 
       assert html =~ "Group Workshop"
-      assert_receive {:provider_update, uid}
+      assert_receive {:provider_update, task_pid, uid}, @task_timeout
       assert uid == event.uid
+
+      # The Task reports the write's result to the grid before it exits, so
+      # once it is down the grid has that answer queued ahead of the render.
+      ref = Process.monitor(task_pid)
+      assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
       assert event_block(lv, event.id) =~ ~s(data-start-minutes="#{@moved_start_minutes}")
     end
   end

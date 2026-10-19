@@ -11,21 +11,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   changed since the last sync.
   """
 
-  import SweetXml
+  import SweetXml, only: [sigil_x: 2]
 
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
+  alias Tymeslot.Integrations.Calendar.Utils.SafeXml
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
-  # A delta is parsed whole into an xmerl DOM, which holds text as charlists at
-  # sixteen bytes or more per character, so the DOM runs to many times the size
-  # of the XML. A routine delta is a few kilobytes; one past this budget comes
-  # from a bulk change on the server (an import, a migration, a script
-  # rewriting every event) and is abandoned mid-transfer, before any of it is
-  # parsed. The caller reads the calendar through the sync window instead.
+  # A delta is parsed whole into a tree, and the parser hands each text node
+  # over as a charlist at sixteen bytes or more per character before it is
+  # turned into a binary, so parsing peaks at many times the size of the XML.
+  # A routine delta is a few kilobytes; one past this budget comes from a bulk
+  # change on the server (an import, a migration, a script rewriting every
+  # event) and is abandoned mid-transfer, before any of it is parsed. The
+  # caller reads the calendar through the sync window instead.
   @max_delta_bytes 4 * 1024 * 1024
 
   # ---------------------------------------------------------------------------
@@ -135,14 +137,27 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
           {:ok, {list(map()), list(String.t()), String.t() | nil}}
           | {:error, :invalid_response | :calendar_data_withheld}
   def parse_response(xml_body) do
-    doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
+    case SafeXml.parse(xml_body) do
+      {:ok, doc} ->
+        read_delta(doc)
 
+      {:error, reason} ->
+        Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(reason))
+        {:error, :invalid_response}
+    end
+  rescue
+    e ->
+      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(e))
+      {:error, :invalid_response}
+  end
+
+  defp read_delta(doc) do
     # Extract the new sync token from the response
-    raw_sync_token = xpath(doc, ~x"//*[local-name()='sync-token']/text()"s)
+    raw_sync_token = SafeXml.xpath(doc, ~x"//*[local-name()='sync-token']/text()"s)
     new_sync_token = if raw_sync_token == "", do: nil, else: raw_sync_token
 
     responses =
-      xpath(
+      SafeXml.xpath(
         doc,
         ~x"//*[local-name()='response']"l,
         href: ~x"./*[local-name()='href']/text()"s,
@@ -167,14 +182,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
 
       {:error, :calendar_data_withheld}
     end
-  rescue
-    e ->
-      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(e))
-      {:error, :invalid_response}
-  catch
-    :exit, reason ->
-      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(reason))
-      {:error, :invalid_response}
   end
 
   # A 404 (or 410) on the `response` element itself, not on a nested
@@ -278,28 +285,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   # A property that is absent or unparseable reads as `nil`: both probes are
   # optimisations, and a caller without a value falls back to a full fetch.
   defp parse_property(xml_body, property) do
-    doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
+    with {:ok, doc} <- SafeXml.parse(xml_body),
+         value when value != "" <- SafeXml.xpath(doc, property_path(property)) do
+      {:ok, value}
+    else
+      "" ->
+        {:ok, nil}
 
-    case xpath(doc, property_path(property)) do
-      "" -> {:ok, nil}
-      value -> {:ok, value}
+      {:error, reason} ->
+        Logger.warning("Failed to parse CalDAV property response",
+          property: property,
+          error: LogFormat.reason(reason)
+        )
+
+        {:ok, nil}
     end
-  rescue
-    e ->
-      Logger.warning("Failed to parse CalDAV property response",
-        property: property,
-        error: LogFormat.reason(e)
-      )
-
-      {:ok, nil}
-  catch
-    :exit, reason ->
-      Logger.warning("Failed to parse CalDAV property response",
-        property: property,
-        error: LogFormat.reason(reason)
-      )
-
-      {:ok, nil}
   end
 
   defp property_path(:getctag), do: ~x"//*[local-name()='getctag']/text()"s

@@ -7,6 +7,7 @@ defmodule Tymeslot.CalendarGrid do
   display colours to integrations.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
   alias Tymeslot.CalendarGrid.EventDeletion
@@ -17,49 +18,29 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.CalendarGrid.Freshness
   alias Tymeslot.CalendarGrid.IcsImport
+  alias Tymeslot.CalendarGrid.RepeatRefusal
   alias Tymeslot.CalendarGrid.SeriesCarry
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.CalendarGrid.SeriesEdit
+  alias Tymeslot.CalendarGrid.SeriesStart
+  alias Tymeslot.CalendarGrid.WriteQueue.SeriesActivity
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.SyncSchedule
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
-  alias Tymeslot.Workers.SyncCalDavCalendarWorker
-  alias Tymeslot.Workers.SyncDebugCalendarWorker
-  alias Tymeslot.Workers.SyncExchangeCalendarWorker
-  alias Tymeslot.Workers.SyncGoogleCalendarWorker
-  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
-  @caldav_providers ProviderConfig.caldav_based_provider_strings()
-
-  # Staleness thresholds (minutes). Each threshold is the sync interval
-  # plus a buffer for queue wait, network latency, and retries.
-  @webhook_stale_minutes 30
-  @caldav_tier_stale_minutes %{
-    1 => 25,
-    2 => 45,
-    3 => 90
-  }
-  @caldav_default_stale_minutes 25
-  @debug_stale_minutes 15
-  # Subscriptions are swept every 30 minutes; the buffer is wider than the
-  # CalDAV ones because the publisher's own regeneration schedule sits on top
-  # of ours, so a feed being an hour old is normal rather than a symptom.
-  @subscription_stale_minutes 75
-  # Exchange is swept on the same 30-minute cadence as a subscription, and for
-  # the same reason: no delta mechanism, so every run re-reads the whole
-  # window twice over. The buffer is the sweep interval plus queue wait.
-  @exchange_stale_minutes 45
+  require Logger
 
   @doc """
   Returns all cached calendar events for the given integration IDs within a time range.
@@ -76,7 +57,26 @@ defmodule Tymeslot.CalendarGrid do
   def list_events_for_range(integration_ids, start_dt, end_dt, opts \\ []) do
     integration_ids
     |> ProviderCalendarEventQueries.list_for_range(start_dt, end_dt, opts)
+    |> Enum.filter(&placeable?/1)
     |> Enum.map(&normalise_event_reminders/1)
+  end
+
+  # The cache's writers refuse a half-timed row, but one stored before they
+  # did would crash the grid's layout (a timed event without an end has
+  # nowhere to stop), so it is left out and logged instead. Search leaves such
+  # rows out in its query (`ProviderCalendarEventQueries.search/3`).
+  defp placeable?(%ProviderCalendarEventSchema{} = row) do
+    complete? = ProviderCalendarEventSchema.timing_complete?(Map.from_struct(row))
+
+    unless complete? do
+      Logger.warning("Calendar grid skipped a cached event with incomplete timing",
+        provider_calendar_event_id: row.id,
+        calendar_integration_id: row.calendar_integration_id,
+        all_day: row.all_day
+      )
+    end
+
+    complete?
   end
 
   @doc """
@@ -177,44 +177,14 @@ defmodule Tymeslot.CalendarGrid do
     )
   end
 
-  @doc """
-  Enqueues sync workers for all active integrations belonging to the user.
+  @doc "Enqueues a sync of each of the user's active integrations. See `Freshness.refresh_events/2`."
+  defdelegate refresh_events(user_id, how \\ :requested), to: Freshness
 
-  Each integration is dispatched to the appropriate worker based on its provider:
-  - `"google"` → `SyncGoogleCalendarWorker`
-  - `"outlook"` → `RefreshOutlookCalendarWorker` (delta sync or bootstrap; the
-    standard webhook-driven `SyncOutlookCalendarWorker` is per-event and can't
-    service a manual refresh on its own)
-  - `"debug"` → `SyncDebugCalendarWorker`
-  - `"ics_url"` → `SyncIcsCalendarWorker`
-  - `"exchange"` → `SyncExchangeCalendarWorker`
-  - any provider returned by `ProviderConfig.caldav_based_providers/0` →
-    `SyncCalDavCalendarWorker`
+  @doc "The integrations whose cached events are stale. See `Freshness.stale_integrations/1`."
+  defdelegate stale_integrations(integrations), to: Freshness
 
-  Returns `{:ok, %{enqueued: count, errors: [{integration_id, reason}]}}`.
-  """
-  @spec refresh_events(integer()) ::
-          {:ok,
-           %{
-             enqueued: non_neg_integer(),
-             skipped: non_neg_integer(),
-             errors: [{integer(), term()}]
-           }}
-  def refresh_events(user_id) do
-    # The context call decrypts credentials; acceptable overhead for a
-    # user-initiated refresh since we need id + provider for each integration.
-    integrations = CalendarManagement.list_active_calendar_integrations(user_id)
-
-    {enqueued, skipped, errors} =
-      Enum.reduce(integrations, {0, 0, []}, fn integration, {count, skip, errs} ->
-        case enqueue_sync_worker(integration) do
-          {:ok, _job} -> {count + 1, skip, errs}
-          {:error, reason} -> {count, skip, [{integration.id, reason} | errs]}
-        end
-      end)
-
-    {:ok, %{enqueued: enqueued, skipped: skipped, errors: errors}}
-  end
+  @doc "The oldest sync among the integrations. See `Freshness.oldest_sync_at/1`."
+  defdelegate oldest_sync_at(integrations), to: Freshness
 
   @doc """
   Returns the display class each of the given integrations paints its events in.
@@ -271,39 +241,6 @@ defmodule Tymeslot.CalendarGrid do
     do: EventColour.rotation_class(rem(index, EventColour.rotation_size()) + 1)
 
   @doc """
-  Returns integrations whose cached data is stale.
-
-  An integration is stale when `last_external_sync_at` is nil or older than the
-  provider-appropriate threshold:
-  - Webhook providers (Google, Outlook): #{@webhook_stale_minutes} min
-  - CalDAV Tier 1 (sync-token, syncs every 15 min): #{@caldav_tier_stale_minutes[1]} min
-  - CalDAV Tier 2 (CTag, syncs every 30 min): #{@caldav_tier_stale_minutes[2]} min
-  - CalDAV Tier 3 (full fetch, syncs every 60 min): #{@caldav_tier_stale_minutes[3]} min
-  - Calendar subscriptions (full fetch, syncs every 30 min): #{@subscription_stale_minutes} min
-  """
-  @spec stale_integrations([CalendarIntegrationSchema.t()]) :: [CalendarIntegrationSchema.t()]
-  def stale_integrations(integrations) do
-    now = DateTime.utc_now()
-    Enum.filter(integrations, &stale?(&1, now))
-  end
-
-  @doc """
-  Returns the oldest `last_external_sync_at` across the given integrations,
-  or nil when none have synced.
-  """
-  @spec oldest_sync_at([CalendarIntegrationSchema.t()]) :: DateTime.t() | nil
-  def oldest_sync_at([]), do: nil
-
-  def oldest_sync_at(integrations) do
-    timestamps =
-      integrations
-      |> Enum.map(& &1.last_external_sync_at)
-      |> Enum.reject(&is_nil/1)
-
-    if timestamps == [], do: nil, else: Enum.min(timestamps, DateTime)
-  end
-
-  @doc """
   Inserts a newly created event into the local cache so it appears
   immediately without waiting for the next sync cycle.
 
@@ -345,6 +282,18 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate ics_import_running?(user_id), to: IcsImport, as: :running?
 
   @doc """
+  Whether the write queue is still writing to the series `event` belongs to.
+  See `SeriesActivity.saving?/2`.
+  """
+  defdelegate series_saving?(queue, event), to: SeriesActivity, as: :saving?
+
+  @doc """
+  Whether the write queue is writing to another event of the series `event`
+  belongs to. See `SeriesActivity.busy?/2`.
+  """
+  defdelegate series_busy?(queue, event), to: SeriesActivity, as: :busy?
+
+  @doc """
   Writes an import plan to one of the user's calendars (see `IcsImport.run/3`),
   then drops the user's cached availability and syncs the calendar, so the
   imported events block their time and appear on the grid. While another
@@ -358,8 +307,8 @@ defmodule Tymeslot.CalendarGrid do
         summary = IcsImport.run(target, plan, opts)
 
         if summary.created > 0 do
-          AvailabilityCache.invalidate_for_user(user_id)
-          enqueue_sync_worker(target.integration)
+          Availability.changed(user_id)
+          SyncSchedule.request_sync(target.integration)
         end
 
         {:ok, summary}
@@ -452,6 +401,47 @@ defmodule Tymeslot.CalendarGrid do
   @spec edit_scopes(map()) :: {:ok, :single | :this_only | :series}
   defdelegate edit_scopes(event), to: EventEdit
 
+  @doc """
+  Whether the grid can give an event of `provider` a repeat rule, or change
+  the one it has (see `ProviderConfig.writes_repeat_rules?/1`).
+  """
+  @spec repeatable_provider?(atom() | String.t() | nil) :: boolean()
+  defdelegate repeatable_provider?(provider), to: ProviderConfig, as: :writes_repeat_rules?
+
+  @doc """
+  The first start of the series `event` belongs to, which a whole-series
+  repeat pattern is written against (see `SeriesStart.of/1`).
+  """
+  @spec series_start(map()) :: Date.t() | DateTime.t() | nil
+  defdelegate series_start(event), to: SeriesStart, as: :of
+
+  @doc """
+  Where the series put `event`, which a change of it and the following
+  occurrences splits the series at (see `SeriesStart.slot/1`).
+  """
+  @spec occurrence_slot(map()) :: Date.t() | DateTime.t() | nil
+  defdelegate occurrence_slot(event), to: SeriesStart, as: :slot
+
+  @doc """
+  The rule an edit of `event` and every following occurrence writes to the
+  series it starts, given the new `rule` with its `COUNT` as given for the
+  whole series: the `COUNT` less the occurrences before the split, counted
+  on the wall clock of `zone` (see `SeriesEdit.following_rule/3`).
+  """
+  @spec following_rule(map(), String.t(), String.t() | nil) ::
+          {:ok, String.t()} | {:error, :ends_before | :start_unknown}
+  defdelegate following_rule(event, rule, zone), to: SeriesEdit
+
+  @doc """
+  Why a calendar of `provider` would refuse `rule` for a series starting on
+  `start_date`, or `nil` (see `RepeatRefusal.reason/4`).
+  """
+  @spec repeat_refusal(atom() | String.t() | nil, String.t() | nil, Date.t(), String.t() | nil) ::
+          RepeatRefusal.reason() | nil
+  defdelegate repeat_refusal(provider, rule, start_date, timezone),
+    to: RepeatRefusal,
+    as: :reason
+
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
           {:ok, CalendarEvent.t()} | {:error, :not_found}
@@ -540,7 +530,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec list_active_integrations(integer()) :: [CalendarIntegrationSchema.t()]
   def list_active_integrations(user_id) do
-    CalendarManagement.list_active_calendar_integrations(user_id)
+    Management.list_active_calendar_integrations(user_id)
   end
 
   @doc """
@@ -548,7 +538,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec get_or_create_preferences(integer()) :: term()
   def get_or_create_preferences(user_id) do
-    CalendarManagement.get_or_create_preferences(user_id)
+    Management.get_or_create_preferences(user_id)
   end
 
   @doc """
@@ -565,7 +555,7 @@ defmodule Tymeslot.CalendarGrid do
 
   def get_user_time_format(user_id, locale) do
     user_id
-    |> CalendarManagement.get_or_create_preferences()
+    |> Management.get_or_create_preferences()
     |> Map.get(:time_format)
     |> TimeFormat.resolve(locale)
   end
@@ -575,72 +565,6 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec save_preferences(integer(), map()) :: {:ok, term()} | {:error, Ecto.Changeset.t()}
   def save_preferences(user_id, attrs) do
-    CalendarManagement.save_preferences(user_id, attrs)
-  end
-
-  # Private
-
-  # Outlook pending initial setup: subscription registration hasn't succeeded yet
-  # (e.g. WEBHOOK_BASE_URL not configured). This is "pending", not "stale" —
-  # showing a stale banner the user can't resolve is just noise.
-  defp stale?(%{provider: "outlook", graph_delta_link: nil, last_external_sync_at: nil}, _now),
-    do: false
-
-  defp stale?(%{last_external_sync_at: nil}, _now), do: true
-
-  defp stale?(integration, now) do
-    threshold = stale_threshold_minutes(integration)
-    cutoff = DateTime.add(now, -threshold, :minute)
-    DateTime.before?(integration.last_external_sync_at, cutoff)
-  end
-
-  defp stale_threshold_minutes(%{provider: "debug"}), do: @debug_stale_minutes
-
-  defp stale_threshold_minutes(%{provider: "ics_url"}), do: @subscription_stale_minutes
-
-  defp stale_threshold_minutes(%{provider: "exchange"}), do: @exchange_stale_minutes
-
-  defp stale_threshold_minutes(%{provider: provider, caldav_sync_tier: tier})
-       when provider in @caldav_providers do
-    Map.get(@caldav_tier_stale_minutes, tier, @caldav_default_stale_minutes)
-  end
-
-  defp stale_threshold_minutes(_integration), do: @webhook_stale_minutes
-
-  defp enqueue_sync_worker(%{provider: "google"} = integration),
-    do: SyncGoogleCalendarWorker.enqueue(integration.id)
-
-  defp enqueue_sync_worker(%{provider: "outlook"} = integration),
-    do: RefreshOutlookCalendarWorker.enqueue(integration.id)
-
-  defp enqueue_sync_worker(%{provider: "debug"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncDebugCalendarWorker.new()
-    |> Oban.insert()
-  end
-
-  # A subscription refresh is always a full re-fetch of the feed; there is no
-  # delta mode to force past.
-  defp enqueue_sync_worker(%{provider: "ics_url"} = integration) do
-    SyncIcsCalendarWorker.enqueue(integration.id)
-  end
-
-  # EWS has no delta mode either: a refresh re-reads the whole window through
-  # both of the provider's reads.
-  defp enqueue_sync_worker(%{provider: "exchange"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncExchangeCalendarWorker.new()
-    |> Oban.insert()
-  end
-
-  defp enqueue_sync_worker(%{provider: provider} = integration) do
-    if provider in @caldav_providers do
-      # Manual refresh always forces a full fetch: users click Refresh because
-      # they believe something is missing, and delta sync is exactly what would
-      # miss it. See docs/superpowers/specs/2026-04-13-caldav-periodic-full-resync-design.md.
-      SyncCalDavCalendarWorker.enqueue_full_fetch(integration.id)
-    else
-      {:error, "unknown provider: #{provider} for integration #{integration.id}"}
-    end
+    Management.save_preferences(user_id, attrs)
   end
 end

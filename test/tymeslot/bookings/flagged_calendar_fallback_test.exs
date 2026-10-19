@@ -36,7 +36,7 @@ defmodule Tymeslot.Bookings.FlaggedCalendarFallbackTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.ExchangeCase
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.Operations
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks

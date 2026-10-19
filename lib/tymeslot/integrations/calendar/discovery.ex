@@ -71,9 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     else
       _other ->
         {:error,
-         dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
-           provider: provider
-         )}
+         dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}
     end
   end
 
@@ -84,8 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   This is the metered/cached discovery core, used both by
   `discover_calendars_for_credentials/5` (not-yet-persisted credentials) and
   by `discover_caldav_calendar_paths/1` (the creation-flow's opportunistic
-  pre-discovery). `Tymeslot.Integrations.Calendar.Connection.validate_connection/2`
-  also calls it directly for its CalDAV branch.
+  pre-discovery).
 
   ## Parameters
   - `provider` - The provider type (any atom returned by
@@ -95,6 +92,9 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     - `:force_refresh` - bypass the cache
     - `:actor` - required. Charged only on a real cache miss (i.e. only
       when discovery actually reaches the network), never on a cache hit.
+    - `:skip_breaker` - reach the server even while its host breaker is
+      open. Only for a discovery a person asked for, which is rate-limited
+      already and is how a recovered server's breaker gets closed.
 
   ## Returns
   - `{:ok, calendars}` - List of discovered calendars
@@ -123,13 +123,13 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   def discover_calendars(provider_atom, config, opts) do
     case Keyword.fetch(opts, :actor) do
       {:ok, actor} ->
-        cache_key = DiscoveryService.build_cache_key(provider_atom, config)
+        cache_key = DiscoveryService.build_cache_key(provider_atom, config, actor)
         force_refresh = Keyword.get(opts, :force_refresh, false)
 
         probe_and_cache(cache_key, actor, force_refresh, fn ->
           ErrorHandler.with_classified_error_handling(
             provider_atom,
-            fn -> dispatch_discovery(provider_atom, config) end,
+            fn -> dispatch_discovery(provider_atom, with_breaker_opt(config, opts)) end,
             %{operation: "calendar_discovery"}
           )
         end)
@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         {:error,
          {:unknown,
           dgettext(
-            "dashboard_calendar_providers",
+            "integrations_calendar",
             "Calendar discovery could not be attributed to your account. Please try again."
           )}}
     end
@@ -181,7 +181,8 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
              {:ok, calendars} <-
                (case discover_calendars(provider_atom, client_config,
                        force_refresh: force_refresh,
-                       actor: Keyword.fetch!(opts, :actor)
+                       actor: Keyword.fetch!(opts, :actor),
+                       skip_breaker: Keyword.get(opts, :skip_breaker, false)
                      ) do
                   {:ok, cals} -> {:ok, cals}
                   {:error, reason} -> {:error, {:discovery, reason}}
@@ -200,9 +201,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:error, :unknown_provider} ->
         {:error,
          {:config,
-          dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
-            provider: provider
-          )}}
+          dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}}
     end
   end
 
@@ -259,7 +258,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
          %{
            discovery:
              dgettext(
-               "dashboard_calendar_providers",
+               "integrations_calendar",
                "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
              )
          }}
@@ -312,7 +311,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:error,
        {:unknown,
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Calendar discovery could not be attributed to your account. Please try again."
         )}}
 
@@ -343,9 +342,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     do:
       {:error,
        {:config,
-        dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
-          provider: provider
-        )}}
+        dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}}
 
   defp resolve_provider_atom(p) do
     case ProviderRegistry.validate_provider(p) do
@@ -370,7 +367,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   # own config-building (some decrypt, Nextcloud also standardizes) out of
   # this module.
   #
-  # Cache key is the integration's id rather than username@host: every
+  # Cache key is the integration's id rather than its credentials: every
   # caller here always passes `force_refresh: true` (a "refresh calendar
   # list" always wants a fresh network fetch), so the cache is invalidated
   # before every compute and only ever coalesces truly concurrent calls for
@@ -460,6 +457,14 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   # takes the config map itself. Piping an EWS `new/1` into
   # `discover_calendars/1` would hand it a tuple, so the two are dispatched
   # apart rather than through one pipeline that happens to fit only one of them.
+  # `:skip_breaker` rides on the config into the client each family builds,
+  # since the providers' `discover_calendars/1` take no options.
+  defp with_breaker_opt(config, opts) do
+    if Keyword.get(opts, :skip_breaker, false),
+      do: Map.put(config, :skip_breaker, true),
+      else: config
+  end
+
   defp dispatch_discovery(provider_atom, config) do
     cond do
       ProviderConfig.caldav_based?(provider_atom) ->
@@ -472,7 +477,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
 
       true ->
         {:error,
-         dgettext("dashboard_calendar_providers", "Unsupported provider: %{provider}",
+         dgettext("integrations_calendar", "Unsupported provider: %{provider}",
            provider: provider_atom
          )}
     end
@@ -488,5 +493,5 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   # Everything the choke point can still refuse with bare: `:unattributable`,
   # and an unresolvable provider.
   defp format_discovery_error(_arg),
-    do: dgettext("dashboard_calendar_providers", "Calendar discovery failed")
+    do: dgettext("integrations_calendar", "Calendar discovery failed")
 end

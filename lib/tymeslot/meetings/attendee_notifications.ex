@@ -32,15 +32,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       organises. Called once the event has actually been deleted, never
       before: see its docs.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
-      debounced pipeline. Both take the event, not its id: `meetings` and
-      `provider_calendar_events` number their rows independently, so an id
-      alone does not name an event.
+      debounced pipeline for a provider calendar event. Both take the event,
+      not its id.
 
   The debounced update path is owned by `Dispatcher`. This module does
   not itself know anything about Oban.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
@@ -48,7 +47,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
-  alias Tymeslot.Meetings.MeetingSchema
 
   @type event :: map
   @type attendee ::
@@ -148,7 +146,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       series: scope
     }
 
-    case CalendarScheduler.schedule_event_update_notification(params) do
+    case EmailScheduler.schedule_event_update_notification(params) do
       :ok -> {:ok, :sent}
       {:error, reason} -> {:error, reason}
     end
@@ -296,7 +294,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
     attendees
     |> Enum.map(fn attendee ->
-      CalendarScheduler.schedule_calendar_invitation(
+      EmailScheduler.schedule_calendar_invitation(
         timing
         |> Map.merge(%{
           user_id: user_id_for(event),
@@ -361,7 +359,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   defp event_id(%{id: id}) when is_integer(id), do: id
 
-  defp event_kind(%MeetingSchema{}), do: :meeting
   defp event_kind(%ProviderCalendarEventSchema{}), do: :provider_calendar_event
 
   defp user_id_for(%{organizer_user_id: id}) when is_integer(id), do: id

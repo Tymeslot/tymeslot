@@ -28,7 +28,6 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
     username: @baikal_username,
     password: @baikal_password,
     calendar_paths: [@baikal_calendar_path],
-    verify_ssl: false,
     provider: :caldav
   }
 

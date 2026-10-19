@@ -12,8 +12,6 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProviderTest do
 
   describe "identity" do
     test "declares its provider type, name and bucket" do
-      assert KmeetProvider.provider_type() == :kmeet
-      assert KmeetProvider.display_name() == "kMeet"
       assert KmeetProvider.connection_test_bucket() == :kmeet
     end
   end
@@ -57,14 +55,6 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProviderTest do
                KmeetProvider.create_join_url(room, "Ada", "ada@example.com", "organizer", nil)
 
       assert url == room.meeting_url
-    end
-  end
-
-  describe "valid_meeting_url?/1" do
-    test "accepts a kMeet room URL and rejects a non-HTTP one or one with no room" do
-      assert KmeetProvider.valid_meeting_url?("https://kmeet.infomaniak.com/abc")
-      refute KmeetProvider.valid_meeting_url?("ftp://kmeet.infomaniak.com/abc")
-      refute KmeetProvider.valid_meeting_url?("https://kmeet.infomaniak.com")
     end
   end
 

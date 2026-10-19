@@ -9,7 +9,8 @@ defmodule Tymeslot.Polls.Voting do
   than trusting client-supplied ids.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Auth
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Polls
 
   alias Tymeslot.Polls.{
@@ -33,17 +34,16 @@ defmodule Tymeslot.Polls.Voting do
   identity and previous votes, at the cost of not distinguishing two people who
   share an address.
 
-  Returns `{:error, :voting_closed}` when voting has closed and
-  `{:error, :poll_full}` once the participant cap is reached.
+  Returns `{:error, :voting_closed}` when voting has closed, or when the
+  poll's host is pending account deletion, and `{:error, :poll_full}` once
+  the participant cap is reached.
   """
   @spec register_participant(PollSchema.t(), map()) ::
           {:ok, PollParticipantSchema.t()}
           | {:error, :voting_closed | :poll_full | Ecto.Changeset.t()}
   def register_participant(poll, attrs) do
-    if Polls.voting_open?(poll) do
+    with :ok <- ensure_open(poll) do
       register_open(poll, attrs)
-    else
-      {:error, :voting_closed}
     end
   end
 
@@ -59,9 +59,9 @@ defmodule Tymeslot.Polls.Voting do
   An empty `votes_map` is a no-op that returns the participant without stamping
   `voted_at`, the participant has not yet expressed anything.
 
-  Returns `{:error, :voting_closed}`, `{:error, :unknown_participant}`,
-  `{:error, :invalid_slot}`, or `{:error, :invalid_response}` on the respective
-  failure.
+  Returns `{:error, :voting_closed}` (also while the poll's host is pending
+  account deletion), `{:error, :unknown_participant}`, `{:error, :invalid_slot}`,
+  or `{:error, :invalid_response}` on the respective failure.
   """
   @spec cast_votes(PollSchema.t(), String.t(), %{optional(Ecto.UUID.t()) => String.t() | atom()}) ::
           {:ok, PollParticipantSchema.t()}
@@ -154,8 +154,12 @@ defmodule Tymeslot.Polls.Voting do
 
   # --- Vote casting helpers ---
 
-  defp ensure_open(poll) do
-    if Polls.voting_open?(poll), do: :ok, else: {:error, :voting_closed}
+  # A voting page opened before its host asked to delete their account can
+  # still submit; the poll is about to go, so it takes no more names or votes.
+  defp ensure_open(%PollSchema{user_id: user_id} = poll) do
+    if Polls.voting_open?(poll) and not Auth.deletion_pending?(user_id),
+      do: :ok,
+      else: {:error, :voting_closed}
   end
 
   defp resolve_participant(poll, token) do
@@ -247,7 +251,7 @@ defmodule Tymeslot.Polls.Voting do
   # transaction above.
   defp maybe_notify_all_voted(poll) do
     if all_participants_voted?(poll) do
-      PollScheduler.schedule_all_voted_nudge(poll)
+      EmailScheduler.schedule_poll_all_voted_nudge(poll)
     end
 
     :ok

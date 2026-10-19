@@ -20,17 +20,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
       on_cancel={JS.push("close_settings", target: @myself)}
       size={:small}
     >
-      <:header>{dgettext("dashboard_calendar_events", "Calendar Settings")}</:header>
+      <:header>{dgettext("dashboard_calendar_settings", "Calendar Settings")}</:header>
 
       <div class="space-y-5">
         <%!-- First day of week --%>
         <div class="flex items-center justify-between">
           <div>
             <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "First day of week")}
+              {dgettext("dashboard_calendar_settings", "First day of week")}
             </p>
             <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_events", "Start weeks on Monday or Sunday")}
+              {dgettext("dashboard_calendar_settings", "Start weeks on Monday or Sunday")}
             </p>
           </div>
           <.segmented_control
@@ -40,10 +40,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             on_change="update_week_start"
             param="option"
             target={@myself}
-            aria_label={dgettext("dashboard_calendar_events", "First day of week")}
+            aria_label={dgettext("dashboard_calendar_settings", "First day of week")}
           >
-            <:option value={:monday} label={dgettext("dashboard_calendar_events", "Mon")} />
-            <:option value={:sunday} label={dgettext("dashboard_calendar_events", "Sun")} />
+            <:option value={:monday} label={dgettext("dashboard_calendar_settings", "Mon")} />
+            <:option value={:sunday} label={dgettext("dashboard_calendar_settings", "Sun")} />
           </.segmented_control>
         </div>
 
@@ -51,10 +51,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <div class="flex items-center justify-between">
           <div>
             <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "Time format")}
+              {dgettext("dashboard_calendar_settings", "Time format")}
             </p>
             <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_events", "12-hour or 24-hour clock")}
+              {dgettext("dashboard_calendar_settings", "12-hour or 24-hour clock")}
             </p>
           </div>
           <.segmented_control
@@ -64,10 +64,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             on_change="update_time_format"
             param="option"
             target={@myself}
-            aria_label={dgettext("dashboard_calendar_events", "Time format")}
+            aria_label={dgettext("dashboard_calendar_settings", "Time format")}
           >
-            <:option value={:"12h"} label={dgettext("dashboard_calendar_events", "12h")} />
-            <:option value={:"24h"} label={dgettext("dashboard_calendar_events", "24h")} />
+            <:option value={:"12h"} label={dgettext("dashboard_calendar_settings", "12h")} />
+            <:option value={:"24h"} label={dgettext("dashboard_calendar_settings", "24h")} />
           </.segmented_control>
         </div>
 
@@ -75,10 +75,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <div class="flex items-center justify-between">
           <div>
             <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "Default view")}
+              {dgettext("dashboard_calendar_settings", "Default view")}
             </p>
             <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_events", "Also switches the current view")}
+              {dgettext("dashboard_calendar_settings", "Also switches the current view")}
             </p>
           </div>
           <.segmented_control
@@ -88,11 +88,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             on_change="update_default_view"
             param="option"
             target={@myself}
-            aria_label={dgettext("dashboard_calendar_events", "Default view")}
+            aria_label={dgettext("dashboard_calendar_settings", "Default view")}
           >
-            <:option value={:day} label={dgettext("dashboard_calendar_events", "Day")} />
-            <:option value={:week} label={dgettext("dashboard_calendar_events", "Week")} />
-            <:option value={:month} label={dgettext("dashboard_calendar_events", "Month")} />
+            <:option value={:day} label={dgettext("dashboard_calendar_settings", "Day")} />
+            <:option value={:week} label={dgettext("dashboard_calendar_settings", "Week")} />
+            <:option value={:month} label={dgettext("dashboard_calendar_settings", "Month")} />
           </.segmented_control>
         </div>
 
@@ -100,10 +100,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <div class="flex items-center justify-between">
           <div>
             <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "Week numbers")}
+              {dgettext("dashboard_calendar_settings", "Week numbers")}
             </p>
             <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_events", "Show ISO week numbers in month view")}
+              {dgettext("dashboard_calendar_settings", "Show ISO week numbers in month view")}
             </p>
           </div>
           <StatusSwitch.status_switch
@@ -119,10 +119,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <div class="flex items-center justify-between">
           <div>
             <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "Show weekends")}
+              {dgettext("dashboard_calendar_settings", "Show weekends")}
             </p>
             <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_events", "Display Saturday and Sunday in week view")}
+              {dgettext("dashboard_calendar_settings", "Display Saturday and Sunday in week view")}
             </p>
           </div>
           <StatusSwitch.status_switch
@@ -138,11 +138,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <div class="flex items-center justify-between">
           <div>
             <p class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "Desktop reminders")}
+              {dgettext("dashboard_calendar_settings", "Desktop reminders")}
             </p>
             <p class="text-token-xs text-tymeslot-400">
               {dgettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_settings",
                 "Show browser notifications before events while Tymeslot is open"
               )}
             </p>

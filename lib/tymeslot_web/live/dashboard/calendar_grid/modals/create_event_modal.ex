@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   import TymeslotWeb.Components.UI.LocaleButton
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
@@ -39,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       # the mode toggle and the picker follow what can be written to, not what
       # is connected.
       |> assign(:targets, Calendar.writable_integrations(assigns.integrations))
+      |> assign(:repeatable, repeatable?(assigns.creating_event, assigns.integrations))
       |> assign(
         :reminder_picker,
         assigns.creating_event[:meeting_reminders] || ReminderPickerState.new()
@@ -345,10 +348,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Repeat --%>
-      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={!@meeting_mode and @repeatable} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={@creating_event[:recurrence_rule]}
           timezone={@user_timezone}
+          start={recurrence_start(@creating_event, @user_timezone)}
+          notice={repeat_notice(@creating_event, @integrations, @user_timezone)}
           myself={@myself}
           change_event="update_create_recurrence"
         />
@@ -481,5 +486,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </:footer>
     </.modal>
     """
+  end
+
+  # Exchange and other calendars the grid writes no repeat rule to offer none.
+  defp repeatable?(creating_event, integrations) do
+    case Enum.find(integrations, &(&1.id == creating_event[:integration_id])) do
+      nil -> true
+      integration -> CalendarGrid.repeatable_provider?(integration.provider)
+    end
+  end
+
+  # Why the calendar picked would refuse the repeat rule (Outlook's
+  # patterns), said while the pattern is chosen; the save refuses it too.
+  defp repeat_notice(creating_event, integrations, timezone) do
+    with rule when is_binary(rule) <- creating_event[:recurrence_rule],
+         %{provider: provider} <-
+           Enum.find(integrations, &(&1.id == creating_event[:integration_id])),
+         start_date = creating_event |> recurrence_start(timezone) |> start_date(),
+         reason when is_atom(reason) and reason != nil <-
+           CalendarGrid.repeat_refusal(provider, rule, start_date, timezone) do
+      RecurrenceEdit.refusal_message(reason)
+    else
+      _accepted -> nil
+    end
+  end
+
+  defp start_date(%DateTime{} = start), do: DateTime.to_date(start)
+  defp start_date(%Date{} = start), do: start
+
+  # The start a repeat pattern is anchored to: the form's date, at its start
+  # time in the organiser's zone for a timed event.
+  defp recurrence_start(creating_event, timezone) do
+    date =
+      case Date.from_iso8601(creating_event[:date] || "") do
+        {:ok, date} -> date
+        {:error, _reason} -> Date.utc_today()
+      end
+
+    if creating_event[:all_day] do
+      date
+    else
+      time = Time.new!(creating_event[:start_hour] || 0, creating_event[:start_minute] || 0, 0)
+
+      case DateTime.new(date, time, timezone) do
+        {:ok, start} -> start
+        {:ambiguous, first, _second} -> first
+        {:gap, _before, after_gap} -> after_gap
+        {:error, _reason} -> DateTime.new!(date, time, "Etc/UTC")
+      end
+    end
   end
 end

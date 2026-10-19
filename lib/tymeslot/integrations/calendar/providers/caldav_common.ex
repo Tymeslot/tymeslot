@@ -8,16 +8,26 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
+
+  alias Tymeslot.Integrations.Calendar.CalDAV.{
+    Base,
+    Client,
+    Discovery,
+    Events,
+    Family,
+    Http,
+    UrlBuilder
+  }
+
+  alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Shared.EventSearch
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Utils.UriUtils
-
-  require Logger
 
   @type caldav_client :: Client.t()
 
@@ -48,7 +58,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
         password: config[:password],
         calendar_paths: calendar_paths,
         writable_calendar_paths: config[:writable_calendar_paths],
-        verify_ssl: true
+        free_busy_paths: config[:free_busy_paths],
+        skip_breaker: config[:skip_breaker] || false
       },
       provider: provider
     )
@@ -58,8 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Builds the client struct downstream Base.* functions run on.
 
   Accepts atom- or string-keyed config with `:base_url`, `:username`,
-  `:password`, `:calendar_paths`, `:writable_calendar_paths` and
-  `:verify_ssl`; takes the provider from
+  `:password`, `:calendar_paths`, and `:writable_calendar_paths`; takes the provider from
   `opts`. This is the only place a `Client` is constructed, which is what
   makes the password's inspect-time redaction hold for every CalDAV-family
   provider.
@@ -76,23 +86,19 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       writable_calendar_paths:
         Map.get(config, :writable_calendar_paths) ||
           Map.get(config, "writable_calendar_paths") || [],
-      verify_ssl: Map.get(config, :verify_ssl, true),
+      free_busy_paths: Map.get(config, :free_busy_paths) || [],
+      skip_breaker: Map.get(config, :skip_breaker, false),
       provider: provider
     }
   end
 
   # The provider is a string on the integration row and an atom on the client,
-  # so the mapping belongs here, next to the client it feeds. Anything outside
-  # the CalDAV family never reaches this module and falls back to plain
-  # `:caldav`.
-  @provider_atoms %{
-    "radicale" => :radicale,
-    "nextcloud" => :nextcloud,
-    "zimbra" => :zimbra,
-    "mailbox_org" => :mailbox_org,
-    "apple" => :apple,
-    "baikal" => :baikal
-  }
+  # so the mapping belongs here, next to the client it feeds. A generic
+  # `"caldav"` row is not in it: its client takes the server type detected
+  # from the URL, as every other generic CalDAV client does, so that its
+  # calls trip the host breaker a reset closes
+  # (`CalendarCircuitBreaker.breaker_key/2`).
+  @provider_atoms Family.client_providers()
 
   @doc """
   Builds a client from a stored calendar integration row.
@@ -104,11 +110,17 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
         base_url: integration.base_url,
         username: integration.username,
         password: integration.password,
-        calendar_paths: integration.calendar_paths,
-        verify_ssl: Map.get(integration, :verify_ssl, true)
+        calendar_paths: integration.calendar_paths
       },
-      provider: Map.get(@provider_atoms, integration.provider, :caldav)
+      provider: client_provider(integration)
     )
+  end
+
+  defp client_provider(%{provider: provider, base_url: base_url}) do
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, provider_atom} -> provider_atom
+      :error -> CalDAVProvider.client_provider(base_url)
+    end
   end
 
   @doc """
@@ -222,9 +234,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   @doc """
   Fetch events for a given time window across all configured calendars in parallel.
+
+  Answers `{:error, %FetchAggregate.Outcome{}}` when some calendars were read
+  and at least one could not be, and the first error when none could be.
   """
   @spec get_events(caldav_client(), DateTime.t(), DateTime.t()) ::
-          {:ok, list()} | {:error, term()}
+          {:ok, list()} | {:error, Outcome.t()} | {:error, term()}
   def get_events(client, start_time, end_time) do
     paths = get_calendar_paths(client)
 
@@ -240,7 +255,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       Enum.map(paths, fn path ->
         {path,
          Tasks.async(Tymeslot.TaskSupervisor, fn ->
-           Events.fetch_events(client, path, start_time, end_time)
+           fetch_path(client, path, start_time, end_time)
          end)}
       end)
 
@@ -255,6 +270,14 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     handle_fetch_results(successes, errors)
   end
 
+  # A collection shared as busy times only answers calendar-query with 403;
+  # its busy periods come through the free-busy-query REPORT instead.
+  defp fetch_path(client, path, start_time, end_time) do
+    if path in Map.get(client, :free_busy_paths, []),
+      do: Events.fetch_free_busy(client, path, start_time, end_time),
+      else: Events.fetch_events(client, path, start_time, end_time)
+  end
+
   # If every calendar path errored, surface the first error — callers must be
   # able to distinguish "no events in range" from "reads silently failed". A
   # dropped error here was the cause of today's "event not found after create"
@@ -265,33 +288,46 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     {:error, reason}
   end
 
-  # At least one path succeeded. Log any failures for visibility, then return
-  # the union of successful results. This keeps degraded multi-calendar
-  # setups working while still making errors observable in logs.
+  # At least one path succeeded. A path that could not be read has unknown
+  # busy time, not none, so any hard failure answers the per-path `Outcome`
+  # rather than the union of the readable calendars: offering slots from
+  # those alone would hide conflicts on the unreadable one. The policy is
+  # `FetchAggregate.require_complete/1`'s, applied once at the availability
+  # boundary, as for Google and Outlook (`MultiCalendarFetch`).
   #
-  # We deliberately don't expand recurrences here — `event_processor.normalise_events`
-  # does its own expansion downstream. Expanding in both places produces N×N
-  # occurrences because each first-pass occurrence still carries the master
-  # RRULE and gets re-expanded.
+  # A collection the server answers 404 for is confirmed absent, not
+  # unreadable: its owner deleted it, so it contributes no events and no
+  # failure. The sync path deselects such a calendar on its own. Any other
+  # refusal, a 410 included (the REPORT has no meaning of its own for one,
+  # so it arrives as `{:unexpected_status, 410}`), fails closed.
+  #
+  # We deliberately don't expand recurrences here: the caller expands them,
+  # through `ICalNormaliser` on both the sync and the live availability read
+  # (`EventsRead`). Expanding in both places produces N×N occurrences because
+  # each first-pass occurrence still carries the master RRULE and gets
+  # re-expanded.
   defp handle_fetch_results(successes, errors) do
-    Enum.each(errors, fn {path, {:error, reason}} ->
-      Logger.warning("CalDAV fetch failed for one calendar path",
-        path: path,
-        reason: LogFormat.reason(reason)
-      )
-    end)
-
-    # De-duplicated on the pair that identifies a VEVENT, not on the UID alone:
-    # a recurring event's overrides share the master's UID by RFC 5545, so
-    # keying on the UID collapsed a whole series back to one event and undid
-    # the parser keeping them.
-    events =
-      successes
-      |> Enum.flat_map(fn {_path, {:ok, evs}} -> evs end)
-      |> Enum.uniq_by(&{&1.uid, &1[:recurrence_id]})
-
-    {:ok, events}
+    (successes ++ errors)
+    |> FetchAggregate.collect(&classify_path_result/1)
+    |> dedupe_outcome_events()
+    |> to_result()
   end
+
+  defp classify_path_result({_path, {:ok, events}}), do: {:ok, events}
+
+  defp classify_path_result({_path, {:error, :not_found}}), do: :absent
+
+  defp classify_path_result({path, {:error, reason}}), do: {:error, path, reason}
+
+  # De-duplicated on the pair that identifies a VEVENT, not on the UID alone:
+  # a recurring event's overrides share the master's UID by RFC 5545, so
+  # keying on the UID collapsed a whole series back to one event and undid
+  # the parser keeping them.
+  defp dedupe_outcome_events(%Outcome{events: events} = outcome),
+    do: %{outcome | events: Enum.uniq_by(events, &{&1.uid, &1[:recurrence_id]})}
+
+  defp to_result(%Outcome{failed: []} = outcome), do: {:ok, outcome.events}
+  defp to_result(%Outcome{} = outcome), do: {:error, outcome}
 
   @doc """
   Create an event in the calendar the payload asks for, or in the client's own
@@ -542,13 +578,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   # Same msgids the provider modules themselves use, so the message a user
   # sees does not depend on which of the two paths produced it.
   defp success_message(:nextcloud),
-    do: dgettext("dashboard_calendar_providers", "Nextcloud connection successful")
+    do: dgettext("integrations_calendar", "Nextcloud connection successful")
 
   defp success_message(:radicale),
-    do: dgettext("dashboard_calendar_providers", "Radicale connection successful")
+    do: dgettext("integrations_calendar", "Radicale connection successful")
 
   defp success_message(_arg),
-    do: dgettext("dashboard_calendar_providers", "CalDAV connection successful")
+    do: dgettext("integrations_calendar", "CalDAV connection successful")
 
   # Matches on the fields rather than on `%Client{}`: the redaction guarantee
   # comes from `build_client/2` constructing the struct, not from strictness

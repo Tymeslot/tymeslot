@@ -125,8 +125,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # resolves it exactly once, in `ReschedulePin`. The slug in the URL is not
   # consulted for one: two types can share a duration, and a stale reschedule
   # link can name a different type outright. Only when the pin comes back empty
-  # — not a reschedule, or its type has since been deleted — does the slug
-  # decide, which is what a fresh booking uses.
+  # (not a reschedule, a whole booking whose type has since been deleted, or a
+  # seat on another organiser's meeting) does the slug decide, which is what
+  # a fresh booking uses.
   defp resolve_entry_meeting_type(socket, params) do
     if ReschedulePin.pinned?(socket) do
       {:ok, socket}
@@ -188,10 +189,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     |> maybe_subscribe_to_group_seats()
     |> BookingLocation.assign_for_meeting_type(
       meeting_type,
-      ThemeFlow.reschedule_location_choice(
-        socket.assigns[:reschedule_meeting_uid],
-        socket.assigns[:organizer_user_id]
-      )
+      ThemeFlow.reschedule_location_choice(socket.assigns[:reschedule_context])
     )
     |> OrganizerHelpers.assign_booking_window()
   end
@@ -224,16 +222,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # A reschedule re-enters the flow as an ordinary booking, so without this the
   # booker is asked the organiser's questions again from blank, having already
   # answered them — while their name, email and message are prefilled right
-  # beside. `Tymeslot.Scheduling.ThemeFlow.reschedule_answers/3` decides which
+  # beside. `Tymeslot.Scheduling.ThemeFlow.reschedule_answers/2` decides which
   # answers may be carried; the step itself is still shown, so the booker sees
   # what will be sent and can change it.
   defp init_questions_engine(socket, definitions) do
-    carried =
-      ThemeFlow.reschedule_answers(
-        socket.assigns[:reschedule_meeting_uid],
-        socket.assigns[:organizer_user_id],
-        definitions
-      )
+    carried = ThemeFlow.reschedule_answers(socket.assigns[:reschedule_context], definitions)
 
     definitions
     |> QEngine.init()
@@ -358,20 +351,15 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
 
-    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII
-    # leaks; otherwise from the booking link's fragment, if it carried one
+    # Pre-fill form if rescheduling, from the booking the organiser-scoped
+    # lookup loaded, or for a seat move from the participant's own seat;
+    # otherwise from the booking link's fragment, if it carried one. A
+    # reschedule link whose booking could not be loaded starts blank.
     form_data =
-      case socket.assigns[:reschedule_seat_token] do
-        nil ->
-          ThemeFlow.build_booking_form_data(
-            socket.assigns[:reschedule_meeting_uid],
-            socket.assigns[:organizer_user_id],
-            socket.assigns[:attendee_prefill] || %{}
-          )
-
-        seat_token ->
-          ThemeFlow.build_seat_booking_form_data(seat_token)
-      end
+      ThemeFlow.build_booking_form_data(
+        socket.assigns[:seat_move_context] || socket.assigns[:reschedule_context],
+        fragment_prefill(socket)
+      )
 
     socket
     |> OrganizerHelpers.setup_form_state(form_data, as: :booking)
@@ -380,6 +368,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)
   end
+
+  defp fragment_prefill(%{assigns: %{reschedule_meeting_uid: uid}}) when is_binary(uid), do: %{}
+  defp fragment_prefill(socket), do: socket.assigns[:attendee_prefill] || %{}
 
   @doc """
   Subscribes the booking page to live seat updates for the resolved meeting

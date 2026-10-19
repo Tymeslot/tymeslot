@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Components.MeetingUtilsTest do
     test "handles mixed Time structs and strings" do
       slots = [~T[09:00:00], "10:30"]
 
-      # `Time` structs are formatted via `Display.format_time_for_display/1`,
+      # `Time` structs are formatted in the 12-hour clock (`TimeFormat.format/2`),
       # which always renders 12h AM/PM regardless of locale — only strings
       # pass through as-is.
       assert [%{time: "9:00 AM", seats_left: nil}, %{time: "10:30", seats_left: nil}] =

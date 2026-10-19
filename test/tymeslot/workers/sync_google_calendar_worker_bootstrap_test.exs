@@ -69,6 +69,30 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
     # Retrying this can never succeed. Returning {:error, _} let Oban exhaust
     # five attempts, raise a permanent-failure admin alert, and the stale
     # refresh enqueue a fresh job straight away: an alert every two minutes.
+    test "stores the untranslated reason whatever locale the job runs under" do
+      integration = insert(:calendar_integration, provider: "google", google_sync_token: nil)
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
+      end)
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+
+      assert refreshed.sync_error ==
+               "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
+    end
+
     test "flags for reconnection, emails the owner and discards on bootstrap" do
       integration = insert(:calendar_integration, provider: "google", google_sync_token: nil)
 

@@ -10,13 +10,17 @@ defmodule Tymeslot.FreeBusy do
   calendar is published as busy too.
   """
 
-  alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Availability.{Events, TimeOff}
+  alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.AvailabilityView
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.FreebusyGenerator
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Security.Token
 
   @token_bytes 24
   @default_horizon_days 60
@@ -40,7 +44,7 @@ defmodule Tymeslot.FreeBusy do
     if feed_enabled?(profile) do
       {:ok, profile}
     else
-      ProfileQueries.update_freebusy_token(profile, generate_token())
+      ProfileQueries.update_freebusy_token(profile, Token.generate(@token_bytes))
     end
   end
 
@@ -48,7 +52,7 @@ defmodule Tymeslot.FreeBusy do
   @spec regenerate_token(ProfileSchema.t()) ::
           {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
   def regenerate_token(%ProfileSchema{} = profile),
-    do: ProfileQueries.update_freebusy_token(profile, generate_token())
+    do: ProfileQueries.update_freebusy_token(profile, Token.generate(@token_bytes))
 
   @doc "Disables the feed by clearing the token."
   @spec disable_feed(ProfileSchema.t()) ::
@@ -63,7 +67,7 @@ defmodule Tymeslot.FreeBusy do
   @spec feed(ProfileSchema.t(), keyword()) :: String.t()
   def feed(%ProfileSchema{} = profile, opts \\ []) do
     horizon_days = Keyword.get(opts, :horizon_days, @default_horizon_days)
-    window_start = DateTime.truncate(Keyword.get(opts, :now, DateTime.utc_now()), :second)
+    window_start = DateTime.truncate(Keyword.get_lazy(opts, :now, &Clock.utc_now/0), :second)
     window_end = DateTime.add(window_start, horizon_days, :day)
 
     FreebusyGenerator.generate(
@@ -89,13 +93,15 @@ defmodule Tymeslot.FreeBusy do
     event_intervals =
       integrations
       |> Enum.map(& &1.id)
-      |> CalendarEventQueries.in_range({window_start, window_end})
+      |> CalendarEventQueries.in_range(
+        {window_start, window_end},
+        AvailabilityView.rules(integrations)
+      )
       |> Enum.map(&apply_all_events_busy(&1, all_busy_ids))
       |> Enum.filter(&CalendarEvent.blocking?/1)
-      |> Enum.flat_map(&event_interval/1)
+      |> Enum.flat_map(&event_interval(&1, Profiles.timezone(profile)))
 
-    event_intervals ++
-      TimeOff.busy_intervals(profile.id, profile.timezone, window_start, window_end)
+    event_intervals ++ TimeOff.busy_intervals(profile, window_start, window_end)
   end
 
   # This reads the event cache directly rather than through
@@ -106,31 +112,18 @@ defmodule Tymeslot.FreeBusy do
     if MapSet.member?(all_busy_ids, id), do: CalendarEvent.as_busy(event), else: event
   end
 
-  # Timed events map directly; all-day events span midnight-to-midnight UTC.
-  defp event_interval(%CalendarEvent{
-         all_day: false,
-         start_at: %DateTime{} = s,
-         end_at: %DateTime{} = e
-       }),
-       do: [{s, e}]
-
-  defp event_interval(%CalendarEvent{
-         all_day: true,
-         start_date: %Date{} = sd,
-         end_date: %Date{} = ed
-       }) do
-    [{DateTime.new!(sd, ~T[00:00:00], "Etc/UTC"), DateTime.new!(ed, ~T[00:00:00], "Etc/UTC")}]
+  # An all-day event spans the owner's local day, as it does on the booking
+  # page. A profile with no timezone is read as UTC, as its time off is.
+  defp event_interval(%CalendarEvent{} = event, timezone) do
+    case Events.to_interval(event, timezone) do
+      {:ok, interval} -> [interval]
+      :error -> []
+    end
   end
-
-  defp event_interval(_other), do: []
 
   defp organizer_email(%ProfileSchema{user: %{email: email}})
        when is_binary(email) and email != "",
        do: email
 
   defp organizer_email(_profile), do: nil
-
-  defp generate_token do
-    @token_bytes |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
-  end
 end

@@ -17,9 +17,9 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitNotOrganiserTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!

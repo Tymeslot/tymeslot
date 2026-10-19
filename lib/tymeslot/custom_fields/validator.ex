@@ -6,6 +6,8 @@ defmodule Tymeslot.CustomFields.Validator do
   normalised value on success.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.FieldValidators
   alias Tymeslot.Security.FieldValidators.MultiSelectValidator
   alias Tymeslot.Security.FieldValidators.NoteAckValidator
@@ -34,7 +36,7 @@ defmodule Tymeslot.CustomFields.Validator do
       "multi_select" -> validate_multi_select(value, definition, opts)
       "yes_no" -> chain3(FieldValidators.YesNoValidator, value, definition, opts)
       "note" -> validate_note(value, definition, opts)
-      _other -> {:error, "Unknown field type"}
+      _other -> {:error, dgettext("errors", "Unknown field type")}
     end
   end
 
@@ -100,7 +102,7 @@ defmodule Tymeslot.CustomFields.Validator do
 
   defp bound_text(value) when is_binary(value) do
     if String.length(value) > @max_answer_length,
-      do: {:error, "Answer is too long"},
+      do: {:error, dgettext("errors", "Answer is too long")},
       else: {:ok, value}
   end
 

@@ -36,19 +36,34 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations
   alias Tymeslot.Infrastructure.ErrorTracking.Throttle
   alias Tymeslot.Infrastructure.Logging.{FileSink, LogFormat, MetadataRedactor}
-  alias Tymeslot.Integrations.Calendar.TokenRefreshJob
-  alias Tymeslot.Integrations.{HealthCheck, Telemetry}
+  alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Integrations.Shared.Lock
+  alias Tymeslot.Integrations.Telemetry
   alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
   alias Tymeslot.Payments.Webhooks.SecretCheck
+  alias Tymeslot.Security.CredentialReencryption.KeyReport
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Telegram.BotSetup
   alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Plugs.AdditionalDashboardPlugs
   alias TymeslotWeb.Router
 
+  # Children the test environment does without: periodic schedulers whose
+  # timers would fire into unrelated tests.
+  @not_started_in_test [PoolPressureMonitor]
+
   @impl Application
   def start(_type, _args) do
+    # Checked before anything else, so that an unusable key stops the boot
+    # with a log line saying how to fix it rather than a crash report.
+    case Encryption.check_config() do
+      :ok -> start_application()
+      {:error, error} -> {:error, {:invalid_encryption_config, error.reason}}
+    end
+  end
+
+  defp start_application do
     validate_config!()
 
     # Install the global Logger metadata redactor before the first log line
@@ -86,6 +101,8 @@ defmodule Tymeslot.Application do
     # Surface dropped/failed booking-analytics page-view writes in the logs.
     AnalyticsTelemetry.attach_default_handler()
 
+    test? = Application.get_env(:tymeslot, :environment) == :test
+
     # Base children that are always started
     base_children = [
       TymeslotWeb.Telemetry,
@@ -93,10 +110,15 @@ defmodule Tymeslot.Application do
       # that no report can reach the database unthrottled once it is up.
       Throttle,
       Tymeslot.Repo,
+      # Apply DB-backed admin overrides on top of config-layer values before
+      # anything that serves requests or runs jobs starts.
+      AppSettings.loader_child_spec(),
       {DNSCluster, query: Application.get_env(:tymeslot, :dns_cluster_query) || :ignore},
       {PubSub, name: Tymeslot.PubSub},
       # Start the Finch HTTP client (used by Req for all HTTP requests).
       {Finch, name: Tymeslot.Finch, pools: %{default: FinchPool.default_options()}},
+      # Stops the per-destination pools pinned requests leave behind
+      FinchPool.Janitor,
       # Start token refresh lock manager
       {Lock, []},
       # Task Supervisor for async operations
@@ -107,60 +129,37 @@ defmodule Tymeslot.Application do
        max_children: Application.get_env(:tymeslot, :error_tracking_max_concurrent_reports, 10)}
     ]
 
-    # Additional children for non-test environments
-    production_children =
-      if Application.get_env(:tymeslot, :environment) != :test do
+    # Services the request path and background jobs both rely on. One list
+    # for every environment, so the order tests run against is the order
+    # production starts in; the few children tests do without are filtered
+    # out below rather than kept in a second hand-maintained list.
+    #
+    # Oban comes after everything its jobs call (caches, the rate limiter,
+    # the circuit breakers): its queues start fetching during its own init,
+    # and children stop in reverse order, so placed here it starts after them
+    # and stops before them, and no job runs against a dependency that is
+    # not up.
+    service_children =
+      Enum.reject(
         [
-          # Start health check service
-          HealthCheck,
-          # Start dashboard cache GenServer
           Tymeslot.Infrastructure.DashboardCache,
-          # Start availability cache GenServer
           Tymeslot.Infrastructure.AvailabilityCache,
-          # Start webhook idempotency cache
+          # Webhook idempotency cache
           Tymeslot.Payments.Webhooks.IdempotencyCache,
-          # Start booking-analytics dashboard cache
+          # Booking-analytics dashboard cache
           Tymeslot.Analytics.MetricsCache,
-          # Start calendar discovery cache
           Tymeslot.Integrations.Calendar.Shared.DiscoveryCache,
-          # Start calendar request coalescer
-          Tymeslot.Integrations.Calendar.RequestCoalescer,
-          # Start Oban for background job processing
-          {Oban, oban_config()},
-          # Start Hammer-backed rate limiter (ETS sliding window)
+          Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer,
+          # Rate limiter (sliding log in ETS)
           {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
-          # Own the account lockout ETS table (AccountLockout is a plain module)
-          Tymeslot.Security.AccountLockout.TableOwner,
-          # Start circuit breaker supervisor
           Tymeslot.Infrastructure.CircuitBreakerSupervisor,
+          # Background jobs (manual testing mode in tests)
+          {Oban, oban_config()},
           # Alert when queries keep waiting for a database connection
           PoolPressureMonitor
-        ]
-      else
-        # Only start essential services for tests
-        [
-          # Start dashboard cache GenServer
-          Tymeslot.Infrastructure.DashboardCache,
-          # Start availability cache GenServer
-          Tymeslot.Infrastructure.AvailabilityCache,
-          # Start webhook idempotency cache
-          Tymeslot.Payments.Webhooks.IdempotencyCache,
-          # Start booking-analytics dashboard cache (ETS table needed in tests too)
-          Tymeslot.Analytics.MetricsCache,
-          # Start calendar discovery cache (ETS table needed in tests too)
-          Tymeslot.Integrations.Calendar.Shared.DiscoveryCache,
-          # Start Hammer-backed rate limiter (ETS sliding window)
-          {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
-          # Own the account lockout ETS table (AccountLockout is a plain module)
-          Tymeslot.Security.AccountLockout.TableOwner,
-          # Start Oban for background job processing (in manual mode for tests)
-          {Oban, oban_config()},
-          # Start circuit breaker supervisor (needed for some tests)
-          Tymeslot.Infrastructure.CircuitBreakerSupervisor,
-          # Start calendar request coalescer (needed for calendar tests)
-          Tymeslot.Integrations.Calendar.RequestCoalescer
-        ]
-      end
+        ],
+        &(test? and &1 in @not_started_in_test)
+      )
 
     # Interactive dev calendar rule store. Started only when opted in via
     # config/dev.exs (DEV_CALENDAR / DEV_EMPTY_CALENDAR); the module is compiled
@@ -172,7 +171,7 @@ defmodule Tymeslot.Application do
 
     children =
       base_children ++
-        production_children ++
+        service_children ++
         dev_children ++
         [
           # Guardians that finish the calendar grid's queued writes when the
@@ -193,11 +192,6 @@ defmodule Tymeslot.Application do
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
         Logger.info("Tymeslot application started successfully", pid: LogFormat.reason(pid))
-
-        # Apply DB-backed admin overrides on top of config-layer values.
-        # Must run after Repo is started; safe in test mode (the singleton row
-        # has all nils on a fresh test DB, so load!/0 is effectively a no-op).
-        AppSettings.load!()
 
         if Application.get_env(:tymeslot, :environment) != :test do
           check_deployment_config()
@@ -298,7 +292,8 @@ defmodule Tymeslot.Application do
     if Application.get_env(:tymeslot, :environment) != :test do
       oban_config = Application.get_env(:tymeslot, Oban, [])
 
-      ObanCron.warn_on_missing_workers(oban_config)
+      # Checked as Oban will run it, with the crontab filled in.
+      oban_config |> ObanCron.extend() |> ObanCron.warn_on_missing_workers()
       ObanRescue.warn_on_unsafe_lifeline(oban_config)
     end
 
@@ -309,15 +304,19 @@ defmodule Tymeslot.Application do
     # start with one that could not run, rather than failing at first use.
     Router.validate_additional_hooks!()
     AdditionalDashboardPlugs.validate_config!()
+
+    # The integration health alert thresholds are read by an hourly job; a
+    # value it cannot run on is refused here rather than at every run.
+    Alerting.validate_config!()
   end
 
   # The startup checks that only work once the rest of the tree is up: the
-  # mailer credential probe needs Tymeslot.Finch, the invalid-index report
-  # needs Tymeslot.Repo. Both are supervised tasks appended after every other
-  # child for that reason, and both are skipped in test.
+  # mailer credential probe needs Tymeslot.Finch, the invalid-index report and
+  # the retired-key check need Tymeslot.Repo. All are supervised tasks appended
+  # after every other child for that reason, and all are skipped in test.
   @spec startup_check_children() :: [Supervisor.child_spec()]
   defp startup_check_children do
-    mailer_health_check_children() ++ index_health_children()
+    mailer_health_check_children() ++ index_health_children() ++ key_check_children()
   end
 
   # Runs the mailer startup health check as a supervised, transient Task
@@ -360,6 +359,27 @@ defmodule Tymeslot.Application do
         Supervisor.child_spec(
           {Task, &IndexHealth.check/0},
           id: Tymeslot.Infrastructure.IndexHealthTask,
+          restart: :temporary
+        )
+      ]
+    else
+      []
+    end
+  end
+
+  # Logs an error when stored values sit under a key id the keyring no longer
+  # lists, or, with LEGACY_KEY_RETIRED set, under no configured key at all
+  # (see `KeyReport`). Off the boot path and `:temporary`, like
+  # `index_health_children/0`: the check reads every encrypted column, and a
+  # diagnostic never delays or takes down the application. Skipped in test,
+  # which drives the check directly.
+  @spec key_check_children() :: [Supervisor.child_spec()]
+  defp key_check_children do
+    if Application.get_env(:tymeslot, :environment) != :test do
+      [
+        Supervisor.child_spec(
+          {Task, &KeyReport.warn_about_unreadable_values/0},
+          id: Tymeslot.Security.KeyCheckTask,
           restart: :temporary
         )
       ]
@@ -469,15 +489,12 @@ defmodule Tymeslot.Application do
     base_config
     |> Keyword.put_new(:engine, ObanEngine)
     |> ObanQueues.build()
+    |> ObanCron.extend()
   end
 
   # Schedule periodic jobs using TaskSupervisor for proper error handling
   @spec schedule_periodic_jobs() :: :ok
   defp schedule_periodic_jobs do
-    schedule_supervised("Google Calendar token refresh", fn ->
-      TokenRefreshJob.schedule_periodic_refresh()
-    end)
-
     # Mask the stored error reasons again when the masking rules have
     # changed since the last boot.
     schedule_supervised("ErrorTracker reason re-masking", fn ->

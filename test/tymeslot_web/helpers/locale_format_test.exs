@@ -297,6 +297,27 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
   end
 
+  describe "format_day_of_month/2" do
+    test "writes the first of a month as an ordinal in French, Italian and Portuguese" do
+      assert LocaleFormat.format_day_of_month(1, "fr") == "1er"
+      assert LocaleFormat.format_day_of_month(1, "it") == "1°"
+      assert LocaleFormat.format_day_of_month(1, "pt") == "1º"
+    end
+
+    test "writes the first as a plain number in the other locales" do
+      for locale <- ~w(en de uk cs pl) do
+        assert {locale, LocaleFormat.format_day_of_month(1, locale)} == {locale, "1"}
+      end
+    end
+
+    test "writes every later day as a plain number in every locale" do
+      for locale <- ~w(en de fr it uk cs pl pt), day <- [2, 13, 31] do
+        assert {locale, LocaleFormat.format_day_of_month(day, locale)} ==
+                 {locale, Integer.to_string(day)}
+      end
+    end
+  end
+
   describe "DST transition handling" do
     test "formats time during DST transition - Time type is DST-agnostic" do
       # Time (without timezone) should always format consistently
@@ -319,8 +340,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
     test "returns French short weekday names" do
       weekdays = LocaleFormat.get_weekday_names("fr", :short)
-      assert Enum.at(weekdays, 0) == "dim"
-      assert Enum.at(weekdays, 1) == "lun"
+      assert weekdays == ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."]
     end
 
     test "returns French narrow weekday names" do
@@ -389,7 +409,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
     test "returns Polish short weekday names" do
       weekdays = LocaleFormat.get_weekday_names("pl", :short)
-      assert weekdays == ["niedz", "pon", "wt", "śr", "czw", "pt", "sob"]
+      assert weekdays == ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."]
     end
 
     test "returns Polish narrow weekday names" do

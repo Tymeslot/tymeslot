@@ -10,6 +10,7 @@ defmodule Tymeslot.Notifications.OrchestratorRequestNotificationsTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
   @moduletag :notifications
@@ -19,8 +20,10 @@ defmodule Tymeslot.Notifications.OrchestratorRequestNotificationsTest do
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
-  alias Tymeslot.Webhooks.Dispatcher, as: WebhookDispatcher
+  alias Tymeslot.Webhooks
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.SlackWorker
+  alias Tymeslot.Workers.TelegramWorker
 
   defp held_meeting(attrs \\ %{}) do
     user = insert(:user)
@@ -100,38 +103,80 @@ defmodule Tymeslot.Notifications.OrchestratorRequestNotificationsTest do
   end
 
   describe "Events request-lifecycle dispatch survives a raising channel" do
-    # These three events used to call `Webhooks.Dispatcher.dispatch/2` (and
-    # its Telegram/Slack counterparts) bare, unlike every other event, which
-    # routes through `Events.dispatch_channel/3` and its blanket rescue. A
-    # raising dispatcher (a DB blip, a failed Oban insert) would escape
-    # straight out of `Events.meeting_requested/1` — and, worse,
-    # `Bookings.Create.run_meeting_transaction/3` calls it from inside an
-    # open `Repo.transaction/1` for gated bookings, so the raise would fail
-    # the invitee's booking outright rather than just costing a
-    # notification.
+    # These three events once called the channel dispatchers bare, unlike
+    # every other event. A raising channel (a DB blip, a failed Oban insert)
+    # would escape straight out of `Events.meeting_requested/2` and fail the
+    # caller, a reschedule sending a booking back into the approval gate,
+    # rather than just cost a notification.
+    #
+    # The webhook channel is made to raise with :meck: `Events` fans out
+    # through `ChannelFanout.dispatch/2` without a `:channels` seam, and
+    # nothing a webhook subscription can hold makes scheduling raise.
     setup do
-      unload_if_mocked(WebhookDispatcher)
-      :meck.new(WebhookDispatcher, [:passthrough])
+      setup_config(:tymeslot,
+        telegram_notifications_allowed: true,
+        telegram_shared_bot: false,
+        slack_notifications_allowed: true
+      )
 
-      :meck.expect(WebhookDispatcher, :dispatch, fn _event, _meeting ->
-        raise "simulated webhook dispatch failure"
+      unload_if_mocked(Webhooks)
+      :meck.new(Webhooks, [:passthrough])
+
+      :meck.expect(Webhooks, :schedule_for_event, fn _user_id, _event_type, _meeting ->
+        raise "simulated webhook scheduling failure"
       end)
 
-      on_exit(fn -> unload_if_mocked(WebhookDispatcher) end)
+      on_exit(fn -> unload_if_mocked(Webhooks) end)
 
-      %{meeting: held_meeting()}
+      meeting = held_meeting()
+      user = meeting.organizer_user
+      events = ["meeting.requested", "meeting.declined", "meeting.request_expired"]
+
+      %{
+        meeting: meeting,
+        slack: insert(:slack_integration, user: user, events: events),
+        telegram: insert(:telegram_integration, user: user, events: events)
+      }
     end
 
-    test "meeting_requested/1 does not raise", %{meeting: meeting} do
+    # Webhooks run first, so the channels after a raising one must still
+    # be scheduled.
+    defp assert_other_channels_enqueued(ctx, event_type) do
+      assert_enqueued(
+        worker: SlackWorker,
+        args: %{
+          "integration_id" => ctx.slack.id,
+          "event_type" => event_type,
+          "meeting_id" => ctx.meeting.id
+        }
+      )
+
+      assert_enqueued(
+        worker: TelegramWorker,
+        args: %{
+          "integration_id" => ctx.telegram.id,
+          "event_type" => event_type,
+          "meeting_id" => ctx.meeting.id
+        }
+      )
+    end
+
+    test "meeting_requested/1 does not raise and still reaches Slack and Telegram",
+         %{meeting: meeting} = ctx do
       assert {:ok, :notifications_scheduled} = Events.meeting_requested(meeting)
+      assert_other_channels_enqueued(ctx, "meeting.requested")
     end
 
-    test "meeting_declined/1 does not raise", %{meeting: meeting} do
+    test "meeting_declined/1 does not raise and still reaches Slack and Telegram",
+         %{meeting: meeting} = ctx do
       assert {:ok, :notifications_scheduled} = Events.meeting_declined(meeting)
+      assert_other_channels_enqueued(ctx, "meeting.declined")
     end
 
-    test "meeting_request_expired/1 does not raise", %{meeting: meeting} do
+    test "meeting_request_expired/1 does not raise and still reaches Slack and Telegram",
+         %{meeting: meeting} = ctx do
       assert {:ok, :notifications_scheduled} = Events.meeting_request_expired(meeting)
+      assert_other_channels_enqueued(ctx, "meeting.request_expired")
     end
   end
 end

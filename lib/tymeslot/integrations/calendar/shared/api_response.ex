@@ -13,15 +13,26 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   statuses inline would have to remember `Redactor.redact_and_truncate/1` every
   time; routing through here means it cannot be skipped.
 
+  Throttling and server failure are classified here too, because both
+  providers answer them alike: a 429 is `:rate_limited`, carrying the
+  `Retry-After` seconds as `"retry_after:<n>"` when the header gives them,
+  and a 5xx is `:server_error`. Both are transient; neither is a network
+  failure, and a caller that waits out a rate limit needs to tell them apart.
+
   Providers keep what genuinely differs, passing it as `:custom`: Google
   classifies a 403 from `error.errors[].reason`, Graph from `error.code` plus a
-  `Retry-After` header, and only Graph reports throttling as a bare 429.
+  `Retry-After` header.
   """
 
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Calendar.HTTP
+  alias Tymeslot.Integrations.Shared.OAuth.ErrorParser
+  alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint
+
+  import ErrorParser, only: [is_oauth_error_status: 1]
 
   @typedoc """
   The three-element error shape both calendar API clients return: a machine
@@ -84,6 +95,34 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
     end
   end
 
+  @doc """
+  Maps a token endpoint refresh onto the calendar clients' refresh result.
+
+  A 400 or 401 is the provider refusing the credential, and its message keeps
+  the OAuth error code so the refresh job and the health check can tell a
+  revoked grant (`invalid_grant`) from other refusals. Anything else, a 200
+  that did not decode included, is transient, and missing client credentials
+  are an authentication error.
+  """
+  @spec token_refresh({:ok, TokenEndpoint.tokens()} | {:error, TokenEndpoint.refresh_error()}) ::
+          {:ok, {String.t(), String.t(), DateTime.t()}} | {:error, atom(), String.t()}
+  def token_refresh(
+        {:ok, %{access_token: access, refresh_token: refresh, expires_at: expires_at}}
+      ),
+      do: {:ok, {access, refresh, expires_at}}
+
+  def token_refresh({:error, {:http_error, status, body}}) when is_oauth_error_status(status),
+    do: {:error, :unauthorized, ErrorParser.build_message("Token refresh failed", status, body)}
+
+  def token_refresh({:error, {:http_error, status, _body}}),
+    do: {:error, :network_error, "HTTP #{status}"}
+
+  def token_refresh({:error, {:network_error, reason}}),
+    do: {:error, :network_error, "Network error: #{inspect(reason)}"}
+
+  def token_refresh({:error, {:not_configured, message}}),
+    do: {:error, :authentication_error, message}
+
   defp default_handle({:ok, %{status: status, body: body}}, _label)
        when status in [200, 201, 204] do
     decode_body(body)
@@ -95,6 +134,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
 
   defp default_handle({:ok, %{status: 404}}, _label) do
     {:error, :not_found, "Calendar not found"}
+  end
+
+  defp default_handle({:ok, %{status: 429} = response}, _label) do
+    {:error, :rate_limited, rate_limited_message(response, "Too many requests")}
+  end
+
+  defp default_handle({:ok, %{status: status, body: body}}, label) when status in 500..599 do
+    Logger.warning("Calendar API server error",
+      provider: label,
+      status: status,
+      body: Redactor.redact_and_truncate(body)
+    )
+
+    {:error, :server_error, "HTTP #{status}"}
   end
 
   # The only path that sees an unrecognised provider body, and so the only one
@@ -112,6 +165,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
 
   defp default_handle({:error, reason}, _label) do
     {:error, :network_error, "Network error: #{inspect(reason)}"}
+  end
+
+  @doc """
+  The message a rate-limited `response` carries: `"retry_after:<n>"` when its
+  `Retry-After` header gives a number of seconds (the form
+  `Tymeslot.Workers.RetryHelpers.parse_retry_after_from_message/1` reads),
+  `fallback` otherwise.
+  """
+  @spec rate_limited_message(map(), String.t()) :: String.t()
+  def rate_limited_message(response, fallback) do
+    case Retry.retry_after_seconds(response) do
+      seconds when is_integer(seconds) -> "retry_after:" <> Integer.to_string(seconds)
+      nil -> fallback
+    end
   end
 
   defp decode_body(""), do: {:ok, %{}}

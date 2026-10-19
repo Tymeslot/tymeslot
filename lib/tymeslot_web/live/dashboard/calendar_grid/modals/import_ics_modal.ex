@@ -31,10 +31,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
       on_cancel={JS.push("close_ics_import", target: @myself)}
       size={:medium}
     >
-      <:header>{dgettext("dashboard_calendar_events", "Import events")}</:header>
+      <:header>{dgettext("dashboard_calendar_import", "Import events")}</:header>
       <:subtitle>
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_import",
           "Copy the events of an .ics file into one of your calendars."
         )}
       </:subtitle>
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
       <div data-testid="import-ics-modal" class="space-y-4">
         <.info_box :if={@targets == []} variant={:info}>
           {dgettext(
-            "dashboard_calendar_events",
+            "dashboard_calendar_import",
             "Connect a calendar Tymeslot can write to before importing events."
           )}
         </.info_box>
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           <div class="flex items-center gap-2 text-token-sm text-tymeslot-700">
             <.spinner />
             <span>
-              {dgettext("dashboard_calendar_events", "Importing %{done} of %{total} events...",
+              {dgettext("dashboard_calendar_import", "Importing %{done} of %{total} events...",
                 done: @ics_import.done,
                 total: length(@ics_import.plan.events)
               )}
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           </div>
           <p class="text-token-xs text-tymeslot-500">
             {dgettext(
-              "dashboard_calendar_events",
+              "dashboard_calendar_import",
               "You can close this window; the import carries on."
             )}
           </p>
@@ -86,11 +86,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
             <span class="text-token-sm font-semibold text-tymeslot-700">
               {if @ics_import.file_name,
                 do: @ics_import.file_name,
-                else: dgettext("dashboard_calendar_events", "Choose or drop an .ics file")}
+                else: dgettext("dashboard_calendar_import", "Choose or drop an .ics file")}
             </span>
             <span class="text-token-xs text-tymeslot-500">
               {dgettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_import",
                 "Exported from Google Calendar, Outlook, Apple Calendar or any other calendar app."
               )}
             </span>
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
             role="status"
           >
             <.spinner />
-            <span>{dgettext("dashboard_calendar_events", "Reading the file...")}</span>
+            <span>{dgettext("dashboard_calendar_import", "Reading the file...")}</span>
           </div>
 
           <.info_box :if={@ics_import.error} variant={:error}>
@@ -112,14 +112,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
           <div :if={@ics_import.plan} data-testid="import-ics-summary">
             <p class="text-token-sm text-tymeslot-700">
               {dngettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_import",
                 "Found 1 event.",
                 "Found %{count} events.",
                 length(@ics_import.plan.events)
               )}
               <span :if={@ics_import.plan.series > 0}>
                 {dngettext(
-                  "dashboard_calendar_events",
+                  "dashboard_calendar_import",
                   "1 of them repeats.",
                   "%{count} of them repeat.",
                   @ics_import.plan.series
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
             </p>
             <p class="mt-1 text-token-xs text-tymeslot-500">
               {dgettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_import",
                 "Guests are not imported, and nobody is sent an invitation."
               )}
             </p>
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
 
           <div :if={@ics_import.plan}>
             <p class="mb-2 text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar_events", "Import into")}
+              {dgettext("dashboard_calendar_import", "Import into")}
             </p>
             <CalendarPicker.calendar_picker
               integrations={@integrations}
@@ -159,15 +159,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ImportIcsModal do
             phx-click="start_ics_import"
             phx-target={@myself}
           >
-            {dgettext("dashboard_calendar_events", "Import")}
+            {dgettext("dashboard_calendar_import", "Import")}
           </.action_button>
           <.action_button
             variant={:secondary}
             phx-click={JS.push("close_ics_import", target: @myself)}
           >
             {if @running,
-              do: dgettext("dashboard_calendar_events", "Close"),
-              else: dgettext("dashboard_calendar_events", "Cancel")}
+              do: dgettext("dashboard_calendar_import", "Close"),
+              else: dgettext("dashboard_calendar_import", "Cancel")}
           </.action_button>
         </div>
       </:footer>

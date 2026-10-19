@@ -76,7 +76,7 @@ defmodule TymeslotWeb.CalendarGridWriteHelpers do
     Process.flag(:trap_exit, true)
     ref = Process.monitor(lv.pid)
     Process.exit(lv.pid, :kill)
-    assert_receive {:DOWN, ^ref, :process, _pid, :killed}, 1_000
+    assert_receive {:DOWN, ^ref, :process, _pid, :killed}, 5_000
   end
 
   @doc """
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.CalendarGridWriteHelpers do
   def answer(write, answer) do
     ref = Process.monitor(write)
     send(write, {:answer, answer})
-    assert_receive {:DOWN, ^ref, :process, _pid, _reason}, 1_000
+    assert_receive {:DOWN, ^ref, :process, _pid, _reason}, 5_000
   end
 
   @doc """

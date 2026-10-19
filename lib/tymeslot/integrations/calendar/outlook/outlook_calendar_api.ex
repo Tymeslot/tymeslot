@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   @behaviour Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
 
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
@@ -13,25 +14,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
   alias Tymeslot.Integrations.Calendar.Outlook.GraphStatus
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
+  alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
-  alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
-  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
-  alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
+  alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
-  alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
-
-  import ErrorParser, only: [is_oauth_error_status: 1]
+  alias Tymeslot.Integrations.Shared.OAuth.Refresh
+  alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint
 
   @base_url "https://graph.microsoft.com/v1.0"
   @silent_event_headers [
     {"Content-Type", "application/json"},
     {"Prefer", "outlook.calendar-update.disableNotifications"}
   ]
-  @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
   # Fields the event-driven sync workers need to normalise a single event.
-  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,originalStart,isAllDay,showAs"
+  # `originalStartTimeZone` is the event's own zone: with `Prefer:
+  # outlook.timezone="UTC"` every `start.timeZone` reads UTC.
+  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,isAllDay,showAs"
 
   @type calendar_event :: %{
           id: String.t(),
@@ -58,10 +58,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         "id,name,canEdit,canShare,canViewPrivateItems,changeKey,color,hexColor,isDefaultCalendar,isRemovable,owner"
     }
 
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <- make_request(:get, "/me/calendars", token, params) do
-        {:ok, response["value"] || []}
-      end
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      Paging.list_all(token, "/me/calendars", params)
     end)
   end
 
@@ -73,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, [calendar_event()]} | api_error()
   def list_events(%CalendarIntegrationSchema{} = integration, calendar_id, start_time, end_time) do
     params = build_events_query_params(start_time, end_time)
-    path = "/me/calendars/#{calendar_id}/calendarView"
+    path = calendar_path(calendar_id, "/calendarView")
     list_events_for_path(integration, path, params)
   end
 
@@ -97,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def create_event(%CalendarIntegrationSchema{} = integration, event_data) do
     with {:ok, body} <- event_body(event_data) do
-      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
         with {:ok, response} <-
                make_request_with_body(:post, "/me/events", token, body,
                  headers: @silent_event_headers
@@ -116,9 +114,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
     with {:ok, body} <- event_body(event_data) do
-      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
         with {:ok, response} <-
-               make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
+               make_request_with_body(:post, calendar_path(calendar_id, "/events"), token, body,
                  headers: @silent_event_headers
                ) do
           {:ok, List.first(convert_to_common_format([response]))}
@@ -135,9 +133,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def update_event(%CalendarIntegrationSchema{} = integration, event_id, event_data) do
     with {:ok, body} <- event_body(event_data) do
-      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
         with {:ok, response} <-
-               make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
+               make_request_with_body(:patch, event_path(event_id), token, body,
                  headers: @silent_event_headers
                ) do
           {:ok, List.first(convert_to_common_format([response]))}
@@ -154,11 +152,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, calendar_event()} | api_error() | CalendarAPIBehaviour.write_refusal()
   def update_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id, event_data) do
     with {:ok, body} <- event_body(event_data) do
-      AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
         with {:ok, response} <-
                make_request_with_body(
                  :patch,
-                 "/me/calendars/#{calendar_id}/events/#{event_id}",
+                 calendar_path(calendar_id, "/events/#{HTTP.segment(event_id)}"),
                  token,
                  body,
                  headers: @silent_event_headers
@@ -180,9 +178,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec patch_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def patch_event(%CalendarIntegrationSchema{} = integration, event_id, body) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
-             make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
+             make_request_with_body(:patch, event_path(event_id), token, body,
                headers: @silent_event_headers
              ) do
         {:ok, List.first(convert_to_common_format([response]))}
@@ -200,8 +198,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, map()} | api_error()
   def insert_event(%CalendarIntegrationSchema{} = integration, calendar_id, body)
       when is_binary(calendar_id) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request_with_body(:post, calendar_path(calendar_id, "/events"), token, body,
         headers: @silent_event_headers
       )
     end)
@@ -216,8 +214,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec get_event_calendar_id(CalendarIntegrationSchema.t(), String.t()) ::
           {:ok, String.t()} | {:error, :unknown_calendar} | api_error()
   def get_event_calendar_id(%CalendarIntegrationSchema{} = integration, event_id) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      case make_request(:get, "/me/events/#{event_id}/calendar", token, %{"$select" => "id"}) do
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      case make_request(:get, event_path(event_id, "/calendar"), token, %{"$select" => "id"}) do
         {:ok, %{"id" => id}} when is_binary(id) and id != "" -> {:ok, id}
         {:ok, _no_id} -> {:error, :unknown_calendar}
         error -> error
@@ -238,8 +236,28 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec get_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           {:ok, map()} | api_error()
   def get_event(%CalendarIntegrationSchema{} = integration, event_id, opts \\ []) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request(:get, "/me/events/#{event_id}", token, %{}, opts)
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request(:get, event_path(event_id), token, %{}, opts)
+    end)
+  end
+
+  @doc """
+  The series master `master_id`, with only what its repeat rule is read
+  from: its type, `recurrence` and first start. Through the circuit breaker,
+  which counts only failures that say Graph is unwell, so a master that is
+  gone (404) does not trip it; an open breaker answers `{:error,
+  :circuit_open}`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_series_master(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, map()} | api_error() | {:error, term()}
+  def get_series_master(%CalendarIntegrationSchema{} = integration, master_id) do
+    params = %{"$select" => "id,type,recurrence,start"}
+
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      CalendarCircuitBreaker.call(:outlook, fn ->
+        make_request(:get, event_path(master_id), token, params)
+      end)
     end)
   end
 
@@ -265,8 +283,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "$expand" => "exceptionOccurrences"
     }
 
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request(:get, "/me/events/#{master_id}", token, params, body: :stored)
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request(:get, event_path(master_id), token, params, body: :stored)
     end)
   end
 
@@ -279,7 +297,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           {:ok, [calendar_event()]} | api_error()
   def list_instances(%CalendarIntegrationSchema{} = integration, event_id, start_time, end_time) do
     params = build_events_query_params(start_time, end_time)
-    list_events_for_path(integration, "/me/events/#{event_id}/instances", params)
+    list_events_for_path(integration, event_path(event_id, "/instances"), params)
   end
 
   @doc """
@@ -300,7 +318,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
     with {:ok, calendars} <- list_calendars(integration) do
       Enum.reduce_while(calendars, {:ok, []}, fn %{"id" => calendar_id}, {:ok, found} ->
-        case list_events_for_path(integration, "/me/calendars/#{calendar_id}/events", params) do
+        case list_events_for_path(integration, calendar_path(calendar_id, "/events"), params) do
           {:ok, events} -> {:cont, {:ok, found ++ events}}
           error -> {:halt, error}
         end
@@ -315,8 +333,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec delete_event(CalendarIntegrationSchema.t(), String.t()) ::
           :ok | api_error()
   def delete_event(%CalendarIntegrationSchema{} = integration, event_id) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      case make_request(:delete, "/me/events/#{event_id}", token, %{}) do
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      case make_request(:delete, event_path(event_id), token, %{}) do
         {:ok, _response} -> :ok
         {:error, :not_found, _msg} -> :ok
         error -> error
@@ -331,8 +349,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
           :ok | api_error()
   def delete_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      case make_request(:delete, "/me/calendars/#{calendar_id}/events/#{event_id}", token, %{}) do
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      case make_request(
+             :delete,
+             calendar_path(calendar_id, "/events/#{HTTP.segment(event_id)}"),
+             token,
+             %{}
+           ) do
         {:ok, _response} -> :ok
         {:error, :not_found, _msg} -> :ok
         error -> error
@@ -349,48 +372,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   def refresh_token(%CalendarIntegrationSchema{} = integration) do
     integration = CalendarIntegrationSchema.decrypt_oauth_tokens(integration)
 
-    current_scope =
-      integration.oauth_scope ||
-        "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile"
-
-    with {:ok, client_id} <- MicrosoftConfig.fetch_client_id(),
-         {:ok, client_secret} <- MicrosoftConfig.fetch_client_secret() do
-      body = %{
-        "grant_type" => "refresh_token",
-        "refresh_token" => integration.refresh_token,
-        "client_id" => client_id,
-        "client_secret" => client_secret,
-        "scope" => current_scope
-      }
-
-      case TokenFlow.refresh_token(@token_url, body,
-             log_context: [
-               integration_id: integration.id,
-               user_id: integration.user_id,
-               provider: :outlook
-             ]
-           ) do
-        {:ok, response} ->
-          expires_in = response["expires_in"] || 3600
-          expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
-
-          {:ok,
-           {response["access_token"], response["refresh_token"] || integration.refresh_token,
-            expires_at}}
-
-        {:error, {:http_error, status, body}} when is_oauth_error_status(status) ->
-          {:error, :unauthorized, ErrorParser.build_message("Token refresh failed", status, body)}
-
-        {:error, {:http_error, status, _body}} ->
-          {:error, :network_error, "HTTP #{status}"}
-
-        {:error, {:network_error, reason}} ->
-          {:error, :network_error, "Network error: #{inspect(reason)}"}
-      end
-    else
-      {:error, reason} ->
-        {:error, :authentication_error, reason}
-    end
+    ApiResponse.token_refresh(
+      TokenEndpoint.refresh_grant(
+        MicrosoftConfig,
+        integration.refresh_token,
+        integration.oauth_scope || MicrosoftConfig.scope(),
+        log_context: [
+          integration_id: integration.id,
+          user_id: integration.user_id,
+          provider: :outlook
+        ]
+      )
+    )
   end
 
   @doc """
@@ -399,7 +392,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @impl CalendarAPIBehaviour
   @spec token_valid?(CalendarIntegrationSchema.t()) :: boolean()
   def token_valid?(%CalendarIntegrationSchema{} = integration) do
-    OAuthToken.valid?(integration, 300)
+    Refresh.valid?(integration.token_expires_at)
   end
 
   @doc """
@@ -450,33 +443,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }
 
-    make_request(:get, "/me/events/#{event_id}", token, params)
-  end
-
-  @doc """
-  Fetches one page of a Graph delta query.
-
-  `url` is the full delta or next link exactly as returned by Graph
-  (delta links are absolute URLs, not paths). Returns the decoded page map
-  (`"value"`, `"@odata.nextLink"`, `"@odata.deltaLink"`), or
-  `{:error, :delta_link_expired, message}` when Graph reports 410 Gone and
-  the stored link must be re-bootstrapped.
-  """
-  @spec get_delta_page(String.t(), String.t()) ::
-          {:ok, map()} | api_error() | {:error, :delta_link_expired, String.t()}
-  def get_delta_page(token, url) do
-    uri = URI.parse(url)
-    path = uri.path <> if(uri.query, do: "?" <> uri.query, else: "")
-
-    headers = [
-      {"Content-Type", "application/json"},
-      {"Prefer", "outlook.timezone=\"UTC\""}
-    ]
-
-    HTTP.request(:get, "https://graph.microsoft.com", path, token,
-      headers: headers,
-      response_handler: &handle_delta_response/1
-    )
+    make_request(:get, event_path(event_id), token, params)
   end
 
   # HTTP plumbing — used internally and by GraphSubscription
@@ -494,6 +461,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     HTTP.request(method, @base_url, path, token,
       params: params,
       headers: headers,
+      http_options: Keyword.get(opts, :http_options, []),
       response_handler: &handle_response(&1, path)
     )
   end
@@ -512,11 +480,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     )
   end
 
-  # The refusal comes before a token is fetched: nothing is sent to Graph.
-  defp event_body(event_data) do
-    with {:ok, body} <- EventMapper.format_event_data(event_data),
-         do: {:ok, EventMapper.add_tymeslot_fingerprint(body)}
-  end
+  # Graph ids are base64 and may carry `/`, `+` or `=`, so each is encoded as
+  # a single path segment.
+  defp calendar_path(calendar_id, rest), do: "/me/calendars/#{HTTP.segment(calendar_id)}#{rest}"
+  defp event_path(event_id, rest \\ ""), do: "/me/events/#{HTTP.segment(event_id)}#{rest}"
 
   defp read_preference(:text), do: ~s(outlook.timezone="UTC", outlook.body-content-type="text")
   defp read_preference(:stored), do: ~s(outlook.timezone="UTC")
@@ -526,19 +493,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp handle_response(response, path) do
     ApiResponse.handle(response, path, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
   end
-
-  defp handle_response(response) do
-    ApiResponse.handle(response, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
-  end
-
-  # Delta queries share the standard response handling but additionally map
-  # 410 Gone — Graph's signal that the delta token is no longer valid and the
-  # caller must re-bootstrap.
-  defp handle_delta_response({:ok, %{status: 410}}) do
-    {:error, :delta_link_expired, "Delta link expired"}
-  end
-
-  defp handle_delta_response(response), do: handle_response(response)
 
   # Query helpers
 
@@ -556,10 +510,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   defp list_events_for_path(%CalendarIntegrationSchema{} = integration, path, params) do
-    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <- make_request(:get, path, token, params) do
-        {:ok, response["value"] || []}
-      end
+    Tokens.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      Paging.list_all(token, path, params)
     end)
   end
 
@@ -584,5 +536,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         response_status: get_in(event, ["responseStatus", "response"])
       }
     end)
+  end
+
+  # The Graph body of an event Tymeslot writes, refused before any request
+  # when its repeat rule has no Graph pattern.
+  defp event_body(event_data) do
+    with {:ok, body} <- EventMapper.format_event_data(event_data),
+         do: {:ok, EventMapper.add_tymeslot_fingerprint(body)}
   end
 end

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
 
   The existing `workflows_test.exs` pins the workflow-level behaviour
   (the async task sends an empty-list `:calendar_list_refreshed`
-  message when `CalendarManagement.get_calendar_integration/2` returns
+  message when `Calendar.Management.get_calendar_integration/2` returns
   `{:error, :not_found}`). This test pins the LiveView side of that
   seam:
 
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar
 
   setup_all do
     case Process.whereis(DashboardCache) do
@@ -136,10 +136,10 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
       # click is processed. The component's assigns are not reloaded by
       # the deletion (no PubSub broadcast), so the integration button
       # remains in the rendered HTML. When the click fires the async
-      # task, `CalendarManagement.get_calendar_integration/2` will
+      # task, `Calendar.Management.get_calendar_integration/2` will
       # return `{:error, :not_found}`.
-      {:ok, to_delete} = CalendarManagement.get_calendar_integration(integration.id, user.id)
-      {:ok, _deleted} = CalendarManagement.delete_calendar_integration(to_delete)
+      {:ok, _deleted} =
+        Calendar.delete_with_primary_reassignment_and_invalidate(user.id, integration.id)
 
       # Click the calendar integration button — the real UI path for
       # `select_calendar_integration`. This sets

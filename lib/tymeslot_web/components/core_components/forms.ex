@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.Honeypot
+  alias Tymeslot.Utils.ChangesetErrors
 
   # ========== UNIFIED INPUT ==========
 
@@ -366,26 +367,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   end
 
   @doc """
-  Translates an error message.
+  Translates an error message in the `errors` domain
+  (`Tymeslot.Utils.ChangesetErrors.translate/1`, shared with the domain).
   """
   @spec translate_error(any()) :: String.t()
-  def translate_error({msg, opts}) do
-    # When using gettext, we typically pass the strings we want
-    # to translate as a static argument:
-    #
-    #     # Translate the number of files with plural rules
-    #     dngettext("errors", "1 file", "%{count} files", count)
-    #
-    # However the error messages in our forms and APIs are generated
-    # dynamically, so we need to translate them by calling Gettext
-    # with our gettext backend as first argument. Translations are
-    # available in the errors.po file (as we use the "errors" domain).
-    if count = opts[:count] do
-      Gettext.dngettext(TymeslotWeb.Gettext, "errors", msg, msg, count, opts)
-    else
-      Gettext.dgettext(TymeslotWeb.Gettext, "errors", msg, opts)
-    end
-  end
+  def translate_error({msg, opts}), do: ChangesetErrors.translate({msg, opts})
 
   def translate_error(msg) when is_binary(msg), do: msg
   def translate_error(other), do: inspect(other)

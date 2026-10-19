@@ -36,22 +36,14 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   approved would hand them the host's calendar.
   """
 
-  alias Phoenix.Token
+  alias Tymeslot.Auth
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.SignedToken
-  alias TymeslotWeb.Endpoint
-
-  @salt "meeting approval"
-
-  # Two weeks is the longest window a meeting type may configure; the extra
-  # fortnight covers a host coming back from leave to a request that has long
-  # since lapsed, so they see "this expired" rather than a broken link.
-  @max_age_seconds 28 * 24 * 3600
 
   @doc "How long an issued token stays verifiable, in seconds."
   @spec max_age() :: pos_integer()
-  def max_age, do: @max_age_seconds
+  def max_age, do: SignedToken.max_age(:meeting_approval)
 
   @doc """
   Signs a token identifying one booking request and the host who owns it.
@@ -62,7 +54,7 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   """
   @spec sign(Meeting.t()) :: String.t()
   def sign(%Meeting{id: id, organizer_user_id: organizer_user_id} = meeting) do
-    Token.sign(Endpoint, @salt, {id, organizer_user_id, meeting.approval_requested_at})
+    SignedToken.sign(:meeting_approval, {id, organizer_user_id, meeting.approval_requested_at})
   end
 
   @doc """
@@ -73,13 +65,17 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   meeting's current one, so a token from a previous request cannot answer a
   new one issued after a re-entry into the approval gate.
 
+  Refuses with `{:error, :not_found}` while the organiser's account is pending
+  deletion: the link answers as if the request did not exist, both when the
+  page loads and when an answer is re-verified.
+
   Says nothing about whether the request is still answerable; that is the
   caller's next question and `Tymeslot.Meetings.Approval` is where it is
   settled.
   """
   @spec verify(String.t()) :: {:ok, Meeting.t()} | {:error, atom()}
   def verify(token) when is_binary(token) do
-    SignedToken.verify(token, @salt, @max_age_seconds, &validate/1)
+    SignedToken.verify(:meeting_approval, token, validate: &validate/1)
   end
 
   def verify(_token), do: {:error, :invalid}
@@ -88,10 +84,10 @@ defmodule Tymeslot.Meetings.ApprovalToken do
        when is_binary(meeting_id) and is_integer(organizer_user_id) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, %{organizer_user_id: ^organizer_user_id} = meeting} ->
-        if same_request?(meeting.approval_requested_at, requested_at) do
-          {:ok, meeting}
-        else
-          {:error, :stale}
+        cond do
+          Auth.deletion_pending?(organizer_user_id) -> {:error, :not_found}
+          same_request?(meeting.approval_requested_at, requested_at) -> {:ok, meeting}
+          true -> {:error, :stale}
         end
 
       {:ok, _meeting} ->

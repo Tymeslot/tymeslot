@@ -19,8 +19,14 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   # Query building helpers
 
-  defp for_user_email(query, email),
-    do: from(m in query, where: m.organizer_email == ^email or m.attendee_email == ^email)
+  # A booking belongs to the account that organises it. The organiser and
+  # attendee email columns are snapshots taken at booking time, and an address
+  # can change hands, so neither may decide whose list a booking appears in.
+  defp for_organizer(query, user_id),
+    do: from(m in query, where: m.organizer_user_id == ^user_id)
+
+  defp with_id(query, nil), do: query
+  defp with_id(query, id), do: from(m in query, where: m.id == ^id)
 
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
@@ -259,17 +265,16 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
-  Get upcoming meetings for a specific user with limit.
-  Filters by user email as either organizer or attendee.
+  Get the organiser's upcoming live bookings, soonest first, up to `limit`.
   """
-  @spec upcoming_meetings_for_user(String.t(), non_neg_integer()) :: [Meeting.t()]
-  def upcoming_meetings_for_user(user_email, limit) do
+  @spec upcoming_meetings_for_organizer(pos_integer(), non_neg_integer()) :: [Meeting.t()]
+  def upcoming_meetings_for_organizer(organizer_user_id, limit) do
     now = DateTime.utc_now()
 
     Meeting
     |> MeetingState.where_live_booking()
     |> upcoming(now)
-    |> for_user_email(user_email)
+    |> for_organizer(organizer_user_id)
     |> order_by_start_asc()
     |> apply_limit(limit)
     |> preload(participants: ^live_participants_preload())
@@ -307,28 +312,28 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
-  Get upcoming meetings for a specific user with proper database filtering.
-  Replaces the N+1 pattern of loading all meetings and filtering in memory.
+  Get every upcoming meeting the organiser holds, whatever its status, soonest
+  first.
   """
-  @spec list_upcoming_meetings_for_user(String.t()) :: [Meeting.t()]
-  def list_upcoming_meetings_for_user(user_email) do
+  @spec list_upcoming_meetings_for_organizer(pos_integer()) :: [Meeting.t()]
+  def list_upcoming_meetings_for_organizer(organizer_user_id) do
     now = DateTime.utc_now()
 
     Meeting
-    |> for_user_email(user_email)
+    |> for_organizer(organizer_user_id)
     |> upcoming(now)
     |> order_by_start_asc()
     |> Repo.all()
   end
 
   @doc """
-  Cursor-based pagination for a user's meetings using keyset on start_time and id.
+  Cursor-based pagination for the organiser's meetings using keyset on start_time and id.
   Accepts opts: :after_start (DateTime), :after_id (binary_id), :per_page, :status, :time_filter (:upcoming | :past),
-  :order (:desc, the default, newest first; or :asc, soonest first).
+  :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first).
   Returns a list limited to per_page.
   """
-  @spec list_meetings_for_user_paginated_cursor(String.t(), Keyword.t()) :: [Meeting.t()]
-  def list_meetings_for_user_paginated_cursor(user_email, opts) do
+  @spec list_meetings_for_organizer_paginated_cursor(pos_integer(), Keyword.t()) :: [Meeting.t()]
+  def list_meetings_for_organizer_paginated_cursor(organizer_user_id, opts) do
     after_start = Keyword.get(opts, :after_start)
     after_id = Keyword.get(opts, :after_id)
     per_page = Keyword.get(opts, :per_page, 20)
@@ -342,7 +347,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     now = DateTime.utc_now()
 
     Meeting
-    |> for_user_email(user_email)
+    |> for_organizer(organizer_user_id)
+    |> with_id(Keyword.get(opts, :id))
     |> with_status(status)
     |> without_status(exclude_status)
     |> apply_time_filter(time_filter, now)
@@ -353,6 +359,19 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
       guests: ^live_guests_preload(),
       participants: ^card_participants_preload()
     )
+    |> Repo.all()
+  end
+
+  @doc """
+  Every meeting id the user organises, past and future, in any status. Read
+  by account deletion before the cascade removes the meetings, so the jobs
+  queued for them can be cleared afterwards.
+  """
+  @spec list_ids_for_organizer(pos_integer()) :: [Ecto.UUID.t()]
+  def list_ids_for_organizer(organizer_user_id) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> select([m], m.id)
     |> Repo.all()
   end
 

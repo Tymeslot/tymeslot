@@ -4,6 +4,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
   @moduletag :payments
   @moduletag :integration
 
+  # Every booking_payment is charged on this connected account, and every
+  # event arrives from it, as Stripe delivers them for a genuine booking.
+  @account "acct_TEST_HOST"
+
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
@@ -13,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     test "marks booking_payment refunded when full amount has been refunded" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "paid",
           amount_cents: 5000,
           refunded_amount_cents: 0,
@@ -32,6 +37,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     test "marks booking_payment partially_refunded when less than full" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "paid",
           amount_cents: 5000,
           refunded_amount_cents: 0,
@@ -50,6 +56,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     test "is idempotent when refunded_amount_cents already matches the event total" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "refunded",
           amount_cents: 5000,
           refunded_amount_cents: 5000,
@@ -71,6 +78,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     test "is a no-op when the same event id has already been processed" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "partially_refunded",
           amount_cents: 5000,
           refunded_amount_cents: 2000,
@@ -95,6 +103,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     test "preserves status disputed when reconciling refund alongside a dispute" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "disputed",
           amount_cents: 5000,
           refunded_amount_cents: 0,
@@ -111,9 +120,34 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     end
   end
 
+  describe "handle/1 with an event from another connected account" do
+    test "leaves the booking payment untouched" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: "paid",
+          amount_cents: 5000,
+          stripe_charge_id: "ch_FOREIGN_REFUND"
+        )
+
+      event =
+        "evt_FOREIGN_REFUND"
+        |> refund_event("ch_FOREIGN_REFUND", 5000)
+        |> Map.put("account", "acct_ATTACKER")
+
+      assert :ok = ChargeRefunded.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == "paid"
+      assert reloaded.refunded_amount_cents == 0
+      assert reloaded.last_event_id == nil
+    end
+  end
+
   defp refund_event(event_id, charge_id, amount_refunded) do
     %{
       "id" => event_id,
+      "account" => @account,
       "type" => "charge.refunded",
       "created" => System.os_time(:second),
       "data" => %{

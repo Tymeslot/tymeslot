@@ -41,7 +41,7 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
   end
 
   defp rate_limit_and_consume(socket, entry) do
-    case RateLimiter.check_avatar_upload_rate_limit(socket.assigns.current_user.id) do
+    case RateLimiter.check(:avatar_upload, socket.assigns.current_user.id) do
       :ok ->
         {:noreply, consume(socket)}
 

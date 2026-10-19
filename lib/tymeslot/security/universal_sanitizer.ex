@@ -4,10 +4,15 @@ defmodule Tymeslot.Security.UniversalSanitizer do
 
   Provides protection against:
   - HTML/XSS attacks using HtmlSanitizeEx
-  - SQL injection patterns
   - Path traversal attacks
   - Dangerous protocol injections
+
+  There is deliberately no SQL-pattern stripping: every query binds values as
+  Ecto parameters, so stripping `--` or `0x…` runs guarded nothing and only
+  corrupted ordinary text ("-- Anna", "colour 0x1F").
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
   alias Tymeslot.Security.SecurityLogger
@@ -23,15 +28,15 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     Use `:plain_text` for free-form user-authored text (event titles, names,
     descriptions) that is only ever rendered through Phoenix templates (which
     auto-escape) and bound to Ecto queries as parameters. Plain-text mode
-    skips HTML/SQL/path/protocol stripping so symbols like `<>`, `--`,
+    skips HTML/path/protocol stripping so symbols like `<>` and
     `<email@x.com>` round-trip unchanged. It still validates UTF-8, strips
     null bytes, normalises to NFC, enforces length/byte limits, and trims
     whitespace. Do NOT use `:plain_text` for values that get interpolated
     into raw HTML strings, URLs, file paths, or shell commands. A value that
     *is* a whole URL is the exception: `:strict` rewrites one without saying
-    so, percent-decoding it and stripping `--` and `0x` runs, so URL fields
-    sanitise in `:plain_text` and take their safety from an explicit scheme
-    and host allow-list instead.
+    so, percent-decoding it and stripping `../` runs, so URL fields sanitise
+    in `:plain_text` and take their safety from an explicit scheme and host
+    allow-list instead.
   - `:allow_html` - Allow basic HTML tags (default: false). Ignored when `:mode` is `:plain_text`.
   - `:log_events` - Log security events (default: true)
   - `:metadata` - Additional metadata for logging
@@ -44,8 +49,8 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       iex> sanitize_and_validate("<script>alert('xss')</script>")
       {:ok, "alert('xss')"}
 
-      iex> sanitize_and_validate("'; DROP TABLE users; --")
-      {:ok, "' users "}
+      iex> sanitize_and_validate("-- Anna")
+      {:ok, "-- Anna"}
 
       iex> sanitize_and_validate("Luka <> Paul", mode: :plain_text)
       {:ok, "Luka <> Paul"}
@@ -114,7 +119,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
         SecurityLogger.log_blocked_input(field, "invalid_encoding", metadata)
       end
 
-      {:error, "Invalid text encoding"}
+      {:error, dgettext("errors", "Invalid text encoding")}
     end
   end
 
@@ -142,7 +147,10 @@ defmodule Tymeslot.Security.UniversalSanitizer do
             max_input_bytes: max_input_bytes
           })
 
-          {:error, "Input exceeds maximum size (#{max_input_bytes} bytes)"}
+          {:error,
+           dgettext("errors", "Input exceeds maximum size (%{max_input_bytes} bytes)",
+             max_input_bytes: max_input_bytes
+           )}
       end
     end
   end
@@ -203,7 +211,6 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     |> decode_url_recursive(3)
     |> remove_null_bytes()
     |> sanitize_html(allow_html)
-    |> remove_sql_injection_patterns(log_events, field, metadata)
     |> prevent_path_traversal(log_events, field, metadata)
     |> remove_dangerous_protocols(log_events, field, metadata)
     |> then(&{:ok, &1})
@@ -239,32 +246,6 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     # corrupts plain text round-tripping through Phoenix templates (which
     # already escape on render).
     String.replace(input, ~r/<[^>]*>/, "")
-  end
-
-  defp remove_sql_injection_patterns(input, log_events, field, metadata) do
-    original = input
-
-    sanitized =
-      input
-      # Remove SQL comments
-      |> recursive_replace(~r/--.*$/m, "")
-      |> recursive_replace(~r/\/\*.*?\*\//m, "")
-      # Remove obvious stacked queries
-      |> recursive_replace(~r/;\s*(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\s/i, "; ")
-      # Remove classic injection patterns
-      |> recursive_replace(~r/'\s*(OR|AND)\s*'\d+'\s*=\s*'\d+/i, "'")
-      |> recursive_replace(~r/"\s*(OR|AND)\s*"\d+"\s*=\s*"\d+/i, "\"")
-      |> recursive_replace(~r/'\s*(OR|AND)\s*\d+\s*=\s*\d+/i, "'")
-      # Remove UNION-based attacks
-      |> recursive_replace(~r/\bUNION\s+(ALL\s+)?SELECT\s/i, "")
-      # Remove dangerous SQL functions in injection context
-      |> recursive_replace(~r/(0x[0-9a-fA-F]+|CHAR\s*\(\s*\d+)/i, "")
-
-    if log_events and sanitized != original do
-      SecurityLogger.log_blocked_input(field, "sql_injection", metadata)
-    end
-
-    sanitized
   end
 
   defp prevent_path_traversal(input, log_events, field, metadata) do
@@ -383,7 +364,10 @@ defmodule Tymeslot.Security.UniversalSanitizer do
           {:ok, String.slice(input, 0, max_length)}
 
         _mode ->
-          {:error, "Input exceeds maximum length (#{max_length} characters)"}
+          {:error,
+           dgettext("errors", "Input exceeds maximum length (%{max_length} characters)",
+             max_length: max_length
+           )}
       end
     end
   end

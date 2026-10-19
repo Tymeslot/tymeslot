@@ -44,74 +44,53 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     end
   end
 
-  # Keep in sync with the exact-match legacy binaries `Tymeslot.Bookings.*`
-  # still returns as `{:error, "..."}` — a new one added there without a
-  # matching `legacy_message/1` clause here silently degrades to the
-  # generic fallback instead of failing loudly.
-  @legacy_exact_binaries [
-    "Invalid date or time format",
-    "Invalid date format",
-    "Meeting is already cancelled",
-    "Cannot cancel a completed meeting",
-    "Cannot cancel a meeting that has already started",
-    "Cannot cancel a meeting that has already occurred",
-    "Cannot reschedule a cancelled meeting",
-    "Cannot reschedule a completed meeting",
-    "Cannot reschedule a meeting that has already started",
-    "Cannot reschedule a meeting that has already occurred",
-    "Cannot reschedule an expired meeting",
-    "Booking time must be in the future",
-    "Attendee email is required",
-    "Attendee name is required",
-    "End time must be after start time",
-    "Failed to create meeting",
-    "Failed to update meeting status",
-    "The guest email must differ from your own address",
-    "Title is required"
-  ]
+  # One entry per refusal `Tymeslot.Bookings.Policy`, `Validation` and
+  # `CreateAdHoc` return (`Tymeslot.Bookings.Refusal.t/0` and the ad-hoc
+  # atoms), with the copy it must render. A refusal added there without a
+  # `message/1` clause falls to the generic fallback and fails here.
+  @refusals %{
+    {:not_cancellable, :completed} => "Cannot cancel a completed meeting",
+    {:not_cancellable, :expired} => "Cannot cancel an expired meeting",
+    {:not_cancellable, :started} => "Cannot cancel a meeting that has already started",
+    {:not_cancellable, :past} => "Cannot cancel a meeting that has already occurred",
+    {:not_reschedulable, :cancelled} => "Cannot reschedule a cancelled meeting",
+    {:not_reschedulable, :completed} => "Cannot reschedule a completed meeting",
+    {:not_reschedulable, :expired} => "Cannot reschedule an expired meeting",
+    {:not_reschedulable, :started} => "Cannot reschedule a meeting that has already started",
+    {:not_reschedulable, :past} => "Cannot reschedule a meeting that has already occurred",
+    {:not_reschedulable, :awaiting_approval} =>
+      "Cannot request a reschedule while the booking awaits approval",
+    :invalid_datetime => "Invalid date/time",
+    :in_past => "Booking time must be in the future",
+    {:too_soon, 12} => "Booking requires at least 12 hours in advance",
+    {:too_far_ahead, 90} => "You cannot book more than 90 days in advance",
+    :title_required => "Title is required",
+    :attendee_name_required => "Attendee name is required",
+    :attendee_email_required => "Attendee email is required",
+    :attendee_is_organizer => "The guest email must differ from your own address",
+    :end_before_start => "End time must be after start time",
+    :meeting_creation_failed => "Failed to create meeting"
+  }
 
-  describe "message/1 with legacy exact-match binary reasons" do
-    test "translates every mapped legacy binary to a non-leaking message" do
-      for reason <- @legacy_exact_binaries do
-        message = BookingErrorMessage.message(reason)
+  describe "message/1 with booking-rule refusals" do
+    test "renders each refusal as its own copy" do
+      mismatches =
+        for {reason, expected} <- @refusals,
+            BookingErrorMessage.message(reason) != expected,
+            do: {reason, BookingErrorMessage.message(reason)}
 
-        assert is_binary(message) and message != "",
-               "expected #{inspect(reason)} to render a non-empty string"
-
-        refute message == "Failed to create appointment. Please try again.",
-               "expected #{inspect(reason)} to have its own mapped message, not the generic fallback"
-      end
+      assert mismatches == []
     end
 
-    # "Invalid date format" and "Invalid date or time format" deliberately
-    # share a message: both reuse the msgid `localization_helpers.ex` already
-    # defines (and every locale already translates) for the same underlying
-    # problem, rather than adding new, untranslated near-duplicate strings.
-    test "shares one message between the two invalid-date/time variants" do
-      assert BookingErrorMessage.message("Invalid date format") ==
-               BookingErrorMessage.message("Invalid date or time format")
+    test "renders a refusal in the visitor's locale" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert BookingErrorMessage.message({:not_cancellable, :expired}) ==
+                 "Ein abgelaufener Termin kann nicht abgesagt werden"
+      end)
     end
   end
 
-  describe "message/1 with legacy interpolated binary reasons" do
-    test "extracts the hour count from Validation's notice-window variants" do
-      assert BookingErrorMessage.message("Booking requires at least 3 hours in advance") =~
-               "3 hours"
-
-      assert BookingErrorMessage.message("Booking requires at least 12 hours advance notice") =~
-               "12 hours"
-    end
-
-    test "extracts the day count from Validation's booking-window variants" do
-      assert BookingErrorMessage.message("Cannot book more than 90 days in advance") =~
-               "90 days"
-
-      assert BookingErrorMessage.message("Booking cannot be more than 365 days in advance") =~
-               "365 days"
-    end
-  end
-
-  describe "message/1 with unrecognised binary reasons" do
+  describe "message/1 with binary reasons" do
     test "falls back to generic copy instead of leaking raw English" do
       reason = "Some short custom error"
 

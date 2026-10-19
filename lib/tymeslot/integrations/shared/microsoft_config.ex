@@ -1,57 +1,53 @@
 defmodule Tymeslot.Integrations.Shared.MicrosoftConfig do
   @moduledoc """
-  Shared configuration helper for Microsoft Graph API integrations (Outlook and Teams).
+  Microsoft identity platform configuration for the Microsoft Graph
+  integrations (Outlook calendar and Teams): client credentials, state
+  secret, endpoints and the scope both request.
+
+  Credentials are read through `Tymeslot.Integrations.Shared.OAuthConfig`
+  (`:outlook_oauth` config, else `OUTLOOK_CLIENT_ID`,
+  `OUTLOOK_CLIENT_SECRET`, `OUTLOOK_STATE_SECRET`).
   """
 
-  @doc """
-  Returns the Microsoft Client ID from configuration or environment variables.
-  """
-  @spec client_id() :: String.t() | nil
-  def client_id do
-    Application.get_env(:tymeslot, :outlook_oauth)[:client_id] ||
-      System.get_env("OUTLOOK_CLIENT_ID")
-  end
+  @behaviour Tymeslot.Integrations.Shared.OAuthConfig
 
-  @doc """
-  Returns the Microsoft Client Secret from configuration or environment variables.
-  """
-  @spec client_secret() :: String.t() | nil
-  def client_secret do
-    Application.get_env(:tymeslot, :outlook_oauth)[:client_secret] ||
-      System.get_env("OUTLOOK_CLIENT_SECRET")
-  end
+  alias Tymeslot.Integrations.Shared.OAuthConfig
 
-  @doc """
-  Returns the state secret used for OAuth CSRF protection.
-  """
+  @base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
+
+  # Outlook calendar and Teams both work through calendar events, so they
+  # request the same scope; `email` puts the account's address in the id token.
+  @scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
+
+  @doc "The client id; raises when it is not configured."
+  @spec client_id!() :: String.t()
+  def client_id!, do: OAuthConfig.fetch!(:microsoft, :client_id)
+
+  @doc "The client secret; raises when it is not configured."
+  @spec client_secret!() :: String.t()
+  def client_secret!, do: OAuthConfig.fetch!(:microsoft, :client_secret)
+
+  @impl OAuthConfig
+  def fetch_client_id, do: OAuthConfig.fetch(:microsoft, :client_id)
+
+  @impl OAuthConfig
+  def fetch_client_secret, do: OAuthConfig.fetch(:microsoft, :client_secret)
+
+  @doc "The secret that signs OAuth `state`; raises when it is not configured."
   @spec state_secret() :: String.t()
-  def state_secret do
-    Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
-      System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "Microsoft OAuth State Secret not configured"
-  end
+  def state_secret, do: OAuthConfig.fetch!(:microsoft, :state_secret)
 
-  @doc """
-  Fetches client_id and returns it in a tagged tuple or error.
-  """
-  @spec fetch_client_id() :: {:ok, String.t()} | {:error, String.t()}
-  def fetch_client_id do
-    case client_id() do
-      id when is_binary(id) and byte_size(id) > 0 -> {:ok, id}
-      _other -> {:error, "Microsoft Client ID not configured"}
-    end
-  end
+  @doc "The authorisation endpoint the browser is sent to."
+  @spec authorize_url() :: String.t()
+  def authorize_url, do: "#{@base_url}/authorize"
 
-  @doc """
-  Fetches client_secret and returns it in a tagged tuple or error.
-  """
-  @spec fetch_client_secret() :: {:ok, String.t()} | {:error, String.t()}
-  def fetch_client_secret do
-    case client_secret() do
-      secret when is_binary(secret) and byte_size(secret) > 0 -> {:ok, secret}
-      _other -> {:error, "Microsoft Client Secret not configured"}
-    end
-  end
+  @impl OAuthConfig
+  @doc "The token endpoint for code exchange and refresh."
+  def token_url, do: "#{@base_url}/token"
+
+  @doc "The scope Outlook calendar and Teams request."
+  @spec scope() :: String.t()
+  def scope, do: @scope
 
   @doc """
   The static Tenant ID used by Microsoft to identify all personal/consumer accounts.

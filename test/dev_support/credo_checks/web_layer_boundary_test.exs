@@ -206,10 +206,10 @@ defmodule CredoChecks.WebLayerBoundaryTest do
   end
 
   describe "forbidden modules" do
-    test "an alias of Calendar.Operations renamed with as: is flagged" do
+    test "an alias of Calendar.Runtime.Operations renamed with as: is flagged" do
       """
       defmodule TymeslotWeb.CalendarGrid.EventDelete do
-        alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+        alias Tymeslot.Integrations.Calendar.Runtime.Operations, as: EventOperations
 
         def delete(uid, ctx), do: EventOperations.delete_event(uid, ctx)
       end
@@ -217,19 +217,19 @@ defmodule CredoChecks.WebLayerBoundaryTest do
       |> check()
       |> assert_issue(fn issue ->
         assert issue.line_no == 2
-        assert issue.message =~ "`Tymeslot.Integrations.Calendar.Operations`"
+        assert issue.message =~ "`Tymeslot.Integrations.Calendar.Runtime.Operations`"
       end)
     end
 
-    test "a fully-qualified call to Calendar.Operations is flagged" do
+    test "a fully-qualified call to Calendar.Runtime.Operations is flagged" do
       """
       defmodule TymeslotWeb.CalendarGrid.EventDelete do
-        def delete(uid, ctx), do: Tymeslot.Integrations.Calendar.Operations.delete_event(uid, ctx)
+        def delete(uid, ctx), do: Tymeslot.Integrations.Calendar.Runtime.Operations.delete_event(uid, ctx)
       end
       """
       |> check()
       |> assert_issue(fn issue ->
-        assert issue.trigger == "Tymeslot.Integrations.Calendar.Operations.delete_event"
+        assert issue.trigger == "Tymeslot.Integrations.Calendar.Runtime.Operations.delete_event"
       end)
     end
 
@@ -265,7 +265,7 @@ defmodule CredoChecks.WebLayerBoundaryTest do
     test "the :forbidden_modules param replaces the default list" do
       source = """
       defmodule TymeslotWeb.SomeComponent do
-        alias Tymeslot.Integrations.Calendar.Operations
+        alias Tymeslot.Integrations.Calendar.Runtime.Operations
         alias Tymeslot.Some.Internal
 
         def go, do: {Operations.x(), Internal.y()}
@@ -342,8 +342,8 @@ defmodule CredoChecks.WebLayerBoundaryTest do
         \"\"\"
 
         # MeetingQueries.count_awaiting_approval_for_organizer/1 is wrapped by
-        # Meetings; Tymeslot.Integrations.Calendar.Operations too.
-        @doc "Wraps `Tymeslot.Integrations.Calendar.Operations.delete_event/2`."
+        # Meetings; Tymeslot.Integrations.Calendar.Runtime.Operations too.
+        @doc "Wraps `Tymeslot.Integrations.Calendar.Runtime.Operations.delete_event/2`."
         def count(id), do: Tymeslot.Meetings.count_awaiting_approval(id)
       end
       """
@@ -354,7 +354,7 @@ defmodule CredoChecks.WebLayerBoundaryTest do
     test "the same code outside the web layer" do
       """
       defmodule Tymeslot.Meetings do
-        alias Tymeslot.Integrations.Calendar.Operations
+        alias Tymeslot.Integrations.Calendar.Runtime.Operations
         alias Tymeslot.Meetings.MeetingQueries
         alias Tymeslot.Workers.SyncIcsCalendarWorker
 

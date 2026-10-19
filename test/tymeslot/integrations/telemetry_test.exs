@@ -43,7 +43,13 @@ defmodule Tymeslot.Integrations.TelemetryTest do
   end
 
   describe "handle_event/4 log levels" do
-    test "unhealthy health check uses :warning level" do
+    # A failed probe is logged as a warning once, by `HealthCheck.ErrorAnalysis`,
+    # with the integration it concerns; this handler only adds a debug line.
+    test "a failed health check logs at :debug level" do
+      previous_level = Logger.level()
+      Logger.configure(level: :debug)
+      on_exit(fn -> Logger.configure(level: previous_level) end)
+
       log =
         capture_log([level: :debug], fn ->
           Telemetry.handle_event(
@@ -54,10 +60,11 @@ defmodule Tymeslot.Integrations.TelemetryTest do
           )
         end)
 
-      assert log =~ "[warning] Health check: test - unhealthy (50ms)"
+      assert log =~ "[debug] Health check: test - failed (50ms)"
+      refute log =~ "[warning]"
     end
 
-    test "healthy health check uses :debug level" do
+    test "a passed health check logs at :debug level" do
       previous_level = Logger.level()
       Logger.configure(level: :debug)
       on_exit(fn -> Logger.configure(level: previous_level) end)
@@ -72,7 +79,7 @@ defmodule Tymeslot.Integrations.TelemetryTest do
           )
         end)
 
-      assert log =~ "[debug] Health check: test - healthy (50ms)"
+      assert log =~ "[debug] Health check: test - passed (50ms)"
     end
 
     test "an unrecognised event falls back to the generic message at :debug level" do

@@ -23,6 +23,18 @@ defmodule CredoChecks.UseCoreInputs do
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
+  @helpers ~w(text_input textarea select password_input email_input number_input checkbox
+              radio_button date_input time_input datetime_local_input color_input file_input
+              range_input search_input telephone_input url_input label)a
+
+  # The modules the helpers live in: `Phoenix.HTML.Form` before Phoenix HTML
+  # 4, `PhoenixHTMLHelpers.Form` since.
+  @form_modules [[:Phoenix, :HTML, :Form], [:PhoenixHTMLHelpers, :Form]]
+
+  # Raw <input, <textarea, <select tags. Hidden inputs are ignored, as they
+  # are often used for CSRF or internal state.
+  @tag_regex ~r/<(input|textarea|select)(?![^>]*type=["']hidden["'])[\s\/>]/i
+
   @doc false
   @impl Credo.Check
   @spec run(SourceFile.t(), any) :: list()
@@ -38,68 +50,116 @@ defmodule CredoChecks.UseCoreInputs do
       []
     else
       issue_meta = IssueMeta.for(source_file, params)
-      lines = SourceFile.lines(source_file)
-
-      # Regex to find raw <input, <textarea, <select tags
-      # We ignore hidden inputs as they are often used for CSRF or internal state.
-      input_regex = ~r/<(input|textarea|select)(?![^>]*type=["']hidden["'])[\s\/>]/i
-
-      # Regex to find standard Phoenix form helpers in .ex files
-      helper_regex =
-        ~r/\.(text_input|textarea|select|password_input|email_input|number_input|checkbox|radio_button|date_input|time_input|datetime_local_input|color_input|file_input|range_input|search_input|telephone_input|url_input|label)\(/
-
-      Enum.reduce(lines, [], fn {line_no, line}, issues ->
-        cond do
-          Regex.run(input_regex, line) ->
-            [issue_for(issue_meta, line_no, line, :tag) | issues]
-
-          Regex.run(helper_regex, line) ->
-            [issue_for(issue_meta, line_no, line, :helper) | issues]
-
-          true ->
-            issues
-        end
-      end)
+      tag_issues(source_file, issue_meta) ++ helper_issues(source_file, issue_meta)
     end
   end
 
-  defp issue_for(issue_meta, line_no, line, type) do
-    {tag, trigger} =
-      case type do
-        :tag ->
-          tag =
-            case Regex.run(~r/<(input|textarea|select)/i, line) do
-              [_, tag] -> tag
-              _other -> "input"
-            end
+  # Tags live in HEEx, which the AST holds as strings, so these are found
+  # line by line; a comment that mentions one is not a use of it.
+  defp tag_issues(source_file, issue_meta) do
+    for {line_no, line} <- SourceFile.lines(source_file),
+        not String.starts_with?(String.trim_leading(line), "#"),
+        [_match, tag] <- [Regex.run(@tag_regex, line)] do
+      format_issue(issue_meta,
+        message:
+          "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.Forms.input/1` instead.",
+        line_no: line_no,
+        trigger: "<#{tag}"
+      )
+    end
+  end
 
-          {tag, "<#{tag}"}
+  # Helpers are found as calls: qualified by a form module or an alias of
+  # one, or unqualified where a form module is imported. Any other module's
+  # function of the same name (`Registry.select/2`, say) is not one.
+  defp helper_issues(source_file, issue_meta) do
+    {aliases, imported?} = Credo.Code.prewalk(source_file, &collect_names/2, {%{}, false})
 
-        :helper ->
-          helper =
-            case Regex.run(
-                   ~r/\.(text_input|textarea|select|password_input|email_input|number_input|checkbox|radio_button|date_input|time_input|datetime_local_input|color_input|file_input|range_input|search_input|telephone_input|url_input|label)\(/,
-                   line
-                 ) do
-              [_, helper] -> helper
-              _other -> "input_helper"
-            end
+    source_file
+    |> Credo.Code.prewalk(&find_helpers(&1, &2, aliases, imported?, issue_meta))
+    |> Enum.reverse()
+  end
 
-          {helper, ".#{helper}"}
+  defp collect_names(
+         {:alias, _meta, [{:__aliases__, _, segments} | opts]} = ast,
+         {aliases, imported?}
+       ) do
+    # `as:` may come with other options, such as `warn: false`.
+    name =
+      case opts do
+        [[_ | _] = keyword] ->
+          case Keyword.get(keyword, :as) do
+            {:__aliases__, _, [as]} -> as
+            _no_as -> List.last(segments)
+          end
+
+        _no_options ->
+          List.last(segments)
       end
 
-    message =
-      if type == :tag do
-        "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.Forms.input/1` instead."
-      else
-        component = if tag == "label", do: "label/1", else: "input/1"
+    {ast, {Map.put(aliases, name, segments), imported?}}
+  end
 
-        "Avoid using `Phoenix.HTML.Form.#{tag}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.Forms.#{component}` instead."
+  defp collect_names(
+         {:alias, _meta, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children} | _opts]} = ast,
+         {aliases, imported?}
+       ) do
+    aliases =
+      for {:__aliases__, _, segments} <- children, into: aliases do
+        {List.last(segments), base ++ segments}
       end
+
+    {ast, {aliases, imported?}}
+  end
+
+  defp collect_names(
+         {:import, _meta, [{:__aliases__, _, segments} | _opts]} = ast,
+         {aliases, imported?}
+       ),
+       do: {ast, {aliases, imported? or segments in @form_modules}}
+
+  # `use PhoenixHTMLHelpers` imports the form helpers along with the rest.
+  defp collect_names(
+         {:use, _meta, [{:__aliases__, _, [:PhoenixHTMLHelpers]} | _opts]} = ast,
+         {aliases, _imported?}
+       ),
+       do: {ast, {aliases, true}}
+
+  defp collect_names(ast, acc), do: {ast, acc}
+
+  defp find_helpers(
+         {{:., _, [{:__aliases__, _, segments}, helper]}, meta, args} = ast,
+         issues,
+         aliases,
+         _imported?,
+         issue_meta
+       )
+       when helper in @helpers and is_list(args) do
+    if resolve(segments, aliases) in @form_modules,
+      do: {ast, [helper_issue(issue_meta, helper, meta, ".#{helper}") | issues]},
+      else: {ast, issues}
+  end
+
+  defp find_helpers({helper, meta, args} = ast, issues, _aliases, true, issue_meta)
+       when helper in @helpers and is_list(args) and args != [],
+       do: {ast, [helper_issue(issue_meta, helper, meta, Atom.to_string(helper)) | issues]}
+
+  defp find_helpers(ast, issues, _aliases, _imported?, _issue_meta), do: {ast, issues}
+
+  defp resolve([first | rest], aliases) do
+    case Map.fetch(aliases, first) do
+      {:ok, segments} -> segments ++ rest
+      :error -> [first | rest]
+    end
+  end
+
+  defp helper_issue(issue_meta, helper, meta, trigger) do
+    component = if helper == :label, do: "label/1", else: "input/1"
 
     format_issue(issue_meta,
-      message: message,
-      line_no: line_no,
+      message:
+        "Avoid using `Phoenix.HTML.Form.#{helper}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.Forms.#{component}` instead.",
+      line_no: meta[:line],
       trigger: trigger
     )
   end

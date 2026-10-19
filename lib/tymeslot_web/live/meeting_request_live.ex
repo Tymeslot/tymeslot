@@ -157,7 +157,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
   defp answer(socket, nil, _action, _success_state), do: socket
 
   defp answer(socket, meeting, action, success_state) do
-    case RateLimiter.check_meeting_approval_rate_limit(ClientIP.get(socket)) do
+    case RateLimiter.check(:meeting_approval, ClientIP.get(socket)) do
       :ok ->
         apply_answer(socket, meeting, action, success_state)
 
@@ -188,6 +188,10 @@ defmodule TymeslotWeb.MeetingRequestLive do
   defp apply_answer(socket, meeting, action, success_state) do
     case current_request(socket.assigns.token, meeting) do
       {:ok, current} -> run_answer(socket, current, action, success_state)
+      # The meeting is gone or its host is unavailable (account pending
+      # deletion): nothing "has changed", so the page just shows the
+      # unrecognised-link state.
+      {:error, :not_found} -> assign(socket, meeting: nil, state: :invalid)
       {:error, _reason} -> stale_request(socket)
     end
   end
@@ -253,6 +257,13 @@ defmodule TymeslotWeb.MeetingRequestLive do
             "That time has since been booked by somebody else, so this request can no longer be approved."
           )
         )
+
+      # Nothing was saved (e.g. an approval whose confirmation could not be
+      # scheduled rolled back), so the request is still open to answer again.
+      {:error, _reason} ->
+        socket
+        |> load_request(socket.assigns.token)
+        |> put_flash(:error, dgettext("booking_manage", "Please wait a moment and try again."))
     end
   end
 end

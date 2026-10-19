@@ -7,7 +7,7 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
   database, so hosts without limits pay nothing.
   """
 
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Meetings.BookingLimits
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
@@ -107,7 +107,7 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
 
     if BookingLimits.enabled?(limits) do
       host_timezone = host_timezone(profile_settings)
-      week_start = CalendarManagement.get_week_start(organizer_user_id)
+      week_start = Management.get_week_start(organizer_user_id)
       {first_date, last_date} = host_date_range(start_date, end_date, host_timezone, opts)
 
       {from_utc, to_utc} =
@@ -125,7 +125,5 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
     end
   end
 
-  defp host_timezone(profile_settings) do
-    (profile_settings && Map.get(profile_settings, :timezone)) || Profiles.get_default_timezone()
-  end
+  defp host_timezone(profile_settings), do: Profiles.timezone(profile_settings)
 end

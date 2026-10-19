@@ -22,11 +22,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Utils.FormHelpers
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SlotIntervalField
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
+  alias TymeslotWeb.Helpers.ContextErrors
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   # The Details fields the create submit posts. Each input already reports its
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   def run(socket, posted_params) do
     user = socket.assigns.current_user
 
-    case RateLimiter.check_meeting_type_write_rate_limit(user.id) do
+    case RateLimiter.check(:meeting_type_write, user.id) do
       :ok ->
         socket = merge_posted_details(socket, posted_params)
 
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   end
 
   def apply_result({:error, %Ecto.Changeset{} = changeset}, socket) do
-    Component.assign(socket, :form_errors, Helpers.changeset_form_errors(changeset))
+    Component.assign(socket, :form_errors, FormErrors.to_map(changeset))
   end
 
   # Gated features refuse the whole save without naming a field.
@@ -124,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
 
   def apply_result({:error, reason}, socket) do
     Flash.error(error_message(reason))
-    Component.assign(socket, :form_errors, FormHelpers.format_context_error(reason))
+    Component.assign(socket, :form_errors, ContextErrors.format_context_error(reason))
   end
 
   defp error_message(:video_integration_required),
@@ -137,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
     do: dgettext("dashboard_meeting_form", "Enter a valid price for this meeting type")
 
   defp error_message(:group_bookings_not_allowed),
-    do: FormHelpers.group_bookings_not_allowed_message()
+    do: ContextErrors.group_bookings_not_allowed_message()
 
   defp error_message(:insufficient_plan),
     do: dgettext("dashboard_meeting_form", "Custom booking questions are available on Pro plans.")

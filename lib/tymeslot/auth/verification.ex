@@ -98,7 +98,7 @@ defmodule Tymeslot.Auth.Verification do
           {:ok, term(), :auto_login | :manual}
           | {:error, atom() | {:rate_limited, String.t()}}
   def verify_email_and_maybe_login(token, opts) when is_binary(token) do
-    limit = RateLimiter.check_verification_link_rate_limit(opts[:ip])
+    limit = RateLimiter.check(:verification_link, opts[:ip])
     context = [event: "email_verification_link", ip: opts[:ip], user_agent: opts[:user_agent]]
 
     with :ok <- limit_link(limit, context),
@@ -170,7 +170,7 @@ defmodule Tymeslot.Auth.Verification do
 
     result =
       RateLimit.with_limit(
-        RateLimiter.check_verification_ip_rate_limit(ip),
+        RateLimiter.check(:verification_ip, ip),
         [event: "email_verification", identifier: nil, ip: ip, user_agent: opts[:user_agent]],
         fn -> email |> unverified_user() |> resend_quietly(ip) end
       )
@@ -228,7 +228,7 @@ defmodule Tymeslot.Auth.Verification do
 
   defp resend_quietly(user, ip) do
     RateLimit.with_limit(
-      RateLimiter.check_verification_user_rate_limit(user.id),
+      RateLimiter.check(:verification_user, user.id),
       [event: "email_verification", identifier: user.id, ip: ip],
       fn ->
         with {:error, reason} <- issue_and_send(user, ip) do

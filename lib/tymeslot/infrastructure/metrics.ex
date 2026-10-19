@@ -23,38 +23,40 @@ defmodule Tymeslot.Infrastructure.Metrics do
   end
 
   @doc """
-  Times and tracks a calendar operation.
+  Times an operation and emits its telemetry event, `prefix ++ [operation]`,
+  with the duration in milliseconds and the result's status.
+
+  ## Options
+
+    * `:prefix` — the event's prefix, `[:tymeslot, :calendar]` by default;
+      video room operations use `[:tymeslot, :video]`.
   """
-  @spec time_operation(atom(), map(), (-> term())) :: term()
-  def time_operation(operation, metadata, fun) when is_function(fun, 0) do
+  @spec time_operation(atom(), map(), (-> term()), keyword()) :: term()
+  def time_operation(operation, metadata, fun, opts \\ []) when is_function(fun, 0) do
+    event = Keyword.get(opts, :prefix, [:tymeslot, :calendar]) ++ [operation]
     start_time = System.monotonic_time()
 
     try do
       result = fun.()
-
-      duration = System.monotonic_time() - start_time
-      duration_ms = System.convert_time_unit(duration, :native, :millisecond)
-
-      emit_calendar_operation(
-        operation,
-        Map.merge(metadata, result_status(result)),
-        %{duration: duration_ms}
-      )
-
+      emit_timed(event, start_time, Map.merge(metadata, result_status(result)))
       result
     rescue
       error ->
-        duration = System.monotonic_time() - start_time
-        duration_ms = System.convert_time_unit(duration, :native, :millisecond)
-
-        emit_calendar_operation(
-          operation,
-          Map.merge(metadata, %{status: :error, error: LogFormat.reason(error)}),
-          %{duration: duration_ms}
+        emit_timed(
+          event,
+          start_time,
+          Map.merge(metadata, %{status: :error, error: LogFormat.reason(error)})
         )
 
         reraise error, __STACKTRACE__
     end
+  end
+
+  defp emit_timed(event, start_time, metadata) do
+    duration_ms =
+      System.convert_time_unit(System.monotonic_time() - start_time, :native, :millisecond)
+
+    :telemetry.execute(event, %{duration: duration_ms}, metadata)
   end
 
   # An operation that returns {:error, _} failed just as surely as one that

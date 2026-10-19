@@ -49,8 +49,8 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
   describe "/dashboard with no unseen announcements" do
     test "does not render the modal", %{conn: conn} do
       user = pre_existing_user()
-      Announcements.mark_seen!(user, "test_alpha")
-      Announcements.mark_seen!(user, "test_beta")
+      Announcements.mark_seen(user, "test_alpha")
+      Announcements.mark_seen(user, "test_beta")
 
       conn = log_in(conn, user)
       {:ok, _view, html} = live(conn, ~p"/dashboard")

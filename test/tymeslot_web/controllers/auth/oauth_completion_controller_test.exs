@@ -22,8 +22,14 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.UserRegisteredHookWorker
 
-  # `RateLimiter.OAuth.check_completion/1` allows this many per IP per window.
+  defmodule NoopHook do
+    @spec on_user_registered(pos_integer(), map()) :: :ok
+    def on_user_registered(_user_id, _metadata), do: :ok
+  end
+
+  # The `:oauth_completion` rate limit allows this many per IP per window.
   @completion_limit 6
 
   setup :setup_providers
@@ -57,6 +63,14 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
     test "announces the new account as a social sign-up from this client", %{conn: conn} do
       :ok = Auth.subscribe_to_user_registrations()
       Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+      original_hook = Application.get_env(:tymeslot, :user_registered_hook)
+      Application.put_env(:tymeslot, :user_registered_hook, NoopHook)
+
+      on_exit(fn ->
+        if original_hook,
+          do: Application.put_env(:tymeslot, :user_registered_hook, original_hook),
+          else: Application.delete_env(:tymeslot, :user_registered_hook)
+      end)
 
       conn = %{conn | remote_ip: {203, 0, 113, 61}}
       complete(conn, pending(), %{"auth" => %{"terms_accepted" => "on"}})
@@ -64,10 +78,13 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
       user = Repo.get_by!(UserSchema, github_user_id: "12345")
       user_id = user.id
 
-      assert_receive {:user_registered, %{user: %{id: ^user_id}, metadata: metadata}}
-      assert metadata.source == "oauth_signup"
-      assert metadata.ip == "203.0.113.61"
-      assert metadata.terms_accepted == true
+      assert_receive {:user_registered, %{user_id: ^user_id, provider: "github"}}
+
+      assert [hook_job] = all_enqueued(worker: UserRegisteredHookWorker)
+      assert hook_job.args["user_id"] == user_id
+      assert hook_job.args["metadata"]["source"] == "oauth_signup"
+      assert hook_job.args["metadata"]["ip"] == "203.0.113.61"
+      assert hook_job.args["metadata"]["terms_accepted"] == true
     end
 
     test "reports a display name too long to store and creates no account", %{conn: conn} do
@@ -147,7 +164,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
 
     test "the notice to a taken address's owner shares the sign-up form's cap", %{conn: conn} do
       owner = insert(:user, email: "capped@example.com")
-      for _i <- 1..5, do: RateLimiter.check_signup_attempt_notice_rate_limit(owner.id)
+      for _i <- 1..5, do: RateLimiter.check(:signup_attempt_notice, owner.id)
 
       conn =
         conn

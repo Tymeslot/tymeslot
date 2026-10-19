@@ -27,44 +27,103 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   whatever the page showed, so offering another type's slots would only
   promise times the move is not checked against.
 
-  A type the host has deleted since the booking resolves to `nil`, and then the
-  choice is a real one: the page falls back to the full list, as before.
+  A whole booking whose type the host has deleted since resolves to `nil`, and
+  then the choice is a real one: the page falls back to the full list, as
+  before. A seat whose type is gone cannot move at all, and never reaches the
+  pin (`SeatMoveLink` turns it away); a seat on another organiser's meeting
+  (a hand-edited username) has no type either and is not pinned, and its
+  submit is refused.
   """
 
-  import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [push_patch: 2]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.LiveView, only: [push_navigate: 2, push_patch: 2, put_flash: 3]
 
+  alias Tymeslot.Bookings.Refusal
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Scheduling.RescheduleContext
+  alias Tymeslot.Scheduling.SeatMoveContext
   alias Tymeslot.Scheduling.ThemeFlow
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeatMoveLink
+
+  require Refusal
+
+  @doc """
+  Loads the booking the page's `:reschedule_meeting_uid` names, once, into
+  `:reschedule_context` (`Tymeslot.Scheduling.ThemeFlow.reschedule_context/2`):
+  the meeting type, location, form values and answers the page starts from all
+  read it rather than looking the meeting up again.
+
+  A booking the rules refuse leaves no context and its reason in
+  `:reschedule_refusal`, for `leave_if_refused/1`; a uid naming no meeting of
+  this organiser leaves neither, and the page books afresh. A page with no uid
+  is cleared of both.
+
+  Run whenever the page applies its URL, so a booking cancelled or moved on
+  since is caught there, as on arrival. Between URL changes the page keeps
+  what it loaded; the submit asks the rules again whatever the page holds.
+  """
+  @spec load_context(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def load_context(
+        %{assigns: %{reschedule_meeting_uid: uid, organizer_user_id: user_id}} = socket
+      )
+      when is_binary(uid) and is_integer(user_id) do
+    case ThemeFlow.reschedule_context(uid, user_id) do
+      {:ok, context} -> assign_context(socket, context, nil)
+      {:error, reason} when Refusal.is_refusal(reason) -> assign_context(socket, nil, reason)
+      {:error, _not_the_organisers} -> assign_context(socket, nil, nil)
+    end
+  end
+
+  def load_context(socket), do: assign_context(socket, nil, nil)
+
+  defp assign_context(socket, context, refusal) do
+    socket
+    |> assign(:reschedule_context, context)
+    |> assign(:reschedule_refusal, refusal)
+  end
 
   @doc """
   The meeting type a reschedule is committed to, or `nil` when this is not a
-  reschedule or its type no longer exists.
+  reschedule, a whole booking's type no longer exists, or a seat is on
+  another organiser's meeting.
 
-  Always resolved from the seat token or the uid. It deliberately does not
-  read `:meeting_type` back off the socket to save the query: the schedule
-  entry assigns that from the URL slug, so trusting it would let a stale link
-  pin the page to a type the meeting is not, and then present it as the one
-  being moved. A seat token wins over a uid, as it does on submit
-  (`Tymeslot.Bookings.Orchestrator`).
+  Always read from the seat or the booking the page loaded from its link
+  (`:seat_move_context`, `:reschedule_context`). It deliberately does not read `:meeting_type` back
+  off the socket: the schedule entry assigns that from the URL slug, so
+  trusting it would let a stale link pin the page to a type the meeting is
+  not, and then present it as the one being moved. A seat token wins over a
+  uid, as it does on submit (`Tymeslot.Bookings.Orchestrator`).
   """
   @spec meeting_type(Phoenix.LiveView.Socket.t()) :: map() | nil
   def meeting_type(socket) do
-    user_id = socket.assigns[:organizer_user_id]
-
-    case socket.assigns[:reschedule_seat_token] do
-      token when is_binary(token) ->
-        ThemeFlow.resolve_meeting_type_for_seat(token, user_id)
-
-      _not_a_seat_move ->
-        ThemeFlow.resolve_meeting_type_for_reschedule(
-          socket.assigns[:reschedule_meeting_uid],
-          user_id
-        )
+    case socket.assigns do
+      %{seat_move_context: %SeatMoveContext{meeting_type: meeting_type}} -> meeting_type
+      %{reschedule_context: %RescheduleContext{meeting_type: meeting_type}} -> meeting_type
+      _neither -> nil
     end
   end
+
+  @doc """
+  Sends a page whose URL names a booking the rules no longer let be moved
+  (cancelled, completed, expired, under way or over) on to a fresh booking,
+  telling the visitor why, rather than letting them fill in a form whose
+  submit can only be refused. The manage page's reschedule link refuses the
+  same bookings at mount. Reads the refusal `load_context/1` found; a page
+  with no reschedule uid, or one naming a booking that can still move, is
+  left as it is.
+  """
+  @spec leave_if_refused(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def leave_if_refused(%{assigns: %{reschedule_refusal: reason}} = socket)
+      when Refusal.is_refusal(reason) do
+    socket
+    |> put_flash(:error, BookingErrorMessage.message(reason))
+    |> push_navigate(to: PathHandlers.restart_path(socket))
+  end
+
+  def leave_if_refused(socket), do: socket
 
   @doc """
   Marks the page as pinned to `meeting_type`: it is the only one offered, and
@@ -86,6 +145,40 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   def clear(socket), do: assign(socket, :meeting_type_pinned, false)
 
   @doc """
+  Marks a page that stops being pinned as offering a real choice again: the
+  organiser's catalogue, which the pin had replaced with the one type being
+  moved, is re-resolved the way the mount resolves it, which is also what
+  keeps a demo organiser whole (its types are synthesised by the overlay
+  rather than stored, so no query could rebuild them).
+
+  On a page that opens on the overview (`on_overview?`), the pinned type
+  stays selected only if the catalogue offers it: one it no longer lists
+  (deactivated since, or private) would leave a selection no card matches,
+  and a "next" that books it. A page on a type's own link keeps it, as that
+  link is how such a type is reached. A page that was not pinned is only
+  marked so.
+  """
+  @spec unpin(Phoenix.LiveView.Socket.t(), boolean()) :: Phoenix.LiveView.Socket.t()
+  def unpin(socket, on_overview?) do
+    if pinned?(socket) do
+      socket
+      |> clear()
+      |> OrganizerHelpers.handle_username_resolution(socket.assigns[:username_context])
+      |> then(&if(on_overview?, do: drop_selection_off_catalogue(&1), else: &1))
+    else
+      clear(socket)
+    end
+  end
+
+  defp drop_selection_off_catalogue(socket) do
+    offered = Enum.map(socket.assigns[:meeting_types] || [], &MeetingTypes.effective_slug/1)
+
+    if socket.assigns[:selected_duration] in offered,
+      do: socket,
+      else: assign(socket, selected_duration: nil, duration: nil, meeting_type: nil)
+  end
+
+  @doc """
   Leaves the reschedule behind: the page is booking afresh again.
 
   "Schedule Another Meeting" restarts the flow in place, without navigating, so
@@ -101,19 +194,17 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
 
   Clearing `:is_rescheduling` is not enough on its own: the uid is what the
   orchestrator receives, and the pin has replaced `:meeting_types` with the one
-  type being moved. The organiser's catalogue is re-resolved the way the mount
-  resolves it, which is also what keeps a demo organiser whole: its types are
-  synthesised by the overlay rather than stored, so no query could rebuild them.
+  type being moved, which `unpin/2` puts right for the route the booking
+  starts again on.
   """
   @spec abandon(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def abandon(socket) do
     socket
     |> assign(:reschedule_meeting_uid, nil)
-    |> assign(:reschedule_seat_token, nil)
-    |> assign(:reschedule_seat_from, nil)
+    |> assign_context(nil, nil)
+    |> SeatMoveLink.clear()
     |> assign(:is_rescheduling, false)
-    |> clear()
-    |> OrganizerHelpers.handle_username_resolution(socket.assigns[:username_context])
+    |> unpin(socket.assigns[:entered_via_overview] == true)
   end
 
   @doc """

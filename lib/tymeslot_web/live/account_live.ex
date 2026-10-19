@@ -7,16 +7,19 @@ defmodule TymeslotWeb.AccountLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Locales
-  alias TymeslotWeb.AccountLive.{Handlers, Helpers}
+  alias TymeslotWeb.AccountLive.{DangerZone, DeleteAccountModal, Handlers, Helpers}
 
   import TymeslotWeb.AccountLive.Components
 
   @impl Phoenix.LiveView
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      socket
      |> assign(:page_title, dgettext("account", "Account Settings"))
      |> assign(:supported_locales, Locales.supported())
+     # Lets a deletion request end every session but leave this socket
+     # connected long enough to deliver its own redirect.
+     |> assign(:session_token, session["user_token"])
      |> Helpers.init_form_state()}
   end
 
@@ -39,8 +42,9 @@ defmodule TymeslotWeb.AccountLive do
               variant={:secondary}
               size={:sm}
               icon="hero-arrow-left"
+              aria-label={dgettext("account", "Back to Dashboard")}
             >
-              {dgettext("account", "Back to Dashboard")}
+              <span class="hidden sm:inline">{dgettext("account", "Back to Dashboard")}</span>
             </.action_link>
 
             <%!-- User dropdown --%>
@@ -66,10 +70,20 @@ defmodule TymeslotWeb.AccountLive do
               <.email_card {assigns} />
               <.password_card {assigns} />
               <.language_card current_user={@current_user} supported_locales={@supported_locales} />
+              <DangerZone.danger_zone_card grace_days={@deletion_grace_days} />
             </div>
           </div>
         </main>
       </div>
+
+      <DeleteAccountModal.delete_account_modal
+        :if={@show_delete_modal}
+        confirmation={@deletion_confirmation}
+        grace_days={@deletion_grace_days}
+        deletion_date={@deletion_date}
+        feedback_options={@deletion_feedback_options}
+        errors={@delete_errors}
+      />
     </div>
     """
   end

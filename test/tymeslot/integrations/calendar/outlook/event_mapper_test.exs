@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~D[2026-04-19]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["isAllDay"] == true
     end
@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~D[2026-04-19]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["start"]["dateTime"] == "2026-04-18T00:00:00.0000000"
       assert result["start"]["timeZone"] == "UTC"
@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~U[2026-04-18 11:00:00Z]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       refute Map.has_key?(result, "isAllDay")
     end
@@ -54,7 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~U[2026-04-18 11:00:00Z]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["showAs"] == "busy"
     end
@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         transparency: :transparent
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["showAs"] == "free"
     end
@@ -80,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         status: :tentative
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["showAs"] == "tentative"
     end
@@ -94,7 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~U[2026-04-18 11:00:00Z]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       refute Map.has_key?(result, "sensitivity")
     end
@@ -107,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         visibility: :private
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["sensitivity"] == "private"
     end
@@ -120,7 +120,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         visibility: :confidential
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["sensitivity"] == "confidential"
     end
@@ -134,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~U[2026-04-18 11:00:00Z]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       # Event data carrying no timezone still gets one, defaulting to UTC.
       assert result["start"]["timeZone"] == "UTC"
@@ -169,7 +169,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         ]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["reminderMinutesBeforeStart"] == 15
       assert result["isReminderOn"] == true
@@ -182,7 +182,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~U[2026-04-18 11:00:00Z]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["isReminderOn"] == false
       refute Map.has_key?(result, "reminderMinutesBeforeStart")
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         reminders: []
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["isReminderOn"] == false
     end
@@ -211,12 +211,41 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE"
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["recurrence"]["pattern"]["type"] == "weekly"
       assert result["recurrence"]["pattern"]["daysOfWeek"] == ["monday", "wednesday"]
       assert result["recurrence"]["range"]["type"] == "noEnd"
       assert result["recurrence"]["range"]["startDate"] == "2026-06-15"
+    end
+
+    # An imported "second Tuesday" used to land on the start's day of every
+    # month, whatever the weekday.
+    test "writes a counted weekday as a relative monthly pattern" do
+      event_data = %{
+        summary: "Board meeting",
+        start_time: ~U[2026-01-13 09:00:00Z],
+        end_time: ~U[2026-01-13 10:00:00Z],
+        recurrence_rule: "FREQ=MONTHLY;BYDAY=2TU"
+      }
+
+      assert format(event_data)["recurrence"]["pattern"] == %{
+               "type" => "relativeMonthly",
+               "daysOfWeek" => ["tuesday"],
+               "index" => "second",
+               "interval" => 1
+             }
+    end
+
+    test "refuses a rule Outlook has no pattern for" do
+      event_data = %{
+        summary: "Board meeting",
+        start_time: ~U[2026-01-13 09:00:00Z],
+        end_time: ~U[2026-01-13 10:00:00Z],
+        recurrence_rule: "FREQ=MONTHLY;BYDAY=5TU"
+      }
+
+      assert EventMapper.format_event_data(event_data) == {:error, :rule_not_supported_by_outlook}
     end
 
     test "derives the start date from an all-day Date start" do
@@ -227,7 +256,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         recurrence_rule: "FREQ=DAILY;COUNT=5"
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       assert result["recurrence"]["range"]["type"] == "numbered"
       assert result["recurrence"]["range"]["numberOfOccurrences"] == 5
@@ -240,7 +269,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
         end_time: ~U[2026-06-15 11:00:00Z]
       }
 
-      {:ok, result} = EventMapper.format_event_data(event_data)
+      result = format(event_data)
 
       refute Map.has_key?(result, "recurrence")
     end
@@ -274,14 +303,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
     end
 
     test "an edit that says nothing about attendees sends no attendees key" do
-      {:ok, result} = EventMapper.format_event_data(timed_event(%{summary: "Renamed"}))
+      result = format(timed_event(%{summary: "Renamed"}))
 
       refute Map.has_key?(result, "attendees")
     end
 
     test "a supplied list is sent as required attendees" do
-      {:ok, result} =
-        EventMapper.format_event_data(
+      result =
+        format(
           timed_event(%{
             attendees: [
               %{"email" => "ada@example.com", "name" => "Ada"},
@@ -305,30 +334,28 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
     # The removal of the last guest, which has to reach Graph as an empty
     # collection rather than as no opinion.
     test "a supplied empty list is sent as an empty collection" do
-      {:ok, result} = EventMapper.format_event_data(timed_event(%{attendees: []}))
+      result = format(timed_event(%{attendees: []}))
 
       assert result["attendees"] == []
     end
 
     test "a nil attendee list is no opinion and sends no attendees key" do
-      {:ok, result} = EventMapper.format_event_data(timed_event(%{attendees: nil}))
+      result = format(timed_event(%{attendees: nil}))
 
       refute Map.has_key?(result, "attendees")
     end
 
     test "the ad-hoc meeting's single attendee is still sent" do
-      {:ok, result} =
-        EventMapper.format_event_data(
-          timed_event(%{attendee_email: "ada@example.com", attendee_name: "Ada"})
-        )
+      result =
+        format(timed_event(%{attendee_email: "ada@example.com", attendee_name: "Ada"}))
 
       assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "Ada"}}] =
                result["attendees"]
     end
 
     test "keeps a cached attendee's label rather than replacing it with the address" do
-      {:ok, result} =
-        EventMapper.format_event_data(
+      result =
+        format(
           timed_event(%{
             attendees: [
               %{
@@ -346,18 +373,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
     end
 
     test "labels an attendee with no name by their address" do
-      {:ok, result} =
-        EventMapper.format_event_data(
-          timed_event(%{attendees: [Attendee.new(email: "ada@example.com")]})
-        )
+      result =
+        format(timed_event(%{attendees: [Attendee.new(email: "ada@example.com")]}))
 
       assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "ada@example.com"}}] =
                result["attendees"]
     end
 
     test "drops an attendee with no address" do
-      {:ok, result} =
-        EventMapper.format_event_data(
+      result =
+        format(
           timed_event(%{
             attendees: [Attendee.new(email: "ada@example.com"), %{"display_name" => "Nobody"}]
           })
@@ -365,5 +390,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
       assert [%{"emailAddress" => %{"address" => "ada@example.com"}}] = result["attendees"]
     end
+  end
+
+  # Every payload here has a rule Graph can express, or none.
+  defp format(event_data) do
+    {:ok, body} = EventMapper.format_event_data(event_data)
+    body
   end
 end

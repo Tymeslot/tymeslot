@@ -574,13 +574,21 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
       {winter, summer} = winter_and_summer_mondays()
       excluded = Date.add(summer, -7)
       overridden = Date.add(summer, 7)
+      # Bounded, as above: unbounded, its last occurrence sits at the edge of
+      # the sync's window, a year from now, and on the hour between the old
+      # and the new start the moved series would have one fewer.
+      until = berlin_instant(Date.add(overridden, 7), ~T[10:00:00])
 
       document =
         calendar(
           @vtimezone <>
-            master(
-              "DTSTART;TZID=Europe/Berlin:#{stamp(winter)}T100000",
-              "EXDATE;TZID=Europe/Berlin:#{stamp(excluded)}T100000\n"
+            String.replace(
+              master(
+                "DTSTART;TZID=Europe/Berlin:#{stamp(winter)}T100000",
+                "EXDATE;TZID=Europe/Berlin:#{stamp(excluded)}T100000\n"
+              ),
+              "RRULE:FREQ=WEEKLY",
+              "RRULE:FREQ=WEEKLY;UNTIL=#{utc_stamp(until)}"
             ) <>
             """
             BEGIN:VEVENT
@@ -601,6 +609,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
       uids = Enum.map(events, & &1.uid)
       uid = &"weekly-sync@example.com_#{stamp(&1)}T110000"
 
+      # The bound took: every Monday from the first to the last, less the one
+      # excluded, the override standing in for its own.
+      assert document =~ "RRULE:FREQ=WEEKLY;UNTIL=#{utc_stamp(until)}"
+      mondays = div(Date.diff(Date.add(overridden, 7), winter), 7) + 1
+      assert length(before) == mondays - 1
       assert length(events) == length(before)
       assert Enum.uniq(uids) == uids
       refute Enum.any?(uids, &String.ends_with?(&1, "T100000"))

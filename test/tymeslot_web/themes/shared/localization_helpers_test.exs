@@ -198,6 +198,24 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       assert {_afternoon, [%{time: "14:00", seats_left: 2, capacity: 10}]} = Enum.at(grouped, 2)
     end
 
+    test "puts each slot in the period its hour falls in, dropping an unparseable time" do
+      times = ["04:59", "05:00", "11:59", "12:00", "16:59", "17:00", "20:59", "21:00", "bogus"]
+
+      grouped =
+        times
+        |> Enum.map(&%{time: &1, seats_left: nil, capacity: nil})
+        |> LocalizationHelpers.group_slots_by_period()
+        |> Enum.map(fn {period, slots} -> {period, Enum.map(slots, & &1.time)} end)
+
+      assert grouped == [
+               {"Early Morning", ["04:59"]},
+               {"Morning", ["05:00", "11:59"]},
+               {"Afternoon", ["12:00", "16:59"]},
+               {"Evening", ["17:00", "20:59"]},
+               {"Late Night", ["21:00"]}
+             ]
+    end
+
     test "sorts slots chronologically inside a period" do
       slots = [
         %{time: "11:30", seats_left: nil, capacity: nil},

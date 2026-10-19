@@ -10,10 +10,9 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   import Ecto.Query
 
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Shared.IntegrationTypes
 
   alias Tymeslot.Repo
 
@@ -36,6 +35,79 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   end
 
   @doc """
+  Inserts the default health state for every active integration of `kind`
+  that has none, in one statement. Returns the number inserted.
+
+  The sweep runs it first, so `due/2` can read health states alone.
+  """
+  @spec seed_missing(IntegrationTypes.kind()) :: non_neg_integer()
+  def seed_missing(kind) do
+    type_str = IntegrationTypes.db_value(kind)
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    missing =
+      from(i in IntegrationTypes.queries(kind).active_query(),
+        left_join: s in IntegrationHealthStateSchema,
+        on: s.integration_type == ^type_str and s.integration_id == i.id,
+        where: is_nil(s.id),
+        select: %{
+          integration_type: ^type_str,
+          integration_id: i.id,
+          user_id: i.user_id,
+          status: ^HealthStatus.to_db_value(:healthy),
+          failures: 0,
+          consecutive_hard_failures: 0,
+          consecutive_sync_failures: 0,
+          successes: 0,
+          backoff_ms: ^IntegrationHealthStateSchema.check_interval_ms(),
+          inserted_at: ^now,
+          updated_at: ^now
+        }
+      )
+
+    {count, _rows} =
+      Repo.insert_all(IntegrationHealthStateSchema, missing,
+        on_conflict: :nothing,
+        conflict_target: [:integration_type, :integration_id]
+      )
+
+    count
+  end
+
+  @doc """
+  The active integrations of `kind` whose next health check is due at `now`:
+  never checked, or checked longer ago than their backoff.
+
+  Reads health states through `integration_health_states_next_check_index`,
+  whose expression the comparison below repeats exactly, so the cost follows
+  the number of due rows rather than the number of integrations. Selects only
+  what scheduling needs; credentials stay in the table.
+  """
+  @spec due(IntegrationTypes.kind(), DateTime.t()) :: [
+          %{id: integer(), provider: String.t(), base_url: String.t() | nil}
+        ]
+  def due(kind, %DateTime{} = now) do
+    type_str = IntegrationTypes.db_value(kind)
+    now = DateTime.to_naive(now)
+
+    Repo.all(
+      from(s in IntegrationHealthStateSchema,
+        join: i in subquery(IntegrationTypes.queries(kind).active_query()),
+        on: i.id == s.integration_id,
+        where: s.integration_type == ^type_str,
+        where:
+          fragment(
+            "(COALESCE(?, '-infinity'::timestamp) + ? * interval '1 millisecond') <= ?",
+            s.last_check_at,
+            s.backoff_ms,
+            ^now
+          ),
+        select: %{id: i.id, provider: i.provider, base_url: i.base_url}
+      )
+    )
+  end
+
+  @doc """
   Retrieves or initialises the health state record for an integration.
 
   If no record exists, inserts a default healthy state using `on_conflict: :nothing`
@@ -55,7 +127,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
       successes: 0,
-      backoff_ms: 1_800_000
+      backoff_ms: IntegrationHealthStateSchema.check_interval_ms()
     }
 
     %IntegrationHealthStateSchema{}
@@ -68,6 +140,32 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
          ) do
       nil -> {:error, :not_found}
       record -> {:ok, record}
+    end
+  end
+
+  @doc """
+  `get_or_init/3`, then the row read again under `FOR UPDATE`, so a caller
+  inside a transaction holds it until that transaction ends.
+
+  The probe and a sync of one integration both read the row, work out the new
+  state and write it back. Each doing so under this lock means neither can
+  write over a state the other wrote after it read.
+  """
+  @spec get_or_init_for_update(String.t() | atom(), integer(), integer()) ::
+          {:ok, IntegrationHealthStateSchema.t()} | {:error, :not_found}
+  def get_or_init_for_update(type, integration_id, user_id) do
+    type_str = to_string(type)
+
+    with {:ok, _record} <- get_or_init(type, integration_id, user_id) do
+      case Repo.one(
+             from(s in IntegrationHealthStateSchema,
+               where: s.integration_type == ^type_str and s.integration_id == ^integration_id,
+               lock: "FOR UPDATE"
+             )
+           ) do
+        nil -> {:error, :not_found}
+        record -> {:ok, record}
+      end
     end
   end
 
@@ -125,7 +223,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
       successes: 0,
-      backoff_ms: 1_800_000,
+      backoff_ms: IntegrationHealthStateSchema.check_interval_ms(),
       last_check_at: Clock.utc_now(),
       last_error_class: nil,
       became_unhealthy_at: nil,
@@ -167,10 +265,12 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   """
   @spec delete_orphaned() :: {non_neg_integer(), nil}
   def delete_orphaned do
-    calendar_deleted = delete_orphaned_by_type("calendar", CalendarIntegrationSchema)
-    video_deleted = delete_orphaned_by_type("video", VideoIntegrationSchema)
+    deleted =
+      IntegrationTypes.kinds()
+      |> Enum.map(&delete_orphaned_by_type/1)
+      |> Enum.sum_by(&elem(&1, 0))
 
-    {elem(calendar_deleted, 0) + elem(video_deleted, 0), nil}
+    {deleted, nil}
   end
 
   @doc """
@@ -185,24 +285,22 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   """
   @spec list_unhealthy_for_user(integer()) :: [IntegrationHealthStateSchema.t()]
   def list_unhealthy_for_user(user_id) do
-    calendar_ids =
-      from(c in CalendarIntegrationSchema,
-        where: c.user_id == ^user_id and c.is_active == true,
-        select: c.id
-      )
+    of_active_integration =
+      Enum.reduce(IntegrationTypes.kinds(), dynamic(false), fn kind, acc ->
+        active_ids = where(active_integration_ids_subquery(kind), user_id: ^user_id)
 
-    video_ids =
-      from(v in VideoIntegrationSchema,
-        where: v.user_id == ^user_id and v.is_active == true,
-        select: v.id
-      )
+        dynamic(
+          [s],
+          ^acc or
+            (s.integration_type == ^IntegrationTypes.db_value(kind) and
+               s.integration_id in subquery(active_ids))
+        )
+      end)
 
     Repo.all(
       from(s in IntegrationHealthStateSchema,
         where: s.user_id == ^user_id and s.status == ^HealthStatus.to_db_value(:unhealthy),
-        where:
-          (s.integration_type == "calendar" and s.integration_id in subquery(calendar_ids)) or
-            (s.integration_type == "video" and s.integration_id in subquery(video_ids))
+        where: ^of_active_integration
       )
     )
   end
@@ -227,8 +325,9 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
           [IntegrationHealthStateSchema.t()]
   def list_pausable(type, %DateTime{} = calendar_cutoff, hard_failure_count)
       when is_integer(hard_failure_count) and hard_failure_count >= 0 do
-    type_str = to_string(type)
-    active_ids = active_integration_ids_subquery(type, type_str)
+    {:ok, kind} = IntegrationTypes.parse(type)
+    type_str = IntegrationTypes.db_value(kind)
+    active_ids = active_integration_ids_subquery(kind)
 
     IntegrationHealthStateSchema
     |> where(
@@ -268,21 +367,15 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
     |> Repo.all()
   end
 
-  defp active_integration_ids_subquery(:calendar, _type_str),
-    do: from(c in CalendarIntegrationSchema, where: c.is_active == true, select: c.id)
+  defp active_integration_ids_subquery(kind),
+    do: select(IntegrationTypes.queries(kind).active_query(), [i], i.id)
 
-  defp active_integration_ids_subquery(:video, _type_str),
-    do: from(v in VideoIntegrationSchema, where: v.is_active == true, select: v.id)
-
-  defp active_integration_ids_subquery(type, type_str) when is_binary(type) do
-    active_integration_ids_subquery(String.to_existing_atom(type), type_str)
-  end
-
-  defp delete_orphaned_by_type(type_str, integration_schema) do
+  defp delete_orphaned_by_type(kind) do
     orphaned_query =
       from(s in IntegrationHealthStateSchema,
-        where: s.integration_type == ^type_str,
-        where: s.integration_id not in subquery(from(i in integration_schema, select: i.id))
+        where: s.integration_type == ^IntegrationTypes.db_value(kind),
+        where:
+          s.integration_id not in subquery(from(i in IntegrationTypes.schema(kind), select: i.id))
       )
 
     Repo.delete_all(orphaned_query)

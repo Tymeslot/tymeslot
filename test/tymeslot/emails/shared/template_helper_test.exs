@@ -133,4 +133,63 @@ defmodule Tymeslot.Emails.Shared.TemplateHelperTest do
       end
     end
   end
+
+  describe "meeting-details builders" do
+    # 09:00 UTC: 10:00 in Berlin, 14:30 in Kolkata.
+    defp payload(overrides \\ %{}) do
+      start = ~U[2026-01-15 09:00:00Z]
+
+      Map.merge(
+        %{
+          date: ~D[2026-01-15],
+          duration: 60,
+          location: "Somewhere",
+          location_type: :in_person_to_arrange,
+          meeting_type: "Consultation",
+          start_time_owner_tz: DateTime.shift_zone!(start, "Europe/Berlin"),
+          start_time_attendee_tz: DateTime.shift_zone!(start, "Asia/Kolkata"),
+          attendee_timezone: "Asia/Kolkata",
+          organizer_time_format: "24h"
+        },
+        overrides
+      )
+    end
+
+    test "attendee_meeting_details/2 gives the booker their own time and zone" do
+      details = TemplateHelper.attendee_meeting_details(payload(), :attendee)
+
+      assert details.start_time == DateTime.shift_zone!(~U[2026-01-15 09:00:00Z], "Asia/Kolkata")
+      assert details.start_time.time_zone == "Asia/Kolkata"
+      refute Map.has_key?(details, :audience)
+      refute Map.has_key?(details, :time_format)
+    end
+
+    test "attendee_meeting_details/2 marks a guest's map for the guest wording" do
+      details = TemplateHelper.attendee_meeting_details(payload(), :guest)
+
+      assert details.audience == :guest
+      assert details.start_time.time_zone == "Asia/Kolkata"
+    end
+
+    test "attendee_meeting_details/2 carries an all-day event's days" do
+      details =
+        TemplateHelper.attendee_meeting_details(
+          payload(%{all_day: true, last_date: ~D[2026-01-17]}),
+          :attendee
+        )
+
+      assert details.all_day
+      assert details.last_date == ~D[2026-01-17]
+    end
+
+    test "organizer_meeting_details/1 gives the organiser their own time, zone and clock" do
+      details = TemplateHelper.organizer_meeting_details(payload())
+
+      assert details.start_time ==
+               DateTime.shift_zone!(~U[2026-01-15 09:00:00Z], "Europe/Berlin")
+
+      assert details.time_format == "24h"
+      assert details.audience == :host
+    end
+  end
 end

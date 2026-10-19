@@ -413,7 +413,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
       # issued from the resulting `handle_info`, well after `render_submit/1`
       # returns. The embed tests drain that with `:sys.get_state/1`, which is
       # not available here because the view shuts down on redirect, so wait for
-      # the redirect itself instead. The 100 ms `assert_receive_timeout`
+      # the redirect itself instead. The 1 s `assert_receive_timeout`
       # default is shorter than a real booking round-trip.
       assert_redirect(view, checkout_url, 5_000)
     end

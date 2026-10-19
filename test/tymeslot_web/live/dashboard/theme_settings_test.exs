@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Repo
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.ThemeCustomizations
@@ -362,10 +362,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       # The hints state the limits the uploads enforce.
       image_hint =
-        "JPG, PNG or WebP. Max #{UploadConstraints.max_file_size_mb(:image)} MB " <>
+        "JPG, PNG or WebP. Max #{Uploads.max_file_size_mb(:image)} MB " <>
           "and 40 megapixels (16 for WebP)."
 
-      video_hint = "MP4 or WebM. Max #{UploadConstraints.max_file_size_mb(:video)} MB."
+      video_hint = "MP4 or WebM. Max #{Uploads.max_file_size_mb(:video)} MB."
 
       refute html_gradient =~ "Select a solid colour"
       refute html_gradient =~ image_hint
