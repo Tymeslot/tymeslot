@@ -247,22 +247,18 @@ defmodule Tymeslot.Availability.Opening do
   # any `{:error, _}` rolls back whatever it wrote before. Booking pages are
   # told once, after the commit.
   defp atomically(user_id, fun) do
-    Repo.transaction(fn ->
-      case fun.() do
-        {:error, reason} -> Repo.rollback(reason)
-        {:ok, value} -> value
-        :ok -> :ok
-      end
-    end)
-    |> case do
-      {:ok, value} ->
+    case Repo.transaction(fn -> commit_or_roll_back(fun.()) end) do
+      {:ok, outcome} ->
         Availability.changed(user_id)
-        if value == :ok, do: :ok, else: {:ok, value}
+        outcome
 
       {:error, _reason} = error ->
         error
     end
   end
+
+  defp commit_or_roll_back({:error, reason}), do: Repo.rollback(reason)
+  defp commit_or_roll_back(outcome), do: outcome
 
   defp owned(profile_id, schedule_id) do
     case AvailabilityScheduleQueries.get_for_profile(schedule_id, profile_id) do

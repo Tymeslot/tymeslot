@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
   import TymeslotWeb.BookableLayerHelpers, only: [await_bookable: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.DateOverrides
   alias Tymeslot.Availability.WeeklySchedule
@@ -153,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       profile: profile
     } do
       # The calendar was drawn on London time; the profile has moved since.
-      profile |> Ecto.Changeset.change(timezone: "America/New_York") |> Repo.update!()
+      profile |> Changeset.change(timezone: "America/New_York") |> Repo.update!()
 
       open_booking(lv, evening(intro))
 
