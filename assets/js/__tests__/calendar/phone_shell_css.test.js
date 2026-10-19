@@ -136,3 +136,10 @@ describe("the Calendars sheet", () => {
     expect(body).toMatch(/min-height:\s*2\.75rem/);
   });
 });
+
+describe("the Calendars sheet's density control", () => {
+  test("its buttons are 44px tall on a phone", () => {
+    const [body] = blocks(phone(), "#calendar-sheet-density button");
+    expect(body).toMatch(/min-height:\s*2\.75rem/);
+  });
+});

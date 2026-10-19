@@ -71,3 +71,10 @@
     min-height: 2.75rem;
   }
 }
+
+@media (width < 40rem) {
+  /* The sheet's density control (a small segmented control) is a touch target too. */
+  #calendar-sheet-density button {
+    min-height: 2.75rem;
+  }
+}

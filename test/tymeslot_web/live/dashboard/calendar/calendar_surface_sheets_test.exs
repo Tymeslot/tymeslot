@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias Tymeslot.Repo
 
   defp phone(conn), do: put_connect_params(conn, %{"viewport" => "phone"})
 
@@ -31,12 +32,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       refute has_element?(lv, "#calendar-calendars-sheet")
 
-      # Opening the calendar syncs the account, which hides Sync now; let it end.
+      # Opening the calendar syncs the account, which hides Sync now; the
+      # sheet shows that state too, then let it end.
+      open_calendars(lv)
+      assert has_element?(lv, "#calendar-calendars-sheet [data-syncing]")
       send(lv.pid, {:calendar_sync_failed, user.id, integration.id})
       render(lv)
       render(lv)
-
-      open_calendars(lv)
 
       sheet = "#calendar-calendars-sheet"
       assert has_element?(lv, "#calendar-phone-calendars[aria-expanded='true']")
@@ -126,6 +128,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       refute has_element?(lv, "#calendar-calendars-sheet")
       assert has_element?(lv, "#calendar-phone-calendars[aria-expanded='false']")
     end
+  end
+
+  test "with no calendar connected the sheet offers to connect one", %{conn: conn} do
+    %{conn: conn, integration: integration} = owner(conn)
+    Repo.delete!(integration)
+    {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+    open_calendars(lv)
+
+    assert has_element?(lv, "#calendar-calendars-sheet #calendar-sheet-connect-link")
   end
 
   test "between 640 and 767px the toolbar's Calendars button opens the same sheet",
