@@ -5,7 +5,7 @@
  * already bookable. Today is Wednesday 14 October 2026.
  */
 import { describe, expect, test } from "vitest";
-import { applyChip, draftFromSlot } from "../../calendar/draft.js";
+import { applyChip, applyText, draftFromSlot } from "../../calendar/draft.js";
 import { applyOpening, moveTo, nextOpenSlot, openingLook, toOpenPayload, withKind } from "../../calendar/opening.js";
 import { addDays, dayNumber, formatWall, normaliseEvent, parseWall } from "../../calendar/time.js";
 
@@ -107,7 +107,42 @@ describe("the next slot that is not already bookable", () => {
     expect(slot([], [])).toEqual(["2026-10-14T08:45", "2026-10-14T09:15"]);
   });
 
+  test("a slot already past is not offered: the draft stays where it is", () => {
+    const lastWeek = Array.from({ length: 7 }, (_, k) => addDays("2026-10-05", k));
+    expect(nextOpenSlot(now, lastWeek, [], [], 30)).toBeNull();
+  });
+
   test("a gap shorter than the opening is skipped", () => {
     expect(slot([busy("2026-10-14T11:00", "2026-10-14T12:45")], windows, 30)).toEqual(["2026-10-14T17:00", "2026-10-14T17:30"]);
+  });
+});
+
+describe("a time the organiser chose is never moved by C", () => {
+  const fromC = () => ({ ...slotDraft(), origin: "next" });
+  const options = { today: "2026-10-14", calendars: [] };
+
+  test("changing the date, start, end or all day forgets where C put it", () => {
+    for (const [chip, value] of [
+      ["date", "2026-10-16"],
+      ["start", "11:00"],
+      ["end", "11:00"],
+      ["allDay", true],
+    ]) {
+      expect(applyChip(fromC(), chip, value).origin).toBeNull();
+    }
+  });
+
+  test("text that sets a time forgets it too; text that does not keeps it", () => {
+    expect(applyText(fromC(), "Lunch at 13:00", options).origin).toBeNull();
+    expect(applyText(fromC(), "Lunch", options).origin).toBe("next");
+  });
+
+  test("Busy/Free and the calendar keep it", () => {
+    expect(applyChip(fromC(), "free", true).origin).toBe("next");
+    expect(applyChip(fromC(), "calendar", "7:home").origin).toBe("next");
+  });
+
+  test("moving the draft forgets it", () => {
+    expect(moveTo(fromC(), parseWall("2026-10-16T13:15")).origin).toBeNull();
   });
 });

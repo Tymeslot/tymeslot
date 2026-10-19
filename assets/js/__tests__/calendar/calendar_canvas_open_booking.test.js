@@ -171,3 +171,42 @@ test("after C, Open for booking moves the draft once, to the next slot guests ca
   expect(q('[data-qc-pick="start"]').textContent).toBe("12:00");
   expect(hook.draft.origin).toBeNull();
 });
+
+test("after C, a start the organiser chose stays when the draft becomes an opening", () => {
+  const { hook, handlers } = mountHook(withTypes());
+  handlers["calendar:bookable"]({
+    on: true,
+    meeting_type: { id: 11, name: "Intro call" },
+    windows: [{ start: "2026-10-14T08:00", end: "2026-10-14T11:00" }],
+    next: null,
+    error: false,
+    timezone: "Europe/London",
+  });
+  key(document.body, "c");
+  const start = q('[data-qc-input="start"]');
+  start.value = "10:00";
+  start.dispatchEvent(new Event("change", { bubbles: true }));
+
+  toOpen();
+  expect(q('[data-qc-pick="start"]').textContent).toBe("10:00");
+  expect(hook.draft.origin).toBeNull();
+});
+
+test("after C on a week already past, Open for booking leaves the draft for the server to answer", () => {
+  const { hook, handlers } = mountHook(payload({ date: "2026-10-07", settings: { ...settings, meeting_types: meetingTypes } }));
+  handlers["calendar:bookable"]({
+    on: true,
+    meeting_type: { id: 11, name: "Intro call" },
+    windows: [{ start: "2026-10-05T09:00", end: "2026-10-05T10:00" }],
+    next: null,
+    error: false,
+    timezone: "Europe/London",
+  });
+  key(document.body, "c");
+  expect(q('[data-qc-pick="date"]').textContent).toBe("Mon 5 Oct");
+  expect(q('[data-qc-pick="start"]').textContent).toBe("09:00");
+
+  toOpen();
+  expect(q('[data-qc-pick="start"]').textContent).toBe("09:00");
+  expect(hook.draft).toMatchObject({ kind: "open", origin: null });
+});

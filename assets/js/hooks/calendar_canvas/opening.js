@@ -7,7 +7,8 @@
  * (`settings.meeting_types`): the field hides, and the chips become meeting
  * type, date, start and end, with "Just this once | Every week". A draft C
  * placed (`origin: "next"`) moves, once, to the next slot guests cannot book
- * yet, read from the last `calendar:bookable` windows (`this.bookable`).
+ * yet, read from the last `calendar:bookable` windows (`this.bookable`),
+ * unless the organiser changed its time first (which clears `origin`).
  * With no calendar to write events to, a new draft starts as an opening.
  *
  * Save pushes `calendar:open_booking` and settles as a create does
@@ -30,12 +31,14 @@ export const OpeningMixin = {
     return noCalendar && this.meetingTypes().length ? this.kindDraft(draft, "open") : draft;
   },
 
-  // `draft` as kind `kind`; a draft C placed moves to a slot not yet
-  // bookable the first time it becomes an opening.
+  // `draft` as kind `kind`; a draft C placed, at a time the organiser has
+  // not changed since, moves to a slot not yet bookable the first time it
+  // becomes an opening. With no such slot (a week already past) it stays.
   kindDraft(draft, kind) {
     const next = withKind(draft, kind, this.meetingTypes());
     if (next.kind !== "open" || draft.kind === "open" || next.origin !== "next") return next;
-    return { ...moveTo(next, this.nextOpenRange(next.end - next.start).startMin), origin: null };
+    const range = this.nextOpenRange(next.end - next.start);
+    return range ? moveTo(next, range.startMin) : { ...next, origin: null };
   },
 
   toKind(kind) {

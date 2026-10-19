@@ -8,7 +8,7 @@
  */
 import { applyChip, nextSlot, rebased } from "./draft.js";
 import { interpolate } from "./render.js";
-import { formatWall, parseWall } from "./time.js";
+import { MINUTES_PER_DAY, formatWall, isoFromDay, parseWall } from "./time.js";
 
 const REPEATS = ["once", "weekly"];
 
@@ -43,8 +43,9 @@ export function applyOpening(draft, chip, value, meetingTypes) {
 }
 
 // The draft moved to start at wall minute `startMin`, keeping its length.
+// It no longer sits where C put it.
 export function moveTo(draft, startMin) {
-  return rebased({ ...draft, start: startMin, end: startMin + (draft.end - draft.start) });
+  return rebased({ ...draft, start: startMin, end: startMin + (draft.end - draft.start), origin: null });
 }
 
 // The params of `calendar:open_booking`.
@@ -66,8 +67,19 @@ export function openingLook(draft, meetingTypes, strings) {
  * `calendar:bookable` sends them) counting as taken, so the slot is one
  * guests cannot book yet. Busy events count too: opening over them would
  * offer nothing.
+ *
+ * Never a slot already past, since nothing past can be opened. A slot
+ * before `now` is looked for again on today alone, from the next quarter
+ * hour, when today is visible: same day, best effort, so when nothing frees
+ * up before midnight C's first candidate stands. When today is not visible
+ * (a week already over) there is none: null, and the draft stays where C
+ * put it for the server to answer.
  */
 export function nextOpenSlot(now, days, events, windows, length, floor = 0) {
   const bookable = windows.map((w) => ({ id: `bookable-${w.start}`, kind: "bookable", startMin: parseWall(w.start), endMin: parseWall(w.end), long: false, free: false }));
-  return nextSlot(now, days, [...events, ...bookable], length, floor);
+  const taken = [...events, ...bookable];
+  const slot = nextSlot(now, days, taken, length, floor);
+  if (slot.startMin >= now) return slot;
+  const today = isoFromDay(Math.floor(now / MINUTES_PER_DAY));
+  return days.includes(today) ? nextSlot(now, [today], taken, length, floor) : null;
 }

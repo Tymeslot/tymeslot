@@ -98,9 +98,17 @@ export function draftFromSlot(id, slot, calendar, firstMinute = 0) {
   return draftFromRange(id, { startMin: slot.day * MINUTES_PER_DAY + start, endMin: slot.day * MINUTES_PER_DAY + end }, calendar);
 }
 
+// `after`, a change of `before`; when its time moved, it no longer sits
+// where C put it (`origin`), so C's one-time move leaves the organiser's
+// own choice alone.
+function retimed(before, after) {
+  const moved = after.start !== before.start || after.end !== before.end || after.allDay !== before.allDay;
+  return moved ? { ...after, origin: null } : after;
+}
+
 // The draft after `parseQuick` read its text.
 export function applyParse(draft, parsed) {
-  return remembered({
+  const next = remembered({
     ...draft,
     title: parsed.title,
     location: parsed.location,
@@ -112,6 +120,7 @@ export function applyParse(draft, parsed) {
     found: parsed.found,
     error: null,
   });
+  return retimed(draft, next);
 }
 
 // The draft after the field changed to `text`. `opts` is parseQuick's:
@@ -136,6 +145,10 @@ function minuteOf(value) {
  * leaves the draft as it was.
  */
 export function applyChip(draft, chip, value) {
+  return retimed(draft, chipped(draft, chip, value));
+}
+
+function chipped(draft, chip, value) {
   const day = dayOf(draft.start);
   const length = draft.end - draft.start;
 
