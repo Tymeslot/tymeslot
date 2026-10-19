@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
           focus_mode: boolean(),
           bookable_layer: boolean(),
           bookable_meeting_type_id: integer() | nil,
+          active_calendar_set_id: integer() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -51,6 +52,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :bookable_layer, :boolean, default: true
     belongs_to :bookable_meeting_type, Tymeslot.MeetingTypes.MeetingTypeSchema
 
+    # The calendar set the new calendar shows (nil: none, the organiser's
+    # own hidden choices apply). A plain id rather than `belongs_to`, so this
+    # module does not depend on `Tymeslot.CalendarGrid`; see
+    # `Tymeslot.CalendarGrid.CalendarSets`.
+    field :active_calendar_set_id, :id
+
     timestamps(type: :utc_datetime)
   end
 
@@ -77,7 +84,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     :fold_night,
     :focus_mode,
     :bookable_layer,
-    :bookable_meeting_type_id
+    :bookable_meeting_type_id,
+    :active_calendar_set_id
   ]
 
   @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -92,5 +100,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     |> unique_constraint(:user_id)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:bookable_meeting_type_id)
+    |> foreign_key_constraint(:active_calendar_set_id)
   end
 end
