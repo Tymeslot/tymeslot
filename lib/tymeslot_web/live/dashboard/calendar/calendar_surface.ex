@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceMenus
   alias TymeslotWeb.Dashboard.Calendar.SurfaceModals
   alias TymeslotWeb.Dashboard.Calendar.SyncBanner
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
@@ -66,19 +67,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # `calendar:*` events answered by `ViewEvents`: how a view is drawn.
   @view_events ~w(calendar:agenda_more calendar:viewport)
 
-  @menus %{
-    "date" => :date,
-    "display" => :display,
-    "calendars" => :calendars,
-    "date_sheet" => :date_sheet
-  }
+  # `calendar:*` events answered by `SurfaceMenus`: which menu is open and
+  # which month the mini month shows.
+  @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
   # finished, events changed elsewhere, or a refresh fell back on its timer.
   @refresh_actions [:events_updated, :integration_synced, :refresh_events]
-
-  # The mini month only pages within the years the grid can show.
-  @mini_years 1900..2200
 
   # What each prompt can send; the module that acts on it parses it again.
   @timing_scopes ~w(this_only following all)
@@ -242,18 +237,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # A video change that changed nothing (see `PanelVideo.unchanged/2`).
   defp unchanged_video(socket, ref, :unchanged), do: PanelVideo.unchanged(socket, ref)
   defp unchanged_video(socket, _ref, _outcome), do: socket
-
-  defp shift_mini_cursor(socket, dir) do
-    cursor = Date.shift(socket.assigns.mini_cursor, month: step(dir))
-
-    if cursor.year in @mini_years,
-      do: assign(socket, :mini_cursor, cursor),
-      else: socket
-  end
-
-  defp step(dir) when dir in [-1, "-1"], do: -1
-  defp step(dir) when dir in [1, "1"], do: 1
-  defp step(_dir), do: 0
 
   defp scope(:events_updated), do: :events
   defp scope(_action), do: :full
@@ -434,19 +417,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     {:noreply, push_patch(socket, to: path)}
   end
 
-  def handle_event("calendar:toggle_menu", %{"menu" => menu}, socket) do
-    wanted = Map.get(@menus, menu)
-    open = if socket.assigns.open_menu == wanted, do: nil, else: wanted
-
-    {:noreply, assign(socket, :open_menu, open)}
-  end
-
-  def handle_event("calendar:close_menu", _params, socket),
-    do: {:noreply, assign(socket, :open_menu, nil)}
-
-  def handle_event("calendar:mini_shift", %{"dir" => dir}, socket),
-    do: {:noreply, shift_mini_cursor(socket, dir)}
-
   def handle_event("calendar:set_density", %{"option" => density}, socket),
     do: {:noreply, DisplayPreferences.set_density(socket, density)}
 
@@ -513,6 +483,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event(event, params, socket) when event in @booking_events,
     do: SurfaceBookingEvents.handle(event, params, socket)
+
+  def handle_event(event, params, socket) when event in @menu_events,
+    do: SurfaceMenus.handle(event, params, socket)
 
   def handle_event(event, params, socket) when event in @view_events,
     do: ViewEvents.handle(event, params, socket)
