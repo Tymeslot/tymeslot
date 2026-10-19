@@ -183,13 +183,17 @@ defmodule Tymeslot.Availability.AvailabilityActions do
 
   @doc """
   Writes a day's row exactly as given (`:is_available` and its hours),
-  leaving its breaks alone. For putting a day back as it was.
+  leaving its breaks alone. For putting a day back as it was. Refused, as
+  `update_day_hours/6` is, when a break the day holds would fall outside
+  those hours.
   """
   @spec restore_day(integer(), integer(), integer(), map(), keyword()) ::
           {:ok, term()} | {:error, term()}
   def restore_day(profile_id, schedule_id, day, attrs, opts \\ []) when is_map(attrs) do
     with_owned_schedule(profile_id, schedule_id, opts, fn ->
-      WeeklySchedule.upsert_day_availability(schedule_id, day, attrs)
+      with :ok <- breaks_fit(schedule_id, day, attrs) do
+        WeeklySchedule.upsert_day_availability(schedule_id, day, attrs)
+      end
     end)
   end
 

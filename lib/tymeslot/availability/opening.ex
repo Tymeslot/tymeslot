@@ -21,8 +21,9 @@ defmodule Tymeslot.Availability.Opening do
 
   `restore/2` puts back only hours the opening left as it wrote them: when
   the day (or, for every week, the widened date too) holds other hours by
-  then, it refuses with `:changed` and writes nothing, so an undo never
-  overwrites a newer change.
+  then, or a break added since would fall outside the hours put back, it
+  refuses with `:changed` and writes nothing, so an undo never overwrites a
+  newer change.
 
   Each opening and each restore runs in one transaction that locks the
   weekday row and the date's override it reads, so a change made meanwhile
@@ -207,7 +208,8 @@ defmodule Tymeslot.Availability.Opening do
   Puts back what `open_once/5` or `open_weekly/5` changed: the date's old
   override (or none), or the weekday's old hours (or closed) and the widened
   date's old override. Only for the user whose schedule it is, and only
-  while those hours are still the ones the opening wrote: otherwise
+  while those hours are still the ones the opening wrote, and no break added
+  to the weekday since would fall outside the hours put back: otherwise
   `{:error, :changed}`. Whatever it refuses, nothing is written.
   """
   @spec restore(pos_integer(), once() | weekly()) :: :ok | {:error, reason()}
@@ -300,7 +302,8 @@ defmodule Tymeslot.Availability.Opening do
   end
 
   # The weekday exactly as it was, closed or open: a closed day keeps the
-  # hours it stored and the breaks it holds.
+  # hours it stored and the breaks it holds. A break that would fall outside
+  # those hours was added since the opening, so the day has changed.
   defp restore_weekly(profile_id, schedule_id, day, previous) do
     profile_id
     |> AvailabilityActions.restore_day(
@@ -309,8 +312,12 @@ defmodule Tymeslot.Availability.Opening do
       Map.take(previous, [:is_available, :start_time, :end_time, :ends_next_day]),
       notify: false
     )
+    |> stranded_as_changed()
     |> map_write_error()
   end
+
+  defp stranded_as_changed({:error, {:breaks_outside_hours, _breaks}}), do: {:error, :changed}
+  defp stranded_as_changed(result), do: result
 
   # An undo is not a new write: the date may have passed since, and its old
   # hours are still what it held.

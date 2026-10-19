@@ -464,6 +464,31 @@ defmodule Tymeslot.Availability.OpeningTest do
                DateOverrides.get(host.profile_id, host.schedule_id, host.date)
     end
 
+    test "refuses a weekly restore that would strand a break added since", host do
+      day = Date.day_of_week(host.date)
+
+      {:ok, result} =
+        Opening.open_weekly(
+          host.user.id,
+          host.meeting_type.id,
+          at(host.date, ~T[18:00:00]),
+          at(host.date, ~T[19:00:00])
+        )
+
+      row = WeeklySchedule.get_day_availability(host.schedule_id, day)
+
+      {:ok, _break} =
+        AvailabilityActions.add_break(host.profile_id, row.id, "17:30", "18:00", "")
+
+      assert {:error, :changed} = Opening.restore(host.user.id, result)
+
+      assert %{
+               start_time: ~T[11:00:00],
+               end_time: ~T[19:00:00],
+               breaks: [%{start_time: ~T[17:30:00], end_time: ~T[18:00:00]}]
+             } = WeeklySchedule.get_day_availability(host.schedule_id, day)
+    end
+
     test "refuses once the date's hours changed since, and leaves them", host do
       {:ok, result} =
         Opening.open_once(
