@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -48,7 +49,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
     do: {:noreply, toggle(socket, :show_week_numbers, :settings)}
 
   def handle("calendar:toggle_desktop_reminders", _params, socket),
-    do: {:noreply, toggle(socket, :desktop_reminders_enabled, :settings)}
+    do:
+      {:noreply,
+       socket |> toggle(:desktop_reminders_enabled, :settings) |> ReminderFeed.refresh()}
 
   def handle("calendar:set_week_start", %{"option" => week_start}, socket)
       when week_start in @week_starts do
@@ -100,6 +103,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
         |> assign(:time_format, format)
         |> SurfaceData.refilter()
         |> SurfaceData.push_settings()
+        |> ReminderFeed.assign_feed()
 
       {:error, _changeset} ->
         failed(socket)

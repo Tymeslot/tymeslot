@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PhoneHeader
   alias TymeslotWeb.Dashboard.Calendar.PhoneTabs
   alias TymeslotWeb.Dashboard.Calendar.PowerEvents
+  alias TymeslotWeb.Dashboard.Calendar.PowerOverlays
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
@@ -74,6 +75,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # `calendar:*` events of the power layer (display options, and later the
   # import, calendar sets and the command bar), answered by `PowerEvents`.
   @power_events PowerEvents.events()
+
+  # `send_update/3` actions of the power layer (the reminder feed's loop, and
+  # later the import's progress), answered by `PowerEvents.update/2`.
+  @power_updates PowerEvents.update_actions()
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
   # finished, events changed elsewhere, or a refresh fell back on its timer.
@@ -195,6 +200,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def update(%{action: :event_writes_released, release: release}, socket),
     do: {:ok, Writes.resume(socket, release)}
+
+  def update(%{action: action} = message, socket) when action in @power_updates,
+    do: {:ok, PowerEvents.update(message, socket)}
 
   # Messages for the old grid (an import's progress, a move between
   # calendars) reach whichever calendar is on screen; this one has nothing
@@ -385,6 +393,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         target={@myself}
       />
       <Toast.toast toast={@toast} target={@myself} />
+      <PowerOverlays.overlays
+        reminders_enabled={@preferences.desktop_reminders_enabled}
+        reminder_feed={@reminder_feed}
+      />
       <SurfaceModals.modals
         series_prompt={@series_prompt}
         delete_prompt={@delete_prompt}

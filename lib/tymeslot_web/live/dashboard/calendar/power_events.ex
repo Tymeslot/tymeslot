@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   import Phoenix.Component, only: [assign: 2]
 
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
+  alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -34,7 +35,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
 
   @doc "The power layer's assigns, at their defaults."
   @spec defaults(socket()) :: socket()
-  # Tasks 6, 8, 11 and 14 replace the empty list with their assigns (see
-  # the plan 6 contracts).
-  def defaults(socket), do: assign(socket, [])
+  def defaults(socket),
+    do: assign(socket, reminder_feed: [], reminder_ref: nil)
+
+  # The `send_update/3` actions of the power layer, which
+  # `CalendarSurface.update/2` routes to `update/2`.
+  @update_actions [:reminder_tick]
+
+  @doc "The `send_update/3` actions `update/2` answers."
+  @spec update_actions() :: [atom()]
+  def update_actions, do: @update_actions
+
+  @doc "Applies one of the power layer's `send_update/3` messages."
+  @spec update(map(), socket()) :: socket()
+  def update(%{action: :reminder_tick, ref: ref}, socket), do: ReminderFeed.tick(socket, ref)
 end

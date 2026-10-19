@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.PowerSettings
   alias TymeslotWeb.Dashboard.Calendar.Preview
+  alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
   alias TymeslotWeb.Dashboard.Calendar.Writes
@@ -113,6 +114,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         |> apply_params()
         |> Deletion.resume()
         |> load_window()
+        |> ReminderFeed.refresh()
         |> Writes.adopt()
         |> SyncStatus.load_persisted()
         |> SyncStatus.refresh_stale()
@@ -408,7 +410,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   (no query) and push with a cache reset.
   """
   @spec refresh(socket()) :: socket()
-  def refresh(socket), do: socket |> assign_accounts() |> filter_events() |> push_events(true)
+  def refresh(socket),
+    do:
+      socket
+      |> assign_accounts()
+      |> filter_events()
+      |> ReminderFeed.assign_feed()
+      |> push_events(true)
 
   @doc """
   After a sync or an outside change, push with a cache reset. `:full` reloads
@@ -420,7 +428,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def reload(socket, :full), do: socket |> load_context() |> reload(:events)
 
   def reload(socket, :events),
-    do: socket |> Deletion.prune() |> load_window() |> push_events(true)
+    do:
+      socket
+      |> Deletion.prune()
+      |> load_window()
+      |> ReminderFeed.assign_feed()
+      |> push_events(true)
 
   @doc """
   Records a saved preference in the assigns. The upsert's return value is not
