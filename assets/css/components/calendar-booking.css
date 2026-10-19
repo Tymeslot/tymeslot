@@ -46,6 +46,31 @@
   white-space: nowrap;
 }
 
+/* A block with room for under two title lines (render.js) keeps the guest's
+   name on its first line: the flag becomes a dot in the top-right corner, out
+   of the text flow. Solid --cal-request-strong on the block's pale tint is
+   well over 3:1 for a graphic; the word "Request" stays in the aria-label. */
+.cal-ev.is-request .cal-ev-request.is-compact {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: var(--cal-request-strong);
+  box-shadow: 0 0 0 1px var(--cal-surface);
+}
+
+.cal-ev.is-request.has-badge .cal-ev-title {
+  padding-right: 12px;
+}
+
+.cal-ev.is-request.is-past .cal-ev-request.is-compact,
+.cal-ev.is-request.is-expired .cal-ev-request.is-compact {
+  background: var(--cal-text-past);
+}
+
 /* On a one-row block the pill sits before the title and the title gives way. */
 .cal-ev.is-short .cal-ev-request {
   align-self: center;

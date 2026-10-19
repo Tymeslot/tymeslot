@@ -279,19 +279,19 @@ describe("renderGrid", () => {
   });
   test("a request carries its own class, a Request flag and says it waits for an answer", () => {
     const grid = draw({
-      events: [timed("booking-1", "Anna · Intro", "2026-10-15T11:00", "2026-10-15T12:00", { kind: "booking", colour: "booking", request: true })],
+      events: [timed("booking-1", "Anna · Intro", "2026-10-15T11:00", "2026-10-15T13:00", { kind: "booking", colour: "booking", request: true })],
     });
     const block = grid.querySelector('[data-event-id="booking-1"]');
     expect(block.classList.contains("is-booking")).toBe(true);
     expect(block.classList.contains("is-request")).toBe(true);
     expect(block.classList.contains("is-expired")).toBe(false);
     expect(block.querySelector(".cal-ev-title .cal-ev-request").textContent).toBe("Request");
-    expect(block.getAttribute("aria-label")).toBe("Anna · Intro, request waiting for your answer, Thu 15 Oct, 11:00–12:00");
+    expect(block.getAttribute("aria-label")).toBe("Anna · Intro, request waiting for your answer, Thu 15 Oct, 11:00–13:00");
   });
 
   test("an expired request is marked expired, flagged so and says it was never answered", () => {
     const grid = draw({
-      events: [timed("booking-2", "Ben · Intro", "2026-10-15T13:00", "2026-10-15T14:00", { kind: "booking", colour: "booking", expired: true })],
+      events: [timed("booking-2", "Ben · Intro", "2026-10-15T13:00", "2026-10-15T15:00", { kind: "booking", colour: "booking", expired: true })],
     });
     const block = grid.querySelector('[data-event-id="booking-2"]');
     expect(block.classList.contains("is-request")).toBe(true);
@@ -345,6 +345,27 @@ describe("renderGrid", () => {
     const request = grid({ request: true });
     expect(request.querySelector(".cal-ev-time")).toBeNull();
     expect(request.style.getPropertyValue("--cal-lines")).toBe("3");
+  });
+
+  test("a short request keeps its title's first word: the flag is a corner badge", () => {
+    // One hour is 48px at the default zoom: room for one title line beside the time.
+    const block = draw({ width: 1440, events: [timed("booking-8", "Anna Kowalska · Intro", "2026-10-15T09:00", "2026-10-15T10:00", { kind: "booking", colour: "booking", request: true })] }).querySelector(
+      '[data-event-id="booking-8"]',
+    );
+    const badge = block.querySelector(".cal-ev-request");
+    expect(badge.classList.contains("is-compact")).toBe(true);
+    expect(badge.textContent).toBe("");
+    expect(badge.getAttribute("aria-hidden")).toBe("true");
+    expect(block.querySelector(".cal-ev-title").textContent.startsWith("Anna")).toBe(true);
+    expect(block.getAttribute("aria-label")).toContain("request waiting for your answer");
+  });
+
+  test("a tall request keeps the inline Request pill", () => {
+    const block = draw({ width: 1440, events: [timed("booking-9", "Anna Kowalska · Intro", "2026-10-15T09:00", "2026-10-15T11:00", { kind: "booking", colour: "booking", request: true })] }).querySelector(
+      '[data-event-id="booking-9"]',
+    );
+    expect(block.querySelector(".cal-ev-title .cal-ev-request").textContent).toBe("Request");
+    expect(block.querySelector(".is-compact")).toBeNull();
   });
 
   test("a plain booking has no flag", () => {

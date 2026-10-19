@@ -45,6 +45,9 @@ const LABEL_HEIGHT = 20;
 // margin around its flag's text.
 const REQUEST_EDGE = 5;
 const FLAG_CHROME = 10;
+// A compact flag's badge (calendar-booking.css `.is-compact`): a dot in the
+// block's top-right corner, and the room the title leaves it.
+const BADGE_ROOM = 12;
 // Below this a one-row block's title is a letter or two: the time beside it
 // gives way. The time is 10px against the 12px the title is measured at.
 const SHORT_TITLE_ROOM = 40;
@@ -337,6 +340,13 @@ function titleHtml(title, width, measureWidth) {
     .join("");
 }
 
+// How many title lines a block has room for beside its time line (or without
+// one, where the time is hidden): under two, a pill would take the only line.
+function titleRoom(item) {
+  const inner = item.height - EVENT_CHROME;
+  return Math.floor((item.hideTime ? inner : inner - TIME_LINE - (item.timeGap || 0)) / LINE_HEIGHT);
+}
+
 function eventBlock(item, event, { strings, settings, now, measureWidth, movingId }) {
   const editable = draggable(event);
   const tf = settings.time_format;
@@ -346,16 +356,20 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   // The flag opens the title's first line, so it is measured with the title,
   // at the pill's own width (10px bold, 8px padding, 2px margin), and the
   // block's extra left padding narrows the text's room.
-  const shown = flag ? `${flag} ${event.title}` : event.title;
-  const measure = flag ? (text) => (text === flag ? measureWidth(flag) * TIME_SCALE + FLAG_CHROME : measureWidth(text)) : measureWidth;
-  const inset = flag ? TITLE_INSET + REQUEST_EDGE : TITLE_INSET;
+  // A block with room for fewer than two title lines would spend its first
+  // on the pill and show only the guest's first word, so the flag shrinks to a
+  // badge in the corner and the title is measured without it.
+  const compact = Boolean(flag) && titleRoom(item) < 2;
+  const shown = flag && !compact ? `${flag} ${event.title}` : event.title;
+  const measure = flag && !compact ? (text) => (text === flag ? measureWidth(flag) * TIME_SCALE + FLAG_CHROME : measureWidth(text)) : measureWidth;
+  const inset = flag ? TITLE_INSET + REQUEST_EDGE + (compact ? BADGE_ROOM : 0) : TITLE_INSET;
   const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
   const range = `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}`;
   const fit = short ? null : textFit(item, shown, !item.hideTime, measure, inset);
   const shortWithoutTime = short && !shortRowFits(item, shown, start, measure, inset);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
     .filter(Boolean)
     .join(" ");
   const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && !event.expired && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
@@ -366,7 +380,8 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
     (fit ? `;--cal-lines:${fit.lines}` : "") +
     (tiny ? `;--cal-lh:${Math.max(8, Math.floor(item.height - 2))}px` : "");
   const timeHtml = time ? `<span class="cal-ev-time"${item.timeGap ? ` style="margin-top:${Math.round(item.timeGap)}px"` : ""}>${escapeHtml(time)}</span>` : "";
-  const flagHtml = flag ? `<span class="cal-ev-request">${escapeHtml(flag)}</span> ` : "";
+  // The compact badge carries no word: the block's aria-label has it.
+  const flagHtml = !flag ? "" : compact ? `<span class="cal-ev-request is-compact" aria-hidden="true"></span>` : `<span class="cal-ev-request">${escapeHtml(flag)}</span> `;
 
   // tabindex -1: the hook makes one block the grid's only tab stop and the
   // arrow keys move between them.
