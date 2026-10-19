@@ -20,8 +20,13 @@ defmodule Tymeslot.CalendarGrid.Period do
   @type viewport :: :phone | :wide
   @type week_start :: :monday | :sunday
 
-  # Month and agenda join the URL in a later step, once the surface can draw them.
-  @views %{"day" => :day, "three_day" => :three_day, "week" => :week}
+  @views %{
+    "day" => :day,
+    "three_day" => :three_day,
+    "week" => :week,
+    "month" => :month,
+    "agenda" => :agenda
+  }
   @steps %{day: 1, three_day: 3, week: 7}
   @time_grid [:day, :three_day, :week]
   @agenda_days 28

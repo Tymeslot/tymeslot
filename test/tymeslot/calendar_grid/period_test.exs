@@ -19,8 +19,13 @@ defmodule Tymeslot.CalendarGrid.PeriodTest do
       assert Period.parse_view("week", :day) == :week
     end
 
-    test "falls back for anything else, including views not built yet" do
-      assert Period.parse_view("month", :week) == :week
+    test "reads month and agenda" do
+      assert Period.parse_view("month", :week) == :month
+      assert Period.parse_view("agenda", :day) == :agenda
+    end
+
+    test "falls back for anything else" do
+      assert Period.parse_view("fortnight", :week) == :week
       assert Period.parse_view(nil, :day) == :day
       assert Period.parse_view(42, :week) == :week
     end

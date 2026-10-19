@@ -54,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
   alias TymeslotWeb.Dashboard.Calendar.Transfer
+  alias TymeslotWeb.Dashboard.Calendar.ViewEvents
   alias TymeslotWeb.Dashboard.Calendar.Visibility
   alias TymeslotWeb.Dashboard.Calendar.Writes
 
@@ -62,6 +63,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # `calendar:*` events answered by `SurfaceBookingEvents` (every `booking:*`
   # event goes there too).
   @booking_events ~w(calendar:bookable_toggle calendar:bookable_type calendar:block calendar:open_booking calendar:bookability)
+
+  # `calendar:*` events answered by `ViewEvents`: how a view is drawn.
+  @view_events ~w(calendar:agenda_more)
 
   @menus %{"date" => :date, "display" => :display}
 
@@ -489,6 +493,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event(event, params, socket) when event in @booking_events,
     do: SurfaceBookingEvents.handle(event, params, socket)
+
+  def handle_event(event, params, socket) when event in @view_events,
+    do: ViewEvents.handle(event, params, socket)
 
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}

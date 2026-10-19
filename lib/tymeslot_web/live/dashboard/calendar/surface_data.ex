@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Dashboard.Calendar.AgendaLoader
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -61,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       events: [],
       events_by_id: %{},
       window: nil,
+      agenda_through: nil,
       rail_open: true,
       open_menu: nil,
       preview: nil,
@@ -175,43 +177,50 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       date: date,
       mini_cursor: Date.beginning_of_month(date),
       preview: nil,
-      open_menu: nil
+      open_menu: nil,
+      agenda_through: nil
     )
   end
 
-  @doc "Loads the events for the period plus one period either side. The bookable layer is loaded for the same window (see BookableLayer)."
+  @doc "Loads the events for the period plus one period either side (an agenda: as far as it has grown). The bookable layer is loaded for the same window (see BookableLayer)."
   @spec load_window(socket()) :: socket()
   def load_window(socket) do
-    %{current_user: user, timezone: timezone} = socket.assigns
-
     window = window_for(socket.assigns)
 
-    {start_dt, end_dt} = EventWindow.utc_range(window.first, window.last, timezone)
+    socket
+    |> assign(window: window, window_events: list_events(socket.assigns, window))
+    |> filter_events()
+    |> BookableLayer.load()
+  end
+
+  @doc """
+  The organiser's events for `range`, unfiltered: the one query behind
+  every window, an agenda's next chunk included (see `AgendaLoader`).
+  """
+  @spec list_events(map(), Date.Range.t()) :: [map()]
+  def list_events(%{current_user: user, timezone: timezone, integrations: integrations}, range) do
+    {start_dt, end_dt} = EventWindow.utc_range(range.first, range.last, timezone)
 
     # Bookings are drawn as themselves rather than as their calendar copies,
     # and requests that expired unanswered are drawn too (see `EventWindow`).
-    window_events =
-      EventWindow.list_events(user.id, socket.assigns.integrations, start_dt, end_dt,
-        bookings: :prefer,
-        include_expired: true
-      )
+    EventWindow.list_events(user.id, integrations, start_dt, end_dt,
+      bookings: :prefer,
+      include_expired: true
+    )
+  end
 
-    socket
-    |> assign(window: window, window_events: window_events)
-    |> filter_events()
-    |> BookableLayer.load()
+  @doc "`events` without hidden calendars and accounts, or deletes still waiting for their undo."
+  @spec visible(map(), [map()]) :: [map()]
+  def visible(assigns, events) do
+    events
+    |> EventWindow.reject_hidden(assigns.hidden_integration_ids, assigns.hidden_calendar_keys)
+    |> PendingDeletes.reject(assigns.pending_deletes)
   end
 
   # Applies the hidden choices to the window's unfiltered events, so a toggle
   # needs no query.
   defp filter_events(socket) do
-    events =
-      socket.assigns.window_events
-      |> EventWindow.reject_hidden(
-        socket.assigns.hidden_integration_ids,
-        socket.assigns.hidden_calendar_keys
-      )
-      |> PendingDeletes.reject(socket.assigns.pending_deletes)
+    events = visible(socket.assigns, socket.assigns.window_events)
 
     socket
     |> assign(events: events, events_by_id: Map.new(events, &{EventPayload.id(&1), &1}))
@@ -428,14 +437,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         date: Date.to_iso8601(date)
       })
 
-  defp window_for(%{view: view, date: date, preferences: preferences}),
-    do:
+  defp window_for(%{view: view, date: date, preferences: preferences} = assigns) do
+    window =
       Period.window(
         view,
         date,
         Period.week_start(preferences.week_start_day),
         preferences.show_weekends
       )
+
+    AgendaLoader.extend_window(assigns, window)
+  end
 
   defp target(%{params: params, preferences: preferences, today: today}) do
     params = params || %{}

@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
   alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.BookablePayload
   alias Tymeslot.CalendarGrid.LayerPreferences
+  alias Tymeslot.CalendarGrid.Period
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -48,10 +49,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
   Loads the layer for the loaded window: computed off the process when it
   is on and has a meeting type, else pushed at once with no windows. While
   a load is in flight it only marks that load stale; another starts once it
-  answers.
+  answers. Month and agenda draw no bookable times, so there it neither
+  computes nor pushes; the next time view's window loads it again.
   """
   @spec load(socket()) :: socket()
   def load(socket) do
+    if Period.time_grid?(socket.assigns.view), do: load_layer(socket), else: socket
+  end
+
+  defp load_layer(socket) do
     %{preferences: preferences, bookable_types: types} = socket.assigns
 
     case {preferences.bookable_layer, LayerPreferences.meeting_type(preferences, types),
@@ -165,9 +171,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
 
   # The loaded window from today on, since nothing before now is bookable,
   # and at most @max_days long; nil when the whole window is in the past.
-  # The surface's longest view is a week (loaded with a week either side),
-  # so the clamp never bites today; a future month view should anchor the
-  # range on the visible period rather than the loaded window's first day.
+  # The longest time view is a week (loaded with a week either side), and
+  # month and agenda never load the layer (`load/1`), so the clamp never bites.
   defp range(%{window: %Date.Range{first: first, last: last}, today: today}) do
     from = Enum.max([first, today], Date)
 

@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.Navigation
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Dashboard.Calendar.PeriodLabels
 
   attr :view, :atom, required: true
   attr :date, :any, required: true
@@ -74,14 +74,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           id="calendar-prev"
           icon="hero-chevron-left"
           size={:sm}
-          label={step_label(@view, :previous)}
+          label={PeriodLabels.step_label(@view, :previous)}
           phx-click={Navigation.js(@view, Period.shift(@view, @date, -1), step: -1)}
         />
         <.icon_button
           id="calendar-next"
           icon="hero-chevron-right"
           size={:sm}
-          label={step_label(@view, :next)}
+          label={PeriodLabels.step_label(@view, :next)}
           phx-click={Navigation.js(@view, Period.shift(@view, @date, 1), step: 1)}
         />
       </div>
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         panel_label={dgettext("dashboard_calendar", "Choose a date")}
         aria-label={
           dgettext("dashboard_calendar", "Choose a date, %{period}",
-            period: period_title(@view, @date, @days, @locale)
+            period: PeriodLabels.title(@view, @date, @days, @locale)
           )
         }
         trigger_class="flex items-center gap-1 rounded-token-md px-2 py-1 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             id="calendar-period-title"
             class="whitespace-nowrap text-token-lg font-semibold text-tymeslot-900"
           >
-            {period_title(@view, @date, @days, @locale)}
+            {PeriodLabels.title(@view, @date, @days, @locale)}
           </span>
           <.icon name="hero-chevron-down-mini" class="h-4 w-4 text-tymeslot-500" />
         </:trigger>
@@ -250,41 +250,4 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
       week: dgettext("dashboard_calendar", "Week")
     ]
   end
-
-  defp step_label(:day, :previous), do: dgettext("dashboard_calendar", "Previous day")
-  defp step_label(:day, :next), do: dgettext("dashboard_calendar", "Next day")
-
-  defp step_label(:three_day, :previous),
-    do: dgettext("dashboard_calendar", "Previous three days")
-
-  defp step_label(:three_day, :next), do: dgettext("dashboard_calendar", "Next three days")
-  defp step_label(:week, :previous), do: dgettext("dashboard_calendar", "Previous week")
-  defp step_label(:week, :next), do: dgettext("dashboard_calendar", "Next week")
-
-  defp period_title(:day, date, _days, locale), do: LocaleFormat.format_weekday_date(date, locale)
-
-  defp period_title(_view, _date, days, locale) do
-    first = List.first(days)
-    last = List.last(days)
-
-    cond do
-      {first.year, first.month} == {last.year, last.month} ->
-        LocaleFormat.format_month_year(first.month, first.year, locale)
-
-      first.year == last.year ->
-        range_title(
-          LocaleFormat.format_month_name(first.month, locale, :short),
-          LocaleFormat.format_month_year(last.month, last.year, locale)
-        )
-
-      true ->
-        range_title(
-          LocaleFormat.format_month_year(first.month, first.year, locale),
-          LocaleFormat.format_month_year(last.month, last.year, locale)
-        )
-    end
-  end
-
-  defp range_title(first, last),
-    do: dgettext("dashboard_calendar", "%{first} – %{last}", first: first, last: last)
 end
