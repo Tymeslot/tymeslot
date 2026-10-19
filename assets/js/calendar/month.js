@@ -25,7 +25,7 @@ export function monthWeeks(days) {
 }
 
 // Timed events (not `long`) touching `iso`, by start.
-export function timedOnDay(events, iso) {
+function timedOnDay(events, iso) {
   const start = dayNumber(iso) * MINUTES_PER_DAY;
   const end = start + MINUTES_PER_DAY;
   return events.filter((e) => !e.long && e.kind !== "draft" && e.startMin < end && Math.max(e.endMin, e.startMin + 1) > start).sort(byStart);
