@@ -15,6 +15,7 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -108,7 +109,7 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
         {:ok, result} = Changes.block_time(host.user.id, host.start_at, host.end_at, "Focus")
 
         {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, result.event.uid)
-        row |> Ecto.Changeset.change(unquote(Macro.escape(change))) |> Repo.update!()
+        row |> Changeset.change(unquote(Macro.escape(change))) |> Repo.update!()
 
         assert {:error, :changed} = Changes.unblock_time(host.user.id, result)
         assert {:ok, _kept} = ProviderCalendarEventQueries.get_by_uid(integration.id, row.uid)
