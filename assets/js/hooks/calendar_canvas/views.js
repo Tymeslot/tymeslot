@@ -87,19 +87,18 @@ export const ViewsMixin = {
   // Day view on a phone: the week around the day, with dots, above the grid.
   // Its buttons carry data-goto-day, so a tap takes the grid's own route to
   // that day. Empty until the week is cached (Day view loads the week's window).
-  weekStrip() {
+  weekStrip(today) {
     if (!this.phone || this.view !== "day") return "";
     const days = periodDays("week", this.date, this.settings.week_start, true);
     if (!isLoaded(this.cache, days)) return "";
-    const today = isoFromDay(Math.floor(this.nowMinute() / MINUTES_PER_DAY));
     const events = eventsForDays(this.cache, days).filter((event) => event.kind !== "draft");
     return renderWeekStrip({ days, date: this.date, today, events, strings: this.strings });
   },
 
   drawView(model) {
     this.keepViewScroll();
-    if (isTimeGrid(this.view)) return this.weekStrip() + renderGrid({ ...model, metrics: metricsFor(Boolean(this.phone)) });
     const today = isoFromDay(Math.floor(model.now / MINUTES_PER_DAY));
+    if (isTimeGrid(this.view)) return this.weekStrip(today) + renderGrid({ ...model, metrics: metricsFor(Boolean(this.phone)) });
 
     if (this.view === "month") {
       return renderMonth({

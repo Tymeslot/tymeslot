@@ -103,3 +103,21 @@ test("on a wide screen, a month day still opens Day view", () => {
   expect(pushes(hook, "calendar:goto")).toEqual([{ view: "day", date: "2026-10-20" }]);
   expect(hook.view).toBe("day");
 });
+
+test("the strip's dots come from the loaded week, not only the day shown", () => {
+  mockViewport(true);
+  const friday = event("event-10", "Friday call", "2026-10-16T10:00", "2026-10-16T11:00");
+  const { el } = mountHook(payload({ view: "day", events: [friday] }));
+
+  const button = (iso) => strip(el).querySelector(`button[data-goto-day="${iso}"]`);
+  expect(button("2026-10-16").querySelector(".cal-dot")).not.toBeNull();
+  expect(button("2026-10-14").querySelector(".cal-dot")).toBeNull();
+});
+
+test("no strip is drawn while the week is not cached", () => {
+  mockViewport(true);
+  const { el } = mountHook(payload({ view: "day", range: { from: "2026-10-14", to: "2026-10-15" } }));
+
+  expect(el.querySelector(".cal-grid")).not.toBeNull();
+  expect(el.querySelector(".cal-strip")).toBeNull();
+});
