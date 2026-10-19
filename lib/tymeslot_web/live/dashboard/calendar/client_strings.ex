@@ -140,7 +140,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
         dgettext(
           "dashboard_calendar_booking",
           "Couldn't confirm the change. Check your bookable times."
-        )
+        ),
+      no_calendar_note:
+        dgettext("dashboard_calendar_booking", "Connect a calendar to add events here.")
     }
   end
 

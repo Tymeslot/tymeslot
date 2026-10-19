@@ -71,6 +71,7 @@ export const strings = {
   open_draft_title: "Open for %{name}",
   open_refused: "Couldn't open that time. Please try again.",
   open_unconfirmed: "Couldn't confirm the change. Check your bookable times.",
+  no_calendar_note: "Connect a calendar to add events here.",
   bookable: "Bookable",
   bookable_label: "%{date}: bookable times for %{meeting_type}. Show what this means",
   next_bookable: "Next bookable time: %{when}",

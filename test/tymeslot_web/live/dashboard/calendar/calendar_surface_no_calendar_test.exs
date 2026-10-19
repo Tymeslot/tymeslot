@@ -1,0 +1,48 @@
+defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceNoCalendarTest do
+  @moduledoc """
+  The new calendar with no calendar connected: the rail says what still
+  shows (bookings and bookable times) and offers to connect one; with a
+  calendar connected it offers nothing.
+  """
+
+  use TymeslotWeb.LiveCase, async: true
+
+  @moduletag :calendar
+  @moduletag :live
+
+  import TymeslotWeb.CalendarSurfaceHelpers
+
+  alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
+
+  setup %{conn: conn} do
+    context = owner(conn)
+    TestMocks.stub_no_calendar_events()
+    context
+  end
+
+  test "the rail says what still shows and offers to connect a calendar", %{
+    conn: conn,
+    integration: integration
+  } do
+    Repo.delete!(integration)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(
+             lv,
+             "#calendar-rail-connect",
+             "No calendar connected. Your bookings and bookable times still show here."
+           )
+
+    lv |> element("#calendar-connect", "Connect a calendar") |> render_click()
+    assert_patch(lv, ~p"/dashboard/integrations?tab=calendars")
+  end
+
+  test "with a calendar connected the rail lists it and offers nothing", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(lv, "#calendar-rail", "Work account")
+    refute has_element?(lv, "#calendar-rail-connect")
+    refute has_element?(lv, "#calendar-connect")
+  end
+end

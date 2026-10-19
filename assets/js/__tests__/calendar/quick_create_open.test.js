@@ -100,3 +100,18 @@ test("a refusal marks the chip it names", () => {
   expect(startRefused.querySelector("[data-qc-pick='start']").getAttribute("aria-invalid")).toBe("true");
   expect(startRefused.querySelector("[data-qc-input='meetingType']").hasAttribute("aria-invalid")).toBe(false);
 });
+
+test("with no calendar to write to, an event explains why it can't be saved", () => {
+  const holder = document.createElement("div");
+  holder.innerHTML = renderQuickCreate({ draft: { ...event(), calendar: null }, strings, timeFormat: "24h", calendars: [], meetingTypes });
+  const popover = holder.firstElementChild;
+
+  expect(popover.querySelector("#calendar-qc-no-calendar").textContent).toBe("Connect a calendar to add events here.");
+  expect(popover.querySelector("[data-qc-save]").disabled).toBe(true);
+  expect(popover.querySelector("[data-qc-more]").disabled).toBe(true);
+});
+
+test("with a calendar there is no such note", () => {
+  expect(view(event()).querySelector("#calendar-qc-no-calendar")).toBeNull();
+  expect(view(opening(), meetingTypes).querySelector("#calendar-qc-no-calendar")).toBeNull();
+});

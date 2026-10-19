@@ -468,3 +468,9 @@ button.cal-qc-chip:hover,
 .cal-qc-kind button {
   flex: 1;
 }
+
+/* Why an event can't be saved here (no calendar connected). */
+.cal-qc-note {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}

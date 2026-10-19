@@ -210,3 +210,28 @@ test("after C on a week already past, Open for booking leaves the draft for the 
   expect(q('[data-qc-pick="start"]').textContent).toBe("09:00");
   expect(hook.draft).toMatchObject({ kind: "open", origin: null });
 });
+
+const noCalendar = (types) => payload({ settings: { ...settings, calendars: [], default_calendar: null, meeting_types: types } });
+
+test("with no calendar, a new draft starts as Open for booking", () => {
+  const { hook } = open(noCalendar(meetingTypes));
+
+  expect(hook.draft.kind).toBe("open");
+  expect(field().hidden).toBe(true);
+  expect(document.activeElement).toBe(q('[data-qc-kind="open"]'));
+  expect(q("[data-qc-save]").disabled).toBe(false);
+});
+
+test("with no calendar and no meeting types, Enter and Save send nothing", () => {
+  const { hook } = open(noCalendar([]));
+  expect(hook.draft.kind).toBe("event");
+  expect(q("#calendar-qc-no-calendar")).not.toBeNull();
+
+  field().value = "Lunch";
+  field().dispatchEvent(new Event("input", { bubbles: true }));
+  key(field(), "Enter");
+  q("[data-qc-save]").click();
+
+  expect(pushes(hook, "calendar:create")).toEqual([]);
+  expect(hook.draft.status).toBe("editing");
+});

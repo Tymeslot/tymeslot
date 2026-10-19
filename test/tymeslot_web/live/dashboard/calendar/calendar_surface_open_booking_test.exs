@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       strings = ClientStrings.build("en")
 
       keys =
-        ~w(kind_label kind_event kind_open meeting_type_chip repeat_label just_this_once every_week open_save open_hint open_draft_title open_refused open_unconfirmed)a
+        ~w(kind_label kind_event kind_open meeting_type_chip repeat_label just_this_once every_week open_save open_hint open_draft_title open_refused open_unconfirmed no_calendar_note)a
 
       assert keys -- Map.keys(strings) == []
       assert strings.kind_open == "Open for booking"

@@ -361,6 +361,8 @@ export const CreateMixin = {
   saveQuickCreate() {
     if (this.draft?.status !== "editing") return;
     if (this.draft.kind === "open") return this.saveOpening();
+    // No calendar to write to: the popover says so, and nothing is sent.
+    if (!(this.settings.calendars || []).length) return;
     this.updateDraft({ ...this.draft, status: "saving", error: null });
     const { id } = this.draft;
     this.pushGuarded("calendar:create", toPayload(this.draft), (reply) => this.createReplied(id, reply), () => this.createLost(id));
@@ -442,6 +444,7 @@ export const CreateMixin = {
 
   moreOptions() {
     if (this.draft?.status !== "editing") return;
+    if (!(this.settings.calendars || []).length) return;
     this.updateDraft({ ...this.draft, status: "opening", error: null });
     const { id } = this.draft;
     const unlock = () => {

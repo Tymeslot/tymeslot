@@ -128,8 +128,8 @@ function errorLine(draft) {
   return draft.error ? `<p id="calendar-qc-error" class="cal-qc-error" role="alert">${escapeHtml(draft.error.message)}</p>` : "";
 }
 
-function foot({ draft, strings }, label, { more }) {
-  const off = locked(draft) ? " disabled" : "";
+function foot({ draft, strings }, label, { more, blocked = false }) {
+  const off = locked(draft) || blocked ? " disabled" : "";
   return (
     `<div class="cal-qc-foot">` +
     (more ? `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${off}>${escapeHtml(strings.more_options)}</button>` : "") +
@@ -140,8 +140,11 @@ function foot({ draft, strings }, label, { more }) {
 
 const hint = (text) => `<p id="calendar-qc-hint" class="cal-qc-hint">${escapeHtml(text)}</p>`;
 
+// Without a calendar to write to, an event cannot be saved; the note says why.
 function eventBody(state) {
-  return chips(state) + showAs(state) + errorLine(state.draft) + foot(state, saveLabel(state), { more: true }) + hint(state.strings.quick_create_hint);
+  const blocked = !state.calendars.length;
+  const note = blocked ? `<p id="calendar-qc-no-calendar" class="cal-qc-note">${escapeHtml(state.strings.no_calendar_note)}</p>` : "";
+  return chips(state) + showAs(state) + note + errorLine(state.draft) + foot(state, saveLabel(state), { more: true, blocked }) + hint(state.strings.quick_create_hint);
 }
 
 function openBody(state) {

@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   visible range, then the organiser's calendars grouped by account, each with
   a colour checkbox, a lock when Tymeslot cannot write to it, and its sync
   status: a spinner while it syncs, a warning while it has a problem
-  (explained in the banner), and Sync now.
+  (explained in the banner), and Sync now. With no calendar connected it
+  says that bookings and bookable times still show, and links to connecting
+  one.
 
   Under the calendars, Layers: the bookable-times switch and the meeting
   type it shows (see `RailLayers`). Calendar sets join the rail in a later
@@ -58,9 +60,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         >
           {dgettext("dashboard_calendar", "Calendars")}
         </h2>
-        <p :if={@accounts == []} class="text-token-sm text-tymeslot-500">
-          {dgettext("dashboard_calendar", "No calendars connected yet.")}
-        </p>
+        <div :if={@accounts == []} id="calendar-rail-connect" class="space-y-2">
+          <p class="text-token-sm text-tymeslot-500">
+            {dgettext(
+              "dashboard_calendar_booking",
+              "No calendar connected. Your bookings and bookable times still show here."
+            )}
+          </p>
+          <.action_link
+            id="calendar-connect"
+            patch={~p"/dashboard/integrations?tab=calendars"}
+            variant={:secondary}
+            size={:sm}
+            icon="hero-plus"
+          >
+            {dgettext("dashboard_calendar_booking", "Connect a calendar")}
+          </.action_link>
+        </div>
         <div :for={account <- @accounts} id={"calendar-account-#{account.id}"} class="mb-3 last:mb-0">
           <div class="flex items-center gap-2 py-1">
             <.check
