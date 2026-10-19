@@ -18,18 +18,25 @@ defmodule Tymeslot.CalendarGrid.CalendarSetsTest do
   @work_member %{integration_id: 1, calendar_id: "work"}
 
   setup do
-    %{user: insert(:user)}
+    user = insert(:user)
+    integration = insert(:calendar_integration, user: user, is_active: true)
+
+    %{
+      user: user,
+      integration: integration,
+      member: %{integration_id: integration.id, calendar_id: "work"}
+    }
   end
 
   defp active_id(user),
     do: CalendarPreferencesQueries.get_or_create(user.id).active_calendar_set_id
 
   describe "create/3" do
-    test "takes the lowest free position and keeps the members", %{user: user} do
-      assert {:ok, first} = CalendarSets.create(user.id, "Work", [@work_member])
+    test "takes the lowest free position and keeps the members", %{user: user, member: member} do
+      assert {:ok, first} = CalendarSets.create(user.id, "Work", [member])
       assert {:ok, second} = CalendarSets.create(user.id, "Family", [])
       assert {first.position, second.position} == {1, 2}
-      assert [%{integration_id: 1, calendar_id: "work"}] = first.members
+      assert [^member] = Enum.map(first.members, &Map.take(&1, [:integration_id, :calendar_id]))
 
       {:ok, _deleted} = CalendarSets.delete(user.id, 1)
       assert {:ok, %{position: 1}} = CalendarSets.create(user.id, "Again", [])
@@ -51,14 +58,37 @@ defmodule Tymeslot.CalendarGrid.CalendarSetsTest do
     end
   end
 
+  describe "stored members" do
+    test "never name an integration the organiser does not have", %{user: user, member: member} do
+      foreign = insert(:calendar_integration, user: insert(:user), is_active: true)
+
+      stray = [
+        %{integration_id: foreign.id, calendar_id: "x"},
+        %{integration_id: -1, calendar_id: nil}
+      ]
+
+      assert {:ok, set} = CalendarSets.create(user.id, "Work", stray ++ [member])
+      assert [%{integration_id: id}] = set.members
+      assert id == member.integration_id
+
+      assert {:ok, %{members: []}} = CalendarSets.put_members(user.id, 1, stray)
+    end
+
+    test "refuse more than 200 members", %{user: user, member: member} do
+      members = for n <- 1..201, do: %{member | calendar_id: "c#{n}"}
+
+      assert {:error, %Ecto.Changeset{}} = CalendarSets.create(user.id, "Work", members)
+    end
+  end
+
   describe "rename/3, put_members/3 and delete/2" do
-    test "change the organiser's own set", %{user: user} do
+    test "change the organiser's own set", %{user: user, member: member} do
       {:ok, _set} = CalendarSets.create(user.id, "Work", [])
 
       assert {:ok, %{name: "Office"}} = CalendarSets.rename(user.id, 1, " Office ")
 
       assert {:ok, %{members: [%{calendar_id: "work"}]}} =
-               CalendarSets.put_members(user.id, 1, [@work_member])
+               CalendarSets.put_members(user.id, 1, [member])
 
       assert {:ok, %{position: 1}} = CalendarSets.delete(user.id, 1)
       assert CalendarSets.list(user.id) == []
@@ -99,6 +129,16 @@ defmodule Tymeslot.CalendarGrid.CalendarSetsTest do
       assert active_id(user) == nil
     end
 
+    test "preferences naming another organiser's set have no active set", %{user: user} do
+      {:ok, theirs} = CalendarSets.create(insert(:user).id, "Theirs", [])
+
+      {:ok, preferences} =
+        CalendarPreferencesQueries.upsert(user.id, %{active_calendar_set_id: theirs.id})
+
+      assert CalendarSets.active(user.id, preferences) == nil
+      assert EffectiveVisibility.for_user(user.id).active_set == nil
+    end
+
     test "deleting the active set leaves no set active", %{user: user} do
       {:ok, _set} = CalendarSets.create(user.id, "Work", [])
       {:ok, _active} = CalendarSets.activate(user.id, 1)
@@ -112,7 +152,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSetsTest do
       assert {:error, changeset} =
                CalendarPreferencesQueries.upsert(user.id, %{active_calendar_set_id: -1})
 
-      assert {"does not exist", _} = changeset.errors[:active_calendar_set_id]
+      assert {"does not exist", _opts} = changeset.errors[:active_calendar_set_id]
     end
   end
 

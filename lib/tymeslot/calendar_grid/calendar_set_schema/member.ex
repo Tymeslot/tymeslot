@@ -20,7 +20,8 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchema.Member do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(member, attrs) do
     member
-    |> cast(attrs, [:integration_id, :calendar_id])
+    |> cast(attrs, [:integration_id, :calendar_id], empty_values: [])
     |> validate_required([:integration_id])
+    |> validate_length(:calendar_id, min: 1, max: 255)
   end
 end

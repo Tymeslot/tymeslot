@@ -15,6 +15,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchema do
 
   @positions 1..9
   @max_name 40
+  @max_members 200
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -49,6 +50,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchema do
     |> validate_length(:name, max: @max_name)
     |> validate_inclusion(:position, @positions)
     |> cast_embed(:members)
+    |> validate_length(:members, max: @max_members)
     |> check_constraint(:position, name: :calendar_sets_position_range)
     |> unique_constraint([:user_id, :position], name: :calendar_sets_user_id_position_index)
     |> foreign_key_constraint(:user_id)
@@ -60,6 +62,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchema do
     set
     |> cast(%{members: Enum.map(members, &member_params/1)}, [])
     |> cast_embed(:members)
+    |> validate_length(:members, max: @max_members)
   end
 
   @doc "A member, struct or map, as changeset params."

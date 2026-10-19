@@ -85,6 +85,28 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibilityTest do
     end
   end
 
+  describe "resolve/4 with stale members" do
+    test "a member naming an integration the organiser does not have is ignored" do
+      with_stray = set([{1, "work"}, {99, "x"}, {99, nil}])
+      without = set([{1, "work"}])
+
+      assert EffectiveVisibility.resolve([], MapSet.new(), @integrations, with_stray) ==
+               %{
+                 EffectiveVisibility.resolve([], MapSet.new(), @integrations, without)
+                 | active_set: with_stray
+               }
+    end
+
+    test "an account whose members all name calendars it no longer syncs is hidden whole" do
+      result =
+        EffectiveVisibility.resolve([], MapSet.new(), @integrations, set([{1, "gone"}, {2, nil}]))
+
+      assert result.hidden_integration_ids == [1]
+      assert result.hidden_calendar_keys == MapSet.new()
+      assert EffectiveVisibility.visible_integration_ids(@integrations, result) == [2]
+    end
+  end
+
   describe "reject/2 and visible_integration_ids/2" do
     test "drop what the set hides and never a booking" do
       result = EffectiveVisibility.resolve([], MapSet.new(), @integrations, set([{1, "work"}]))

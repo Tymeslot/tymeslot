@@ -19,6 +19,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSets do
   alias Tymeslot.CalendarGrid.CalendarSetQueries
   alias Tymeslot.CalendarGrid.CalendarSetSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias Tymeslot.Integrations.Calendar.Management
 
   @type set :: CalendarSetSchema.t()
   @type member :: %{integration_id: integer(), calendar_id: String.t() | nil}
@@ -51,7 +52,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSets do
           user_id: user_id,
           name: name,
           position: position,
-          members: plain(members)
+          members: members |> plain() |> owned(user_id)
         })
     end
   end
@@ -70,7 +71,12 @@ defmodule Tymeslot.CalendarGrid.CalendarSets do
   @spec put_members(integer(), integer(), [member()]) ::
           {:ok, set()} | {:error, :not_found | Ecto.Changeset.t()}
   def put_members(user_id, position, members),
-    do: with_set(user_id, position, &CalendarSetQueries.update_members(&1, plain(members)))
+    do:
+      with_set(
+        user_id,
+        position,
+        &CalendarSetQueries.update_members(&1, members |> plain() |> owned(user_id))
+      )
 
   @doc "Makes the set on `position` the active one; 0 leaves the active set."
   @spec activate(integer(), integer()) ::
@@ -161,6 +167,13 @@ defmodule Tymeslot.CalendarGrid.CalendarSets do
       [] -> [%{integration_id: id, calendar_id: nil}]
       entries -> Enum.map(entries, &%{integration_id: id, calendar_id: &1.id})
     end
+  end
+
+  # Members naming an integration the organiser does not have (removed, or
+  # another organiser's) are never stored.
+  defp owned(members, user_id) do
+    ids = user_id |> Management.list_active_calendar_integrations() |> MapSet.new(& &1.id)
+    Enum.filter(members, &MapSet.member?(ids, &1.integration_id))
   end
 
   defp plain(members), do: members |> Enum.map(&CalendarSetSchema.member_params/1) |> Enum.uniq()

@@ -5,6 +5,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchemaTest do
 
   @moduletag :calendar
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.CalendarSetSchema
 
   defp changeset(attrs),
@@ -17,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchemaTest do
   test "a name is trimmed and loses null bytes" do
     changeset = changeset(%{name: "  Wo\u0000rk  "})
     assert changeset.valid?
-    assert Ecto.Changeset.get_change(changeset, :name) == "Work"
+    assert Changeset.get_change(changeset, :name) == "Work"
   end
 
   test "a blank name or one over 40 characters is refused" do
@@ -40,7 +41,22 @@ defmodule Tymeslot.CalendarGrid.CalendarSetSchemaTest do
     assert changeset.valid?
 
     assert [%{integration_id: 4, calendar_id: nil}] =
-             Ecto.Changeset.apply_changes(changeset).members
+             Changeset.apply_changes(changeset).members
+  end
+
+  test "a calendar id is 1 to 255 characters and a set holds at most 200 members" do
+    refute changeset(%{members: [%{integration_id: 4, calendar_id: ""}]}).valid?
+
+    refute changeset(%{members: [%{integration_id: 4, calendar_id: String.duplicate("a", 256)}]}).valid?
+
+    assert changeset(%{members: [%{integration_id: 4, calendar_id: String.duplicate("a", 255)}]}).valid?
+
+    members = for n <- 1..201, do: %{integration_id: 4, calendar_id: "c#{n}"}
+    refute changeset(%{members: members}).valid?
+    assert changeset(%{members: Enum.take(members, 200)}).valid?
+
+    set = %CalendarSetSchema{name: "Work", position: 1, members: []}
+    refute CalendarSetSchema.members_changeset(set, members).valid?
   end
 
   test "members_changeset replaces the members alone" do

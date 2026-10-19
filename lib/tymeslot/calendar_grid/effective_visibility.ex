@@ -43,7 +43,7 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibility do
       Enum.reduce(integrations, {[], MapSet.new()}, fn integration, {ids, keys} ->
         case Map.fetch(by_integration, integration.id) do
           :error -> {[integration.id | ids], keys}
-          {:ok, calendar_ids} -> {ids, hide_unlisted(keys, integration, calendar_ids)}
+          {:ok, calendar_ids} -> hide_unlisted({ids, keys}, integration, calendar_ids)
         end
       end)
 
@@ -83,15 +83,25 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibility do
         visibility.hidden_calendar_keys
       )
 
-  # A whole-account member (nil) hides nothing in the account.
-  defp hide_unlisted(keys, integration, calendar_ids) do
-    if nil in calendar_ids do
-      keys
-    else
-      integration
-      |> CalendarDirectory.synced_entries()
-      |> Enum.reject(&(&1.id in calendar_ids))
-      |> Enum.reduce(keys, &MapSet.put(&2, {integration.id, &1.id}))
+  # A whole-account member (nil) hides nothing in the account. An account
+  # whose members all name calendars it no longer syncs shows nothing, so it
+  # is hidden whole.
+  defp hide_unlisted({ids, keys}, integration, calendar_ids) do
+    synced = CalendarDirectory.synced_entries(integration)
+
+    cond do
+      nil in calendar_ids ->
+        {ids, keys}
+
+      not Enum.any?(synced, &(&1.id in calendar_ids)) ->
+        {[integration.id | ids], keys}
+
+      true ->
+        {ids, Enum.reduce(synced, keys, &hide_unless_member(&2, integration, &1, calendar_ids))}
     end
+  end
+
+  defp hide_unless_member(keys, integration, entry, calendar_ids) do
+    if entry.id in calendar_ids, do: keys, else: MapSet.put(keys, {integration.id, entry.id})
   end
 end
