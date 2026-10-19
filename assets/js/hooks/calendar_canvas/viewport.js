@@ -11,6 +11,7 @@
  * rotation, a resized window) is reported as `calendar:viewport` once it
  * has settled; the server answers with the period it now shows.
  */
+import { keyboardInset } from "../../calendar/sheet.js";
 import { PHONE_QUERY } from "../../calendar/viewport.js";
 
 export const VIEWPORT_DEBOUNCE_MS = 150;
@@ -25,9 +26,11 @@ export const ViewportMixin = {
       this.viewportTimer = setTimeout(() => this.viewportChanged(), VIEWPORT_DEBOUNCE_MS);
     };
     this.media?.addEventListener?.("change", this.viewportListener);
+    this.mountKeyboardInset();
   },
 
   destroyViewport() {
+    this.destroyKeyboardInset();
     clearTimeout(this.viewportTimer);
     this.viewportTimer = null;
     this.media?.removeEventListener?.("change", this.viewportListener);
@@ -45,6 +48,32 @@ export const ViewportMixin = {
       this.view = "three_day";
       this.render();
     }
+  },
+
+  // iOS leaves position: fixed elements behind the on-screen keyboard. The
+  // part of the layout viewport the keyboard covers goes to --cal-kb-inset,
+  // which lifts the sheets and the full-screen editor (calendar-phone.css);
+  // quick create's draft is then kept clear of the risen sheet.
+  mountKeyboardInset() {
+    const visual = window.visualViewport;
+    if (!visual) return;
+    this.insetListener = () => {
+      document.documentElement.style.setProperty("--cal-kb-inset", `${keyboardInset(window.innerHeight, visual)}px`);
+      if (this.quick) this.revealDraft();
+    };
+    visual.addEventListener("resize", this.insetListener);
+    visual.addEventListener("scroll", this.insetListener);
+    this.insetListener();
+  },
+
+  destroyKeyboardInset() {
+    const visual = window.visualViewport;
+    if (visual && this.insetListener) {
+      visual.removeEventListener("resize", this.insetListener);
+      visual.removeEventListener("scroll", this.insetListener);
+    }
+    this.insetListener = null;
+    document.documentElement.style.removeProperty("--cal-kb-inset");
   },
 
   // Overlays open as bottom sheets on a phone (see calendar/sheet.js).

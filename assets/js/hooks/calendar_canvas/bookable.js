@@ -26,7 +26,7 @@
  */
 import { formatFreeTimes } from "../../calendar/free_times.js";
 import { renderExplainer } from "../../calendar/bookable_explainer.js";
-import { placePopover } from "../../calendar/popover.js";
+import { applyPlacement, placeOverlay, releaseSheet } from "../../calendar/sheet.js";
 import { MINUTES_PER_DAY, parseWall, periodDays } from "../../calendar/time.js";
 import { MODALS, TYPING } from "./keys.js";
 
@@ -48,8 +48,10 @@ export const BookableMixin = {
       e.preventDefault();
       this.toggleBookable();
     };
-    // A press on a label is left to its click, which toggles the explainer.
+    // A press on a label is left to its click, which toggles the explainer;
+    // one on a sheet's scrim to the scrim's click, which closes it.
     this.explainerOutside = (e) => {
+      if (e.target.closest?.("[data-sheet-scrim]")) return;
       if (this.explainer && !this.explainer.contains(e.target) && !e.target.closest?.("[data-bookable-label]")) this.closeExplainer();
     };
     document.addEventListener("keydown", this.bookableKey);
@@ -120,10 +122,8 @@ export const BookableMixin = {
     this.el.appendChild(explainer);
 
     const size = { width: explainer.offsetWidth || EXPLAINER_ESTIMATE.width, height: explainer.offsetHeight || EXPLAINER_ESTIMATE.height };
-    const position = placePopover(anchor.getBoundingClientRect(), size, viewport());
-    explainer.style.left = `${Math.round(position.left)}px`;
-    explainer.style.top = `${Math.round(position.top)}px`;
-    explainer.style.maxHeight = position.maxHeight ? `${Math.round(position.maxHeight)}px` : "";
+    applyPlacement(explainer, placeOverlay(anchor.getBoundingClientRect(), size, viewport(), { sheet: this.sheetMode() }));
+    explainer.addEventListener("calendar:dismiss", () => this.closeExplainer());
     this.explainer = explainer;
     this.explainerDay = day;
     anchor.setAttribute("aria-expanded", "true");
@@ -133,6 +133,7 @@ export const BookableMixin = {
 
   // Forget the explainer without touching focus (a redraw has removed it).
   dropExplainer() {
+    releaseSheet(this.explainer);
     document.removeEventListener("pointerdown", this.explainerOutside);
     this.el.querySelector(`[data-bookable-label="${this.explainerDay}"]`)?.setAttribute("aria-expanded", "false");
     this.explainer = null;

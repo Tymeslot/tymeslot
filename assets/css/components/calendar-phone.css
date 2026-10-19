@@ -78,3 +78,49 @@
     min-height: 2.75rem;
   }
 }
+
+/* Sheets. On a phone the hook's overlays (the "+N" list, quick create, the
+   band explainer) carry .is-sheet (assets/js/calendar/sheet.js), and the
+   preview is drawn as a sheet here; each has a .cal-scrim just before it,
+   which takes the tap that closes it, so that tap never reaches the grid.
+   --cal-kb-inset (written from visualViewport) lifts a sheet above the iOS
+   keyboard. The list and the explainer live inside the surface row, an
+   isolated stacking context, so the row is lifted while it holds one. */
+@media (width < 40rem) {
+  .cal-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--cal-z-scrim);
+    background: color-mix(in srgb, var(--cal-ink) 30%, transparent);
+  }
+
+  .cal-list.is-sheet,
+  .cal-qc.is-sheet,
+  .cal-bookable-pop.is-sheet,
+  .cal-preview {
+    top: auto;
+    right: 0;
+    bottom: var(--cal-kb-inset, 0px);
+    left: 0;
+    z-index: var(--cal-z-sheet);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: calc(100dvh - var(--cal-kb-inset, 0px) - env(safe-area-inset-top) - 2rem);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-bottom: 0;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  }
+
+  .cal-row:has(.is-sheet) {
+    z-index: var(--cal-z-sheet);
+  }
+
+  /* Room for quick create's draft to scroll clear of the sheet, even late
+     in the day. */
+  :root.cal-sheet-open .cal-scroll {
+    padding-bottom: 50dvh;
+  }
+}

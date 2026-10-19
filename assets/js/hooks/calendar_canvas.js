@@ -54,6 +54,7 @@ import { ViewportMixin } from "./calendar_canvas/viewport.js";
 import { ViewsMixin } from "./calendar_canvas/views.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
+import { applyPlacement, placeOverlay, releaseSheet } from "../calendar/sheet.js";
 import { renderList } from "../calendar/render.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isTimeGrid, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
 
@@ -116,7 +117,9 @@ export const CalendarCanvas = {
     this.measureWidth = this.measureWidth || canvasMeasure();
 
     this.outside = (e) => {
-      // A press on the chip itself is left to its click, which toggles the list.
+      // A press on the chip itself is left to its click, which toggles the
+      // list; one on a sheet's scrim to the scrim's click, which closes it.
+      if (e.target.closest?.("[data-sheet-scrim]")) return;
       if (this.list && !this.list.contains(e.target) && !this.listAnchorEl?.contains(e.target)) this.closeList();
     };
     this.listeners = [
@@ -490,9 +493,15 @@ export const CalendarCanvas = {
   },
 
   // The preview is rendered by LiveView outside this element, so its position
-  // travels as CSS variables on <html>, which LiveView never patches.
+  // travels as CSS variables on <html>, which LiveView never patches. On a
+  // phone it is a bottom sheet drawn by CSS (calendar-phone.css), and the
+  // variables go.
   setPreviewPosition({ left, top, maxHeight }) {
     const style = document.documentElement.style;
+    if (this.sheetMode()) {
+      for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
+      return;
+    }
     if (maxHeight) style.setProperty("--cal-pop-h", `${Math.round(maxHeight)}px`);
     else style.removeProperty("--cal-pop-h");
     style.setProperty("--cal-pop-x", `${Math.round(left)}px`);
@@ -547,10 +556,9 @@ export const CalendarCanvas = {
     const list = holder.firstElementChild;
     this.el.appendChild(list);
 
-    const position = placePopover(anchor.getBoundingClientRect(), { width: list.offsetWidth || 240, height: list.offsetHeight || 160 }, viewport());
-    list.style.left = `${Math.round(position.left)}px`;
-    list.style.top = `${Math.round(position.top)}px`;
-    list.style.maxHeight = position.maxHeight ? `${Math.round(position.maxHeight)}px` : "";
+    const size = { width: list.offsetWidth || 240, height: list.offsetHeight || 160 };
+    applyPlacement(list, placeOverlay(anchor.getBoundingClientRect(), size, viewport(), { sheet: this.sheetMode() }));
+    list.addEventListener("calendar:dismiss", () => this.closeList());
     this.list = list;
     this.listAnchor = this.focusKeyOf(anchor);
     this.listAnchorEl = anchor;
@@ -558,8 +566,10 @@ export const CalendarCanvas = {
     list.querySelector("button")?.focus();
   },
 
-  // Forget the list without touching focus (the grid redraw has removed it).
+  // Forget the list without touching focus (the grid redraw has removed it,
+  // or is about to); its sheet state goes with it.
   dropList() {
+    releaseSheet(this.list);
     document.removeEventListener("pointerdown", this.outside);
     this.list = null;
     this.listAnchorEl = null;

@@ -3,7 +3,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
   The server-rendered sheets of the new calendar: the Calendars sheet (the
   rail's calendars and layers, and the display options, where the rail is
   hidden) and the date sheet (a month to pick a day from, opened from the
-  phone header's title).
+  phone header's title). It also pins what the server renders for the hook's
+  sheets: the scrim behind the event preview, and the side panel's header that
+  the full-screen editor pads and enlarges (placement itself is CSS and
+  `calendar/sheet.js`, tested under `assets/js/__tests__/calendar/`).
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -21,6 +24,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
 
   defp open_calendars(lv), do: lv |> element("#calendar-phone-calendars") |> render_click()
   defp open_dates(lv), do: lv |> element("#calendar-phone-title") |> render_click()
+
+  defp canvas_hook(lv, event, params),
+    do: lv |> element("#calendar-canvas") |> render_hook(event, params)
 
   describe "the Calendars sheet" do
     setup %{conn: conn} do
@@ -296,6 +302,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       toggle.()
 
       assert has_element?(lv, "#calendar-picker-month", "October 2026")
+    end
+  end
+
+  describe "the preview and the panel" do
+    setup %{conn: conn} do
+      context = owner(conn)
+      review = event(context.integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+      {:ok, lv, _html} = live(context.conn, ~p"/dashboard/calendar")
+
+      Map.merge(context, %{lv: lv, id: "event-#{review.id}"})
+    end
+
+    test "the preview comes with a scrim just before it, and both go when it closes", %{
+      lv: lv,
+      id: id
+    } do
+      refute has_element?(lv, ".cal-scrim")
+
+      canvas_hook(lv, "calendar:open", %{"id" => id})
+      assert has_element?(lv, ".cal-scrim[aria-hidden='true'] + #calendar-preview")
+
+      canvas_hook(lv, "calendar:close_preview", %{"refocus" => "false"})
+      refute has_element?(lv, ".cal-scrim")
+      refute has_element?(lv, "#calendar-preview")
     end
   end
 end

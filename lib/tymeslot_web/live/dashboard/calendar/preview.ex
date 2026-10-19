@@ -90,6 +90,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @spec preview(map()) :: Phoenix.LiveView.Rendered.t()
   def preview(assigns) do
     ~H"""
+    <%!-- On a phone the preview is a bottom sheet (calendar-phone.css). The
+         scrim behind it dims the grid and takes the tap that closes it (the
+         preview's click-away), so that tap never lands on the grid. --%>
+    <div class="cal-scrim sm:hidden" aria-hidden="true"></div>
     <div
       id="calendar-preview"
       class="cal-preview"

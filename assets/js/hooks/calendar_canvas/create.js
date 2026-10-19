@@ -33,7 +33,7 @@
  * quick create at the next free slot (calendar/draft.js `nextSlot`).
  */
 import { applyChip, applyText, draftFromRange, nextSlot, toPayload } from "../../calendar/draft.js";
-import { placePopover } from "../../calendar/popover.js";
+import { applyPlacement, placeOverlay, releaseSheet, sheetCovers } from "../../calendar/sheet.js";
 import { renderQuickBody, renderQuickCreate, renderQuickHead } from "../../calendar/quick_create.js";
 import { MINUTES_PER_DAY, isTimeGrid, isoFromDay, periodDays } from "../../calendar/time.js";
 import { newDraftId } from "./draft.js";
@@ -60,6 +60,9 @@ export const CreateMixin = {
     this.notice = null;
     this.noticeTimer = null;
     this.quickOutside = (e) => {
+      // A press on a sheet's scrim is left to the scrim's click, which
+      // cancels; the tap then never reaches the grid under it.
+      if (e.target.closest?.("[data-sheet-scrim]")) return;
       if (!this.quick || this.quick.element.contains(e.target) || e.target.closest?.("[data-draft-id]")) return;
       this.cancelQuickCreate({ restoreFocus: false });
     };
@@ -131,10 +134,12 @@ export const CreateMixin = {
       element.addEventListener("change", (e) => this.quickChange(e));
       element.addEventListener("click", (e) => this.quickClick(e));
       element.addEventListener("keydown", (e) => this.quickKey(e));
+      element.addEventListener("calendar:dismiss", () => this.cancelQuickCreate({ restoreFocus: false }));
       document.body.appendChild(element);
       document.addEventListener("pointerdown", this.quickOutside);
     }
     this.placeQuickCreate();
+    this.revealDraft();
     this.quickFocus();
   },
 
@@ -154,6 +159,7 @@ export const CreateMixin = {
     clearTimeout(this.followTimer);
     this.followTimer = null;
     document.removeEventListener("pointerdown", this.quickOutside);
+    releaseSheet(this.quick?.element);
     this.quick?.element.remove();
     this.quick = null;
   },
@@ -180,6 +186,7 @@ export const CreateMixin = {
     this.draft = draft;
     this.render();
     this.refreshQuick();
+    this.revealDraft();
     this.followDraft();
   },
 
@@ -289,7 +296,8 @@ export const CreateMixin = {
   },
 
   // Beside the draft, never over it (calendar/popover.js); in the middle of
-  // the grid while the draft is not drawn (its days still loading).
+  // the grid while the draft is not drawn (its days still loading). On a
+  // phone a bottom sheet (calendar/sheet.js).
   placeQuickCreate() {
     if (!this.quick || !this.draft) return;
     const { element } = this.quick;
@@ -303,10 +311,20 @@ export const CreateMixin = {
       anchor = { left: x, right: x, top: box.top + 80, bottom: box.top + 80 };
     }
     const size = { width: element.offsetWidth || ESTIMATE.width, height: element.offsetHeight || ESTIMATE.height };
-    const { left, top, maxHeight } = placePopover(anchor, size, viewport());
-    element.style.left = `${Math.round(left)}px`;
-    element.style.top = `${Math.round(top)}px`;
-    element.style.maxHeight = maxHeight ? `${Math.round(maxHeight)}px` : "";
+    applyPlacement(element, placeOverlay(anchor, size, viewport(), { sheet: this.sheetMode() }));
+  },
+
+  // A sheet lies over the foot of the grid: the draft scrolls up to just
+  // above it. Only on the hook's own changes (opening, a new draft state,
+  // the follow, the keyboard), never on the organiser's scrolling.
+  revealDraft() {
+    if (!this.quick?.element.classList.contains("is-sheet") || !this.draft) return;
+    const block = this.el.querySelector(draftSelector(this.draft.id));
+    const scroller = this.el.querySelector("[data-scroll]");
+    if (!block || !scroller) return;
+    const header = this.el.querySelector(".cal-top");
+    const limit = header ? header.getBoundingClientRect().bottom : scroller.getBoundingClientRect().top;
+    scroller.scrollTop += sheetCovers(block.getBoundingClientRect(), this.quick.element.getBoundingClientRect(), limit);
   },
 
   // After a pause in typing (`delay`), brings the draft into view: the grid moves to
@@ -326,6 +344,7 @@ export const CreateMixin = {
         return;
       }
       this.el.querySelector(draftSelector(this.draft.id))?.scrollIntoView?.({ block: "nearest" });
+      this.revealDraft();
     }, delay);
   },
 
