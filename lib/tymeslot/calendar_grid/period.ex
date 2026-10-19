@@ -3,21 +3,58 @@ defmodule Tymeslot.CalendarGrid.Period do
   The days a calendar view shows, and how it steps from one period to the next.
 
   Pure date arithmetic. The calendar surface loads events for `window/4` (the
-  period plus one period either side), and `assets/js/calendar/time.js`
-  mirrors `days/4` and `shift/3` so the browser can draw a neighbouring
-  period from events it already holds. The two must agree; their tests pin
-  the same cases.
+  period plus one period either side; a day loads its whole week either
+  side, so the phone's week strip has every day's events), and
+  `assets/js/calendar/time.js` mirrors `days/4` and `shift/3` so the browser
+  can draw a neighbouring period from events it already holds. The two must
+  agree; their tests pin the same cases.
+
+  Day, three days and week are time grids (`time_grid?/1`). A month is the
+  six weeks of `month_matrix/2`, always seven columns, and steps by a
+  calendar month with the day clamped (31 January to 28 February). An
+  agenda lists `agenda_days/0` days from its date and grows as it scrolls,
+  up to `agenda_max_days/0` (see `TymeslotWeb.Dashboard.Calendar.AgendaLoader`).
   """
 
-  @type view :: :day | :three_day | :week
+  @type view :: :day | :three_day | :week | :month | :agenda
+  @type viewport :: :phone | :wide
   @type week_start :: :monday | :sunday
 
+  # Month and agenda join the URL in a later step, once the surface can draw them.
   @views %{"day" => :day, "three_day" => :three_day, "week" => :week}
   @steps %{day: 1, three_day: 3, week: 7}
+  @time_grid [:day, :three_day, :week]
+  @agenda_days 28
+  @agenda_max_days 168
 
-  @doc "The views the surface draws, in toolbar order."
+  @doc "The views the surface draws, in the desktop toolbar's order."
   @spec views() :: [view()]
-  def views, do: [:day, :three_day, :week]
+  def views, do: [:day, :three_day, :week, :month, :agenda]
+
+  @doc "The views a phone offers, in the order of its bottom tabs."
+  @spec phone_views() :: [view()]
+  def phone_views, do: [:agenda, :day, :three_day, :month]
+
+  @doc "Whether `view` draws the time grid (hours down, days across)."
+  @spec time_grid?(view()) :: boolean()
+  def time_grid?(view), do: view in @time_grid
+
+  @doc """
+  The view shown for `view` on a viewport: a week on a phone shows three
+  days (seven columns do not fit); every other view is itself. The URL and
+  the stored default keep the view asked for.
+  """
+  @spec for_viewport(view(), viewport()) :: view()
+  def for_viewport(:week, :phone), do: :three_day
+  def for_viewport(view, _viewport), do: view
+
+  @doc "The days an agenda loads at a time, and the step of its previous and next."
+  @spec agenda_days() :: pos_integer()
+  def agenda_days, do: @agenda_days
+
+  @doc "The furthest an agenda extends from its date before \"Show later\" moves the date on."
+  @spec agenda_max_days() :: pos_integer()
+  def agenda_max_days, do: @agenda_max_days
 
   @doc "Reads a view from a URL parameter, or `default` when it names none."
   @spec parse_view(term(), view()) :: view()
@@ -51,7 +88,10 @@ defmodule Tymeslot.CalendarGrid.Period do
   def week_start("sunday"), do: :sunday
   def week_start(_stored), do: :monday
 
-  @doc "The days `view` shows around `date`."
+  @doc """
+  The days `view` shows around `date`. A month always shows seven columns;
+  hidden weekends apply to the week alone.
+  """
   @spec days(view(), Date.t(), week_start(), boolean()) :: [Date.t()]
   def days(:day, date, _week_start, _weekends?), do: [date]
   def days(:three_day, date, _week_start, _weekends?), do: Enum.map(0..2, &Date.add(date, &1))
@@ -63,16 +103,32 @@ defmodule Tymeslot.CalendarGrid.Period do
     if weekends?, do: days, else: Enum.reject(days, &(Date.day_of_week(&1) in [6, 7]))
   end
 
-  @doc "The anchor date one period before (`-1`) or after (`1`) `date`."
+  def days(:month, date, week_start, _weekends?),
+    do: date |> month_matrix(week_start) |> List.flatten()
+
+  def days(:agenda, date, _week_start, _weekends?),
+    do: Enum.map(0..(@agenda_days - 1), &Date.add(date, &1))
+
+  @doc """
+  The anchor date one period before (`-1`) or after (`1`) `date`. A month
+  keeps the day of the month where the target month has it, else its last
+  day, as `Date.shift/2` does.
+  """
   @spec shift(view(), Date.t(), -1 | 1) :: Date.t()
+  def shift(:month, date, direction), do: Date.shift(date, month: direction)
+  def shift(:agenda, date, direction), do: Date.add(date, direction * @agenda_days)
   def shift(view, date, direction), do: Date.add(date, direction * Map.fetch!(@steps, view))
 
   @doc """
   The days the surface loads events for: from the first day of the previous
   period to the last day of the next, contiguous even when weekends are
-  hidden, so a step either way renders from data already in the browser.
+  hidden, so a step either way renders from data already in the browser. A
+  day loads its week's window, so the phone's week strip can show every
+  day's events and a switch between day and week needs no query.
   """
   @spec window(view(), Date.t(), week_start(), boolean()) :: Date.Range.t()
+  def window(:day, date, week_start, weekends?), do: window(:week, date, week_start, weekends?)
+
   def window(view, date, week_start, _weekends?) do
     first = view |> days(shift(view, date, -1), week_start, true) |> List.first()
     last = view |> days(shift(view, date, 1), week_start, true) |> List.last()

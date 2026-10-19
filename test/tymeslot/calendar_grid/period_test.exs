@@ -111,4 +111,102 @@ defmodule Tymeslot.CalendarGrid.PeriodTest do
     assert hd(hd(weeks)) == ~D[2026-09-28]
     assert List.last(List.last(weeks)) == ~D[2026-11-08]
   end
+
+  describe "views" do
+    test "the desktop toolbar order and the phone's tab order" do
+      assert Period.views() == [:day, :three_day, :week, :month, :agenda]
+      assert Period.phone_views() == [:agenda, :day, :three_day, :month]
+    end
+
+    test "only day, three days and week are time grids" do
+      assert Enum.filter(Period.views(), &Period.time_grid?/1) == [:day, :three_day, :week]
+    end
+
+    test "a week on a phone shows three days; every other view is itself" do
+      assert Period.for_viewport(:week, :phone) == :three_day
+      assert Period.for_viewport(:week, :wide) == :week
+      assert Period.for_viewport(:month, :phone) == :month
+      assert Period.for_viewport(:day, :phone) == :day
+      assert Period.for_viewport(:agenda, :phone) == :agenda
+    end
+  end
+
+  describe "month" do
+    test "shows six weeks of seven days from the week start before the first" do
+      days = Period.days(:month, ~D[2026-10-16], :monday, true)
+
+      assert length(days) == 42
+      assert {List.first(days), List.last(days)} == {~D[2026-09-28], ~D[2026-11-08]}
+    end
+
+    test "starts on Sunday when weeks do" do
+      days = Period.days(:month, ~D[2026-10-16], :sunday, true)
+
+      assert {List.first(days), List.last(days)} == {~D[2026-09-27], ~D[2026-11-07]}
+    end
+
+    test "keeps its weekends when the week hides them" do
+      days = Period.days(:month, ~D[2026-10-16], :monday, false)
+
+      assert length(days) == 42
+      assert ~D[2026-10-17] in days
+    end
+
+    test "steps by a calendar month, keeping the day where the month has it" do
+      assert Period.shift(:month, ~D[2026-10-16], 1) == ~D[2026-11-16]
+      assert Period.shift(:month, ~D[2026-01-15], -1) == ~D[2025-12-15]
+      assert Period.shift(:month, ~D[2026-12-15], 1) == ~D[2027-01-15]
+    end
+
+    test "31 January steps to the last day of February, leap years included" do
+      assert Period.shift(:month, ~D[2026-01-31], 1) == ~D[2026-02-28]
+      assert Period.shift(:month, ~D[2024-01-31], 1) == ~D[2024-02-29]
+      assert Period.shift(:month, ~D[2026-03-31], -1) == ~D[2026-02-28]
+    end
+
+    test "loads from the previous month's grid to the next month's" do
+      window = Period.window(:month, ~D[2026-10-16], :monday, true)
+
+      assert {window.first, window.last} == {~D[2026-08-31], ~D[2026-12-06]}
+      assert Date.diff(window.last, window.first) + 1 <= 112
+    end
+
+    test "a window around 31 January reaches the grids of December and February" do
+      window = Period.window(:month, ~D[2026-01-31], :monday, true)
+
+      assert {window.first, window.last} == {~D[2025-12-01], ~D[2026-03-08]}
+    end
+  end
+
+  describe "agenda" do
+    test "shows four weeks from its date" do
+      days = Period.days(:agenda, ~D[2026-10-14], :monday, false)
+
+      assert length(days) == Period.agenda_days()
+      assert {List.first(days), List.last(days)} == {~D[2026-10-14], ~D[2026-11-10]}
+    end
+
+    test "steps by four weeks" do
+      assert Period.shift(:agenda, ~D[2026-10-14], 1) == ~D[2026-11-11]
+      assert Period.shift(:agenda, ~D[2026-10-14], -1) == ~D[2026-09-16]
+    end
+
+    test "loads four weeks before its date and eight from it" do
+      window = Period.window(:agenda, ~D[2026-10-14], :monday, true)
+
+      assert {window.first, window.last} == {~D[2026-09-16], ~D[2026-12-08]}
+    end
+
+    test "extends at most 24 weeks from its date" do
+      assert Period.agenda_max_days() == 6 * Period.agenda_days()
+    end
+  end
+
+  test "a day loads its week with a week either side, as the week view does" do
+    assert Period.window(:day, ~D[2026-10-14], :monday, true) ==
+             Period.window(:week, ~D[2026-10-14], :monday, true)
+
+    window = Period.window(:day, ~D[2026-10-18], :sunday, true)
+    assert {window.first, window.last} == {~D[2026-10-11], ~D[2026-10-31]}
+  end
 end

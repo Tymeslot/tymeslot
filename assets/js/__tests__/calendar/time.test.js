@@ -5,6 +5,8 @@
  */
 import { describe, expect, test } from "vitest";
 import {
+  AGENDA_DAYS,
+  AGENDA_MAX_DAYS,
   NIGHT_END,
   NIGHT_STRIP,
   addDays,
@@ -12,8 +14,10 @@ import {
   formatHour,
   formatMinutes,
   isoFromDay,
+  isTimeGrid,
   isoWeekday,
   makeScale,
+  monthMatrix,
   needsAnswer,
   normaliseEvent,
   parseWall,
@@ -155,5 +159,56 @@ describe("segmentsForDay", () => {
     expect(Object.fromEntries(segments.map((g) => [g.id, g.attention]))).toEqual({ open: true, lapsed: false, swept: false, plain: false });
     expect(needsAnswer({ request: true })).toBe(true);
     expect(needsAnswer({ request: true, expired: true })).toBe(false);
+  });
+});
+
+describe("month and agenda mirror Period", () => {
+  test("a month is six weeks of seven days from the week start before the first", () => {
+    const days = periodDays("month", "2026-10-16", "monday", true);
+    expect(days).toHaveLength(42);
+    expect([days[0], days[41]]).toEqual(["2026-09-28", "2026-11-08"]);
+  });
+
+  test("a month starts on Sunday when weeks do", () => {
+    const days = periodDays("month", "2026-10-16", "sunday", true);
+    expect([days[0], days[41]]).toEqual(["2026-09-27", "2026-11-07"]);
+  });
+
+  test("a month keeps its weekends when the week hides them", () => {
+    const days = periodDays("month", "2026-10-16", "monday", false);
+    expect(days).toHaveLength(42);
+    expect(days).toContain("2026-10-17");
+  });
+
+  test("monthMatrix is the month's days", () => {
+    expect(monthMatrix("2026-10-16", "monday")).toEqual(periodDays("month", "2026-10-16", "monday", true));
+  });
+
+  test("a month steps by a calendar month, keeping the day where the month has it", () => {
+    expect(shiftPeriod("month", "2026-10-16", 1)).toBe("2026-11-16");
+    expect(shiftPeriod("month", "2026-01-15", -1)).toBe("2025-12-15");
+    expect(shiftPeriod("month", "2026-12-15", 1)).toBe("2027-01-15");
+  });
+
+  test("31 January steps to the last day of February, leap years included", () => {
+    expect(shiftPeriod("month", "2026-01-31", 1)).toBe("2026-02-28");
+    expect(shiftPeriod("month", "2024-01-31", 1)).toBe("2024-02-29");
+    expect(shiftPeriod("month", "2026-03-31", -1)).toBe("2026-02-28");
+  });
+
+  test("an agenda shows four weeks from its date and steps by four weeks", () => {
+    const days = periodDays("agenda", "2026-10-14", "monday", false);
+    expect(days).toHaveLength(AGENDA_DAYS);
+    expect([days[0], days[27]]).toEqual(["2026-10-14", "2026-11-10"]);
+    expect(shiftPeriod("agenda", "2026-10-14", 1)).toBe("2026-11-11");
+    expect(shiftPeriod("agenda", "2026-10-14", -1)).toBe("2026-09-16");
+  });
+
+  test("an agenda extends at most 24 weeks", () => {
+    expect(AGENDA_MAX_DAYS).toBe(6 * AGENDA_DAYS);
+  });
+
+  test("only day, three days and week are time grids", () => {
+    expect(["day", "three_day", "week", "month", "agenda"].filter(isTimeGrid)).toEqual(["day", "three_day", "week"]);
   });
 });

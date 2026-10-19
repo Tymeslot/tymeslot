@@ -120,6 +120,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     assert lv |> element("#calendar-period-title") |> render() =~ "20 October 2026"
   end
 
+  test "day view loads its week with a week either side, so switching to that week needs no query",
+       %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=day&date=2026-10-14")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{view: "day", range: %{from: "2026-10-05", to: "2026-10-26"}})
+
+    lv |> element("#calendar-view-week") |> render_click()
+
+    assert_patch(lv, "/dashboard/calendar?view=week&date=2026-10-14")
+    assert_push_event(lv, "calendar:period", %{view: "week", date: "2026-10-14"})
+    refute_push_event(lv, "calendar:events", _payload)
+  end
+
   test "a URL it cannot read falls back to this week instead of failing", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=fortnight&date=not-a-date")
 

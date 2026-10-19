@@ -8,7 +8,9 @@
  * at day resolution.
  *
  * `periodDays` and `shiftPeriod` mirror Tymeslot.CalendarGrid.Period so the
- * hook can draw the next period before the server answers.
+ * hook can draw the next period before the server answers: a month is the
+ * six weeks of `monthMatrix` and steps by a calendar month with the day
+ * clamped; an agenda is AGENDA_DAYS days from its date.
  */
 export const MINUTES_PER_DAY = 1440;
 export const NIGHT_END = 420; // 07:00, where the folded night strip ends
@@ -16,7 +18,11 @@ export const NIGHT_STRIP = 28; // px the folded night occupies
 export const HOUR_HEIGHT = { comfortable: 52, compact: 38 };
 
 const MS_PER_DAY = 86_400_000;
-const STEP = { day: 1, three_day: 3, week: 7 };
+export const AGENDA_DAYS = 28;
+// The furthest an agenda extends from its date before "Show later" moves it on.
+export const AGENDA_MAX_DAYS = 168;
+const STEP = { day: 1, three_day: 3, week: 7, agenda: AGENDA_DAYS };
+const TIME_GRID = new Set(["day", "three_day", "week"]);
 const pad = (n) => String(n).padStart(2, "0");
 
 export function dayNumber(iso) {
@@ -51,13 +57,30 @@ export function addDays(iso, count) {
   return isoFromDay(dayNumber(iso) + count);
 }
 
+export function isTimeGrid(view) {
+  return TIME_GRID.has(view);
+}
+
+// The day number of the week start on or before `day`.
+function weekStartOf(day, weekStart) {
+  const weekday = isoWeekday(day);
+  return day - (weekStart === "sunday" ? weekday % 7 : weekday - 1);
+}
+
+// Six weeks of seven days covering `iso`'s month, as Period.month_matrix/2.
+export function monthMatrix(iso, weekStart) {
+  const first = weekStartOf(dayNumber(`${iso.slice(0, 7)}-01`), weekStart);
+  return Array.from({ length: 42 }, (_, k) => isoFromDay(first + k));
+}
+
 export function periodDays(view, iso, weekStart, showWeekends) {
   const day = dayNumber(iso);
   if (view === "day") return [isoFromDay(day)];
   if (view === "three_day") return [0, 1, 2].map((k) => isoFromDay(day + k));
+  if (view === "month") return monthMatrix(iso, weekStart);
+  if (view === "agenda") return Array.from({ length: AGENDA_DAYS }, (_, k) => isoFromDay(day + k));
 
-  const weekday = isoWeekday(day);
-  const first = day - (weekStart === "sunday" ? weekday % 7 : weekday - 1);
+  const first = weekStartOf(day, weekStart);
 
   return [0, 1, 2, 3, 4, 5, 6]
     .map((k) => first + k)
@@ -65,7 +88,19 @@ export function periodDays(view, iso, weekStart, showWeekends) {
     .map(isoFromDay);
 }
 
+// A calendar month on, keeping the day where the month has it, else its last
+// day, as Elixir's Date.shift/2 does.
+function shiftMonth(iso, direction) {
+  const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
+  const index = year * 12 + (month - 1) + direction;
+  const toYear = Math.floor(index / 12);
+  const toMonth = index % 12;
+  const last = new Date(Date.UTC(toYear, toMonth + 1, 0)).getUTCDate();
+  return `${toYear}-${pad(toMonth + 1)}-${pad(Math.min(day, last))}`;
+}
+
 export function shiftPeriod(view, iso, direction) {
+  if (view === "month") return shiftMonth(iso, direction);
   return addDays(iso, direction * STEP[view]);
 }
 
