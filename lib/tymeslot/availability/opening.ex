@@ -23,8 +23,15 @@ defmodule Tymeslot.Availability.Opening do
   the day (or, for every week, the widened date too) holds other hours by
   then, it refuses with `:changed` and writes nothing, so an undo never
   overwrites a newer change.
+
+  Each opening and each restore runs in one transaction that locks the
+  weekday row and the date's override it reads, so a change made meanwhile
+  either lands before the read (and is seen) or waits for the commit, and a
+  write refused part way leaves nothing behind. Booking pages are told once,
+  after the commit.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.AvailabilityActions
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.DateOverrides
@@ -35,6 +42,7 @@ defmodule Tymeslot.Availability.Opening do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
 
   @day_minutes 1440
 
@@ -111,17 +119,22 @@ defmodule Tymeslot.Availability.Opening do
         opts \\ []
       ) do
     with {:ok, ctx} <- context(user_id, meeting_type_id, opts),
-         {:ok, slot} <- slot(ctx.timezone, start_at, end_at),
-         {:ok, current} <- DateOverrides.get(ctx.profile.id, ctx.schedule.id, slot.date),
-         {:ok, hours} <- cover(once_hours(current, ctx.schedule.id, slot.date), slot),
-         {:ok, _override} <- write_once(ctx, slot.date, hours, current) do
-      {:ok,
-       Map.merge(hours, %{
-         kind: :once,
-         schedule_id: ctx.schedule.id,
-         date: slot.date,
-         previous: override_snapshot(current)
-       })}
+         {:ok, slot} <- slot(ctx.timezone, start_at, end_at) do
+      atomically(user_id, fn ->
+        row = WeeklySchedule.lock_day_availability(ctx.schedule.id, Date.day_of_week(slot.date))
+
+        with {:ok, current} <- DateOverrides.lock(ctx.profile.id, ctx.schedule.id, slot.date),
+             {:ok, hours} <- cover(once_hours(current, row), slot),
+             {:ok, _override} <- write_once(ctx, slot.date, hours, current) do
+          {:ok,
+           Map.merge(hours, %{
+             kind: :once,
+             schedule_id: ctx.schedule.id,
+             date: slot.date,
+             previous: override_snapshot(current)
+           })}
+        end
+      end)
     end
   end
 
@@ -130,8 +143,8 @@ defmodule Tymeslot.Availability.Opening do
   The result names the weekday's new hours and what it had before. When the
   slot's own date has an override that closes it or has hours of its own, that
   override is widened the same way (it would otherwise keep this week's date
-  shut), and `previous.override` holds what it was. Takes `timezone:` as
-  `open_once/5` does.
+  shut), and `previous.override` holds what it was. Both land or neither
+  does. Takes `timezone:` as `open_once/5` does.
   """
   @spec open_weekly(pos_integer(), pos_integer(), DateTime.t(), DateTime.t(), keyword()) ::
           {:ok, weekly()} | {:error, reason()}
@@ -145,27 +158,30 @@ defmodule Tymeslot.Availability.Opening do
     with {:ok, ctx} <- context(user_id, meeting_type_id, opts),
          {:ok, slot} <- slot(ctx.timezone, start_at, end_at) do
       day = Date.day_of_week(slot.date)
-      row = WeeklySchedule.get_day_availability(ctx.schedule.id, day)
 
-      with {:ok, hours} <- cover(weekly_hours(row), slot),
-           {:ok, dated} <- dated_hours(ctx, slot),
-           {:ok, _row} <- write_weekly(ctx.profile.id, ctx.schedule.id, day, hours),
-           {:ok, override} <- widen_date(ctx, slot.date, dated, row) do
-        {:ok,
-         Map.merge(hours, %{
-           kind: :weekly,
-           schedule_id: ctx.schedule.id,
-           day_of_week: day,
-           previous: row |> weekly_snapshot() |> Map.put(:override, override)
-         })}
-      end
+      atomically(user_id, fn ->
+        row = WeeklySchedule.lock_day_availability(ctx.schedule.id, day)
+
+        with {:ok, hours} <- cover(weekly_hours(row), slot),
+             {:ok, dated} <- dated_hours(ctx, slot, row),
+             {:ok, _row} <- write_weekly(ctx.profile.id, ctx.schedule.id, day, hours),
+             {:ok, override} <- widen_date(ctx, slot.date, dated) do
+          {:ok,
+           Map.merge(hours, %{
+             kind: :weekly,
+             schedule_id: ctx.schedule.id,
+             day_of_week: day,
+             previous: row |> weekly_snapshot() |> Map.put(:override, override)
+           })}
+        end
+      end)
     end
   end
 
   # The slot's date has its own say only when an override closes it or gives
   # it hours; `available` without hours follows the weekly row.
-  defp dated_hours(ctx, slot) do
-    with {:ok, current} <- DateOverrides.get(ctx.profile.id, ctx.schedule.id, slot.date) do
+  defp dated_hours(ctx, slot, row) do
+    with {:ok, current} <- DateOverrides.lock(ctx.profile.id, ctx.schedule.id, slot.date) do
       case current do
         nil ->
           {:ok, nil}
@@ -174,30 +190,17 @@ defmodule Tymeslot.Availability.Opening do
           {:ok, nil}
 
         _own_say ->
-          with {:ok, hours} <- cover(once_hours(current, ctx.schedule.id, slot.date), slot),
+          with {:ok, hours} <- cover(once_hours(current, row), slot),
                do: {:ok, {current, hours}}
       end
     end
   end
 
-  defp widen_date(_ctx, _date, nil, _row), do: {:ok, nil}
+  defp widen_date(_ctx, _date, nil), do: {:ok, nil}
 
-  defp widen_date(ctx, date, {current, hours}, row) do
-    case write_once(ctx, date, hours, current) do
-      {:ok, _override} ->
-        {:ok, %{date: date, was: override_snapshot(current), hours: hours}}
-
-      {:error, _reason} = error ->
-        # The weekday is already widened; put it back so nothing half-applies.
-        restore_weekly(
-          ctx.profile.id,
-          ctx.schedule.id,
-          Date.day_of_week(date),
-          weekly_snapshot(row)
-        )
-
-        error
-    end
+  defp widen_date(ctx, date, {current, hours}) do
+    with {:ok, _override} <- write_once(ctx, date, hours, current),
+         do: {:ok, %{date: date, was: override_snapshot(current), hours: hours}}
   end
 
   @doc """
@@ -205,21 +208,19 @@ defmodule Tymeslot.Availability.Opening do
   override (or none), or the weekday's old hours (or closed) and the widened
   date's old override. Only for the user whose schedule it is, and only
   while those hours are still the ones the opening wrote: otherwise
-  `{:error, :changed}`, with nothing written.
+  `{:error, :changed}`. Whatever it refuses, nothing is written.
   """
   @spec restore(pos_integer(), once() | weekly()) :: :ok | {:error, reason()}
   def restore(user_id, %{kind: :once, schedule_id: schedule_id, date: date} = result) do
-    with {:ok, profile} <- profile(user_id),
-         :ok <- unchanged_date(profile.id, schedule_id, date, result) do
-      case result.previous do
-        nil ->
-          DateOverrides.delete(profile.id, schedule_id, date)
-
-        previous ->
-          profile.id
-          |> put_back_override(schedule_id, date, previous)
-          |> to_ok()
-      end
+    with {:ok, profile} <- profile(user_id) do
+      atomically(user_id, fn ->
+        with :ok <- unchanged_date(profile.id, schedule_id, date, result) do
+          case result.previous do
+            nil -> DateOverrides.delete(profile.id, schedule_id, date, notify: false)
+            previous -> put_back_override(profile.id, schedule_id, date, previous)
+          end
+        end
+      end)
     end
   end
 
@@ -227,19 +228,39 @@ defmodule Tymeslot.Availability.Opening do
     override = Map.get(result.previous, :override)
 
     with {:ok, profile} <- profile(user_id),
-         :ok <- owned(profile.id, schedule_id),
-         :ok <- unchanged_day(schedule_id, day, result),
-         :ok <- unchanged_override(profile.id, schedule_id, override),
-         {:ok, _row} <- restore_weekly(profile.id, schedule_id, day, result.previous) do
-      case override do
-        %{date: date, was: was} ->
-          profile.id |> put_back_override(schedule_id, date, was) |> to_ok()
+         :ok <- owned(profile.id, schedule_id) do
+      atomically(user_id, fn ->
+        with :ok <- unchanged_day(schedule_id, day, result),
+             :ok <- unchanged_override(profile.id, schedule_id, override),
+             {:ok, _row} <- restore_weekly(profile.id, schedule_id, day, result.previous) do
+          case override do
+            %{date: date, was: was} -> put_back_override(profile.id, schedule_id, date, was)
+            nil -> :ok
+          end
+        end
+      end)
+    end
+  end
 
-        nil ->
-          :ok
+  # Runs `fun` in one transaction, so its checks and writes see and leave
+  # one state: the rows it locks stay as it read them until it commits, and
+  # any `{:error, _}` rolls back whatever it wrote before. Booking pages are
+  # told once, after the commit.
+  defp atomically(user_id, fun) do
+    Repo.transaction(fn ->
+      case fun.() do
+        {:error, reason} -> Repo.rollback(reason)
+        {:ok, value} -> value
+        :ok -> :ok
       end
-    else
-      {:error, _reason} = error -> map_write_error(error)
+    end)
+    |> case do
+      {:ok, value} ->
+        Availability.changed(user_id)
+        if value == :ok, do: :ok, else: {:ok, value}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -252,7 +273,7 @@ defmodule Tymeslot.Availability.Opening do
 
   # The weekday still holds the hours the opening gave it.
   defp unchanged_day(schedule_id, day, hours) do
-    case WeeklySchedule.get_day_availability(schedule_id, day) do
+    case WeeklySchedule.lock_day_availability(schedule_id, day) do
       %{is_available: true} = row -> same_hours(row, hours)
       _closed_or_gone -> {:error, :changed}
     end
@@ -265,7 +286,7 @@ defmodule Tymeslot.Availability.Opening do
 
   # The date still holds the custom hours the opening wrote for it.
   defp unchanged_date(profile_id, schedule_id, date, hours) do
-    case DateOverrides.get(profile_id, schedule_id, date) do
+    case DateOverrides.lock(profile_id, schedule_id, date) do
       {:ok, %{override_type: "custom_hours"} = override} -> same_hours(override, hours)
       {:ok, _other_or_none} -> {:error, :changed}
       {:error, _reason} = error -> error
@@ -289,7 +310,8 @@ defmodule Tymeslot.Availability.Opening do
     |> AvailabilityActions.restore_day(
       schedule_id,
       day,
-      Map.take(previous, [:is_available, :start_time, :end_time, :ends_next_day])
+      Map.take(previous, [:is_available, :start_time, :end_time, :ends_next_day]),
+      notify: false
     )
     |> map_write_error()
   end
@@ -298,8 +320,9 @@ defmodule Tymeslot.Availability.Opening do
   # hours are still what it held.
   defp put_back_override(profile_id, schedule_id, date, snapshot) do
     profile_id
-    |> DateOverrides.put_back(schedule_id, Map.put(snapshot, :date, date))
+    |> DateOverrides.put_back(schedule_id, Map.put(snapshot, :date, date), notify: false)
     |> map_write_error()
+    |> to_ok()
   end
 
   defp write_once(ctx, date, hours, current) do
@@ -311,7 +334,7 @@ defmodule Tymeslot.Availability.Opening do
       })
 
     ctx.profile.id
-    |> DateOverrides.upsert(ctx.schedule.id, attrs)
+    |> DateOverrides.upsert(ctx.schedule.id, attrs, notify: false)
     |> map_write_error()
   end
 
@@ -321,7 +344,8 @@ defmodule Tymeslot.Availability.Opening do
       schedule_id,
       day,
       Calendar.strftime(hours.start_time, "%H:%M"),
-      Window.format_end(hours.end_time, hours.ends_next_day)
+      Window.format_end(hours.end_time, hours.ends_next_day),
+      notify: false
     )
     |> map_write_error()
   end
@@ -378,16 +402,12 @@ defmodule Tymeslot.Availability.Opening do
   # (`BusinessHours`): an override with hours of its own wins, `unavailable`
   # closes the day, and `available` without hours or no override at all
   # falls back to the weekly row.
-  defp once_hours(%{override_type: "unavailable"}, _schedule_id, _date), do: nil
+  defp once_hours(%{override_type: "unavailable"}, _row), do: nil
 
-  defp once_hours(%{start_time: %Time{}, end_time: %Time{}} = override, _schedule_id, _date),
+  defp once_hours(%{start_time: %Time{}, end_time: %Time{}} = override, _row),
     do: span(override)
 
-  defp once_hours(_usual_hours, schedule_id, date) do
-    schedule_id
-    |> WeeklySchedule.get_day_availability(Date.day_of_week(date))
-    |> weekly_hours()
-  end
+  defp once_hours(_usual_hours, row), do: weekly_hours(row)
 
   defp weekly_hours(%{is_available: true, start_time: %Time{}, end_time: %Time{}} = row),
     do: span(row)

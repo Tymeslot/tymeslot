@@ -25,6 +25,15 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   end
 
   @doc """
+  As `get_day_availability/2`, locking the day's row until the caller's
+  transaction ends. Call it inside a transaction.
+  """
+  @spec lock_day_availability(integer(), integer()) :: WeeklyAvailabilitySchema.t() | nil
+  def lock_day_availability(schedule_id, day_of_week) do
+    WeeklyAvailabilityQueries.lock_day_availability_with_breaks(schedule_id, day_of_week)
+  end
+
+  @doc """
   Creates or updates availability for a specific day.
   """
   @spec upsert_day_availability(integer(), integer(), map()) ::

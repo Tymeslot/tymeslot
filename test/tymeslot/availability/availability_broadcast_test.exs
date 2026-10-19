@@ -134,9 +134,64 @@ defmodule Tymeslot.Availability.AvailabilityBroadcastTest do
 
       assert_receive {:availability_changed, user_id} when user_id == user.id
     end
+
+    test "opening every week on a date with hours of its own tells once, after both writes" do
+      %{user: user, schedule: schedule} = create_bookable_profile()
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+      date = next_bookable_weekday()
+
+      insert(:availability_override,
+        schedule: schedule,
+        date: date,
+        override_type: "custom_hours",
+        start_time: ~T[10:00:00],
+        end_time: ~T[12:00:00]
+      )
+
+      :ok = Availability.subscribe(user.id)
+
+      assert {:ok, %{previous: %{override: %{date: ^date}}}} =
+               Opening.open_weekly(
+                 user.id,
+                 meeting_type.id,
+                 DateTime.new!(date, ~T[18:00:00], "Etc/UTC"),
+                 DateTime.new!(date, ~T[19:00:00], "Etc/UTC")
+               )
+
+      assert_received {:availability_changed, user_id} when user_id == user.id
+      refute_received {:availability_changed, _user_id}
+    end
   end
 
   describe "a refused write tells nobody" do
+    test "a weekly restore that fails part way, and so writes nothing" do
+      %{user: user, schedule: schedule} = create_bookable_profile()
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+      date = next_bookable_weekday()
+
+      insert(:availability_override,
+        schedule: schedule,
+        date: date,
+        override_type: "custom_hours",
+        start_time: ~T[10:00:00],
+        end_time: ~T[12:00:00]
+      )
+
+      {:ok, result} =
+        Opening.open_weekly(
+          user.id,
+          meeting_type.id,
+          DateTime.new!(date, ~T[18:00:00], "Etc/UTC"),
+          DateTime.new!(date, ~T[19:00:00], "Etc/UTC")
+        )
+
+      broken = put_in(result, [:previous, :override, :was, :override_type], "unknown")
+      :ok = Availability.subscribe(user.id)
+
+      assert {:error, :invalid_hours} = Opening.restore(user.id, broken)
+      refute_received {:availability_changed, _user_id}
+    end
+
     test "weekly hours the editor refuses" do
       %{user: user, profile: profile, schedule: schedule} = create_bookable_profile()
       :ok = Availability.subscribe(user.id)

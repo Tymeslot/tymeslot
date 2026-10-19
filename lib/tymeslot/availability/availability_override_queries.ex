@@ -19,6 +19,19 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   end
 
   @doc """
+  As `get_override_by_schedule_and_date/2`, locking the row (`FOR UPDATE`)
+  until the caller's transaction ends.
+  """
+  @spec lock_override_by_schedule_and_date(integer(), Date.t()) ::
+          AvailabilityOverrideSchema.t() | nil
+  def lock_override_by_schedule_and_date(schedule_id, date) do
+    AvailabilityOverrideSchema
+    |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
+    |> lock("FOR UPDATE")
+    |> Repo.one()
+  end
+
+  @doc """
   Gets overrides for a schedule within a date range.
   """
   @spec get_overrides_by_schedule_and_date_range(integer(), Date.t(), Date.t()) ::

@@ -8,7 +8,9 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   `{:error, :not_found}` and changes nothing, whatever the caller passed.
 
   A write that lands calls `Tymeslot.Availability.changed/1`; a refusal
-  does not.
+  does not. `update_day_hours/6` and `restore_day/5` take `notify: false`
+  for a caller writing inside its own transaction, which calls `changed/1`
+  itself once that commits.
   """
 
   alias Tymeslot.Availability
@@ -71,15 +73,15 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   value: `"HH:MM"` ends the same day, `"HH:MM+1"` the next
   (`Tymeslot.Availability.Window.parse_end/1`).
   """
-  @spec update_day_hours(integer(), integer(), integer(), String.t(), String.t()) ::
+  @spec update_day_hours(integer(), integer(), integer(), String.t(), String.t(), keyword()) ::
           {:ok, term()}
           | {:error,
              :invalid_time_format
              | :not_found
              | {:breaks_outside_hours, [map()]}
              | Ecto.Changeset.t()}
-  def update_day_hours(profile_id, schedule_id, day, start_str, end_str) do
-    with_owned_schedule(profile_id, schedule_id, fn ->
+  def update_day_hours(profile_id, schedule_id, day, start_str, end_str, opts \\ []) do
+    with_owned_schedule(profile_id, schedule_id, opts, fn ->
       with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
            {:ok, {end_time, ends_next_day}} <- Window.parse_end(end_str) do
         hours = %{start_time: start_time, end_time: end_time, ends_next_day: ends_next_day}
@@ -183,9 +185,10 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   Writes a day's row exactly as given (`:is_available` and its hours),
   leaving its breaks alone. For putting a day back as it was.
   """
-  @spec restore_day(integer(), integer(), integer(), map()) :: {:ok, term()} | {:error, term()}
-  def restore_day(profile_id, schedule_id, day, attrs) when is_map(attrs) do
-    with_owned_schedule(profile_id, schedule_id, fn ->
+  @spec restore_day(integer(), integer(), integer(), map(), keyword()) ::
+          {:ok, term()} | {:error, term()}
+  def restore_day(profile_id, schedule_id, day, attrs, opts \\ []) when is_map(attrs) do
+    with_owned_schedule(profile_id, schedule_id, opts, fn ->
       WeeklySchedule.upsert_day_availability(schedule_id, day, attrs)
     end)
   end
@@ -214,10 +217,10 @@ defmodule Tymeslot.Availability.AvailabilityActions do
 
   # Runs `fun` only for a schedule the profile owns, then refreshes that
   # schedule's booking pages if it wrote.
-  defp with_owned_schedule(profile_id, schedule_id, fun) do
+  defp with_owned_schedule(profile_id, schedule_id, opts \\ [], fun) do
     case AvailabilityScheduleQueries.get_for_profile(schedule_id, profile_id) do
       nil -> {:error, :not_found}
-      schedule -> run_and_invalidate(schedule, fun)
+      schedule -> run_and_invalidate(schedule, fun, Keyword.get(opts, :notify, true))
     end
   end
 
@@ -225,14 +228,14 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   defp with_owned_day(profile_id, weekly_availability_id, fun) do
     case WeeklyAvailabilityQueries.get_for_profile(weekly_availability_id, profile_id) do
       nil -> {:error, :not_found}
-      day -> run_and_invalidate(AvailabilityScheduleQueries.get(day.schedule_id), fun)
+      day -> run_and_invalidate(AvailabilityScheduleQueries.get(day.schedule_id), fun, true)
     end
   end
 
   # A refusal wrote nothing, so there is nothing for anyone to recompute.
-  defp run_and_invalidate(schedule, fun) do
+  defp run_and_invalidate(schedule, fun, notify?) do
     result = fun.()
-    unless match?({:error, _reason}, result), do: Availability.changed(schedule)
+    if notify? and not match?({:error, _reason}, result), do: Availability.changed(schedule)
     result
   end
 end

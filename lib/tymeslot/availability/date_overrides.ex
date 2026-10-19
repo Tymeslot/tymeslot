@@ -10,6 +10,10 @@ defmodule Tymeslot.Availability.DateOverrides do
   id is passed. A write is refused for a date already gone on the owner's
   clock, and every change calls `Tymeslot.Availability.changed/1`, so booking
   pages and calendars compute afresh.
+
+  A caller writing several things in one transaction passes `notify: false`
+  to the writes and calls `changed/1` itself once the transaction commits:
+  told before then, a reader would compute afresh from the old rows.
   """
 
   alias Tymeslot.Availability
@@ -33,19 +37,32 @@ defmodule Tymeslot.Availability.DateOverrides do
   end
 
   @doc """
+  As `get/3`, locking the override until the caller's transaction ends.
+  Call it inside a transaction.
+  """
+  @spec lock(integer(), integer(), Date.t()) ::
+          {:ok, AvailabilityOverrideSchema.t() | nil} | {:error, :not_found}
+  def lock(profile_id, schedule_id, %Date{} = date) do
+    with {:ok, schedule} <- owned_schedule(profile_id, schedule_id) do
+      {:ok, AvailabilityOverrideQueries.lock_override_by_schedule_and_date(schedule.id, date)}
+    end
+  end
+
+  @doc """
   Writes the schedule's override on `attrs.date`, replacing any it has.
   `attrs` takes `:date`, `:override_type`, and for custom hours
   `:start_time`, `:end_time` and `:ends_next_day`, plus an optional
-  `:reason`; a field left out is cleared.
+  `:reason`; a field left out is cleared. Takes `notify: false` (see the
+  moduledoc).
   """
-  @spec upsert(integer(), integer(), map()) ::
+  @spec upsert(integer(), integer(), map(), keyword()) ::
           {:ok, AvailabilityOverrideSchema.t()}
           | {:error, :not_found | :in_past | Ecto.Changeset.t()}
-  def upsert(profile_id, schedule_id, %{date: %Date{} = date} = attrs) do
+  def upsert(profile_id, schedule_id, %{date: %Date{} = date} = attrs, opts \\ []) do
     with {:ok, schedule} <- owned_schedule(profile_id, schedule_id),
          :ok <- not_in_past(profile_id, date),
          {:ok, override} <- write(schedule.id, date, attrs) do
-      Availability.changed(schedule)
+      notify(schedule, opts)
       {:ok, override}
     end
   end
@@ -55,12 +72,12 @@ defmodule Tymeslot.Availability.DateOverrides do
   override that was there before a change (an undo): after midnight the date
   may be gone on the owner's clock, but what it held is still the truth.
   """
-  @spec put_back(integer(), integer(), map()) ::
+  @spec put_back(integer(), integer(), map(), keyword()) ::
           {:ok, AvailabilityOverrideSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
-  def put_back(profile_id, schedule_id, %{date: %Date{} = date} = attrs) do
+  def put_back(profile_id, schedule_id, %{date: %Date{} = date} = attrs, opts \\ []) do
     with {:ok, schedule} <- owned_schedule(profile_id, schedule_id),
          {:ok, override} <- write(schedule.id, date, attrs) do
-      Availability.changed(schedule)
+      notify(schedule, opts)
       {:ok, override}
     end
   end
@@ -70,13 +87,18 @@ defmodule Tymeslot.Availability.DateOverrides do
   error, so an undo that arrives twice is harmless. Allowed for a past date:
   it changes nothing a guest can book.
   """
-  @spec delete(integer(), integer(), Date.t()) :: :ok | {:error, :not_found}
-  def delete(profile_id, schedule_id, %Date{} = date) do
+  @spec delete(integer(), integer(), Date.t(), keyword()) :: :ok | {:error, :not_found}
+  def delete(profile_id, schedule_id, %Date{} = date, opts \\ []) do
     with {:ok, schedule} <- owned_schedule(profile_id, schedule_id) do
       AvailabilityOverrideQueries.delete_by_schedule_and_date(schedule.id, date)
-      Availability.changed(schedule)
+      notify(schedule, opts)
       :ok
     end
+  end
+
+  defp notify(schedule, opts) do
+    if Keyword.get(opts, :notify, true), do: Availability.changed(schedule)
+    :ok
   end
 
   defp write(schedule_id, date, attrs, retry? \\ true) do

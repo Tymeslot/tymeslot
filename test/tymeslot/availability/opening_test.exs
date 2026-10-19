@@ -399,9 +399,71 @@ defmodule Tymeslot.Availability.OpeningTest do
                  at(host.saturday, ~T[19:00:00])
                )
     end
+
+    test "a date write refused after the weekday widened leaves the weekday as it was",
+         host do
+      wednesday = Date.add(host.saturday, -3)
+      yesterday = Date.add(wednesday, -1)
+
+      insert(:availability_override,
+        schedule: host.schedule,
+        date: yesterday,
+        override_type: "custom_hours",
+        start_time: ~T[10:00:00],
+        end_time: ~T[12:00:00]
+      )
+
+      # Just past midnight, a slot starting late yesterday still runs, but
+      # yesterday's override can no longer be written.
+      ClockHelpers.freeze_clock(at(wednesday, ~T[00:10:00]))
+
+      assert {:error, :in_past} =
+               Opening.open_weekly(
+                 host.user.id,
+                 host.meeting_type.id,
+                 at(yesterday, ~T[23:30:00]),
+                 at(wednesday, ~T[00:30:00])
+               )
+
+      assert %{start_time: ~T[11:00:00], end_time: ~T[17:00:00], ends_next_day: false} =
+               WeeklySchedule.get_day_availability(host.schedule_id, Date.day_of_week(yesterday))
+    end
   end
 
   describe "restore/2" do
+    test "a weekly restore whose date part fails leaves the weekday as the opening left it",
+         host do
+      day = Date.day_of_week(host.date)
+
+      insert(:availability_override,
+        schedule: host.schedule,
+        date: host.date,
+        override_type: "custom_hours",
+        start_time: ~T[10:00:00],
+        end_time: ~T[12:00:00]
+      )
+
+      {:ok, result} =
+        Opening.open_weekly(
+          host.user.id,
+          host.meeting_type.id,
+          at(host.date, ~T[18:00:00]),
+          at(host.date, ~T[19:00:00])
+        )
+
+      # An override that cannot be saved, so putting the date back fails
+      # after the weekday was put back.
+      broken = put_in(result, [:previous, :override, :was, :override_type], "unknown")
+
+      assert {:error, :invalid_hours} = Opening.restore(host.user.id, broken)
+
+      assert %{start_time: ~T[11:00:00], end_time: ~T[19:00:00]} =
+               WeeklySchedule.get_day_availability(host.schedule_id, day)
+
+      assert {:ok, %{start_time: ~T[10:00:00], end_time: ~T[19:00:00]}} =
+               DateOverrides.get(host.profile_id, host.schedule_id, host.date)
+    end
+
     test "refuses once the date's hours changed since, and leaves them", host do
       {:ok, result} =
         Opening.open_once(
