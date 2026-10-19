@@ -79,6 +79,16 @@ describe("T", () => {
     expect(gotos(hook).at(-1)).toEqual({ view: "week", date: "2026-10-14" });
   });
 
+  test("on a phone it goes back to today in the three-day view", () => {
+    mockViewport(true);
+    const { hook } = mountHook(payload({ view: "three_day" }));
+
+    press(document.body, "j");
+    press(document.body, "t");
+
+    expect(gotos(hook).at(-1)).toEqual({ view: "three_day", date: "2026-10-14" });
+  });
+
   test("stays in month view", () => {
     const { hook } = mountHook(monthPayload());
 
@@ -148,6 +158,19 @@ describe("overlays that take the keyboard", () => {
     press(document.body, "d");
 
     expect(gotos(hook)).toEqual([]);
+  });
+
+  test.each([
+    ["C opens no quick create", "c", {}, () => expect(document.getElementById("calendar-quick-create")).toBeNull()],
+    ["B toggles no bookable layer", "b", {}, (hook) => expect(pushes(hook, "calendar:bookable_toggle")).toEqual([])],
+    ["Ctrl Z asks for no undo", "z", { ctrlKey: true }, (hook) => expect(pushes(hook, "calendar:undo")).toEqual([])],
+  ])("an open core modal silences the older single keys: %s", (_name, key, extra, expectSilent) => {
+    const { hook } = mountHook();
+    document.body.insertAdjacentHTML("beforeend", '<div class="modal-overlay" style="display: flex;"></div>');
+
+    press(document.body, key, extra);
+
+    expectSilent(hook);
   });
 
   test("a closed command bar and a hidden core modal leave them working", () => {
