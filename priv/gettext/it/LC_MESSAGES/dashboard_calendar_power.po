@@ -15,3 +15,59 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Press T to go to today, J for the next period and K for the previous period."
 msgstr "Premi T per andare a oggi, J per il periodo successivo e K per il periodo precedente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "12-hour"
+msgstr "12 ore"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "24-hour"
+msgstr "24 ore"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Before events with a reminder, while the calendar is open"
+msgstr "Prima degli eventi con un promemoria, mentre il calendario è aperto"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Clock"
+msgstr "Orologio"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications"
+msgstr "Notifiche desktop"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Import an .ics file"
+msgstr "Importa un file .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "In the week view"
+msgstr "Nella vista settimana"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Include weekends"
+msgstr "Includi i fine settimana"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Show week numbers"
+msgstr "Mostra i numeri di settimana"
+
+#: lib/tymeslot_web/live/dashboard/calendar/mini_month.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Week %{number}"
+msgstr "Settimana %{number}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Week starts on"
+msgstr "La settimana inizia di"
