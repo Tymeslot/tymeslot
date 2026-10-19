@@ -183,11 +183,6 @@ msgstr "відповісти на цей лист"
 msgid "Having trouble with the button? Copy and paste this link into your browser:"
 msgstr "Не працює кнопка? Скопіюйте та вставте це посилання у свій браузер:"
 
-#: lib/tymeslot/emails/shared/meeting/video_section.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting will start at the scheduled time"
-msgstr "Зустріч розпочнеться у запланований час"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "hour"
@@ -209,7 +204,7 @@ msgstr "%{name} запросив(-ла) вас на подію."
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Запрошення до календаря - %{title}, %{date}"
+msgstr "Запрошення до календаря – %{title}, %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -281,11 +276,6 @@ msgstr "Ім'я"
 msgid "Phone"
 msgstr "Телефон"
 
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Reset your password"
-msgstr "Скиньте пароль"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Saturday"
@@ -310,11 +300,6 @@ msgstr "Часовий пояс"
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "вівторок"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Verify your new email address"
-msgstr "Підтвердьте свою нову адресу електронної пошти"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
 #, elixir-autogen, elixir-format
@@ -362,36 +347,6 @@ msgstr "Додаткова інформація"
 msgid "Join the video call"
 msgstr "Приєднатися до відеодзвінка"
 
-#: lib/tymeslot/emails/email_service/calendar_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Owner"
-msgstr "Власник календаря"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Email Address Changed - Tymeslot Account"
-msgstr "Електронну адресу змінено - обліковий запис Tymeslot"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Email Address Changed Successfully"
-msgstr "Електронну адресу успішно змінено"
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Verify your email address"
-msgstr "Підтвердьте свою електронну адресу"
-
-#: lib/tymeslot/emails/email_service/calendar_emails.ex
-#, elixir-autogen, elixir-format
-msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr "⚠️ Помилка синхронізації календаря - потрібні дії з вашого боку"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "⚠️ Email Change Request - Security Alert"
-msgstr "⚠️ Запит на зміну електронної адреси - сповіщення безпеки"
-
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "You'll receive %{count} reminder before the appointment."
@@ -400,7 +355,7 @@ msgstr[0] "Ви отримаєте %{count} нагадування до поча
 msgstr[1] "Ви отримаєте %{count} нагадування до початку зустрічі."
 msgstr[2] "Ви отримаєте %{count} нагадувань до початку зустрічі."
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "day"
@@ -409,7 +364,7 @@ msgstr[0] "день"
 msgstr[1] "дні"
 msgstr[2] "днів"
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "hour"
@@ -418,7 +373,7 @@ msgstr[0] "годину"
 msgstr[1] "години"
 msgstr[2] "годин"
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "minute"
@@ -485,25 +440,10 @@ msgstr "Учасник: %{attendee}"
 msgid "Message from attendee:"
 msgstr "Повідомлення від учасника:"
 
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a Tymeslot account"
-msgstr "У вас уже є обліковий запис Tymeslot"
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot account has no password"
-msgstr "Ваш обліковий запис Tymeslot не має пароля"
-
 #: lib/tymeslot/emails/shared/sign_in_provider.ex
 #, elixir-autogen, elixir-format
 msgid "single sign-on"
 msgstr "єдиний вхід (SSO)"
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm your email to finish signing up"
-msgstr "Підтвердьте пошту, щоб завершити реєстрацію"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -523,12 +463,12 @@ msgstr "Скасовано"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled - %{title} (every occurrence)"
-msgstr "Скасовано - %{title} (усі повторення)"
+msgstr "Скасовано – %{title} (усі повторення)"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled - %{title} on %{date}"
-msgstr "Скасовано - %{title}, %{date}"
+msgstr "Скасовано – %{title}, %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -600,6 +540,11 @@ msgstr[2] "Групова зустріч: у вас одне з %{count} міс�
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
 msgstr "завершення: %{date}, %{time}"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Duration:"
+msgstr "Тривалість:"
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format

@@ -30,8 +30,12 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     insert(:profile, user: user)
 
-    stub(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _client ->
-      {{:ok, nil}, {:ok, nil}}
+    stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
+      {:ok, nil}
+    end)
+
+    stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+      {:ok, nil}
     end)
 
     conn = conn |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(user)
@@ -228,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     # `answer/4` runs the transition off the socket's process
     # (`start_async/3`), so every outcome here is only visible after
     # `render_async/2` observes the task finish. The default
-    # `assert_receive_timeout` (100ms) is too tight for a cold DB
+    # `assert_receive_timeout` (1 s, see test_helper.exs) is too tight for a cold DB
     # connection plus the calendar/video/notification fan-out the first
     # time this process touches them, so every call here is given an
     # explicit, more generous budget rather than relying on the default.
@@ -372,7 +376,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       view = open_requests(conn)
 
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check_meeting_approval_rate_limit("dashboard:#{user.id}")
+        assert :ok = RateLimiter.check(:meeting_approval, "dashboard:#{user.id}")
       end
 
       view |> element("[data-testid='approve-request']") |> render_click()
@@ -388,7 +392,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       view |> element("[data-testid='decline-request']") |> render_click()
 
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check_meeting_approval_rate_limit("dashboard:#{user.id}")
+        assert :ok = RateLimiter.check(:meeting_approval, "dashboard:#{user.id}")
       end
 
       view

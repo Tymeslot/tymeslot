@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
 
   The numeric bound (1000 requests per minute, in a bucket of its own so
   Telegram and Zoom traffic cannot starve Stripe) lives in
-  `Tymeslot.Security.RateLimiter.Bookings` and is pinned by its own tests;
+  `Tymeslot.Security.RateLimiter.Limits` and is pinned by its own tests;
   what matters here is the response when the limiter reports `:rate_limited`.
   """
 
@@ -29,18 +29,12 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   import Mox
   import Tymeslot.ConfigTestHelpers
 
-  alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
 
   setup :verify_on_exit!
-
-  setup do
-    IdempotencyCache.clear_all()
-    :ok
-  end
 
   describe "rate limit" do
     setup %{conn: conn} do
@@ -52,7 +46,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
 
       # Hit 1001 times to avoid boundary races in the sliding window backend.
       for _i <- 1..1001, do: RateLimit.hit("stripe_webhook:#{client_ip}", 60_000, 1_000)
-      assert {:error, :rate_limited} = RateLimiter.check_stripe_webhook_rate_limit(client_ip)
+      assert {:error, :rate_limited, _message} = RateLimiter.check(:stripe_webhook, client_ip)
 
       on_exit(fn -> RateLimiter.clear_bucket("stripe_webhook:#{client_ip}") end)
 
@@ -103,7 +97,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
 
       # The bucket Telegram and Zoom share; Stripe must not draw from it.
       for _i <- 1..101, do: RateLimit.hit("webhook:#{client_ip}", 600_000, 100)
-      assert {:error, :rate_limited} = RateLimiter.check_webhook_rate_limit(client_ip)
+      assert {:error, :rate_limited, _message} = RateLimiter.check(:webhook, client_ip)
       on_exit(fn -> RateLimiter.clear_bucket("webhook:#{client_ip}") end)
 
       conn =
@@ -121,7 +115,6 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       secret = "whsec_e2e_valid"
 
       with_config(:tymeslot,
-        skip_webhook_verification: false,
         stripe_provider: Tymeslot.Payments.Stripe,
         stripe_webhook_secret: secret
       )
@@ -145,7 +138,6 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       secret = "whsec_e2e_invalid"
 
       with_config(:tymeslot,
-        skip_webhook_verification: false,
         stripe_provider: Tymeslot.Payments.Stripe,
         stripe_webhook_secret: secret
       )

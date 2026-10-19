@@ -73,4 +73,19 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   def success_message(:none),
     do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
+
+  @doc """
+  The message shown when the meeting had been cancelled elsewhere before the
+  host confirmed. A refund the host chose was not issued, so it says so.
+  """
+  @spec already_cancelled_message(term()) :: String.t()
+  def already_cancelled_message({:refund, _cents}),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "This booking was already cancelled, so no refund was issued."
+      )
+
+  def already_cancelled_message(:none),
+    do: dgettext("dashboard_bookings", "This booking was already cancelled.")
 end

@@ -2,20 +2,28 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
   use Tymeslot.DataCase, async: false
   @moduletag :payments
 
+  import Mox
+
   alias Tymeslot.Payments.CustomerLookup
+  alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.TestFixtures
 
+  setup :verify_on_exit!
+
+  # A subscription manager written before the lookup callbacks existed.
+  defmodule ManagerWithoutLookups do
+    @spec should_show_branding?(integer()) :: boolean()
+    def should_show_branding?(_user_id), do: true
+  end
+
+  # Core standalone: no subscription manager, so every lookup below the
+  # metadata goes to `payment_transactions`. The describe blocks that consult
+  # a manager configure the mock themselves.
   setup do
-    # Configure subscription schema for tests
-    Application.put_env(:tymeslot, :subscription_schema, TymeslotSaas.Payments.SubscriptionSchema)
-    Application.put_env(:tymeslot, :repo, Tymeslot.SaasRepo)
-
-    on_exit(fn ->
-      Application.delete_env(:tymeslot, :subscription_schema)
-      Application.delete_env(:tymeslot, :repo)
-    end)
-
+    original = Application.get_env(:tymeslot, :subscription_manager)
+    Application.put_env(:tymeslot, :subscription_manager, nil)
+    on_exit(fn -> Application.put_env(:tymeslot, :subscription_manager, original) end)
     :ok
   end
 
@@ -41,62 +49,44 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
     end
   end
 
-  # find_user_id_by_stripe_customer has been moved to TymeslotSaas.Payments.CustomerLookup
-  # Tests for that function are now in the SaaS test suite
-
-  describe "get_subscription_by_customer_id/1" do
-    test "returns nil when stripe_customer_id is nil" do
+  describe "subscription lookups" do
+    test "answer nil for a nil id" do
       assert CustomerLookup.get_subscription_by_customer_id(nil) == nil
-    end
-
-    test "returns nil when subscription schema not configured" do
-      Application.delete_env(:tymeslot, :subscription_schema)
-
-      assert CustomerLookup.get_subscription_by_customer_id("cus_test") == nil
-
-      # Restore for other tests
-      Application.put_env(
-        :tymeslot,
-        :subscription_schema,
-        TymeslotSaas.Payments.SubscriptionSchema
-      )
-    end
-
-    # Note: Full integration tests with SaaS schema are in the SaaS test suite
-    # This test suite focuses on Core standalone behavior
-    test "returns nil when subscription schema not configured and logs appropriately" do
-      Application.delete_env(:tymeslot, :subscription_schema)
-
-      # Should return nil when schema not configured
-      assert CustomerLookup.get_subscription_by_customer_id("cus_123") == nil
-
-      # Restore for other tests
-      Application.put_env(
-        :tymeslot,
-        :subscription_schema,
-        TymeslotSaas.Payments.SubscriptionSchema
-      )
-    end
-  end
-
-  describe "get_subscription_by_subscription_id/1" do
-    test "returns nil when stripe_subscription_id is nil" do
       assert CustomerLookup.get_subscription_by_subscription_id(nil) == nil
     end
 
-    test "returns nil when subscription schema not configured" do
-      Application.delete_env(:tymeslot, :subscription_schema)
-
+    test "answer nil without a subscription manager, as Core standalone" do
+      assert CustomerLookup.get_subscription_by_customer_id("cus_test") == nil
       assert CustomerLookup.get_subscription_by_subscription_id("sub_test") == nil
+    end
+
+    test "answer nil from a manager that does not implement them" do
+      Application.put_env(:tymeslot, :subscription_manager, ManagerWithoutLookups)
+
+      assert CustomerLookup.get_subscription_by_customer_id("cus_test") == nil
+      assert CustomerLookup.get_subscription_by_subscription_id("sub_test") == nil
+    end
+
+    test "ask the configured subscription manager" do
+      Application.put_env(:tymeslot, :subscription_manager, SubscriptionManagerMock)
+
+      expect(SubscriptionManagerMock, :get_subscription_by_customer_id, fn "cus_known" ->
+        %{user_id: 7}
+      end)
+
+      expect(SubscriptionManagerMock, :get_subscription_by_subscription_id, fn "sub_known" ->
+        %{user_id: 8}
+      end)
+
+      assert CustomerLookup.get_subscription_by_customer_id("cus_known") == %{user_id: 7}
+      assert CustomerLookup.get_subscription_by_subscription_id("sub_known") == %{user_id: 8}
     end
   end
 
   describe "find_user_id/1" do
-    # `TymeslotSaas.Payments.SubscriptionSchema` is not loaded in Core's own
-    # test suite (Core never depends on SaaS), so `Code.ensure_loaded?/1`
-    # always fails here and every case below exercises the
-    # `payment_transactions` fallback — the path Core standalone actually
-    # runs. SaaS's test suite covers the subscription_schema-first path.
+    # With no subscription manager every case below exercises the
+    # `payment_transactions` fallback, the path Core standalone runs; the
+    # last one shows a manager's record taking precedence over it.
     test "returns nil when nothing resolves" do
       assert CustomerLookup.find_user_id(%{subscription_id: nil, customer_id: nil}) == nil
 
@@ -230,6 +220,27 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
                subscription_id: "sub_metadata_absent",
                customer_id: "cus_unrelated"
              }) == user.id
+    end
+
+    test "prefers the subscription manager's record over the transaction fallback" do
+      manager_owner = TestFixtures.create_user_fixture()
+      transaction_owner = TestFixtures.create_user_fixture()
+
+      PaymentTestHelpers.create_test_transaction(%{
+        user_id: transaction_owner.id,
+        status: "completed",
+        subscription_id: "sub_managed",
+        stripe_id: "sess_managed"
+      })
+
+      Application.put_env(:tymeslot, :subscription_manager, SubscriptionManagerMock)
+
+      stub(SubscriptionManagerMock, :get_subscription_by_subscription_id, fn "sub_managed" ->
+        %{user_id: manager_owner.id}
+      end)
+
+      assert CustomerLookup.find_user_id(%{subscription_id: "sub_managed", customer_id: nil}) ==
+               manager_owner.id
     end
   end
 end

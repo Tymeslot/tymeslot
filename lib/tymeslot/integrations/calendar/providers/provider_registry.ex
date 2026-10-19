@@ -9,7 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
-  use Tymeslot.Integrations.Common.ProviderRegistry,
+  use Tymeslot.Integrations.Shared.ProviderRegistry,
     provider_type_name: "provider",
     default_provider: :caldav,
     metadata_fields: [],

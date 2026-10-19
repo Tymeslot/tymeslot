@@ -119,6 +119,45 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
     assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
   end
 
+  # Refreshing a cancelled booking's event would put it back on the
+  # organiser's calendar (an update recreates an event it cannot find), and an
+  # ended one's is history.
+  test "refreshes the calendar event of a booking still to come only" do
+    %{user: user} = create_user_with_profile()
+    integration = insert_talk_integration(user, "disconnect-refresh.example.com")
+
+    room = fn attrs ->
+      insert_meeting_for_user(
+        user,
+        Map.merge(
+          %{video_integration_id: integration.id, video_provider: "nextcloud_talk"},
+          attrs
+        )
+      )
+    end
+
+    upcoming = room.(%{video_room_id: "upcoming1"})
+    cancelled = room.(%{video_room_id: "cancelled1", status: "cancelled"})
+    ended = room.(%{video_room_id: "ended0001", start_offset: -2 * 86_400, duration: 1800})
+
+    {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+    expect(HTTPClientMock, :request, 3, fn :delete, _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 200, body: talk_ocs(nil)}}
+    end)
+
+    assert :ok =
+             perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+    assert Enum.map([upcoming, cancelled, ended], &Repo.reload!(&1).video_room_id) ==
+             [nil, nil, nil]
+
+    assert [%{args: %{"meeting_id" => refreshed}}] =
+             all_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+
+    assert refreshed == upcoming.id
+  end
+
   test "retries and keeps the row when the provider call fails" do
     %{user: user} = create_user_with_profile()
     integration = insert_zoom_integration(user)

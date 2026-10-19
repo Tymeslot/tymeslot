@@ -2,8 +2,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
   @moduledoc """
   The Graph answers `Outlook.CalendarAPI` classifies apart from the shared
   response envelope (`Shared.ApiResponse`): a 403 carrying its
-  classification in `error.code`, and throttling reported as a bare 429.
-  Both may carry a `Retry-After` the caller should honour.
+  classification in `error.code`. A throttling 403 may carry a `Retry-After`
+  the caller should honour, as a 429 does.
   """
 
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
@@ -16,18 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
   def classify({:ok, %{status: 403, body: body} = resp}) do
     ApiResponse.with_error_object(body, fn msg, decoded ->
       code = String.downcase(to_string(get_in(decoded, ["error", "code"]) || ""))
-      handle_403_reason(classify_outlook_403(msg, code), msg, parse_retry_after(resp))
+      handle_403_reason(classify_outlook_403(msg, code), msg, resp)
     end)
-  end
-
-  def classify({:ok, %{status: 429} = resp}) do
-    case parse_retry_after(resp) do
-      retry_after when is_integer(retry_after) ->
-        {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
-
-      nil ->
-        {:error, :rate_limited, "Too many requests"}
-    end
   end
 
   def classify(_response), do: :default
@@ -57,26 +47,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
       String.contains?(message, "insufficient")
   end
 
-  defp parse_retry_after(resp) do
-    headers = Map.get(resp, :headers, %{})
+  defp handle_403_reason(:rate_limited, msg, resp),
+    do: {:error, :rate_limited, ApiResponse.rate_limited_message(resp, msg)}
 
-    case Map.get(headers, "retry-after") do
-      [value | _rest] ->
-        case Integer.parse(value) do
-          {n, _remainder} -> n
-          _parse_error -> nil
-        end
-
-      _no_header ->
-        nil
-    end
-  end
-
-  defp handle_403_reason(:rate_limited, _msg, retry_after) when is_integer(retry_after) do
-    {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
-  end
-
-  defp handle_403_reason(:rate_limited, msg, _retry_after), do: {:error, :rate_limited, msg}
-  defp handle_403_reason(:unauthorized, msg, _retry_after), do: {:error, :unauthorized, msg}
-  defp handle_403_reason(_other_reason, msg, _retry_after), do: {:error, :network_error, msg}
+  defp handle_403_reason(:unauthorized, msg, _resp), do: {:error, :unauthorized, msg}
+  defp handle_403_reason(_other_reason, msg, _resp), do: {:error, :network_error, msg}
 end

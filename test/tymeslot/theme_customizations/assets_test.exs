@@ -11,24 +11,18 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
 
   import Mox
 
+  alias Tymeslot.Media.Uploads
+  alias Tymeslot.Test.JobRefusal
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.ThemeCustomizations.Storage
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.Workers.VideoTranscoder
 
   setup :verify_on_exit!
 
   setup do
-    upload_root =
-      Path.join(System.tmp_dir!(), "tymeslot_assets_#{System.unique_integer([:positive])}")
-
-    original_root = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :upload_directory, original_root)
-      File.rm_rf(upload_root)
-    end)
+    UploadRoot.isolate("tymeslot_assets")
 
     %{profile: insert(:profile)}
   end
@@ -41,7 +35,7 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
   end
 
   defp stored_file(profile, theme_id, relative) do
-    full = Storage.build_theme_file_path("themes/#{profile.id}/#{theme_id}/#{relative}")
+    full = UploadRoot.path("themes/#{profile.id}/#{theme_id}/#{relative}")
     File.mkdir_p!(Path.dirname(full))
     File.write!(full, "old")
     {"themes/#{profile.id}/#{theme_id}/#{relative}", full}
@@ -50,7 +44,7 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
   # Every file under the profile's upload directory for the theme, images and
   # videos alike.
   defp uploaded_files(profile, theme_id) do
-    [Storage.get_upload_base_directory(), "themes", to_string(profile.id), theme_id, "*", "*"]
+    [Uploads.root(), "themes", to_string(profile.id), theme_id, "*", "*"]
     |> Path.join()
     |> Path.wildcard()
   end
@@ -78,12 +72,10 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
       assert customization.settings["background_image_path"] =~
                ~r{^themes/#{profile.id}/1/images/}
 
-      assert File.exists?(
-               Storage.build_theme_file_path(customization.settings["background_image_path"])
-             )
+      assert File.exists?(UploadRoot.path(customization.settings["background_image_path"]))
     end
 
-    test "replaces an uploaded video, deleting its file", %{profile: profile} do
+    test "keeps an uploaded video stored beside it", %{profile: profile} do
       {video, video_file} = stored_file(profile, "1", "videos/old.mp4")
 
       {:ok, _existing} =
@@ -101,8 +93,31 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
                  temp_file("bg.png", @png)
                )
 
-      assert customization.settings["background_video_path"] == nil
-      refute File.exists?(video_file)
+      assert customization.settings["background_type"] == "image"
+      assert customization.settings["background_video_path"] == video
+      assert File.exists?(video_file)
+    end
+
+    test "replaces the previous uploaded image, deleting its file", %{profile: profile} do
+      {image, image_file} = stored_file(profile, "1", "images/old.png")
+
+      {:ok, _existing} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "background_type" => "gradient",
+          "background_value" => "gradient_1",
+          "background_image_path" => image
+        })
+
+      assert {:ok, customization} =
+               ThemeCustomizations.attach_asset(
+                 profile.id,
+                 "1",
+                 :background_image_path,
+                 temp_file("bg.png", @png)
+               )
+
+      assert customization.settings["background_image_path"] not in [nil, image]
+      refute File.exists?(image_file)
     end
 
     test "refuses a file that is not an image, saving nothing", %{profile: profile} do
@@ -134,9 +149,7 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
       assert customization.settings["background_value"] == "custom"
       assert customization.video_processing_status == %{"background_video_path" => "pending"}
 
-      assert File.exists?(
-               Storage.build_theme_file_path(customization.settings["background_video_path"])
-             )
+      assert File.exists?(UploadRoot.path(customization.settings["background_video_path"]))
 
       assert_enqueued(
         worker: VideoTranscoder,
@@ -148,7 +161,7 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
       )
     end
 
-    test "replaces an uploaded image, deleting its file", %{profile: profile} do
+    test "keeps an uploaded image stored beside it", %{profile: profile} do
       stub(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
       {image, image_file} = stored_file(profile, "2", "images/old.png")
 
@@ -167,8 +180,45 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
                  temp_file("clip.mp4", @mp4)
                )
 
-      assert customization.settings["background_image_path"] == nil
-      refute File.exists?(image_file)
+      assert customization.settings["background_type"] == "video"
+      assert customization.settings["background_image_path"] == image
+      assert File.exists?(image_file)
+    end
+
+    test "when the job cannot be queued, changes nothing and deletes the new file",
+         %{profile: profile} do
+      stub(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+      {video, video_file} = stored_file(profile, "2", "videos/old.mp4")
+
+      {:ok, existing} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "2", %{
+          "background_type" => "video",
+          "background_value" => "custom",
+          "background_video_path" => video
+        })
+
+      {:ok, _completed} =
+        ThemeCustomizationQueries.update_video_processing_status(
+          existing.id,
+          "background_video_path",
+          "completed"
+        )
+
+      JobRefusal.refuse_jobs(VideoTranscoder)
+
+      assert {:error, "The upload failed and nothing was changed. Please try again."} =
+               ThemeCustomizations.attach_asset(
+                 profile.id,
+                 "2",
+                 :background_video_path,
+                 temp_file("clip.mp4", @mp4)
+               )
+
+      row = ThemeCustomizations.get_by_profile_and_theme(profile.id, "2")
+      assert row.settings["background_video_path"] == video
+      assert row.video_processing_status == %{"background_video_path" => "completed"}
+      assert uploaded_files(profile, "2") == [video_file]
+      refute_enqueued(worker: VideoTranscoder)
     end
 
     test "refuses a file that is not a video, saving nothing", %{profile: profile} do
@@ -291,8 +341,8 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
                )
 
       path = customization.settings["fixture_intro_captions_path"]
-      assert path =~ ~r"^themes/#{profile.id}/99/captions/[0-9a-f]{12}-intro\.vtt$"
-      assert File.read!(Storage.build_theme_file_path(path)) == @vtt
+      assert path =~ ~r"^themes/#{profile.id}/99/captions/[0-9a-f-]{36}\.vtt$"
+      assert File.read!(UploadRoot.path(path)) == @vtt
 
       # Captions are served as they are: nothing is transcoded or tracked.
       refute_enqueued(worker: VideoTranscoder)
@@ -331,11 +381,9 @@ defmodule Tymeslot.ThemeCustomizations.AssetsTest do
 
       first_path = first.settings["fixture_intro_captions_path"]
       refute first_path == second.settings["fixture_intro_captions_path"]
-      refute File.exists?(Storage.build_theme_file_path(first_path))
+      refute File.exists?(UploadRoot.path(first_path))
 
-      assert File.exists?(
-               Storage.build_theme_file_path(second.settings["fixture_intro_captions_path"])
-             )
+      assert File.exists?(UploadRoot.path(second.settings["fixture_intro_captions_path"]))
     end
   end
 

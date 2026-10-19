@@ -1,23 +1,33 @@
 defmodule Tymeslot.Meetings.VideoRoomAttachment do
   @moduledoc """
-  Attaches a video room the provider has already created to its meeting.
+  Attaches a video room the provider has already created to its meeting, and
+  lets go of one the provider no longer has.
 
   The last step of `Tymeslot.Meetings.VideoRooms.add_video_room_to_meeting/1`,
   and the only one inside a database transaction: the provider call happens
   before it, so a slow provider never holds a connection. The meeting row is
   re-locked and re-checked here, so a concurrent worker that attached a room
-  first wins and this one's room is discarded, and a room created for a
+  first wins and this one's room is released, and a room created for a
   location the meeting has since left is released instead of attached.
   """
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
+  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema, MeetingState}
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
+
+  # What a booking keeps of a room that is gone: nothing.
+  @cleared_room %{
+    video_room_id: nil,
+    video_room_enabled: false,
+    organizer_video_url: nil,
+    attendee_video_url: nil
+  }
 
   @doc """
   Writes `video_room_attrs` onto `meeting` under the row lock, then schedules
@@ -83,11 +93,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
         {:error, :calendar_event_pending}
 
       {:ok, {:already_attached, existing_meeting}} ->
-        Logger.info(
-          "Video room already attached by a concurrent writer; discarding provider response",
-          meeting_id: existing_meeting.id
-        )
-
+        release_duplicate(meeting, existing_meeting, video_room_attrs)
         {:ok, existing_meeting}
 
       {:error, reason} = error ->
@@ -108,13 +114,44 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
     end
   end
 
+  # The room a losing concurrent creator made exists on the provider and
+  # nothing in the database points at it, so it is released, unless it is the
+  # very room that won (a provider that hands back the same room twice) or
+  # the booking's own calendar event: a Teams meeting placed on that event is
+  # the event, and releasing it would replace the booking's calendar entry.
+  defp release_duplicate(meeting, existing_meeting, video_room_attrs) do
+    if releasable_duplicate?(video_room_attrs, existing_meeting, meeting) do
+      Logger.info("Video room already attached by a concurrent writer; releasing this one",
+        meeting_id: existing_meeting.id
+      )
+
+      release_unattached_room(meeting, video_room_attrs)
+    else
+      # This room is the attached one, or the booking's own calendar event.
+      Logger.info("Video room already attached by a concurrent writer; nothing to release",
+        meeting_id: existing_meeting.id
+      )
+    end
+  end
+
+  defp releasable_duplicate?(%{video_room_id: room_id}, existing_meeting, meeting)
+       when is_binary(room_id) do
+    room_id not in [
+      existing_meeting.video_room_id,
+      existing_meeting.provider_event_id,
+      meeting.provider_event_id
+    ]
+  end
+
+  defp releasable_duplicate?(_video_room_attrs, _existing_meeting, _meeting), do: false
+
   defp schedule_calendar_update(meeting) do
     case CalendarEventScheduler.schedule_calendar_update(meeting.id) do
       {:ok, _job} ->
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to schedule calendar update after video room attachment",
+        Logger.warning("Failed to schedule calendar update after video room change",
           meeting_id: meeting.id,
           reason: LogFormat.reason(reason)
         )
@@ -188,6 +225,47 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   # A provider with no room id (a static custom link) has nothing to delete.
   def release_unattached_room(_meeting, _video_room_attrs), do: :ok
+
+  @doc """
+  Clears the room off `meeting`: its id and its join links. For a caller that
+  pairs the write with another in one transaction; `forget/2` is the whole
+  step for a room the provider no longer has.
+  """
+  @spec clear(MeetingSchema.t()) :: {:ok, MeetingSchema.t()} | {:error, Ecto.Changeset.t()}
+  def clear(%MeetingSchema{} = meeting), do: MeetingQueries.update_meeting(meeting, @cleared_room)
+
+  @doc """
+  Lets go of a room the provider no longer has: clears it off `meeting`, so
+  the clean-up scans stop finding it and nothing shows its dead join links,
+  then has calendar sync refresh the booking's event, which still carries
+  them.
+
+  Only a booking that still expects its calendar event and has not ended by
+  `now` is refreshed. A cancelled or declined booking's event is gone, and
+  an update would recreate it; a past one is history.
+
+  Always `:ok`: the room is gone either way. A failed write leaves the room
+  id in place, so the clean-up scans retry it harmlessly.
+  """
+  @spec forget(MeetingSchema.t(), DateTime.t()) :: :ok
+  def forget(%MeetingSchema{} = meeting, now \\ Clock.utc_now()) do
+    case clear(meeting) do
+      {:ok, updated} ->
+        if MeetingState.expects_calendar_event?(updated) and
+             DateTime.after?(updated.end_time, now),
+           do: schedule_calendar_update(updated)
+
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning("Failed to clear a video room the provider no longer has",
+          meeting_id: meeting.id,
+          errors: LogFormat.reason(changeset.errors)
+        )
+
+        :ok
+    end
+  end
 
   @spec update_meeting_with_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, :database_update_failed}

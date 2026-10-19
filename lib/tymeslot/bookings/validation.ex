@@ -6,12 +6,16 @@ defmodule Tymeslot.Bookings.Validation do
   All validation is based on the data passed in as parameters.
   """
 
-  alias Tymeslot.Availability.{Calculate, Offer, TimeSlots}
+  alias Tymeslot.Availability.{Calculate, Events, Offer}
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.ScheduleCheck
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
+  alias Tymeslot.Utils.DateTimeUtils.Duration
+
+  @default_min_advance_hours 3
+  @default_max_advance_days 365
 
   @typedoc "A calendar event with start and optional end time, used for conflict checking."
   @type calendar_event :: %{
@@ -37,10 +41,10 @@ defmodule Tymeslot.Bookings.Validation do
       {:ok, {start_datetime, end_datetime}}
 
       iex> Validation.parse_meeting_times("invalid", "10:00 AM", 30, "America/New_York")
-      {:error, "Invalid date or time format"}
+      {:error, :invalid_datetime}
   """
   @spec parse_meeting_times(String.t(), String.t(), integer() | String.t(), String.t()) ::
-          {:ok, {DateTime.t(), DateTime.t()}} | {:error, String.t()}
+          {:ok, {DateTime.t(), DateTime.t()}} | {:error, :invalid_datetime}
   def parse_meeting_times(date_string, time_string, duration, timezone) do
     with {:ok, date} <- parse_date(date_string),
          {:ok, time} <- safe_parse_time_slot(time_string),
@@ -49,40 +53,46 @@ defmodule Tymeslot.Bookings.Validation do
          end_datetime <- DateTime.add(start_datetime, duration_minutes, :minute) do
       {:ok, {start_datetime, end_datetime}}
     else
-      _parse_error -> {:error, "Invalid date or time format"}
+      _parse_error -> {:error, :invalid_datetime}
     end
   end
 
+  @typedoc """
+  Why a booking time is refused: it is not in the future (`:in_past`), it
+  falls inside the schedule's minimum notice (`{:too_soon, hours}`), or
+  beyond its booking window (`{:too_far_ahead, days}`).
+  """
+  @type booking_time_refusal ::
+          :in_past | {:too_soon, non_neg_integer()} | {:too_far_ahead, non_neg_integer()}
+
   @doc """
-  Validates that a booking time meets all constraints.
+  Validates that a booking time is in the future, outside the minimum notice
+  and inside the booking window that `config` sets (`:min_advance_hours`,
+  `:max_advance_booking_days`, defaulting to 3 hours and 365 days).
+  `:current_time` in `config` stands in for the clock.
 
   Pure validation based on time calculations only.
   """
-  @spec validate_booking_time(DateTime.t(), String.t() | DateTime.t(), scheduling_config()) ::
-          :ok | {:error, String.t()}
-  def validate_booking_time(start_datetime, timezone_or_end, config \\ %{})
+  @spec validate_booking_time(DateTime.t(), scheduling_config()) ::
+          :ok | {:error, booking_time_refusal()}
+  def validate_booking_time(start_datetime, config \\ %{}) do
+    current_time = Map.get(config, :current_time, Clock.utc_now())
+    min_notice_hours = Map.get(config, :min_advance_hours, @default_min_advance_hours)
+    max_booking_days = Map.get(config, :max_advance_booking_days, @default_max_advance_days)
 
-  # Handle the 2-parameter case: (start_time, timezone)
-  def validate_booking_time(start_datetime, timezone, config) when is_binary(timezone) do
-    overrides = %{
-      max_advance_booking_days: 90,
-      notice_error_message: fn hours -> "Booking requires at least #{hours} hours in advance" end,
-      window_error_message: fn days -> "Cannot book more than #{days} days in advance" end
-    }
+    cond do
+      DateTime.compare(start_datetime, current_time) != :gt ->
+        {:error, :in_past}
 
-    validate_booking_time_with_defaults(start_datetime, config, overrides)
-  end
+      not TimeRange.meets_minimum_notice?(start_datetime, current_time, min_notice_hours * 60) ->
+        {:error, {:too_soon, min_notice_hours}}
 
-  # Handle the 3-parameter case: (start_datetime, end_datetime, config)
-  def validate_booking_time(start_datetime, _end_datetime, config) do
-    overrides = %{
-      notice_error_message: fn hours ->
-        "Booking requires at least #{hours} hours advance notice"
-      end,
-      window_error_message: fn days -> "Booking cannot be more than #{days} days in advance" end
-    }
+      not TimeRange.within_booking_window?(start_datetime, current_time, max_booking_days) ->
+        {:error, {:too_far_ahead, max_booking_days}}
 
-    validate_booking_time_with_defaults(start_datetime, config, overrides)
+      true ->
+        :ok
+    end
   end
 
   @doc """
@@ -94,33 +104,26 @@ defmodule Tymeslot.Bookings.Validation do
   Events are first filtered through `CalendarEvent.blocking?/1` so that
   cancelled, declined, and `TRANSP:TRANSPARENT` (free/busy = free) events
   never block a booking, matching the contract that `Availability.Conflicts`
-  enforces for the display path.
+  enforces for the display path. They are then turned into instants by
+  `Availability.Events.convert_events_to_timezone/3`, the conversion the
+  display path uses, so an all-day event blocks the owner's local day here
+  exactly as it does on the booking page, and an event without an end blocks
+  the same stretch on both.
   """
   @spec check_slot_availability(
           DateTime.t(),
           DateTime.t(),
           [calendar_event()],
-          TimeRange.buffers()
+          TimeRange.buffers(),
+          String.t()
         ) :: :ok | {:error, :slot_unavailable}
-  def check_slot_availability(start_datetime, end_datetime, events, buffers \\ {0, 0}) do
-    normalized_events =
+  def check_slot_availability(start_datetime, end_datetime, events, buffers, owner_timezone) do
+    intervals =
       events
       |> Enum.filter(&CalendarEvent.blocking?/1)
-      |> Enum.map(fn event ->
-        start_time = DateTimeUtils.to_datetime(event.start_time)
+      |> Events.convert_events_to_timezone(owner_timezone, "Etc/UTC")
 
-        end_time =
-          DateTimeUtils.to_datetime(event.end_time) || DateTime.add(start_time, 30, :minute)
-
-        %{event | start_time: start_time, end_time: end_time}
-      end)
-
-    if TimeRange.has_conflict_with_events?(
-         start_datetime,
-         end_datetime,
-         normalized_events,
-         buffers
-       ) do
+    if TimeRange.has_conflict_with_events?(start_datetime, end_datetime, intervals, buffers) do
       {:error, :slot_unavailable}
     else
       :ok
@@ -130,7 +133,8 @@ defmodule Tymeslot.Bookings.Validation do
   @doc """
   Validates that a time slot has no conflicts with existing events.
 
-  Takes calendar events and checks for overlaps.
+  Takes calendar events and checks for overlaps, with all-day events anchored
+  in the config's `:owner_timezone`.
   """
   @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [calendar_event()], scheduling_config()) ::
           :ok | {:error, :slot_unavailable}
@@ -139,24 +143,9 @@ defmodule Tymeslot.Bookings.Validation do
       start_datetime,
       end_datetime,
       events,
-      Calculate.config_buffers(config)
+      Calculate.config_buffers(config),
+      Map.get(config, :owner_timezone, "Etc/UTC")
     )
-  end
-
-  @doc """
-  Validates that a meeting is eligible for rescheduling.
-
-  Returns `{:ok, meeting}` if the meeting can be rescheduled,
-  or `{:error, reason}` if it cannot (e.g. cancelled or completed).
-  """
-  @spec validate_meeting_for_reschedule(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, String.t()}
-  def validate_meeting_for_reschedule(meeting) do
-    cond do
-      meeting.status == "cancelled" -> {:error, "Cannot reschedule a cancelled meeting"}
-      meeting.status == "completed" -> {:error, "Cannot reschedule a completed meeting"}
-      true -> {:ok, meeting}
-    end
   end
 
   @doc """
@@ -195,7 +184,7 @@ defmodule Tymeslot.Bookings.Validation do
              params.user_timezone
            ),
          {:ok, date} <- parse_date(params.date),
-         :ok <- validate_booking_time(start_datetime, params.user_timezone, config),
+         :ok <- validate_booking_time(start_datetime, config),
          :ok <-
            ScheduleCheck.validate_slot_on_schedule(
              date,
@@ -243,67 +232,14 @@ defmodule Tymeslot.Bookings.Validation do
 
   defp parse_duration(duration) when is_integer(duration), do: {:ok, duration}
 
+  # A booking names its length; one that cannot be read is refused rather
+  # than booked at a default length the booker never chose.
   defp parse_duration(duration) when is_binary(duration) do
-    # TimeSlots.parse_duration returns an integer directly
-    minutes = TimeSlots.parse_duration(duration)
-    {:ok, minutes}
-  end
-
-  defp parse_duration(_invalid), do: {:error, :invalid_duration}
-
-  defp validate_booking_time_with_defaults(start_datetime, config, overrides) do
-    defaults = %{
-      current_time: Clock.utc_now(),
-      min_advance_hours: 3,
-      max_advance_booking_days: 365
-    }
-
-    merged =
-      defaults
-      |> Map.merge(overrides)
-      |> Map.merge(config)
-
-    current_time = Map.get(merged, :current_time)
-    min_notice_hours = Map.get(merged, :min_advance_hours)
-    max_booking_days = Map.get(merged, :max_advance_booking_days)
-    min_notice_minutes = min_notice_hours * 60
-
-    past_error = Map.get(merged, :past_error_message, "Booking time must be in the future")
-
-    notice_error =
-      format_window_message(
-        Map.get(merged, :notice_error_message),
-        min_notice_hours,
-        fn hours -> "Booking requires at least #{hours} hours advance notice" end
-      )
-
-    window_error =
-      format_window_message(
-        Map.get(merged, :window_error_message),
-        max_booking_days,
-        fn days -> "Booking cannot be more than #{days} days in advance" end
-      )
-
-    cond do
-      DateTime.compare(start_datetime, current_time) != :gt ->
-        {:error, past_error}
-
-      not TimeRange.meets_minimum_notice?(start_datetime, current_time, min_notice_minutes) ->
-        {:error, notice_error}
-
-      not TimeRange.within_booking_window?(start_datetime, current_time, max_booking_days) ->
-        {:error, window_error}
-
-      true ->
-        :ok
+    case Duration.parse_minutes(duration) do
+      {:ok, minutes} when minutes > 0 -> {:ok, minutes}
+      _not_a_length -> {:error, :invalid_duration}
     end
   end
 
-  defp format_window_message(message, value, _default_fun)
-       when is_function(message, 1),
-       do: message.(value)
-
-  defp format_window_message(message, _value, _default_fun) when is_binary(message), do: message
-
-  defp format_window_message(_other, value, default_fun), do: default_fun.(value)
+  defp parse_duration(_invalid), do: {:error, :invalid_duration}
 end

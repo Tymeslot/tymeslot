@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Shared.ProviderConfigHelper do
   development-only providers.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Calculates effective providers list, filtering by enabled status and optionally including dev providers.
 
@@ -38,24 +40,29 @@ defmodule Tymeslot.Integrations.Shared.ProviderConfigHelper do
   end
 
   @doc """
-  Validates that a config map contains all required fields.
+  Validates that a config map contains all required fields, for calendar and
+  video providers alike.
 
-  ## Parameters
-  - `config`: Configuration map to validate
-  - `required_fields`: List of required field atoms
-
-  ## Returns
-  - `:ok` if all required fields are present
-  - `{:error, String.t()}` with missing fields if validation fails
+  Returns `:ok`, or the translated error from `missing_fields_error/1`.
   """
   @spec validate_required_fields(%{atom() => term()}, list(atom())) :: :ok | {:error, String.t()}
   def validate_required_fields(config, required_fields) do
-    missing_fields = required_fields -- Map.keys(config)
-
-    if Enum.empty?(missing_fields) do
-      :ok
-    else
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+    case required_fields -- Map.keys(config) do
+      [] -> :ok
+      missing_fields -> missing_fields_error(missing_fields)
     end
+  end
+
+  @doc """
+  The error for a provider configuration missing `fields`, in the user's
+  language. One message for every provider family, so the wording does not
+  depend on which kind of integration is being set up.
+  """
+  @spec missing_fields_error([atom() | String.t()]) :: {:error, String.t()}
+  def missing_fields_error(fields) do
+    {:error,
+     dgettext("integrations", "Missing required fields: %{fields}",
+       fields: Enum.join(fields, ", ")
+     )}
   end
 end

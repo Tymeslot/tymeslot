@@ -10,7 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommonCredentialsTest d
     username: "user",
     password: "pass",
     calendar_paths: [],
-    verify_ssl: true,
     provider: :caldav
   }
 

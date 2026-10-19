@@ -15,6 +15,20 @@ defmodule Tymeslot.Mocks.Subscription do
       show_branding
     end)
 
+    # No subscription is recorded unless a test says otherwise, as for Core
+    # standalone.
+    stub(Tymeslot.Payments.SubscriptionManagerMock, :get_subscription_by_customer_id, fn _id ->
+      nil
+    end)
+
+    stub(
+      Tymeslot.Payments.SubscriptionManagerMock,
+      :get_subscription_by_subscription_id,
+      fn _id ->
+        nil
+      end
+    )
+
     stub_subscriptions_provider(opts)
   end
 

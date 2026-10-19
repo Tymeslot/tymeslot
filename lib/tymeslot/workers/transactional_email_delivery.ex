@@ -34,9 +34,8 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   alias Tymeslot.Workers.SnoozePolicy
 
   @circuit_open_jitter_seconds 30
-  # Matches `EmailWorker`'s cap for the same reason; callers here don't
-  # necessarily have an execution count to hand, so this is the ceiling that
-  # formula converges on.
+  # Matches `EmailWorker`'s cap for the same reason: the ceiling the
+  # per-execution formula below converges on.
   @rate_limited_snooze_seconds 300
 
   # Bounds how many times a job may snooze past an open breaker or a rate
@@ -63,14 +62,25 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   def recipient_rejected?(reason), do: reason == @recipient_rejected_reason
 
   @doc """
-  Delivers `email`, logging `failure_message` with `metadata` when the failure
-  is one an ordinary retry can still fix.
+  Delivers `email` for `job`, logging `failure_message` with `metadata` when
+  the failure is one an ordinary retry can still fix.
+
+  The job is what bounds the snooze loops: its execution count, snoozes
+  included (`SnoozePolicy.executions/1`), is taken here so that no caller can
+  leave it out and snooze for ever.
   """
-  @spec deliver(Swoosh.Email.t(), String.t(), keyword()) :: outcome()
-  def deliver(email, failure_message, metadata \\ []) do
+  @spec deliver(Swoosh.Email.t(), Oban.Job.t(), String.t(), keyword()) :: outcome()
+  def deliver(email, %Oban.Job{} = job, failure_message, metadata \\ []) do
     case Delivery.deliver(email) do
-      {:ok, _result} -> :ok
-      {:error, reason} -> handle_failure(reason, failure_message, metadata)
+      {:ok, _result} ->
+        :ok
+
+      {:error, reason} ->
+        handle_failure(
+          reason,
+          failure_message,
+          Keyword.put(metadata, :executions, SnoozePolicy.executions(job))
+        )
     end
   end
 
@@ -80,16 +90,16 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   discard a permanently rejected recipient, or fall back to an ordinary
   retry. `failure_message` is only used for that last, generic case.
 
-  `metadata` may include `:executions` (how many times Oban has run the job,
-  snoozes included, from `SnoozePolicy.executions/1`) to bound the snooze loops
-  and to scale the `:rate_limited` snooze the same way `EmailWorker` does;
-  callers that omit it get the formula's first-execution value. Passing
+  For `:circuit_open` and `:rate_limited`, `metadata` must include
+  `:executions` (how many times Oban has run the job, snoozes included, from
+  `SnoozePolicy.executions/1`): it bounds the snooze loops and scales the
+  `:rate_limited` snooze the same way `EmailWorker` does. Passing
   `job.attempt` in its place leaves both loops unbounded, since a snooze does
   not advance `attempt` from Oban 2.24 on.
   """
   @spec handle_failure(term(), String.t(), keyword()) :: outcome()
   def handle_failure(:circuit_open, _failure_message, metadata) do
-    executions = Keyword.get(metadata, :executions, 1)
+    executions = Keyword.fetch!(metadata, :executions)
     base_seconds = CircuitBreakerSupervisor.email_breaker_recovery_seconds()
 
     case SnoozePolicy.snooze_or_exhaust(executions,
@@ -116,7 +126,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   end
 
   def handle_failure(:rate_limited, _failure_message, metadata) do
-    executions = Keyword.get(metadata, :executions, 1)
+    executions = Keyword.fetch!(metadata, :executions)
     base_seconds = min(@rate_limited_snooze_seconds, 60 * executions)
 
     case SnoozePolicy.snooze_or_exhaust(executions,

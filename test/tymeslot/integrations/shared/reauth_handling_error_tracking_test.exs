@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingErrorTrackingTest do
   import Tymeslot.ConfigTestHelpers
 
   alias ErrorTracker.Error
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Repo
@@ -36,7 +36,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingErrorTrackingTest do
         integration = insert(:calendar_integration, provider: provider)
 
         assert {:discard, ^discard_reason} =
-                 CalendarManagement.handle_reauth_required(integration)
+                 Management.handle_reauth_required(integration)
       end
 
       video = insert(:video_integration)
@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingErrorTrackingTest do
 
     capture_log(fn ->
       assert {:discard, _reason} =
-               CalendarManagement.handle_reauth_required(integration, cause: :expired_grant)
+               Management.handle_reauth_required(integration, cause: :expired_grant)
     end)
 
     assert errors() == []

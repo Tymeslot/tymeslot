@@ -57,6 +57,21 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
       assert "/dav/first" = CalendarPathResolver.resolve(integration)
     end
 
+    # A selected read-only share is read for availability and can be listed
+    # first, but a booking written to it fails.
+    test "skips a path calendar_list marks read-only when no default is set" do
+      integration = %{
+        default_booking_calendar_id: nil,
+        calendar_list: [
+          %CalendarEntry{id: "/dav/shared", path: "/dav/shared", selected: true, read_only: true},
+          %CalendarEntry{id: "/dav/own", path: "/dav/own", selected: true}
+        ],
+        calendar_paths: ["/dav/shared", "/dav/own"]
+      }
+
+      assert "/dav/own" = CalendarPathResolver.resolve(integration)
+    end
+
     test "returns nil when neither default nor calendar_paths are configured" do
       integration = %{
         default_booking_calendar_id: nil,

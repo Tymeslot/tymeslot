@@ -119,7 +119,7 @@ defmodule TymeslotWeb.AuthLiveTest do
 
     test "with the address's verification allowance used up, taken and free still match",
          %{conn: conn} do
-      for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit("127.0.0.1")
+      for _i <- 1..5, do: RateLimiter.check(:verification_ip, "127.0.0.1")
       owner = insert(:user)
       fresh = "fresh-#{System.unique_integer([:positive])}@example.com"
 
@@ -505,7 +505,7 @@ defmodule TymeslotWeb.AuthLiveTest do
 
   defp setup_password_reset_token(_context) do
     user = insert(:user)
-    token = Token.generate_token()
+    token = Token.generate()
     {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
     %{user: user, token: token}
   end

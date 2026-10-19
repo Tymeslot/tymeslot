@@ -1,27 +1,24 @@
 defmodule CredoChecks.AttendeeNotificationsBoundary do
   @moduledoc """
-  Flags direct calls to calendar-invitation schedulers from outside
+  Flags direct calls to the calendar-invitation scheduler from outside
   `Tymeslot.Meetings.AttendeeNotifications`.
 
   `Tymeslot.Meetings.AttendeeNotifications` is the single entry point for every
-  calendar-event attendee message. Bypassing it by calling the underlying
-  orchestrator or `CalendarScheduler` directly re-introduces the duplication
-  and divergence problems the centralisation was meant to solve.
+  calendar-event attendee message. Bypassing it by calling `CalendarScheduler`
+  directly re-introduces the duplication and divergence problems the
+  centralisation was meant to solve.
 
   ## Flagged functions
 
-  - `Tymeslot.Notifications.Orchestrator.schedule_calendar_invitations/3`
-  - `Tymeslot.Notifications.Orchestrator.schedule_event_update_notification/2`
   - `Tymeslot.Emails.EmailScheduler.CalendarScheduler.schedule_calendar_invitation/1`
   - `Tymeslot.Emails.EmailScheduler.CalendarScheduler.schedule_event_update_notification/1`
 
   ## Allowed call sites
 
   - `lib/tymeslot/meetings/attendee_notifications.ex` and its submodules
-  - The `Orchestrator` and `CalendarScheduler` modules themselves (internal
-    composition between the two layers)
+  - The `CalendarScheduler` module itself
   - Worker handler modules under
-    `lib/tymeslot/workers/email_worker_handlers/` — these are downstream
+    `lib/tymeslot/notifications/email/` — these are downstream
     of the scheduler, not callers of it
   - Tests (`*_test.exs`)
   - Migrations (`priv/repo/migrations/`)
@@ -33,9 +30,9 @@ defmodule CredoChecks.AttendeeNotificationsBoundary do
     explanations: [
       check: """
       Calendar-invitation scheduling must go through
-      `Tymeslot.Meetings.AttendeeNotifications`. Calling the orchestrator or
-      `CalendarScheduler` directly bypasses the centralised change detection,
-      rate limiting, and last-notified-state tracking.
+      `Tymeslot.Meetings.AttendeeNotifications`. Calling `CalendarScheduler`
+      directly bypasses the centralised change detection, rate limiting, and
+      last-notified-state tracking.
       """
     ]
 
@@ -44,8 +41,6 @@ defmodule CredoChecks.AttendeeNotificationsBoundary do
 
   # Flagged calls: {module suffix (last N aliases), func, arity}
   @flagged [
-    {[:Notifications, :Orchestrator], :schedule_calendar_invitations, 3},
-    {[:Notifications, :Orchestrator], :schedule_event_update_notification, 2},
     {[:Emails, :EmailScheduler, :CalendarScheduler], :schedule_calendar_invitation, 1},
     {[:Emails, :EmailScheduler, :CalendarScheduler], :schedule_event_update_notification, 1}
   ]
@@ -79,12 +74,11 @@ defmodule CredoChecks.AttendeeNotificationsBoundary do
   end
 
   defp scheduler_internal_file?(filename) do
-    String.ends_with?(filename, "/notifications/orchestrator.ex") or
-      String.ends_with?(filename, "/email_scheduler/calendar_scheduler.ex")
+    String.ends_with?(filename, "/email_scheduler/calendar_scheduler.ex")
   end
 
   defp worker_handler_file?(filename) do
-    String.contains?(filename, "/workers/email_worker_handlers/")
+    String.contains?(filename, "/notifications/email/")
   end
 
   defp test_file?(filename) do

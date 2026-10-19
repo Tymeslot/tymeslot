@@ -28,8 +28,8 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.Bookings.Reschedule
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
@@ -219,7 +219,7 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
     }
 
     assert {:ok, _updated} =
-             Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+             Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
   end
 
   # Runs every calendar job the reschedule set off, in queue order, against

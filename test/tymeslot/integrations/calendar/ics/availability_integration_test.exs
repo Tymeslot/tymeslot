@@ -20,13 +20,16 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Ecto.Changeset
+  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Ics.Provider, as: IcsProvider
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.RateLimiter
 
   @feed_url "https://feeds.example.com/secret-address/team.ics"
 
@@ -84,6 +87,27 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
       assert Enum.any?(events, &(&1.uid == "blocked-slot@example.com"))
     end
 
+    test "a feed set to show only contributes nothing", %{user: user, integration: integration} do
+      integration
+      |> Changeset.change(
+        calendar_list: [
+          %CalendarEntry{
+            id: "subscription",
+            path: "subscription",
+            selected: true,
+            read_only: true,
+            blocks_availability: false
+          }
+        ]
+      )
+      |> Repo.update!()
+
+      assert {:ok, events} =
+               EventFetcher.get_events_for_range_fresh(user.id, ~D[2026-08-01], ~D[2026-08-20])
+
+      refute Enum.any?(events, &(&1.uid == "blocked-slot@example.com"))
+    end
+
     test "a range that excludes the cached event's window returns no events for it", %{
       user: user
     } do
@@ -125,7 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
       integration: integration
     } do
       assert {:ok, %{all_events_busy: true}} =
-               CalendarManagement.set_all_events_busy(integration.id, user.id, true)
+               Calendar.set_all_events_busy(user.id, integration.id, true)
 
       assert holiday(user).transparency == "opaque"
       assert CalendarEvent.blocking?(holiday(user))
@@ -134,18 +158,18 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
       assert busy_block(user).transparency == "opaque"
 
       assert {:ok, %{all_events_busy: false}} =
-               CalendarManagement.set_all_events_busy(integration.id, user.id, false)
+               Calendar.set_all_events_busy(user.id, integration.id, false)
 
       refute CalendarEvent.blocking?(holiday(user))
     end
   end
 
-  describe "CalendarManagement.set_all_events_busy/3" do
+  describe "Calendar.set_all_events_busy/3" do
     test "refuses a connection that is not a subscription", %{user: user} do
       caldav = insert(:calendar_integration, user: user, provider: "caldav")
 
       assert {:error, :not_a_subscription} =
-               CalendarManagement.set_all_events_busy(caldav.id, user.id, true)
+               Calendar.set_all_events_busy(user.id, caldav.id, true)
 
       refute Repo.reload!(caldav).all_events_busy
     end
@@ -154,8 +178,23 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
       other = insert(:user)
 
       assert {:error, :not_found} =
-               CalendarManagement.set_all_events_busy(integration.id, other.id, true)
+               Calendar.set_all_events_busy(other.id, integration.id, true)
 
+      refute Repo.reload!(integration).all_events_busy
+    end
+
+    test "is refused once the owner's write budget is spent", %{
+      user: user,
+      integration: integration
+    } do
+      fn -> RateLimiter.check(:integration_write, user.id) end
+      |> Stream.repeatedly()
+      |> Enum.find(&match?({:error, :rate_limited, _message}, &1))
+
+      assert {:error, {:rate_limited, message}} =
+               Calendar.set_all_events_busy(user.id, integration.id, true)
+
+      assert byte_size(message) > 0
       refute Repo.reload!(integration).all_events_busy
     end
   end

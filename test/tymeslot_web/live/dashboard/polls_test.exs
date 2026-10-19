@@ -7,7 +7,9 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Polls
+  alias Tymeslot.Repo
 
   # A host with a profile but no calendar integration and no username: the
   # baseline for list/create/validation tests.
@@ -196,6 +198,32 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
         |> render_submit()
 
       assert html =~ "Add at least one candidate time"
+      assert Polls.list_polls(user.id) == []
+    end
+
+    # A changeset refusal reaches the form in the host's language, like the
+    # form's own copy around it.
+    test "shows a refused title in the host's language", %{conn: conn, user: user} do
+      user |> Changeset.change(locale: "de") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      view |> element("button[phx-click='new_poll']") |> render_click()
+      view |> element("button[phx-click='add_slot']") |> render_click()
+
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "",
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "form[phx-submit='create_poll']", "darf nicht leer sein")
       assert Polls.list_polls(user.id) == []
     end
   end

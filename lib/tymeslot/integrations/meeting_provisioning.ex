@@ -28,10 +28,21 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   plan is `:inline`, and reads the event back for the link Google made, since
   the update's own answer does not reach it. On `:attach` it has the Teams
   provider attach the meeting to the existing event.
+
+  ## Scope: dashboard events, not bookings
+
+  `plan/3` decides for events created and edited on the dashboard calendar
+  (`Tymeslot.CalendarGrid`). Bookings do not go through it yet:
+  `Tymeslot.Meetings.VideoRooms` provisions every booking's room on its own,
+  so a booking on Google Calendar with Google Meet gets a standalone Meet
+  space whose link is written into the event, not inline conference data.
+  The one decision bookings share is where a Teams meeting goes
+  (`teams_room_placement/1`).
   """
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events
@@ -54,7 +65,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   `:inline` for Google Calendar with Google Meet, and `:attach` for Outlook
   with Microsoft Teams, each only when both integrations belong to the same
-  account. All other combinations yield `:separate` or `:none`.
+  account. Any other usable video integration yields `:separate`.
+
+  `:none` when no video is asked for, and also when the video integration is
+  not one the user can use: another user's, disconnected, or switched off.
+  Planning a room on it would only defer the refusal to the provider call.
   """
   @spec plan(integer() | nil, integer() | nil, integer()) :: plan()
   def plan(calendar_integration_id, video_integration_id, user_id)
@@ -63,11 +78,15 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   def plan(cal_id, vid_id, user_id)
       when is_integer(cal_id) and is_integer(vid_id) and is_integer(user_id) do
-    with {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
-         {:ok, video} <- Video.fetch_integration_for_user(vid_id, user_id) do
-      {placement(calendar, video), vid_id}
-    else
-      _unresolved -> {:separate, vid_id}
+    case Video.fetch_live_integration_for_user(vid_id, user_id) do
+      {:ok, %{is_active: true} = video} ->
+        case Calendar.get_integration(cal_id, user_id) do
+          {:ok, calendar} -> {placement(calendar, video), vid_id}
+          _no_calendar -> {:separate, vid_id}
+        end
+
+      _unusable ->
+        :none
     end
   end
 
@@ -181,7 +200,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # so the meeting takes an event of its own rather than leave the booking
   # without a link: a second calendar entry is the lesser harm.
   defp booking_event_placement(%MeetingSchema{inserted_at: inserted_at}, _cal_id) do
-    if DateTime.diff(DateTime.utc_now(), inserted_at, :second) < @calendar_event_grace_seconds,
+    if DateTime.diff(Clock.utc_now(), inserted_at, :second) < @calendar_event_grace_seconds,
       do: :awaiting_calendar_event,
       else: :own_event
   end

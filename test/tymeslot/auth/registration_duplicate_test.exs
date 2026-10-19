@@ -109,12 +109,28 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
   test "the notice is capped per recipient, while the reply stays the same" do
     owner = insert(:user)
 
-    for _i <- 1..5, do: RateLimiter.check_signup_attempt_notice_rate_limit(owner.id)
+    for _i <- 1..5, do: RateLimiter.check(:signup_attempt_notice, owner.id)
 
     assert {:existing_account, _message} =
              Registration.register_user(params(owner.email), ClientIP.request_opts(%Plug.Conn{}))
 
     assert [] = notices()
+  end
+
+  test "a source over its own limit spends nothing of the owner's notice budget" do
+    owner = insert(:user)
+    attacker_ip = "203.0.113.171"
+
+    for _i <- 1..5, do: RateLimiter.check(:verification_ip, attacker_ip)
+
+    for _i <- 1..6 do
+      assert :rate_limited = Registration.answer_taken_address(owner, attacker_ip)
+    end
+
+    assert [] = notices()
+
+    assert :sent = Registration.answer_taken_address(owner, "203.0.113.172")
+    assert [_notice] = notices()
   end
 
   test "a concurrent sign-up that wins the unique index is answered as a duplicate" do
@@ -145,7 +161,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
     # refuses it.
     defp remaining_resends(ip_string) do
       Enum.count(1..10, fn _i ->
-        RateLimiter.check_verification_ip_rate_limit(ip_string) == :ok
+        RateLimiter.check(:verification_ip, ip_string) == :ok
       end)
     end
 
@@ -165,7 +181,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
     test "with the allowance used up, a free address is answered like a taken one" do
       owner = insert(:user)
       conn = conn_from({198, 51, 100, 33})
-      for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit("198.51.100.33")
+      for _i <- 1..5, do: RateLimiter.check(:verification_ip, "198.51.100.33")
 
       fresh = unique_email("fresh")
       assert {:ok, user, message} = Registration.register_user(params(fresh), conn)

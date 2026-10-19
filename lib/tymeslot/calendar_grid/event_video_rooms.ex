@@ -77,6 +77,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   alias Tymeslot.CalendarGrid.EventVideoRoomTimes
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -146,7 +147,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   """
   @spec rescheduled(map()) :: :ok
   def rescheduled(event) do
-    times = EventVideoRoomTimes.for_event(event)
+    times = event |> SeriesRules.with_series_start() |> EventVideoRoomTimes.for_event()
 
     event
     |> rooms_of_event()
@@ -469,7 +470,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
   defp insert(provider, room_id, event) do
     {lobby_opens_at, ends_at} =
-      event |> EventVideoRoomTimes.for_event() |> EventVideoRoomTimes.initial()
+      event
+      |> SeriesRules.with_series_start()
+      |> EventVideoRoomTimes.for_event()
+      |> EventVideoRoomTimes.initial()
 
     attrs = %{
       user_id: event.user_id,

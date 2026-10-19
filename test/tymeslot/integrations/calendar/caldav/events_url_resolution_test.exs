@@ -17,7 +17,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsUrlResolutionTest do
     username: "user",
     password: "pass",
     calendar_paths: ["/calendars/user/personal/"],
-    verify_ssl: true,
     provider: :caldav
   }
 

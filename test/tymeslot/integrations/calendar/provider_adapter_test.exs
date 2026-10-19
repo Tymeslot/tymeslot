@@ -173,8 +173,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
       # EWS is not CalDAV, so no CalDAV client is built for it. What pins that
       # is the mailbox address: `provider_account_email` is the one field the
       # CalDAV branch's config does not carry, so adding :exchange to
-      # @caldav_based_providers makes this raise. `base_url` and `verify_ssl`
-      # survive that branch and would keep a test written on them green.
+      # @caldav_based_providers makes this raise. `base_url`
+      # survives that branch and would keep a test written on it green.
       assert [config] =
                Tymeslot.Integrations.Calendar.Exchange.Provider.build_client_configs(
                  adapter_client.client

@@ -288,7 +288,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
     test "clicking the day the step opened on keeps it selected and keeps its times",
          %{conn: conn, profile: profile} do
       # "2" is Rhythm, whose day button carried the toggle.
-      {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+      {:ok, profile} = Profiles.update_booking_theme(profile, "2")
 
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 
@@ -342,7 +342,7 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       # map, whose display range leads with the month just left — aligning onto
       # a day from that leading row walks the week strip backwards while the
       # booker is pressing "next".
-      {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+      {:ok, profile} = Profiles.update_booking_theme(profile, "2")
 
       {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
 

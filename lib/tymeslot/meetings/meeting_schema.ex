@@ -4,6 +4,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   video conferencing, and meeting lifecycle management.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -13,6 +14,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
+
+  @unique_slot_constraint :unique_confirmed_meeting_per_organizer_at_time
 
   @type t :: %__MODULE__{
           id: binary() | nil,
@@ -87,6 +90,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           provider_event_id: String.t() | nil,
           ical_sequence: integer(),
           last_notified_state: map(),
+          notified_end_time: DateTime.t() | nil,
+          seen_calendar_end_time: DateTime.t() | nil,
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
           show_as_free: boolean(),
@@ -198,7 +203,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:attendee_timezone, :string)
     field(:attendee_locale, :string, default: "en")
 
-    # URLs and links
+    # URLs and links. `view_url`, `reschedule_url` and `cancel_url` are a copy
+    # taken at booking time and go stale when the host's username or the base
+    # URL changes; links shown to anyone come from
+    # `Tymeslot.Bookings.MeetingLinks.for_meeting/1`.
     field(:view_url, :string)
     field(:reschedule_url, :string)
     field(:cancel_url, :string)
@@ -282,6 +290,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Attendee notification tracking
     field(:ical_sequence, :integer, default: 0)
     field(:last_notified_state, :map, default: %{})
+
+    # The end the booker was last told by an end change notice, or held before
+    # a change not yet announced; nil when it knows the meeting as booked or
+    # last rescheduled. Written only by the end change and reschedule paths.
+    field(:notified_end_time, :utc_datetime)
+    # The calendar end at the last sync in step (`Calendar.TimingChange`); own end on insert.
+    field(:seen_calendar_end_time, :utc_datetime)
 
     # Custom booking fields
     field(:custom_fields_snapshot, {:array, :map}, default: [])
@@ -480,10 +495,18 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> put_change(:status, "confirmed")
   end
 
-  @status_transition_fields [:status, :cancelled_at, :cancellation_reason]
+  @status_transition_fields [
+    :status,
+    :cancelled_at,
+    :cancellation_reason,
+    :approval_requested_at,
+    :approval_deadline_at
+  ]
 
   @doc """
-  Changeset for a bare status transition (cancel, external auto-cancel).
+  Changeset for a bare status transition (cancel, external auto-cancel, a
+  completed payment confirming its booking or moving it into the approval
+  gate).
 
   Deliberately narrower than `changeset/2`: it casts and validates only the
   fields a status transition ever touches, so it works identically for solo
@@ -498,19 +521,28 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     meeting
     |> cast(attrs, @status_transition_fields)
     |> validate_inclusion(:status, @valid_statuses)
+    |> unique_constraint([:organizer_user_id, :start_time],
+      name: @unique_slot_constraint,
+      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
+    )
   end
 
   defp base_changeset(meeting, attrs, required_fields) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> ensure_calendar_uid()
+    |> ensure_seen_calendar_end()
     |> validate_required([:calendar_uid | required_fields])
-    |> EmailChangeset.validate_email(:organizer_email)
+    # Every writer copies `organizer_email` from the host's stored account (or
+    # the operator's configured fallback), never from a form, so it is held
+    # only to presence and length: an account whose address predates the
+    # current format rules must still be able to take bookings.
+    |> EmailChangeset.validate_email(:organizer_email, existing: true)
     |> EmailChangeset.validate_email(:attendee_email)
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_required([:attendee_locale])
     |> validate_inclusion(:attendee_locale, supported_locale_codes(),
-      message: "is not a supported locale"
+      message: dgettext_noop("errors", "is not a supported locale")
     )
     |> validate_number(:capacity, greater_than: 0)
     |> TimeOrder.validate_time_order(:start_time, :end_time)
@@ -530,8 +562,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> unique_constraint(:uid)
     |> unique_constraint(:calendar_uid)
     |> unique_constraint([:organizer_user_id, :start_time],
-      name: :unique_confirmed_meeting_per_organizer_at_time,
-      message: "You already have a confirmed meeting at this time."
+      name: @unique_slot_constraint,
+      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
     )
     |> check_constraint(:end_time, name: :meetings_end_after_start)
     |> foreign_key_constraint(:venue_id)
@@ -551,6 +583,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     end
   end
 
+  defp ensure_seen_calendar_end(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs),
+    do: put_change(cs, :seen_calendar_end_time, get_field(cs, :end_time))
+
+  defp ensure_seen_calendar_end(changeset), do: changeset
+
   defp calculate_duration(changeset) do
     # Only calculate duration if not provided
     if get_change(changeset, :duration) do
@@ -566,6 +603,23 @@ defmodule Tymeslot.Meetings.MeetingSchema do
         changeset
       end
     end
+  end
+
+  @doc """
+  True when a changeset's error is a violation of the organiser's unique
+  slot index, `(organizer_user_id, start_time)` over the rows that hold a
+  slot: a lost race for the slot against a writer that committed first, not
+  invalid input.
+
+  Group seat booking retries on it by joining the winner's meeting, and the
+  booking flow answers it as the slot being taken.
+  """
+  @spec unique_slot_violation?(Ecto.Changeset.t()) :: boolean()
+  def unique_slot_violation?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn {_field, {_message, error_opts}} ->
+      error_opts[:constraint] == :unique and
+        to_string(error_opts[:constraint_name] || "") == Atom.to_string(@unique_slot_constraint)
+    end)
   end
 
   @doc """

@@ -33,6 +33,8 @@ defmodule Tymeslot.Integrations.Calendar.NextcloudIntegrationTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Nextcloud.Provider, as: NextcloudProvider
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -55,7 +57,7 @@ defmodule Tymeslot.Integrations.Calendar.NextcloudIntegrationTest do
     # cascades into spurious failures for every shape that runs after it, and
     # the suite's result depends on the seed rather than on the code.
     CalendarCircuitBreaker.reset(:nextcloud)
-    CalendarCircuitBreaker.reset_all_hosts()
+    ProviderBreakers.reset_all_hosts()
     :ok
   end
 

@@ -17,6 +17,7 @@ defmodule Tymeslot.Infrastructure.PinnedRequestPoolTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Plug.Conn
+  alias Tymeslot.Infrastructure.FinchPool.Janitor
   alias Tymeslot.Infrastructure.HTTPClient
 
   defmodule EchoHostPlug do
@@ -80,6 +81,25 @@ defmodule Tymeslot.Infrastructure.PinnedRequestPoolTest do
     # The request went to a tagged pool on the shared instance instead.
     assert [tag] = shared_pool_tags(port)
     assert tag =~ ~r/^[0-9a-f]{32}$/
+  end
+
+  test "lease the pool for the request and return it afterwards", %{port: port} do
+    url = "http://127.0.0.1:#{port}/echo"
+
+    assert {:ok, %Req.Response{status: 200}} =
+             HTTPClient.get(url, [], connect_options: [hostname: "localhost"])
+
+    # The janitor tracks the pool the request used, and no lease outlives it,
+    # so the pool is free to be stopped once idle.
+    assert [{pool, %{leases: leases}}] = janitor_pools(port)
+    assert pool.tag in shared_pool_tags(port)
+    assert MapSet.size(leases) == 0
+  end
+
+  # `release/2` is a cast; the state call queues behind it.
+  defp janitor_pools(port) do
+    %{pools: pools} = :sys.get_state(Janitor)
+    Enum.filter(pools, fn {pool, _entry} -> match?(%{host: "127.0.0.1", port: ^port}, pool) end)
   end
 
   defp req_managed_instances do

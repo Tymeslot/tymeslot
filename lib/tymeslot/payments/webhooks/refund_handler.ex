@@ -2,8 +2,15 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @moduledoc """
   Handles Stripe refund webhook events.
 
-  CRITICAL: This handler protects revenue by revoking Pro access when refunds are issued.
-  Without this handler, users could receive refunds while keeping Pro access indefinitely.
+  CRITICAL: a full refund must end the subscription it paid for, or the user
+  keeps Pro access and is billed again. This handler decides whether a refund
+  revokes access and hands that decision, with the invoice the refunded
+  charge paid and the subscription that invoice billed (read from Stripe
+  when not recorded here), to the configured payment-event handler, which is
+  the one place access is revoked (cancelling the subscription at Stripe as
+  well as locally). A handler failure, or a Stripe lookup failure, fails the
+  delivery, so Stripe redelivers the refund. The handler itself then tells
+  the user.
 
   ## Partial Refund Handling
 
@@ -22,45 +29,38 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   - charge.refund.updated: Refund status changed
   """
 
-  use Tymeslot.Payments.Behaviours.WebhookHandler
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
-  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
+  alias Tymeslot.Payments.ChargeInvoice
+  alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.PubSub
+  alias Tymeslot.Payments.SubscriptionInvoices
   alias Tymeslot.Payments.Webhooks.WebhookUtils
   alias Tymeslot.Utils.MapKeys
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def can_handle?(event_type) when event_type in ["charge.refunded", "charge.refund.updated"] do
-    true
-  end
+  # Stripe statuses of a subscription that still exists and bills, or can
+  # resume billing. A refund only revokes one of these: an incomplete or
+  # paused subscription has nothing to revoke.
+  @live_subscription_statuses ~w(active trialing past_due unpaid)
 
-  def can_handle?(_event_type), do: false
+  @impl WebhookHandler
+  def handle(
+        %{"type" => "charge.refunded", "data" => %{"object" => %{"id" => _id} = charge}} = event
+      ),
+      do: handle_refunded(event, charge)
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def process(%{"type" => "charge.refunded"} = event, charge) do
-    handle_refunded(event, charge)
-  end
+  def handle(
+        %{"type" => "charge.refund.updated", "data" => %{"object" => %{"id" => _id} = refund}} =
+          event
+      ),
+      do: handle_refund_updated(event, refund)
 
-  def process(%{"type" => "charge.refund.updated"} = event, refund) do
-    handle_refund_updated(event, refund)
-  end
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def validate(refund_object) when is_map(refund_object) do
-    required_fields = ["id"]
-
-    if Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
-      :ok
-    else
-      {:error, :missing_fields, "Missing required fields in refund object"}
-    end
-  end
-
-  def validate(_event), do: {:error, :invalid_structure, "Invalid refund object"}
+  def handle(_event), do: {:error, :permanent, :missing_fields}
 
   # Private functions
 
@@ -84,16 +84,74 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       stripe_event_id: event["id"]
     )
 
-    # Broadcast event for SaaS to handle subscription revocation
-    PubSub.broadcast_payment_event(:charge_refunded, %{
-      event_id: event["id"],
+    case paid_for(charge, should_revoke) do
+      {:ok, %{invoice_id: invoice_id, subscription_id: subscription_id}} ->
+        hand_off_refund(event, charge, %{
+          charge_id: charge_id,
+          customer_id: customer_id,
+          invoice_id: invoice_id,
+          subscription_id: subscription_id,
+          total_refunded: total_refunded,
+          charge_amount: charge_amount,
+          should_revoke: should_revoke
+        })
+
+      {:error, reason} ->
+        {:error, :retry_later, reason}
+    end
+  end
+
+  # The invoice the refunded charge paid and the subscription it billed. A
+  # refund that revokes access needs the subscription for certain, so it is
+  # read from Stripe whenever the charge or the recorded invoices do not
+  # say: an invoice recorded before invoices were kept here, or a charge
+  # rendered at an API version that no longer names its invoice. Without a
+  # subscription manager there is no subscription to revoke, and a refund
+  # below the threshold revokes nothing, so both settle for what is known
+  # locally.
+  defp paid_for(charge, true = _should_revoke) do
+    if Config.subscription_manager(),
+      do: ChargeInvoice.for_charge(charge),
+      else: paid_for(charge, false)
+  end
+
+  defp paid_for(charge, false = _should_revoke) do
+    invoice_id = charge["invoice"]
+
+    {:ok,
+     %{
+       invoice_id: invoice_id,
+       subscription_id: SubscriptionInvoices.subscription_id_for_invoice(invoice_id)
+     }}
+  end
+
+  defp hand_off_refund(event, charge, refund) do
+    # Hand the refund to the configured payment-event handler first: if it
+    # fails, nothing below has run yet and Stripe redelivers the event. The
+    # subscription the charge paid for lets the handler revoke that
+    # subscription rather than whichever one the customer holds now.
+    payment_event =
+      refund
+      |> Map.put(:event_id, event["id"])
+      |> Map.put(
+        :refund_percentage,
+        calculate_refund_percentage(refund.total_refunded, refund.charge_amount)
+      )
+
+    case PubSub.hand_off_payment_event(:charge_refunded, payment_event) do
+      :ok -> handle_refunded_locally(charge, refund)
+      {:error, reason} -> {:error, :retry_later, {:hand_off_failed, reason}}
+    end
+  end
+
+  defp handle_refunded_locally(charge, refund) do
+    %{
       charge_id: charge_id,
       customer_id: customer_id,
       total_refunded: total_refunded,
       charge_amount: charge_amount,
-      refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
       should_revoke: should_revoke
-    })
+    } = refund
 
     # Find the subscription by Stripe customer ID for local notifications
     case CustomerLookup.get_subscription_by_customer_id(customer_id) do
@@ -118,53 +176,57 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         {:ok, :refund_logged}
 
       subscription ->
-        result =
-          if should_revoke do
-            ensure_revoked_access(
-              subscription,
-              charge_id,
-              customer_id,
-              total_refunded,
-              charge_amount
-            )
-          else
-            Logger.info("Refund below threshold - not revoking access",
-              user_id: subscription.user_id,
-              charge_id: charge_id,
-              total_refunded: total_refunded,
-              charge_amount: charge_amount,
-              refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
-              threshold: refund_revocation_threshold_percent()
-            )
+        # Revoking access is the payment-event handler's job: it received
+        # this refund, with the decision, above, and has not acted on it
+        # yet. Here the user is told, and told access ends only when the
+        # refund is for the subscription they hold now.
+        revoked = should_revoke and refunds_current_subscription?(refund, subscription)
 
-            :ok
-          end
-
-        case result do
-          :ok ->
-            # Alert admin about processed refund
-            AdminAlerts.report(:refund_processed,
-              summary: "Refund processed for subscription",
-              context: %{
-                user_id: subscription.user_id,
-                charge_id: charge_id,
-                total_refunded: total_refunded,
-                charge_amount: charge_amount,
-                access_revoked: should_revoke
-              }
-            )
-
-            # Send email notification to user, quoting the amount of THIS
-            # refund rather than the cumulative total across the charge.
-            latest_refund_amount = calculate_latest_refund_amount(charge)
-            send_refund_email(subscription, latest_refund_amount, should_revoke, charge)
-
-            {:ok, :refund_processed}
-
-          error ->
-            error
+        if !should_revoke do
+          Logger.info("Refund below threshold - not revoking access",
+            user_id: subscription.user_id,
+            charge_id: charge_id,
+            total_refunded: total_refunded,
+            charge_amount: charge_amount,
+            refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
+            threshold: refund_revocation_threshold_percent()
+          )
         end
+
+        # Alert admin about processed refund
+        AdminAlerts.report(:refund_processed,
+          summary: "Refund processed for subscription",
+          context: %{
+            user_id: subscription.user_id,
+            charge_id: charge_id,
+            total_refunded: total_refunded,
+            charge_amount: charge_amount,
+            access_revoked: revoked
+          }
+        )
+
+        # Send email notification to user, quoting the amount of THIS
+        # refund rather than the cumulative total across the charge.
+        latest_refund_amount = calculate_latest_refund_amount(charge)
+        send_refund_email(subscription, latest_refund_amount, revoked, charge)
+
+        {:ok, :refund_processed}
     end
+  end
+
+  # Whether the refunded charge paid for the subscription the customer holds
+  # now, and that subscription is still live. A charge whose invoice billed
+  # no subscription (or that paid no invoice) refunds none; one whose
+  # invoice billed a different subscription paid for an earlier one, and
+  # the customer keeps the subscription they hold now.
+  # Made public for testing purposes but should be considered internal API.
+  @doc false
+  @spec refunds_current_subscription?(map(), map()) :: boolean()
+  def refunds_current_subscription?(%{subscription_id: nil}, _subscription), do: false
+
+  def refunds_current_subscription?(%{subscription_id: subscription_id}, subscription) do
+    Map.get(subscription, :status) in @live_subscription_statuses and
+      subscription_id == Map.get(subscription, :stripe_subscription_id)
   end
 
   defp handle_refund_updated(_event, refund) do
@@ -287,53 +349,5 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       error_msg: "Failed to send refund notification: ",
       standalone_msg: "Refund processed template not configured (Standalone mode)"
     )
-  end
-
-  defp revoke_subscription_access(stripe_customer_id) do
-    manager = subscription_manager()
-
-    if manager && Code.ensure_loaded?(manager) do
-      manager.update_subscription_status(stripe_customer_id, "canceled", DateTime.utc_now())
-    else
-      {:error, :subscription_manager_unavailable,
-       "Subscription manager not configured - cannot revoke access"}
-    end
-  end
-
-  defp subscription_manager do
-    Application.get_env(:tymeslot, :subscription_manager)
-  end
-
-  defp ensure_revoked_access(subscription, charge_id, customer_id, total_refunded, charge_amount) do
-    case revoke_subscription_access(customer_id) do
-      {:ok, _result} ->
-        Logger.info("Refund processed - access revoked",
-          user_id: subscription.user_id,
-          charge_id: charge_id,
-          customer_id: customer_id,
-          total_refunded: total_refunded,
-          charge_amount: charge_amount,
-          refund_percentage: calculate_refund_percentage(total_refunded, charge_amount)
-        )
-
-        :ok
-
-      {:error, :subscription_manager_unavailable, _message} ->
-        Logger.info("REFUND SKIPPED - Subscription manager not configured",
-          charge_id: charge_id,
-          customer_id: customer_id
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Refund error - failed to revoke access",
-          user_id: subscription.user_id,
-          charge_id: charge_id,
-          error: LogFormat.reason(reason)
-        )
-
-        {:error, :retry_later, "Subscription revocation failed"}
-    end
   end
 end

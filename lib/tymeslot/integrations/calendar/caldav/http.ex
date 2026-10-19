@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.ResponseTooLargeError
-  alias Tymeslot.Infrastructure.RetryLogic
+  alias Tymeslot.Infrastructure.Retry
   # Aliased as CalDAVBase to avoid shadowing Elixir's built-in Base module,
   # which is referenced by name in build_headers/3 for Base64 encoding.
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
@@ -44,25 +44,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     # sentinel elsewhere (it deletes calendar paths and local rows).
     405 => :method_not_allowed,
     408 => :timeout,
-    429 => :rate_limited
+    429 => :rate_limited,
+    # The shapes of a server that is down rather than one failing this
+    # request: a reverse proxy in front of a dead backend, or a server in
+    # maintenance mode. Kept apart from `:server_error` because the offline
+    # queue reads the difference (see `CalDAV.OfflineQueue`); every other
+    # caller treats the two alike.
+    502 => :service_unavailable,
+    503 => :service_unavailable,
+    504 => :service_unavailable
   }
 
   @doc """
   Performs a PROPFIND request with configurable retry logic.
 
-  Defaults to 2 retries for discovery operations. Pass `max_retries: 0` to
-  disable. The `:body` option overrides the default propfind XML payload;
+  Defaults to 3 attempts for discovery operations. Pass `max_attempts: 1` to
+  disable retrying. The `:body` option overrides the default propfind XML payload;
   `:depth` sets the WebDAV Depth header (default `"1"`).
   """
   @spec propfind(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def propfind(url, username, password, opts \\ []) do
     retry_opts =
-      CalDAVBase.default_retry_opts()
-      |> Keyword.merge(max_retries: Keyword.get(opts, :max_retries, 2))
+      [max_attempts: Keyword.get(opts, :max_attempts, 3)]
       |> Keyword.merge(Keyword.get(opts, :retry_opts, []))
+      |> then(&CalDAVBase.retry_opts(retry_opts: &1))
 
-    RetryLogic.with_retry(
+    Retry.with_backoff(
       fn -> do_propfind(url, username, password, opts) end,
       retry_opts
     )
@@ -102,6 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       authed_request("PROPFIND", url, username, password, extra_headers, fn headers ->
         Config.http_client_module().request(:propfind, url, body, headers,
           receive_timeout: timeout,
+          max_response_bytes: CalDAVBase.max_propfind_bytes(),
           ssrf_protect: true
         )
       end)

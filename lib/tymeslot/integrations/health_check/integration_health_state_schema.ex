@@ -33,6 +33,10 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
           updated_at: DateTime.t() | nil
         }
 
+  # How often a healthy integration is probed, and the backoff a new or
+  # recovered integration starts at.
+  @check_interval_ms :timer.minutes(30)
+
   schema "integration_health_states" do
     field(:integration_type, :string)
     field(:integration_id, :integer)
@@ -42,7 +46,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
     field(:consecutive_hard_failures, :integer, default: 0)
     field(:consecutive_sync_failures, :integer, default: 0)
     field(:successes, :integer, default: 0)
-    field(:backoff_ms, :integer, default: 1_800_000)
+    field(:backoff_ms, :integer, default: @check_interval_ms)
     field(:last_check_at, :utc_datetime_usec)
     field(:last_error_class, :string)
     field(:became_unhealthy_at, :utc_datetime_usec)
@@ -50,6 +54,10 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc "How often a healthy integration is probed, in milliseconds."
+  @spec check_interval_ms() :: pos_integer()
+  def check_interval_ms, do: @check_interval_ms
 
   # The canonical status set lives in `HealthCheck.HealthStatus`. The sole
   # runtime-derived writer (`Monitor.put_state/3`) writes through

@@ -8,7 +8,7 @@ defmodule Tymeslot.Bookings.ValidationTest do
 
   alias Tymeslot.Bookings.Validation
 
-  describe "check_slot_availability/4" do
+  describe "check_slot_availability/5" do
     test "detects conflict with a normal DateTime event" do
       events = [
         %{start_time: ~U[2026-04-07 10:00:00Z], end_time: ~U[2026-04-07 11:00:00Z]}
@@ -19,7 +19,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -33,7 +34,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 11:10:00Z],
                  ~U[2026-04-07 11:40:00Z],
                  events,
-                 {15, 5}
+                 {15, 5},
+                 "Etc/UTC"
                )
 
       assert :ok =
@@ -41,7 +43,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 11:10:00Z],
                  ~U[2026-04-07 11:40:00Z],
                  events,
-                 {5, 15}
+                 {5, 15},
+                 "Etc/UTC"
                )
 
       # Ends ten minutes before the event starts: the mirror image.
@@ -50,7 +53,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 09:20:00Z],
                  ~U[2026-04-07 09:50:00Z],
                  events,
-                 {5, 15}
+                 {5, 15},
+                 "Etc/UTC"
                )
 
       assert :ok =
@@ -58,7 +62,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 09:20:00Z],
                  ~U[2026-04-07 09:50:00Z],
                  events,
-                 {15, 5}
+                 {15, 5},
+                 "Etc/UTC"
                )
     end
 
@@ -72,7 +77,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 12:00:00Z],
                  ~U[2026-04-07 13:00:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -87,7 +93,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:00:00Z],
                  ~U[2026-04-07 11:00:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -96,13 +103,39 @@ defmodule Tymeslot.Bookings.ValidationTest do
         %{start_time: ~D[2026-04-07], end_time: nil}
       ]
 
-      # nil end_time should be normalised to start + 30 minutes (00:00 to 00:30 UTC)
+      # A date-only start with no end blocks its whole day (RFC 5545)
       assert {:error, :slot_unavailable} =
                Validation.check_slot_availability(
                  ~U[2026-04-07 00:15:00Z],
                  ~U[2026-04-07 00:45:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
+               )
+    end
+
+    test "anchors an all-day event at midnight in the owner's timezone" do
+      # 7 April in Sydney (AEST, +10:00) runs 6 April 14:00Z to 7 April 14:00Z.
+      events = [%{start_time: ~D[2026-04-07], end_time: ~D[2026-04-08], all_day: true}]
+
+      # 09:00 on 8 April in Sydney: after the host's day, inside the UTC one.
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 23:00:00Z],
+                 ~U[2026-04-07 23:30:00Z],
+                 events,
+                 {0, 0},
+                 "Australia/Sydney"
+               )
+
+      # 09:00 on 7 April in Sydney: inside the host's day, before the UTC one.
+      assert {:error, :slot_unavailable} =
+               Validation.check_slot_availability(
+                 ~U[2026-04-06 23:00:00Z],
+                 ~U[2026-04-06 23:30:00Z],
+                 events,
+                 {0, 0},
+                 "Australia/Sydney"
                )
     end
 
@@ -116,7 +149,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-08 10:00:00Z],
                  ~U[2026-04-08 11:00:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -132,7 +166,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 14:30:00Z],
                  ~U[2026-04-07 15:30:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -148,7 +183,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-06 23:50:00Z],
                  ~U[2026-04-07 00:20:00Z],
                  events,
-                 {15, 15}
+                 {15, 15},
+                 "Etc/UTC"
                )
     end
 
@@ -167,7 +203,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -186,7 +223,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -205,7 +243,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -227,7 +266,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-29 14:00:00Z],
                  ~U[2026-04-29 15:00:00Z],
                  events,
-                 {15, 15}
+                 {15, 15},
+                 "Etc/UTC"
                )
     end
 
@@ -246,7 +286,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-29 14:00:00Z],
                  ~U[2026-04-29 15:00:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -272,7 +313,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:00:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
 
       # 14:30 slot overlaps the opaque event — still blocked
@@ -281,7 +323,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 14:30:00Z],
                  ~U[2026-04-07 15:30:00Z],
                  events,
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
 
@@ -310,7 +353,8 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  ~U[2026-04-07 10:30:00Z],
                  ~U[2026-04-07 11:30:00Z],
                  [transparent_event],
-                 {0, 0}
+                 {0, 0},
+                 "Etc/UTC"
                )
     end
   end
@@ -351,8 +395,18 @@ defmodule Tymeslot.Bookings.ValidationTest do
       assert DateTime.diff(end_datetime, start_datetime, :minute) == 30
     end
 
+    test "refuses a duration it cannot read instead of booking 30 minutes" do
+      assert {:error, :invalid_datetime} =
+               Validation.parse_meeting_times("2025-06-15", "10:00", "soon", "Europe/Berlin")
+
+      assert {:ok, {start_datetime, end_datetime}} =
+               Validation.parse_meeting_times("2025-06-15", "10:00", "45min", "Europe/Berlin")
+
+      assert DateTime.diff(end_datetime, start_datetime, :minute) == 45
+    end
+
     test "still rejects an unknown timezone" do
-      assert {:error, "Invalid date or time format"} =
+      assert {:error, :invalid_datetime} =
                Validation.parse_meeting_times("2025-06-15", "10:00", 30, "Not/AZone")
     end
   end

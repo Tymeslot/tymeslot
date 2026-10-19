@@ -4,10 +4,8 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   require Logger
 
   alias Tymeslot.Emails.Delivery
-  alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Emails.Shared.MjmlEmail
+  alias Tymeslot.Emails.HostClock
   alias Tymeslot.Infrastructure.AdminAlerts
-  alias Tymeslot.Profiles
 
   alias Tymeslot.Emails.Templates.{
     CalendarInvitation,
@@ -17,18 +15,13 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
     RescheduleRequest
   }
 
-  alias Swoosh.Email
-
-  use Gettext, backend: TymeslotWeb.Gettext
-
   @doc """
   Sends a calendar sync error notification to the calendar owner.
   This is only sent when calendar event creation fails after all retries.
   """
   @spec send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
   def send_calendar_sync_error(meeting, error_reason) do
-    owner_email =
-      meeting.organizer_email || Application.get_env(:tymeslot, :email)[:from_email]
+    owner_email = CalendarSyncError.recipient_email(meeting)
 
     Logger.info("Sending calendar sync error notification",
       meeting_id: meeting.id,
@@ -45,16 +38,11 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
       }
     )
 
-    RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
-      {html_body, text_body} = CalendarSyncError.render_both(meeting, error_reason)
-
-      MjmlEmail.base_email()
-      |> Email.to({meeting.organizer_name || dgettext("emails", "Calendar Owner"), owner_email})
-      |> Email.subject(dgettext("emails", "⚠️ Calendar Sync Error - Manual Action Required"))
-      |> Email.html_body(html_body)
-      |> Email.text_body(text_body)
-      |> Delivery.deliver()
-    end)
+    # The operator is alerted before the email is rendered, so a template
+    # that fails to render cannot swallow the alert.
+    meeting
+    |> CalendarSyncError.render(error_reason)
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -72,7 +60,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
       discrepancy: discrepancy
     )
 
-    owner_timezone = resolve_owner_timezone(meeting)
+    owner_timezone = HostClock.timezone(meeting)
 
     result =
       Delivery.deliver(
@@ -85,6 +73,26 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
     )
 
     result
+  end
+
+  @doc """
+  Tells an organiser that a meeting now ends where they moved its end in their
+  own calendar, and who was emailed the new end. `notice` carries the end it
+  had before (`:previous_end_time`), the names of the attendees reached
+  (`:attendees`) and how many guests were (`:guests`).
+  """
+  @spec send_end_change_to_organizer(map(), String.t(), ExternalBookingChange.end_notice()) ::
+          {:ok, any()} | {:error, any()}
+  def send_end_change_to_organizer(meeting, organizer_email, notice) do
+    Logger.info("Sending external end change notice", meeting_id: meeting.id)
+
+    meeting
+    |> ExternalBookingChange.render_end_followed(
+      organizer_email,
+      notice,
+      HostClock.timezone(meeting)
+    )
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -121,8 +129,4 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
     email = RescheduleRequest.render(meeting)
     Delivery.deliver(email)
   end
-
-  defp resolve_owner_timezone(%{organizer_user_id: nil}), do: Profiles.get_default_timezone()
-  defp resolve_owner_timezone(%{organizer_user_id: id}), do: Profiles.get_user_timezone(id)
-  defp resolve_owner_timezone(_meeting), do: Profiles.get_default_timezone()
 end

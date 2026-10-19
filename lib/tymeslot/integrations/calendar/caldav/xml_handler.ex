@@ -1,20 +1,20 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ICalParser
+  alias Tymeslot.Integrations.Calendar.Utils.SafeXml
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
   @moduledoc """
-  Secure XML parsing and building for CalDAV operations using SweetXML.
+  Secure XML parsing and building for CalDAV operations.
 
-  This module provides secure XML handling with:
-  - Protection against XML bombs and entity expansion attacks
-  - Proper namespace handling
-  - XPath-based parsing for reliability
-  - Schema validation
+  Responses are parsed through `Utils.SafeXml`, which refuses DTDs (so no
+  entity expansion) and keeps every name a binary, so a hostile server cannot
+  grow the atom table. Values are read with namespace-agnostic xpaths.
   """
 
-  import SweetXml
+  import SweetXml, only: [sigil_x: 2, transform_by: 2]
   require Logger
 
   @typedoc "A parsed CalDAV event returned by `parse_calendar_query/1`."
@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           required(:start_time) => DateTime.t() | Date.t(),
           required(:end_time) => DateTime.t() | Date.t() | nil,
           required(:transparency) => String.t() | nil,
-          required(:raw_ical) => String.t()
+          required(:raw_ical) => String.t() | nil
         }
 
   @doc """
@@ -115,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   end
 
   @doc """
-  Parses a calendar discovery response using SweetXML.
+  Parses a calendar discovery response.
 
   Returns the discovered calendars as `CalendarEntry` structs, produced at
   this discovery boundary so every downstream caller reads a single
@@ -125,13 +125,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           {:ok, [CalendarEntry.t()]} | {:error, String.t()}
   def parse_calendar_discovery(xml_body, opts \\ []) do
     # Parse with security limits
-    doc = parse_with_security(xml_body)
+    doc = parse_with_security(xml_body, CalDAVBase.max_propfind_bytes())
 
     # Use namespace-agnostic approach for better compatibility
     # Different CalDAV servers use different namespace prefixes (C: vs c: vs cal:)
     calendars =
       doc
-      |> xpath(
+      |> SafeXml.xpath(
         ~x"//*[local-name()='response']"l,
         href: ~x"./*[local-name()='href']/text()"s,
         displayname: ~x".//*[local-name()='displayname']/text()"s,
@@ -162,6 +162,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           transform_by(
             ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']/*[local-name()='write' or local-name()='all' or local-name()='write-content' or local-name()='bind']",
             &(&1 != nil)
+          ),
+        # `DAV:read`, or the `DAV:all` aggregate holding it. A collection
+        # shared for free/busy only (`CALDAV:read-free-busy`) answers the
+        # calendar-query REPORT the sync and availability send with 403.
+        has_read_privilege:
+          transform_by(
+            ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']/*[local-name()='read' or local-name()='all']",
+            &(&1 != nil)
+          ),
+        # `CALDAV:read-free-busy` alone: the calendar answers the RFC 4791
+        # free-busy-query REPORT with its busy periods and nothing else.
+        has_free_busy_privilege:
+          transform_by(
+            ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']/*[local-name()='read-free-busy']",
+            &(&1 != nil)
           )
       )
       |> Enum.filter(&include_calendar?/1)
@@ -172,7 +187,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           path: cal.href,
           color: cal.calendar_color,
           selected: Keyword.get(opts, :selected_default, false),
-          read_only: read_only?(cal)
+          read_only: read_only?(cal),
+          free_busy_only: free_busy_only?(cal)
         }
       end)
 
@@ -188,14 +204,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   """
   @spec parse_calendar_query(String.t()) :: {:ok, list(parsed_event())} | {:error, String.t()}
   def parse_calendar_query(xml_body) do
-    doc = parse_with_security(xml_body)
+    doc = parse_with_security(xml_body, CalDAVBase.max_report_bytes())
 
     # Use namespace-agnostic XPath throughout — CalDAV servers use many different
     # namespace prefixes (D:, d:, no prefix, C:, cal:, etc.). local-name() matching
     # is the only portable approach across all server implementations.
     events =
       doc
-      |> xpath(
+      |> SafeXml.xpath(
         ~x"//*[local-name()='response']"l,
         href: ~x"./*[local-name()='href']/text()"s,
         etag: ~x".//*[local-name()='getetag']/text()"s,
@@ -243,10 +259,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   """
   @spec parse_current_user_principal(String.t()) :: {:ok, String.t()} | {:error, term()}
   def parse_current_user_principal(xml_body) do
-    doc = parse_with_security(xml_body)
+    doc = parse_with_security(xml_body, CalDAVBase.max_propfind_bytes())
 
     href =
-      xpath(
+      SafeXml.xpath(
         doc,
         ~x"//*[local-name()='current-user-principal']/*[local-name()='href']/text()"s
       )
@@ -270,10 +286,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   """
   @spec parse_calendar_home_set(String.t()) :: {:ok, String.t()} | {:error, term()}
   def parse_calendar_home_set(xml_body) do
-    doc = parse_with_security(xml_body)
+    doc = parse_with_security(xml_body, CalDAVBase.max_propfind_bytes())
 
     href =
-      xpath(
+      SafeXml.xpath(
         doc,
         ~x"//*[local-name()='calendar-home-set']/*[local-name()='href']/text()"s
       )
@@ -300,11 +316,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   @spec parse_calendar_user_address_set(String.t()) ::
           {:ok, [String.t(), ...]} | {:error, term()}
   def parse_calendar_user_address_set(xml_body) do
-    doc = parse_with_security(xml_body)
+    doc = parse_with_security(xml_body, CalDAVBase.max_propfind_bytes())
 
     addresses =
       doc
-      |> xpath(~x"//*[local-name()='calendar-user-address-set']/*[local-name()='href']"l,
+      |> SafeXml.xpath(~x"//*[local-name()='calendar-user-address-set']/*[local-name()='href']"l,
         href: ~x"./text()"s,
         preferred: ~x"./@preferred"s
       )
@@ -331,21 +347,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
 
   # Private helper functions
 
-  defp parse_with_security(xml_string) do
-    # Validate XML size to prevent memory exhaustion
-    # 10MB limit
-    if byte_size(xml_string) > 10_000_000 do
-      raise "XML document too large"
+  defp parse_with_security(xml_string, max_bytes) do
+    # Defensive only: every body reaching these parsers was already capped in
+    # transit, a REPORT at `CalDAVBase.max_report_bytes/0` and a PROPFIND at
+    # `CalDAVBase.max_propfind_bytes/0`. One past its own budget came from a
+    # path that skipped the cap, and is refused like a malformed document
+    # rather than parsed.
+    if byte_size(xml_string) > max_bytes do
+      raise "XML parse failed: :too_large"
     end
 
-    # Parse with namespace awareness and XXE prevention options.
-    # xmerl (SweetXml's backend) signals fatal parse errors via Erlang :exit, not
-    # Elixir exceptions. Catch and re-raise as a RuntimeError so the rescue clauses
-    # in each public parser function can handle malformed XML uniformly.
-    try do
-      SweetXml.parse(xml_string, namespace_conformant: true, dtd: :none)
-    catch
-      :exit, reason -> raise "XML parse failed: #{inspect(reason)}"
+    # Raised rather than returned so the rescue clause in each public parser
+    # handles malformed XML uniformly. The reason never quotes the document.
+    case SafeXml.parse(xml_string) do
+      {:ok, doc} -> doc
+      {:error, reason} -> raise "XML parse failed: #{inspect(reason)}"
     end
   end
 
@@ -390,8 +406,26 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   defp build_prop_element(other),
     do: raise(ArgumentError, "unknown CalDAV property atom: #{inspect(other)}")
 
+  # A calendar whose reported privilege set grants none of read, write and
+  # read-free-busy cannot be read at all, so it is not offered. One granting
+  # read-free-busy alone is kept as free/busy only (`free_busy_only?/1`). A
+  # set listing write alone is taken as readable: a server is not known to
+  # grant one without the other, and leaving out a writable calendar would
+  # cost the organiser their booking calendar. Without a privilege set (most
+  # servers send none), readable is assumed.
+  defp include_calendar?(%{
+         has_privilege_set: true,
+         has_read_privilege: false,
+         has_write_privilege: false,
+         has_free_busy_privilege: false,
+         href: href
+       }) do
+    Logger.debug("CalDAV calendar excluded: privilege set grants no read access", href: href)
+    false
+  end
+
   # Keep only calendar collections that support VEVENT. When the server omits
-  # supported-calendar-component-set, accept the calendar by default — RFC 4791
+  # supported-calendar-component-set, accept the calendar by default: RFC 4791
   # treats VEVENT support as implied. Collections that explicitly declare
   # components without VEVENT are filtered out (e.g. mailbox.org's task-only
   # "Aufgaben" collection).
@@ -417,6 +451,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   # privileges at all (most do not) are treated as writable.
   defp read_only?(%{has_privilege_set: true, has_write_privilege: false}), do: true
   defp read_only?(_other), do: false
+
+  # Shared for free/busy only: the privilege set grants `read-free-busy` and
+  # neither read nor write. Such a calendar is read through the
+  # free-busy-query REPORT (`CalDAV.FreeBusy`), never synced, never written.
+  defp free_busy_only?(%{
+         has_privilege_set: true,
+         has_read_privilege: false,
+         has_write_privilege: false,
+         has_free_busy_privilege: true
+       }),
+       do: true
+
+  defp free_busy_only?(_other), do: false
 
   defp determine_calendar_name(%{displayname: displayname, href: _calendar_href})
        when displayname != "" do

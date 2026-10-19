@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NavigationTest do
         __changed__: %{},
         current_user: user,
         profile: profile,
+        user_timezone: profile.timezone,
         integrations: [],
         events: [],
         hidden_integration_ids: [],

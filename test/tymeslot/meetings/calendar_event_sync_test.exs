@@ -238,7 +238,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       {:ok, meeting} =
         MeetingQueries.update_meeting(meeting, %{provider_event_id: "replacement-event"})
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx, _opts -> :ok end)
 
       assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 2)
       assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "replacement-event"
@@ -256,7 +256,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx, _opts ->
         {:error, :connection_failed}
       end)
 
@@ -275,7 +275,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:error, :no_integration}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx, _opts -> :ok end)
 
       assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
       assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "replacement-event"
@@ -301,7 +301,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:ok, CreatedEvent.provider_minted("replacement-event")}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "replacement-event", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn "replacement-event", _ctx, _opts -> :ok end)
       expect(Tymeslot.CalendarMock, :update_event, fn "teams-event", _data, _ctx -> :ok end)
 
       assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
@@ -318,7 +318,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:ok, CreatedEvent.provider_minted("replacement-event")}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "replacement-event", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn "replacement-event", _ctx, _opts -> :ok end)
 
       assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
       assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "teams-event"
@@ -339,10 +339,10 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx, _opts -> :ok end)
       assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx, _opts ->
         {:error, :not_found}
       end)
 
@@ -377,7 +377,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.calendar_uid
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx, _opts -> :ok end)
 
       assert :ok = CalendarEventSync.delete(meeting.id, 1)
     end
@@ -393,7 +393,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
           status: "cancelled"
         })
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^provider_event_id, _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^provider_event_id, _ctx, _opts -> :ok end)
 
       assert :ok = CalendarEventSync.delete(meeting.id, 1)
     end
@@ -403,7 +403,9 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.calendar_uid
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx -> {:error, :not_found} end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx, _opts ->
+        {:error, :not_found}
+      end)
 
       assert :ok = CalendarEventSync.delete(meeting.id, 1)
     end
@@ -576,7 +578,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:ok, %{integration_id: meeting.calendar_integration_id, calendar_path: %{invalid: true}}}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "exact-provider-id", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn "exact-provider-id", _ctx, _opts -> :ok end)
 
       assert {:error, :calendar_mapping_persistence_failed} =
                CalendarEventSync.create(meeting.id, 1)
@@ -603,7 +605,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       # The provider event was created but the mapping write collides on the
       # calendar UID unique constraint. The orphaned provider event must be deleted so a
       # retry of `create` doesn't produce a duplicate.
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx, _opts -> :ok end)
 
       assert {:error, :calendar_mapping_persistence_failed} =
                CalendarEventSync.create(meeting.id, 1)
@@ -631,7 +633,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
       # Even if the compensating delete itself errors, the persistence error is
       # still surfaced for retry (best-effort compensation must not mask it).
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx, _opts ->
         {:error, :connection_failed}
       end)
 

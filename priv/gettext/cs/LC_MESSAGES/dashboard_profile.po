@@ -159,11 +159,6 @@ msgstr "Nahrání se nezdařilo."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr "Nahrání se nezdařilo: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Nahrávání…"
 
@@ -182,7 +177,7 @@ msgstr "vasejmeno"
 msgid "Unknown timezone"
 msgstr "Neznámé časové pásmo"
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Příliš mnoho pokusů o změnu uživatelského jména. Zkuste to prosím později."
@@ -274,3 +269,8 @@ msgstr "Toto uživatelské jméno je vyhrazené"
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
 msgstr "Smazat profilový obrázek"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Uživatelské jméno"

@@ -21,6 +21,9 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
   import Swoosh.Email
 
   alias Tymeslot.Bookings.BookingTitle
+  alias Tymeslot.Bookings.MeetingLinks
+
+  alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
     Formatting,
@@ -34,6 +37,8 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
     TimezoneHelper
   }
 
+  alias Tymeslot.Utils.DateTimeUtils
+
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
@@ -45,12 +50,13 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
 
   @spec render(Meeting.t(), keyword()) :: Swoosh.Email.t()
   def render(%Meeting{} = meeting, opts \\ []) do
-    locale = meeting.attendee_locale || "en"
+    locale = RecipientLocale.attendee_locale(meeting)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       # The stored title is in the organiser's language; the booker reads it in
-      # theirs.
-      meeting = %{meeting | title: BookingTitle.localise(meeting)}
+      # theirs. The links are built now, not read from the booking-time copy.
+      meeting =
+        %{MeetingLinks.with_current_links(meeting) | title: BookingTitle.localise(meeting)}
 
       kind = if rescheduled?(meeting), do: :reschedule, else: :booking
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
@@ -93,11 +99,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
       |> to({meeting.attendee_name, meeting.attendee_email})
       |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(meeting.organizer_name, meeting.organizer_email)
-      |> subject(
-        Sanitise.sanitize_for_header(
-          subject_line(kind, meeting, Formatting.format_date_short(attendee_time, locale))
-        )
-      )
+      |> subject(subject_line(kind, meeting, Formatting.format_date_short(attendee_time, locale)))
       |> html_body(html_body)
       |> text_body(text_body_for({meeting, kind}, details, previous, locale))
     end)
@@ -190,7 +192,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
         dgettext("emails_booking_requests", "Previously scheduled for %{time}.",
           time:
             previous
-            |> TimezoneHelper.convert_to_timezone(meeting.attendee_timezone || "UTC")
+            |> DateTimeUtils.convert_to_timezone(meeting.attendee_timezone || "UTC")
             |> Formatting.format_datetime(locale)
         )
 
@@ -207,8 +209,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
       duration: meeting.duration,
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
-      meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-      timezone: meeting.attendee_timezone || "UTC"
+      meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting")
     }
   end
 
@@ -225,7 +226,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
   defp waiting_sentence(%Meeting{} = meeting, locale) do
     deadline =
       meeting.approval_deadline_at
-      |> TimezoneHelper.convert_to_timezone(meeting.attendee_timezone || "UTC")
+      |> DateTimeUtils.convert_to_timezone(meeting.attendee_timezone || "UTC")
       |> Formatting.format_datetime(locale)
 
     dgettext("emails_booking_requests", "%{organizer} will reply by %{deadline} at the latest.",
@@ -234,15 +235,18 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
     )
   end
 
-  defp cancel_line(%Meeting{cancel_url: nil}), do: ""
-
   # The msgid carries no markup — the `<a>` is built here and passed in as
   # %{link}, so translators only ever see plain text and a placeholder, and
   # the href goes through the same URL validation every other link in these
   # templates gets before it reaches the sink.
   defp cancel_line(%Meeting{cancel_url: url}) do
-    safe_url = Sanitise.sanitize_url(url)
+    case Sanitise.sanitize_url(url) do
+      nil -> ""
+      safe_url -> withdraw_line(safe_url)
+    end
+  end
 
+  defp withdraw_line(safe_url) do
     link_text =
       Sanitise.sanitize_for_email(dgettext("emails_booking_requests", "withdraw your request"))
 
@@ -265,17 +269,13 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
     #{text_intro(meeting, kind)}
 
     #{dgettext("emails_booking_requests", "REQUESTED TIME:")}
-    #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
-    #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
-    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
+    #{TextBodyHelper.format_meeting_details(details, locale)}
     #{previous || ""}
 
     #{waiting_sentence(meeting, locale)}
 
     #{held_sentence(meeting, kind)}
-    #{if meeting.cancel_url, do: "\n" <> dgettext("emails_booking_requests", "Withdraw your request:") <> "\n" <> meeting.cancel_url, else: ""}
+    #{if Sanitise.safe_url?(meeting.cancel_url), do: "\n" <> dgettext("emails_booking_requests", "Withdraw your request:") <> "\n" <> meeting.cancel_url, else: ""}
     """
   end
 end

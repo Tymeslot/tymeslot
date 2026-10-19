@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_create_form(lv)
 
-      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, "Attendee email is required"}})
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :attendee_email_required}})
       html = render(lv)
 
       assert html =~ ~s(id="create-event-modal")

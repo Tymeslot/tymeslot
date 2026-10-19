@@ -106,6 +106,10 @@ msgstr "Podrobnosti chyby"
 msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
 msgstr "Tuto schůzku se nepodařilo přidat do vašeho kalendáře. Ve službě Tymeslot je schůzka úspěšně potvrzena a potvrzovací e-maily byly odeslány vám i účastníkovi. Do kalendáře si ji ale budete muset přidat ručně."
 
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
 msgid "Integration"
@@ -161,11 +165,6 @@ msgstr "Rezervace je v pořádku – jen si ji prosím přidejte do kalendáře
 msgid "This is an automated system notification. Please check your calendar sync settings if this issue persists."
 msgstr "Toto je automatické systémové upozornění. Pokud potíže přetrvávají, zkontrolujte prosím nastavení synchronizace kalendáře."
 
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
-msgstr "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{days} dní trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."
-
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Time:"
@@ -176,12 +175,356 @@ msgstr "Čas:"
 msgid "Video rooms not created"
 msgstr "Videomístnosti nebyly vytvořeny"
 
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
 msgid "What should I do?"
 msgstr "Co mám udělat?"
 
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
 msgid "What's happening?"
 msgstr "Co se děje?"
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} calendar is no longer on your calendar server"
+msgid_plural "%{count} calendars are no longer on your calendar server"
+msgstr[0] "%{count} kalendář už na vašem kalendářovém serveru není"
+msgstr[1] "%{count} kalendáře už na vašem kalendářovém serveru nejsou"
+msgstr[2] "%{count} kalendářů už na vašem kalendářovém serveru není"
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar no longer available"
+msgid_plural "Calendars no longer available"
+msgstr[0] "Kalendář už není dostupný"
+msgstr[1] "Kalendáře už nejsou dostupné"
+msgstr[2] "Kalendáře už nejsou dostupné"
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "If you removed it on purpose, there is nothing to do. If not, restore it on your calendar server, then select it again in your calendar settings."
+msgid_plural "If you removed them on purpose, there is nothing to do. If not, restore them on your calendar server, then select them again in your calendar settings."
+msgstr[0] "Pokud šlo o záměrné odstranění, nemusíte nic dělat. Pokud ne, obnovte kalendář na kalendářovém serveru a pak ho znovu vyberte v nastavení kalendáře."
+msgstr[1] "Pokud šlo o záměrné odstranění, nemusíte nic dělat. Pokud ne, obnovte kalendáře na kalendářovém serveru a pak je znovu vyberte v nastavení kalendáře."
+msgstr[2] "Pokud šlo o záměrné odstranění, nemusíte nic dělat. Pokud ne, obnovte kalendáře na kalendářovém serveru a pak je znovu vyberte v nastavení kalendáře."
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Open calendar settings"
+msgstr "Otevřít nastavení kalendáře"
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "These calendars are no longer on your calendar server, so Tymeslot has stopped using them:"
+msgstr "Tyto kalendáře už na vašem kalendářovém serveru nejsou, a proto je Tymeslot přestal používat:"
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot checked %{integration} and the server no longer has the calendar listed above. This usually means it was deleted, or stopped being shared with you, on the server. Your other calendars on %{integration} are unaffected."
+msgid_plural "Tymeslot checked %{integration} and the server no longer has the calendars listed above. This usually means they were deleted, or stopped being shared with you, on the server. Your other calendars on %{integration} are unaffected."
+msgstr[0] "Tymeslot zkontroloval integraci %{integration} a výše uvedený kalendář už na serveru není. Obvykle to znamená, že byl na serveru smazán nebo s vámi přestal být sdílen. Ostatních kalendářů v integraci %{integration} se to netýká."
+msgstr[1] "Tymeslot zkontroloval integraci %{integration} a výše uvedené kalendáře už na serveru nejsou. Obvykle to znamená, že byly na serveru smazány nebo s vámi přestaly být sdíleny. Ostatních kalendářů v integraci %{integration} se to netýká."
+msgstr[2] "Tymeslot zkontroloval integraci %{integration} a výše uvedené kalendáře už na serveru nejsou. Obvykle to znamená, že byly na serveru smazány nebo s vámi přestaly být sdíleny. Ostatních kalendářů v integraci %{integration} se to netýká."
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "You get this email once each time a calendar disappears. The notice in your calendar settings stays until you dismiss it."
+msgstr "Když kalendář zmizí, dostanete o tom jen tento jeden e-mail. Upozornění v nastavení kalendáře zůstane zobrazené, dokud ho nezavřete."
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "“%{calendar}” is no longer on your calendar server"
+msgstr "Kalendář „%{calendar}“ už na vašem kalendářovém serveru není"
+
+#: lib/tymeslot/emails/templates/calendars_removed.ex
+#, elixir-autogen, elixir-format
+msgid "“%{calendar}” is no longer on your calendar server, so Tymeslot has stopped using it."
+msgstr "Kalendář „%{calendar}“ už na vašem kalendářovém serveru není, a proto ho Tymeslot přestal používat."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Owner"
+msgstr "Vlastník kalendáře"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "⚠️ Calendar Sync Error - Manual Action Required"
+msgstr "⚠️ Chyba synchronizace kalendáře – je potřeba ruční zásah"
+
+#: lib/tymeslot/emails/shared/integration_labels.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} calendar"
+msgstr "kalendáře %{provider}"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} needs reconnecting before Tymeslot can use it again."
+msgstr "Integraci %{provider} je potřeba připojit znovu, aby ji Tymeslot mohl opět používat."
+
+#: lib/tymeslot/emails/shared/integration_labels.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} video"
+msgstr "videohovorů %{provider}"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Check Integration Settings"
+msgstr "Zkontrolovat nastavení integrací"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Check that your credentials or OAuth tokens are still valid"
+msgstr "Ověřte, zda jsou vaše přihlašovací údaje nebo tokeny OAuth stále platné"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Choose %{provider}, paste the current feed link and select Subscribe"
+msgstr "Vyberte %{provider}, vložte aktuální odkaz na kanál a zvolte „Odebírat“"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Click %{action} and supply fresh credentials, or toggle the integration back on if the underlying issue is already fixed"
+msgstr "Klikněte na %{action} a zadejte nové přihlašovací údaje, nebo integraci znovu zapněte, pokud je původní problém už vyřešený"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Contact your calendar provider if the issue persists"
+msgstr "Pokud potíže přetrvávají, obraťte se na poskytovatele kalendáře"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Contact your video provider if the issue persists"
+msgstr "Pokud potíže přetrvávají, obraťte se na poskytovatele videohovorů"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Smazat"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Upravit"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{provider}"
+msgstr "Upravit %{provider}"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the credentials again, or new ones if the old ones were revoked, and save"
+msgstr "Zadejte přihlašovací údaje znovu, případně nové, pokud byly ty původní zneplatněny, a uložte je"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Follow the steps %{provider} asks for"
+msgstr "Postupujte podle kroků, které %{provider} vyžaduje"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Health probes for your %{integration} integration have been failing intermittently for 48+ hours."
+msgstr "Kontroly stavu vaší integrace %{integration} už déle než 48 hodin občas selhávají."
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "How do I bring it back?"
+msgstr "Jak integraci znovu zprovoznit?"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "If you changed your password recently, you may need to reconnect the integration"
+msgstr "Pokud v poslední době došlo ke změně hesla, může být potřeba integraci připojit znovu"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "If you no longer need this integration, you can simply remove it"
+msgstr "Pokud tuto integraci už nepotřebujete, můžete ji jednoduše odebrat"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Integration may need attention"
+msgstr "Integrace možná vyžaduje pozornost"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Integration paused"
+msgstr "Integrace pozastavena"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Open Integration Settings"
+msgstr "Otevřít nastavení integrací"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Open your calendar settings"
+msgstr "Otevřete nastavení kalendáře"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Open your integration settings"
+msgstr "Otevřete nastavení integrací"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Our health checks for your %{integration} integration have been returning errors on and off for at least 48 hours. It's worth taking a look in case something needs your attention."
+msgstr "Kontroly stavu vaší integrace %{integration} už nejméně 48 hodin střídavě hlásí chyby. Vyplatí se na ni podívat, pokud by něco vyžadovalo vaši pozornost."
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Připojit znovu"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect %{provider}"
+msgstr "Připojit znovu %{provider}"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect required"
+msgstr "Vyžaduje opětovné připojení"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect your %{provider} integration"
+msgstr "Připojte znovu svou integraci %{provider}"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Select %{action} on the %{provider} row"
+msgstr "U položky %{provider} zvolte %{action}"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "This is the only paused-integration notification you'll receive for this integration. Reactivating it will reset the health monitor."
+msgstr "O pozastavení této integrace vám přijde jen toto jedno upozornění. Po jejím opětovném zapnutí se sledování stavu vynuluje."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "This notification is sent when an integration needs attention. You will not receive another notice about this until you reconnect it."
+msgstr "Toto upozornění se posílá, když integrace vyžaduje pozornost. Další upozornění o tomto problému už nedostanete, dokud ji znovu nepřipojíte."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "This notification is sent when an integration needs attention. You will not receive another notice about this until you replace it."
+msgstr "Toto upozornění se posílá, když integrace vyžaduje pozornost. Další upozornění o tomto problému už nedostanete, dokud ji nenahradíte."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "This notification is sent when an integration needs attention. You will not receive another notice about this until you update it."
+msgstr "Toto upozornění se posílá, když integrace vyžaduje pozornost. Další upozornění o tomto problému už nedostanete, dokud ji neaktualizujete."
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "This notification is sent when an integration remains unhealthy for 48+ hours. It will not repeat for 30 days."
+msgstr "Toto upozornění se posílá, když integrace nefunguje správně déle než 48 hodin. Dalších 30 dní se už nezopakuje."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected."
+msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji znovu nepřipojíte. Důvod je uvedený výše. Vašich stávajících rezervací se to netýká."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you replace it. The reason is shown above. Your existing bookings are not affected."
+msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji nenahradíte. Důvod je uvedený výše. Vašich stávajících rezervací se to netýká."
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot can no longer use your %{integration} integration, and it will stay that way until you update it. The reason is shown above. Your existing bookings are not affected."
+msgstr "Tymeslot už nemůže používat vaši integraci %{integration} a nebude to možné, dokud ji neaktualizujete. Důvod je uvedený výše. Vašich stávajících rezervací se to netýká."
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Visit your integration settings to test the connection"
+msgstr "V nastavení integrací otestujte připojení"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "We've paused your %{integration} integration after %{count} day of failed health checks. Reconnect when you're ready and it'll resume."
+msgid_plural "We've paused your %{integration} integration after %{count} days of failed health checks. Reconnect when you're ready and it'll resume."
+msgstr[0] "Po %{count} dni neúspěšných kontrol stavu jsme vaši integraci %{integration} pozastavili. Až se vám to bude hodit, připojte ji znovu a opět se rozběhne."
+msgstr[1] "Po %{count} dnech neúspěšných kontrol stavu jsme vaši integraci %{integration} pozastavili. Až se vám to bude hodit, připojte ji znovu a opět se rozběhne."
+msgstr[2] "Po %{count} dnech neúspěšných kontrol stavu jsme vaši integraci %{integration} pozastavili. Až se vám to bude hodit, připojte ji znovu a opět se rozběhne."
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{integration} integration has been paused"
+msgstr "Vaše integrace %{integration} byla pozastavena"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{integration} integration has been paused after %{count} day of failed health checks."
+msgid_plural "Your %{integration} integration has been paused after %{count} days of failed health checks."
+msgstr[0] "Vaše integrace %{integration} byla pozastavena po %{count} dni neúspěšných kontrol stavu."
+msgstr[1] "Vaše integrace %{integration} byla pozastavena po %{count} dnech neúspěšných kontrol stavu."
+msgstr[2] "Vaše integrace %{integration} byla pozastavena po %{count} dnech neúspěšných kontrol stavu."
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{integration} integration may need attention"
+msgstr "Vaše integrace %{integration} možná vyžaduje pozornost"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{integration} integration needs reconnecting"
+msgstr "Vaši integraci %{integration} je potřeba připojit znovu"
+
+#: lib/tymeslot/emails/templates/integration_reauth_required.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{integration} integration needs reconnecting before it can keep working."
+msgstr "Aby vaše integrace %{integration} mohla dál fungovat, je potřeba ji připojit znovu."
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar integration has been paused"
+msgstr "Vaše integrace kalendáře byla pozastavena"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar integration may need attention"
+msgstr "Vaše integrace kalendáře možná vyžaduje pozornost"
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Your video integration has been paused"
+msgstr "Vaše videointegrace byla pozastavena"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Your video integration may need attention"
+msgstr "Vaše videointegrace možná vyžaduje pozornost"
+
+#: lib/tymeslot/emails/templates/integration_unhealthy.ex
+#, elixir-autogen, elixir-format
+msgid "Our connection probes to your %{integration} integration have been failing intermittently for 48+ hours. The integration may already be working again. If it isn't, syncing and new bookings could be affected, so it's worth a quick check."
+msgstr "Pokusy o připojení k vaší integraci %{integration} už déle než 48 hodin občas selhávají. Integrace už možná zase funguje. Pokud ne, může to ovlivnit synchronizaci i nové rezervace, a proto se vyplatí ji rychle zkontrolovat."
+
+#: lib/tymeslot/emails/templates/integration_paused.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{integration} integration has been failing connection checks for %{count}+ day. We've paused it so it stops consuming resources and stops generating noise. Nothing has been deleted: your settings, calendar selections, and history are all preserved."
+msgid_plural "Your %{integration} integration has been failing connection checks for %{count}+ days. We've paused it so it stops consuming resources and stops generating noise. Nothing has been deleted: your settings, calendar selections, and history are all preserved."
+msgstr[0] "Kontroly připojení vaší integrace %{integration} selhávají už nejméně %{count} den. Pozastavili jsme ji, aby zbytečně nespotřebovávala prostředky a nevytvářela nadbytečná hlášení. Nic nebylo smazáno: nastavení, vybrané kalendáře i historie zůstávají zachovány."
+msgstr[1] "Kontroly připojení vaší integrace %{integration} selhávají už nejméně %{count} dny. Pozastavili jsme ji, aby zbytečně nespotřebovávala prostředky a nevytvářela nadbytečná hlášení. Nic nebylo smazáno: nastavení, vybrané kalendáře i historie zůstávají zachovány."
+msgstr[2] "Kontroly připojení vaší integrace %{integration} selhávají už nejméně %{count} dní. Pozastavili jsme ji, aby zbytečně nespotřebovávala prostředky a nevytvářela nadbytečná hlášení. Nic nebylo smazáno: nastavení, vybrané kalendáře i historie zůstávají zachovány."
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "This is the only email you will get about this for now. If the same problem is still there in %{count} day, you will hear about it again. Your video settings show the notice for as long as it lasts."
+msgid_plural "This is the only email you will get about this for now. If the same problem is still there in %{count} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
+msgstr[0] "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{count} den trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."
+msgstr[1] "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{count} dny trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."
+msgstr[2] "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{count} dní trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."

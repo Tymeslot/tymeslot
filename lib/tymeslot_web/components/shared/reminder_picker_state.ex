@@ -16,7 +16,8 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerState do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.MeetingTypes.Reminders, as: MeetingTypeReminders
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias TymeslotWeb.Components.Shared.ReminderPicker
 
   @type t :: %{
@@ -96,6 +97,29 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerState do
   end
 
   @doc """
+  Adds what the open custom row still holds, for an owner about to act on the
+  list: focus leaving the row, or the quick-add meeting being created.
+
+  A typed value is the host's intent even if Add was never pressed, so it is
+  added rather than dropped; a value that fails validation leaves its message
+  in `:reminder_error` like any rejected add. A closed or empty row, or one the
+  limit has hidden, holds nothing pending and answers `{:noop, state}`.
+  """
+  @spec commit_pending(t(), map()) :: {:ok, t()} | {:noop, t()}
+  def commit_pending(state, params \\ %{}) do
+    if pending?(state, params), do: add_custom(state, params), else: {:noop, state}
+  end
+
+  @doc "Whether the custom row holds a value that has not been added."
+  @spec pending?(t(), map()) :: boolean()
+  def pending?(state, params \\ %{}) do
+    value = get_in(params, ["reminder", "value"]) || state.new_reminder_value
+
+    state.show_custom_reminder and String.trim(to_string(value)) != "" and
+      length(state.reminders) < ReminderValidation.max_reminders()
+  end
+
+  @doc """
   Removes the reminder the given value and unit name, whether they arrive as a
   `JS.push` payload or as individual `phx-value-*` params.
   """
@@ -110,7 +134,8 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerState do
 
     remaining =
       Enum.reject(state.reminders, fn reminder ->
-        reminder.value == ReminderUtils.parse_reminder_value(value) and reminder.unit == unit
+        reminder.value == MeetingTypeReminders.parse_reminder_value(value) and
+          reminder.unit == unit
       end)
 
     {:ok, %{state | reminders: remaining, reminder_error: nil}}

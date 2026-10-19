@@ -294,7 +294,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
       System.put_env("RECAPTCHA_SECRET_KEY", "test_secret_key")
 
       result =
-        RecaptchaHelpers.maybe_verify_signup_token("", %{ip: "127.0.0.1", user_agent: "test"})
+        RecaptchaHelpers.verify(:signup, "", %{ip: "127.0.0.1", user_agent: "test"})
 
       assert result == {:error, :recaptcha_failed}
     end
@@ -311,7 +311,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
       System.put_env("RECAPTCHA_SECRET_KEY", "test_secret_key")
 
       result =
-        RecaptchaHelpers.maybe_verify_signup_token(nil, %{ip: "127.0.0.1", user_agent: "test"})
+        RecaptchaHelpers.verify(:signup, nil, %{ip: "127.0.0.1", user_agent: "test"})
 
       assert result == {:error, :recaptcha_failed}
     end

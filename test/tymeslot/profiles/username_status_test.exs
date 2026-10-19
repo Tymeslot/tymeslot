@@ -78,13 +78,13 @@ defmodule Tymeslot.Profiles.UsernameStatusTest do
     end
 
     test "is :reserved when the username is reserved" do
-      changeset = ProfileSchema.changeset(insert(:profile), %{username: "admin"})
+      changeset = ProfileSchema.username_changeset(insert(:profile), %{username: "admin"})
 
       assert Profiles.username_error(changeset) == :reserved
     end
 
     test "is nil when nothing is wrong with the username's availability" do
-      changeset = ProfileSchema.changeset(insert(:profile), %{username: "Sarah"})
+      changeset = ProfileSchema.username_changeset(insert(:profile), %{username: "Sarah"})
 
       refute changeset.valid?
       assert Profiles.username_error(changeset) == nil

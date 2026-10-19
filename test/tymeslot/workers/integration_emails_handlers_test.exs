@@ -1,4 +1,4 @@
-defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
+defmodule Tymeslot.Notifications.Email.IntegrationEmailsTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :workers
@@ -8,7 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
 
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
-  alias Tymeslot.Workers.EmailWorkerHandlers
+  alias Tymeslot.Notifications.EmailHandlers
 
   setup :verify_on_exit!
 
@@ -19,8 +19,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       expect(EmailServiceMock, :send_calendar_invitation, fn "bob@example.com", details ->
         assert details.event_title == "Team Sync"
         assert details.event_uid == "evt-uid-1"
-        assert details.start_time == ~U[2026-04-10 10:00:00Z]
-        assert details.end_time == ~U[2026-04-10 11:00:00Z]
+        # The same instants, stated in the organiser's timezone.
+        assert DateTime.compare(details.start_time, ~U[2026-04-10 10:00:00Z]) == :eq
+        assert DateTime.compare(details.end_time, ~U[2026-04-10 11:00:00Z]) == :eq
         assert details.duration == 60
         assert details.location == "Office"
         assert details.organizer_name == "Alice Organiser"
@@ -29,7 +30,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => user.id,
                  "attendee_email" => "bob@example.com",
                  "event_title" => "Team Sync",
@@ -50,7 +51,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => user.id,
                  "attendee_email" => "guest@example.com",
                  "event_title" => "Quick chat",
@@ -64,7 +65,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
 
     test "discards when the user does not exist" do
       assert {:discard, "User not found"} =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => 999_999,
                  "attendee_email" => "bob@example.com",
                  "event_title" => "X",
@@ -80,7 +81,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       user = insert(:user)
 
       assert {:discard, "Invalid datetime:" <> _rest} =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => user.id,
                  "attendee_email" => "bob@example.com",
                  "event_title" => "X",
@@ -100,7 +101,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => user.id,
                  "attendee_email" => "bob@example.com",
                  "event_title" => "X",
@@ -145,7 +146,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,
@@ -181,7 +182,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,
@@ -207,7 +208,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
         {:ok, "sent"}
       end)
 
-      EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+      EmailHandlers.execute_email_action("send_event_update_notification", %{
         "user_id" => user.id,
         "integration_id" => integration.id,
         "event_uid" => event.uid,
@@ -225,7 +226,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
 
     test "discards when the user is not found", %{integration: integration, event: event} do
       assert {:discard, "Event or user not found"} =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => 999_999,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,
@@ -241,7 +242,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
 
     test "discards when the cached event is missing", %{user: user, integration: integration} do
       assert {:discard, "Event or user not found"} =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => "evt-does-not-exist",
@@ -265,7 +266,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert {:discard, "Partial delivery failure:" <> _rest} =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,
@@ -296,7 +297,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_unhealthy_notification",
                  %{
                    "user_id" => user.id,
@@ -378,7 +379,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
 
     test "discards when the user or integration is missing" do
       assert {:discard, "User or integration not found"} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_unhealthy_notification",
                  %{
                    "user_id" => 999_999,
@@ -399,7 +400,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_unhealthy_notification",
                  %{
                    "user_id" => user.id,
@@ -431,7 +432,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_reauth_notification",
                  %{
                    "user_id" => user.id,
@@ -448,7 +449,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: false)
 
       assert {:discard, "Integration no longer needs reauth"} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_reauth_notification",
                  %{
                    "user_id" => user.id,
@@ -460,7 +461,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
 
     test "discards when the user or integration is missing" do
       assert {:discard, "User or integration not found"} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_reauth_notification",
                  %{
                    "user_id" => 999_999,
@@ -481,7 +482,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_reauth_notification",
                  %{
                    "user_id" => user.id,
@@ -609,7 +610,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
   end
 
   defp execute_room_creation_error_notification(user_id, integration_id, code) do
-    EmailWorkerHandlers.execute_email_action("send_video_room_creation_error_notification", %{
+    EmailHandlers.execute_email_action("send_video_room_creation_error_notification", %{
       "user_id" => user_id,
       "integration_id" => integration_id,
       "error_code" => code

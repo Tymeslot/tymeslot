@@ -25,12 +25,12 @@ defmodule Tymeslot.Profiles.ProfileQueriesTest do
     end
   end
 
-  describe "update_profile/2" do
+  describe "update_basic/2" do
     test "validates timezone against business rules" do
       profile = insert(:profile)
 
       assert {:error, changeset} =
-               ProfileQueries.update_profile(profile, %{timezone: "Invalid/Zone"})
+               ProfileQueries.update_basic(profile, %{timezone: "Invalid/Zone"})
 
       refute changeset.valid?
       assert "is not a valid timezone" in errors_on(changeset).timezone

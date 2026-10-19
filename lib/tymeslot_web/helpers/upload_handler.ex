@@ -1,17 +1,12 @@
 defmodule TymeslotWeb.Helpers.UploadHandler do
   @moduledoc """
-  Helpers for stored uploads: settling LiveView upload entries before they are
-  consumed, plus atomic writes and safe deletes.
-
-  The file-system pair goes through `TymeslotWeb.Helpers.FileOperations` for
-  path sanitisation, secure directory creation and error handling, so callers
-  never assemble a destination path themselves.
+  Settles LiveView upload entries before they are consumed. Storing and
+  deleting the files themselves is `Tymeslot.Media.Uploads`.
   """
 
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Phoenix.LiveView.UploadConfig
-  alias TymeslotWeb.Helpers.FileOperations
 
   # LiveView records the `max_entries` breach against the upload config rather
   # than against the offending entry, so it arrives through `upload_errors/1`.
@@ -76,32 +71,6 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
     end
   end
 
-  @doc """
-  Handles file storage with atomic operations and proper cleanup.
-  """
-  @spec store_file_atomically(String.t(), String.t(), String.t(), map()) ::
-          {:ok, String.t()} | {:error, term()}
-  def store_file_atomically(source_path, dest_dir, filename, context) do
-    with {:ok, secure_dest_dir} <-
-           FileOperations.validate_and_sanitize_path(get_upload_base_dir(), dest_dir),
-         :ok <- FileOperations.ensure_secure_directory(secure_dest_dir),
-         sanitized_filename <- FileOperations.sanitize_filename(filename),
-         dest_path <- Path.join(secure_dest_dir, sanitized_filename),
-         {:ok, _final_path} <- FileOperations.atomic_file_move(source_path, dest_path, context) do
-      {:ok, sanitized_filename}
-    else
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  @doc """
-  Safely deletes a file using robust error handling.
-  """
-  @spec delete_file_safely(String.t(), map()) :: :ok | {:error, term()}
-  def delete_file_safely(file_path, context) do
-    FileOperations.safe_delete_file(file_path, context)
-  end
-
   # Private helpers
 
   # Rejected outright: the client never uploads it.
@@ -115,9 +84,5 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
       %{^upload_key => %UploadConfig{} = conf} -> @too_many_files in Component.upload_errors(conf)
       _not_configured -> false
     end
-  end
-
-  defp get_upload_base_dir do
-    Application.get_env(:tymeslot, :upload_directory, "uploads")
   end
 end

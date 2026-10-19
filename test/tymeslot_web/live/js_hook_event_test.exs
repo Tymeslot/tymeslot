@@ -88,13 +88,13 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
 
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers, only: [exhaust_limit!: 2]
 
   alias Ecto.Changeset
   alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
 
   setup :setup_dashboard_user
@@ -103,24 +103,6 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
   # payloads below are dated from the UTC clock, so the two have to agree.
   setup %{profile: profile} do
     {:ok, profile: Repo.update!(Changeset.change(profile, timezone: "Etc/UTC"))}
-  end
-
-  setup do
-    try do
-      :meck.unload(RateLimiter)
-    rescue
-      _other -> :ok
-    end
-
-    on_exit(fn ->
-      try do
-        :meck.unload(RateLimiter)
-      rescue
-        _other -> :ok
-      end
-    end)
-
-    :ok
   end
 
   describe "event_dropped — malformed payload" do
@@ -267,11 +249,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
       mt1 = insert(:meeting_type, user: user, name: "Intro", sort_order: 0)
       mt2 = insert(:meeting_type, user: user, name: "Deep Dive", sort_order: 1)
 
-      :meck.new(RateLimiter, [:passthrough])
-
-      :meck.expect(RateLimiter, :check_meeting_type_write_rate_limit, fn _user_id ->
-        {:error, :rate_limited, "Slow down — too many reorders"}
-      end)
+      refusal = exhaust_limit!(:meeting_type_write, user.id)
 
       socket = build_component_socket(user)
 
@@ -285,7 +263,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
       # `Flash.error/1` sends `{:flash, {:error, msg}}` to self(); the
       # parent LiveView's `handle_info/2` forwards it to the rendered
       # flash region.
-      assert_received {:flash, {:error, "Slow down — too many reorders"}}
+      assert_received {:flash, {:error, ^refusal}}
 
       # Order untouched — the rate-limit arm must short-circuit before
       # the filter and Ecto update run.

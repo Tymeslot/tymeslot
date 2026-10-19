@@ -20,9 +20,9 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Repo
 
   setup :verify_on_exit!

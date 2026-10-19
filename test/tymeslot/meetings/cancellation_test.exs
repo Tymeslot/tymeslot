@@ -3,11 +3,11 @@ defmodule Tymeslot.Meetings.CancellationTest do
   Cancelling a paid meeting with a refund, from the point of view of who asks.
 
   A refund moves the host's money, so only the host who took the payment may
-  ask for one. Anyone else who is allowed to cancel the meeting (its attendee,
-  signed in under the booking address) cancels it without a refund. A refused
-  refund must be refused before the meeting is touched: cancelling first and
-  then failing would report a refund problem for a refund nobody was entitled
-  to request.
+  ask for one, and only the meeting's organiser may cancel it through here at
+  all: its attendee, signed in under the booking address, is refused outright.
+  A refusal must come before the meeting is touched: cancelling first and then
+  failing would report a refund problem for a refund nobody was entitled to
+  request.
   """
 
   use Tymeslot.DataCase, async: false
@@ -130,13 +130,15 @@ defmodule Tymeslot.Meetings.CancellationTest do
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
 
-    test "an attendee cancelling without a refund still cancels", %{
+    test "an attendee cancelling without a refund is refused too", %{
       attendee: attendee,
       meeting: meeting,
       payment: payment
     } do
-      assert {:ok, cancelled} = Meetings.cancel_meeting_with_refund(meeting, attendee.id, :none)
-      assert cancelled.status == "cancelled"
+      assert {:error, :not_found} =
+               Meetings.cancel_meeting_with_refund(meeting, attendee.id, :none)
+
+      assert {:ok, %{status: "confirmed"}} = MeetingQueries.get_meeting(meeting.id)
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
     end
   end

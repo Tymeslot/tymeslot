@@ -1,4 +1,4 @@
-defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
+defmodule Tymeslot.Notifications.Email.CalendarEventEmailsTest do
   @moduledoc """
   The calendar invitation and event update handlers for the two kinds of
   event the timed, previously-notified cases in `IntegrationEmailsTest` do
@@ -14,7 +14,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
   import Tymeslot.Factory
 
   alias Tymeslot.EmailServiceMock
-  alias Tymeslot.Workers.EmailWorkerHandlers
+  alias Tymeslot.Notifications.EmailHandlers
 
   setup :verify_on_exit!
 
@@ -37,7 +37,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => user.id,
                  "attendee_email" => "bob@example.com",
                  "event_title" => "Offsite",
@@ -54,7 +54,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
       user = insert(:user)
 
       assert {:discard, "Invalid datetime:" <> _rest} =
-               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+               EmailHandlers.execute_email_action("send_calendar_invitation", %{
                  "user_id" => user.id,
                  "attendee_email" => "bob@example.com",
                  "event_title" => "Offsite",
@@ -110,7 +110,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,
@@ -145,7 +145,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
       end)
 
       assert {:discard, "Cached event has no timing"} =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,
@@ -167,8 +167,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
       expect(EmailServiceMock, :send_event_update_notification, fn _email, details ->
         assert details.first_notification
 
-        assert details.changes == [
-                 {:time, nil, event.start_at},
+        # The time is stated in the organiser's timezone: the same instant.
+        assert [{:time, nil, time} | fields] = details.changes
+        assert DateTime.compare(time, event.start_at) == :eq
+
+        assert fields == [
                  {:title, nil, "Updated Title"},
                  {:location, nil, "New Room"},
                  {:description, nil, "Updated description"}
@@ -178,7 +181,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventEmailsTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_event_update_notification", %{
+               EmailHandlers.execute_email_action("send_event_update_notification", %{
                  "user_id" => user.id,
                  "integration_id" => integration.id,
                  "event_uid" => event.uid,

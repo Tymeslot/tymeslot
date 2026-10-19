@@ -19,6 +19,7 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
   alias Tymeslot.CalendarGrid.IcsImport
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Utils.EventValidator
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   setup :verify_on_exit!
@@ -292,6 +293,50 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
     end
   end
 
+  # The parser reads a timed DTSTART with no end as a moment, which a calendar
+  # write refuses; an import writes a real event, so it takes an hour.
+  describe "a timed event with no usable end" do
+    setup do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, calendar_list: calendars())
+      {:ok, target} = IcsImport.target(user.id, integration.id, "/cal/home/")
+
+      plan =
+        plan!(
+          ics([
+            vevent(["UID:bare@x", "SUMMARY:Bare start", "DTSTART:20261105T090000Z"]),
+            vevent([
+              "UID:back@x",
+              "SUMMARY:Ends before it starts",
+              "DTSTART:20261106T090000Z",
+              "DTEND:20261106T080000Z"
+            ])
+          ])
+        )
+
+      %{target: target, plan: plan}
+    end
+
+    test "is planned to last an hour", %{plan: plan} do
+      assert Enum.map(plan.events, &{&1.summary, &1.end_time}) == [
+               {"Bare start", ~U[2026-11-05 10:00:00Z]},
+               {"Ends before it starts", ~U[2026-11-06 10:00:00Z]}
+             ]
+    end
+
+    # The provider write validates its event as `Calendar.Runtime.Operations` does.
+    test "imports, rather than failing the write", ctx do
+      expect(Tymeslot.CalendarMock, :create_event, 2, fn data, _context ->
+        case EventValidator.validate(data) do
+          {:ok, _data} -> {:ok, CreatedEvent.new(data.uid)}
+          {:error, _changeset} = refused -> refused
+        end
+      end)
+
+      assert %{total: 2, created: 2, failed: 0, halted: nil} = IcsImport.run(ctx.target, ctx.plan)
+    end
+  end
+
   describe "run/3" do
     setup do
       user = insert(:user)
@@ -384,6 +429,55 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
       end)
 
       assert %{created: 1, failed: 8, halted: nil} = IcsImport.run(ctx.target, %{events: events})
+    end
+
+    test "counts a series whose rule Outlook refuses apart from failures, and writes the rest",
+         ctx do
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, 2, fn
+        %{summary: "One"}, _context ->
+          {:error, :rule_not_supported_by_outlook}
+
+        data, _context ->
+          send(test_pid, {:written, data.summary})
+          {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      assert %{created: 1, failed: 0, failed_titles: [], rules_refused: 1, halted: nil} =
+               IcsImport.run(ctx.target, ctx.plan)
+
+      assert_received {:written, "Two"}
+    end
+
+    # A refused rule is the calendar answering, not the calendar being down,
+    # so a file full of such series must not stop the import as unavailable.
+    test "carries on past a run of refused rules", ctx do
+      refused =
+        for n <- 1..6,
+            do: %{
+              summary: "R#{n}",
+              start_time: ~U[2026-11-05 09:00:00Z],
+              all_day: false,
+              recurrence_rule: "FREQ=MONTHLY;BYDAY=2TU,-1FR"
+            }
+
+      last = %{summary: "Last", start_time: ~U[2026-11-06 09:00:00Z], all_day: false}
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, 7, fn
+        %{summary: "Last"} = data, _context ->
+          send(test_pid, {:written, data.summary})
+          {:ok, CreatedEvent.new(data.uid)}
+
+        _data, _context ->
+          {:error, :rule_not_supported_by_outlook}
+      end)
+
+      assert %{created: 1, failed: 0, rules_refused: 6, halted: nil} =
+               IcsImport.run(ctx.target, %{events: refused ++ [last]})
+
+      assert_received {:written, "Last"}
     end
 
     test "stops at once when the provider's circuit breaker is open", ctx do

@@ -2,22 +2,27 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   @moduledoc """
   MJML template for calendar sync error notification sent to the calendar owner.
 
-  Rendered in the owner's locale. The caller establishes it from
-  `organizer_user_id` via `Tymeslot.Emails.RecipientLocale`; this module only
-  reads the ambient locale for the pure date and time formatting.
+  Addressed to the meeting's organiser (the instance's sender address when
+  the meeting has none) and rendered in their locale, resolved from
+  `organizer_user_id`.
   """
+
+  alias Swoosh.Email
+  alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
     Formatting,
     MeetingComponents,
+    MjmlEmail,
     Styles,
     TemplateHelper,
-    Text,
-    TimezoneHelper
+    Text
   }
 
-  alias Tymeslot.Profiles
+  alias Tymeslot.Utils.DateTimeUtils
+
+  alias Tymeslot.Emails.HostClock
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -26,6 +31,8 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
 
   @type meeting_map :: %{
           required(:start_time) => DateTime.t(),
+          required(:organizer_email) => String.t() | nil,
+          required(:organizer_name) => String.t() | nil,
           required(:duration) => integer(),
           required(:location) => String.t() | nil,
           optional(:organizer_user_id) => term(),
@@ -33,27 +40,52 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
         }
 
   @doc """
-  Returns `{html_body, text_body}`, computing the owner's local start time only once.
+  The email to the meeting's organiser, in their locale, computing their
+  local start time only once for both parts.
   """
-  @spec render_both(meeting_map(), any()) :: {String.t(), String.t()}
-  def render_both(meeting, error_reason) do
-    error_details = TemplateHelper.format_error_reason(error_reason)
-    owner_start_time = owner_start_time(meeting)
+  @spec render(meeting_map(), any()) :: Email.t()
+  def render(meeting, error_reason) do
+    RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
+      error_details = TemplateHelper.format_error_reason(error_reason)
+      locale = Gettext.get_locale(TymeslotWeb.Gettext)
+      clock = HostClock.for_meeting(meeting, locale)
+      owner_start_time = DateTimeUtils.convert_to_timezone(meeting.start_time, clock.timezone)
 
-    {do_render_html(error_details, owner_start_time, meeting),
-     do_render_text(error_details, owner_start_time, meeting)}
+      MjmlEmail.base_email()
+      |> Email.to(recipient(meeting))
+      |> Email.subject(
+        dgettext("emails_integrations", "⚠️ Calendar Sync Error - Manual Action Required")
+      )
+      |> Email.html_body(
+        do_render_html(error_details, {owner_start_time, clock}, meeting, locale)
+      )
+      |> Email.text_body(
+        do_render_text(error_details, {owner_start_time, clock}, meeting, locale)
+      )
+    end)
   end
 
-  defp do_render_html(error_details, owner_start_time, meeting) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+  @doc """
+  The address the email goes to: the meeting's organiser, or the instance's
+  sender address when the meeting has none.
+  """
+  @spec recipient_email(meeting_map()) :: String.t()
+  def recipient_email(meeting),
+    do: meeting.organizer_email || Application.get_env(:tymeslot, :email)[:from_email]
 
+  defp recipient(meeting) do
+    {meeting.organizer_name || dgettext("emails_integrations", "Calendar Owner"),
+     recipient_email(meeting)}
+  end
+
+  defp do_render_html(error_details, {owner_start_time, clock}, meeting, locale) do
     mjml_content = """
     #{Callouts.alert_box(:cancelled,
     dgettext("emails_integrations", "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."),
     title: dgettext("emails_integrations", "Calendar Sync Error"))}
 
     #{Text.title_section(dgettext("emails_integrations", "Meeting Details"))}
-    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location}, locale)}
+    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location, time_format: clock.time_format}, locale)}
 
     #{Text.divider()}
 
@@ -87,9 +119,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     )
   end
 
-  defp do_render_text(error_details, owner_start_time, meeting) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
+  defp do_render_text(error_details, {owner_start_time, clock}, meeting, locale) do
     """
     #{dgettext("emails_integrations", "Calendar Sync Error - Manual Action Required")}
 
@@ -97,7 +127,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
 
     #{dgettext("emails_integrations", "MEETING DETAILS:")}
     #{dgettext("emails_integrations", "Date:")} #{Formatting.format_date(owner_start_time, locale)}
-    #{dgettext("emails_integrations", "Time:")} #{Formatting.format_time(owner_start_time, locale)}
+    #{dgettext("emails_integrations", "Time:")} #{Formatting.format_time(owner_start_time, locale, clock.time_format)}
     #{dgettext("emails_integrations", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
     #{dgettext("emails_integrations", "Location:")} #{meeting.location || dgettext("emails_integrations", "Not specified")}
 
@@ -128,15 +158,5 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   defp common_causes_text do
     causes = Enum.map_join(common_causes(), "\n- ", & &1)
     "#{dgettext("emails_integrations", "Common causes:")}\n- #{causes}"
-  end
-
-  defp owner_start_time(meeting) do
-    owner_timezone =
-      case meeting.organizer_user_id do
-        nil -> Profiles.get_default_timezone()
-        user_id -> Profiles.get_user_timezone(user_id)
-      end
-
-    TimezoneHelper.convert_to_timezone(meeting.start_time, owner_timezone)
   end
 end

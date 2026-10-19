@@ -76,7 +76,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
       description_value =
         ics_content
         |> String.replace("\r\n ", "")
-        |> String.split("\n")
+        |> String.split("\r\n")
         |> Enum.find_value(fn line ->
           case String.split(line, ":", parts: 2) do
             ["DESCRIPTION" <> _params, value] -> value
@@ -121,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
       # next element. We strip the trailing "\r" before measuring.
       violations =
         ics_content
-        |> String.split("\n")
+        |> String.split("\r\n")
         |> Enum.reject(&(&1 == ""))
         |> Enum.filter(fn line ->
           stripped = String.trim_trailing(line, "\r")
@@ -156,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
       # All lines within 75 octets
       violations =
         ics_content
-        |> String.split("\n")
+        |> String.split("\r\n")
         |> Enum.reject(&(&1 == ""))
         |> Enum.filter(fn line ->
           stripped = String.trim_trailing(line, "\r")
@@ -167,6 +167,46 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
 
       # Content still present (folding is transparent to the value)
       assert ics_content =~ "Ünïcödé answer:"
+    end
+
+    # Joined back up, a torn character reads fine, so each physical line is
+    # checked on its own: a strict parser decodes it before unfolding.
+    test "keeps every folded line of an invitation valid UTF-8" do
+      ics_content =
+        IcsGenerator.generate_ics(%{
+          title: "Unicode Folding",
+          description: String.duplicate("ü", 40),
+          start_time: ~U[2026-01-15 14:00:00Z],
+          end_time: ~U[2026-01-15 15:00:00Z],
+          uid: "unicode-fold-456",
+          organizer_email: "host@example.com"
+        })
+
+      lines = String.split(ics_content, "\r\n")
+
+      assert Enum.any?(lines, &String.starts_with?(&1, " ü"))
+      assert Enum.reject(lines, &String.valid?/1) == []
+    end
+  end
+
+  describe "line endings" do
+    # RFC 5545 §3.1: every content line ends in CRLF, the folded ones too.
+    # Lenient clients accept a bare LF; strict parsers and mail gateways do not.
+    test "ends every content line in CRLF, with no bare LF anywhere" do
+      ics =
+        IcsGenerator.generate_ics(%{
+          title: "Line endings",
+          description: String.duplicate("A long line that has to be folded. ", 10),
+          start_time: ~U[2026-01-15 14:00:00Z],
+          end_time: ~U[2026-01-15 15:00:00Z],
+          uid: "crlf-1",
+          organizer_email: "org@example.com",
+          attendee_email: "guest@example.com"
+        })
+
+      assert String.ends_with?(ics, "END:VCALENDAR\r\n")
+      refute Regex.match?(~r/(?<!\r)\n/, ics)
+      assert String.contains?(ics, "\r\n ")
     end
   end
 end

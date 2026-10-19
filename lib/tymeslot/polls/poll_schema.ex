@@ -11,7 +11,6 @@ defmodule Tymeslot.Polls.PollSchema do
   alias Tymeslot.Polls.{PollParticipantSchema, PollTimeSlotSchema}
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
-  alias Tymeslot.Utils.UnguessableToken
   alias Tymeslot.Validation.Constraints
 
   @max_slots 40
@@ -28,8 +27,7 @@ defmodule Tymeslot.Polls.PollSchema do
     field(:duration_minutes, :integer)
     # The poll's public voting link, which the host copies from the
     # dashboard again whenever they like, so it is encrypted rather than only
-    # hashed; it is looked up by `token_hash`. The plain `token` column
-    # predates this and is no longer read or written.
+    # hashed; it is looked up by `token_hash`.
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
     field(:status, Ecto.Enum, values: [:open, :confirmed, :cancelled], default: :open)
@@ -137,7 +135,7 @@ defmodule Tymeslot.Polls.PollSchema do
 
   defp put_new_token(changeset) do
     case get_field(changeset, :token) do
-      nil -> put_change(changeset, :token, UnguessableToken.generate())
+      nil -> put_change(changeset, :token, Token.generate(24))
       _token -> changeset
     end
   end

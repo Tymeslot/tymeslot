@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils.Duration
@@ -97,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   end
 
   defp parse_event_block(event_block, vtimezones) do
-    lines = unfold_lines(event_block)
+    lines = LineFolder.unfold_lines(event_block)
 
     # Extract properties
     uid = extract_property(lines, "UID")
@@ -116,9 +117,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
     start_time = parse_datetime_property(dtstart, vtimezones)
 
-    end_time =
-      parse_datetime_property(dtend, vtimezones) ||
-        calculate_end_time(start_time, extract_property(lines, "DURATION"))
+    {end_time, duration_defaulted} =
+      case parse_datetime_property(dtend, vtimezones) do
+        nil -> calculate_end_time(start_time, extract_property(lines, "DURATION"))
+        dtend_time -> {dtend_time, false}
+      end
 
     if uid && start_time do
       %{
@@ -139,12 +142,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         exdates: exdates,
         start_time: start_time,
         end_time: end_time,
+        # A DURATION that could not be read, so `end_time` is the default
+        # length instead: an hour for a timed event, a day for an all-day one.
+        # The normaliser reports it, as it reports the events it skips.
+        duration_defaulted: duration_defaulted,
         # The DTSTART TZID as written on the wire, already sanitised to an IANA
         # name. `start_time`/`end_time` above are converted to UTC, which throws
         # the zone away — recurring events need it back to expand occurrences in
         # local wall-clock time across a DST transition (see
-        # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_event/3`). `nil` for UTC, floating, and
-        # DATE-valued events, none of which have a zone to restore.
+        # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_occurrences/3`).
+        # `nil` for UTC, floating, and DATE-valued events, none of which have a
+        # zone to restore.
         timezone: dtstart_timezone(dtstart),
         # A DTSTART with neither a TZID nor a `Z` is a floating wall-clock time,
         # which `start_time`/`end_time` above read as UTC. Kept so a caller that
@@ -174,25 +182,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     do: Regex.match?(~r/T\d{6}$/, String.trim(value))
 
   defp floating?(_dtstart), do: false
-
-  defp unfold_lines(content) do
-    content
-    |> String.split("\n")
-    |> Enum.reduce([], fn line, acc ->
-      # Continuation line (starts with space or tab)
-      if acc != [] and match?(<<c, _::binary>> when c in [?\s, ?\t], line) do
-        [last | rest] = acc
-        # RFC 5545 §3.1: unfold by removing the line break and exactly ONE
-        # whitespace character; any further whitespace belongs to the value
-        <<_fold, continuation::binary>> = line
-        [last <> continuation | rest]
-      else
-        # New line
-        [line | acc]
-      end
-    end)
-    |> Enum.reverse()
-  end
 
   defp extract_attendees(lines) do
     lines
@@ -343,14 +332,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  defp decode_value(value) do
-    value
-    |> String.trim()
-    |> String.replace("\\n", "\n")
-    |> String.replace("\\,", ",")
-    |> String.replace("\\;", ";")
-    |> String.replace("\\\\", "\\")
-  end
+  # RFC 5545 §3.3.11, in one pass: each escape is read once, so the escaped
+  # backslash in `\\new` stays a backslash before "new" rather than becoming
+  # a line break, and an uppercase `\N` is a line break too.
+  defp decode_value(value), do: value |> String.trim() |> unescape_text("")
+
+  defp unescape_text(<<"\\", char, rest::binary>>, acc) when char in [?n, ?N],
+    do: unescape_text(rest, acc <> "\n")
+
+  defp unescape_text(<<"\\", char, rest::binary>>, acc) when char in [?\\, ?;, ?,],
+    do: unescape_text(rest, <<acc::binary, char>>)
+
+  defp unescape_text(<<char, rest::binary>>, acc), do: unescape_text(rest, <<acc::binary, char>>)
+  defp unescape_text(<<>>, acc), do: acc
 
   defp parse_datetime_property(nil, _vtimezones), do: nil
 
@@ -408,19 +402,21 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  defp calculate_end_time(nil, _duration), do: nil
+  # The end an event's DTSTART and DURATION give when it has no DTEND, and
+  # whether DURATION was unreadable so the default length stands in for it.
+  defp calculate_end_time(nil, _duration), do: {nil, false}
 
-  # Default 1 hour for DateTime, 1 day for Date
-  defp calculate_end_time(%DateTime{} = start_time, nil),
-    do: DateTime.add(start_time, 3600, :second)
+  # RFC 5545 §3.6.1: with neither DTEND nor DURATION, a DATE-TIME DTSTART
+  # ends where it starts, and a DATE one takes up that whole day.
+  defp calculate_end_time(%DateTime{} = start_time, nil), do: {start_time, false}
 
-  defp calculate_end_time(%Date{} = start_time, nil), do: Date.add(start_time, 1)
+  defp calculate_end_time(%Date{} = start_time, nil), do: {Date.add(start_time, 1), false}
 
   defp calculate_end_time(%DateTime{} = start_time, duration_str) do
     # Parse ISO 8601 duration (simplified - only handles basic cases)
     case Duration.parse(duration_str) do
-      {:ok, seconds} -> DateTime.add(start_time, seconds, :second)
-      {:error, _reason} -> DateTime.add(start_time, 3600, :second)
+      {:ok, seconds} -> {DateTime.add(start_time, seconds, :second), false}
+      {:error, _reason} -> {DateTime.add(start_time, 3600, :second), true}
     end
   end
 
@@ -431,11 +427,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       {:ok, seconds} ->
         # Convert seconds to days, rounding up to at least 1 day
         days = div(seconds, 86_400)
-        Date.add(start_time, max(days, 1))
+        {Date.add(start_time, max(days, 1)), false}
 
       {:error, _reason} ->
         # Fallback to 1 day
-        Date.add(start_time, 1)
+        {Date.add(start_time, 1), true}
     end
   end
 

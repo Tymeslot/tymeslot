@@ -8,6 +8,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
 
   import Mox
 
+  alias Ecto.Changeset
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
@@ -42,7 +44,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
 
     user = insert(:user)
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
+    {:ok, _profile} = Profiles.update_booking_theme(profile, "1")
 
     insert(:connect_account,
       user: user,
@@ -141,6 +143,53 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
                CheckoutSessions.create_session_for_booking(meeting)
     end
 
+    test "refuses a meeting type that is no longer paid, such as after a currency change",
+         %{user: user, meeting_type: mt} do
+      {:ok, :reset} =
+        MeetingPayments.change_default_currency(
+          ConnectAccountQueries.live_for_user(user.id),
+          "gbp"
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: "awaiting_payment"
+        )
+
+      assert {:error, :payment_not_required} =
+               CheckoutSessions.create_session_for_booking(meeting)
+
+      refute BookingPaymentQueries.by_meeting_id(meeting.id)
+    end
+
+    test "refuses a host whose account currency would charge the stored price at the wrong scale",
+         %{user: user, meeting_type: mt} do
+      # An account opened before the allowlist was enforced, in a currency
+      # counted in whole units; the changeset would refuse it now, so it is
+      # written directly. A legacy currency counted in hundredths is charged
+      # (see the booker journey in `LegacyCurrencyPaidBookingTest`).
+      user.id
+      |> ConnectAccountQueries.live_for_user()
+      |> Changeset.change(default_currency: "jpy")
+      |> Repo.update!()
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: "awaiting_payment"
+        )
+
+      assert {:error, :payments_unavailable} =
+               CheckoutSessions.create_session_for_booking(meeting)
+
+      refute BookingPaymentQueries.by_meeting_id(meeting.id)
+    end
+
     test "omits application_fee_amount from payment_intent_data when fee is zero",
          %{user: user, meeting_type: mt} do
       Application.put_env(:tymeslot, :payment_application_fee_bp, 0)
@@ -236,7 +285,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       test "keep the exact #{key} success and cancel URL shape",
            %{user: user, meeting_type: mt} do
         {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-        {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: unquote(theme_id)})
+        {:ok, _profile} = Profiles.update_booking_theme(profile, unquote(theme_id))
 
         meeting =
           insert(:meeting,

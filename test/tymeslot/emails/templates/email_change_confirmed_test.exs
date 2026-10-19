@@ -14,7 +14,14 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = ~U[2025-01-15 11:00:00Z]
       is_old_email = false
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(is_old_email),
+          user,
+          old_email,
+          new_email,
+          confirmed_time
+        ).html_body
 
       assert String.starts_with?(html, "<!doctype html>")
       assert html =~ "Hi Grace Lee"
@@ -28,7 +35,14 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = ~U[2025-01-15 11:00:00Z]
       is_old_email = true
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(is_old_email),
+          user,
+          old_email,
+          new_email,
+          confirmed_time
+        ).html_body
 
       assert String.starts_with?(html, "<!doctype html>")
       assert html =~ "Hi Henry Taylor"
@@ -42,7 +56,14 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = ~U[2025-01-15 11:00:00Z]
       is_old_email = false
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(is_old_email),
+          user,
+          old_email,
+          new_email,
+          confirmed_time
+        ).html_body
 
       assert html =~ old_email
       assert html =~ new_email
@@ -55,7 +76,14 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = ~U[2025-01-15 11:00:00Z]
       is_old_email = true
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(is_old_email),
+          user,
+          old_email,
+          new_email,
+          confirmed_time
+        ).html_body
 
       # "Previous email" is a card label present in both variants; the intro copy
       # about the previous address is what distinguishes the old-address notice.
@@ -69,21 +97,33 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = nil
       is_old_email = false
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(is_old_email),
+          user,
+          old_email,
+          new_email,
+          confirmed_time
+        ).html_body
 
       assert html =~ "Just now"
     end
 
-    test "formats confirmed_time when provided" do
-      user = build_user_data()
-      old_email = "old@example.com"
-      new_email = "new@example.com"
+    test "states the confirmed time on the user's own clock" do
+      profile = insert(:profile, timezone: "America/New_York")
+      user = build_user_data(%{id: profile.user_id})
       confirmed_time = ~U[2025-01-15 11:00:00Z]
-      is_old_email = false
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(false),
+          user,
+          "old@example.com",
+          "new@example.com",
+          confirmed_time
+        ).html_body
 
-      assert html =~ "15 January 2025 at 11:00 AM UTC"
+      assert html =~ "15 January 2025 at 6:00 AM EST"
     end
 
     test "includes instructions for using new email" do
@@ -93,7 +133,14 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = ~U[2025-01-15 11:00:00Z]
       is_old_email = false
 
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
+      html =
+        EmailChangeConfirmed.render(
+          role(is_old_email),
+          user,
+          old_email,
+          new_email,
+          confirmed_time
+        ).html_body
 
       assert html =~ "Use new@example.com to sign in from now on"
     end
@@ -105,10 +152,17 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       confirmed_time = ~U[2025-01-15 11:00:00Z]
 
       # Call without is_old_email parameter (should default to false)
-      html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time)
+      html =
+        EmailChangeConfirmed.render(:new, user, old_email, new_email, confirmed_time).html_body
 
       assert html ==
-               EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, false)
+               EmailChangeConfirmed.render(
+                 role(false),
+                 user,
+                 old_email,
+                 new_email,
+                 confirmed_time
+               ).html_body
 
       assert html =~ "a copy of this confirmation was sent to your previous email address"
     end
@@ -121,7 +175,8 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       new_email = "grace.new@example.com"
       confirmed_time = ~U[2025-01-15 11:00:00Z]
 
-      text = EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, false)
+      text =
+        EmailChangeConfirmed.render(role(false), user, old_email, new_email, confirmed_time).text_body
 
       assert text =~ old_email
       assert text =~ new_email
@@ -130,14 +185,18 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
     test "includes recipient notice for old email" do
       user = build_user_data()
-      text = EmailChangeConfirmed.render_text(user, "old@x.com", "new@x.com", nil, true)
+
+      text =
+        EmailChangeConfirmed.render(role(true), user, "old@x.com", "new@x.com", nil).text_body
 
       assert text =~ "previous address"
     end
 
     test "handles nil confirmed_time" do
       user = build_user_data()
-      text = EmailChangeConfirmed.render_text(user, "old@x.com", "new@x.com", nil, false)
+
+      text =
+        EmailChangeConfirmed.render(role(false), user, "old@x.com", "new@x.com", nil).text_body
 
       assert text =~ "Just now"
     end
@@ -153,7 +212,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       user = build_user_data(%{name: "<script>steal()</script>", email: "new@example.com"})
 
       text =
-        EmailChangeConfirmed.render_text(user, "old@example.com", "new@example.com", nil, false)
+        EmailChangeConfirmed.render(role(false), user, "old@example.com", "new@example.com", nil).text_body
 
       # Plain text is not HTML: the tags survive as literal characters, and the
       # surrounding change details are not displaced by them.
@@ -162,4 +221,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       assert text =~ "new@example.com"
     end
   end
+
+  defp role(true), do: :old
+  defp role(false), do: :new
 end

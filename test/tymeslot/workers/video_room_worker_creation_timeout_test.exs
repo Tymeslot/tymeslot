@@ -21,8 +21,8 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
-  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
@@ -80,7 +80,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
       talk = insert_meeting(user, insert_talk_integration(user))
 
       assert VideoRoomWorker.creation_timeout_ms(talk) <
-               ProviderRegistry.room_creation_budget_ms()
+               ProviderConfig.room_creation_budget_ms()
     end
 
     test "outlasts every provider when the meeting's integration cannot be resolved", %{
@@ -98,10 +98,10 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
                  meeting.organizer_user_id,
                  meeting.video_integration_id
                ) ==
-                 ProviderRegistry.room_creation_budget_ms()
+                 ProviderConfig.room_creation_budget_ms()
 
         assert VideoRoomWorker.creation_timeout_ms(meeting) >
-                 ProviderRegistry.room_creation_budget_ms()
+                 ProviderConfig.room_creation_budget_ms()
       end
     end
   end

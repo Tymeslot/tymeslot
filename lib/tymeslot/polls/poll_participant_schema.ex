@@ -12,7 +12,6 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   alias Tymeslot.Security.FieldValidators.NameValidator
   alias Tymeslot.Security.Token
   alias Tymeslot.Timezones
-  alias Tymeslot.Utils.UnguessableToken
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -24,8 +23,7 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     field(:email, :string)
     # The per-person `?p=` token. Registering again with the same address
     # resumes the participant and hands their link back, so the token is
-    # encrypted rather than only hashed; it is looked up by `token_hash`. The
-    # plain `token` column predates this and is no longer read or written.
+    # encrypted rather than only hashed; it is looked up by `token_hash`.
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
     field(:timezone, :string)
@@ -104,7 +102,7 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   defp put_new_token(changeset) do
     case get_field(changeset, :token) do
-      nil -> put_change(changeset, :token, UnguessableToken.generate())
+      nil -> put_change(changeset, :token, Token.generate(24))
       _token -> changeset
     end
   end

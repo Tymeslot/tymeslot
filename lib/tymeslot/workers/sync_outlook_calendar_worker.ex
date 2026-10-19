@@ -16,9 +16,23 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   use Oban.Worker,
     queue: :calendar_events,
     max_attempts: 5,
-    unique: [period: 60, keys: [:calendar_integration_id, :graph_resource_id]]
+    unique: [
+      period: 60,
+      keys: [:calendar_integration_id, :graph_resource_id],
+      # Only a job still waiting to run absorbs a second notification for the
+      # same event: it fetches the event when it runs, so it reads the later
+      # change too. One that has fetched already (running or finished) must
+      # not swallow it, or a second edit within the minute never reaches the
+      # cache.
+      states: [:available, :scheduled, :retryable]
+    ]
 
   use Gettext, backend: TymeslotWeb.Gettext
+
+  # An open breaker or a rate limit is waited out with a snooze, which from
+  # Oban 2.24 costs no attempt; without a bound a provider that never
+  # recovers would keep this job snoozing for ever, with no alert.
+  @max_unavailable_snoozes 12
 
   require Logger
 
@@ -26,15 +40,17 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.InvalidEventReport
+  alias Tymeslot.Integrations.Calendar.Defaults
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
-  alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesMaster
+  alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.Sync
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.ReauthHandling
+  alias Tymeslot.Workers.CalendarSyncJob
   alias Tymeslot.Workers.RetryHelpers
-  alias Tymeslot.Workers.SyncHealth
 
   # CalendarGrid enqueues Outlook jobs with only calendar_integration_id (no graph_resource_id).
   # Outlook syncs are event-driven via Microsoft Graph webhooks — there is no full-sync path yet.
@@ -63,31 +79,21 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     {:discard, "graph_resource_id required — Outlook syncs are webhook-driven"}
   end
 
-  def perform(%Oban.Job{
-        args: %{
-          "calendar_integration_id" => integration_id,
-          "graph_resource_id" => graph_resource_id
-        }
-      }) do
-    Logger.metadata(
-      calendar_integration_id: integration_id,
-      graph_resource_id: graph_resource_id
+  def perform(
+        %Oban.Job{
+          args: %{
+            "calendar_integration_id" => _integration_id,
+            "graph_resource_id" => graph_resource_id
+          }
+        } =
+          job
+      ) do
+    Logger.metadata(graph_resource_id: graph_resource_id)
+
+    CalendarSyncJob.run(job, &sync_event(&1, graph_resource_id),
+      max_snoozes: @max_unavailable_snoozes,
+      exhausted_reason: "Outlook Calendar did not recover within the maximum wait"
     )
-
-    case CalendarIntegrationQueries.get(integration_id) do
-      {:ok, integration} ->
-        InvalidEventReport.collect(fn -> sync_event(integration, graph_resource_id) end)
-
-      {:error, :not_found} ->
-        Logger.warning("Calendar integration not found, discarding sync job",
-          calendar_integration_id: integration_id
-        )
-
-        {:discard, @integration_gone}
-
-      {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
-    end
   end
 
   # ---------------------------------------------------------------------------
@@ -96,7 +102,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   defp sync_event(integration, graph_resource_id) do
     result =
-      AccessToken.with_access_token(integration, &OutlookCalendarAPI.refresh_token/1, fn token ->
+      Tokens.with_access_token(integration, &OutlookCalendarAPI.refresh_token/1, fn token ->
         # Check for 404 (deleted event) and 401 BEFORE the circuit breaker so
         # that deleted events and auth failures don't count as failures and
         # trip the breaker.
@@ -119,9 +125,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         end
       end)
 
-    result
-    |> handle_sync_result(integration, graph_resource_id)
-    |> tap(&SyncHealth.record_outcome(integration, &1))
+    handle_sync_result(result, integration, graph_resource_id)
   end
 
   defp handle_sync_result(result, integration, graph_resource_id) do
@@ -165,7 +169,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   end
 
   # Graph is refusing the credentials, not this one event: the 401 is caught
-  # ahead of the circuit breaker, and `AccessToken.with_access_token/4` has
+  # ahead of the circuit breaker, and `Tokens.with_access_token/4` has
   # already tried a refresh, so reaching here means the refresh failed or the
   # refreshed token was rejected too. Every other event notification for this
   # integration is about to be refused the same way, and the 15-minute sweep
@@ -174,10 +178,10 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   # emails them, and the scheduler's uniqueness window backstops the race
   # between two event jobs flagging at once.
   defp handle_credentials_rejected(integration) do
-    CalendarManagement.flag_for_reconnection(
+    Management.flag_for_reconnection(
       integration,
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "Microsoft rejected the stored credentials. Please reconnect the integration."
       ),
       @credentials_rejected
@@ -198,15 +202,34 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   defp handle_event_fetched(integration, graph_resource_id, event) do
     context = %{
       calendar_integration_id: integration.id,
-      provider_calendar_id: integration.default_booking_calendar_id || "primary",
+      provider_calendar_id: Defaults.booking_calendar_id(integration),
       synced_at: DateTime.utc_now(:microsecond)
     }
 
     case OutlookProvider.normalise_events([event], context) do
       {:ok, [_cal_event | _rest] = calendar_events} ->
-        Sync.persist_normalised_events(integration, calendar_events)
-        stamp_external_sync(integration)
-        :ok
+        :ok =
+          SeriesRules.refresh(integration.id, calendar_events, SeriesMaster.reader(integration),
+            changed: true
+          )
+
+        # A cache write that failed is a cycle that did not sync: the job
+        # retries and health state counts it, rather than the sync being
+        # stamped as done over an event the cache never received.
+        case Sync.persist_normalised_events(integration, calendar_events) do
+          :ok ->
+            stamp_external_sync(integration)
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Outlook event could not be written to the cache",
+              calendar_integration_id: integration.id,
+              graph_resource_id: graph_resource_id,
+              error: LogFormat.reason(reason)
+            )
+
+            {:error, :cache_write_failed}
+        end
 
       {:ok, []} ->
         Logger.warning("Outlook event could not be normalised; skipping",

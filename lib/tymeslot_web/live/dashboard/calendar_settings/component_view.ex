@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
               is_refreshing={@is_refreshing}
               myself={@myself}
               health_states={@health_states}
+              stuck_changes={@stuck_changes}
             />
           <% end %>
         </div>
@@ -87,6 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
         id="calendar-selection"
         show={@managing_calendar_id != nil}
         integration={Enum.find(@integrations, &(&1.id == @managing_calendar_id))}
+        booking_calendar_ids={Map.get(@booking_calendar_ids, @managing_calendar_id, [])}
         target={@myself}
         on_cancel={JS.push("close_manage_calendars", target: @myself)}
       />

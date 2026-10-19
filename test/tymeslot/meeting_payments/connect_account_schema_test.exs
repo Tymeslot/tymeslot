@@ -34,6 +34,23 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchemaTest do
     assert cs.valid?
   end
 
+  test "accepts an allowlisted currency and rejects any other" do
+    attrs = %{user_id: 1, country: "ch", status: "active"}
+
+    assert ConnectAccountSchema.changeset(
+             %ConnectAccountSchema{},
+             Map.put(attrs, :default_currency, "gbp")
+           ).valid?
+
+    cs =
+      ConnectAccountSchema.changeset(
+        %ConnectAccountSchema{},
+        Map.put(attrs, :default_currency, "jpy")
+      )
+
+    assert {_message, [validation: :inclusion, enum: _allowlist]} = cs.errors[:default_currency]
+  end
+
   test "rejects unknown status" do
     cs =
       ConnectAccountSchema.changeset(%ConnectAccountSchema{}, %{

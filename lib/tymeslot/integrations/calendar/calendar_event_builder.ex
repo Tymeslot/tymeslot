@@ -13,8 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Utils.MapKeys
-  alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Endpoint
 
   # Tymeslot's own reminder pipeline sends the reminder emails, so alarms
@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   # consume `Tymeslot.Integrations.Calendar.Reminder`'s canonical
   # `%{method:, minutes_before:}` shape instead, so the two are reconciled
   # here. Reminders round-tripped through a JSONB column come back
-  # string-keyed; `ReminderUtils.normalize_reminder/1` accepts either form and
+  # string-keyed; `Reminders.normalize_reminder/1` accepts either form and
   # rejects anything it can't read, which is dropped rather than written out
   # as a malformed alarm.
   defp build_reminders(meeting) do
@@ -101,9 +101,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   end
 
   defp to_alarm(reminder) do
-    case ReminderUtils.normalize_reminder(reminder) do
+    case Reminders.normalize_reminder(reminder) do
       {:ok, %{value: value, unit: unit}} ->
-        minutes_before = div(ReminderUtils.reminder_interval_seconds(value, unit), 60)
+        minutes_before = div(Reminders.reminder_interval_seconds(value, unit), 60)
         [%{method: @alarm_method, minutes_before: minutes_before}]
 
       {:error, :invalid_reminder} ->

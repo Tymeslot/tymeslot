@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
   setup do
     user = insert(:user)
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
-    {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
+    {:ok, profile} = Profiles.update_booking_theme(profile, "1")
 
     %{user: user, profile: profile}
   end
@@ -298,6 +298,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       meeting: meeting,
       host_user_id: user.id,
       status: "pending",
+      stripe_account_id: "acct_TEST",
       stripe_checkout_session_id: "cs_TEST"
     )
 
@@ -312,7 +313,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
              FailAndExpire.handle(
                %{
                  "id" => "evt_async_failed_#{System.unique_integer([:positive])}",
-                 "data" => %{"object" => %{"client_reference_id" => meeting.id}}
+                 "account" => "acct_TEST",
+                 "data" => %{
+                   "object" => %{"id" => "cs_TEST", "client_reference_id" => meeting.id}
+                 }
                },
                "checkout.session.async_payment_failed",
                :async_payment_failed
@@ -452,7 +456,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
 
   test "rejects mismatched theme slug (host uses Rhythm)", %{conn: conn, user: user} do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+    {:ok, _profile} = Profiles.update_booking_theme(profile, "2")
 
     meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 

@@ -19,7 +19,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSeriesRefreshTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
-  alias Tymeslot.Integrations.Calendar.Operations
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
 
   setup :verify_on_exit!
 

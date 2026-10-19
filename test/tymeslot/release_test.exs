@@ -11,6 +11,7 @@ defmodule Tymeslot.ReleaseTest do
   alias Tymeslot.Repo
 
   import Tymeslot.Factory
+  import Tymeslot.AppSettingsEnvHelpers
 
   setup do
     # A downstream overlay's config can set enable_admin_ui to false. Force it
@@ -67,6 +68,25 @@ defmodule Tymeslot.ReleaseTest do
 
     test "refuses to demote the only remaining admin without force" do
       admin = insert(:user, is_admin: true)
+
+      assert {:error, :last_admin} = Release.demote_admin(admin.email)
+      assert Repo.reload!(admin).is_admin
+    end
+
+    test "refuses when the only other admin signs in with a password and password sign-in is off" do
+      restore_app_settings_env(%{})
+      enable_credentialed_oauth()
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+
+      admin =
+        insert(:user,
+          is_admin: true,
+          provider: "oauth",
+          provider_uid: "oidc-uid-1",
+          password_hash: nil
+        )
+
+      _password_admin = insert(:user, is_admin: true)
 
       assert {:error, :last_admin} = Release.demote_admin(admin.email)
       assert Repo.reload!(admin).is_admin

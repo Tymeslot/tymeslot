@@ -6,24 +6,14 @@ defmodule Tymeslot.Security.Token do
   alias Ecto.Changeset
 
   @doc """
-  Generates a strong random session token.
-  Returns just the token string.
+  Generates an unguessable, URL-safe token: `bytes` random bytes (32 by
+  default), base64url without padding. The one place the app mints random
+  tokens for sessions, account links, public resource links, OAuth state and
+  CSP nonces.
   """
-  @spec generate_session_token() :: String.t()
-  def generate_session_token do
-    generate_strong_token()
-  end
-
-  @doc """
-  Generates a generic secure token.
-  """
-  @spec generate_token() :: String.t()
-  def generate_token do
-    generate_strong_token()
-  end
-
-  defp generate_strong_token do
-    Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+  @spec generate(pos_integer()) :: String.t()
+  def generate(bytes \\ 32) when is_integer(bytes) and bytes > 0 do
+    bytes |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
   end
 
   @doc """

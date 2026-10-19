@@ -9,11 +9,11 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
   import Ecto.Query
   import Tymeslot.ConfigTestHelpers
 
-  alias Config.Reader
   alias ErrorTracker.Error
   alias ErrorTracker.Occurrence
   alias Oban.Cron.Expression
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Infrastructure.ObanCron
   alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
 
   describe "perform/1" do
@@ -213,32 +213,15 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
   end
 
   describe "schedule" do
-    test "is registered in the runtime crontab with a parseable daily schedule" do
-      runtime_exs = "runtime.exs" |> config_path() |> File.read!()
-
-      pattern = ~r/\{\s*"([^"]+)"\s*,\s*Tymeslot\.Workers\.ErrorTrackerMaintenanceWorker\s*\}/
-
-      assert [_match, schedule] = Regex.run(pattern, runtime_exs),
-             "ErrorTrackerMaintenanceWorker is not registered in the runtime.exs crontab"
+    test "is registered in the shared crontab with a parseable daily schedule" do
+      assert {schedule, ErrorTrackerMaintenanceWorker} =
+               List.keyfind(ObanCron.base_crontab(), ErrorTrackerMaintenanceWorker, 1)
 
       assert {:ok, _expression} = Expression.parse(schedule)
-    end
-
-    test "is registered in the dev crontab" do
-      crontab =
-        "dev.exs"
-        |> config_path()
-        |> Reader.read!(env: :dev, target: :host)
-        |> get_in([:tymeslot, Oban, :cron, :crontab])
-
-      assert Enum.any?(crontab, &match?({_schedule, ErrorTrackerMaintenanceWorker}, &1))
     end
   end
 
   defp perform_job, do: ErrorTrackerMaintenanceWorker.perform(%Oban.Job{args: %{}})
-
-  defp config_path(file),
-    do: [__DIR__, "..", "..", "..", "config", file] |> Path.join() |> Path.expand()
 
   defp days_ago(days), do: DateTime.add(DateTime.utc_now(), -days, :day)
 

@@ -130,6 +130,34 @@ defmodule Tymeslot.Emails.DeliveryTest do
     end
   end
 
+  describe "the email breaker" do
+    setup do
+      breaker = CircuitBreakerSupervisor.email_breaker_name()
+      CircuitBreaker.reset(breaker)
+      on_exit(fn -> CircuitBreaker.reset(breaker) end)
+      setup_config(:tymeslot, Tymeslot.Mailer, adapter: FailingMailerAdapter)
+      setup_config(:tymeslot, :test_delivery_error, :econnrefused)
+      :ok
+    end
+
+    test "email_breaker_refusing?/0 turns true once deliveries open the breaker" do
+      refute Delivery.email_breaker_refusing?()
+
+      for _attempt <- 1..Delivery.email_breaker_config().failure_threshold do
+        assert {:error, :econnrefused} = Delivery.deliver(valid_email())
+      end
+
+      assert Delivery.email_breaker_refusing?()
+    end
+
+    test "email_breaker_recovery_seconds/0 is the breaker's recovery timeout in seconds" do
+      %{recovery_timeout: recovery_ms} =
+        CircuitBreaker.status(CircuitBreakerSupervisor.email_breaker_name()).config
+
+      assert Delivery.email_breaker_recovery_seconds() * 1_000 == recovery_ms
+    end
+  end
+
   describe "permanent_rejection?/1" do
     test "recognises the Postmark codes for a dead address" do
       assert Delivery.permanent_rejection?({422, %{"ErrorCode" => 406}})
@@ -149,46 +177,56 @@ defmodule Tymeslot.Emails.DeliveryTest do
   end
 
   describe "deliver/1 — permanent recipient rejection" do
+    # Each test delivers through a breaker of its own, so no other delivery
+    # in the suite can move the counts it asserts on.
     setup do
       setup_config(:tymeslot, Tymeslot.Mailer, adapter: FailingMailerAdapter)
-      CircuitBreaker.reset(CircuitBreakerSupervisor.email_breaker_name())
-      on_exit(fn -> CircuitBreaker.reset(CircuitBreakerSupervisor.email_breaker_name()) end)
-      :ok
+      # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
+      breaker = :"delivery_test_breaker_#{System.unique_integer([:positive])}"
+
+      start_supervised!(
+        {CircuitBreaker, name: breaker, config: CircuitBreakerSupervisor.email_breaker_config()}
+      )
+
+      %{breaker: breaker}
     end
 
-    test "returns a rejection the caller can distinguish from a transient failure" do
+    test "returns a rejection the caller can distinguish from a transient failure", %{
+      breaker: breaker
+    } do
       setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
 
       assert {:error, {:recipient_rejected, @suppressed_recipient}} =
-               Delivery.deliver(valid_email())
+               Delivery.deliver(valid_email(), breaker: breaker)
     end
 
     # The incident this guards against: three notifications to one hard-bounced
     # address opened the breaker, which then failed every unrelated email —
     # including the admin alert reporting the failure — for five minutes.
-    test "does not count towards the circuit breaker, however many addresses are dead" do
+    test "does not count towards the circuit breaker, however many addresses are dead", %{
+      breaker: breaker
+    } do
       setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
-      breaker = CircuitBreakerSupervisor.email_breaker_name()
       threshold = CircuitBreaker.status(breaker).config.failure_threshold
 
       for _attempt <- 1..(threshold * 2) do
-        assert {:error, {:recipient_rejected, _reason}} = Delivery.deliver(valid_email())
+        assert {:error, {:recipient_rejected, _reason}} =
+                 Delivery.deliver(valid_email(), breaker: breaker)
       end
 
       assert CircuitBreaker.status(breaker).status == :closed
     end
 
-    test "a transient provider failure still opens the breaker" do
+    test "a transient provider failure still opens the breaker", %{breaker: breaker} do
       setup_config(:tymeslot, :test_delivery_error, :econnrefused)
-      breaker = CircuitBreakerSupervisor.email_breaker_name()
       threshold = CircuitBreaker.status(breaker).config.failure_threshold
 
       for _attempt <- 1..threshold do
-        assert {:error, :econnrefused} = Delivery.deliver(valid_email())
+        assert {:error, :econnrefused} = Delivery.deliver(valid_email(), breaker: breaker)
       end
 
       assert CircuitBreaker.status(breaker).status == :open
-      assert {:error, :circuit_open} = Delivery.deliver(valid_email())
+      assert {:error, :circuit_open} = Delivery.deliver(valid_email(), breaker: breaker)
     end
 
     # A hung SMTP/API connection is the common shape of a mail outage, and is
@@ -197,17 +235,86 @@ defmodule Tymeslot.Emails.DeliveryTest do
     # also hide the outage from the breaker, or the breaker never opens and
     # every subsequent send is spent inside the outage instead of snoozing
     # past it.
-    test "a timeout still opens the breaker, even though the caller sees assumed delivery" do
+    test "a timeout still opens the breaker, even though the caller sees assumed delivery", %{
+      breaker: breaker
+    } do
       setup_config(:tymeslot, :test_delivery_error, :timeout)
-      breaker = CircuitBreakerSupervisor.email_breaker_name()
       threshold = CircuitBreaker.status(breaker).config.failure_threshold
 
       for _attempt <- 1..threshold do
-        assert {:ok, :assumed_delivered} = Delivery.deliver(valid_email())
+        assert {:ok, :assumed_delivered} = Delivery.deliver(valid_email(), breaker: breaker)
       end
 
       assert CircuitBreaker.status(breaker).status == :open
-      assert {:error, :circuit_open} = Delivery.deliver(valid_email())
+      assert {:error, :circuit_open} = Delivery.deliver(valid_email(), breaker: breaker)
+    end
+  end
+
+  describe "deliver/2 header values" do
+    setup do
+      Application.put_env(:swoosh, :shared_test_process, self())
+      on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    end
+
+    # A CR or LF in a display name or a subject must never reach the
+    # adapter's header encoding, whichever template built the email.
+    test "strips line breaks from display names and the subject, keeping the addresses" do
+      email = %{
+        valid_email()
+        | to: [{"Ada\r\nBcc: victim@example.com", "ada@example.com"}],
+          cc: [{"Grace\n", "grace@example.com"}],
+          subject: "Meeting\r\nX-Injected: yes"
+      }
+
+      assert {:ok, _receipt} = Delivery.deliver(email)
+      assert_received {:email, sent}
+
+      assert sent.to == [{"Ada Bcc: victim@example.com", "ada@example.com"}]
+      assert sent.cc == [{"Grace", "grace@example.com"}]
+      assert sent.from == {"Tymeslot", "noreply@example.com"}
+      assert sent.subject == "Meeting X-Injected: yes"
+    end
+
+    test "keeps the email's private data, which carries tracking" do
+      email = Email.put_private(valid_email(), :tracking, %{"campaign" => "x"})
+
+      assert {:ok, _receipt} = Delivery.deliver(email)
+      assert_received {:email, %{private: %{tracking: %{"campaign" => "x"}}}}
+    end
+  end
+
+  describe "deliver/2 and ambiguous timeouts" do
+    setup do
+      setup_config(:tymeslot, Tymeslot.Mailer, adapter: FailingMailerAdapter)
+      setup_config(:tymeslot, :test_delivery_error, :timeout)
+      breaker = CircuitBreakerSupervisor.email_breaker_name()
+      CircuitBreaker.reset(breaker)
+      on_exit(fn -> CircuitBreaker.reset(breaker) end)
+    end
+
+    test "are assumed delivered unless the caller asks for the bounded retry" do
+      assert {:ok, :assumed_delivered} = Delivery.deliver(valid_email())
+
+      assert {{:ok, :assumed_delivered}, false} =
+               Delivery.with_ambiguous_timeouts(:assume_delivered, fn ->
+                 Delivery.deliver(valid_email())
+               end)
+    end
+
+    test "under :retry_once come back as an error to retry, and say they happened" do
+      assert {{:error, {:ambiguous, :timeout}}, true} =
+               Delivery.with_ambiguous_timeouts(:retry_once, fn ->
+                 Delivery.deliver(valid_email())
+               end)
+
+      # The policy ends with the call.
+      assert {:ok, :assumed_delivered} = Delivery.deliver(valid_email())
+    end
+
+    # AhaSend's 202 Accepted can arrive with a body its adapter cannot parse.
+    test "a 202 the adapter could not parse is a message the provider took" do
+      setup_config(:tymeslot, :test_delivery_error, {202, "not json"})
+      assert {:ok, :accepted} = Delivery.deliver(valid_email())
     end
   end
 
@@ -245,8 +352,32 @@ defmodule Tymeslot.Emails.DeliveryTest do
       assert Delivery.timeout_error?(:timeout)
     end
 
-    test "recognises a string mentioning a timeout, case-insensitively" do
-      assert Delivery.timeout_error?("connection Timeout while sending")
+    # A reason is judged by its shape; one that merely mentions a timeout in
+    # its text (a provider's error body, say) is retried, not assumed sent.
+    test "does not treat a reason that only mentions a timeout as one" do
+      refute Delivery.timeout_error?("connection Timeout while sending")
+      refute Delivery.timeout_error?({422, %{"Message" => "Request timeout"}})
+    end
+
+    test "recognises an API adapter's transport timeout and a gateway timeout" do
+      assert Delivery.timeout_error?(%Mint.TransportError{reason: :timeout})
+      assert Delivery.timeout_error?({504, "Gateway Timeout"})
+    end
+
+    test "recognises Finch's transport timeout, connect or receive alike" do
+      assert Delivery.timeout_error?(%Finch.TransportError{reason: :timeout})
+    end
+
+    # gen_smtp reports a lost connection alike for MAIL FROM, RCPT TO and
+    # DATA, so it cannot say whether anything was sent: retried, as a
+    # duplicate is preferred to a loss.
+    test "retries a connection gen_smtp lost after the session opened" do
+      refute Delivery.timeout_error?({:send, {:network_failure, ~c"host", {:error, :closed}}})
+    end
+
+    test "retries other transport errors and HTTP statuses" do
+      refute Delivery.timeout_error?(%Mint.TransportError{reason: :closed})
+      refute Delivery.timeout_error?({503, "Service Unavailable"})
     end
 
     test "recognises a timeout gen_smtp reports mid-transaction, when the message may have left" do

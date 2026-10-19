@@ -36,7 +36,7 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
   @spec run(pos_integer(), pos_integer(), keyword()) ::
           {:ok, :deleted | :cleanup_scheduled} | {:error, any()}
   def run(user_id, id, opts) when is_integer(user_id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
+    case VideoIntegrationQueries.get_live_for_user(id, user_id) do
       {:ok, integration} ->
         remove(integration, Keyword.get(opts, :delete_rooms, false))
 
@@ -77,7 +77,7 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
           count: non_neg_integer()
         }
   def rooms_to_delete(user_id, id) when is_integer(user_id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
+    case VideoIntegrationQueries.get_live_for_user(id, user_id) do
       {:ok, integration} ->
         scope = room_scope(integration.provider)
         now = DateTime.utc_now()
