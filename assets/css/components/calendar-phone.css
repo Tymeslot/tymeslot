@@ -38,6 +38,13 @@
     height: var(--cal-fab-size);
   }
 
+  /* The last row and the 23:00 slot scroll clear of the + button. */
+  .cal-agenda,
+  .cal-month-agenda,
+  .cal-scroll {
+    padding-bottom: var(--cal-fab-clear);
+  }
+
   /* Above the tab bar and the + button. */
   .cal-toast-region,
   .cal-notice {

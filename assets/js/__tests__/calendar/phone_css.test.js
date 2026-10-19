@@ -255,4 +255,19 @@ describe("the phone, views and touch stylesheets", () => {
     expect(phone).toMatch(/env\(safe-area-inset-bottom\)/);
     expect(phone).toMatch(/env\(safe-area-inset-top\)/);
   });
+
+  test.each([".cal-agenda", ".cal-month-agenda", ".cal-scroll"])(
+    "%s leaves room under the + button on a phone",
+    (name) => {
+      const found = where(rules(component("calendar-phone.css")), name).filter(
+        (r) => r.at.some((a) => a.includes(PHONE)) && decl(r.body, "padding-bottom") === "var(--cal-fab-clear)",
+      );
+
+      expect(found.length).toBeGreaterThan(0);
+    },
+  );
+
+  test("--cal-fab-clear clears the + button and its offset", () => {
+    expect(read("base/variables.css")).toMatch(/--cal-fab-clear:\s*calc\(var\(--cal-fab-size\) \+ 1\.5rem\)/);
+  });
 });
