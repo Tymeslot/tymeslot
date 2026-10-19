@@ -14,26 +14,37 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Helpers.LocaleFormat
+
+  # Phones and coarse pointers get a 44px hit area on every row: the row is
+  # at least 44px tall, segments stretch to it, and a switch's invisible
+  # ::before pad reaches 44x44 around its 36x20 body.
+  @row "max-sm:min-h-11 pointer-coarse:min-h-11"
+  @segments "max-sm:[&>button]:min-h-11 max-sm:[&>button]:px-3 pointer-coarse:[&>button]:min-h-11 pointer-coarse:[&>button]:px-3"
+  @switch "relative before:absolute before:-inset-x-1 before:-inset-y-3 before:content-['']"
 
   attr :id_prefix, :string,
     required: true,
     doc: ~s(prefixes every id: "calendar" in the toolbar, "calendar-sheet" in the sheet)
 
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
+  attr :time_format, :string, required: true, doc: ~s("24h" or "12h": the surface's `time_format`)
   attr :target, :any, required: true
 
   @spec display_options(map()) :: Phoenix.LiveView.Rendered.t()
   def display_options(assigns) do
     ~H"""
     <div id={"#{@id_prefix}-display-rows"} class="space-y-4">
-      <div class="flex items-center justify-between gap-3">
+      <div class={["flex items-center justify-between gap-3", row()]}>
         <span class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar", "Density")}
         </span>
         <.segmented_control
           id={"#{@id_prefix}-density"}
           size={:sm}
+          class={segments()}
           value={@preferences.density}
           on_change="calendar:set_density"
           param="option"
@@ -44,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
           <:option value="compact" label={dgettext("dashboard_calendar", "Compact")} />
         </.segmented_control>
       </div>
-      <div class="flex items-center justify-between gap-3">
+      <div class={["flex items-center justify-between gap-3", row()]}>
         <span class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar", "Fold early hours")}
         </span>
@@ -54,20 +65,158 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
           on_change="calendar:toggle_fold_night"
           target={@target}
           size={:small}
+          class={switch_pad()}
           aria_label={dgettext("dashboard_calendar", "Fold early hours")}
         />
       </div>
+      <.week_rows
+        id_prefix={@id_prefix}
+        preferences={@preferences}
+        time_format={@time_format}
+        target={@target}
+      />
       <div class="flex flex-col items-start gap-1 border-t border-tymeslot-100 pt-3">
         <%!-- No phx-target: DashboardLive swaps the component. --%>
         <.action_button
           id={"#{@id_prefix}-back-to-old"}
           variant={:ghost}
           size={:sm}
+          class="max-sm:min-h-11 pointer-coarse:min-h-11"
           phx-click={JS.push("calendar:switch_surface", value: %{enabled: false})}
         >
           {dgettext("dashboard_calendar", "Back to the old calendar")}
         </.action_button>
       </div>
+    </div>
+    """
+  end
+
+  defp row, do: @row
+  defp segments, do: @segments
+  defp switch_pad, do: @switch
+
+  # Rows 3 to 7: what the week shows and how times read. Weekends and the
+  # week start reload the window; the others redraw from the settings (see
+  # `DisplayPreferences`).
+  attr :id_prefix, :string, required: true
+  attr :preferences, :map, required: true
+  attr :time_format, :string, required: true
+  attr :target, :any, required: true
+
+  defp week_rows(assigns) do
+    [sunday, monday | _rest] =
+      LocaleFormat.get_weekday_names(Gettext.get_locale(TymeslotWeb.Gettext), :full)
+
+    assigns =
+      assign(assigns,
+        monday: monday,
+        sunday: sunday,
+        week_start: Atom.to_string(Period.week_start(assigns.preferences.week_start_day)),
+        row: @row,
+        segments: @segments
+      )
+
+    ~H"""
+    <.switch_row
+      id={"#{@id_prefix}-weekends"}
+      label={dgettext("dashboard_calendar_power", "Include weekends")}
+      description={dgettext("dashboard_calendar_power", "In the week view")}
+      checked={@preferences.show_weekends}
+      event="calendar:toggle_weekends"
+      target={@target}
+    />
+    <.switch_row
+      id={"#{@id_prefix}-week-numbers"}
+      label={dgettext("dashboard_calendar_power", "Show week numbers")}
+      checked={@preferences.show_week_numbers}
+      event="calendar:toggle_week_numbers"
+      target={@target}
+    />
+    <div class={["flex items-center justify-between gap-3", @row]}>
+      <span class="text-token-sm font-medium text-tymeslot-700">
+        {dgettext("dashboard_calendar_power", "Week starts on")}
+      </span>
+      <.segmented_control
+        id={"#{@id_prefix}-week-start"}
+        size={:sm}
+        class={@segments}
+        value={@week_start}
+        on_change="calendar:set_week_start"
+        param="option"
+        target={@target}
+        aria_label={dgettext("dashboard_calendar_power", "Week starts on")}
+      >
+        <:option value="monday" label={@monday} />
+        <:option value="sunday" label={@sunday} />
+      </.segmented_control>
+    </div>
+    <div class={["flex items-center justify-between gap-3", @row]}>
+      <span class="text-token-sm font-medium text-tymeslot-700">
+        {dgettext("dashboard_calendar_power", "Clock")}
+      </span>
+      <.segmented_control
+        id={"#{@id_prefix}-time-format"}
+        size={:sm}
+        class={@segments}
+        value={@time_format}
+        on_change="calendar:set_time_format"
+        param="option"
+        target={@target}
+        aria_label={dgettext("dashboard_calendar_power", "Clock")}
+      >
+        <:option value="24h" label={dgettext("dashboard_calendar_power", "24-hour")} />
+        <:option value="12h" label={dgettext("dashboard_calendar_power", "12-hour")} />
+      </.segmented_control>
+    </div>
+    <.switch_row
+      id={"#{@id_prefix}-desktop-reminders"}
+      label={dgettext("dashboard_calendar_power", "Desktop notifications")}
+      description={
+        dgettext(
+          "dashboard_calendar_power",
+          "Before events with a reminder, while the calendar is open"
+        )
+      }
+      checked={@preferences.desktop_reminders_enabled}
+      event="calendar:toggle_desktop_reminders"
+      target={@target}
+    />
+    """
+  end
+
+  # A label, an optional description read with the switch, and the switch.
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :description, :string, default: nil
+  attr :checked, :boolean, required: true
+  attr :event, :string, required: true
+  attr :target, :any, required: true
+
+  defp switch_row(assigns) do
+    assigns = assign(assigns, row: @row, pad: @switch)
+
+    ~H"""
+    <div class={["flex items-start justify-between gap-3", @row]}>
+      <div class="min-w-0">
+        <span class="block text-token-sm font-medium text-tymeslot-700">{@label}</span>
+        <span
+          :if={@description}
+          id={"#{@id}-description"}
+          class="block text-token-xs text-tymeslot-500"
+        >
+          {@description}
+        </span>
+      </div>
+      <StatusSwitch.status_switch
+        id={@id}
+        checked={@checked}
+        on_change={@event}
+        target={@target}
+        size={:small}
+        class={@pad}
+        aria_label={@label}
+        aria-describedby={@description && "#{@id}-description"}
+      />
     </div>
     """
   end

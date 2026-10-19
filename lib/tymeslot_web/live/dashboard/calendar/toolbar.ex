@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :rail_open, :boolean, required: true
   attr :hidden_count, :integer, required: true
+  attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :target, :any, required: true
 
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
@@ -215,6 +216,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           <DisplayOptions.display_options
             id_prefix="calendar"
             preferences={@preferences}
+            time_format={@time_format}
             target={@target}
           />
         </:panel>

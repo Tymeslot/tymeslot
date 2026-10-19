@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   attr :reauth_ids, :any, default: MapSet.new()
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
+  attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :target, :any, required: true
 
   @spec calendars_sheet(map()) :: Phoenix.LiveView.Rendered.t()
@@ -87,6 +88,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
           <DisplayOptions.display_options
             id_prefix="calendar-sheet"
             preferences={@preferences}
+            time_format={@time_format}
             target={@target}
           />
         </section>

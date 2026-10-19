@@ -17,7 +17,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
 
   @routes %{
     "calendar:set_density" => DisplayPreferences,
-    "calendar:toggle_fold_night" => DisplayPreferences
+    "calendar:toggle_fold_night" => DisplayPreferences,
+    "calendar:toggle_weekends" => DisplayPreferences,
+    "calendar:toggle_week_numbers" => DisplayPreferences,
+    "calendar:set_week_start" => DisplayPreferences,
+    "calendar:set_time_format" => DisplayPreferences,
+    "calendar:toggle_desktop_reminders" => DisplayPreferences
   }
 
   @doc "The events `handle/3` answers."

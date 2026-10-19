@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias TymeslotWeb.Dashboard.Calendar.AgendaLoader
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.Deletion
+  alias TymeslotWeb.Dashboard.Calendar.LastView
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
   alias TymeslotWeb.Dashboard.Calendar.PowerSettings
@@ -249,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket |> assign(:open_menu, nil) |> push_period()
 
       _other ->
-        socket = apply_params(socket, opts)
+        socket = socket |> apply_params(opts) |> LastView.remember()
 
         if window_for(socket.assigns) == loaded,
           do: push_period(socket),

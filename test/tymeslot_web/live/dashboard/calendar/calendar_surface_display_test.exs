@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
   @moduledoc """
   The new calendar's display options, drawn once (`DisplayOptions`) for the
-  toolbar and the Calendars sheet: comfortable or compact density, and
-  whether the hours before 07:00 fold into one strip.
+  toolbar and the Calendars sheet: density, the folded night, weekends, week
+  numbers, the week start, the clock and desktop notifications.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -87,4 +87,196 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
 
     assert has_element?(lv, "#calendar-display-options-panel.overflow-y-auto.w-80")
   end
+
+  defp canvas(lv, event, params),
+    do: lv |> element("#calendar-canvas") |> render_hook(event, params)
+
+  defp stored(user), do: CalendarPreferencesQueries.get_or_create(user.id)
+
+  describe "what the week shows" do
+    test "hiding weekends is saved and reloads the window with a reset", %{conn: conn} do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      open_display_options(lv)
+      lv |> element("#calendar-weekends") |> render_click()
+
+      assert_push_event(lv, "calendar:events", %{reset: true, settings: %{show_weekends: false}})
+      refute stored(user).show_weekends
+      assert has_element?(lv, "#calendar-weekends[aria-checked='false']")
+    end
+
+    test "a Sunday week start is saved and the window moves to Sunday-start weeks", %{
+      conn: conn
+    } do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      open_display_options(lv)
+      lv |> element("#calendar-week-start-sunday") |> render_click()
+
+      # The week of Wed 14 October, one week either side: Sun 4 to Sat 24.
+      assert_push_event(lv, "calendar:events", %{
+        reset: true,
+        range: %{from: "2026-10-04", to: "2026-10-25"},
+        settings: %{week_start: "sunday"}
+      })
+
+      assert stored(user).week_start_day == "sunday"
+      assert has_element?(lv, "#calendar-week-start-sunday[aria-pressed='true']")
+    end
+
+    test "week numbers are saved and sent to the canvas without a reload", %{conn: conn} do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      open_display_options(lv)
+      lv |> element("#calendar-week-numbers") |> render_click()
+
+      assert_push_event(lv, "calendar:settings", %{show_week_numbers: true})
+      refute_push_event(lv, "calendar:events", _payload)
+      assert stored(user).show_week_numbers
+    end
+
+    test "the Calendars sheet sets the same preference as the toolbar", %{conn: conn} do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      canvas(lv, "calendar:toggle_menu", %{"menu" => "calendars"})
+      lv |> element("#calendar-sheet-week-numbers") |> render_click()
+
+      assert_push_event(lv, "calendar:settings", %{show_week_numbers: true})
+      assert stored(user).show_week_numbers
+    end
+
+    test "a week start or clock the server does not know changes nothing", %{conn: conn} do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      canvas(lv, "calendar:set_week_start", %{"option" => "friday"})
+      canvas(lv, "calendar:set_week_start", %{})
+      canvas(lv, "calendar:set_time_format", %{"option" => "13h"})
+
+      refute_push_event(lv, "calendar:events", _payload)
+      refute_push_event(lv, "calendar:settings", _settings)
+      assert stored(user).week_start_day == "monday"
+      assert stored(user).time_format == "24h"
+    end
+  end
+
+  describe "the clock" do
+    test "12-hour is saved, sent to the canvas and kept when the dashboard renders again", %{
+      conn: conn
+    } do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      open_display_options(lv)
+      lv |> element("#calendar-time-format-12h") |> render_click()
+
+      assert_push_event(lv, "calendar:settings", %{time_format: "12h"})
+      assert stored(user).time_format == "12h"
+
+      # A navigation renders DashboardLive again, which hands the surface its
+      # own `time_format`: only a parent told of the change keeps 12-hour.
+      canvas(lv, "calendar:goto", %{"view" => "day", "date" => "2026-10-15"})
+      assert_patch(lv, "/dashboard/calendar?view=day&date=2026-10-15")
+      canvas(lv, "calendar:ready", %{})
+
+      assert_reply(lv, %{settings: %{time_format: "12h"}})
+      open_display_options(lv)
+      assert has_element?(lv, "#calendar-time-format-12h[aria-pressed='true']")
+    end
+
+    test "an open preview is rebuilt in the new clock", %{conn: conn} do
+      %{conn: conn, integration: integration} = owner(conn)
+      review = event(integration, "work", "Design review", ~U[2026-10-14 13:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      canvas(lv, "calendar:open", %{"id" => "event-#{review.id}"})
+      assert lv |> element("#calendar-preview") |> render() =~ "14:00"
+
+      open_display_options(lv)
+      lv |> element("#calendar-time-format-12h") |> render_click()
+
+      assert lv |> element("#calendar-preview") |> render() =~ "2:00 PM"
+    end
+  end
+
+  describe "desktop notifications" do
+    test "switching them on is saved and sent to the canvas", %{conn: conn} do
+      %{conn: conn, user: user} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      open_display_options(lv)
+      lv |> element("#calendar-desktop-reminders") |> render_click()
+
+      assert_push_event(lv, "calendar:settings", %{desktop_reminders: true})
+      assert stored(user).desktop_reminders_enabled
+    end
+
+    test "stored week numbers and notifications reach the canvas on its first request", %{
+      conn: conn
+    } do
+      %{conn: conn} =
+        owner(conn, preferences: [show_week_numbers: true, desktop_reminders_enabled: true])
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:ready", %{})
+
+      assert_reply(lv, %{settings: %{show_week_numbers: true, desktop_reminders: true}})
+    end
+  end
+
+  describe "touch targets" do
+    test "every row of both placements reaches a 44px hit area on phones and coarse pointers",
+         %{conn: conn} do
+      %{conn: conn} = owner(conn)
+
+      for prefix <- ["calendar", "calendar-sheet"] do
+        {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+        if prefix == "calendar",
+          do: open_display_options(lv),
+          else: canvas(lv, "calendar:toggle_menu", %{"menu" => "calendars"})
+
+        rows =
+          lv
+          |> element("##{prefix}-display-rows")
+          |> render()
+          |> Floki.parse_fragment!()
+
+        controls =
+          for suffix <- ~w(density week-start time-format),
+              do: Floki.find(rows, "##{prefix}-#{suffix}")
+
+        switches =
+          for suffix <- ~w(fold-night weekends week-numbers desktop-reminders),
+              do: Floki.find(rows, "##{prefix}-#{suffix}")
+
+        # Anchor the lists: an id that stopped rendering must fail here.
+        assert Enum.map(controls ++ switches, &length/1) == List.duplicate(1, 7)
+
+        assert Enum.reject(controls, &(class_of(&1) =~ "max-sm:[&>button]:min-h-11")) == []
+
+        assert Enum.reject(controls, &(class_of(&1) =~ "pointer-coarse:[&>button]:min-h-11")) ==
+                 []
+
+        assert Enum.reject(switches, &(class_of(&1) =~ "before:-inset-y-3")) == []
+
+        row_classes =
+          rows
+          |> Floki.find("##{prefix}-display-rows > div:not(.border-t)")
+          |> Enum.map(&class_of/1)
+
+        assert length(row_classes) == 7
+        assert Enum.reject(row_classes, &(&1 =~ "max-sm:min-h-11")) == []
+
+        back = Floki.find(rows, "##{prefix}-back-to-old")
+        assert class_of(back) =~ "max-sm:min-h-11"
+      end
+    end
+  end
+
+  defp class_of(node), do: node |> Floki.attribute("class") |> Enum.join(" ")
 end

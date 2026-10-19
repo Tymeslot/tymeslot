@@ -26,7 +26,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerSettings do
         }
 
   @spec settings(map()) :: t()
-  def settings(_assigns) do
-    %{show_week_numbers: false, sets: [], active_set: 0, focus: false, desktop_reminders: false}
+  def settings(assigns) do
+    %{
+      show_week_numbers: assigns.preferences.show_week_numbers,
+      sets: [],
+      active_set: 0,
+      focus: false,
+      desktop_reminders: assigns.preferences.desktop_reminders_enabled
+    }
   end
 end

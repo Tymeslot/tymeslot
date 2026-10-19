@@ -1,56 +1,116 @@
 defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
   @moduledoc """
-  Saves the calendar surface's display choices (density and the folded
-  night) and tells the `CalendarCanvas` hook to redraw with them. Its events
-  arrive through `PowerEvents`.
+  Saves the calendar surface's display options and redraws with them.
+  `PowerEvents` routes each option's event here. What a change needs
+  depends on what it touches:
+
+    * density, the folded night, week numbers and desktop notifications
+      only change how the hook draws, so the settings are pushed again
+      (`:settings`);
+    * the week start and weekends change the days and the loaded window, so
+      the window is reloaded and pushed with a cache reset (`:window`);
+    * the clock is also mirrored by `DashboardLive` for the rest of the
+      dashboard (and handed back to the surface on every render), so the
+      parent is told, and an open preview is rebuilt in it.
+
+  Every handler parses its params again and ignores what it does not know.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import Phoenix.Component, only: [assign: 3]
+
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Live.Shared.Flash
 
-  @type socket :: Phoenix.LiveView.Socket.t()
+  @week_starts ~w(monday sunday)
 
+  @type socket :: Phoenix.LiveView.Socket.t()
+  @type effect :: :settings | :window
+
+  @doc "Answers the display options' events (see `PowerEvents`)."
   @spec handle(String.t(), map(), socket()) :: {:noreply, socket()}
-  def handle("calendar:set_density", %{"option" => density}, socket),
-    do: {:noreply, set_density(socket, density)}
+  def handle("calendar:set_density", %{"option" => density}, socket) do
+    if density in CalendarGrid.densities(),
+      do: {:noreply, save(socket, :density, density, :settings)},
+      else: {:noreply, socket}
+  end
 
   def handle("calendar:toggle_fold_night", _params, socket),
-    do: {:noreply, toggle_fold_night(socket)}
+    do: {:noreply, toggle(socket, :fold_night, :settings)}
+
+  def handle("calendar:toggle_weekends", _params, socket),
+    do: {:noreply, toggle(socket, :show_weekends, :window)}
+
+  def handle("calendar:toggle_week_numbers", _params, socket),
+    do: {:noreply, toggle(socket, :show_week_numbers, :settings)}
+
+  def handle("calendar:toggle_desktop_reminders", _params, socket),
+    do: {:noreply, toggle(socket, :desktop_reminders_enabled, :settings)}
+
+  def handle("calendar:set_week_start", %{"option" => week_start}, socket)
+      when week_start in @week_starts do
+    if week_start == socket.assigns.preferences.week_start_day,
+      do: {:noreply, socket},
+      else: {:noreply, save(socket, :week_start_day, week_start, :window)}
+  end
+
+  def handle("calendar:set_time_format", %{"option" => format}, socket) do
+    if TimeFormat.valid?(format) and format != socket.assigns.time_format,
+      do: {:noreply, set_time_format(socket, format)},
+      else: {:noreply, socket}
+  end
 
   def handle(_event, _params, socket), do: {:noreply, socket}
 
-  @doc "Saves `density` when it is one the grid can draw."
-  @spec set_density(socket(), term()) :: socket()
-  def set_density(socket, density) do
-    if density in CalendarGrid.densities(),
-      do: save(socket, :density, density, :settings),
-      else: socket
-  end
-
-  @doc "Flips whether the hours before 07:00 fold into one strip."
-  @spec toggle_fold_night(socket()) :: socket()
-  def toggle_fold_night(socket),
-    do: save(socket, :fold_night, !socket.assigns.preferences.fold_night, :settings)
-
   @doc """
-  Saves one display preference and applies it: `:settings` redraws the grid
-  from a settings push. A failed save keeps what was shown and says so.
+  Saves one preference and redraws: `:settings` pushes the display settings
+  again, `:window` reloads the window and pushes it with a cache reset.
+  A failed save leaves everything as it was and says so.
   """
-  @spec save(socket(), atom(), term(), :settings) :: socket()
-  def save(socket, key, value, :settings) do
+  @spec save(socket(), atom(), term(), effect()) :: socket()
+  def save(socket, key, value, effect) do
     case CalendarGrid.save_preferences(socket.assigns.current_user.id, %{key => value}) do
       {:ok, _preferences} ->
-        socket |> SurfaceData.put_preference(key, value) |> SurfaceData.push_settings()
+        socket |> SurfaceData.put_preference(key, value) |> redraw(effect)
 
       {:error, _changeset} ->
-        Flash.put_flash(
-          socket,
-          :error,
-          dgettext("dashboard_calendar", "Couldn't save that change. Please try again.")
-        )
+        failed(socket)
     end
   end
+
+  defp toggle(socket, key, effect),
+    do: save(socket, key, !Map.fetch!(socket.assigns.preferences, key), effect)
+
+  defp redraw(socket, :settings), do: SurfaceData.push_settings(socket)
+  defp redraw(socket, :window), do: SurfaceData.reload(socket, :events)
+
+  # The clock: saved, mirrored by the parent (whose next render hands the
+  # surface the same value), and applied here at once, an open preview
+  # included (`refilter/1` rebuilds it from the assigns).
+  defp set_time_format(socket, format) do
+    case CalendarGrid.save_preferences(socket.assigns.current_user.id, %{time_format: format}) do
+      {:ok, _preferences} ->
+        send(self(), {:time_format_updated, format})
+
+        socket
+        |> SurfaceData.put_preference(:time_format, format)
+        |> assign(:time_format, format)
+        |> SurfaceData.refilter()
+        |> SurfaceData.push_settings()
+
+      {:error, _changeset} ->
+        failed(socket)
+    end
+  end
+
+  defp failed(socket),
+    do:
+      Flash.put_flash(
+        socket,
+        :error,
+        dgettext("dashboard_calendar", "Couldn't save that change. Please try again.")
+      )
 end
