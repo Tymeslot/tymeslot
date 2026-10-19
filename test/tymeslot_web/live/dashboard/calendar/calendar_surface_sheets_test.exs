@@ -225,6 +225,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
              )
     end
 
+    test "reopening shows the period's month, not the month last paged to", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+      lv |> element("#calendar-sheet-month button[aria-label='Next month']") |> render_click()
+      assert has_element?(lv, "#calendar-sheet-month", "November 2026")
+
+      open_dates(lv)
+      refute has_element?(lv, "#calendar-date-sheet")
+      open_dates(lv)
+
+      assert has_element?(lv, "#calendar-sheet-month", "October 2026")
+    end
+
     test "a day goes there in the current view and closes the sheet", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open_dates(lv)
@@ -262,6 +275,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       lv |> element("#calendar-sheet-month button[aria-label='Next month']") |> render_click()
 
       assert has_element?(lv, "#calendar-sheet-month", "November 2026")
+    end
+  end
+
+  describe "the toolbar's date picker" do
+    setup %{conn: conn}, do: owner(conn)
+
+    test "reopening shows the period's month, not the month last paged to", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      toggle = fn ->
+        lv |> element("#calendar-date-picker [phx-value-menu='date']") |> render_click()
+      end
+
+      toggle.()
+      lv |> element("#calendar-picker-month button[aria-label='Next month']") |> render_click()
+      assert has_element?(lv, "#calendar-picker-month", "November 2026")
+
+      toggle.()
+      toggle.()
+
+      assert has_element?(lv, "#calendar-picker-month", "October 2026")
     end
   end
 end
