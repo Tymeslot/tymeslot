@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   These are functions that work with socket assigns, not components.
   """
 
-  alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
 
   # ========== TIMEZONE HELPERS ==========
@@ -16,7 +15,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   """
   @spec resolve_timezone(term()) :: {:ok, String.t()} | :error
   def resolve_timezone(timezone) do
-    case Security.validate_timezone(timezone) do
+    case Timezones.validate(timezone) do
       {:ok, validated} -> {:ok, Timezones.normalize(validated)}
       {:error, _reason} -> :error
     end

@@ -2,8 +2,8 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   @moduledoc """
   Meeting settings input validation and sanitisation.
 
-  Provides specialised validation for meeting settings forms including
-  meeting type creation/editing and scheduling settings configuration.
+  Provides specialised validation for the meeting type form. A schedule's
+  booking policy is validated by `Tymeslot.Availability.PolicyValidation`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -101,84 +101,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     do: validate_max_participants(value, metadata, Constraints.group_participants_range())
 
   def validate_field(_other_field, _value, _metadata),
-    do: {:error, %{base: "Invalid field"}}
-
-  @doc """
-  Validates the buffer kept free before each booking.
-
-  ## Parameters
-  - `value_str` - String containing the buffer in minutes
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, validated_integer}` | `{:error, validation_error}`
-  """
-  @spec validate_buffer_before_minutes(String.t(), keyword()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def validate_buffer_before_minutes(value_str, opts \\ []),
-    do: validate_buffer(value_str, "Buffer before", "buffer_before_minutes", opts)
-
-  @doc """
-  Validates the buffer kept free after each booking. Same rule and return
-  shape as `validate_buffer_before_minutes/2`.
-  """
-  @spec validate_buffer_after_minutes(String.t(), keyword()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def validate_buffer_after_minutes(value_str, opts \\ []),
-    do: validate_buffer(value_str, "Buffer after", "buffer_after_minutes", opts)
-
-  # Both buffers share one range, read from `Constraints` so this check and
-  # the schema's cannot disagree.
-  defp validate_buffer(value_str, label, event_name, opts) do
-    range = Constraints.buffer_minutes_range()
-    validate_numeric_setting(value_str, range.first, range.last, label, event_name, opts)
-  end
-
-  @doc """
-  Validates advance booking days setting input.
-
-  ## Parameters
-  - `days_str` - String containing advance booking days value
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, validated_integer}` | `{:error, validation_error}`
-  """
-  @spec validate_advance_booking_days(String.t(), keyword()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def validate_advance_booking_days(days_str, opts \\ []) do
-    validate_numeric_setting(
-      days_str,
-      1,
-      365,
-      "Advance booking days",
-      "advance_booking_days",
-      opts
-    )
-  end
-
-  @doc """
-  Validates minimum advance hours setting input.
-
-  ## Parameters
-  - `hours_str` - String containing minimum advance hours value
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, validated_integer}` | `{:error, validation_error}`
-  """
-  @spec validate_min_advance_hours(String.t(), keyword()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def validate_min_advance_hours(hours_str, opts \\ []) do
-    validate_numeric_setting(
-      hours_str,
-      0,
-      168,
-      "Minimum advance hours",
-      "min_advance_hours",
-      opts
-    )
-  end
+    do: {:error, %{base: dgettext("dashboard_meeting_form", "Invalid field")}}
 
   # --- Private helpers ---
 
@@ -247,8 +170,11 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_meeting_name(nil, _metadata), do: {:error, %{name: "Meeting name is required"}}
-  defp validate_meeting_name("", _metadata), do: {:error, %{name: "Meeting name is required"}}
+  defp validate_meeting_name(nil, _metadata),
+    do: {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name is required")}}
+
+  defp validate_meeting_name("", _metadata),
+    do: {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name is required")}}
 
   defp validate_meeting_name(name, metadata) when is_binary(name) do
     case UniversalSanitizer.sanitize_and_validate(name, mode: :plain_text, metadata: metadata) do
@@ -260,13 +186,28 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
         cond do
           String.length(trimmed) > 100 ->
-            {:error, %{name: "Meeting name must be 100 characters or less"}}
+            {:error,
+             %{
+               name:
+                 dgettext("dashboard_meeting_form", "Meeting name must be 100 characters or less")
+             }}
 
           String.length(trimmed) < 2 ->
-            {:error, %{name: "Meeting name must be at least 2 characters"}}
+            {:error,
+             %{
+               name:
+                 dgettext("dashboard_meeting_form", "Meeting name must be at least 2 characters")
+             }}
 
           slug == "" ->
-            {:error, %{name: "Meeting name must contain at least one letter or number"}}
+            {:error,
+             %{
+               name:
+                 dgettext(
+                   "dashboard_meeting_form",
+                   "Meeting name must contain at least one letter or number"
+                 )
+             }}
 
           true ->
             {:ok, trimmed}
@@ -278,13 +219,14 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   end
 
   defp validate_meeting_name(_invalid, _metadata) do
-    {:error, %{name: "Meeting name must be text"}}
+    {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name must be text")}}
   end
 
   defp validate_meeting_duration(nil, _metadata),
-    do: {:error, %{duration: "Duration is required"}}
+    do: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}}
 
-  defp validate_meeting_duration("", _metadata), do: {:error, %{duration: "Duration is required"}}
+  defp validate_meeting_duration("", _metadata),
+    do: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}}
 
   defp validate_meeting_duration(duration_str, metadata) when is_binary(duration_str) do
     case UniversalSanitizer.sanitize_and_validate(duration_str,
@@ -300,7 +242,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   end
 
   defp validate_meeting_duration(_invalid, _metadata) do
-    {:error, %{duration: "Duration must be a number"}}
+    {:error, %{duration: dgettext("dashboard_meeting_form", "Duration must be a number")}}
   end
 
   defp validate_duration_value(sanitized_duration) do
@@ -309,20 +251,43 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         validate_duration_constraints(duration)
 
       _invalid ->
-        {:error, %{duration: "Duration must be a valid number of minutes"}}
+        {:error,
+         %{
+           duration:
+             dgettext("dashboard_meeting_form", "Duration must be a valid number of minutes")
+         }}
     end
   end
 
   defp validate_duration_constraints(duration) when duration < @min_duration do
-    {:error, %{duration: "Duration must be at least #{@min_duration} minutes"}}
+    {:error,
+     %{
+       duration:
+         dgettext("dashboard_meeting_form", "Duration must be at least %{min} minutes",
+           min: @min_duration
+         )
+     }}
   end
 
   defp validate_duration_constraints(duration) when duration > @max_duration do
-    {:error, %{duration: "Duration cannot exceed 24 hours (#{@max_duration} minutes)"}}
+    {:error,
+     %{
+       duration:
+         dgettext("dashboard_meeting_form", "Duration cannot exceed 24 hours (%{max} minutes)",
+           max: @max_duration
+         )
+     }}
   end
 
-  defp validate_duration_constraints(duration) when rem(duration, 5) != 0 do
-    {:error, %{duration: "Duration must be divisible by 5 minutes"}}
+  defp validate_duration_constraints(duration)
+       when rem(duration, unquote(Constraints.duration_step_minutes())) != 0 do
+    {:error,
+     %{
+       duration:
+         dgettext("dashboard_meeting_form", "Duration must be a multiple of %{step} minutes",
+           step: Constraints.duration_step_minutes()
+         )
+     }}
   end
 
   defp validate_duration_constraints(duration) do
@@ -348,7 +313,8 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   end
 
   defp validate_meeting_slot_interval(_invalid, _metadata) do
-    {:error, %{slot_interval: "Slot interval must be a number"}}
+    {:error,
+     %{slot_interval: dgettext("dashboard_meeting_form", "Slot interval must be a number")}}
   end
 
   defp validate_slot_interval_value(""), do: {:ok, ""}
@@ -359,7 +325,11 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         validate_slot_interval_constraints(interval)
 
       _invalid ->
-        {:error, %{slot_interval: "Slot interval must be a valid number of minutes"}}
+        {:error,
+         %{
+           slot_interval:
+             dgettext("dashboard_meeting_form", "Slot interval must be a valid number of minutes")
+         }}
     end
   end
 
@@ -368,10 +338,22 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
     cond do
       interval < range.first ->
-        {:error, %{slot_interval: "Slot interval must be at least #{range.first} minutes"}}
+        {:error,
+         %{
+           slot_interval:
+             dgettext("dashboard_meeting_form", "Slot interval must be at least %{min} minutes",
+               min: range.first
+             )
+         }}
 
       interval > range.last ->
-        {:error, %{slot_interval: "Slot interval cannot exceed #{range.last} minutes"}}
+        {:error,
+         %{
+           slot_interval:
+             dgettext("dashboard_meeting_form", "Slot interval cannot exceed %{max} minutes",
+               max: range.last
+             )
+         }}
 
       true ->
         {:ok, to_string(interval)}
@@ -391,7 +373,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
           {:error,
            %{
              description:
-               "Description must be #{Constraints.description_max_length()} characters or less"
+               dgettext("dashboard_meeting_form", "Description must be %{max} characters or less",
+                 max: Constraints.description_max_length()
+               )
            }}
         else
           {:ok, String.trim(sanitized_description)}
@@ -403,7 +387,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   end
 
   defp validate_meeting_description(_invalid, _metadata) do
-    {:error, %{description: "Description must be text"}}
+    {:error, %{description: dgettext("dashboard_meeting_form", "Description must be text")}}
   end
 
   defp validate_icon(nil, _metadata), do: {:ok, "none"}
@@ -415,7 +399,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         if sanitized_icon in MeetingTypeSchema.valid_icons() do
           {:ok, sanitized_icon}
         else
-          {:error, %{icon: "Invalid icon selected"}}
+          {:error, %{icon: dgettext("dashboard_meeting_form", "Invalid icon selected")}}
         end
 
       {:error, error} ->
@@ -424,7 +408,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   end
 
   defp validate_icon(_invalid, _metadata) do
-    {:error, %{icon: "Invalid icon format"}}
+    {:error, %{icon: dgettext("dashboard_meeting_form", "Invalid icon format")}}
   end
 
   defp validate_calendar_integration_id(nil, _metadata), do: {:ok, nil}
@@ -437,24 +421,40 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
       id when is_binary(id) ->
         case Integer.parse(id) do
-          {int, ""} -> {:ok, int}
-          _invalid -> {:error, %{calendar_integration: "Invalid calendar account selected"}}
+          {int, ""} ->
+            {:ok, int}
+
+          _invalid ->
+            {:error,
+             %{
+               calendar_integration:
+                 dgettext("dashboard_meeting_form", "Invalid calendar account selected")
+             }}
         end
 
       _invalid ->
-        {:error, %{calendar_integration: "Invalid calendar account format"}}
+        {:error,
+         %{
+           calendar_integration:
+             dgettext("dashboard_meeting_form", "Invalid calendar account format")
+         }}
     end
   end
 
   defp validate_target_calendar_id(nil, _metadata), do: {:ok, nil}
   defp validate_target_calendar_id("", _metadata), do: {:ok, nil}
 
+  # The id is the provider's own (a CalDAV path, a Google or Outlook calendar
+  # id), so it is checked and never rewritten: `:strict` mode would strip
+  # `0x<hex>` runs and everything from `--` onwards, pointing bookings at a
+  # calendar that does not exist or is not the one picked.
   defp validate_target_calendar_id(id, metadata) when is_binary(id) do
-    UniversalSanitizer.sanitize_and_validate(id, allow_html: false, metadata: metadata)
+    UniversalSanitizer.sanitize_and_validate(id, mode: :plain_text, metadata: metadata)
   end
 
   defp validate_target_calendar_id(_invalid, _metadata) do
-    {:error, %{target_calendar: "Invalid target calendar format"}}
+    {:error,
+     %{target_calendar: dgettext("dashboard_meeting_form", "Invalid target calendar format")}}
   end
 
   # Only validated when the form actually posts the key — an absent key means

@@ -41,7 +41,7 @@ defmodule TymeslotWeb.AccountLiveCredentialsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       # Meanwhile, someone else who knows the password redirects the account.
-      change_token = Token.generate_token()
+      change_token = Token.generate()
 
       {:ok, _pending} =
         UserTokenQueries.request_email_change(user, "attacker@example.com", change_token)
@@ -103,5 +103,45 @@ defmodule TymeslotWeb.AccountLiveCredentialsTest do
       assert has_element?(view, ~s(input[name="email_form[new_email]"][aria-invalid]))
       assert has_element?(view, ~s(input[name="email_form[current_password]"][aria-invalid]))
     end
+
+    # A registered address must not be told apart from a free one anywhere the
+    # requester can look: the answer, the pending notice before and after a
+    # reload, and cancelling it.
+    for {label, address} <- [
+          {"a free address", "free.address@example.com"},
+          {"another account's address", "registered@example.com"}
+        ] do
+      test "changing to #{label} reads as a pending change that can be cancelled", %{conn: conn} do
+        create_user_fixture(%{email: "registered@example.com"})
+        {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+        html = submit_email_change(view, unquote(address))
+
+        assert html =~ "Verification email sent to #{unquote(address)}"
+        refute html =~ "already in use"
+        assert pending?(view, unquote(address))
+
+        {:ok, reloaded, _html} = live(conn, ~p"/dashboard/account")
+        assert pending?(reloaded, unquote(address))
+
+        html = reloaded |> element(~s([phx-click="cancel_email_change"])) |> render_click()
+        assert html =~ "Email change request cancelled"
+        refute has_element?(reloaded, "h3", "Email Change Pending")
+      end
+    end
+  end
+
+  defp submit_email_change(view, address) do
+    view |> element("button", "Change Email") |> render_click()
+
+    view
+    |> form("form[phx-submit='update_email']", %{
+      "email_form" => %{"new_email" => address, "current_password" => "Password123!"}
+    })
+    |> render_submit()
+  end
+
+  defp pending?(view, address) do
+    has_element?(view, "h3", "Email Change Pending") and has_element?(view, "strong", address)
   end
 end

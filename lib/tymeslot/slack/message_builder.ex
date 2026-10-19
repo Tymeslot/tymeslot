@@ -13,13 +13,23 @@ defmodule Tymeslot.Slack.MessageBuilder do
   Block Kit reference: https://api.slack.com/block-kit
   """
 
-  alias Tymeslot.Utils.UrlBuilder
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Notifications.EventTypes
 
   @max_reason_length 500
 
+  # Matched by name rather than wire literal; any other name (a job queued
+  # before an event was renamed) falls through to the generic clause.
+  @created EventTypes.to_event_type(:meeting_created)
+  @cancelled EventTypes.to_event_type(:meeting_cancelled)
+  @rescheduled EventTypes.to_event_type(:meeting_rescheduled)
+  @requested EventTypes.to_event_type(:meeting_requested)
+  @declined EventTypes.to_event_type(:meeting_declined)
+  @request_expired EventTypes.to_event_type(:meeting_request_expired)
+
   @doc "Builds the blocks list for a given event and meeting."
   @spec build_blocks(String.t(), map(), String.t()) :: [map()]
-  def build_blocks("meeting.created", meeting, timezone) do
+  def build_blocks(@created, meeting, timezone) do
     base = [
       header("New booking"),
       section_summary(meeting),
@@ -30,7 +40,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     append_actions(base, meeting)
   end
 
-  def build_blocks("meeting.cancelled", meeting, _timezone) do
+  def build_blocks(@cancelled, meeting, _timezone) do
     [
       header("Booking cancelled"),
       section_summary(meeting),
@@ -39,7 +49,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
   end
 
-  def build_blocks("meeting.rescheduled", meeting, timezone) do
+  def build_blocks(@rescheduled, meeting, timezone) do
     base = [
       header("Booking rescheduled"),
       section_summary(meeting),
@@ -50,7 +60,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     append_actions(base, meeting)
   end
 
-  def build_blocks("meeting.requested", meeting, timezone) do
+  def build_blocks(@requested, meeting, timezone) do
     base = [
       header("New booking request"),
       section_summary(meeting),
@@ -61,7 +71,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     append_actions(base, meeting)
   end
 
-  def build_blocks("meeting.declined", meeting, _timezone) do
+  def build_blocks(@declined, meeting, _timezone) do
     [
       header("Booking request declined"),
       section_summary(meeting),
@@ -70,7 +80,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
   end
 
-  def build_blocks("meeting.request_expired", meeting, _timezone) do
+  def build_blocks(@request_expired, meeting, _timezone) do
     [
       header("Booking request expired"),
       section_summary(meeting),
@@ -282,9 +292,9 @@ defmodule Tymeslot.Slack.MessageBuilder do
   end
 
   defp meeting_url(meeting) do
-    case Map.get(meeting, :uid) do
-      nil -> nil
-      _uid -> UrlBuilder.build_url("/dashboard/meetings")
+    case Map.get(meeting, :id) do
+      id when is_binary(id) -> MeetingLinks.host_view_url(id)
+      _none -> nil
     end
   end
 

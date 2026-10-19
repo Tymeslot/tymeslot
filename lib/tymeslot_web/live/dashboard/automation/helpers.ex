@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -40,10 +39,18 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   end
 
   @doc """
+  The name an integration being edited has now, which its form may submit
+  unchanged however long it is; `nil` for a new one.
+  """
+  @spec stored_name(map() | nil) :: String.t() | nil
+  def stored_name(%{name: name}), do: name
+  def stored_name(_form_data), do: nil
+
+  @doc """
   Validates a single field and returns updated errors map.
   """
-  @spec validate_field(map(), map(), String.t(), any(), map()) :: map()
-  def validate_field(form_values, current_errors, field, value, metadata) do
+  @spec validate_field(map(), map(), String.t(), any(), map(), String.t() | nil) :: map()
+  def validate_field(form_values, current_errors, field, value, metadata, stored_name \\ nil) do
     allowed_fields = ["name", "url", "events"]
 
     if field in allowed_fields do
@@ -52,7 +59,11 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
       # Interactive validation gets its own, looser bucket (see the comment
       # above `WebhookInputValidation.validate_webhook_form/2`) so rapid
       # blurs/toggles cannot spend the budget the save itself needs.
-      validate_opts = [metadata: metadata, bucket: "webhook_form_validate", limit: 180]
+      validate_opts = [
+        metadata: metadata,
+        bucket: :webhook_form_validate,
+        stored_name: stored_name
+      ]
 
       case WebhookInputValidation.validate_webhook_form(updated_values, validate_opts) do
         {:ok, _sanitized} ->
@@ -99,16 +110,6 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
       {int, _value} -> int
       _other -> 0
     end
-  end
-
-  @doc """
-  Formats changeset errors into a flat map.
-  """
-  @spec format_changeset_errors(Ecto.Changeset.t()) :: map()
-  def format_changeset_errors(changeset) do
-    FormHelpers.format_changeset_errors(changeset)
-    |> Enum.map(fn {k, v} -> {k, List.first(v)} end)
-    |> Map.new()
   end
 
   @doc """
@@ -292,7 +293,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   Runs a rate-limited test action: checks the rate limit, sets a loading key,
   fetches the entity, calls test_fn, and clears the loading key on completion.
   `get_fn` receives the socket and returns `{:ok, entity} | {:error, reason}`.
-  `test_fn` receives the entity and returns `:ok | {:error, reason}`.
+  `test_fn` receives the entity and returns `:ok | {:error, reason}`; either
+  function's `{:error, :not_found}` shows `not_found_msg`.
   """
   @spec do_rate_limited_test(
           Phoenix.LiveView.Socket.t(),
@@ -305,7 +307,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   def do_rate_limited_test(socket, id, testing_key, get_fn, test_fn, {success_msg, not_found_msg}) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_webhook_test_rate_limit(user_id) do
+    case RateLimiter.check(:webhook_test, user_id) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         {:noreply, socket}
@@ -320,6 +322,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
               :ok ->
                 Flash.info(success_msg)
                 {:noreply, assign(socket, testing_key, nil)}
+
+              # The test reads the entity again, scoped to the acting user, so
+              # it can still find it gone (deleted in another tab, say).
+              {:error, :not_found} ->
+                Flash.error(not_found_msg)
+                {:noreply, assign(socket, testing_key, nil)}
+
+              {:error, reason} when is_atom(reason) ->
+                {:noreply,
+                 socket |> handle_feature_access_error(reason) |> assign(testing_key, nil)}
 
               {:error, reason} ->
                 Flash.error(

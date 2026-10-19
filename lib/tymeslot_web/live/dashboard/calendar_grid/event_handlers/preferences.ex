@@ -17,6 +17,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
 
   @allowed_preference_keys ~w(week_start_day time_format default_view show_week_numbers show_weekends desktop_reminders_enabled)a
 
+  # The preferences that change which days the grid shows. The grid loads
+  # events for exactly those days, so changing one reloads them.
+  @visible_day_keys ~w(week_start_day show_weekends)a
+
   @spec handle_toggle_settings(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_toggle_settings(_params, socket) do
@@ -44,12 +48,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
         prefs = %{socket.assigns.preferences | key => value}
         notify_parent(key, value)
 
-        socket =
-          socket
-          |> assign(:preferences, prefs)
-          |> Helpers.precompute_derived()
-
-        {:noreply, socket}
+        {:noreply, socket |> assign(:preferences, prefs) |> refresh_for(key)}
 
       {:error, _changeset} ->
         send(
@@ -80,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
     user_id = socket.assigns.current_user.id
     stored = if colour == "default", do: nil, else: colour
 
-    with :ok <- RateLimiter.check_integration_appearance_rate_limit(user_id),
+    with :ok <- RateLimiter.check(:integration_appearance, user_id),
          {:ok, integration_id} <- Shared.parse_int(id_str),
          {:ok, _appearance} <-
            Appearance.set_colour(user_id, integration_id, calendar_id, stored) do
@@ -110,6 +109,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   # Without this the calendar's own toggle would leave every other surface, and
   # the profile toggle that writes the same column, showing the old clock until
   # the next full page load.
+  defp refresh_for(socket, key) when key in @visible_day_keys, do: Helpers.load_events(socket)
+  defp refresh_for(socket, _key), do: Helpers.precompute_derived(socket)
+
   defp notify_parent(:time_format, value), do: send(self(), {:time_format_updated, value})
   defp notify_parent(_key, _value), do: :ok
 
@@ -161,12 +163,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
       {:ok, _preferences} ->
         prefs = %{socket.assigns.preferences | key => new_value}
 
-        socket =
-          socket
-          |> assign(:preferences, prefs)
-          |> Helpers.precompute_derived()
-
-        {:noreply, socket}
+        {:noreply, socket |> assign(:preferences, prefs) |> refresh_for(key)}
 
       {:error, _changeset} ->
         send(

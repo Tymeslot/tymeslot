@@ -21,21 +21,36 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
-  @spec build_dtstart(map()) :: String.t()
-  def build_dtstart(%{start_time: %Date{} = date}) do
+  @doc """
+  `DTSTART` for `event`. A timed event is written in UTC; a timed event of a
+  series given its `zone` (see `ICalBuilder.series_zone/1`) as the wall clock
+  in that zone, `DTSTART;TZID=<zone>:...`, so the series keeps its local time
+  across a DST change (RFC 5545 §3.3.10 expands a rule in DTSTART's zone).
+  """
+  @spec build_dtstart(map(), String.t() | nil) :: String.t()
+  def build_dtstart(event, zone \\ nil)
+
+  def build_dtstart(%{all_day: true} = event, _zone), do: utc_dtstart(event)
+
+  def build_dtstart(%{start_time: %DateTime{} = dt}, zone) when is_binary(zone),
+    do: zoned_line("DTSTART", dt, zone)
+
+  def build_dtstart(event, _zone), do: utc_dtstart(event)
+
+  defp utc_dtstart(%{start_time: %Date{} = date}) do
     "DTSTART;VALUE=DATE:#{format_date(date)}"
   end
 
-  def build_dtstart(%{all_day: true, start_time: start_time}) do
+  defp utc_dtstart(%{all_day: true, start_time: start_time}) do
     date = DateTime.to_date(start_time)
     "DTSTART;VALUE=DATE:#{format_date(date)}"
   end
 
-  def build_dtstart(%{start_time: %NaiveDateTime{} = ndt}) do
+  defp utc_dtstart(%{start_time: %NaiveDateTime{} = ndt}) do
     "DTSTART:#{format_naive_datetime(ndt)}"
   end
 
-  def build_dtstart(%{start_time: %DateTime{} = dt}) do
+  defp utc_dtstart(%{start_time: %DateTime{} = dt}) do
     "DTSTART:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
   end
 
@@ -48,17 +63,29 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # exclusive. This guard catches callers that supply `end_time == start_time`
   # (e.g. direct test callers or future create paths that forget to add +1),
   # ensuring we never silently emit a zero-length all-day event.
-  @spec build_dtend(map()) :: String.t()
-  def build_dtend(%{end_time: %Date{} = date, start_time: %Date{} = start}) do
+  @doc """
+  `DTEND` for `event`, in the form `build_dtstart/2` writes `DTSTART` in.
+  """
+  @spec build_dtend(map(), String.t() | nil) :: String.t()
+  def build_dtend(event, zone \\ nil)
+
+  def build_dtend(%{all_day: true} = event, _zone), do: utc_dtend(event)
+
+  def build_dtend(%{end_time: %DateTime{} = dt}, zone) when is_binary(zone),
+    do: zoned_line("DTEND", dt, zone)
+
+  def build_dtend(event, _zone), do: utc_dtend(event)
+
+  defp utc_dtend(%{end_time: %Date{} = date, start_time: %Date{} = start}) do
     exclusive = if Date.compare(date, start) == :eq, do: Date.add(date, 1), else: date
     "DTEND;VALUE=DATE:#{format_date(exclusive)}"
   end
 
-  def build_dtend(%{end_time: %Date{} = date}) do
+  defp utc_dtend(%{end_time: %Date{} = date}) do
     "DTEND;VALUE=DATE:#{format_date(date)}"
   end
 
-  def build_dtend(%{all_day: true, end_time: end_time, start_time: start_time}) do
+  defp utc_dtend(%{all_day: true, end_time: end_time, start_time: start_time}) do
     end_date = DateTime.to_date(end_time)
     start_date = DateTime.to_date(start_time)
 
@@ -68,16 +95,16 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
     "DTEND;VALUE=DATE:#{format_date(exclusive)}"
   end
 
-  def build_dtend(%{all_day: true, end_time: end_time}) do
+  defp utc_dtend(%{all_day: true, end_time: end_time}) do
     date = DateTime.to_date(end_time)
     "DTEND;VALUE=DATE:#{format_date(date)}"
   end
 
-  def build_dtend(%{end_time: %NaiveDateTime{} = ndt}) do
+  defp utc_dtend(%{end_time: %NaiveDateTime{} = ndt}) do
     "DTEND:#{format_naive_datetime(ndt)}"
   end
 
-  def build_dtend(%{end_time: %DateTime{} = dt}) do
+  defp utc_dtend(%{end_time: %DateTime{} = dt}) do
     "DTEND:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
   end
 
@@ -186,9 +213,30 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # master event is a DATE-TIME (timed event), bare Date exceptions are
   # promoted to UTC DateTimes at DTSTART's time-of-day. If the master is a
   # DATE (all-day event), we emit `;VALUE=DATE`.
-  @spec build_exdate(map()) :: String.t() | nil
-  def build_exdate(%{recurrence_exceptions: dates, start_time: %DateTime{} = start_dt})
-      when is_list(dates) and dates != [] do
+  #
+  # Given the series' `zone`, a timed master's exceptions are written as wall
+  # clocks in it, as `build_dtstart/2` writes DTSTART, each at DTSTART's local
+  # time of day.
+  @spec build_exdate(map(), String.t() | nil) :: String.t() | nil
+  def build_exdate(event, zone \\ nil)
+
+  def build_exdate(%{recurrence_exceptions: dates, start_time: %DateTime{} = start_dt}, zone)
+      when is_list(dates) and dates != [] and is_binary(zone) do
+    time_of_day = start_dt |> DateTime.shift_zone!(zone) |> DateTime.to_time()
+
+    formatted =
+      Enum.map_join(dates, ",", fn
+        %Date{} = d -> format_naive_datetime(NaiveDateTime.new!(d, time_of_day))
+        %DateTime{} = dt -> wall_clock(dt, zone)
+      end)
+
+    "EXDATE;TZID=#{zone}:#{formatted}"
+  end
+
+  def build_exdate(event, _zone), do: utc_exdate(event)
+
+  defp utc_exdate(%{recurrence_exceptions: dates, start_time: %DateTime{} = start_dt})
+       when is_list(dates) and dates != [] do
     start_utc = DateTime.shift_zone!(start_dt, "Etc/UTC")
     time_of_day = DateTime.to_time(start_utc)
 
@@ -206,8 +254,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
     "EXDATE:#{formatted}"
   end
 
-  def build_exdate(%{recurrence_exceptions: dates, start_time: %Date{}})
-      when is_list(dates) and dates != [] do
+  defp utc_exdate(%{recurrence_exceptions: dates, start_time: %Date{}})
+       when is_list(dates) and dates != [] do
     formatted =
       Enum.map_join(dates, ",", fn
         %Date{} = d -> format_date(d)
@@ -216,7 +264,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
     "EXDATE;VALUE=DATE:#{formatted}"
   end
 
-  def build_exdate(_event), do: nil
+  defp utc_exdate(_event), do: nil
+
+  defp zoned_line(name, datetime, zone), do: "#{name};TZID=#{zone}:#{wall_clock(datetime, zone)}"
+
+  defp wall_clock(datetime, zone),
+    do: datetime |> DateTime.shift_zone!(zone) |> DateTime.to_naive() |> format_naive_datetime()
 
   # Which property carries the attendee is the server's call, not this
   # module's: `CalDAV.Scheduling.attendee_mode/1` weighs the failure modes
@@ -350,8 +403,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # itself fire iTIP). The `SCHEDULE-AGENT=CLIENT` parameter is kept as
   # defence-in-depth for servers that honour RFC 6638 §7.1 even though
   # Zimbra silently strips it (see issue #41).
-  @spec build_organizer_line(map()) :: String.t() | nil
-  def build_organizer_line(%{organizer_email: email} = event)
+  #
+  # In `{:organiser_attendee, _}` mode the line carries the address the owner
+  # line does (`Scheduling.owner_attendee_address/2`), so an organiser whose
+  # address is not on the account still organises their own event: the server
+  # then lists them once and accepts later guest changes (issue #151).
+  @spec build_organizer_line(map(), Scheduling.mode()) :: String.t() | nil
+  def build_organizer_line(event, mode \\ :contact)
+
+  def build_organizer_line(%{organizer_email: email} = event, {:organiser_attendee, addresses})
+      when is_binary(email) do
+    event
+    |> Map.put(:organizer_email, Scheduling.owner_attendee_address(email, addresses))
+    |> build_organizer_line()
+  end
+
+  def build_organizer_line(%{organizer_email: email} = event, _mode)
       when is_binary(email) and email != "" do
     case Map.get(event, :organizer_name) do
       name when is_binary(name) and name != "" ->
@@ -362,5 +429,5 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
     end
   end
 
-  def build_organizer_line(_event), do: nil
+  def build_organizer_line(_event, _mode), do: nil
 end

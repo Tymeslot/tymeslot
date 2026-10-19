@@ -3,14 +3,13 @@ defmodule Tymeslot.MeetingTypes do
   Context for managing meeting types.
   """
   alias Ecto.UUID
+  alias Tymeslot.Availability
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Clock
-  alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
+  alias Tymeslot.MeetingTypes.BookingCalendar
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
@@ -24,7 +23,6 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Repo
   alias Tymeslot.Utils.UriUtils
   alias Tymeslot.Venues
-  require Logger
 
   @doc """
   The locations this meeting type offers, in the host's order.
@@ -199,31 +197,28 @@ defmodule Tymeslot.MeetingTypes do
   def location_venue_choices(_meeting_type), do: %{}
 
   @doc """
-  Gets all active meeting types for a user, creating defaults if none exist.
+  Gets all active meeting types for a user. A pure read: a host may have
+  none (the defaults are seeded once, with the profile; see
+  `seed_default_meeting_types/2`).
   """
   @spec get_active_meeting_types(integer()) :: [Ecto.Schema.t()]
-  def get_active_meeting_types(user_id) do
-    list_seeding_defaults(user_id, &MeetingTypeQueries.list_active_meeting_types/1)
-  end
+  def get_active_meeting_types(user_id),
+    do: MeetingTypeQueries.list_active_meeting_types(user_id)
 
   @doc """
-  Gets all meeting types for a user (active and inactive).
+  Gets all meeting types for a user (active and inactive). A pure read, like
+  `get_active_meeting_types/1`.
   """
   @spec get_all_meeting_types(integer()) :: [Ecto.Schema.t()]
-  def get_all_meeting_types(user_id) do
-    list_seeding_defaults(user_id, &MeetingTypeQueries.list_all_meeting_types/1)
-  end
+  def get_all_meeting_types(user_id), do: MeetingTypeQueries.list_all_meeting_types(user_id)
 
   @doc """
   Gets the publicly listed meeting types for a user (active and not private).
   This feeds the public booking overview; private types are excluded and
   reachable only by their direct link.
 
-  Deliberately a pure read: unlike the two owner-facing listings above it never
-  seeds the default meeting types. An anonymous page view must not write to the
-  host's account, and a host with no meeting types must show the booking page's
-  empty state rather than be given two bookable durations they never created
-  (which would also silently resurrect defaults a host had deleted on purpose).
+  A pure read, like the two owner-facing listings above: a host with no
+  meeting types shows the booking page's empty state.
 
   A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
   inactive one is: it takes no new bookings, so the page must not offer it.
@@ -233,27 +228,6 @@ defmodule Tymeslot.MeetingTypes do
     user_id
     |> MeetingTypeQueries.list_public_meeting_types()
     |> GroupAccess.reject_paused()
-  end
-
-  # The two owner-facing listings above differ only in which query they run;
-  # each seeds the user's default meeting types first if they have none yet.
-  # The public listing deliberately does not go through here.
-  defp list_seeding_defaults(user_id, list_fun) do
-    ensure_default_meeting_types(user_id)
-    list_fun.(user_id)
-  end
-
-  defp ensure_default_meeting_types(user_id) do
-    if MeetingTypeQueries.has_meeting_types?(user_id) do
-      :ok
-    else
-      Logger.info("Creating default meeting types for user", user_id: user_id)
-
-      case create_default_meeting_types(user_id) do
-        {:ok, _meeting_types} -> :ok
-        {:error, reason} -> ErrorTracking.report_error(reason, nil, %{user_id: user_id})
-      end
-    end
   end
 
   @doc """
@@ -278,9 +252,22 @@ defmodule Tymeslot.MeetingTypes do
   `opts` are forwarded to the changeset for payment-validation context.
   """
   @spec create_meeting_type(map(), keyword()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
   def create_meeting_type(attrs, opts \\ []) do
-    with {:ok, meeting_type} <- MeetingTypeQueries.create_meeting_type(attrs, opts) do
+    result =
+      Repo.transaction(fn ->
+        changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs, opts)
+
+        with {:ok, promotion} <- BookingCalendar.promote(changeset),
+             {:ok, meeting_type} <- MeetingTypeQueries.create_meeting_type(attrs, opts) do
+          {meeting_type, promotion}
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    with {:ok, {meeting_type, promotion}} <- result do
+      if promotion == :promoted, do: invalidate_after_commit(meeting_type.user_id)
       Publication.maybe_publish(meeting_type.user_id)
       {:ok, meeting_type}
     end
@@ -292,7 +279,7 @@ defmodule Tymeslot.MeetingTypes do
   `opts` are forwarded to the changeset for payment-validation context.
   """
   @spec update_meeting_type(Ecto.Schema.t(), map(), keyword()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
   def update_meeting_type(meeting_type, attrs, opts \\ []) do
     case Repo.transaction(fn -> do_update_meeting_type(meeting_type, attrs, opts) end) do
       {:ok, updated} ->
@@ -300,7 +287,7 @@ defmodule Tymeslot.MeetingTypes do
         maybe_broadcast_seat_change(meeting_type, updated)
         # Offered slots are cached per meeting type, and an edit can change which
         # availability schedule the type resolves to, so the cached answer must go.
-        AvailabilityCache.invalidate_for_user(updated.user_id)
+        invalidate_after_commit(updated.user_id)
         {:ok, updated}
 
       {:error, reason} ->
@@ -309,13 +296,14 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   defp do_update_meeting_type(meeting_type, attrs, opts) do
-    case MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
-      {:ok, updated} ->
-        sync_group_capacity(meeting_type, updated)
-        updated
+    changeset = MeetingTypeSchema.changeset(meeting_type, attrs, opts)
 
-      {:error, reason} ->
-        Repo.rollback(reason)
+    with {:ok, _promotion} <- BookingCalendar.promote(changeset),
+         {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
+      sync_group_capacity(meeting_type, updated)
+      updated
+    else
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
@@ -452,6 +440,9 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate venue_usage_counts(user_id), to: MeetingTypeQueries
   defdelegate remove_venue_from_locations(user_id, venue_id), to: MeetingTypeQueries
 
+  # Which of `user_ids` have at least one meeting type, active or not.
+  defdelegate user_ids_with_meeting_type(user_ids), to: MeetingTypeQueries, as: :user_ids_with_any
+
   @doc """
   The owner's meeting types, by name, that deleting `venue_id` would leave
   with an in-person location listing no venue: those with a location whose
@@ -494,15 +485,24 @@ defmodule Tymeslot.MeetingTypes do
   """
   defdelegate max_reminders(), to: ReminderValidation
 
+  # Once the write commits, never inside a caller's transaction, where a read
+  # in between would cache the old answer again.
+  defp invalidate_after_commit(user_id) do
+    unless MeetingTypeQueries.in_transaction?(),
+      do: Availability.changed(user_id)
+  end
+
   @doc """
   Creates a meeting type from form parameters with validation.
   """
   @spec create_meeting_type_from_form(integer(), map(), map()) ::
           {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def create_meeting_type_from_form(user_id, form_params, ui_state) do
-    with {:ok, attrs} <- FormMapper.build_attrs(form_params, ui_state),
+    payment_opts = FormMapper.payment_opts(user_id)
+
+    with {:ok, attrs} <- FormMapper.build_attrs(form_params, ui_state, payment_opts[:currency]),
          :ok <- FormValidation.check(user_id, attrs) do
-      create_meeting_type(Map.put(attrs, :user_id, user_id), FormMapper.payment_opts(user_id))
+      create_meeting_type(Map.put(attrs, :user_id, user_id), payment_opts)
     end
   end
 
@@ -514,52 +514,37 @@ defmodule Tymeslot.MeetingTypes do
   def update_meeting_type_from_form(meeting_type, form_params, ui_state) do
     user_id = meeting_type.user_id
 
-    with {:ok, attrs} <- FormMapper.build_attrs(form_params, ui_state),
+    payment_opts = FormMapper.payment_opts(user_id)
+
+    with {:ok, attrs} <-
+           FormMapper.build_attrs(form_params, ui_state, payment_opts[:currency]),
          :ok <- FormValidation.check(user_id, attrs, meeting_type.max_participants || 1) do
-      update_meeting_type(meeting_type, attrs, FormMapper.payment_opts(user_id))
+      update_meeting_type(meeting_type, attrs, payment_opts)
     end
   end
 
   @doc """
-  Creates default meeting types for a new user.
-  Fetches the user's primary calendar integration, builds default templates,
-  deduplicates against existing names, then bulk-inserts.
+  Seeds the two default meeting types for a new user, once, as the profile is
+  created (`Tymeslot.Profiles.create_profile/1` and the OAuth sign-up, which
+  passes its transaction's `repo`). A host who later deletes them keeps none:
+  nothing seeds them again.
+
+  A new account has no calendar and no username yet, so the defaults carry
+  no booking calendar and there is no booking page to publish. A seed that
+  meets types already there (a retried sign-up) inserts nothing.
   """
-  @spec create_default_meeting_types(integer()) ::
-          {:ok, [MeetingTypeSchema.t()]} | {:error, term()}
-  def create_default_meeting_types(user_id) when is_integer(user_id) do
-    {calendar_integration_id, target_calendar_id} = resolve_primary_calendar(user_id)
-    existing = MeetingTypeQueries.existing_names(user_id)
+  @spec seed_default_meeting_types(integer(), Ecto.Repo.t()) :: :ok
+  def seed_default_meeting_types(user_id, repo \\ Repo) when is_integer(user_id) do
     now = DateTime.utc_now(:second)
 
-    result =
-      user_id
-      |> default_meeting_type_templates(calendar_integration_id, target_calendar_id, now)
-      |> Enum.reject(fn type -> MapSet.member?(existing, type.name) end)
-      |> MeetingTypeQueries.bulk_insert_meeting_types()
+    user_id
+    |> default_meeting_type_templates(nil, nil, now)
+    |> MeetingTypeQueries.insert_defaults(repo)
 
-    with {:ok, _meeting_types} <- result do
-      Publication.maybe_publish(user_id)
-    end
-
-    result
+    :ok
   end
-
-  @spec create_default_meeting_types(term()) :: {:error, :invalid_user_id}
-  def create_default_meeting_types(_invalid_user_id), do: {:error, :invalid_user_id}
 
   # Private functions
-
-  defp resolve_primary_calendar(user_id) do
-    case CalendarPrimary.get_primary_calendar_integration(user_id) do
-      {:ok, %{default_booking_calendar_id: cal_id} = integration}
-      when is_binary(cal_id) ->
-        {integration.id, cal_id}
-
-      _other ->
-        {nil, nil}
-    end
-  end
 
   defp default_meeting_type_templates(
          user_id,

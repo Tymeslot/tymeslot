@@ -15,6 +15,8 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
   like a 20-digit run. The minimum keeps short internal/extension codes valid.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   # E.164 max (15) + a 2-digit buffer for "00"-prefixed / trunk-`0` variations.
   @max_digits 17
   @min_digits 4
@@ -42,30 +44,30 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
       # persisted, so a number padded with hundreds of cosmetic spaces would
       # otherwise survive (trim hides the bloat) and bloat the stored JSONB.
       String.length(value) > @max_length ->
-        {:error, "Phone number is too long"}
+        {:error, dgettext("errors_input", "Phone number is too long")}
 
       Regex.match?(~r/[A-Za-z]/, main) ->
-        {:error, "Phone number contains invalid characters"}
+        {:error, dgettext("errors_input", "Phone number contains invalid characters")}
 
       not Regex.match?(~r/^\+?[\d\s\-\(\)\.]+$/, main) ->
-        {:error, "Phone number contains invalid characters"}
+        {:error, dgettext("errors_input", "Phone number contains invalid characters")}
 
       digit_count(main) < @min_digits ->
-        {:error, "Phone number is too short"}
+        {:error, dgettext("errors_input", "Phone number is too short")}
 
       digit_count(main) > @max_digits ->
-        {:error, "Phone number is too long"}
+        {:error, dgettext("errors_input", "Phone number is too long")}
 
       true ->
         :ok
     end
   end
 
-  def validate(_value, _opts), do: {:error, "Phone number must be text"}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "Phone number must be text")}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, "Phone number is required"}
+      {:error, dgettext("errors_input", "Phone number is required")}
     else
       :ok
     end

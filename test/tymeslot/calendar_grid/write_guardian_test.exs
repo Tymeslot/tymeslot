@@ -38,7 +38,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardianTest do
     # The running write's change is taken as made, the waiting one on top.
     assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
     assert %{summary: "Renamed", location: "Room 9"} = row
-    assert [%{uid: uid, sync_state: state}] = QueueQueries.list_pending(caldav.id)
+    assert [%{uid: uid, sync_state: state}] = QueueQueries.list_pending(caldav.id, 100, 100)
     assert uid == event.uid
     refute state == "synced"
     refute_receive {:captured_log, %{level: :error}}, 100

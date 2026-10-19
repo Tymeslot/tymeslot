@@ -160,9 +160,9 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
 
       # A successful discovery makes several real PROPFIND round-trips (guessed
       # path plus the RFC 4791 principal chain) before creating and persisting
-      # the integration, which comfortably exceeds render_async/1's 100ms
-      # default (tuned for a single mocked call) even though every call is
-      # instantly stubbed.
+      # the integration, which can outlast render_async/1's default (the
+      # suite's one-second assert_receive_timeout) on a loaded machine even
+      # though every call is instantly stubbed.
       render_async(view, 2000)
       html = render(view)
 
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       # An exit rather than a raise, which takes a different route out:
       # `CalendarCircuitBreaker.with_breaker/3` rescues exceptions, and
       # `rescue` does not catch exits. What stops this one is
-      # `Tymeslot.Infrastructure.CacheStore.compute_and_store/5` — every
+      # `Tymeslot.Infrastructure.CacheStore.compute/3` — every
       # discovery runs inside `DiscoveryCache.get_or_compute/2` — whose
       # `catch` resolves any non-local exit to `{:error, :computation_failed}`.
       # So the async task returns normally, `handle_async/3` never sees
@@ -272,7 +272,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       |> render_submit()
 
       # See the success test above for why this exceeds render_async/1's
-      # 100ms default: a real (stubbed) PROPFIND chain runs before the
+      # 1 s default: a real (stubbed) PROPFIND chain runs before the
       # duplicate-account check fails.
       render_async(view, 2000)
       html = render(view)
@@ -308,7 +308,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       |> render_submit()
 
       # See the success test above for why this exceeds render_async/1's
-      # 100ms default.
+      # 1 s default.
       render_async(view, 2000)
       html = render(view)
 
@@ -347,7 +347,7 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       |> render_submit()
 
       # See the success test above for why this exceeds render_async/1's
-      # 100ms default.
+      # 1 s default.
       render_async(view, 2000)
 
       # Only one integration exists, and it was created with the FIRST

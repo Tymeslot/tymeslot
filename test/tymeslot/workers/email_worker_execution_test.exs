@@ -11,13 +11,20 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.DeliveryClaims.DeliveryClaimQueries
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
+
+  # A job already in the queue is never rebuilt, so one whose args the
+  # current `EmailWorker.new/2` would refuse (inserted by older code) still
+  # reaches `perform/1`; `perform_job/2` would refuse it first.
+  defp perform_queued(args), do: EmailWorker.perform(%Oban.Job{args: args, attempt: 1})
 
   defp admin_alert_args do
     %{
@@ -55,8 +62,14 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       profile = insert(:profile)
       meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
 
-      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
-        {{:ok, :sent}, {:ok, :sent}}
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
+                                                                                      _details ->
+        {:ok, :sent}
+      end)
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _email,
+                                                                                     _details ->
+        {:ok, :sent}
       end)
 
       assert :ok =
@@ -82,8 +95,14 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
       {:ok, [_guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
 
-      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 1, fn _details ->
-        {{:ok, :sent}, {:ok, :sent}}
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email,
+                                                                                     _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 1, fn _email,
+                                                                                    _details ->
+        {:ok, :sent}
       end)
 
       expect(Tymeslot.EmailServiceMock, :send_guest_cancellation, 1, fn "guest@example.com",
@@ -127,8 +146,14 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       :claimed = DeliveryClaimQueries.claim(job.id, "cancellation:participants")
       :claimed = DeliveryClaimQueries.claim(job.id, "cancellation:guest:#{told.id}")
 
-      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 0, fn _details ->
-        {{:ok, :sent}, {:ok, :sent}}
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 0, fn _email,
+                                                                                     _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 0, fn _email,
+                                                                                    _details ->
+        {:ok, :sent}
       end)
 
       expect(Tymeslot.EmailServiceMock, :send_guest_cancellation, 1, fn "untold@example.com",
@@ -186,12 +211,24 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       profile = insert(:profile)
       meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
 
-      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 1, fn _details ->
-        {{:error, :delivery_failed}, {:error, :delivery_failed}}
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email,
+                                                                                     _details ->
+        {:error, :delivery_failed}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 1, fn _details ->
-        {{:ok, :sent}, {:ok, :sent}}
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 1, fn _email,
+                                                                                    _details ->
+        {:error, :delivery_failed}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email,
+                                                                                     _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 1, fn _email,
+                                                                                    _details ->
+        {:ok, :sent}
       end)
 
       job =
@@ -204,27 +241,87 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert :ok = EmailWorker.perform(%{job | attempt: 2})
     end
 
-    test "discards job on partial failure to avoid duplicate sends" do
+    test "a partial failure errors the job and the retry sends only the copy that failed" do
       profile = insert(:profile)
       meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
 
-      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
-        {{:ok, :sent}, {:error, :delivery_failed}}
+      # The organiser's copy goes out on the first run only; the attendee's
+      # fails once and is the only one sent again.
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 1, fn _email,
+                                                                                     _details ->
+        {:ok, :sent}
       end)
 
-      assert {:discard, _reason} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_cancellation_emails",
-                 "meeting_id" => meeting.id
-               })
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 1, fn _email,
+                                                                                    _details ->
+        {:error, :delivery_failed}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 1, fn _email,
+                                                                                    _details ->
+        {:ok, :sent}
+      end)
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_cancellation_emails",
+          "meeting_id" => meeting.id
+        })
+
+      assert {:error, _reason} = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(%{job | attempt: 2})
+    end
+
+    test "a job holding the legacy participants claim sends no participant copy but tells an unclaimed guest" do
+      profile = insert(:profile)
+
+      meeting =
+        insert(:meeting,
+          organizer_user: profile.user,
+          status: "cancelled",
+          first_announced_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, [_guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_cancellation_emails",
+          "meeting_id" => meeting.id
+        })
+
+      :ok = DeliveryClaims.once(job.id, "cancellation:participants", fn -> :ok end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, 0, fn _email,
+                                                                                     _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, 0, fn _email,
+                                                                                    _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_guest_cancellation, 1, fn "guest@example.com",
+                                                                        _details ->
+        {:ok, :sent}
+      end)
+
+      assert :ok = EmailWorker.perform(job)
     end
 
     test "returns error on total failure so job is retried" do
       profile = insert(:profile)
       meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
 
-      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
-        {{:error, :delivery_failed}, {:error, :delivery_failed}}
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
+                                                                                      _details ->
+        {:error, :delivery_failed}
+      end)
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _email,
+                                                                                     _details ->
+        {:error, :delivery_failed}
       end)
 
       assert {:error, _reason} =
@@ -236,16 +333,21 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
     # A permanent rejection of one recipient used to discard the whole job,
     # throwing away the other recipient's still-retryable send. Neither
-    # succeeded here, so nothing has gone out yet — the job must retry, not
+    # succeeded here, so nothing has gone out yet: the job must retry, not
     # discard, or the still-live recipient never gets their cancellation
     # email.
     test "retries rather than discarding when one recipient is rejected and the other fails transiently" do
       profile = insert(:profile)
       meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
 
-      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
-        {{:error, {:recipient_rejected, {422, %{"ErrorCode" => 406}}}},
-         {:error, :delivery_failed}}
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
+                                                                                      _details ->
+        {:error, {:recipient_rejected, {422, %{"ErrorCode" => 406}}}}
+      end)
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _email,
+                                                                                     _details ->
+        {:error, :delivery_failed}
       end)
 
       assert {:error, _reason} =
@@ -258,16 +360,12 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
   describe "perform/1 error handling" do
     test "discards job with missing action parameter" do
-      assert {:discard, "Missing action parameter"} =
-               perform_job(EmailWorker, %{"meeting_id" => 123})
+      assert {:discard, "Missing action parameter"} = perform_queued(%{"meeting_id" => 123})
     end
 
     test "discards job with unknown action" do
       assert {:discard, reason} =
-               perform_job(EmailWorker, %{
-                 "action" => "unknown_action",
-                 "meeting_id" => 123
-               })
+               perform_queued(%{"action" => "unknown_action", "meeting_id" => 123})
 
       assert reason =~ "Unknown action"
     end
@@ -288,7 +386,9 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert {:discard, "Meeting not found"} =
                perform_job(EmailWorker, %{
                  "action" => "send_reminder_emails",
-                 "meeting_id" => fake_id
+                 "meeting_id" => fake_id,
+                 "reminder_value" => 1,
+                 "reminder_unit" => "hours"
                })
     end
 
@@ -299,36 +399,51 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert {:discard, "Meeting cancelled"} =
                perform_job(EmailWorker, %{
                  "action" => "send_reminder_emails",
-                 "meeting_id" => meeting.id
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 1,
+                 "reminder_unit" => "hours"
                })
     end
 
     test "discards job if user not found for email verification" do
       assert {:discard, "User not found"} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_email_verification",
-                 "user_id" => 999_999,
-                 "verification_url" => "http://test.com"
-               })
+               perform_job(
+                 EmailWorker,
+                 LinkArg.put(
+                   %{"action" => "send_email_verification", "user_id" => 999_999},
+                   "verification_url",
+                   "http://test.com"
+                 )
+               )
     end
 
     test "discards job if user not found for password reset" do
       assert {:discard, "User not found"} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_password_reset",
-                 "user_id" => 999_999,
-                 "reset_url" => "http://test.com"
-               })
+               perform_job(
+                 EmailWorker,
+                 LinkArg.put(
+                   %{"action" => "send_password_reset", "user_id" => 999_999},
+                   "reset_url",
+                   "http://test.com"
+                 )
+               )
     end
 
     test "discards send_email_change_verification job if user not found" do
       assert {:discard, "User not found"} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_email_change_verification",
-                 "user_id" => 999_999,
-                 "new_email" => "new@example.com",
-                 "verification_url" => "https://example.com/verify/token"
-               })
+               perform_job(
+                 EmailWorker,
+                 LinkArg.put(
+                   %{
+                     "action" => "send_email_change_verification",
+                     "user_id" => 999_999,
+                     "new_email" => "new@example.com",
+                     "token_hash" => "hash"
+                   },
+                   "verification_url",
+                   "https://example.com/verify/token"
+                 )
+               )
     end
 
     test "discards send_email_change_notification job if user not found" do
@@ -387,9 +502,8 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       :ok
     end
 
-    # The exponential backoff tops out at 16 seconds, so before this the five
-    # attempts were spent inside the first twenty seconds of a five-minute
-    # outage and the job discarded while the provider was merely paused.
+    # Snoozing spends no attempt, so the attempts are kept for failures the
+    # breaker does not cover, and a paused provider is waited out instead.
     test "snoozes for at least the breaker's recovery window" do
       assert {:snooze, seconds} = perform_job(EmailWorker, admin_alert_args())
 
@@ -423,26 +537,33 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       end)
 
       assert {:discard, "Recipient permanently undeliverable"} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_email_verification",
-                 "user_id" => user.id,
-                 "verification_url" => "https://example.com/verify/token"
-               })
+               perform_job(
+                 EmailWorker,
+                 LinkArg.put(
+                   %{"action" => "send_email_verification", "user_id" => user.id},
+                   "verification_url",
+                   "https://example.com/verify/token"
+                 )
+               )
     end
   end
 
   describe "backoff/1" do
-    test "calculates exponential backoff: 1s, 2s, 4s, 8s, 16s" do
-      assert EmailWorker.backoff(%Oban.Job{attempt: 1}) == 1
-      assert EmailWorker.backoff(%Oban.Job{attempt: 2}) == 2
-      assert EmailWorker.backoff(%Oban.Job{attempt: 3}) == 4
-      assert EmailWorker.backoff(%Oban.Job{attempt: 4}) == 8
-      assert EmailWorker.backoff(%Oban.Job{attempt: 5}) == 16
+    test "doubles from one second" do
+      assert Enum.map(1..7, &EmailWorker.backoff(%Oban.Job{attempt: &1})) ==
+               [1, 2, 4, 8, 16, 32, 64]
     end
 
-    test "caps backoff at 16 seconds" do
-      assert EmailWorker.backoff(%Oban.Job{attempt: 6}) == 16
-      assert EmailWorker.backoff(%Oban.Job{attempt: 10}) == 16
+    test "caps at two minutes" do
+      assert EmailWorker.backoff(%Oban.Job{attempt: 8}) == 120
+      assert EmailWorker.backoff(%Oban.Job{attempt: 10}) == 120
+    end
+
+    # A job's copies share its attempts, so its retries have to outlast a
+    # short provider outage, not just a blip.
+    test "ten attempts span several minutes of a failing provider" do
+      total = Enum.sum(Enum.map(1..9, &EmailWorker.backoff(%Oban.Job{attempt: &1})))
+      assert total >= 5 * 60
     end
   end
 
@@ -457,7 +578,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.queue == "emails"
-      assert job.max_attempts == 5
+      assert job.max_attempts == 10
     end
 
     test "confirmation emails have priority 0 (highest)" do

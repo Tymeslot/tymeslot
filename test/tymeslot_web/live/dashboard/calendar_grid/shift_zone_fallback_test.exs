@@ -6,59 +6,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ShiftZoneFallbackTest do
   @moduletag :unit
   @moduletag :calendar
 
-  alias Tymeslot.Timezones
+  alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
 
-  # Tests the single validation point for invalid user timezones in the calendar
-  # grid. The strategy is: validate ONCE at the LiveView edge (precompute_derived/1)
-  # so that all downstream helpers can use bang variants safely. The load-bearing
-  # behaviour is Tymeslot.Timezones.validate_or_utc/2 and its use in
-  # DataLoading.precompute_derived/1.
+  # The calendar grid resolves the user's timezone once, at the LiveView edge
+  # (precompute_derived/1), by the owner-zone rule (Tymeslot.Profiles.timezone/1),
+  # so every downstream helper can shift into it safely. A stored zone the
+  # time-zone database does not know reads as the default zone, the clock the
+  # booking engine reads the same host on, and is logged once.
 
   @bad_tz "Not/A_Real_Zone"
   @good_tz "Europe/London"
-
-  # ---------------------------------------------------------------------------
-  # Tymeslot.Timezones.validate_or_utc/2 — the edge-validation function
-  # ---------------------------------------------------------------------------
-
-  describe "Timezones.validate_or_utc/2" do
-    test "returns a valid timezone unchanged" do
-      assert Timezones.validate_or_utc(@good_tz) == @good_tz
-    end
-
-    test "returns 'Etc/UTC' for an unknown IANA zone" do
-      assert Timezones.validate_or_utc(@bad_tz) == "Etc/UTC"
-    end
-
-    test "returns 'Etc/UTC' for an empty string" do
-      assert Timezones.validate_or_utc("") == "Etc/UTC"
-    end
-
-    test "logs exactly once per call (not per downstream use)" do
-      logs =
-        capture_log(fn ->
-          Timezones.validate_or_utc(@bad_tz, user_id: 1)
-        end)
-
-      # A single warning line — the message does not repeat.
-      occurrences = logs |> String.split("Invalid user timezone") |> length()
-      # split produces (n+1) parts for n occurrences
-      assert occurrences == 2
-    end
-
-    test "does not log for a valid timezone" do
-      # capture_log/1 captures from every process in the VM, so unrelated logs
-      # from concurrent async tests can leak in. Assert the absence of this
-      # function's specific warning rather than the entire log being empty.
-      log =
-        capture_log(fn ->
-          Timezones.validate_or_utc(@good_tz, user_id: 99)
-        end)
-
-      refute log =~ "Invalid user timezone"
-    end
-  end
 
   # ---------------------------------------------------------------------------
   # DataLoading.precompute_derived/1 — the call site
@@ -83,10 +41,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ShiftZoneFallbackTest do
       }
     end
 
-    test "assigns 'Etc/UTC' when the profile timezone is invalid" do
+    test "assigns the default zone when the profile timezone is invalid" do
       socket = build_socket(@bad_tz)
       result = DataLoading.precompute_derived(socket)
-      assert result.assigns.user_timezone == "Etc/UTC"
+      assert result.assigns.user_timezone == Profiles.get_default_timezone()
     end
 
     test "preserves a valid timezone unchanged" do

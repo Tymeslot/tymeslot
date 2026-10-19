@@ -21,18 +21,18 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # High priority for calendar sync
     priority: 1
 
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Availability
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Shared.ReauthHandling
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.Bounded
   alias Tymeslot.Workers.RetryHelpers
   alias Tymeslot.Workers.SnoozePolicy
   require Logger
@@ -89,19 +89,68 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  defp run(action, meeting_id, job, attempt) do
-    if Application.get_env(:tymeslot, :test_mode, false) do
-      # In test mode, run synchronously to avoid SQL sandbox and Mox allowance issues
-      # with child processes created by Task.async
-      result = dispatch_action(action, meeting_id, job.args, attempt)
-      handle_result(result, job)
-    else
-      task =
-        Tasks.async(Tymeslot.TaskSupervisor, fn ->
-          dispatch_action(action, meeting_id, job.args, attempt)
-        end)
+  # Every "wait for the calendar to recover" verdict below (a timeout, an open
+  # breaker, an unresponsive server, a failed connection, a rate limit) is a
+  # snooze, and from Oban 2.24 a snooze costs no attempt, so without a bound a
+  # calendar that never recovers keeps the booking's job alive for ever and
+  # its owner is never told. Twelve runs is anything from about twenty minutes
+  # (two-minute waits on an open breaker) to two hours (ten-minute waits on an
+  # unresponsive server); past it each run fails and spends an attempt.
+  #
+  # None of those verdicts reaches the owner email `CalendarEventSync` sends
+  # for a persistent create failure, so a create that spends its last attempt
+  # this way sends it here: otherwise the booking's calendar entry is lost
+  # with only an operator alert to show for it.
+  @max_recovery_snoozes 12
+  @recovery_exhausted "Calendar server did not recover within the maximum wait"
 
-      handle_task_result(task, action, meeting_id, job)
+  defp run(action, meeting_id, job, attempt) do
+    action
+    |> run_unbounded(meeting_id, job, attempt)
+    |> SnoozePolicy.bound(job,
+      max_snoozes: @max_recovery_snoozes,
+      reason: @recovery_exhausted
+    )
+    |> tap(&notify_if_create_abandoned(&1, action, meeting_id, job))
+  end
+
+  defp notify_if_create_abandoned(
+         {:error, @recovery_exhausted},
+         "create",
+         meeting_id,
+         %Oban.Job{attempt: attempt, max_attempts: max_attempts}
+       )
+       when attempt >= max_attempts,
+       do: CalendarEventSync.notify_create_abandoned(meeting_id, @recovery_exhausted)
+
+  defp notify_if_create_abandoned(_result, _action, _meeting_id, _job), do: :ok
+
+  defp run_unbounded(action, meeting_id, job, attempt) do
+    timeout_ms = calendar_timeout_ms()
+
+    case Bounded.run(fn -> dispatch_action(action, meeting_id, job.args, attempt) end, timeout_ms) do
+      {:ok, result} ->
+        handle_result(result, job)
+
+      {:exit, reason} ->
+        Logger.error("Calendar operation crashed",
+          action: action,
+          meeting_id: meeting_id,
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, "Calendar operation crashed: #{LogFormat.reason(reason)}"}
+
+      :timeout ->
+        Logger.error("Calendar operation timed out",
+          action: action,
+          meeting_id: meeting_id,
+          timeout_ms: timeout_ms
+        )
+
+        # Snooze instead of error to give the server recovery time before
+        # the next attempt, especially important before the final attempt.
+        {:snooze, 300}
     end
   end
 
@@ -143,7 +192,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # one waits and the queue always moves.
   defp wait_behind_earlier_write(%Oban.Job{id: id, attempted_at: %DateTime{}} = job, meeting_id)
        when is_integer(id) do
-    if ObanJobQueries.earlier_job_executing?(__MODULE__, meeting_id, job) do
+    if Jobs.earlier_job_executing?(__MODULE__, meeting_id, job) do
       case SnoozePolicy.snooze_or_exhaust(SnoozePolicy.executions(job),
              max_snoozes: @max_write_waits,
              base_seconds: @write_wait_seconds,
@@ -185,35 +234,6 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     Application.get_env(:tymeslot, :calendar_timeout_ms, @default_calendar_timeout_ms)
   end
 
-  defp handle_task_result(task, action, meeting_id, job) do
-    timeout_ms = calendar_timeout_ms()
-
-    case Task.yield(task, timeout_ms) || Task.shutdown(task) do
-      {:ok, result} ->
-        handle_result(result, job)
-
-      {:exit, reason} ->
-        Logger.error("Calendar operation crashed",
-          action: action,
-          meeting_id: meeting_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        {:error, "Calendar operation crashed: #{LogFormat.reason(reason)}"}
-
-      nil ->
-        Logger.error("Calendar operation timed out",
-          action: action,
-          meeting_id: meeting_id,
-          timeout_ms: timeout_ms
-        )
-
-        # Snooze instead of error to give the server recovery time before
-        # the next attempt, especially important before the final attempt.
-        {:snooze, 300}
-    end
-  end
-
   # Private functions
 
   defp handle_result(result, job) do
@@ -221,6 +241,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       :ok ->
         tidy_after_write(job)
         :ok
+
+      # A rate limit that said how long to wait (see `OAuthBase`).
+      {:error, {:rate_limited, seconds}} when is_integer(seconds) ->
+        tag_for_offline_queue(job, :rate_limited)
+        handle_error_result(:rate_limited, job, "retry_after:#{seconds}")
 
       {:error, error_type} ->
         handle_failure(error_type, job)
@@ -312,7 +337,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # from before the event existed. "update"/"delete" don't shift what counts
   # as busy in a way booking-page callers observe, so this is create-only.
   defp maybe_invalidate_availability_cache("create", meeting),
-    do: AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    do: Availability.changed(meeting.organizer_user_id)
 
   defp maybe_invalidate_availability_cache(_action, _meeting), do: :ok
 
@@ -402,9 +427,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # file lock, worsening the condition that's slowing it down in the
     # first place. Back off for 10 minutes so the server has a real chance
     # to recover (whatever was slowing it — backup, GC pause, lock
-    # contention from another client) before we touch it again. Oban's
-    # default max_attempts: 5 combined with this snooze gives ~50 minutes
-    # of graceful retry before the job is considered genuinely stuck.
+    # contention from another client) before we touch it again. A snooze
+    # costs no attempt, so it is `run/4`'s bound that ends the wait.
     Logger.warning(
       "CalDAV server unresponsive on write, snoozing 10 minutes to avoid worsening wedge"
     )

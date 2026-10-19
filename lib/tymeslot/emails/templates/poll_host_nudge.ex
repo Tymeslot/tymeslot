@@ -18,17 +18,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   import Swoosh.Email
 
   alias Tymeslot.Emails.RecipientLocale
-
-  alias Tymeslot.Emails.Shared.{
-    Buttons,
-    MjmlEmail,
-    PollHost,
-    PollStandings,
-    Sanitise,
-    TemplateHelper,
-    Text
-  }
-
+  alias Tymeslot.Emails.Shared.{Buttons, MjmlEmail, PollHost, PollStandings, TemplateHelper, Text}
   alias Tymeslot.Polls.PollSchema
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -59,7 +49,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
 
       MjmlEmail.base_email(tracking: :lifecycle)
       |> to({host_name, poll.user.email})
-      |> subject(Sanitise.sanitize_for_header(copy.subject))
+      |> subject(copy.subject)
       |> html_body(html_body)
       |> text_body(build_text_body(copy, PollStandings.text(poll, locale), results_url))
     end)

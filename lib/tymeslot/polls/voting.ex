@@ -11,7 +11,8 @@ defmodule Tymeslot.Polls.Voting do
   rather than trusting client-supplied ids.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Auth
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Polls
 
   alias Tymeslot.Polls.{
@@ -40,17 +41,16 @@ defmodule Tymeslot.Polls.Voting do
   was. Both return `:ok`, so the answer never tells a visitor whether an
   address takes part.
 
-  Returns `{:error, :voting_closed}` once voting has closed,
-  `{:error, :poll_full}` when the participant cap is reached, and
-  `{:error, :too_many_requests}` when too many links are out unconfirmed.
+  Returns `{:error, :voting_closed}` once voting has closed, or while the
+  poll's host is pending account deletion, `{:error, :poll_full}` when the
+  participant cap is reached, and `{:error, :too_many_requests}` when too many
+  links are out unconfirmed.
   """
   @spec request_link(PollSchema.t(), map()) ::
           :ok | {:error, :voting_closed | :poll_full | :too_many_requests | Ecto.Changeset.t()}
   def request_link(poll, attrs) do
-    if Polls.voting_open?(poll) do
+    with :ok <- ensure_open(poll) do
       request_open(poll, attrs)
-    else
-      {:error, :voting_closed}
     end
   end
 
@@ -74,9 +74,10 @@ defmodule Tymeslot.Polls.Voting do
   responses, as the `:name` option; without a valid one nothing is saved and
   the name changeset is returned.
 
-  Returns `{:error, :voting_closed}`, `{:error, :unknown_participant}`,
-  `{:error, :invalid_slot}`, `{:error, :invalid_response}`,
-  `{:error, :poll_full}` or `{:error, changeset}` on the respective failure.
+  Returns `{:error, :voting_closed}` (also while the poll's host is pending
+  account deletion), `{:error, :unknown_participant}`, `{:error, :invalid_slot}`,
+  `{:error, :invalid_response}`, `{:error, :poll_full}` or `{:error, changeset}`
+  on the respective failure.
   """
   @spec cast_votes(
           PollSchema.t(),
@@ -138,7 +139,7 @@ defmodule Tymeslot.Polls.Voting do
     resend_before = DateTime.add(now, -@resend_interval_seconds, :second)
 
     if PollParticipantQueries.claim_link_send(participant.id, now, resend_before) do
-      PollScheduler.schedule_participant_link(participant)
+      EmailScheduler.schedule_poll_participant_link(participant)
     else
       :ok
     end
@@ -177,7 +178,8 @@ defmodule Tymeslot.Polls.Voting do
     |> Map.new()
   end
 
-  defp handle_insert({:ok, participant}), do: PollScheduler.schedule_participant_link(participant)
+  defp handle_insert({:ok, participant}),
+    do: EmailScheduler.schedule_poll_participant_link(participant)
 
   # On the unique-constraint race a concurrent request for the same address
   # inserted first, and its link is already on the way. Any other changeset
@@ -203,8 +205,12 @@ defmodule Tymeslot.Polls.Voting do
 
   # --- Vote casting helpers ---
 
-  defp ensure_open(poll) do
-    if Polls.voting_open?(poll), do: :ok, else: {:error, :voting_closed}
+  # A voting page opened before its host asked to delete their account can
+  # still submit; the poll is about to go, so it takes no more names or votes.
+  defp ensure_open(%PollSchema{user_id: user_id} = poll) do
+    if Polls.voting_open?(poll) and not Auth.deletion_pending?(user_id),
+      do: :ok,
+      else: {:error, :voting_closed}
   end
 
   defp resolve_participant(poll, token) do
@@ -316,7 +322,7 @@ defmodule Tymeslot.Polls.Voting do
   # One receipt, for the first responses saved. Later changes are saved
   # silently: the receipt already holds the link to come back with.
   defp maybe_send_receipt(%PollParticipantSchema{voted_at: nil}, stamped),
-    do: PollScheduler.schedule_vote_receipt(stamped)
+    do: EmailScheduler.schedule_poll_vote_receipt(stamped)
 
   defp maybe_send_receipt(_participant, _stamped), do: :ok
 
@@ -329,7 +335,7 @@ defmodule Tymeslot.Polls.Voting do
   # A host who asked to hear about new votes gets them bundled: this joins the
   # update already waiting, or schedules one.
   defp maybe_update_host(%PollSchema{notify_on_vote: true} = poll),
-    do: PollScheduler.schedule_vote_digest(poll)
+    do: EmailScheduler.schedule_poll_vote_digest(poll)
 
   defp maybe_update_host(_poll), do: :ok
 
@@ -341,7 +347,7 @@ defmodule Tymeslot.Polls.Voting do
   # inside the transaction above.
   defp maybe_notify_all_voted(poll) do
     if all_participants_voted?(poll) do
-      PollScheduler.schedule_all_voted_nudge(poll)
+      EmailScheduler.schedule_poll_all_voted_nudge(poll)
     end
 
     :ok

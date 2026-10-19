@@ -16,6 +16,7 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
   @moduletag :security
   @moduletag :i18n
 
+  alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.RateLimiter.Helpers
   alias Tymeslot.Test.LogCapture
@@ -28,11 +29,10 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
   describe "the five refusals this path produces" do
     test "signup names its 10-minute tier" do
       ip = "203.0.113.90"
-      email = "refusal-signup@example.com"
 
-      for _i <- 1..5, do: assert(:ok = RateLimiter.check_signup_rate_limit(email, ip))
+      for _i <- 1..5, do: assert(:ok = RateLimiter.check(:signup_ip, ip))
 
-      assert {:error, :rate_limited, message} = RateLimiter.check_signup_rate_limit(email, ip)
+      assert {:error, :rate_limited, message} = RateLimiter.check(:signup_ip, ip)
 
       assert message ==
                "You've reached the limit of 5 signup attempts per 10 minutes. " <>
@@ -54,13 +54,12 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
     end
 
     test "password reset names its hourly tier" do
-      email = "refusal-reset@example.com"
       ip = "203.0.113.92"
 
-      for _i <- 1..5, do: assert(:ok = RateLimiter.check_password_reset_rate_limit(email, ip))
+      for _i <- 1..5, do: assert(:ok = RateLimiter.check(:password_reset_ip, ip))
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_password_reset_rate_limit(email, ip)
+               RateLimiter.check(:password_reset_ip, ip)
 
       assert message ==
                "You've reached the limit of 5 password reset requests per hour. " <>
@@ -70,10 +69,10 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
     test "the booking recipient cap names its hourly tier" do
       email = "refusal-recipient@example.com"
 
-      for _i <- 1..5, do: assert(:ok = RateLimiter.check_booking_recipient_limit(email))
+      for _i <- 1..5, do: assert(:ok = RateLimiter.check(:booking_recipient, email))
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_booking_recipient_limit(email)
+               RateLimiter.check(:booking_recipient, email)
 
       assert message ==
                "You've reached the limit of 5 bookings per hour. " <>
@@ -87,10 +86,10 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
     test "a calendar event move names its one-minute tier in the singular, not as per 1 minutes" do
       user_id = 99_501
 
-      for _i <- 1..3, do: assert(:ok = RateLimiter.check_calendar_event_move_rate_limit(user_id))
+      for _i <- 1..3, do: assert(:ok = RateLimiter.check(:calendar_event_move, user_id))
 
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_calendar_event_move_rate_limit(user_id)
+               RateLimiter.check(:calendar_event_move, user_id)
 
       assert message ==
                "You've reached the limit of 3 calendar event moves per minute. " <>
@@ -103,13 +102,12 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
   describe "locale" do
     test "the refusal arrives in the reader's language, label and all" do
       ip = "203.0.113.93"
-      email = "refusal-locale@example.com"
 
       message =
         Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
-          for _i <- 1..5, do: assert(:ok = RateLimiter.check_signup_rate_limit(email, ip))
+          for _i <- 1..5, do: assert(:ok = RateLimiter.check(:signup_ip, ip))
 
-          assert {:error, :rate_limited, message} = RateLimiter.check_signup_rate_limit(email, ip)
+          assert {:error, :rate_limited, message} = RateLimiter.check(:signup_ip, ip)
           message
         end)
 
@@ -121,53 +119,80 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
     test "the log line stays English while the sentence is translated" do
       LogCapture.attach()
 
-      ip = "203.0.113.94"
-      email = "refusal-log@example.com"
+      # A tiered limit that logs its own refusals (the auth ones leave that to
+      # the auth flows' security event).
+      email = "tiers-#{System.unique_integer([:positive])}@example.com"
 
       Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
-        for _i <- 1..5, do: RateLimiter.check_signup_rate_limit(email, ip)
-        assert {:error, :rate_limited, _message} = RateLimiter.check_signup_rate_limit(email, ip)
+        for _i <- 1..5, do: RateLimiter.check(:booking_recipient, email)
+        assert {:error, :rate_limited, _message} = RateLimiter.check(:booking_recipient, email)
       end)
 
       assert_receive {:captured_log, %{level: :warning, meta: %{operation: operation} = meta}}
 
       # `operation` is what a log search is keyed on, so it must not follow the
       # reader's locale the way the sentence does.
-      assert operation == "signup"
+      assert operation == "booking"
       assert meta.limit == 5
-      assert meta.window_minutes == 10
+      assert meta.window_minutes == 60
     end
   end
 
-  describe "tier order" do
-    # Both tiers carry the same budget, so after three charges either one would
-    # refuse. The walk is ordered shortest window first and halts on the first
-    # refusal, so the minute-long tier is the one that must speak: sending
-    # somebody away for a day when a minute would do is the failure this pins.
+  describe "which tier speaks" do
+    # The refusal names the tier a retry has to wait longest for, so that the
+    # limit, the window and the wait in one sentence agree. This used to be
+    # the first tier in list order to refuse, the shortest window, which with
+    # a longer tier also full told people to come back in a minute when a
+    # retry then would be refused again for a day.
     @same_budget_tiers [{"1m", 3, 60_000}, {"1d", 3, 24 * 60 * 60_000}]
 
-    test "the tightest tier that tripped is the one the message names" do
+    test "a longer tier that is also full is the one the message names" do
       bucket = fresh_bucket()
 
       for _i <- 1..3, do: assert(:ok = charge(bucket, @same_budget_tiers))
 
       assert {:error, :rate_limited, message} = charge(bucket, @same_budget_tiers)
 
-      assert message =~ "per minute"
-      refute message =~ "per day"
+      assert message ==
+               "You've reached the limit of 3 widgets per day. " <>
+                 "Please try again in 1 day."
     end
 
-    test "list order, not window length, is what decides that" do
-      # The anchor for the test above: the same two tiers the other way round
-      # refuse on the day-long one, so the assertion there can genuinely fail.
-      reversed = Enum.reverse(@same_budget_tiers)
+    test "the shorter tier speaks when a retry after its wait would pass" do
+      # The anchor for the test above: with room left in the day, a minute
+      # does do, and sending somebody away for a day is the failure this pins.
+      tiers = [{"1m", 3, 60_000}, {"1d", 10, 24 * 60 * 60_000}]
       bucket = fresh_bucket()
 
-      for _i <- 1..3, do: assert(:ok = charge(bucket, reversed))
+      for _i <- 1..3, do: assert(:ok = charge(bucket, tiers))
 
-      assert {:error, :rate_limited, message} = charge(bucket, reversed)
+      assert {:error, :rate_limited, message} = charge(bucket, tiers)
 
-      assert message =~ "per day"
+      assert message ==
+               "You've reached the limit of 3 widgets per minute. " <>
+                 "Please try again in 1 minute."
+    end
+  end
+
+  describe "the wait" do
+    # The walk halts on the minute tier, but a retry walks every tier again:
+    # a wait timed by the refusing tier alone would send someone back into
+    # the hour tier, which is still full, so that is the tier that speaks.
+    test "covers a longer tier that a retry would still trip" do
+      bucket = fresh_bucket()
+      tiers = [{"1m", 2, 60_000}, {"1h", 3, 60 * 60_000}]
+
+      for _i <- 1..2, do: RateLimit.hit("#{bucket}:1m", 60_000, 2)
+      for _i <- 1..3, do: RateLimit.hit("#{bucket}:1h", 60 * 60_000, 3)
+
+      assert {:error, :rate_limited, message} = charge(bucket, tiers)
+
+      assert message ==
+               "You've reached the limit of 3 widgets per hour. " <>
+                 "Please try again in 1 hour."
+
+      # Working the wait out charged nothing past the refusing tier.
+      assert length(RateLimit.entries("#{bucket}:1h")) == 3
     end
   end
 

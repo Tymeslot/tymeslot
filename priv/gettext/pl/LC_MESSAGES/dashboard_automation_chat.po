@@ -1,3 +1,4 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: tymeslot\n"
@@ -829,6 +830,37 @@ msgstr "Błąd Slacka: %{error}"
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Usuń %{name}"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Telegram"
+msgstr "Nie udało się połączyć z Telegramem"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "No chat is linked to this integration yet"
+msgstr "Z tą integracją nie powiązano jeszcze żadnego czatu"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram refused the message (%{status}): %{description}"
+msgstr "Telegram odrzucił wiadomość (%{status}): %{description}"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "The bot token is missing"
+msgstr "Brak tokenu bota"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "The shared Telegram bot is not configured"
+msgstr "Wspólny bot Telegram nie jest skonfigurowany"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
+msgstr "Wstrzymana: twój plan nie obejmuje automatyzacji. Po przejściu na wyższy plan wznowi się sama."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
 #, elixir-autogen, elixir-format

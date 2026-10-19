@@ -218,6 +218,8 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
        %{
          "name" => sanitized_name,
          "url" => sanitized_url,
+         # Blocks unless the form says to show it only.
+         "blocks_availability" => params["blocks_availability"] not in ["false", false],
          "all_events_busy" => params["all_events_busy"] in [true, "true", "on"]
        }}
     else

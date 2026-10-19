@@ -243,11 +243,11 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   @spec do_request(atom(), String.t(), any(), list(), keyword()) ::
           {:ok, Response.t()} | {:error, Exception.t()}
   defp do_request(method, url, body, headers, options) do
-    req_options = build_req_options(method, url, body, headers, options)
+    {req_options, connect_options} = build_req_options(method, url, body, headers, options)
 
     result =
-      track_request(method, url, fn ->
-        Req.request(req_options)
+      with_connect_options(req_options, url, connect_options, fn req_options ->
+        track_request(method, url, fn -> Req.request(req_options) end)
       end)
 
     # Metrics are recorded first so an oversized response still reports the
@@ -353,7 +353,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   # Non-standard methods (e.g. PROPFIND, REPORT) must be passed as uppercase strings.
   @standard_methods ~w(get post put patch delete head options)a
 
-  @spec build_req_options(atom(), String.t(), any(), list(), keyword()) :: keyword()
+  @spec build_req_options(atom(), String.t(), any(), list(), keyword()) ::
+          {keyword(), keyword()}
   defp build_req_options(method, url, body, headers, user_options) do
     # Get timeout for this operation
     timeout = get_timeout(method, user_options)
@@ -370,7 +371,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       receive_timeout: timeout,
       # Disable Req's default retry: :safe_transient which silently retries
       # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
-      # explicitly at the CalDAV layer (RetryLogic) and Oban layer.
+      # explicitly at the CalDAV layer (Retry) and Oban layer.
       retry: false,
       # Disable automatic JSON decoding to match HTTPoison behavior
       # Callers handle JSON parsing explicitly with Jason.decode!
@@ -415,9 +416,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         Keyword.get(user_opts_clean, :connect_options, [])
       )
 
-    options_with_cap
-    |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
-    |> apply_connect_options(url, connect_options)
+    {Keyword.merge(options_with_cap, Keyword.delete(user_opts_clean, :connect_options)),
+     connect_options}
   end
 
   # The request carries the correlation id of the work that made it as
@@ -449,18 +449,28 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   # The fallback is the behaviour that preceded it, and runs whenever the
   # request is not going through Finch at all — the suite routes Req through a
   # test plug, which opens no socket and has no pool to register.
-  defp apply_connect_options(options, _url, []), do: options
+  defp with_connect_options(options, _url, [], fun), do: fun.(options)
 
-  defp apply_connect_options(options, url, connect_options) do
-    with {:ok, finch_options} <- Keyword.fetch(options, :finch),
-         {:ok, pooled_options} <- FinchPool.request_option(url, connect_options) do
-      Keyword.put(options, :finch, Keyword.merge(finch_options, pooled_options))
-    else
-      _no_finch_instance ->
-        options
-        |> Keyword.delete(:finch)
-        |> Keyword.put(:connect_options, connect_options)
+  defp with_connect_options(options, url, connect_options, fun) do
+    case Keyword.fetch(options, :finch) do
+      {:ok, finch_options} ->
+        FinchPool.with_pool(url, connect_options, fn
+          {:ok, pooled} ->
+            fun.(Keyword.put(options, :finch, Keyword.merge(finch_options, pooled)))
+
+          :error ->
+            fun.(unpooled(options, connect_options))
+        end)
+
+      :error ->
+        fun.(unpooled(options, connect_options))
     end
+  end
+
+  defp unpooled(options, connect_options) do
+    options
+    |> Keyword.delete(:finch)
+    |> Keyword.put(:connect_options, connect_options)
   end
 
   # A proxied request never goes through the test plug. The proxy is the thing

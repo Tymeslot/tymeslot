@@ -1,188 +1,167 @@
 defmodule Tymeslot.Security.RateLimiter do
   @moduledoc """
-  Rate limiter backed by Hammer (ETS sliding window).
+  Rate limiting over `Tymeslot.Security.RateLimit`'s sliding log.
+
+  Every named limit lives in `Tymeslot.Security.RateLimiter.Limits`, and
+  `check/2` charges one of them:
+
+      RateLimiter.check(:meeting_cancel, client_ip)
+      RateLimiter.check(:webhook_write, user_id)
+
+  A caller outside this application, which cannot add to that table, uses
+  `check_bucket/2` with its own key and budget. Login and connection tests
+  keep their own functions: one charges several related buckets and a
+  failure-only throttle, the other picks its bucket from the provider.
+
+  Every check answers `:ok` or `{:error, :rate_limited, message}`, where the
+  message tells the person which limit stopped them and for how long. A
+  `:user`-scoped limit given anything but a positive integer answers
+  `{:error, :invalid_user_id}`, and an `:id`-scoped one `{:error, :invalid_id}`.
   """
 
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter.Auth
-  alias Tymeslot.Security.RateLimiter.Bookings
-  alias Tymeslot.Security.RateLimiter.Calendar
-  alias Tymeslot.Security.RateLimiter.Dashboard
   alias Tymeslot.Security.RateLimiter.Helpers
   alias Tymeslot.Security.RateLimiter.Integrations
-  alias Tymeslot.Security.RateLimiter.OAuth
-  alias Tymeslot.Security.RateLimiter.Profile
-  alias Tymeslot.Security.RateLimiter.PublicEndpoints
+  alias Tymeslot.Security.RateLimiter.Limits
 
   @type bucket_key :: String.t()
-  @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
+  @type result :: :ok | {:error, :rate_limited, String.t()}
 
   @doc """
-  Check rate limit for a given bucket key.
-  Returns {:allow, count} if within limits, {:deny, limit} if exceeded.
+  Charges one hit against the named limit, for `key` (a client address, a
+  user id, an email address or a prebuilt key, as the entry's scope says).
+  Raises on a name that is not in `Limits`.
   """
-  @spec check_rate(bucket_key(), pos_integer(), pos_integer()) :: rate_check_result()
-  def check_rate(bucket_key, window_ms, limit) do
-    Helpers.check_rate(bucket_key, window_ms, limit)
+  @spec check(Limits.name(), term()) ::
+          result() | {:error, :invalid_user_id} | {:error, :invalid_id}
+  def check(name, key) do
+    entry = Limits.fetch!(name)
+
+    with {:ok, suffix, identifier} <- scope_key(entry[:scope], key, entry[:operation]) do
+      charge("#{entry[:prefix]}:#{suffix}", identifier, entry)
+    end
+  end
+
+  @doc """
+  Charges one hit against a bucket defined by the caller, for code outside
+  this application that cannot add to `Limits`.
+
+  Options: `:limit` and `:window_ms` (required, by name, so they cannot be
+  swapped), `:operation` (required, the English name the log line carries),
+  `:identifier` (what the log line names, masked when address-shaped),
+  `:action` (the localised plural the refusal reads) and `log: false`.
+  """
+  @spec check_bucket(bucket_key(), keyword()) :: result()
+  def check_bucket(bucket_key, opts) when is_binary(bucket_key) do
+    Helpers.check_window(
+      bucket_key,
+      Keyword.fetch!(opts, :limit),
+      Keyword.fetch!(opts, :window_ms),
+      opts
+    )
+  end
+
+  defp scope_key(:source, ip, _operation), do: {:ok, Helpers.source_key(ip), ip}
+
+  defp scope_key(:user, user_id, _operation) when is_integer(user_id) and user_id > 0 do
+    id = Integer.to_string(user_id)
+    {:ok, id, id}
+  end
+
+  defp scope_key(:user, user_id, operation), do: Helpers.invalid_user_id(operation, user_id)
+
+  defp scope_key(:id, id, _operation) when is_integer(id) and id > 0 do
+    id = Integer.to_string(id)
+    {:ok, id, id}
+  end
+
+  defp scope_key(:id, id, operation), do: Helpers.invalid_id(operation, id)
+
+  defp scope_key(:email, email, _operation) when is_binary(email) do
+    normalised = email |> String.trim() |> String.downcase()
+    {:ok, normalised, normalised}
+  end
+
+  defp scope_key(:key, key, _operation) do
+    key = to_string(key)
+    {:ok, key, key}
+  end
+
+  defp charge(bucket_key, identifier, entry) do
+    case entry[:tiers] do
+      nil ->
+        Helpers.check_window(bucket_key, entry[:limit], entry[:window_ms],
+          operation: entry[:operation],
+          identifier: identifier,
+          action: action(entry),
+          log: Keyword.get(entry, :log, true)
+        )
+
+      tiers ->
+        Helpers.check_multi_bucket_limits(
+          [{bucket_key, tiers, entry[:operation], action(entry)}],
+          log: Keyword.get(entry, :log, true)
+        )
+    end
+  end
+
+  defp action(entry) do
+    case entry[:action] do
+      nil -> nil
+      msgid -> Gettext.dgettext(TymeslotWeb.Gettext, "errors", msgid)
+    end
   end
 
   @doc """
   Clear rate limit data for a specific bucket key.
-
-  Test-only — bypasses Hammer's internal state management.
   """
   @spec clear_bucket(bucket_key()) :: :ok
-  def clear_bucket(bucket_key) do
-    :ets.match_delete(RateLimit, {{bucket_key, :_}, :_})
-    :ok
-  end
+  defdelegate clear_bucket(bucket_key), to: Helpers
 
   @doc """
-  Clear all rate limit data.
-
-  Test-only — bypasses Hammer's internal state management.
+  Clear all rate limit data. Test-only.
   """
   @spec clear_all() :: :ok
-  def clear_all do
-    :ets.delete_all_objects(RateLimit)
-    :ok
-  end
+  defdelegate clear_all, to: RateLimit
 
-  @doc """
-  Check rate limit for authentication.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_rate_limit(bucket_key(), pos_integer(), pos_integer()) ::
-          :ok | {:error, :rate_limited}
-  def check_rate_limit(bucket_key, limit, window_ms) do
-    Helpers.check_rate_limit(bucket_key, limit, window_ms)
-  end
+  @doc "The key a per-IP bucket counts as one client: IPv4 as it is, IPv6 by its /64."
+  @spec source_key(nil | :inet.ip_address() | String.t()) :: String.t()
+  defdelegate source_key(ip), to: Helpers
 
   # Auth
 
   @doc """
-  Rate limit authentication attempts with account lockout.
+  Rate limit authentication attempts, including the failed-login throttle.
 
-  The lockout and the per-account budget are keyed on the email *and* the
+  The throttle and the per-account budget are keyed on the email *and* the
   client address, so failures from one address never lock the owner out from
   another; a wider per-email ceiling covers a run spread across many
   addresses. Returns :ok if allowed, {:error, :rate_limited, message} if
   exceeded.
   """
-  @spec check_auth_rate_limit(String.t(), String.t() | nil) ::
-          :ok | {:error, :rate_limited, String.t()}
+  @spec check_auth_rate_limit(String.t(), String.t() | nil) :: result()
   def check_auth_rate_limit(email, ip), do: Auth.check_auth(email, ip)
 
   @doc """
-  Record an authentication attempt's result for lockout tracking, against the
-  same email and client address `check_auth_rate_limit/2` consults.
+  Record an authentication attempt's result for the failed-login throttle,
+  against the same email and client address `check_auth_rate_limit/2`
+  consults. Returns `{:error, :account_throttled, message}` for the failure
+  that crosses the threshold, and for every failure after it.
   """
   @spec record_auth_attempt(String.t(), String.t() | nil, boolean()) ::
-          :ok | {:error, atom(), String.t()}
+          :ok | {:error, :account_throttled, String.t()}
   def record_auth_attempt(email, ip, success), do: Auth.record_attempt(email, ip, success)
 
   @doc """
-  Rate limit signup attempts per email and per IP with multi-window buckets.
+  Rate limit sending a verification email: the requesting address's budget
+  first, then the account's, so an address over its own limit spends nothing
+  of the account's.
   """
-  @spec check_signup_rate_limit(String.t(), String.t() | :inet.ip_address() | nil) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_signup_rate_limit(email, ip), do: Auth.check_signup(email, ip)
-
-  @doc """
-  Rate limit email verification/resend attempts per user and per IP.
-  """
-  @spec check_verification_rate_limit(String.t(), String.t() | :inet.ip_address() | nil) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_verification_rate_limit(user_id, ip), do: Auth.check_verification(user_id, ip)
-
-  @doc """
-  The per-IP half of `check_verification_rate_limit/2`, on the same bucket.
-  """
-  @spec check_verification_ip_rate_limit(String.t() | :inet.ip_address() | nil) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_verification_ip_rate_limit(ip), do: Auth.check_verification_ip(ip)
-
-  @doc """
-  The per-user half of `check_verification_rate_limit/2`, on the same bucket.
-  """
-  @spec check_verification_user_rate_limit(term()) :: :ok | {:error, :rate_limited, String.t()}
-  def check_verification_user_rate_limit(user_id), do: Auth.check_verification_user(user_id)
-
-  @doc """
-  Rate limit the note sent to an account's owner when someone tries to sign up
-  with their address, per recipient.
-  """
-  @spec check_signup_attempt_notice_rate_limit(term()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_signup_attempt_notice_rate_limit(user_id),
-    do: Auth.check_signup_attempt_notice(user_id)
-
-  @doc """
-  Rate limit the link that finishes a social sign-up with a typed address,
-  per recipient address.
-  """
-  @spec check_social_signup_confirmation_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_social_signup_confirmation_rate_limit(email),
-    do: Auth.check_social_signup_confirmation(email)
-
-  @doc """
-  Rate limit password reset requests per email and per IP.
-  """
-  @spec check_password_reset_rate_limit(
-          String.t(),
-          String.t() | :inet.ip_address() | nil
-        ) :: :ok | {:error, :rate_limited, String.t()}
-  def check_password_reset_rate_limit(email, ip), do: Auth.check_password_reset(email, ip)
-
-  @doc """
-  Rate limit completing emailed email-change links, per IP.
-  """
-  @spec check_email_change_verify_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_email_change_verify_rate_limit(client_ip),
-    do: Auth.check_email_change_verify(client_ip)
-
-  @doc """
-  Rate limit setting a new password against a reset token, per IP.
-  """
-  @spec check_password_reset_submit_rate_limit(String.t() | nil) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_password_reset_submit_rate_limit(client_ip),
-    do: Auth.check_password_reset_submit(client_ip)
-
-  @doc """
-  Rate limit completing emailed verification links, per IP.
-  """
-  @spec check_verification_link_rate_limit(String.t() | nil) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_verification_link_rate_limit(client_ip), do: Auth.check_verification_link(client_ip)
-
-  # OAuth
-
-  @doc """
-  Rate limit OAuth initiation attempts (GitHub, Google signup).
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_oauth_initiation_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_oauth_initiation_rate_limit(ip_address), do: OAuth.check_initiation(ip_address)
-
-  @doc """
-  Rate limit OAuth callback processing.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_oauth_callback_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_oauth_callback_rate_limit(ip_address), do: OAuth.check_callback(ip_address)
-
-  @doc """
-  Rate limit OAuth completion form submissions.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_oauth_completion_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_oauth_completion_rate_limit(ip_address), do: OAuth.check_completion(ip_address)
+  @spec check_verification_rate_limit(term(), String.t() | :inet.ip_address() | nil) :: result()
+  def check_verification_rate_limit(user_id, ip) do
+    with :ok <- check(:verification_ip, ip), do: check(:verification_user, user_id)
+  end
 
   # Integrations
 
@@ -216,418 +195,7 @@ defmodule Tymeslot.Security.RateLimiter do
           Integrations.connection_bucket(),
           Integrations.connection_scope() | nil,
           Integrations.connection_action()
-        ) :: :ok | {:error, :rate_limited, String.t()} | {:error, :unattributable}
+        ) :: result() | {:error, :unattributable}
   def check_connection_test_rate_limit(bucket, scope, action \\ :connection_test),
     do: Integrations.check_connection_test(bucket, scope, action)
-
-  # Bookings
-
-  @doc """
-  Rate limit webhook endpoint.
-
-  Limit: 100 requests per 10 minutes per IP
-
-  ## Parameters
-    * `client_ip` - The client IP address
-
-  ## Returns
-    * `:ok` - Request allowed
-    * `{:error, :rate_limited}` - Rate limit exceeded
-  """
-  @spec check_webhook_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_webhook_rate_limit(client_ip), do: Bookings.check_webhook_endpoint(client_ip)
-
-  @doc """
-  Rate limit the Stripe platform and Connect webhook endpoints per source
-  address (1000/min, one bucket shared by both).
-
-  Deliberately far looser than `check_webhook_rate_limit/1`: Stripe sends from
-  a small pool of addresses, and a delayed event can leave a paid booking
-  waiting. See `Tymeslot.Security.RateLimiter.Bookings.check_stripe_webhook_endpoint/1`.
-  """
-  @spec check_stripe_webhook_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_stripe_webhook_rate_limit(client_ip),
-    do: Bookings.check_stripe_webhook_endpoint(client_ip)
-
-  @doc """
-  Rate limit booking submission attempts.
-  Returns {:allow, count} if allowed, {:deny, limit} if exceeded.
-  """
-  @spec check_booking_submission_limit(String.t()) :: rate_check_result()
-  def check_booking_submission_limit(client_ip), do: Bookings.check_booking_submission(client_ip)
-
-  @doc """
-  Rate limit booking submissions by attendee email (recipient of the
-  confirmation email). Complements the per-IP limit to stop email
-  amplification from an attacker rotating source IPs against one mailbox.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_booking_recipient_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_booking_recipient_limit(email), do: Bookings.check_booking_recipient(email)
-
-  @doc """
-  Rate limit meeting cancellation attempts.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Prevents abuse by limiting how often meeting cancellation actions can be performed.
-  Generous limit of 10 cancellations per 10 minutes per IP to avoid impacting legitimate users.
-  """
-  @spec check_meeting_cancel_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_meeting_cancel_rate_limit(client_ip), do: Bookings.check_meeting_cancel(client_ip)
-
-  @doc """
-  Rate limit answers to a booking request (approve or decline).
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_meeting_approval_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_meeting_approval_rate_limit(client_ip),
-    do: Bookings.check_meeting_approval(client_ip)
-
-  @doc """
-  Rate limit guest RSVP page views and responses.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_guest_rsvp_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_guest_rsvp_rate_limit(client_ip), do: Bookings.check_guest_rsvp(client_ip)
-
-  @doc """
-  Rate limit a group participant's seat-management pages and actions.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_seat_manage_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_seat_manage_rate_limit(client_ip), do: Bookings.check_seat_manage(client_ip)
-
-  @doc """
-  Rate limit meeting keep/uncancel attempts.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Prevents abuse by limiting how often meeting keep actions can be performed.
-  Generous limit of 10 keep actions per 10 minutes per IP to avoid impacting legitimate users.
-  """
-  @spec check_meeting_keep_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_meeting_keep_rate_limit(client_ip), do: Bookings.check_meeting_keep(client_ip)
-
-  # Profile
-
-  @doc """
-  Rate limit username change attempts.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_username_change_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited}
-  def check_username_change_rate_limit(identifier),
-    do: Profile.check_username_change(identifier)
-
-  @doc """
-  Rate limit username availability checks.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_username_check_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_username_check_rate_limit(identifier),
-    do: Profile.check_username_check(identifier)
-
-  # Dashboard
-
-  @doc """
-  Rate limit theme customization changes (color schemes, backgrounds).
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded,
-  or {:error, :invalid_user_id} if user_id is invalid.
-
-  Prevents abuse by limiting how often theme customization changes can be made.
-
-  ## Rate Limit Configuration
-
-  - Limit: 150 changes per 5 minutes per user
-  - Rationale: Allows legitimate customization workflow where users try multiple
-    colors/backgrounds rapidly to find their preferred design (~30-40 changes in
-    active session). Adjusted from initial 50 to reduce false positives based on
-    expected UX patterns.
-  - Scope: All theme changes (colors + backgrounds) share same bucket to prevent
-    overall abuse while allowing natural exploration workflow.
-
-  ## Error Responses
-
-  - `:ok` - Request allowed
-  - `{:error, :rate_limited, message}` - Rate limit exceeded
-  - `{:error, :invalid_user_id}` - Invalid user_id provided
-  """
-  @spec check_theme_customization_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_theme_customization_rate_limit(user_id),
-    do: Dashboard.check_theme_customization(user_id)
-
-  @doc """
-  Rate limit meeting filter changes in dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Prevents abuse by limiting how often filter changes can be made.
-  Generous limit of 100 filter changes per 5 minutes per user to allow normal browsing.
-  """
-  @spec check_meeting_filter_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_meeting_filter_rate_limit(user_id), do: Dashboard.check_meeting_filter(user_id)
-
-  @doc """
-  Rate limit webhook create/update operations from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 30 writes per 30 minutes per user.
-  """
-  @spec check_webhook_write_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_webhook_write_rate_limit(user_id), do: Dashboard.check_webhook_write(user_id)
-
-  @doc """
-  Rate limit webhook test-connection operations from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 30 tests per 5 minutes per user.
-  """
-  @spec check_webhook_test_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_webhook_test_rate_limit(user_id), do: Dashboard.check_webhook_test(user_id)
-
-  @doc """
-  Rate limit webhook security token regeneration from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 10 regenerations per hour per user.
-  """
-  @spec check_webhook_token_regen_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_webhook_token_regen_rate_limit(user_id),
-    do: Dashboard.check_webhook_token_regen(user_id)
-
-  @doc """
-  Rate limit the "refresh all calendars" operation from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 5 refreshes per 2 minutes per user.
-  """
-  @spec check_calendar_refresh_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_calendar_refresh_rate_limit(user_id),
-    do: Dashboard.check_calendar_refresh(user_id)
-
-  @doc """
-  Rate limit inline edits to calendar events (title, location, description, time).
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 30 edits per 5 minutes per user.
-  """
-  @spec check_calendar_event_edit_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_calendar_event_edit_rate_limit(user_id),
-    do: Calendar.check_event_edit(user_id)
-
-  @doc """
-  Rate limit importing an `.ics` file into a calendar. Each import may write up
-  to a thousand events to the user's calendar provider.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 5 imports per hour per user.
-  """
-  @spec check_calendar_ics_import_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_calendar_ics_import_rate_limit(user_id),
-    do: Calendar.check_ics_import(user_id)
-
-  @doc """
-  Rate limit moving events between calendars (delete + create).
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Uses tiered windows so a burst trips the short window first (1 min cooldown)
-  rather than locking the user out for a long period:
-  - 3 per minute
-  - 5 per 5 minutes
-  - 15 per hour
-  - 30 per day
-  """
-  @spec check_calendar_event_move_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_calendar_event_move_rate_limit(user_id),
-    do: Calendar.check_event_move(user_id)
-
-  @doc """
-  Rate limit calendar and video integration write operations (add/toggle) from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 30 writes per 30 minutes per user.
-  """
-  @spec check_integration_write_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_integration_write_rate_limit(user_id),
-    do: Dashboard.check_integration_write(user_id)
-
-  @doc """
-  Rate limit changes to how an integration is *presented* — its name and the
-  colour its events are painted in.
-
-  A separate, more permissive bucket from `check_integration_write_rate_limit/1`
-  because the two meter different things. That one guards writes that reach a
-  provider or move credentials around, where 30 in half an hour is already
-  generous. These write one column on a row the user owns and touch nothing
-  outside Tymeslot, and they are driven by a swatch grid: comparing colours by
-  clicking through them is how the control is meant to be used, and it would
-  exhaust a connection-sized budget in under a minute.
-
-  Limit: 150 writes per 30 minutes per user.
-  """
-  @spec check_integration_appearance_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_integration_appearance_rate_limit(user_id),
-    do: Dashboard.check_integration_appearance(user_id)
-
-  @doc """
-  Rate limit showing and hiding individual calendars in the dashboard grid.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Its own budget rather than the appearance one: hiding a calendar is a view
-  control clicked while reading the week, not a settings change, so it is sized
-  where normal use cannot reach it.
-
-  Limit: 300 toggles per 10 minutes per user.
-  """
-  @spec check_calendar_visibility_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_calendar_visibility_rate_limit(user_id),
-    do: Dashboard.check_calendar_visibility(user_id)
-
-  @doc """
-  Rate limit meeting type write operations (create, update, toggle, delete, reorder) from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 60 writes per 30 minutes per user.
-  """
-  @spec check_meeting_type_write_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_meeting_type_write_rate_limit(user_id),
-    do: Dashboard.check_meeting_type_write(user_id)
-
-  @doc """
-  Rate limit meeting type auto-save writes from the meeting type editor.
-
-  Auto-save persists on every change, so this bucket is far more permissive
-  than the manual write limit — it must never trip during a legitimate
-  editing session while still capping a runaway or scripted client.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 600 writes per 30 minutes per user.
-  """
-  @spec check_meeting_type_autosave_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_meeting_type_autosave_rate_limit(user_id),
-    do: Dashboard.check_meeting_type_autosave(user_id)
-
-  @doc """
-  Rate limit avatar upload and delete operations from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 20 uploads per hour per user.
-  """
-  @spec check_avatar_upload_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_avatar_upload_rate_limit(user_id), do: Dashboard.check_avatar_upload(user_id)
-
-  @doc """
-  Rate limit changes to the embed domain whitelist from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 10 updates per hour per user.
-  """
-  @spec check_embed_domain_update_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_embed_domain_update_rate_limit(user_id),
-    do: Dashboard.check_embed_domain_update(user_id)
-
-  @doc """
-  Rate limit owner-side meeting cancellation from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 20 cancellations per 10 minutes per user.
-  """
-  @spec check_dashboard_cancel_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_dashboard_cancel_rate_limit(user_id), do: Dashboard.check_cancel(user_id)
-
-  @doc """
-  Rate limit owner-side reschedule request sending from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 20 reschedule requests per 10 minutes per user.
-  """
-  @spec check_dashboard_reschedule_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_dashboard_reschedule_rate_limit(user_id), do: Dashboard.check_reschedule(user_id)
-
-  @doc """
-  Rate limit the host inviting guests to an existing booking from the dashboard.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 20 invitation batches per 10 minutes per user.
-  """
-  @spec check_dashboard_add_guests_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_dashboard_add_guests_rate_limit(user_id), do: Dashboard.check_add_guests(user_id)
-
-  @doc """
-  Rate limit creating an ad-hoc meeting from the calendar grid's quick add.
-  Each save emails the main guest and up to ten extra guests, so it gets the
-  same budget as inviting guests to an existing booking, in its own bucket.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-
-  Limit: 20 meetings per 10 minutes per user.
-  """
-  @spec check_dashboard_quick_add_meeting_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
-  def check_dashboard_quick_add_meeting_rate_limit(user_id),
-    do: Dashboard.check_quick_add_meeting(user_id)
-
-  @doc """
-  Rate limit payment initiation attempts.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-
-  Prevents abuse by limiting how often users can initiate payment or subscription checkouts.
-  This protects against API spam and potential DoS attacks via the payment endpoint.
-  """
-  @spec check_payment_initiation_rate_limit(integer() | any()) ::
-          :ok | {:error, :rate_limited} | {:error, :invalid_user_id}
-  def check_payment_initiation_rate_limit(user_id),
-    do: Dashboard.check_payment_initiation(user_id)
-
-  @doc "Rate limit calendar webhook notifications per integration (60/min)."
-  @spec check_calendar_webhook_rate_limit(integer()) :: :ok | {:error, :rate_limited}
-  def check_calendar_webhook_rate_limit(id), do: Calendar.check_webhook(id)
-
-  @doc """
-  Rate limit the calendar push endpoints per source address (1000/min).
-
-  Deliberately far looser than `check_webhook_rate_limit/1`: the address is the
-  provider's, shared by every tenant on the instance. See
-  `Tymeslot.Security.RateLimiter.Calendar.check_push_endpoint/1`.
-  """
-  @spec check_calendar_push_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_calendar_push_rate_limit(client_ip), do: Calendar.check_push_endpoint(client_ip)
-
-  # Public endpoints
-
-  @doc "Rate limit the public free/busy feed per client IP (60/min)."
-  @spec check_freebusy_feed_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_freebusy_feed_rate_limit(client_ip),
-    do: PublicEndpoints.check_freebusy_feed(client_ip)
-
-  @doc "Rate limit the per-meeting `.ics` download per client IP (60/min)."
-  @spec check_meeting_calendar_feed_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_meeting_calendar_feed_rate_limit(client_ip),
-    do: PublicEndpoints.check_meeting_calendar_feed(client_ip)
-
-  @doc "Rate limit the healthcheck endpoint per client IP (30/min)."
-  @spec check_healthcheck_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
-  def check_healthcheck_rate_limit(client_ip), do: PublicEndpoints.check_healthcheck(client_ip)
 end

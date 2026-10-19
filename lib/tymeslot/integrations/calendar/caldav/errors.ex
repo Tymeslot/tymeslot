@@ -22,113 +22,128 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   inspected atom can never leak into the product. Raw terms stay in the logs,
   which is where diagnostics belong.
 
-  String reasons (e.g. `"Unexpected status: 418"`) pass through unchanged;
-  unrecognised terms collapse to a generic sentence rather than being
-  inspected, so internal representations never reach the UI.
+  Every answer is one of a fixed set of msgids, never text built from the
+  reason: the sentence is stored on the integration (`sync_error`) in
+  English and translated where it is shown, by looking it up as a msgid, so
+  an interpolated or passed-through string could never be translated, and a
+  string reason is internal English rather than anything written for the
+  owner. String reasons and unrecognised terms therefore collapse to a
+  generic sentence rather than being shown or inspected.
 
-  Kept as functions rather than a module attribute: a `dgettext/2` call in an
-  attribute would freeze the locale at compile time.
+  The answer is the untranslated msgid (`dgettext_noop/2`), whatever the
+  locale of the process asking: translating here would store the locale of
+  the job that failed, not the owner's.
   """
   @spec describe_error(Base.error_reason() | term()) :: String.t()
-  def describe_error(reason) when is_binary(reason), do: reason
+  # The XML parsers' failures are the one family of string reasons with a
+  # specific meaning for the owner.
+  def describe_error("Failed to parse " <> _response), do: describe_error(:invalid_response)
 
-  def describe_error({:unexpected_status, status}),
+  def describe_error(reason) when is_binary(reason), do: unknown_error_description()
+
+  # The status stays in the logs `Http` writes; the sentence is fixed so that
+  # it can be translated where it is shown.
+  def describe_error({:free_busy_unreadable, _reason}),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
-        "The calendar server refused the request (HTTP %{status}).",
-        status: status
+      dgettext_noop(
+        "integrations_calendar",
+        "A calendar shared with you as busy times only could not be read. Its last known busy times still block your booking page."
       )
+
+  def describe_error({:unexpected_status, _status}),
+    do: dgettext_noop("integrations_calendar", "The calendar server refused the request.")
 
   def describe_error(:unauthorized),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server rejected the stored credentials. Please reconnect the calendar."
       )
 
   def describe_error(:forbidden),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server refused access to this calendar."
       )
 
   def describe_error(:not_found),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The event no longer exists on the calendar server."
       )
 
   def describe_error(:method_not_allowed),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
       )
 
   def describe_error(:precondition_failed),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The event changed on the calendar server since Tymeslot last synced it."
       )
 
   def describe_error(:rate_limited),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically."
       )
 
   def describe_error(:network_error),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "Tymeslot could not reach the calendar server. Tymeslot will retry automatically."
       )
 
   def describe_error(:invalid_response),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server returned a response Tymeslot could not understand."
       )
 
   def describe_error(:response_too_large),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server returned more data than Tymeslot can process at once."
       )
 
   def describe_error(:server_error),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server reported an error. Tymeslot will retry automatically."
       )
 
+  def describe_error(:service_unavailable), do: describe_error(:server_error)
+
   def describe_error(:server_unresponsive),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server did not respond. Tymeslot will retry automatically."
       )
 
   def describe_error(:timeout),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
         "The calendar server took too long to respond. Tymeslot will retry automatically."
       )
 
   def describe_error(_other), do: unknown_error_description()
 
   defp unknown_error_description do
-    dgettext(
-      "dashboard_calendar_providers",
+    dgettext_noop(
+      "integrations_calendar",
       "Tymeslot could not complete the request against the calendar server."
     )
   end
@@ -151,6 +166,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   """
   @spec terminal_error?(Base.error_reason() | term()) :: boolean()
   def terminal_error?(:method_not_allowed), do: true
+  # The body outgrew its byte budget: the server answered, and a retry minutes
+  # later downloads the same oversized answer again.
+  def terminal_error?(:response_too_large), do: true
   def terminal_error?({:unexpected_status, status}) when status in 400..499, do: true
   def terminal_error?(_other), do: false
 
@@ -169,9 +187,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   A 5xx counts here even though it is retryable in general: it is retryable as
   *this* request, and the caller is expected to act on a repeated one by
   choosing a different request, not by giving up. Transport failures do not
-  count. A timeout or a refused connection is the server never answering, which
-  says nothing about which features it supports, and demoting on one would
-  abandon a working capability over a blip of packet loss.
+  count, and nor does `:service_unavailable` (a 502, 503 or 504). A timeout, a
+  refused connection or a server down for maintenance is the server not
+  answering, which says nothing about which features it supports, and demoting
+  on one would abandon a working capability over a blip of packet loss or an
+  hour of planned downtime.
   """
   @spec unsupported_request?(Base.error_reason() | term()) :: boolean()
   def unsupported_request?(:method_not_allowed), do: true

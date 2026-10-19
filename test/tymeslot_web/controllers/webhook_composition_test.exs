@@ -18,7 +18,7 @@ defmodule TymeslotWeb.WebhookCompositionTest do
       `last_outlook_notification_at` here would make the "last
       received" timestamp meaningless (it would advance on every
       malformed Graph burst, masking real silence);
-    * a valid notification arriving after the per-integration Hammer
+    * a valid notification arriving after the per-integration rate-limit
       bucket is exhausted — the controller must still return 202 (Graph
       expects it) but must NOT enqueue `SyncOutlookCalendarWorker` and
       must NOT advance `last_outlook_notification_at`.
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.WebhookCompositionTest do
       `telegram_enabled?` / `shared_bot_mode?` 404 path.
   """
 
-  # async: false — tests exhaust Hammer's shared ETS bucket to exercise the
+  # async: false — tests exhaust the shared rate-limit ETS bucket to exercise the
   # per-integration rate-limit arm; isolation requires sequential execution.
   use TymeslotWeb.ConnCase, async: false
 
@@ -159,16 +159,16 @@ defmodule TymeslotWeb.WebhookCompositionTest do
           last_outlook_notification_at: baseline_at
         )
 
-      # Exhaust the per-integration Hammer bucket (61 hits > the 60-per-60s
-      # limit) to guarantee the sliding-window check returns {:error,
-      # :rate_limited} for this integration id regardless of timing jitter.
+      # Exhaust the per-integration rate-limit bucket (61 hits > the 60-per-60s
+      # limit) to guarantee the sliding-window check refuses this
+      # integration id regardless of timing jitter.
       for _i <- 1..61 do
         RateLimit.hit("calendar_webhook:#{integration.id}", 60_000, 60)
       end
 
       # Confirm the bucket is genuinely exhausted before the HTTP call.
-      assert {:error, :rate_limited} =
-               RateLimiter.check_calendar_webhook_rate_limit(integration.id)
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check(:calendar_webhook, integration.id)
 
       payload = %{
         "value" => [

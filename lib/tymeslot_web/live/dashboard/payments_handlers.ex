@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsHandlers do
   Payments-specific `handle_params/3` logic for `DashboardLive`.
 
   When the host lands on the integrations hub having just returned from the
-  Stripe Express onboarding flow (`?return=1`/`?refresh=1`, carried across from
+  Stripe onboarding flow (`?return=1`/`?refresh=1`, carried across from
   the legacy `/dashboard/payments` route), this enqueues a one-shot Stripe
   resync so capability flags refresh without waiting on the next
   `account.updated` webhook. It runs on every `:integrations` render,
@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsHandlers do
   alias Tymeslot.MeetingPayments
 
   @doc """
-  Enqueues the Stripe capability resync when the host returns from the Express
+  Enqueues the Stripe capability resync when the host returns from the Stripe
   onboarding flow (`?return=1`/`?refresh=1`), and returns the socket unchanged.
 
   Safe to call on every `:integrations` render: the resync only runs on the

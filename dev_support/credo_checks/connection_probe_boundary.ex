@@ -19,10 +19,9 @@ defmodule CredoChecks.ConnectionProbeBoundary do
   - `lib/tymeslot/integrations/calendar/connection.ex` — resolves the
     provider module and calls the callback from inside a `ConnectionProbe`
     request
-  - `lib/tymeslot/integrations/video/providers/provider_registry.ex` —
-    `test_provider_connection/2`, the one function `ProviderAdapter.test_connection/2`
-    (itself called only from `Tymeslot.Integrations.Video.Connection`) uses
-    to reach across the module boundary
+  - `lib/tymeslot/integrations/video/providers/provider_adapter.ex` —
+    `ProviderAdapter.test_connection/2`, itself called only from
+    `Tymeslot.Integrations.Video.Connection`
   - Test files
   - An `:allowed` param (list of filename substrings), for any future caller
     with a genuine, reviewed reason to bypass `ConnectionProbe`:
@@ -54,7 +53,7 @@ defmodule CredoChecks.ConnectionProbeBoundary do
       check: """
       A provider's `perform_connection_test/1` callback must only be called
       from `Tymeslot.Integrations.Calendar.Connection` or
-      `Tymeslot.Integrations.Video.Providers.ProviderRegistry` — every other
+      `Tymeslot.Integrations.Video.Providers.ProviderAdapter` — every other
       caller belongs behind `Tymeslot.Integrations.Shared.ConnectionProbe`.
       """,
       params: [
@@ -86,7 +85,7 @@ defmodule CredoChecks.ConnectionProbeBoundary do
 
   defp excluded?(filename, allowed) do
     calendar_connection_file?(filename) or
-      video_provider_registry_file?(filename) or
+      video_provider_adapter_file?(filename) or
       test_file?(filename) or
       Enum.any?(allowed, &String.contains?(filename, &1))
   end
@@ -94,8 +93,8 @@ defmodule CredoChecks.ConnectionProbeBoundary do
   defp calendar_connection_file?(filename),
     do: String.ends_with?(filename, "/integrations/calendar/connection.ex")
 
-  defp video_provider_registry_file?(filename),
-    do: String.ends_with?(filename, "/integrations/video/providers/provider_registry.ex")
+  defp video_provider_adapter_file?(filename),
+    do: String.ends_with?(filename, "/integrations/video/providers/provider_adapter.ex")
 
   defp test_file?(filename) do
     String.contains?(filename, "/test/") or String.starts_with?(filename, "test/") or
@@ -116,7 +115,7 @@ defmodule CredoChecks.ConnectionProbeBoundary do
           message:
             "`#{@flagged_function}/#{@flagged_arity}` should only be called through " <>
               "`Tymeslot.Integrations.Shared.ConnectionProbe` (via `Calendar.Connection` or " <>
-              "`Video.Providers.ProviderRegistry`).",
+              "`Video.Providers.ProviderAdapter`).",
           line_no: meta[:line],
           trigger: Atom.to_string(@flagged_function)
         )

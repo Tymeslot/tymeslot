@@ -5,13 +5,12 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.Infrastructure.BatchDeleteQueries
+  alias Tymeslot.Notifications.IntegrationQueries
   alias Tymeslot.Repo
 
   alias Tymeslot.Webhooks.{
     DeliveryStatus,
     WebhookDeliverySchema,
-    WebhookEventSchema,
     WebhookSchema
   }
 
@@ -70,8 +69,8 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   """
   @spec create_webhook(map()) :: {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_webhook(attrs) do
-    %WebhookSchema{}
-    |> WebhookSchema.changeset(attrs)
+    attrs
+    |> WebhookSchema.create_changeset()
     |> Repo.insert()
   end
 
@@ -82,7 +81,13 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
           {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_webhook(%WebhookSchema{} = webhook, attrs) do
     webhook
-    |> WebhookSchema.changeset(attrs)
+    |> WebhookSchema.update_changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp update_state(%WebhookSchema{} = webhook, attrs) do
+    webhook
+    |> WebhookSchema.state_transition_changeset(attrs)
     |> Repo.update()
   end
 
@@ -100,9 +105,8 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   """
   @spec toggle_webhook(WebhookSchema.t()) ::
           {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
-  def toggle_webhook(%WebhookSchema{} = webhook) do
-    update_webhook(webhook, %{is_active: !webhook.is_active})
-  end
+  def toggle_webhook(%WebhookSchema{} = webhook),
+    do: IntegrationQueries.toggle_active(WebhookSchema, webhook)
 
   @doc """
   Records a successful webhook delivery.
@@ -112,7 +116,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   def record_success(%WebhookSchema{} = webhook, triggered_at \\ nil) do
     triggered_at = triggered_at || DateTime.utc_now()
 
-    update_webhook(webhook, %{
+    update_state(webhook, %{
       last_triggered_at: triggered_at,
       last_status: DeliveryStatus.encode_success(),
       failure_count: 0
@@ -152,7 +156,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   @spec disable_webhook(WebhookSchema.t(), String.t()) ::
           {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
   def disable_webhook(%WebhookSchema{} = webhook, reason) do
-    update_webhook(webhook, %{
+    update_state(webhook, %{
       is_active: false,
       disabled_at: DateTime.utc_now(),
       disabled_reason: reason
@@ -164,151 +168,32 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   """
   @spec enable_webhook(WebhookSchema.t()) ::
           {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
-  def enable_webhook(%WebhookSchema{} = webhook) do
-    update_webhook(webhook, %{
-      is_active: true,
-      disabled_at: nil,
-      disabled_reason: nil,
-      failure_count: 0
-    })
-  end
+  def enable_webhook(%WebhookSchema{} = webhook),
+    do: IntegrationQueries.enable(WebhookSchema, webhook)
 
   # ============================================================================
   # Webhook Delivery Queries
   # ============================================================================
 
-  @doc """
-  Lists webhook deliveries for a specific webhook with pagination.
-  """
   @spec list_deliveries(integer(), keyword()) :: [WebhookDeliverySchema.t()]
-  def list_deliveries(webhook_id, opts) do
-    limit = Keyword.get(opts, :limit, 50)
-    offset = Keyword.get(opts, :offset, 0)
+  def list_deliveries(webhook_id, opts),
+    do: IntegrationQueries.list_deliveries(WebhookDeliverySchema, :webhook_id, webhook_id, opts)
 
-    WebhookDeliverySchema
-    |> where([d], d.webhook_id == ^webhook_id)
-    |> order_by([d], desc: d.inserted_at)
-    |> limit(^limit)
-    |> offset(^offset)
-    |> Repo.all()
-  end
+  @spec create_delivery(map()) :: {:ok, WebhookDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
+  def create_delivery(attrs), do: IntegrationQueries.create_delivery(WebhookDeliverySchema, attrs)
 
-  @doc """
-  Creates a webhook delivery log entry.
-  """
-  @spec create_delivery(map()) ::
-          {:ok, WebhookDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_delivery(attrs) do
-    %WebhookDeliverySchema{}
-    |> WebhookDeliverySchema.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc """
-  Gets delivery statistics for a webhook.
-  """
   @spec get_delivery_stats(integer(), keyword()) :: map()
-  def get_delivery_stats(webhook_id, opts) do
-    days_ago = Keyword.get(opts, :days, 7)
-    since = DateTime.add(DateTime.utc_now(), -days_ago, :day)
-
-    query =
-      from d in WebhookDeliverySchema,
-        where: d.webhook_id == ^webhook_id and d.inserted_at >= ^since
-
-    total = Repo.aggregate(query, :count, :id)
-
-    successful =
-      query
-      |> where([d], d.response_status >= 200 and d.response_status < 300)
-      |> Repo.aggregate(:count, :id)
-
-    failed =
-      query
-      |> where([d], d.response_status >= 400 or not is_nil(d.error_message))
-      |> Repo.aggregate(:count, :id)
-
-    %{
-      total: total,
-      successful: successful,
-      failed: failed,
-      success_rate: if(total > 0, do: Float.round(successful / total * 100, 1), else: 0.0),
-      period_days: days_ago
-    }
+  def get_delivery_stats(webhook_id, opts \\ []) do
+    IntegrationQueries.delivery_stats(
+      WebhookDeliverySchema,
+      :webhook_id,
+      webhook_id,
+      Keyword.get(opts, :days, 7)
+    )
   end
 
-  @doc """
-  Deletes webhook delivery log rows older than `days`. Deletes in bounded
-  batches (see `BatchDeleteQueries`) so a large backlog can't blow past the
-  database timeout in a single transaction. A zero, negative, or non-integer
-  retention is treated as a no-op so a misconfigured value can never wipe the
-  whole table.
-  """
+  @doc "Deletes webhook delivery log rows older than `days`; see `IntegrationQueries.cleanup_old_deliveries/2`."
   @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
-  def cleanup_old_deliveries(days) when is_integer(days) and days > 0 do
-    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
-
-    BatchDeleteQueries.delete_older_than(WebhookDeliverySchema, :inserted_at, cutoff)
-  end
-
-  def cleanup_old_deliveries(_days), do: {0, nil}
-
-  # ============================================================================
-  # Webhook Event Queries (incoming Stripe events)
-  # ============================================================================
-
-  @doc """
-  Deletes all webhook events.
-  """
-  @spec delete_all_webhook_events() :: {non_neg_integer(), nil}
-  def delete_all_webhook_events do
-    Repo.delete_all(WebhookEventSchema)
-  end
-
-  @doc """
-  Gets a webhook event by its Stripe event ID.
-  """
-  @spec get_webhook_event_by_stripe_id(String.t()) :: WebhookEventSchema.t() | nil
-  def get_webhook_event_by_stripe_id(stripe_event_id) do
-    Repo.get_by(WebhookEventSchema, stripe_event_id: stripe_event_id)
-  end
-
-  @doc """
-  Inserts a webhook event record, doing nothing on conflict with existing stripe_event_id.
-  """
-  @spec upsert_webhook_event(map()) ::
-          {:ok, WebhookEventSchema.t()} | {:error, Ecto.Changeset.t()}
-  def upsert_webhook_event(attrs) do
-    %WebhookEventSchema{}
-    |> WebhookEventSchema.changeset(attrs)
-    |> Repo.insert(on_conflict: :nothing, conflict_target: :stripe_event_id)
-  end
-
-  @doc """
-  Nullifies payloads on webhook events older than the given cutoff date.
-
-  Returns `{count, nil}` where count is the number of rows updated.
-  """
-  @spec nullify_stale_payloads(DateTime.t()) :: {non_neg_integer(), nil}
-  def nullify_stale_payloads(%DateTime{} = cutoff_date) do
-    query =
-      from(w in WebhookEventSchema,
-        where: w.inserted_at < ^cutoff_date and not is_nil(w.payload)
-      )
-
-    Repo.update_all(query, set: [payload: nil])
-  end
-
-  @doc """
-  Deletes webhook events older than the given cutoff date.
-
-  Deletes in bounded batches (see `BatchDeleteQueries`) so a large backlog
-  can't blow past the database timeout in a single transaction.
-
-  Returns `{count, nil}` where count is the number of rows deleted.
-  """
-  @spec delete_old_webhook_events(DateTime.t()) :: {non_neg_integer(), nil}
-  def delete_old_webhook_events(%DateTime{} = cutoff_date) do
-    BatchDeleteQueries.delete_older_than(WebhookEventSchema, :inserted_at, cutoff_date)
-  end
+  def cleanup_old_deliveries(days),
+    do: IntegrationQueries.cleanup_old_deliveries(WebhookDeliverySchema, days)
 end

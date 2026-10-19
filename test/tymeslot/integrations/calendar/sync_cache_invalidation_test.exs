@@ -58,6 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-06-07],
           "Europe/London",
           30,
+          nil,
           nil
         )
 
@@ -92,6 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-07-07],
           "Etc/UTC",
           60,
+          nil,
           nil
         )
 
@@ -102,6 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-07-07],
           "Etc/UTC",
           60,
+          nil,
           nil
         )
 
@@ -135,6 +138,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-08-07],
           "Etc/UTC",
           30,
+          nil,
           nil
         )
 
@@ -162,6 +166,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-09-07],
           "Etc/UTC",
           45,
+          nil,
           nil
         )
 
@@ -191,6 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-10-07],
           "Etc/UTC",
           30,
+          nil,
           nil
         )
 

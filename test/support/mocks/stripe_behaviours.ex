@@ -6,6 +6,7 @@ defmodule Tymeslot.Mocks.StripeBehaviours do
   defmodule StripeCustomerBehaviour do
     @moduledoc "Behaviour for Stripe Customer operations"
     @callback create(map(), list()) :: {:ok, map()} | {:error, any()}
+    @callback delete(String.t(), list()) :: {:ok, map()} | {:error, any()}
   end
 
   defmodule StripeSessionBehaviour do
@@ -26,10 +27,17 @@ defmodule Tymeslot.Mocks.StripeBehaviours do
   defmodule StripeChargeBehaviour do
     @moduledoc "Behaviour for Stripe Charge operations"
     @callback retrieve(String.t(), map(), list()) :: {:ok, map()} | {:error, any()}
+    @callback list(map(), list()) :: {:ok, map()} | {:error, any()}
   end
 
-  defmodule StripeWebhookBehaviour do
-    @moduledoc "Behaviour for Stripe Webhook operations"
-    @callback construct_event(binary(), String.t(), String.t()) :: {:ok, map()} | {:error, any()}
+  defmodule StripeInvoiceBehaviour do
+    @moduledoc "Behaviour for Stripe Invoice operations"
+    @callback retrieve(String.t(), map(), list()) :: {:ok, map()} | {:error, any()}
+    @callback list(map(), list()) :: {:ok, map()} | {:error, any()}
+  end
+
+  defmodule StripeInvoicePaymentBehaviour do
+    @moduledoc "Behaviour for Stripe InvoicePayment operations"
+    @callback list(map(), list()) :: {:ok, map()} | {:error, any()}
   end
 end

@@ -67,7 +67,8 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit do
   @doc """
   `:ok` when the series has an occurrence before `slot`, and
   `:first_occurrence` when it has none: the master's start is its first
-  occurrence on both providers.
+  occurrence, as RFC 5545 counts it. Graph does not count a start that is
+  off the series' pattern, which `Outlook.SeriesSplit` checks on top.
   """
   @spec ensure_occurrences_before(tuple(), Date.t() | NaiveDateTime.t()) ::
           :ok | :first_occurrence

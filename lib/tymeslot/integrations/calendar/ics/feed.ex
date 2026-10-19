@@ -99,55 +99,97 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   drifting into two vocabularies for one problem.
   """
   @spec error_message(error()) :: String.t()
-  def error_message(:unauthorised),
-    do:
-      dgettext(
-        "dashboard_calendar_providers",
-        "The calendar feed rejected the link. It may have been revoked or reset."
-      )
-
-  def error_message(:not_found),
-    do:
-      dgettext(
-        "dashboard_calendar_providers",
-        "The calendar feed URL returned 404. Check that the link is complete and still published."
-      )
-
-  def error_message(:invalid_ics),
-    do:
-      dgettext(
-        "dashboard_calendar_providers",
-        "That URL did not return a calendar feed. Make sure it points at an .ics file."
-      )
-
-  def error_message(:too_large),
-    do: dgettext("dashboard_calendar_providers", "That calendar feed is too large to process.")
-
-  def error_message(:too_many_redirects),
-    do: dgettext("dashboard_calendar_providers", "The calendar feed redirected too many times.")
-
-  def error_message(:missing_url),
-    do: dgettext("dashboard_calendar_providers", "Enter the calendar feed URL.")
-
-  def error_message({:blocked, _reason}),
-    do:
-      dgettext(
-        "dashboard_calendar_providers",
-        "That URL points at a blocked address and cannot be reached."
-      )
-
   def error_message({:http_status, status}),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar feed returned HTTP %{status}.",
         status: status
       )
 
-  def error_message(_reason),
+  def error_message(reason),
+    do: Gettext.dgettext(TymeslotWeb.Gettext, "integrations_calendar", msgid(reason))
+
+  @doc """
+  The sentence a failed subscription sync stores on the integration
+  (`sync_error`), which the integration card shows while syncs keep failing.
+
+  Every answer is a fixed msgid, left untranslated: the card translates the
+  stored English, in the viewer's locale, by
+  looking it up as one, so text built from the reason could never be
+  translated, and an exception's own text is not written for the owner (the
+  worker logs it). That is why the status is left out here while
+  `error_message/1` names it for the connect form, which shows it at once.
+  A rescued exception and the guarded empty-feed refusal are outside the
+  fetch vocabulary, so each gets a sentence of its own.
+  """
+  @spec sync_error_message(error() | :empty_feed_with_populated_cache | Exception.t()) ::
+          String.t()
+  def sync_error_message(exception) when is_exception(exception) do
+    dgettext_noop(
+      "integrations_calendar",
+      "Calendar subscription sync failed while saving a fetched event. Tymeslot will try again on the next sync."
+    )
+  end
+
+  def sync_error_message({:http_status, _status}),
+    do: dgettext_noop("integrations_calendar", "The calendar feed returned an error.")
+
+  def sync_error_message(:empty_feed_with_populated_cache) do
+    dgettext_noop(
+      "integrations_calendar",
+      "The calendar feed came back empty, but the cache still holds previously synced events. Keeping the cache in place and retrying rather than emptying your diary."
+    )
+  end
+
+  def sync_error_message(reason), do: msgid(reason)
+
+  # The fixed sentence for each failure, untranslated (see `sync_error_message/1`).
+  defp msgid(:unauthorised),
     do:
-      dgettext(
-        "dashboard_calendar_providers",
+      dgettext_noop(
+        "integrations_calendar",
+        "The calendar feed rejected the link. It may have been revoked or reset."
+      )
+
+  defp msgid(:not_found),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "The calendar feed URL returned 404. Check that the link is complete and still published."
+      )
+
+  defp msgid(:invalid_ics),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "That URL did not return a calendar feed. Make sure it points at an .ics file."
+      )
+
+  defp msgid(:too_large),
+    do: dgettext_noop("integrations_calendar", "That calendar feed is too large to process.")
+
+  defp msgid(:too_many_redirects),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "The calendar feed redirected too many times."
+      )
+
+  defp msgid(:missing_url),
+    do: dgettext_noop("integrations_calendar", "Enter the calendar feed URL.")
+
+  defp msgid({:blocked, _reason}),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
+        "That URL points at a blocked address and cannot be reached."
+      )
+
+  defp msgid(_reason),
+    do:
+      dgettext_noop(
+        "integrations_calendar",
         "Could not reach the calendar feed. Check the URL and try again."
       )
 

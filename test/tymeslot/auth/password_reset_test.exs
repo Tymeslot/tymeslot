@@ -29,8 +29,16 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       assert {:error, :invalid_input, _message} = PasswordReset.initiate_reset("")
     end
 
-    test "rejects malformed email with an error rather than the anti-enumeration success" do
-      assert {:error, :invalid_input, _message} = PasswordReset.initiate_reset("not-an-email")
+    test "rejects an overlong email with an error rather than the anti-enumeration success" do
+      overlong = String.duplicate("a", 250) <> "@example.com"
+      assert {:error, :invalid_input, _message} = PasswordReset.initiate_reset(overlong)
+    end
+
+    test "answers a malformed address like any other unknown one, and sends nothing" do
+      # The format rules govern new addresses only; a lookup that finds no
+      # account gets the same reply as every other address.
+      assert {:ok, :reset_initiated, _message} = PasswordReset.initiate_reset("not-an-email")
+      assert all_enqueued(worker: EmailWorker) == []
     end
 
     test "password reset returns consistent messages to prevent email enumeration" do
@@ -94,12 +102,38 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     end
   end
 
+  describe "initiate_reset/1 targets the address as typed" do
+    # Strict sanitisation would strip the `0x<hex>` run, so a reset for
+    # crypto0xabc@ would mail the owner of crypto@ instead, and `--` would
+    # truncate the address to something unusable.
+    test "a 0x address resets its own account, not the stranger's it would sanitise to" do
+      owner = insert(:user, email: "crypto0xabc@example.com")
+      _stranger = insert(:user, email: "crypto@example.com")
+
+      assert {:ok, :reset_initiated, _message} =
+               PasswordReset.initiate_reset("crypto0xabc@example.com")
+
+      assert [job] = all_enqueued(worker: EmailWorker, args: %{"action" => "send_password_reset"})
+      assert job.args["user_id"] == owner.id
+    end
+
+    test "a -- address resets its own account" do
+      owner = insert(:user, email: "jean--paul@example.com")
+
+      assert {:ok, :reset_initiated, _message} =
+               PasswordReset.initiate_reset("jean--paul@example.com")
+
+      assert [job] = all_enqueued(worker: EmailWorker, args: %{"action" => "send_password_reset"})
+      assert job.args["user_id"] == owner.id
+    end
+  end
+
   describe "initiate_reset/1 token rotation" do
     test "a duplicate request within the dedup window rotates the token and updates the queued job" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
 
       # Simulate the first request: store the reset token and queue its email.
-      original_token = Token.generate_token()
+      original_token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, original_token)
 
       assert {:ok, :scheduled} =
@@ -129,7 +163,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   describe "verify_token/1" do
     test "with valid token returns the user as a schema struct" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # A struct, not a bare map: the schema's `redact: true` keeps secrets
@@ -140,7 +174,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "a token issued just inside its two-hour lifetime is still valid" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
       set_reset_sent_at(user, -(2 * 3600 - 60))
 
@@ -149,7 +183,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "a token just past its two-hour lifetime has expired" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
       set_reset_sent_at(user, -(2 * 3600 + 60))
 
@@ -158,7 +192,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "with expired token returns {:error, :token_expired, _}" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Manually expire the token by setting reset_sent_at to 3 hours ago
@@ -181,7 +215,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   describe "reset_password/3" do
     test "reset tokens are single-use" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
@@ -207,7 +241,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "returns the user struct without the plaintext password" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:ok, %UserSchema{} = updated, _message} =
@@ -231,12 +265,12 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     test "revokes a pending email change, so its link can no longer be confirmed" do
       user = insert(:user, password_hash: Password.hash_password("Password123!"))
 
-      change_token = Token.generate_token()
+      change_token = Token.generate()
 
       {:ok, pending_user} =
         UserTokenQueries.request_email_change(user, "attacker@example.com", change_token)
 
-      reset_token = Token.generate_token()
+      reset_token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(pending_user, reset_token)
 
       assert {:ok, _user, _message} =
@@ -260,7 +294,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "records a password_change audit entry carrying the request context" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # SecurityLogger emits at :info; config/test.exs pins the primary level to
@@ -292,7 +326,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
         Endpoint.subscribe("users_sessions:#{Base.url_encode64(Token.hash_token(session.token))}")
       end)
 
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
@@ -314,7 +348,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "with mismatched confirmation returns error" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:error, _reason, _message} =
@@ -328,7 +362,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "enforces strong password requirements" do
       user = insert(:user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Weak password rejected
@@ -380,6 +414,39 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     end
   end
 
+  describe "initiate_reset/2 per-address allowance" do
+    @reset_reply "If an account exists with this email address, password reset instructions have been sent."
+
+    test "one client spending an address's allowance never refuses another client's request" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+
+      # Far more than the address's hourly and daily allowances, all from one
+      # client: everything past its own limit is refused.
+      results = for _i <- 1..15, do: PasswordReset.initiate_reset(user.email, ip: "192.0.2.10")
+      assert Enum.count(results, &match?({:error, :rate_limited, _message}, &1)) == 10
+
+      assert {:ok, :reset_initiated, @reset_reply} =
+               PasswordReset.initiate_reset(user.email, ip: "192.0.2.11")
+    end
+
+    test "over the address's allowance the reply is unchanged and nothing is sent" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+
+      for n <- 1..5 do
+        assert {:ok, :reset_initiated, @reset_reply} =
+                 PasswordReset.initiate_reset(user.email, ip: "192.0.2.#{20 + n}")
+      end
+
+      assert all_enqueued(worker: EmailWorker) != []
+      Repo.delete_all(Oban.Job)
+
+      assert {:ok, :reset_initiated, @reset_reply} =
+               PasswordReset.initiate_reset(user.email, ip: "192.0.2.30")
+
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+  end
+
   describe "reset_password/4 rate limiting" do
     test "refuses a client past 30 attempts a minute, before the token is looked at" do
       user = insert(:user)
@@ -403,7 +470,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   describe "token tamper + replay resistance" do
     test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Flip the last character to produce a different-but-same-length token.
@@ -439,7 +506,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       # lock itself is verified at the query level in
       # `Tymeslot.Auth.UserTokenQueriesTest`.
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       tasks =
@@ -474,5 +541,20 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     sent_at = DateTime.add(DateTime.utc_now(:second), offset_seconds, :second)
 
     Repo.update_all(from(u in UserSchema, where: u.id == ^user.id), set: [reset_sent_at: sent_at])
+  end
+
+  describe "an account whose stored address predates the email format rules" do
+    test "can request a reset, and the reset email targets that account" do
+      address = ~s("legacy"@example.com)
+      user = insert(:user, email: address, password_hash: Password.hash_password("OldPass123!"))
+
+      assert {:ok, :reset_initiated, _message} = PasswordReset.initiate_reset(address)
+
+      assert [job] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_password_reset"})
+
+      assert job.args["user_id"] == user.id
+      assert Repo.get!(UserSchema, user.id).reset_token_hash == job.args["token_hash"]
+    end
   end
 end

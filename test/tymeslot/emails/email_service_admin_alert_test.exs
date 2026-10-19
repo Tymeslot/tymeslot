@@ -13,6 +13,16 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     end
   end
 
+  # Hands each alert to the test process; AdminAlerts calls the
+  # implementation in the caller's process.
+  defmodule RecordingAdminAlerts do
+    @spec send_alert(any(), map()) :: :ok
+    def send_alert(event, metadata) do
+      send(self(), {:admin_alert, event, metadata})
+      :ok
+    end
+  end
+
   # EmailService.deliver/1 runs inside CircuitBreaker.call/2, which executes the
   # delivery function inside a GenServer. Swoosh's test adapter delivers to
   # whichever process calls Mailer.deliver/1 — the circuit breaker, not this
@@ -121,5 +131,30 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     assert [{_name, address}] = email.to
     assert address == meeting.organizer_email
     assert email.subject =~ "Calendar Sync Error"
+  end
+
+  test "calendar sync error alerts the operator even when the email cannot be rendered" do
+    original_alerts = Application.get_env(:tymeslot, :admin_alerts_impl)
+    Application.put_env(:tymeslot, :admin_alerts_impl, RecordingAdminAlerts)
+
+    on_exit(fn ->
+      if is_nil(original_alerts) do
+        Application.delete_env(:tymeslot, :admin_alerts_impl)
+      else
+        Application.put_env(:tymeslot, :admin_alerts_impl, original_alerts)
+      end
+    end)
+
+    # No start time: the template cannot place the meeting on a clock.
+    meeting = build(:meeting, start_time: nil)
+
+    assert_raise MatchError, fn ->
+      EmailService.send_calendar_sync_error(meeting, :test_error)
+    end
+
+    assert_received {:admin_alert, :calendar_sync_error, %{meeting_id: meeting_id} = metadata}
+    assert meeting_id == meeting.id
+    assert metadata.owner_email == meeting.organizer_email
+    refute_received {:email, _email}
   end
 end

@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.TimeChangeNotifyLiveViewTest do
 
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
-  alias Tymeslot.Integrations.Calendar.Operations
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.EmailWorker

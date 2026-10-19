@@ -431,6 +431,21 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   defp placeholder(module), do: "#" <> inspect(module) <> "<" <> @redacted <> ">"
 
+  @doc """
+  Whether `key` names an email address (`email`, `owner_email`,
+  `admin_recipient`, `recipients`): the suffix rule this module redacts by,
+  for other scrubbers to share.
+  """
+  @spec email_key?(atom() | String.t()) :: boolean()
+  def email_key?(key) when is_atom(key), do: key |> Atom.to_string() |> email_key?()
+
+  def email_key?(key) when is_binary(key) do
+    downcased = String.downcase(key, :ascii)
+    Enum.any?(@sensitive_key_suffixes, &suffix_match?(downcased, &1))
+  end
+
+  def email_key?(_key), do: false
+
   defp key_class(key) when is_atom(key) do
     key
     |> Atom.to_string()

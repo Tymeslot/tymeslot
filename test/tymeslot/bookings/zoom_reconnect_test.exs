@@ -67,7 +67,7 @@ defmodule Tymeslot.Bookings.ZoomReconnectTest do
       }
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       # The grant predates the scope a reschedule needs, so the sync is refused
       # without calling Zoom, discarded, and the integration flagged.

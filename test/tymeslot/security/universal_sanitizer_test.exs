@@ -103,21 +103,19 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
       # Recursive path traversal
       assert {:ok, "etc/passwd"} =
                UniversalSanitizer.sanitize_and_validate("....//etc/passwd", log_events: false)
-
-      # Nested SQL injection patterns
-      # "UNION UNION SELECT SELECT" should be fully removed
-      assert {:ok, "normal text"} =
-               UniversalSanitizer.sanitize_and_validate("UNION UNION SELECT SELECT normal text",
-                 log_events: false
-               )
     end
 
-    test "removes null bytes before other sanitization to prevent keyword breaking" do
-      # If null bytes are removed after SQL sanitization, this would become "UNION SELECT "
-      input = "UN\x00ION SEL\x00ECT "
+    test "removes null bytes before other sanitization to prevent pattern breaking" do
+      # Stripped after the protocol check, this would become "javascript:".
+      input = "java\x00script:alert(1)"
       assert {:ok, sanitized} = UniversalSanitizer.sanitize_and_validate(input, log_events: false)
-      refute sanitized =~ "UNION"
-      refute sanitized =~ "SELECT"
+      refute sanitized =~ "javascript:"
+    end
+
+    test "keeps SQL-looking text unchanged, since queries bind values as parameters" do
+      for input <- ["-- Anna", "colour 0x1F", "jean--paul@example.com", "crypto0xabc@example.com"] do
+        assert {:ok, ^input} = UniversalSanitizer.sanitize_and_validate(input, log_events: false)
+      end
     end
 
     test "preserves CalDAV calendar paths with @ symbols and slashes" do
@@ -194,7 +192,7 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
     test "logs the caller-supplied field name and the specific check that fired" do
       {events, _log} =
         with_captured_warnings(fn ->
-          UniversalSanitizer.sanitize_and_validate("bob' OR '1'='1",
+          UniversalSanitizer.sanitize_and_validate("../../etc/passwd",
             log_events: true,
             field: :email,
             metadata: %{ip: "127.0.0.1"}
@@ -204,13 +202,13 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
       assert Enum.any?(events, fn event ->
                event.message == "Suspicious input sanitised" and
                  event.metadata[:field] == :email and
-                 event.metadata[:check] == "sql_injection"
+                 event.metadata[:check] == "path_traversal"
              end),
-             "expected a warning with field=:email and check=\"sql_injection\", got: #{inspect(events)}"
+             "expected a warning with field=:email and check=\"path_traversal\", got: #{inspect(events)}"
 
       # Must not regress to the old pattern where the check was logged as the field.
       refute Enum.any?(events, fn event ->
-               event.metadata[:field] == :sql_injection
+               event.metadata[:field] == :path_traversal
              end)
     end
 
@@ -231,12 +229,12 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
     test "defaults field to :unknown when caller omits it" do
       {events, _log} =
         with_captured_warnings(fn ->
-          UniversalSanitizer.sanitize_and_validate("bob' OR '1'='1", log_events: true)
+          UniversalSanitizer.sanitize_and_validate("../../etc/passwd", log_events: true)
         end)
 
       assert Enum.any?(events, fn event ->
                event.metadata[:field] == :unknown and
-                 event.metadata[:check] == "sql_injection"
+                 event.metadata[:check] == "path_traversal"
              end)
     end
   end

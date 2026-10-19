@@ -1,0 +1,491 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/yes_no_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Answer is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/yes_no_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Answer must be yes or no"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/note_ack_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmation timestamp is invalid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/note_ack_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmation timestamp must be UTC"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date is after the latest allowed date"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date is before the earliest allowed date"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date is invalid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date must be in YYYY-MM-DD format"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date must be text"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/date_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Date range configuration is invalid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Domain has a reserved domain ending (.%{tld})"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Domain has an invalid domain ending (.%{tld})"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Domain has an invalid domain ending (.%{tld}). Did you mean .%{suggestion}?"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Domain has an unrecognised domain ending (.%{tld}). Did you mean .%{suggestion}?"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Domain has an unrecognised domain ending (.%{tld}). If it is correct, this version of Tymeslot predates it and needs updating."
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email domain format is invalid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email domain is missing"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email exceeds maximum length (%{max_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email format is invalid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email format is invalid (consecutive dots not allowed)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email format is invalid (missing @ symbol)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email format is invalid (multiple @ symbols)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email format is invalid (spaces not allowed)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Email has a reserved domain ending (.%{tld})"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Email has an invalid domain ending (.%{tld})"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Email has an invalid domain ending (.%{tld}). Did you mean .%{suggestion}?"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Email has an unrecognised domain ending (.%{tld}). Did you mean .%{suggestion}?"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/tld_list.ex
+#, elixir-autogen, elixir-format
+msgid "Email has an unrecognised domain ending (.%{tld}). If it is correct, this version of Tymeslot predates it and needs updating."
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email must be a text value"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/email_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Email username is missing"
+msgstr ""
+
+#: lib/tymeslot/security/url_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a full address starting with https://, for example https://example.com"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/integration_name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Integration name is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/integration_name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Integration name must be 100 characters or less"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/integration_name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Integration name must be text"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/message_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Message cannot be blank"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/message_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Message is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/message_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Message is too long (maximum %{max_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/message_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Message is too short (minimum %{min_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/message_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Message must be a text value"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/message_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Message must contain meaningful content"
+msgstr ""
+
+#: lib/tymeslot/security/url_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name cannot be blank"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name cannot be only numbers"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name contains excessive whitespace"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name contains invalid characters"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name is too long (maximum %{max_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name is too short (minimum %{min_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/name_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Name must be a text value"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/number_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Number is not valid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/number_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Number is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/number_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Number is too long"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/number_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Number must be at least %{min}"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/number_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Number must be at most %{max}"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/number_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Number must be numeric"
+msgstr ""
+
+#: lib/tymeslot/security/url_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Only HTTP and HTTPS URLs are allowed"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/phone_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Phone number contains invalid characters"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/phone_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Phone number is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/phone_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Phone number is too long"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/phone_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Phone number is too short"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/phone_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Phone number must be text"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/note_ack_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Please acknowledge to continue"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose an option"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/multi_select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose at least %{min}"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/multi_select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose at least one option"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/multi_select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose at most %{max}"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose one of the available options"
+msgstr ""
+
+#: lib/tymeslot/security/url_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Private or local network addresses are not allowed"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Selection must be a single option"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/multi_select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Selections must be a list"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/multi_select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Selections must be strings"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/multi_select_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Some selections are not valid options"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/text_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Text cannot be blank"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/text_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Text is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/text_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Text is too long (maximum %{max_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/text_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Text is too short (minimum %{min_length} characters)"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/text_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Text must be a text value"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/time_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Time is after the latest allowed time"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/time_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Time is before the earliest allowed time"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/time_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Time is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/time_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Time must be in HH:MM format"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/time_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Time must be text"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/time_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Time range configuration is invalid"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/url_validator.ex
+#, elixir-autogen, elixir-format
+msgid "URL is required"
+msgstr ""
+
+#: lib/tymeslot/security/url_validation.ex
+#, elixir-autogen, elixir-format
+msgid "URL must be %{max} characters or less"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/url_validator.ex
+#, elixir-autogen, elixir-format
+msgid "URL must be text"
+msgstr ""
+
+#: lib/tymeslot/security/url_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Use HTTPS for non-local servers"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username is required"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be a text value"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at least %{count} character long"
+msgid_plural "Username must be at least %{count} characters long"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at most %{count} character long"
+msgid_plural "Username must be at most %{count} characters long"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+msgstr ""

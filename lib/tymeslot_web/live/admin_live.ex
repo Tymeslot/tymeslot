@@ -29,7 +29,7 @@ defmodule TymeslotWeb.AdminLive do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.AdminLive.Components.{Layout, Settings, Users}
-  alias TymeslotWeb.AdminLive.Formatters
+  alias TymeslotWeb.AdminLive.{Formatters, UserActions}
 
   require Logger
 
@@ -69,8 +69,9 @@ defmodule TymeslotWeb.AdminLive do
   @impl Phoenix.LiveView
   def handle_event("set_setting", %{"key" => key, "state" => state}, socket) do
     with {:ok, atom_key} <- parse_setting_key(key),
+         :boolean <- Formatters.kind(atom_key),
          {:ok, parsed} <- parse_setting_value(state) do
-      handle_setting_update(socket, atom_key, parsed, state)
+      handle_setting_update(socket, atom_key, parsed)
     else
       _other ->
         {:noreply,
@@ -169,25 +170,25 @@ defmodule TymeslotWeb.AdminLive do
     end
   end
 
-  # --- Users tab events: role-change flow ---
+  # --- Users tab events (see TymeslotWeb.AdminLive.UserActions) ---
 
   def handle_event("request_promote", params, socket),
-    do: open_pending_action(:promote, params, socket)
+    do: UserActions.open_pending_action(:promote, params, socket)
 
   def handle_event("request_demote", params, socket),
-    do: open_pending_action(:demote, params, socket)
+    do: UserActions.open_pending_action(:demote, params, socket)
 
-  def handle_event("cancel_pending_action", _params, socket) do
-    {:noreply, clear_pending_action(socket)}
-  end
+  def handle_event("cancel_pending_action", _params, socket),
+    do: {:noreply, UserActions.clear_pending_action(socket)}
 
-  def handle_event("promote_user", %{"id" => id}, socket) do
-    with_user_id(id, socket, &handle_promote(&1, assign(socket, :role_change_submitting, true)))
-  end
+  def handle_event("promote_user", %{"id" => id}, socket), do: UserActions.promote(id, socket)
 
-  def handle_event("demote_user", %{"id" => id}, socket) do
-    with_user_id(id, socket, &handle_demote(&1, assign(socket, :role_change_submitting, true)))
-  end
+  def handle_event("demote_user", %{"id" => id}, socket), do: UserActions.demote(id, socket)
+
+  def handle_event("request_delete", params, socket),
+    do: UserActions.open_pending_action(:delete, params, socket)
+
+  def handle_event("delete_user", %{"id" => id}, socket), do: UserActions.delete(id, socket)
 
   # --- Email branding helpers ---
 
@@ -227,12 +228,12 @@ defmodule TymeslotWeb.AdminLive do
     end
   end
 
-  defp handle_setting_update(socket, atom_key, parsed, state) do
+  defp handle_setting_update(socket, atom_key, parsed) do
     case AppSettings.update(%{atom_key => parsed}) do
       {:ok, _settings} ->
         {:noreply,
          socket
-         |> put_flash(:info, setting_change_message(atom_key, state))
+         |> put_flash(:info, Formatters.toggled(atom_key, parsed))
          |> load_data()}
 
       {:error, :would_lock_out} ->
@@ -266,12 +267,6 @@ defmodule TymeslotWeb.AdminLive do
   defp parse_setting_value("true"), do: {:ok, true}
   defp parse_setting_value("false"), do: {:ok, false}
   defp parse_setting_value(_other), do: :error
-
-  defp setting_change_message(key, "true"),
-    do: dgettext("dashboard_admin", "%{name} enabled.", name: Formatters.humanise(key))
-
-  defp setting_change_message(key, "false"),
-    do: dgettext("dashboard_admin", "%{name} disabled.", name: Formatters.humanise(key))
 
   defp handle_typed_setting_update(socket, key, value) do
     case AppSettings.update(%{key => value}) do
@@ -405,111 +400,6 @@ defmodule TymeslotWeb.AdminLive do
     end
   end
 
-  # --- Role-change helpers ---
-
-  defp open_pending_action(kind, %{"id" => id, "email" => email}, socket) do
-    case parse_user_id(id) do
-      {:ok, user_id} ->
-        {:noreply, assign(socket, :pending_action, %{kind: kind, id: user_id, email: email})}
-
-      :error ->
-        {:noreply, put_flash(socket, :error, dgettext("dashboard_admin", "Invalid user id."))}
-    end
-  end
-
-  defp open_pending_action(_kind, _params, socket) do
-    {:noreply, put_flash(socket, :error, dgettext("dashboard_admin", "Invalid request."))}
-  end
-
-  defp with_user_id(id, socket, fun) do
-    case parse_user_id(id) do
-      {:ok, user_id} ->
-        fun.(user_id)
-
-      :error ->
-        {:noreply, put_flash(socket, :error, dgettext("dashboard_admin", "Invalid user id."))}
-    end
-  end
-
-  defp parse_user_id(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {user_id, ""} when user_id > 0 -> {:ok, user_id}
-      _other -> :error
-    end
-  end
-
-  defp parse_user_id(_id), do: :error
-
-  defp handle_promote(user_id, socket) do
-    case Auth.promote_admin(socket.assigns.current_user, user_id) do
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> clear_pending_action()
-         |> put_flash(:info, dgettext("dashboard_admin", "User promoted to admin."))
-         |> push_patch(to: ~p"/admin/users")}
-
-      {:error, reason} ->
-        {:noreply,
-         socket
-         |> clear_pending_action()
-         |> put_flash(:error, role_change_error_message(:promote, reason))}
-    end
-  end
-
-  defp handle_demote(user_id, socket) do
-    self_demote? = user_id == socket.assigns.current_user.id
-
-    case Auth.demote_admin(socket.assigns.current_user, user_id) do
-      {:ok, _user} when self_demote? ->
-        # Self-demote: force a full reload of /dashboard so the new request
-        # runs through the plug pipeline with the now-demoted user, dropping
-        # the admin menu entry and blocking /admin reentry.
-        {:noreply,
-         socket
-         |> clear_pending_action()
-         |> put_flash(:info, dgettext("dashboard_admin", "You have been demoted from admin."))
-         |> redirect(to: ~p"/dashboard")}
-
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> clear_pending_action()
-         |> put_flash(:info, dgettext("dashboard_admin", "User demoted from admin."))
-         |> push_patch(to: ~p"/admin/users")}
-
-      {:error, reason} ->
-        {:noreply,
-         socket
-         |> clear_pending_action()
-         |> put_flash(:error, role_change_error_message(:demote, reason))}
-    end
-  end
-
-  defp role_change_error_message(_action, :not_found),
-    do: dgettext("dashboard_admin", "User not found.")
-
-  defp role_change_error_message(_action, :forbidden),
-    do: dgettext("dashboard_admin", "Admin access required.")
-
-  defp role_change_error_message(_action, :admin_ui_disabled),
-    do: dgettext("dashboard_admin", "Admin UI is disabled.")
-
-  defp role_change_error_message(:demote, :last_admin),
-    do: dgettext("dashboard_admin", "Cannot demote the last admin. Promote someone else first.")
-
-  defp role_change_error_message(:promote, %Ecto.Changeset{}),
-    do: dgettext("dashboard_admin", "Could not promote user.")
-
-  defp role_change_error_message(:demote, %Ecto.Changeset{}),
-    do: dgettext("dashboard_admin", "Could not demote user.")
-
-  defp clear_pending_action(socket) do
-    socket
-    |> assign(:pending_action, nil)
-    |> assign(:role_change_submitting, false)
-  end
-
   # --- Data loading ---
 
   defp load_data(socket) do
@@ -528,6 +418,7 @@ defmodule TymeslotWeb.AdminLive do
     |> assign(:users, Auth.list_users())
     |> assign(:user_count, Auth.count_users())
     |> assign(:admin_count, Auth.count_admins())
+    |> assign(:self_demote_blocked?, not Auth.remaining_signin_capable_admins?(user))
   end
 
   # Config-level errors (`:too_many_files`) come from `upload_errors/1`; a
@@ -584,6 +475,7 @@ defmodule TymeslotWeb.AdminLive do
         current_user={@current_user}
         user_count={@user_count}
         admin_count={@admin_count}
+        self_demote_blocked?={@self_demote_blocked?}
         pending_action={@pending_action}
         role_change_submitting={@role_change_submitting}
       />

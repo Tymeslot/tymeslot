@@ -119,7 +119,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
       email = run_update_to_delivery(event, fn job -> assert job.args["first_notification"] end)
 
       assert email.text_body =~ "Current Details"
-      assert email.text_body =~ "Time: 03 Nov 2026, 09:30 UTC"
+      # Stated in the organiser's timezone: with no profile, the platform
+      # default (Europe/Tallinn).
+      assert email.text_body =~ "Time: 03 Nov 2026, 11:30 EET"
       assert email.text_body =~ "Title: Standup"
       refute email.text_body =~ "What Changed"
       refute email.text_body =~ "→"
@@ -143,7 +145,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
 
       email = run_update_to_delivery(event)
 
-      assert email.text_body =~ "Time: 04 Nov 2026, 14:00 UTC"
+      assert email.text_body =~ "Time: 04 Nov 2026, 16:00 EET"
       refute email.text_body =~ "Title:"
     end
 
@@ -240,7 +242,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
         assert email.subject == "Cancelled - Standup on 3 Nov"
         assert email.text_body =~ "Event Cancelled"
         assert email.text_body =~ "Olive Organiser has cancelled an event you were invited to."
-        assert email.text_body =~ "Date: 3 November 2026\nTime: 09:30 AM UTC"
+        assert email.text_body =~ "Date: 3 November 2026\nTime: 11:30 AM EET"
         refute email.text_body =~ "invited you"
 
         ics = calendar_attachment(email)

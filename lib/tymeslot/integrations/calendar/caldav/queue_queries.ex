@@ -4,8 +4,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
 
   A cache row carries the ordinary provider columns *and* a small set of
   bookkeeping columns (`sync_state`, `sync_attempts`, `sync_last_attempt_at`,
-  `sync_last_error`) recording a local change that has not yet reached the
-  server. Those columns have their own lifecycle: they are written when
+  `sync_last_error`, `sync_deferred_since`) recording a local change that has
+  not yet reached the server. Those columns have their own lifecycle: they are written when
   Tymeslot declares a local intent, read back by `OfflineQueue.flush/2` at the
   start of each sync cycle, and cleared when the replay succeeds. That is a
   different concern from caching what a provider returned, and it is used by
@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -94,15 +95,74 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
 
   Returned in ascending `updated_at` order so the oldest pending change
   is replayed first — preserves FIFO semantics across edits to the same
-  cached row.
+  cached row. At most `limit` rows, leaving out those that have already
+  failed `max_attempts` times.
   """
-  @spec list_pending(integer()) :: [ProviderCalendarEventSchema.t()]
-  def list_pending(calendar_integration_id) do
+  @spec list_pending(integer(), pos_integer(), pos_integer()) :: [ProviderCalendarEventSchema.t()]
+  def list_pending(calendar_integration_id, limit, max_attempts) do
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id == ^calendar_integration_id)
     |> where([e], e.sync_state != "synced")
+    |> where([e], e.sync_attempts < ^max_attempts)
     |> order_by([e], asc: e.updated_at)
+    |> limit(^limit)
     |> Repo.all()
+  end
+
+  @doc """
+  The queued changes of `user_id`'s integrations that have failed
+  `max_attempts` counted times and are no longer replayed, by integration:
+  how many there are, and the failure most recently recorded on one.
+
+  Keyed on the attempt count, not on `sync_last_error`: a change still being
+  retried carries an error too.
+  """
+  @spec stuck_by_integration(pos_integer(), pos_integer()) :: %{
+          pos_integer() => %{count: pos_integer(), last_error: String.t() | nil}
+        }
+  def stuck_by_integration(user_id, max_attempts) do
+    ProviderCalendarEventSchema
+    |> join(:inner, [e], i in CalendarIntegrationSchema, on: i.id == e.calendar_integration_id)
+    |> where([_e, i], i.user_id == ^user_id)
+    |> where_stuck(max_attempts)
+    |> group_by([e], e.calendar_integration_id)
+    |> select([e], {
+      e.calendar_integration_id,
+      %{
+        count: count(e.id),
+        last_error:
+          fragment(
+            "(array_agg(? ORDER BY ? DESC) FILTER (WHERE ? IS NOT NULL))[1]",
+            e.sync_last_error,
+            e.sync_last_attempt_at,
+            e.sync_last_error
+          )
+      }
+    })
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Returns the stuck changes of `calendar_integration_id` (see
+  `stuck_by_integration/2`) to the queue: their attempt count and deferral
+  clock start again, so the next flush replays them. Answers how many.
+  """
+  @spec release_stuck(pos_integer(), pos_integer()) :: non_neg_integer()
+  def release_stuck(calendar_integration_id, max_attempts) do
+    {count, _rows} =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where_stuck(max_attempts)
+      |> Repo.update_all(set: [sync_attempts: 0, sync_deferred_since: nil])
+
+    count
+  end
+
+  defp where_stuck(query, max_attempts) do
+    query
+    |> where([e], e.sync_state != "synced")
+    |> where([e], e.sync_attempts >= ^max_attempts)
   end
 
   @doc """
@@ -128,6 +188,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
           sync_attempts: 0,
           sync_last_attempt_at: now,
           sync_last_error: nil,
+          sync_deferred_since: nil,
           updated_at: now
         ],
         new_etag
@@ -148,7 +209,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
   Records a failed replay attempt for a pending cache row.
 
   Increments `sync_attempts`, stamps `sync_last_attempt_at`, and stores
-  the formatted error in `sync_last_error`. Does not change
+  the formatted error in `sync_last_error`. The server answered, so a run
+  of deferrals (`mark_sync_deferred/4`) is over. Does not change
   `sync_state` — the row stays in the queue and will be retried on
   the next sync cycle.
   """
@@ -163,8 +225,49 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
     )
     |> Repo.update_all(
       inc: [sync_attempts: 1],
-      set: [sync_last_attempt_at: now, sync_last_error: reason]
+      set: [sync_last_attempt_at: now, sync_last_error: reason, sync_deferred_since: nil]
     )
+
+    :ok
+  end
+
+  @doc """
+  Records a replay attempt that never reached a server able to answer it.
+
+  Stamps `sync_last_attempt_at`, stores the formatted error in
+  `sync_last_error`, and starts `sync_deferred_since` if this is the first
+  deferral in a row. It leaves `sync_attempts` alone, since an outage says
+  nothing about whether the server would accept the change, unless the row
+  has been deferred without a break since before `count_before`: a change
+  that has gone unanswered that long is not waiting out an outage, and
+  counting it lets the cap end what would otherwise block the queue for
+  good.
+  """
+  @spec mark_sync_deferred(integer(), String.t(), String.t(), DateTime.t()) :: :ok
+  def mark_sync_deferred(calendar_integration_id, uid, reason, %DateTime{} = count_before)
+      when is_binary(reason) do
+    now = DateTime.utc_now(:microsecond)
+
+    ProviderCalendarEventSchema
+    |> where(
+      [e],
+      e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid
+    )
+    |> update([e],
+      set: [
+        sync_last_attempt_at: ^now,
+        sync_last_error: ^reason,
+        sync_deferred_since: coalesce(e.sync_deferred_since, ^now),
+        sync_attempts:
+          e.sync_attempts +
+            fragment(
+              "CASE WHEN ? < ? THEN 1 ELSE 0 END",
+              e.sync_deferred_since,
+              type(^count_before, :utc_datetime_usec)
+            )
+      ]
+    )
+    |> Repo.update_all([])
 
     :ok
   end

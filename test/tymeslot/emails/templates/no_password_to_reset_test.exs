@@ -11,7 +11,8 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToResetTest do
 
   describe "render/2" do
     test "names the provider the account signs in with and links to sign in" do
-      html = NoPasswordToReset.render(build_user_data(%{provider: "google"}), @sign_in_url)
+      html =
+        NoPasswordToReset.render(build_user_data(%{provider: "google"}), @sign_in_url).html_body
 
       assert html =~ "<html"
       assert html =~ "signs in with Google, so it has no password to reset"
@@ -19,7 +20,8 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToResetTest do
     end
 
     test "carries no password reset link" do
-      html = NoPasswordToReset.render(build_user_data(%{provider: "github"}), @sign_in_url)
+      html =
+        NoPasswordToReset.render(build_user_data(%{provider: "github"}), @sign_in_url).html_body
 
       refute html =~ "/auth/reset-password"
     end
@@ -27,23 +29,30 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToResetTest do
 
   describe "render_text/2" do
     test "names GitHub for a GitHub account" do
-      text = NoPasswordToReset.render_text(build_user_data(%{provider: "github"}), @sign_in_url)
+      text =
+        NoPasswordToReset.render(build_user_data(%{provider: "github"}), @sign_in_url).text_body
 
       assert text =~ "signs in with GitHub"
       assert text =~ @sign_in_url
     end
 
     test "falls back to single sign-on for a generic provider" do
-      text = NoPasswordToReset.render_text(build_user_data(%{provider: "oauth"}), @sign_in_url)
+      text =
+        NoPasswordToReset.render(build_user_data(%{provider: "oauth"}), @sign_in_url).text_body
 
       assert text =~ "signs in with single sign-on"
     end
 
     test "is translated for the recipient's locale" do
-      text =
-        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
-          NoPasswordToReset.render_text(build_user_data(%{provider: "google"}), @sign_in_url)
-        end)
+      email =
+        NoPasswordToReset.render(
+          build_user_data(%{provider: "google", locale: "de"}),
+          @sign_in_url
+        )
+
+      text = email.text_body
+
+      assert email.subject == "Ihr Tymeslot-Konto hat kein Passwort"
 
       assert text =~ "meldet sich jedoch über Google an"
     end

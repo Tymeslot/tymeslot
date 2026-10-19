@@ -13,7 +13,7 @@ defmodule TymeslotWeb.TelegramWebhookController do
     if Telegram.telegram_enabled?() and Telegram.shared_bot_mode?() do
       client_ip = ClientIP.get(conn)
 
-      case RateLimiter.check_webhook_rate_limit(client_ip) do
+      case RateLimiter.check(:webhook, client_ip) do
         :ok ->
           case verify_secret(conn) do
             :ok ->
@@ -23,7 +23,7 @@ defmodule TymeslotWeb.TelegramWebhookController do
               conn |> put_status(403) |> json(%{error: "forbidden"}) |> halt()
           end
 
-        {:error, :rate_limited} ->
+        {:error, :rate_limited, _message} ->
           conn |> put_status(429) |> json(%{error: "too many requests"}) |> halt()
       end
     else

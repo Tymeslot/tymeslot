@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
     if theme.schedule_view == :calendar do
       test "#{theme.slug} opens a link to a later month on that day's month and week",
            %{conn: conn, profile: profile} do
-        {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: @theme.id})
+        {:ok, profile} = Profiles.update_booking_theme(profile, @theme.id)
         # Sunday 31 January 2027 in Tallinn; the linked day is Wednesday 10 March.
         freeze_clock(~U[2027-01-31 12:00:00Z])
 
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
 
     test "#{theme.slug} fetches the linked month's availability once connected",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: @theme.id})
+      {:ok, profile} = Profiles.update_booking_theme(profile, @theme.id)
       # The 15th of next month: always another month, and inside the window.
       next_month = Date.shift(today(), month: 1)
       linked = Date.new!(next_month.year, next_month.month, 15)
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
 
       test "#{theme.slug} drops a linked day #{case_name} and lands on the first free day",
            %{conn: conn, profile: profile} do
-        {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: @theme.id})
+        {:ok, profile} = Profiles.update_booking_theme(profile, @theme.id)
         today = today()
         linked = Date.to_iso8601(Date.add(today, @offset))
 
@@ -195,7 +195,8 @@ defmodule TymeslotWeb.Live.Scheduling.LinkedDateTest do
         end_date,
         @zone,
         meeting_type.duration_minutes,
-        meeting_type.id
+        meeting_type.id,
+        nil
       )
 
     match?({:ok, _map}, AvailabilityCache.get_or_compute_events(key, fn -> {:error, :probe} end))

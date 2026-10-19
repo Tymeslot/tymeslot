@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Repo
   alias TymeslotWeb.Hooks.DashboardInitHook
 
   defp build_socket(assigns \\ %{}) do
@@ -53,6 +54,19 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
       assert %ProfileSchema{id: id, user_id: user_id} = updated_socket.assigns.profile
       assert user_id == user.id
       assert Profiles.get_profile(user.id).id == id
+    end
+
+    test "sends the visitor back to sign-in when the account was deleted meanwhile" do
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      Repo.delete!(user)
+
+      for socket <- [
+            build_socket(%{current_user: user}),
+            %{build_socket(%{current_user: user}) | transport_pid: nil}
+          ] do
+        assert {:halt, halted} = DashboardInitHook.on_mount(:default, %{}, %{}, socket)
+        assert halted.redirected == {:redirect, %{to: "/auth/login", status: 302}}
+      end
     end
   end
 end

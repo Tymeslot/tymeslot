@@ -229,6 +229,46 @@ defmodule Tymeslot.Bookings.RescheduleSeatEmailsIntegrationTest do
              ParticipantQueries.get(moved.id)
   end
 
+  # The old seat's guests are told on the retry when a mail outage missed
+  # them, rather than the move's job finishing without them.
+  test "a move retries the old seat's guest cancellation a mail outage missed",
+       %{old_meeting: old_meeting, mover: mover} do
+    {:ok, [guest]} =
+      Guests.create_for_participant(old_meeting.id, mover.id, ["guest@example.com"])
+
+    {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+    assert {:ok, %{meeting: new_meeting, participant: moved}} =
+             move(mover, new_slot_params())
+
+    args = reschedule_args(new_meeting, moved, mover)
+
+    expect(EmailServiceMock, :send_seat_reschedule_to_participant, 1, fn _email, _d, _old ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_seat_update_to_organizer, 1, fn :moved, _email, _d ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_guest_confirmation, 1, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_guest_cancellation, fn _email, _details ->
+      {:error, :smtp_down}
+    end)
+
+    assert {:error, _reason} = perform_job(EmailWorker, args)
+
+    expect(EmailServiceMock, :send_guest_cancellation, fn email, _details ->
+      assert email == "guest@example.com"
+      {:ok, "sent"}
+    end)
+
+    assert :ok = perform_job(EmailWorker, args)
+  end
+
   # The guests used to be re-invited to the new time while the old entry
   # stayed in their calendars, never cancelled.
   test "the mover's guests move with the seat: the old entry is cancelled and the new one invited",

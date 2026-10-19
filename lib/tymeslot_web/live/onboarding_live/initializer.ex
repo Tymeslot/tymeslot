@@ -10,7 +10,10 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.LiveView, only: [connected?: 1, get_connect_params: 1, allow_upload: 3]
+  use TymeslotWeb, :verified_routes
+
+  import Phoenix.LiveView,
+    only: [connected?: 1, get_connect_params: 1, allow_upload: 3, redirect: 2]
 
   alias Phoenix.Component
   alias Tymeslot.Auth
@@ -34,8 +37,14 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   """
   @spec initialize(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def initialize(socket, user) do
-    profile = load_profile(socket, user)
+    case load_profile(socket, user) do
+      # The account was deleted between sign-in and this mount.
+      {:error, :user_not_found} -> redirect(socket, to: ~p"/auth/login")
+      profile -> initialize_with_profile(socket, user, profile)
+    end
+  end
 
+  defp initialize_with_profile(socket, user, profile) do
     connected_calendars =
       if connected?(socket), do: Calendar.list_integrations(user.id), else: []
 
@@ -117,9 +126,10 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
   defp load_profile(socket, user) do
     if connected?(socket) do
-      {:ok, loaded} = Onboarding.get_or_create_profile(user.id)
-      {:ok, profile} = Profiles.ensure_timezone(loaded, get_connect_params(socket)["timezone"])
-      profile
+      with {:ok, loaded} <- Onboarding.get_or_create_profile(user.id) do
+        {:ok, profile} = Profiles.ensure_timezone(loaded, get_connect_params(socket)["timezone"])
+        profile
+      end
     else
       nil
     end

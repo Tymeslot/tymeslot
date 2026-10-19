@@ -369,11 +369,6 @@ msgstr "Con quanto anticipo i clienti possono fissare un appuntamento con te."
 msgid "I'll connect a calendar later"
 msgstr "Collegherò un calendario più tardi"
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone"
-msgstr "Fuso orario non valido"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you up and running in just a few steps."
@@ -599,11 +594,6 @@ msgstr "Questo nome utente è già in uso"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Questo nome utente è riservato"
-
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone must be a string"
-msgstr "Il fuso orario deve essere una stringa"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format

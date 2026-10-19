@@ -27,10 +27,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.CalDAVDiscoveryStub
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   # Route CalDAV HTTP through the real HTTPClient so `Req.Test` can intercept
@@ -49,7 +51,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
     # breaker and the host-specific one so a prior 401 run doesn't
     # short-circuit the next run's PROPFIND.
     CalendarCircuitBreaker.reset(:caldav)
-    CalendarCircuitBreaker.reset_for_url(:caldav, "http://localhost:65432")
+
+    CalendarCircuitBreaker.reset(
+      :caldav,
+      ProviderBreakers.host_from_base_url("http://localhost:65432")
+    )
+
     RateLimiter.clear_all()
     :ok
   end
@@ -512,7 +519,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
     calendar_href = Keyword.fetch!(opts, :calendar_href)
     calendar_name = Keyword.fetch!(opts, :calendar_name)
 
-    stub_discovery(accept_basic, principal_path, home_set_path, [
+    CalDAVDiscoveryStub.stub(accept_basic, principal_path, home_set_path, [
       {calendar_href, calendar_name}
     ])
   end
@@ -525,82 +532,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
     home_set_path = Keyword.fetch!(opts, :home_set_path)
     calendars = Keyword.fetch!(opts, :calendars)
 
-    stub_discovery(accept_basic, principal_path, home_set_path, calendars)
-  end
-
-  defp stub_discovery(accept_basic, principal_path, home_set_path, calendars) do
-    ReqTest.stub(:tymeslot_http, fn http_conn ->
-      with ["Basic " <> encoded] <- Conn.get_req_header(http_conn, "authorization"),
-           {:ok, ^accept_basic} <- Base.decode64(encoded) do
-        respond_caldav(http_conn, principal_path, home_set_path, calendars)
-      else
-        _no_match -> Conn.resp(http_conn, 401, "")
-      end
-    end)
-  end
-
-  defp respond_caldav(conn, principal_path, home_set_path, calendars) do
-    {:ok, body, conn} = Conn.read_body(conn)
-
-    cond do
-      String.contains?(body, "current-user-principal") ->
-        xml_multistatus(conn, """
-          <response>
-            <href>#{conn.request_path}</href>
-            <propstat>
-              <prop>
-                <current-user-principal xmlns="DAV:"><href>#{principal_path}</href></current-user-principal>
-              </prop>
-              <status>HTTP/1.1 200 OK</status>
-            </propstat>
-          </response>
-        """)
-
-      String.contains?(body, "calendar-home-set") ->
-        xml_multistatus(conn, """
-          <response>
-            <href>#{conn.request_path}</href>
-            <propstat>
-              <prop>
-                <calendar-home-set xmlns="urn:ietf:params:xml:ns:caldav">
-                  <href xmlns="DAV:">#{home_set_path}</href>
-                </calendar-home-set>
-              </prop>
-              <status>HTTP/1.1 200 OK</status>
-            </propstat>
-          </response>
-        """)
-
-      true ->
-        # Calendar listing — emit one <response> per requested calendar.
-        inner =
-          Enum.map_join(calendars, "\n", fn {href, name} ->
-            """
-              <response>
-                <href>#{href}</href>
-                <propstat>
-                  <prop>
-                    <displayname>#{name}</displayname>
-                    <resourcetype>
-                      <collection/>
-                      <calendar xmlns="urn:ietf:params:xml:ns:caldav"/>
-                    </resourcetype>
-                  </prop>
-                  <status>HTTP/1.1 200 OK</status>
-                </propstat>
-              </response>
-            """
-          end)
-
-        xml_multistatus(conn, inner)
-    end
-  end
-
-  defp xml_multistatus(conn, inner) do
-    xml = ~s|<?xml version="1.0"?><multistatus xmlns="DAV:">#{inner}</multistatus>|
-
-    conn
-    |> Conn.put_resp_header("content-type", "application/xml")
-    |> Conn.resp(207, xml)
+    CalDAVDiscoveryStub.stub(accept_basic, principal_path, home_set_path, calendars)
   end
 end

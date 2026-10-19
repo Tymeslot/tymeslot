@@ -60,21 +60,22 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
                ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "2")
     end
 
-    test "prevents duplicate theme customizations for same profile and theme" do
+    test "writes nothing when the profile already has a customization of the theme" do
       profile = insert(:profile)
 
-      insert(:theme_customization, profile: profile, theme_id: "1")
+      existing = insert(:theme_customization, profile: profile, theme_id: "1")
 
-      {:error, changeset} =
-        ThemeCustomizationQueries.create(%{
-          profile_id: profile.id,
-          theme_id: "1",
-          color_scheme: "default",
-          background_type: "gradient",
-          background_value: "gradient_1"
-        })
+      assert {:ok, :exists} =
+               ThemeCustomizationQueries.create(%{
+                 profile_id: profile.id,
+                 theme_id: "1",
+                 color_scheme: "purple",
+                 background_type: "gradient",
+                 background_value: "gradient_1"
+               })
 
-      assert "has already been taken" in errors_on(changeset).profile_id
+      assert ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "1").settings ==
+               existing.settings
     end
 
     test "allows same theme customization for different profiles" do
@@ -118,29 +119,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
     end
   end
 
-  describe "get_all_by_profile_id/1" do
-    test "retrieves all customizations for a profile" do
-      profile = insert(:profile)
-      customization1 = insert(:theme_customization, profile: profile, theme_id: "1")
-      customization2 = insert(:theme_customization, profile: profile, theme_id: "2")
-      _other_customization = insert(:theme_customization)
-
-      result = ThemeCustomizationQueries.get_all_by_profile_id(profile.id)
-
-      assert length(result) == 2
-      assert Enum.any?(result, fn c -> c.id == customization1.id end)
-      assert Enum.any?(result, fn c -> c.id == customization2.id end)
-    end
-
-    test "returns empty list when profile has no customizations" do
-      profile = insert(:profile)
-
-      result = ThemeCustomizationQueries.get_all_by_profile_id(profile.id)
-
-      assert result == []
-    end
-  end
-
   describe "update/2" do
     test "updates customization attributes" do
       customization =
@@ -162,23 +140,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
 
       assert {:error, changeset} = ThemeCustomizationQueries.update(customization, attrs)
       assert "is invalid" in errors_on(changeset).color_scheme
-    end
-  end
-
-  describe "delete/1" do
-    test "deletes a customization" do
-      customization = insert(:theme_customization)
-
-      assert {:ok, deleted} = ThemeCustomizationQueries.delete(customization)
-      assert deleted.id == customization.id
-
-      result =
-        ThemeCustomizationQueries.get_by_profile_and_theme(
-          customization.profile_id,
-          customization.theme_id
-        )
-
-      assert result == nil
     end
   end
 
@@ -282,7 +243,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
         }
 
         assert {:error, changeset} = ThemeCustomizationQueries.create(attrs)
-        assert "must be a valid hex color" in errors_on(changeset).background_value
+        assert "must be a hex colour such as #14b8a6" in errors_on(changeset).background_value
       end
     end
 
@@ -330,7 +291,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
 
       assert {:error, changeset} = ThemeCustomizationQueries.create(attrs)
 
-      assert "is required for uploaded image background" in errors_on(changeset).background_image_path
+      assert "is required for an uploaded image background" in errors_on(changeset).background_image_path
     end
 
     test "accepts preset video without video path" do
@@ -377,7 +338,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
 
       assert {:error, changeset} = ThemeCustomizationQueries.create(attrs)
 
-      assert "is required for uploaded video background" in errors_on(changeset).background_video_path
+      assert "is required for an uploaded video background" in errors_on(changeset).background_video_path
     end
   end
 

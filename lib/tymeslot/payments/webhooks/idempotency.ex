@@ -1,8 +1,7 @@
 defmodule Tymeslot.Payments.Webhooks.Idempotency do
   @moduledoc """
-  The single deduplication policy for verified Stripe webhook events, shared
-  by the platform path (`Tymeslot.Payments.Webhooks.Delivery`) and the Connect
-  path (`Tymeslot.MeetingPayments.Webhooks.WebhookProcessor`).
+  The deduplication policy for verified Stripe webhook events, applied by
+  `Tymeslot.Payments.Webhooks.Ingress` to both endpoints.
 
   Stripe documents that the same event can be delivered more than once, so a
   redelivery must not repeat the handler's side effects. `with_idempotency/4`
@@ -10,11 +9,14 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
   the reservation from the handler's result:
 
     * success (`:ok` or `{:ok, _}`): marked processed, `{:ok, :processed}`
-    * retryable (`{:error, :retry_later}` or `{:error, :retry_later, _}`):
-      released so the redelivery runs again, `{:error, :retry_later}`
-    * any other result, including a shape no handler is documented to
-      return: logged, marked processed so Stripe stops redelivering an event
-      that cannot succeed, `{:error, :permanent}`
+    * `{:error, :permanent, _}`: logged, marked processed so Stripe stops
+      redelivering an event that cannot succeed, `{:error, :permanent}`
+    * `{:error, :retry_later, _}`: released so the redelivery runs again,
+      `{:error, :retry_later}`
+    * any other result, a shape the handler contract
+      (`Tymeslot.Payments.Behaviours.WebhookHandler`) does not allow: logged
+      as an error and released like a retryable one, since acknowledging it
+      could lose a payment event
     * the handler raises, throws or exits: released, then re-raised, so the
       reservation never outlives the attempt
 
@@ -93,10 +95,8 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
 
   defp classify(:ok), do: :processed
   defp classify({:ok, _status}), do: :processed
-  defp classify({:error, :retry_later}), do: :retry
-  defp classify({:error, :retry_later, _message}), do: :retry
-  defp classify({:error, _reason}), do: :failed
-  defp classify({:error, _reason, _message}), do: :failed
+  defp classify({:error, :retry_later, _reason}), do: :retry
+  defp classify({:error, :permanent, _reason}), do: :failed
   defp classify(_unexpected), do: :unexpected
 
   defp settle(:processed, result, event_id, event_type, payload, duration_ms) do
@@ -115,7 +115,7 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
   defp settle(:retry, result, event_id, event_type, _payload, duration_ms) do
     IdempotencyCache.release(event_id)
 
-    Logger.warning("Stripe webhook event failed transiently, Stripe will retry",
+    Logger.warning("Stripe webhook event failed, Stripe will retry",
       event_id: event_id,
       event_type: event_type,
       error: LogFormat.reason(result),
@@ -125,16 +125,23 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
     {:error, :retry_later}
   end
 
-  defp settle(outcome, result, event_id, event_type, payload, duration_ms)
-       when outcome in [:failed, :unexpected] do
+  defp settle(:unexpected, result, event_id, event_type, _payload, duration_ms) do
+    IdempotencyCache.release(event_id)
+
+    Logger.error("Stripe webhook handler broke its result contract, Stripe will retry",
+      event_id: event_id,
+      event_type: event_type,
+      error: LogFormat.reason(result),
+      processing_time_ms: duration_ms
+    )
+
+    {:error, :retry_later}
+  end
+
+  defp settle(:failed, result, event_id, event_type, payload, duration_ms) do
     IdempotencyCache.mark_processed(event_id, event_type, payload)
 
-    message =
-      if outcome == :unexpected,
-        do: "Stripe webhook handler returned an unexpected result, treated as permanent",
-        else: "Stripe webhook event failed permanently"
-
-    Logger.error(message,
+    Logger.error("Stripe webhook event failed permanently",
       event_id: event_id,
       event_type: event_type,
       error: LogFormat.reason(result),

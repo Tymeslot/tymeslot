@@ -30,6 +30,23 @@ defmodule Tymeslot.Workers.DeliveryClaims.DeliveryClaimQueries do
     end
   end
 
+  @doc """
+  The key of the earliest claim the job holds that starts with `prefix`, or
+  `nil`. Earliest by insertion, so every caller gets the same one.
+  """
+  @spec first_key(integer(), String.t()) :: String.t() | nil
+  def first_key(oban_job_id, prefix) do
+    DeliveryClaimSchema
+    |> where(
+      [c],
+      c.oban_job_id == ^oban_job_id and fragment("starts_with(?, ?)", c.effect_key, ^prefix)
+    )
+    |> order_by([c], asc: c.id)
+    |> select([c], c.effect_key)
+    |> limit(1)
+    |> Repo.one()
+  end
+
   @doc "Drops a claim, so a later execution of the job may perform the effect."
   @spec release(integer(), String.t()) :: :ok
   def release(oban_job_id, effect_key) do
@@ -58,7 +75,7 @@ defmodule Tymeslot.Workers.DeliveryClaims.DeliveryClaimQueries do
     count
   end
 
-  @doc "Whether the claim is held. For tests and diagnostics."
+  @doc "Whether the claim is held."
   @spec claimed?(integer(), String.t()) :: boolean()
   def claimed?(oban_job_id, effect_key) do
     DeliveryClaimSchema

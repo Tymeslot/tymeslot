@@ -22,11 +22,13 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     ApplicationFee,
     BookingPaymentQueries,
     ConnectAccountQueries,
+    Currency,
     StripeAdapter
   }
 
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Tymeslot.Themes.Catalog, as: ThemeCatalog
   alias TymeslotWeb.Endpoint
 
@@ -44,8 +46,12 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     # Holding a pooled connection open across a network round-trip to Stripe
     # risks pool exhaustion when Stripe is slow. Instead we:
     #
-    #   1. Insert the booking_payment row (status `pending`).
-    #   2. Call Stripe to create the checkout session — outside any transaction.
+    #   1. Insert the booking_payment row (status `pending`), in a short
+    #      transaction holding the host's Connect account row locked while
+    #      the currency and price are read, so a currency change
+    #      (`MeetingPayments.change_default_currency/2`) cannot fall between
+    #      reading them and recording the payment.
+    #   2. Call Stripe to create the checkout session, outside any transaction.
     #   3. Attach the returned session id to the row.
     #
     # If step 2 or 3 fails the row stays `pending` with no session id; the
@@ -54,35 +60,53 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     # meeting expires). Idempotency on the Stripe side is preserved by the
     # `checkout:<meeting_id>` idempotency key, so a retried booking for the same
     # meeting collapses to a single Stripe session.
-    with {:ok, context} <- build_context(meeting),
-         {:ok, booking_payment} <- BookingPaymentQueries.insert(context.snapshot),
+    with {:ok, host} <- fetch_host(meeting.organizer_user_id),
+         :ok <- check_payments_access(host.id),
+         {:ok, %{booking_payment: booking_payment} = context} <- record_payment(meeting, host),
          {:ok, session} <- create_stripe_session(meeting, context),
          {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
       {:ok, %{checkout_url: session.url, booking_payment: booking_payment}}
     end
   end
 
-  defp build_context(meeting) do
-    with {:ok, host} <- fetch_host(meeting.organizer_user_id),
-         :ok <- check_payments_access(host.id),
-         {:ok, account} <- fetch_connect_account(host.id),
-         {:ok, meeting_type} <- fetch_meeting_type(meeting.meeting_type_id) do
-      theme_id = resolve_theme_id(host.id)
-      bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
-      fee_cents = ApplicationFee.calculate(meeting_type.price_cents || 0, bp_config)
-
-      {:ok,
-       %{
-         host: host,
-         account: account,
-         meeting_type: meeting_type,
-         theme_id: theme_id,
-         theme_slug: theme_slug_for(theme_id),
-         fee_cents: fee_cents,
-         snapshot: snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents)
-       }}
-    end
+  defp record_payment(meeting, host) do
+    Repo.transaction(fn ->
+      with {:ok, account} <- lock_connect_account(host.id),
+           {:ok, meeting_type} <- fetch_meeting_type(meeting.meeting_type_id),
+           :ok <- check_still_paid(meeting_type),
+           context = build_context(meeting, host, account, meeting_type),
+           {:ok, booking_payment} <- BookingPaymentQueries.insert(context.snapshot) do
+        Map.put(context, :booking_payment, booking_payment)
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
+
+  defp build_context(meeting, host, account, meeting_type) do
+    theme_id = resolve_theme_id(host.id)
+    bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
+    fee_cents = ApplicationFee.calculate(meeting_type.price_cents, bp_config)
+
+    %{
+      host: host,
+      account: account,
+      meeting_type: meeting_type,
+      theme_id: theme_id,
+      theme_slug: theme_slug_for(theme_id),
+      fee_cents: fee_cents,
+      snapshot: snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents)
+    }
+  end
+
+  # The meeting type was paid when the booking was made, but a currency
+  # change since then resets every price, and the old price must not be
+  # charged in the new currency.
+  defp check_still_paid(%{payment_required: true, price_cents: price})
+       when is_integer(price) and price > 0,
+       do: :ok
+
+  defp check_still_paid(_meeting_type), do: {:error, :payment_not_required}
 
   defp create_stripe_session(meeting, context) do
     %{account: account, meeting_type: mt, fee_cents: fee, theme_slug: slug} = context
@@ -143,10 +167,20 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     end
   end
 
-  defp fetch_connect_account(user_id) do
-    case ConnectAccountQueries.live_for_user(user_id) do
-      %{charges_enabled: true} = account -> {:ok, account}
-      _account_or_nil -> {:error, :payments_unavailable}
+  # An account in a currency outside the allowlist (opened before it was
+  # enforced) is still charged when that currency counts in hundredths, as
+  # the stored price does; Stripe enforces its own minimum when the session
+  # is created. Any other takes no payments until its host picks a supported
+  # currency (`Currency.support/1`).
+  defp lock_connect_account(user_id) do
+    case ConnectAccountQueries.lock_live_for_user(user_id) do
+      %{charges_enabled: true, default_currency: currency} = account ->
+        if Currency.chargeable?(currency),
+          do: {:ok, account},
+          else: {:error, :payments_unavailable}
+
+      _account_or_nil ->
+        {:error, :payments_unavailable}
     end
   end
 

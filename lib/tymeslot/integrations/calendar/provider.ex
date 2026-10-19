@@ -126,10 +126,10 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   Turns a provider's own event representation into `CalendarEvent` structs.
 
   `raw_events` is deliberately untyped. Most providers hand over decoded JSON
-  maps, but Exchange hands over parsed XML elements, which are xmerl records
-  and so tuples. `[map()]` would exclude that outright rather than describe
-  anything a caller can rely on: what the elements are is the implementing
-  provider's business, and no caller ever builds this list itself.
+  maps, but Exchange hands over parsed XML elements. A narrower type would
+  not describe anything a caller can rely on: what the elements are is the
+  implementing provider's business, and no caller ever builds this list
+  itself.
   """
   @callback normalise_events(raw_events :: [term()], context :: context()) ::
               {:ok, [CalendarEvent.t()]} | {:error, term()}
@@ -156,10 +156,11 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   @doc """
   Declares which representation `list_events/2` hands back.
 
-  `:raw` is the provider's own wire format, the shape its own
-  `normalise_events/2` parses: iCalendar text for the CalDAV family, decoded
-  API payloads for the OAuth providers. Pairing the two callbacks is only
-  valid for these.
+  `:raw` is the provider's own representation, the shape its own
+  `normalise_events/2` parses: the parsed iCalendar maps `ICalParser` emits
+  (unexpanded masters and their overrides) for the CalDAV family, decoded API
+  payloads for the OAuth providers. Pairing the two callbacks is only valid
+  for these.
 
   `:normalised` means `list_events/2` has already mapped its events into the
   plain-map shape the availability path consumes. Cache-backed providers
@@ -173,6 +174,20 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   `mix compile --warnings-as-errors` instead of being silently assumed raw.
   """
   @callback list_events_representation() :: :raw | :normalised
+
+  @doc """
+  Maps `list_events/2`'s answer into the plain map shape the live
+  availability read consumes: atom keys, with `:start_time` and `:end_time`.
+
+  This is a different question from `list_events_representation/0`, which
+  asks whether `normalise_events/2` can parse the answer. Parsed iCalendar
+  maps are `:raw` and already in this shape, so most providers answer their
+  events unchanged; the OAuth providers map their string-keyed API payloads.
+  Required, so a provider that answers string-keyed maps cannot be silently
+  read as converted, which would leave every event without a time and drop
+  it from the conflict check.
+  """
+  @callback convert_events(events :: list()) :: [map()]
 
   @doc """
   Discovers the user's calendars given a persisted integration.

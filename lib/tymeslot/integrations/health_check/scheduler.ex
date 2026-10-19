@@ -2,64 +2,65 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   @moduledoc """
   Domain: Intelligent Check Timing
 
-  Determines when health checks should run based on backoff strategies,
-  circuit breaker state, and jitter. Prevents system overload through
-  intelligent scheduling and duplicate prevention.
+  Decides which integrations are due a health check and enqueues one for
+  each, skipping those whose circuit breaker is open and spreading the
+  enqueued checks with jitter. Run every five minutes by
+  `Tymeslot.Workers.IntegrationHealthSweepWorker`, so an integration is
+  probed within five minutes of its backoff elapsing.
   """
 
   require Logger
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Shared.IntegrationTypes
 
   alias Tymeslot.Infrastructure.{
     CalendarCircuitBreaker,
-    CircuitBreakerHelpers,
     ErrorTracking,
+    ProviderBreakers,
     VideoCircuitBreaker
   }
 
-  alias Tymeslot.Integrations.HealthCheck.{Monitor, ProviderHelpers}
+  alias Tymeslot.Integrations.HealthCheck.ProviderHelpers
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   @max_jitter_ms 30_000
 
+  # `force: true` treats every active integration as due.
+  @end_of_time ~U[9999-12-31 23:59:59Z]
+
   @type integration_type :: :calendar | :video
 
   @doc """
-  Schedules health check jobs for all active integrations.
-  Health state is read from the database per-integration to determine if a check is due.
+  Enqueues a health check for every active integration whose check is due.
+
+  Seeds a default health state for integrations that have none, reads the
+  due ones in one query per kind, and removes health states whose
+  integration is gone. `force: true` enqueues a check for every active
+  integration regardless of backoff.
+
+  Each due integration is enqueued with its own `Oban.insert/1`, because the
+  worker's uniqueness (one pending check per integration) is enforced on a
+  single insert and not by `Oban.insert_all/1` on this engine: a check still
+  waiting out its jitter when the next sweep runs must not be doubled.
   """
   @spec schedule_all(keyword()) :: :ok
   def schedule_all(opts \\ []) do
-    now = Clock.utc_now()
-    force = Keyword.get(opts, :force, false)
+    now = if Keyword.get(opts, :force, false), do: @end_of_time, else: Clock.utc_now()
 
-    Enum.each(CalendarIntegrationQueries.list_all_active(), fn int ->
-      schedule_if_due(:calendar, int, now, force)
-    end)
+    for kind <- IntegrationTypes.kinds() do
+      IntegrationHealthStateQueries.seed_missing(kind)
 
-    Enum.each(VideoIntegrationQueries.list_all_active(), fn int ->
-      schedule_if_due(:video, int, now, force)
-    end)
+      kind
+      |> IntegrationHealthStateQueries.due(now)
+      |> Enum.each(&schedule(kind, &1))
+    end
 
     IntegrationHealthStateQueries.delete_orphaned()
 
     :ok
-  end
-
-  @doc """
-  Determines if a check is due based on health state and current time.
-  """
-  @spec due_for_check?(Monitor.health_state(), DateTime.t()) :: boolean()
-  def due_for_check?(%{last_check_at: nil}, _now), do: true
-
-  def due_for_check?(%{last_check_at: last_check_at, backoff_ms: backoff_ms}, now) do
-    next_time = DateTime.add(last_check_at, backoff_ms, :millisecond)
-    DateTime.compare(next_time, now) != :gt
   end
 
   @doc """
@@ -73,11 +74,16 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
   # Private Functions
 
-  # Isolated per-row: an exception while scheduling one integration (e.g. a
-  # malformed health state row) must not abort the sweep for every
-  # integration after it, nor take down the supervised HealthCheck GenServer.
-  defp schedule_if_due(type, integration, now, force) do
-    do_schedule_if_due(type, integration, now, force)
+  # Isolated per row: an exception while scheduling one integration must not
+  # abort the sweep for every integration after it.
+  defp schedule(type, integration) do
+    Logger.debug("Scheduling integration health check",
+      type: type,
+      integration_id: integration.id,
+      provider: integration.provider
+    )
+
+    enqueue_if_allowed(type, integration)
   rescue
     e ->
       ErrorTracking.report_error(e, __STACKTRACE__, %{
@@ -85,30 +91,6 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
         integration_id: integration.id,
         provider: integration.provider
       })
-  end
-
-  defp do_schedule_if_due(type, integration, now, force) do
-    health_state = Monitor.get_state(type, integration.id, integration.user_id)
-
-    if force || due_for_check?(health_state, now) do
-      Logger.debug("Scheduling integration health check",
-        type: type,
-        integration_id: integration.id,
-        provider: integration.provider,
-        backoff_ms: health_state.backoff_ms,
-        last_error_class: health_state.last_error_class
-      )
-
-      enqueue_if_allowed(type, integration)
-    else
-      Logger.debug("Skipping integration health check (backoff)",
-        type: type,
-        integration_id: integration.id,
-        provider: integration.provider,
-        backoff_ms: health_state.backoff_ms,
-        last_error_class: health_state.last_error_class
-      )
-    end
   end
 
   defp enqueue_if_allowed(type, integration) do
@@ -167,20 +149,32 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     end
   end
 
+  # A host breaker starts with a server's first call and is reaped once idle,
+  # so none exists for a server with no recent traffic, as after every boot.
+  # It has recorded no failures: it is closed, not missing.
+  defp unstarted_as_closed({:error, :breaker_not_found}, host)
+       when is_binary(host) and host != "",
+       do: %{status: :closed}
+
+  defp unstarted_as_closed(status, _host), do: status
+
   defp check_circuit_breaker(type, integration, provider_atom) do
+    # Self-hosted providers (the CalDAV family and Exchange for calendars,
+    # MiroTalk for video) key their circuit breaker per host, so this must
+    # check the same breaker their calls actually trip, or a tenant whose
+    # host is down never gets skipped here.
+    base_url = integration.base_url
+
     circuit_status =
       try do
         case type do
           :calendar ->
-            CalendarCircuitBreaker.status(provider_atom)
+            {breaker_provider, host} = CalendarCircuitBreaker.breaker_key(provider_atom, base_url)
+            breaker_provider |> CalendarCircuitBreaker.status(host) |> unstarted_as_closed(host)
 
           :video ->
-            # Self-hosted providers (MiroTalk) key their circuit breaker per
-            # host — see `VideoCircuitBreaker.status/2` — so this must check
-            # the same breaker `ProviderAdapter` actually trips, or a tenant
-            # whose host is down never gets skipped here.
-            host = CircuitBreakerHelpers.host_from_base_url(Map.get(integration, :base_url))
-            VideoCircuitBreaker.status(provider_atom, host)
+            host = ProviderBreakers.host_from_base_url(base_url)
+            provider_atom |> VideoCircuitBreaker.status(host) |> unstarted_as_closed(host)
         end
       rescue
         e ->

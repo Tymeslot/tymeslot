@@ -106,7 +106,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert {:ok, _uuid} = UUID.cast(meeting.uid)
 
       base = "#{Endpoint.url()}/#{profile.username}/meeting/#{meeting.uid}"
-      assert meeting.view_url == base
+      assert meeting.view_url == "#{Endpoint.url()}/dashboard/meetings"
       assert meeting.reschedule_url == base <> "/reschedule"
       assert meeting.cancel_url == base <> "/cancel"
     end
@@ -325,7 +325,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
     } do
       params = %{params | attendee_email: user.email}
 
-      assert {:error, "The guest email must differ from your own address"} =
+      assert {:error, :attendee_is_organizer} =
                CreateAdHoc.execute(params)
     end
 
@@ -335,7 +335,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
     } do
       params = %{params | attendee_email: "  #{String.upcase(user.email)}  "}
 
-      assert {:error, "The guest email must differ from your own address"} =
+      assert {:error, :attendee_is_organizer} =
                CreateAdHoc.execute(params)
     end
 

@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthEventErrorContractTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.Integrations.Calendar.Operations
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthEventErrorContractTest do
       end)
 
       assert {:error, :not_found} =
-               Operations.delete_event("event-123", {integration.id, user.id})
+               Operations.delete_event("event-123", {integration.id, user.id}, [])
     end
 
     test "an expired token surfaces as :unauthorized", %{user: user, integration: integration} do

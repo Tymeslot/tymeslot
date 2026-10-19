@@ -23,14 +23,14 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmationTest do
     assert :sent = SignupConfirmation.request(:github, oauth_data("a@example.com"), %{}, ip)
 
     remaining =
-      Enum.count(1..10, fn _i -> RateLimiter.check_verification_ip_rate_limit(ip) == :ok end)
+      Enum.count(1..10, fn _i -> RateLimiter.check(:verification_ip, ip) == :ok end)
 
     assert remaining == 4
   end
 
   test "reports the address limit, and sends nothing past it" do
     ip = "198.51.100.141"
-    for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit(ip)
+    for _i <- 1..5, do: RateLimiter.check(:verification_ip, ip)
 
     assert :rate_limited =
              SignupConfirmation.request(:github, oauth_data("b@example.com"), %{}, ip)
@@ -39,7 +39,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmationTest do
   end
 
   test "caps links per recipient without changing the reply" do
-    for _i <- 1..5, do: RateLimiter.check_social_signup_confirmation_rate_limit("c@example.com")
+    for _i <- 1..5, do: RateLimiter.check(:social_signup_confirmation, "c@example.com")
 
     assert :sent =
              SignupConfirmation.request(

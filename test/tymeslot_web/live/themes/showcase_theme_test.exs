@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.TestMocks
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Presets
@@ -395,16 +396,8 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
     @png MediaFixtures.png()
 
     setup do
-      upload_root =
-        Path.join(System.tmp_dir!(), "tymeslot_showcase_#{System.unique_integer([:positive])}")
-
-      original_root = Application.get_env(:tymeslot, :upload_directory)
-      Application.put_env(:tymeslot, :upload_directory, upload_root)
-
-      on_exit(fn ->
-        Application.put_env(:tymeslot, :upload_directory, original_root)
-        File.rm_rf(upload_root)
-      end)
+      UploadRoot.isolate("tymeslot_showcase")
+      :ok
     end
 
     test "choices made in every panel reach one booking page as its tokens and media",

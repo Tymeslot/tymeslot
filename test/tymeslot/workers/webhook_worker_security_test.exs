@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
@@ -31,15 +32,15 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
 
       # Insert webhook with encrypted token
       {:ok, webhook} =
-        %WebhookSchema{}
-        |> WebhookSchema.changeset(%{
-          name: "Test Webhook",
-          url: "https://example.com/webhook",
-          events: ["meeting.created"],
-          is_active: true,
-          user_id: user.id
-        })
-        |> Repo.insert()
+        Repo.insert(
+          WebhookSchema.create_changeset(%{
+            name: "Test Webhook",
+            url: "https://example.com/webhook",
+            events: ["meeting.created"],
+            is_active: true,
+            user_id: user.id
+          })
+        )
 
       # The token is generated automatically on insert
       webhook = WebhookSchema.decrypt_token(webhook)
@@ -75,6 +76,57 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
                  "event_type" => "meeting.created",
                  "meeting_id" => meeting.id
                })
+    end
+
+    test "signs the exact body posted with the webhook token, keeping the token header" do
+      meeting = insert(:meeting)
+      user = insert(:user)
+      test_pid = self()
+
+      {:ok, webhook} =
+        Repo.insert(
+          WebhookSchema.create_changeset(%{
+            name: "Signed Webhook",
+            url: "https://example.com/webhook",
+            events: ["meeting.created"],
+            is_active: true,
+            user_id: user.id
+          })
+        )
+
+      token = WebhookSchema.decrypt_token(webhook).webhook_token
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, headers, _opts ->
+        send(test_pid, {:posted, body, headers})
+        {:ok, %{status: 200, body: "OK"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      assert_received {:posted, body, headers}
+      assert {"X-Tymeslot-Token", ^token} = List.keyfind(headers, "X-Tymeslot-Token", 0)
+      assert_signed(headers, body, token)
+    end
+
+    test "signs the Test Connection request the same way" do
+      test_pid = self()
+      token = "ts_test-connection-token"
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, headers, _opts ->
+        send(test_pid, {:posted, body, headers})
+        {:ok, %Req.Response{status: 200, body: "OK"}}
+      end)
+
+      assert :ok = Webhooks.test_webhook_connection("https://example.com/webhook", token)
+
+      assert_received {:posted, body, headers}
+      assert {"X-Tymeslot-Token", ^token} = List.keyfind(headers, "X-Tymeslot-Token", 0)
+      assert_signed(headers, body, token)
     end
 
     test "blocks delivery and logs the attempt when the URL targets a private network in production" do
@@ -280,5 +332,20 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
     stub(Tymeslot.DnsResolverMock, :resolve_public, fn _url, _opts ->
       {:ok, [{93, 184, 216, 34}]}
     end)
+  end
+
+  # Verifies the signature as a receiver would, from the raw body it got:
+  # HMAC-SHA256 of "<t>.<body>" keyed with the token, with `t` recent.
+  defp assert_signed(headers, body, token) do
+    assert {"X-Tymeslot-Signature", signature} =
+             List.keyfind(headers, "X-Tymeslot-Signature", 0)
+
+    assert [_match, timestamp, digest] = Regex.run(~r/\At=(\d+),v1=([0-9a-f]{64})\z/, signature)
+
+    expected =
+      Base.encode16(:crypto.mac(:hmac, :sha256, token, timestamp <> "." <> body), case: :lower)
+
+    assert digest == expected
+    assert abs(System.os_time(:second) - String.to_integer(timestamp)) < 60
   end
 end

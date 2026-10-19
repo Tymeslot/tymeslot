@@ -18,7 +18,6 @@ defmodule Tymeslot.Emails.Templates.PollVoteDigest do
     MjmlEmail,
     PollHost,
     PollStandings,
-    Sanitise,
     TemplateHelper,
     Text
   }
@@ -52,11 +51,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteDigest do
 
       MjmlEmail.base_email(tracking: :lifecycle)
       |> to({host_name, poll.user.email})
-      |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_polls", "New responses on \"%{title}\"", title: poll.title)
-        )
-      )
+      |> subject(dgettext("emails_polls", "New responses on \"%{title}\"", title: poll.title))
       |> html_body(html_body)
       |> text_body(
         build_text_body(headline, names, PollStandings.text(poll, locale), results_url)

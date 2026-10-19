@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
   on the organiser's dashboard.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -30,6 +31,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
           confirmation_sent_at: DateTime.t() | nil,
           invited_by: inviter() | nil,
           reminders_sent: [map()] | nil,
+          notified_end_time: DateTime.t() | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -44,8 +46,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
     field(:status, :string, default: "pending")
     # Every email a guest is sent (confirmation, reminders, reschedules)
     # rebuilds their RSVP links from this token, so it is encrypted rather
-    # than only hashed, and looked up by `rsvp_token_hash`. The plain
-    # `rsvp_token` column predates this and is no longer read or written.
+    # than only hashed, and looked up by `rsvp_token_hash`.
     field(:rsvp_token, EncryptedString, source: :rsvp_token_encrypted, redact: true)
     field(:rsvp_token_hash, :string)
     field(:responded_at, :utc_datetime)
@@ -54,6 +55,10 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # Who put this guest on the meeting. Nil on rows from before the column,
     # which read as the booker (see `inviter/1`).
     field(:invited_by, Ecto.Enum, values: [:booker, :organizer])
+    # The end this guest was last told by an end change notice, or held before
+    # a change not yet announced; nil when it knows the meeting as booked or
+    # last rescheduled. Written only by the end change and reschedule paths.
+    field(:notified_end_time, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
     belongs_to(:participant, ParticipantSchema, type: :binary_id)
@@ -95,11 +100,11 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # colleague is fine, and used to fail the second booking outright.
     |> unique_constraint([:meeting_id, :email],
       name: :meeting_guests_meeting_id_email_solo_index,
-      message: "has already been added"
+      message: dgettext_noop("errors", "has already been added")
     )
     |> unique_constraint([:meeting_id, :participant_id, :email],
       name: :meeting_guests_participant_id_email_index,
-      message: "has already been added"
+      message: dgettext_noop("errors", "has already been added")
     )
     |> foreign_key_constraint(:meeting_id)
     |> foreign_key_constraint(:participant_id)
@@ -165,13 +170,6 @@ defmodule Tymeslot.Meetings.GuestSchema do
   def status_key("declined"), do: :declined
   def status_key(_pending), do: :pending
 
-  # Generates an unguessable, URL-safe RSVP token.
-  defp generate_token do
-    @token_bytes
-    |> :crypto.strong_rand_bytes()
-    |> Base.url_encode64(padding: false)
-  end
-
   defp ensure_status(changeset) do
     case get_field(changeset, :status) do
       nil -> put_change(changeset, :status, "pending")
@@ -181,7 +179,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
 
   defp ensure_rsvp_token(changeset) do
     case get_field(changeset, :rsvp_token) do
-      nil -> put_change(changeset, :rsvp_token, generate_token())
+      nil -> put_change(changeset, :rsvp_token, Token.generate(@token_bytes))
       _present -> changeset
     end
   end

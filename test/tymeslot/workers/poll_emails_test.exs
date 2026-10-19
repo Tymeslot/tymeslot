@@ -12,11 +12,13 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   @moduletag :emails
 
   import Swoosh.TestAssertions
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.Invitations
@@ -609,5 +611,19 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   defp request(poll, attrs) do
     :ok = Voting.request_link(poll, attrs)
     PollParticipantQueries.get_by_poll_and_email(poll.id, attrs.email)
+  end
+
+  describe "the deadline reminder's language" do
+    # A participant row with no usable language falls back to the booking
+    # pages' default, not to English.
+    test "is the booking pages' default for a participant with none" do
+      with_config(:tymeslot, :booking_default_locale, "de")
+      poll = insert(:poll, title: "Sprint Planning")
+      participant = insert(:poll_participant, poll: poll, locale: nil)
+
+      email = PollDeadlineReminder.render(poll, participant, "https://example.com/p/vote")
+
+      assert email.subject == "Erinnerung: Stimmen Sie über „Sprint Planning“ ab"
+    end
   end
 end

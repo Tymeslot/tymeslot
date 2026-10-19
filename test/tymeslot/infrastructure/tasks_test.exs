@@ -117,6 +117,29 @@ defmodule Tymeslot.Infrastructure.TasksTest do
     end
   end
 
+  describe "the task runs in its caller's locale" do
+    test "with_context/1, as a LiveView's start_async uses it" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      fun = Tasks.with_context(fn -> Gettext.get_locale(TymeslotWeb.Gettext) end)
+      parent = self()
+
+      spawn(fn -> send(parent, {:locale, fun.()}) end)
+
+      assert_receive {:locale, "de"}
+    end
+
+    test "async/1, so text it builds is translated" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      message =
+        Task.await(
+          Tasks.async(fn -> Gettext.dgettext(TymeslotWeb.Gettext, "errors", "can't be blank") end)
+        )
+
+      assert message == "darf nicht leer sein"
+    end
+  end
+
   describe "a crash inside a task" do
     setup do
       with_config(:error_tracker, enabled: true)

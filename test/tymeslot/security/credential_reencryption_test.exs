@@ -4,75 +4,33 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
   @moduletag :integration
 
   alias Ecto.UUID
-  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-  alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.GuestSchema
-  alias Tymeslot.Meetings.ParticipantSchema
-  alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Polls.PollSchema
-  alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.CredentialReencryption
   alias Tymeslot.Security.EncryptedStorage
+  alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
-  alias Tymeslot.Slack
   alias Tymeslot.Slack.SlackIntegrationSchema
-  alias Tymeslot.Telegram
   alias Tymeslot.Telegram.TelegramIntegrationSchema
-  alias Tymeslot.Webhooks
+  alias Tymeslot.Test.LegacyCiphertext
   alias Tymeslot.Webhooks.WebhookSchema
-
-  # {context, table_name} — every context the sweep is expected to cover.
-  # Keeping this list here, alongside the guard test below, means a context
-  # gaining a new `*_encrypted` field without updating its
-  # `encrypted_storage/0` fails this test rather than silently stranding a
-  # secret on the legacy key.
-  @covered_contexts [
-    {Calendar, "calendar_integrations"},
-    {Video, "video_integrations"},
-    {Slack, "slack_integrations"},
-    {Telegram, "telegram_integrations"},
-    {Webhooks, "webhooks"},
-    {Meetings, "meeting_guests"},
-    {Meetings, "meeting_participants"},
-    {Polls, "polls"},
-    {Polls, "poll_participants"},
-    {Profiles, "profiles"}
-  ]
-
-  # Schemas whose credentials sit behind a virtual field and an explicit
-  # `*_encrypted` field, listed by `encrypted_credential_fields/0`.
-  @encrypted_credential_schemas [
-    CalendarIntegrationSchema,
-    VideoIntegrationSchema,
-    SlackIntegrationSchema,
-    TelegramIntegrationSchema,
-    WebhookSchema
-  ]
-
-  # Every schema of a swept table, whichever way it maps its encrypted columns.
-  @swept_schemas @encrypted_credential_schemas ++
-                   [
-                     GuestSchema,
-                     ParticipantSchema,
-                     PollSchema,
-                     PollParticipantSchema,
-                     ProfileSchema
-                   ]
 
   defp reload_token(schema, id) do
     Repo.get!(schema, id).bot_token_encrypted
+  end
+
+  setup_all do
+    {:ok, modules} = :application.get_key(:tymeslot, :modules)
+    Enum.each(modules, &Code.ensure_loaded!/1)
+    %{modules: modules}
   end
 
   describe "run/1" do
     test "migrates legacy v0 values to the current version and leaves current values untouched" do
       legacy =
         insert(:telegram_integration,
-          bot_token_encrypted: Encryption.encrypt_legacy("legacy-bot-token")
+          bot_token_encrypted: LegacyCiphertext.encrypt("legacy-bot-token")
         )
 
       current =
@@ -103,7 +61,7 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
       webhook = insert(:webhook)
 
       Repo.update_all(from(w in "webhooks", where: w.id == ^webhook.id),
-        set: [url_encrypted: Encryption.encrypt_legacy("https://hooks.example.com/legacy")]
+        set: [url_encrypted: LegacyCiphertext.encrypt("https://hooks.example.com/legacy")]
       )
 
       assert {:ok, %{tables: %{"webhooks" => %{migrated_values: 1}}}} =
@@ -123,7 +81,7 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
 
       for poll <- polls do
         Repo.query!("UPDATE polls SET token_encrypted = $1 WHERE id = $2", [
-          Encryption.encrypt_legacy(poll.token),
+          LegacyCiphertext.encrypt(poll.token),
           UUID.dump!(poll.id)
         ])
       end
@@ -137,7 +95,7 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
     end
 
     test "a second run is a no-op" do
-      insert(:telegram_integration, bot_token_encrypted: Encryption.encrypt_legacy("token"))
+      insert(:telegram_integration, bot_token_encrypted: LegacyCiphertext.encrypt("token"))
 
       assert {:ok, %{totals: %{migrated_values: first}}} = CredentialReencryption.run()
       assert first >= 1
@@ -161,22 +119,22 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
       legacy_calendar =
         insert(:calendar_integration,
           provider: "google",
-          username_encrypted: Encryption.encrypt_legacy("legacy-username"),
-          password_encrypted: Encryption.encrypt_legacy("legacy-password"),
-          access_token_encrypted: Encryption.encrypt_legacy("legacy-access-token"),
-          refresh_token_encrypted: Encryption.encrypt_legacy("legacy-refresh-token")
+          username_encrypted: LegacyCiphertext.encrypt("legacy-username"),
+          password_encrypted: LegacyCiphertext.encrypt("legacy-password"),
+          access_token_encrypted: LegacyCiphertext.encrypt("legacy-access-token"),
+          refresh_token_encrypted: LegacyCiphertext.encrypt("legacy-refresh-token")
         )
 
       legacy_video =
         insert(:video_integration,
           provider: "teams",
-          api_key_encrypted: Encryption.encrypt_legacy("legacy-api-key"),
-          access_token_encrypted: Encryption.encrypt_legacy("legacy-access-token"),
-          refresh_token_encrypted: Encryption.encrypt_legacy("legacy-refresh-token"),
-          client_id_encrypted: Encryption.encrypt_legacy("legacy-client-id"),
-          client_secret_encrypted: Encryption.encrypt_legacy("legacy-client-secret"),
-          tenant_id_encrypted: Encryption.encrypt_legacy("legacy-tenant-id"),
-          teams_user_id_encrypted: Encryption.encrypt_legacy("legacy-teams-user-id")
+          api_key_encrypted: LegacyCiphertext.encrypt("legacy-api-key"),
+          access_token_encrypted: LegacyCiphertext.encrypt("legacy-access-token"),
+          refresh_token_encrypted: LegacyCiphertext.encrypt("legacy-refresh-token"),
+          client_id_encrypted: LegacyCiphertext.encrypt("legacy-client-id"),
+          client_secret_encrypted: LegacyCiphertext.encrypt("legacy-client-secret"),
+          tenant_id_encrypted: LegacyCiphertext.encrypt("legacy-tenant-id"),
+          teams_user_id_encrypted: LegacyCiphertext.encrypt("legacy-teams-user-id")
         )
 
       assert {:ok, %{tables: tables}} = CredentialReencryption.run()
@@ -227,52 +185,77 @@ defmodule Tymeslot.Security.CredentialReencryptionTest do
   end
 
   describe "covered_tables/0" do
-    test "every covered context implements the EncryptedStorage behaviour" do
-      for {context, _table} <- @covered_contexts do
-        assert EncryptedStorage in (context.module_info(:attributes)[:behaviour] || []),
-               "expected #{inspect(context)} to implement Tymeslot.Security.EncryptedStorage"
-      end
+    # Derived from the compiled application rather than kept by hand, so a new
+    # schema, context or encrypted column is checked the moment it exists.
+    # `:application.get_key/2` lists every module, loaded or not, which is
+    # what a release (loading modules lazily) needs too. Loading them all can
+    # outlast a test's 60 s timeout on a loaded machine, so it is done once,
+    # in `setup_all`, which the timeout does not cover.
+
+    test "sweeps every encrypted column of every schema", %{modules: modules} do
+      expected = MapSet.new(encrypted_columns(modules))
+
+      covered =
+        MapSet.new(
+          for {table, columns} <- CredentialReencryption.covered_tables(),
+              column <- columns,
+              do: {table, column}
+        )
+
+      assert MapSet.size(expected) > 0
+      assert MapSet.difference(expected, covered) == MapSet.new(), "not swept"
+      assert MapSet.difference(covered, expected) == MapSet.new(), "swept but not encrypted"
     end
 
-    test "covers exactly the tables of every context expected to be swept" do
-      covered = Map.new(CredentialReencryption.covered_tables())
+    test "every context implementing EncryptedStorage is swept", %{modules: modules} do
+      implementers =
+        Enum.filter(modules, fn module ->
+          EncryptedStorage in (module.module_info(:attributes)
+                               |> Keyword.get_values(:behaviour)
+                               |> List.flatten())
+        end)
 
-      assert Enum.sort(Map.keys(covered)) ==
-               Enum.sort(Enum.map(@covered_contexts, fn {_context, table} -> table end))
+      assert implementers != []
+
+      declared = Enum.flat_map(implementers, &List.wrap(&1.encrypted_storage()))
+      assert Enum.sort(declared) == Enum.sort(CredentialReencryption.covered_tables())
     end
 
-    test "sweeps every encrypted column of each table, EncryptedString fields included" do
-      # A field typed `EncryptedString` maps to its `*_encrypted` column under
-      # another name, so only the column names show what the sweep must cover.
-      covered = Map.new(CredentialReencryption.covered_tables())
-
-      for schema <- @swept_schemas do
-        columns =
-          for field <- schema.__schema__(:fields),
-              column = schema.__schema__(:field_source, field),
-              String.ends_with?(to_string(column), "_encrypted"),
-              do: column
-
-        assert Enum.sort(Map.fetch!(covered, schema.__schema__(:source))) == Enum.sort(columns)
-      end
-    end
-
-    test "every schema's encrypted_credential_fields/0 matches its actual *_encrypted columns" do
+    test "every encrypted_credential_fields/0 matches its schema's *_encrypted fields", %{
+      modules: modules
+    } do
       # A new `*_encrypted` field added to a schema but never added to
       # `encrypted_credential_fields/0` would silently strand that column on
       # the legacy key forever — the sweep only ever sees the declared list.
-      for schema <- @encrypted_credential_schemas do
-        actual_encrypted_fields =
+      schemas = Enum.filter(modules, &function_exported?(&1, :encrypted_credential_fields, 0))
+
+      assert schemas != []
+
+      for schema <- schemas do
+        actual =
           schema.__schema__(:fields)
           |> Enum.filter(&String.ends_with?(to_string(&1), "_encrypted"))
           |> Enum.sort()
 
-        assert actual_encrypted_fields != [],
-               "expected #{inspect(schema)} to declare at least one *_encrypted field"
-
-        assert actual_encrypted_fields == Enum.sort(schema.encrypted_credential_fields()),
-               "expected #{inspect(schema)}.encrypted_credential_fields/0 to match its actual *_encrypted schema fields"
+        assert actual == Enum.sort(schema.encrypted_credential_fields()),
+               "expected #{inspect(schema)}.encrypted_credential_fields/0 to match its *_encrypted fields"
       end
     end
+  end
+
+  # `{table, column}` for every column a schema encrypts: a field typed
+  # `EncryptedString` (stored under a `*_encrypted` source), or a binary field
+  # holding ciphertext under a `*_encrypted` name.
+  defp encrypted_columns(modules) do
+    for module <- modules,
+        function_exported?(module, :__schema__, 1),
+        table = module.__schema__(:source),
+        is_binary(table),
+        field <- module.__schema__(:fields),
+        column = module.__schema__(:field_source, field),
+        module.__schema__(:type, field) == EncryptedString or
+          String.ends_with?(to_string(column), "_encrypted"),
+        uniq: true,
+        do: {table, column}
   end
 end

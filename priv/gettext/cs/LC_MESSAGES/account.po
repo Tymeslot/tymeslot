@@ -13,30 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} day ago"
-msgid_plural "%{count} days ago"
-msgstr[0] "před %{count} dnem"
-msgstr[1] "před %{count} dny"
-msgstr[2] "před %{count} dny"
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} hour ago"
-msgid_plural "%{count} hours ago"
-msgstr[0] "před %{count} hodinou"
-msgstr[1] "před %{count} hodinami"
-msgstr[2] "před %{count} hodinami"
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minute ago"
-msgid_plural "%{count} minutes ago"
-msgstr[0] "před %{count} minutou"
-msgstr[1] "před %{count} minutami"
-msgstr[2] "před %{count} minutami"
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
 msgstr "Ověřovací e-mail byl odeslán na adresu"
 
@@ -66,6 +42,7 @@ msgid "Back to Dashboard"
 msgstr "Zpět na nástěnku"
 
 #: lib/tymeslot_web/live/account_live/components.ex
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Zrušit"
@@ -95,6 +72,7 @@ msgstr "Potvrzení nového hesla"
 msgid "Confirm your new password"
 msgstr "Potvrďte své nové heslo"
 
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Current Password"
@@ -165,11 +143,6 @@ msgstr "Přihlášení heslem není u účtů se sociálním přihlášením k
 msgid "Pending change to:"
 msgstr "Požadovaná změna na:"
 
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "Sent %{time}"
-msgstr "Odesláno %{time}"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Update Email"
@@ -194,11 +167,6 @@ msgstr "Aktualizace hesla"
 #, elixir-autogen, elixir-format
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr "Heslo bylo změněno. Přihlaste se prosím znovu novým heslem."
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "just now"
-msgstr "právě teď"
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
@@ -244,3 +212,180 @@ msgstr "Automaticky"
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
 msgstr "Řídit se nastavením jazyka v prohlížeči místo pevné volby."
+
+#: lib/tymeslot/auth/account_deletion/request.ex
+#, elixir-autogen, elixir-format
+msgid "That is not the email address of this account."
+msgstr "To není e-mailová adresa tohoto účtu."
+
+#: lib/tymeslot/auth/account_deletion/request.ex
+#, elixir-autogen, elixir-format
+msgid "Your account could not be scheduled for deletion. Please try again."
+msgstr "Váš účet se nepodařilo naplánovat ke smazání. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Another reason"
+msgstr "Jiný důvod"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Anything else you would like to tell us? (optional)"
+msgstr "Chcete nám ještě něco sdělit? (nepovinné)"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar events and video links that already exist stay as they are. If a meeting will not take place, contact your guests yourself."
+msgstr "Již vytvořené události v kalendáři a odkazy na videohovory zůstanou beze změny. Pokud se schůzka nebude konat, kontaktujte své hosty osobně."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a reason"
+msgstr "Vyberte důvod"
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "Delete account"
+msgstr "Smazat účet"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete account now"
+msgstr "Smazat účet hned"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete your account"
+msgstr "Smazání účtu"
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "Delete your account and everything in it immediately. This cannot be undone."
+msgstr "Okamžitě smažte svůj účet a vše, co obsahuje. Tuto akci nelze vrátit zpět."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting..."
+msgstr "Mazání…"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "I no longer need it"
+msgstr "Už ho nepotřebuji"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "I switched to another tool"
+msgstr "Teď používám jiný nástroj"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "It costs too much"
+msgstr "Je to příliš drahé"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "It is hard to use"
+msgstr "Špatně se ovládá"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "It is missing something I need"
+msgstr "Chybí mi v něm něco, co potřebuji"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule deletion"
+msgstr "Naplánovat smazání"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Something kept going wrong"
+msgstr "Něco stále nefungovalo"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Type your email address to confirm"
+msgstr "Pro potvrzení zadejte svou e-mailovou adresu"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Until then it is frozen and your booking page is offline. Sign in before that date to restore it."
+msgstr "Do té doby je účet zmrazen a vaše rezervační stránka je offline. Pokud se přihlásíte před tímto datem, účet obnovíte."
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "Upcoming bookings are deleted from Tymeslot and your guests are not notified."
+msgstr "Nadcházející rezervace se ze služby Tymeslot smažou a vaši hosté nebudou upozorněni."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Why are you leaving? (optional)"
+msgstr "Proč odcházíte? (nepovinné)"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your account and everything in it will be deleted immediately. This cannot be undone."
+msgstr "Váš účet bude okamžitě smazán i se vším, co obsahuje. Tuto akci nelze vrátit zpět."
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your account has been deleted."
+msgstr "Váš účet byl smazán."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your account will be deleted on %{date}."
+msgstr "Váš účet bude smazán dne %{date}."
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
+msgstr "Váš účet bude smazán dne %{date}. Pokud si to rozmyslíte, přihlaste se před tímto datem."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your upcoming bookings will be deleted from Tymeslot. Your guests will not be notified."
+msgstr "Vaše nadcházející rezervace budou ze služby Tymeslot smazány. Vaši hosté nebudou upozorněni."
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "If you delete your account, it is frozen for %{count} day, then deleted. Sign in during that time to restore it."
+msgid_plural "If you delete your account, it is frozen for %{count} days, then deleted. Sign in during that time to restore it."
+msgstr[0] "Pokud svůj účet smažete, bude zmrazen na %{count} den, poté bude smazán. Pokud se v této době přihlásíte, účet obnovíte."
+msgstr[1] "Pokud svůj účet smažete, bude zmrazen na %{count} dny, poté bude smazán. Pokud se v této době přihlásíte, účet obnovíte."
+msgstr[2] "Pokud svůj účet smažete, bude zmrazen na %{count} dní, poté bude smazán. Pokud se v této době přihlásíte, účet obnovíte."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{count} day ago"
+msgid_plural "Sent %{count} days ago"
+msgstr[0] "Odesláno před %{count} dnem"
+msgstr[1] "Odesláno před %{count} dny"
+msgstr[2] "Odesláno před %{count} dny"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{count} hour ago"
+msgid_plural "Sent %{count} hours ago"
+msgstr[0] "Odesláno před %{count} hodinou"
+msgstr[1] "Odesláno před %{count} hodinami"
+msgstr[2] "Odesláno před %{count} hodinami"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{count} minute ago"
+msgid_plural "Sent %{count} minutes ago"
+msgstr[0] "Odesláno před %{count} minutou"
+msgstr[1] "Odesláno před %{count} minutami"
+msgstr[2] "Odesláno před %{count} minutami"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent just now"
+msgstr "Odesláno právě teď"
+
+#: lib/tymeslot/auth/account_deletion/request.ex
+#, elixir-autogen, elixir-format
+msgid "You are the only admin who can sign in, so this account cannot be deleted yet. Make another account an admin first, or ask the server operator to delete it from the release shell."
+msgstr "Jste jediný správce, který se může přihlásit, takže tento účet zatím nelze smazat. Nejprve udělejte správcem jiný účet, nebo požádejte provozovatele serveru, aby jej smazal z release shellu."

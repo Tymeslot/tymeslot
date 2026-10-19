@@ -21,11 +21,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.CalDAV.BookingDocument
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Shared.EventSearch
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
@@ -180,8 +180,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   Every calendar of the integration a client reaches is asked in turn, since
   the event may live in any of them. Those are the selected calendars the
   organiser can write to, and the booking calendar: a CalDAV calendar
-  selected read-only gets no client (`ProviderCommon.caldav_writable_paths/1`),
-  so its refusal cannot leave the event's absence unproven. When every one of
+  selected read-only is not asked
+  (`ClientManager.writable_clients_for_integration/1`), so its refusal
+  cannot leave the event's absence unproven. When every one of
   them says it does not exist, the provider looks for it in the account's
   other writable calendars, where the organiser may have moved it
   (`Provider.find_moved_event/2`). A cancelled event counts as none. The
@@ -195,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           {:ok, list()} | {:error, :not_found} | {:error, term()}
   def fetch_event(event_ref, {integration_id, user_id})
       when is_integer(integration_id) and is_integer(user_id) do
-    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
+    case Management.fetch_integration_for_user(integration_id, user_id) do
       {:ok, integration} ->
         event_ref = Map.put(event_ref, :calendar_integration_id, integration_id)
         clients = event_clients(integration)
@@ -209,12 +210,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
     end
   end
 
-  # One client per calendar the integration reaches, plus the booking calendar
-  # Tymeslot writes new events to, which need not be among the selected ones.
+  # One client per writable calendar the integration reaches, plus the booking
+  # calendar Tymeslot writes new events to, which need not be among the
+  # selected ones.
   defp event_clients(integration) do
     booking = ClientManager.get_client_by_integration_id(integration.id, integration.user_id)
 
-    Enum.uniq(ClientManager.clients_for_integration(integration) ++ List.wrap(booking))
+    Enum.uniq(ClientManager.writable_clients_for_integration(integration) ++ List.wrap(booking))
   end
 
   defp fetch_from_clients([], _event_ref), do: {:error, :no_calendar_client}

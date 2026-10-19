@@ -482,4 +482,65 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       assert meta[:provider] == :google
     end
   end
+
+  # Google's holiday calendar ids carry a `#`, which left as it is in a URL
+  # ends the path: the request then goes to another calendar and answers 404.
+  describe "provider ids with reserved characters" do
+    @holiday_id "en.uk#holiday@group.v.calendar.google.com"
+    @encoded_holiday_id "en.uk%23holiday%40group.v.calendar.google.com"
+    @base "https://www.googleapis.com/calendar/v3"
+
+    setup do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      %{integration: integration}
+    end
+
+    test "list_events/4 reads a holiday calendar by its whole id", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        assert %URI{path: "/calendar/v3/calendars/" <> @encoded_holiday_id <> "/events"} =
+                 URI.parse(url)
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
+      end)
+
+      now = DateTime.utc_now()
+
+      assert {:ok, []} =
+               CalendarAPI.list_events(integration, @holiday_id, now, DateTime.add(now, 3600))
+    end
+
+    test "create_event/3 writes to a holiday calendar by its whole id", %{
+      integration: integration
+    } do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, url, _body, _headers, _opts ->
+        assert url == "#{@base}/calendars/#{@encoded_holiday_id}/events?sendUpdates=none"
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "created"})}}
+      end)
+
+      event_data = %{
+        summary: "Meeting",
+        start_time: DateTime.utc_now(),
+        end_time: DateTime.add(DateTime.utc_now(), 3600),
+        timezone: "UTC"
+      }
+
+      assert {:ok, %{"id" => "created"}} =
+               CalendarAPI.create_event(integration, @holiday_id, event_data)
+    end
+
+    test "delete_event/3 keeps a `/` inside the calendar id", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        assert url == "#{@base}/calendars/team%2Fshared/events/abc123"
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = CalendarAPI.delete_event(integration, "team/shared", "abc123")
+    end
+  end
 end

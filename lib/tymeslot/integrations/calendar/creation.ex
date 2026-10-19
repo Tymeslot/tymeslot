@@ -5,22 +5,22 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.SanitizeMerge
   alias Tymeslot.Workers.SyncIcsCalendarWorker
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -29,8 +29,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
 
   @doc """
-  Validates incoming params (security-aware), creates the integration via Calendar,
-  and ensures the first integration becomes primary.
+  Validates incoming params (security-aware), creates the integration with
+  `create/2`, and ensures the first integration becomes primary.
 
   Returns:
     {:ok, %CalendarIntegrationSchema{}}
@@ -52,14 +52,13 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       when is_integer(user_id) and is_map(params) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    with {:ok, sanitized} <-
+    with :ok <- check_creatable_provider(params["provider"]),
+         {:ok, sanitized} <-
            CalendarInputValidation.validate_calendar_integration_form(params, metadata: metadata),
          :ok <- check_write_budget(user_id),
          validated <- SanitizeMerge.merge(params, sanitized),
          :ok <- check_no_duplicate_calendar(user_id, validated),
-         count_before <- length(CalendarManagement.list_calendar_integrations(user_id)),
-         {:ok, integration} <- Calendar.create_integration(validated, user_id) do
-      ensure_primary_on_first(user_id, integration.id, count_before)
+         {:ok, integration} <- create(validated, user_id) do
       {:ok, integration}
     else
       {:error, :duplicate_integration} ->
@@ -78,6 +77,25 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
       {:error, validation_errors} when is_map(validation_errors) ->
         {:error, {:form_errors, validation_errors}}
+    end
+  end
+
+  @doc """
+  Creates a calendar integration from params that have already passed form
+  validation, with provider-specific parsing and the pre-validation probe.
+  """
+  @spec create(%{String.t() => term()}, user_id()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | term()}
+  def create(params, user_id) when is_map(params) and is_integer(user_id) do
+    # The changeset runs before the pre-validation probe, not after it. A
+    # submission it rejects is decided entirely in-process, while the probe is
+    # an outbound request to an address the organiser typed and is metered as
+    # one; charging their connection budget for a local rejection is what made a
+    # save report itself as too many connection tests.
+    with {:ok, attrs} <- prepare_attrs(params, user_id),
+         :ok <- CalendarIntegrationSchema.validate_new(attrs),
+         {:ok, attrs} <- prevalidate_config(attrs) do
+      Management.create_calendar_integration(attrs)
     end
   end
 
@@ -113,11 +131,10 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
          # rejects never leaves the machine and must not cost a token.
          :ok <- CalendarIntegrationSchema.validate_new(attrs),
          {:ok, attrs} <- probe_subscription(attrs, user_id),
-         # Deliberately no `ensure_primary_on_first/3`: a subscription can never
-         # receive a booking, so promoting one to primary would leave a user whose
-         # only calendar is a subscription with a primary that silently fails
-         # every booking write.
-         {:ok, integration} <- CalendarManagement.create_calendar_integration(attrs) do
+         # A subscription is never made the primary: it can never receive a
+         # booking, and `PrimaryElection.adopt_if_vacant/1` refuses a read-only
+         # provider.
+         {:ok, integration} <- Management.create_calendar_integration(attrs) do
       enqueue_initial_sync(integration)
       {:ok, integration}
     else
@@ -153,7 +170,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
   @spec check_write_budget(user_id()) :: :ok | {:error, {:rate_limited, String.t()}}
   def check_write_budget(user_id) when is_integer(user_id) and user_id > 0 do
-    case RateLimiter.check_integration_write_rate_limit(user_id) do
+    case RateLimiter.check(:integration_write, user_id) do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, {:rate_limited, message}}
     end
@@ -194,7 +211,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     :sha256 |> :crypto.hash(url) |> Base.encode16(case: :lower)
   end
 
-  defp subscription_attrs(user_id, %{"name" => name, "url" => url} = sanitized) do
+  defp subscription_attrs(user_id, %{"name" => name, "url" => url} = params) do
     %{
       user_id: user_id,
       name: name,
@@ -205,9 +222,9 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       subscription_url: url,
       provider_account_id: subscription_account_id(url),
       calendar_paths: [],
-      calendar_list: [subscription_calendar()],
+      calendar_list: [subscription_calendar(params)],
       is_active: true,
-      all_events_busy: Map.get(sanitized, "all_events_busy", false)
+      all_events_busy: Map.get(params, "all_events_busy", false)
     }
   end
 
@@ -222,14 +239,16 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     end
   end
 
-  defp subscription_calendar do
+  # The feed blocks availability unless the form said to show it only.
+  defp subscription_calendar(params) do
     %CalendarEntry{
       id: "subscription",
       path: "subscription",
       name: "Subscribed calendar",
       type: "calendar",
       selected: true,
-      read_only: true
+      read_only: true,
+      blocks_availability: Map.get(params, "blocks_availability", true)
     }
   end
 
@@ -284,17 +303,23 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     end
   end
 
-  @doc """
-  If this was the user's first integration, set it as primary.
-  """
-  @spec ensure_primary_on_first(user_id(), pos_integer(), non_neg_integer()) ::
-          :ok | {:error, term()}
-  def ensure_primary_on_first(user_id, new_integration_id, count_before) do
-    case count_before do
-      0 -> CalendarPrimary.set_primary_calendar_integration(user_id, new_integration_id)
-      _count -> :ok
+  # The connection form is the only way into `create_with_validation/3`, and
+  # it connects CalDAV-family servers: discovery, the connection probe and the
+  # calendar selection are all CalDAV-shaped. Any other provider arriving
+  # here (Google, Outlook, a feed, the dev-only debug provider) would be
+  # created unprobed with whatever URL and credentials came with it, as would
+  # one the operator has switched off.
+  defp check_creatable_provider(provider) do
+    with {:ok, atom} <- ProviderConfig.parse(provider),
+         true <- atom in ProviderConfig.caldav_based_providers() do
+      :ok
+    else
+      _refused -> {:error, %{generic: [unsupported_provider_message()]}}
     end
   end
+
+  defp unsupported_provider_message,
+    do: dgettext("dashboard_calendar_settings", "Unsupported provider")
 
   # ---------------------------
   # Param shaping and pre-validation (moved from facade)
@@ -476,6 +501,9 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
         {:error, :unattributable} ->
           {:error, :unattributable}
 
+        {:error, {:invalid_config, message}} ->
+          {:error, %{discovery: message}}
+
         # Reported against `:discovery`, the key both CalDAV forms already use
         # for "the connection attempt itself failed". A probe failure is never
         # attributable to one input: the reason arrives as a sanitised sentence,
@@ -489,18 +517,9 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       end
     else
       # A CalDAV-family provider the operator has switched off fails
-      # validation, so there is nothing to probe with; creation goes ahead
-      # unprobed, as it always has, but no longer silently. `provider` is one
-      # of the fixed CalDAV-family names (the clause's guard), never
-      # arbitrary input.
-      {:error, _error} ->
-        Logger.warning(
-          "Skipped the connection probe for a calendar provider that is switched off",
-          provider: provider,
-          user_id: attrs[:user_id]
-        )
-
-        {:ok, attrs}
+      # validation, so there is nothing to probe with, and nothing that has
+      # not been probed is created.
+      {:error, _error} -> {:error, %{discovery: unsupported_provider_message()}}
     end
   end
 
@@ -518,11 +537,19 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   # probe already-persisted integrations, which must not be re-validated against
   # current input rules (see `Connection.probe/3`). Validating first also means a
   # malformed submission is rejected without ever charging a rate-limit token.
+  # A `validate_config/1` refusal is already a sentence in the user's
+  # language, so it is tagged and shown as it is: run through the sanitiser,
+  # whose keyword matching only knows English, it would lose its meaning.
   defp test_config(provider_atom, config, user_id) do
     with {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom),
-         :ok <- provider_module.validate_config(config),
+         :ok <- tag_config_refusal(provider_module.validate_config(config)),
          {:ok, _message} <- Connection.probe(provider_atom, config, {:user, user_id}) do
       :ok
     end
   end
+
+  defp tag_config_refusal({:error, message}) when is_binary(message),
+    do: {:error, {:invalid_config, message}}
+
+  defp tag_config_refusal(result), do: result
 end

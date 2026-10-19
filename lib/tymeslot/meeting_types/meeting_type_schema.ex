@@ -8,11 +8,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.ReminderValidation
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
@@ -145,6 +145,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
     * `:host_charges_enabled` (default `false`) — whether the host's Stripe
       Connect account can accept charges.
+    * `:price_settable` (default `false`) — whether the host may set or
+      change a price (`Tymeslot.MeetingPayments.price_settable?/1`). Without
+      it, turning payment on or changing a price is refused; turning payment
+      off is not.
     * `:currency` (default `"usd"`) — the host's pricing currency, used only
       to format the minimum-charge error message in major units.
     * `:currency_minimum_cents` (default `50`) — minimum charge amount in
@@ -193,19 +197,16 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_required([:name, :duration_minutes, :user_id])
     |> validate_length(:name, Constraints.name_length_opts())
     |> validate_length(:description, max: Constraints.description_max_length())
-    |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
-    |> validate_number(:slot_interval_minutes, Constraints.slot_interval_minutes_opts())
-    |> validate_number(:sort_order, greater_than_or_equal_to: 0)
-    |> validate_number(:max_participants, Constraints.max_participants_opts())
-    |> validate_number(:last_spots_threshold, Constraints.last_spots_threshold_opts())
-    |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
+    |> validate_numbers()
     |> validate_booking_limits(:meeting_types)
-    |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
+    |> validate_inclusion(:icon, @valid_icons,
+      message: dgettext_noop("errors", "must be one of the available icons")
+    )
     |> normalize_slug()
     |> validate_slug()
     |> validate_video_integration()
     |> validate_calendar_destination()
-    |> validate_reminder_config()
+    |> ReminderValidation.validate_changeset()
     |> validate_payment_fields(opts)
     |> validate_group_rules()
     |> unique_constraint([:user_id, :name],
@@ -214,12 +215,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     )
     |> unique_constraint([:user_id, :slug],
       name: :meeting_types_user_id_slug_index,
-      message: "is already taken"
+      message: dgettext_noop("errors", "is already taken")
     )
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:video_integration_id)
     |> foreign_key_constraint(:calendar_integration_id)
     |> foreign_key_constraint(:availability_schedule_id)
+  end
+
+  defp validate_numbers(changeset) do
+    changeset
+    |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
+    |> validate_duration_step()
+    |> validate_number(:slot_interval_minutes, Constraints.slot_interval_minutes_opts())
+    |> validate_number(:sort_order, greater_than_or_equal_to: 0)
+    |> validate_number(:max_participants, Constraints.max_participants_opts())
+    |> validate_number(:last_spots_threshold, Constraints.last_spots_threshold_opts())
+    |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
   end
 
   @doc """
@@ -299,7 +311,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_slug()
     |> unique_constraint([:user_id, :slug],
       name: :meeting_types_user_id_slug_index,
-      message: "is already taken"
+      message: dgettext_noop("errors", "is already taken")
     )
   end
 
@@ -318,6 +330,18 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     end)
   end
 
+  # Only on a changed duration, so a type saved before the rule keeps saving.
+  defp validate_duration_step(changeset) do
+    step = Constraints.duration_step_minutes()
+    message = {dgettext_noop("errors", "must be a multiple of %{step} minutes"), step: step}
+
+    validate_change(changeset, :duration_minutes, fn :duration_minutes, minutes ->
+      if is_integer(minutes) and rem(minutes, step) != 0,
+        do: [duration_minutes: message],
+        else: []
+    end)
+  end
+
   # Only a newly supplied (non-nil) slug needs format checking — clearing it to
   # NULL or leaving it untouched is always valid.
   defp validate_slug(changeset) do
@@ -328,13 +352,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       slug ->
         cond do
           String.length(slug) > @slug_max_length ->
-            add_error(changeset, :slug, "is too long")
+            add_error(changeset, :slug, dgettext_noop("errors", "is too long"))
 
           Regex.match?(@reserved_slug_format, slug) or slug in @reserved_slugs ->
             add_error(changeset, :slug, "is reserved")
 
           not Regex.match?(@slug_format, slug) ->
-            add_error(changeset, :slug, "may only contain lowercase letters, numbers and hyphens")
+            add_error(
+              changeset,
+              :slug,
+              dgettext_noop("errors", "may only contain lowercase letters, numbers and hyphens")
+            )
 
           true ->
             changeset
@@ -355,7 +383,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     supplied? = Map.has_key?(changeset.params || %{}, "locations")
 
     if supplied? and get_field(changeset, :locations) == [] do
-      add_error(changeset, :locations, "must include at least one location")
+      add_error(
+        changeset,
+        :locations,
+        dgettext_noop("errors", "must include at least one location")
+      )
     else
       changeset
     end
@@ -396,7 +428,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     video_integration_id = get_field(changeset, :video_integration_id)
 
     if allow_video && is_nil(video_integration_id) do
-      add_error(changeset, :video_integration_id, "is required when video meetings are enabled")
+      add_error(
+        changeset,
+        :video_integration_id,
+        dgettext_noop("errors", "is required when video meetings are enabled")
+      )
     else
       changeset
     end
@@ -412,14 +448,14 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         add_error(
           changeset,
           :target_calendar_id,
-          "is required when a calendar integration is selected"
+          dgettext_noop("errors", "is required when a calendar integration is selected")
         )
 
       {nil, tid} when is_binary(tid) ->
         add_error(
           changeset,
           :calendar_integration_id,
-          "is required when a target calendar is selected"
+          dgettext_noop("errors", "is required when a target calendar is selected")
         )
 
       _other ->
@@ -427,84 +463,53 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     end
   end
 
-  defp validate_reminder_config(changeset) do
-    case get_change(changeset, :reminder_config) do
-      nil ->
-        changeset
-
-      reminders when is_list(reminders) ->
-        validate_reminder_list(changeset, reminders)
-
-      _other ->
-        add_error(changeset, :reminder_config, "must be a list of reminder settings")
-    end
-  end
-
-  # The count is checked before the entries, so an oversized list reports that
-  # rather than whichever of its entries happens to be malformed.
-  defp validate_reminder_list(changeset, reminders) do
-    normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder/1)
-
-    result =
-      cond do
-        length(reminders) > ReminderValidation.max_reminders() ->
-          {:error, :too_many}
-
-        Enum.any?(normalized, &match?({:error, _reason}, &1)) ->
-          {:error, :invalid}
-
-        true ->
-          normalized
-          |> Enum.map(fn {:ok, reminder} -> reminder end)
-          |> ReminderValidation.check_policy(
-            ReminderUtils.normalize_reminders(changeset.data.reminder_config)
-          )
-      end
-
-    case result do
-      :ok -> changeset
-      {:error, reason} -> add_reminder_error(changeset, reason)
-    end
-  end
-
-  defp add_reminder_error(changeset, :too_many),
-    do:
-      add_error(changeset, :reminder_config, "cannot have more than %{count} reminders",
-        count: ReminderValidation.max_reminders()
-      )
-
-  defp add_reminder_error(changeset, :invalid),
-    do: add_error(changeset, :reminder_config, "contains invalid reminder settings")
-
-  defp add_reminder_error(changeset, :duplicate),
-    do: add_error(changeset, :reminder_config, "contains duplicate reminders")
-
-  defp add_reminder_error(changeset, :exceeds_max),
-    do: add_error(changeset, :reminder_config, "cannot be set for more than 1 year in advance")
-
   defp validate_payment_fields(changeset, opts) do
+    changeset = validate_price_settable(changeset, opts)
+
     if get_field(changeset, :payment_required) do
       changeset
       |> validate_required([:price_cents])
-      |> validate_charges_enabled(opts)
       |> validate_currency_minimum(opts)
     else
       changeset
     end
   end
 
-  # Asked when the host asks for payment, not every time they touch a meeting
-  # type that already has one. A paid type keeps its price while Stripe is
-  # disconnected, so that it resumes on reconnect (see
-  # `Tymeslot.MeetingTypes.FormMapper.build_attrs/2`); reading the stored
-  # `true` with `get_field` would then fail every unrelated save with "Stripe
-  # must be connected", on a field the form cannot render in that state.
-  defp validate_charges_enabled(changeset, opts) do
+  # Asked when the host asks for payment or sets a price, not every time they
+  # touch a meeting type that already has one. A paid type keeps its price
+  # while it cannot be edited (Stripe disconnected, or an account in a legacy
+  # currency that checkout still charges), so that it resumes as it was (see
+  # `Tymeslot.MeetingTypes.FormMapper.build_attrs/3`); reading the stored
+  # `true` with `get_field` would then fail every unrelated save, on a field
+  # the form cannot render in that state. Turning payment off, which clears
+  # the price, stays open.
+  defp validate_price_settable(changeset, opts) do
     cond do
-      Keyword.get(opts, :host_charges_enabled, false) -> changeset
-      get_change(changeset, :payment_required) != true -> changeset
-      true -> add_error(changeset, :payment_required, "Stripe must be connected")
+      Keyword.get(opts, :price_settable, false) ->
+        changeset
+
+      not price_edit?(changeset) ->
+        changeset
+
+      Keyword.get(opts, :host_charges_enabled, false) ->
+        add_error(
+          changeset,
+          :payment_required,
+          dgettext_noop("errors", "Prices cannot be set in your Stripe account's currency")
+        )
+
+      true ->
+        add_error(
+          changeset,
+          :payment_required,
+          dgettext_noop("errors", "Stripe must be connected")
+        )
     end
+  end
+
+  defp price_edit?(changeset) do
+    get_change(changeset, :payment_required) == true or
+      (changed?(changeset, :price_cents) and not is_nil(get_field(changeset, :price_cents)))
   end
 
   defp validate_currency_minimum(changeset, opts) do
@@ -513,14 +518,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
     validate_number(changeset, :price_cents,
       greater_than_or_equal_to: minimum,
-      message: "must be at least #{format_minimum(minimum, currency)}"
+      message:
+        dgettext("errors", "must be at least %{minimum}",
+          minimum: Money.format(minimum, currency)
+        )
     )
-  end
-
-  # Mirrors the minimum hint shown beside the price input (e.g. "EUR 0.50"),
-  # so the validation error speaks in major units rather than raw cents.
-  defp format_minimum(cents, currency) do
-    "#{String.upcase(currency)} #{:erlang.float_to_binary(cents / 100, decimals: 2)}"
   end
 
   # What a group type (more than one participant per slot) cannot also be.

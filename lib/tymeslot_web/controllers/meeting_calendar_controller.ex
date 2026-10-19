@@ -25,17 +25,17 @@ defmodule TymeslotWeb.MeetingCalendarController do
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"username" => username, "meeting_uid" => uid}) do
-    case RateLimiter.check_meeting_calendar_feed_rate_limit(ClientIP.get(conn)) do
+    case RateLimiter.check(:meeting_ics, ClientIP.get(conn)) do
       :ok -> serve(conn, username, uid)
-      {:error, :rate_limited} -> send_status(conn, 429)
+      {:error, :rate_limited, _message} -> send_status(conn, 429)
     end
   end
 
   @spec seat(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def seat(conn, %{"token" => token}) do
-    case RateLimiter.check_meeting_calendar_feed_rate_limit(ClientIP.get(conn)) do
+    case RateLimiter.check(:meeting_ics, ClientIP.get(conn)) do
       :ok -> serve_seat(conn, token)
-      {:error, :rate_limited} -> send_status(conn, 429)
+      {:error, :rate_limited, _message} -> send_status(conn, 429)
     end
   end
 

@@ -7,13 +7,14 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
   alias Tymeslot.Locales
   alias TymeslotWeb.AccountLive.Helpers
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.DeletionDate
 
   # Provider constants
   @social_provider_default "social"
@@ -109,6 +110,39 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     end
   end
 
+  def handle_event("open_delete_account_modal", _params, socket) do
+    due_at = Auth.account_deletion_due_at(DateTime.utc_now())
+
+    {:noreply,
+     assign(socket,
+       show_delete_modal: true,
+       delete_errors: %{},
+       deletion_date: DeletionDate.format(due_at, socket.assigns.current_user)
+     )}
+  end
+
+  def handle_event("close_delete_account_modal", _params, socket) do
+    {:noreply, assign(socket, show_delete_modal: false, delete_errors: %{})}
+  end
+
+  def handle_event("request_account_deletion", %{"delete_account" => params}, socket) do
+    opts = ClientIP.request_opts(socket) ++ [current_session_token: socket.assigns.session_token]
+
+    case Auth.request_account_deletion(socket.assigns.current_user, params, opts) do
+      {:ok, pending} ->
+        {:noreply,
+         socket
+         |> LiveView.put_flash(:info, deletion_requested_message(pending))
+         |> LiveView.redirect(to: ~p"/auth/login")}
+
+      {:error, :rate_limited, message} ->
+        {:noreply, socket |> LiveView.put_flash(:error, message) |> assign(:delete_errors, %{})}
+
+      {:error, errors} ->
+        {:noreply, assign(socket, :delete_errors, Map.new(errors, fn {k, v} -> {k, [v]} end))}
+    end
+  end
+
   def handle_event(_event, _params, socket) do
     {:noreply, socket}
   end
@@ -171,6 +205,18 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
       {:error, errors} ->
         handle_update_error(socket, errors, :password)
+    end
+  end
+
+  defp deletion_requested_message(pending) do
+    if Auth.account_deletion_grace_days() == 0 do
+      dgettext("account", "Your account has been deleted.")
+    else
+      dgettext(
+        "account",
+        "Your account will be deleted on %{date}. Sign in before then if you change your mind.",
+        date: DeletionDate.format(pending.deletion_scheduled_at, pending)
+      )
     end
   end
 

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
+defmodule Tymeslot.Integrations.Shared.ProviderRegistryTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
@@ -35,7 +35,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
   end
 
   defmodule TestRegistry do
-    use Tymeslot.Integrations.Common.ProviderRegistry,
+    use Tymeslot.Integrations.Shared.ProviderRegistry,
       provider_type_name: "test provider",
       default_provider: :google,
       metadata_fields: [:capabilities],
@@ -60,10 +60,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
       assert_raise ArgumentError, fn -> TestRegistry.get_provider!(:invalid) end
     end
 
-    test "validate_provider_config/2 delegates to module" do
-      assert :ok = TestRegistry.validate_provider_config(:google, %{})
-    end
-
     test "list_providers_with_metadata/0 returns full info" do
       metadata = TestRegistry.list_providers_with_metadata()
       google = Enum.find(metadata, &(&1.type == :google))
@@ -72,20 +68,11 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
       assert google.capabilities == [:events]
 
       outlook = Enum.find(metadata, &(&1.type == :outlook))
-      assert outlook.capabilities == []
+      assert outlook.capabilities == nil
     end
 
     test "default_provider/0 returns default" do
       assert TestRegistry.default_provider() == :google
-    end
-
-    test "provider_supported?/1 checks existence" do
-      assert TestRegistry.provider_supported?(:google)
-      refute TestRegistry.provider_supported?(:invalid)
-    end
-
-    test "provider_count/0 returns size" do
-      assert TestRegistry.provider_count() == 2
     end
   end
 end

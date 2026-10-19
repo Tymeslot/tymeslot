@@ -115,8 +115,10 @@
   --line-2: var(--border-medium);
   --surface-1: var(--surface-subtle);
   --notice-warning: var(--theme-warning);
-  /* The preview notice's scrim: it sits on the page background, whatever
-     the organiser chose there (shared/components/preview-notice.css). */
+  /* The preview notice's near-opaque dark scrim
+     (shared/components/preview-notice.css): it sits on the page background
+     itself, so its amber text keeps its contrast whatever the organiser chose
+     there. */
   --preview-notice-ground: rgb(15 23 42 / 0.85);
 
   --theme-primary-solid: var(--theme-primary);
@@ -129,7 +131,6 @@
   --chrome-surface-hover: rgba(0, 0, 0, 0.65);
   --chrome-line-hover: rgba(255, 255, 255, 0.3);
   --chrome-ink: #ffffff;
-  --preview-notice-ground: rgb(15 23 42 / 0.85);
 
   --print-line: #cccccc;
 }

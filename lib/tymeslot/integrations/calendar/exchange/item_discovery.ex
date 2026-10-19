@@ -36,6 +36,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery do
   alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
 
+  # `GetItem` answers with `BaseShape=Default`, which carries each item's full
+  # body, so one request for a whole window (up to the server's
+  # `FindCountLimit`, 1000 by default) could run to tens of megabytes. A
+  # hundred ids keeps every response comfortably inside the EWS byte budget.
+  @get_item_batch_size 100
+
   @typedoc """
   An item id and the change key stating which version of it was seen. The
   change key is `""` where the server stated none.
@@ -53,26 +59,74 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery do
   end
 
   @doc """
-  Fetches the given items' fields in one batched `GetItem`.
+  Fetches the given items' fields with batched `GetItem` requests, at most
+  #{@get_item_batch_size} ids to a request, answering the items in the order
+  the ids were given.
 
   An empty list is answered `{:ok, []}` without a round trip: `m:ItemIds`
   demands a child, so an empty batch would be answered with a schema fault
-  rather than an empty list.
+  rather than an empty list. A batch answered over the response budget is
+  split in half and retried, down to single items; any other failure, or one
+  item over budget on its own, fails the whole read. No partial window is
+  answered.
 
   Answers the raw `t:CalendarItem` elements, which
   `Exchange.EventNormaliser.normalise_events/2` turns into `CalendarEvent`
   structs. The batch-level guard is applied first, so a response in which
-  every message failed is an error rather than an empty calendar.
+  every message failed is an error rather than an empty calendar, and so is
+  one in which no item came back with the properties the request asked for.
   """
   @spec fetch_items(Client.config(), [id_pair()]) :: {:ok, [Soap.document()]} | {:error, term()}
   def fetch_items(_config, []), do: {:ok, []}
 
   def fetch_items(config, ids) do
-    with {:ok, doc} <- Client.call(config, Requests.get_item(ids)),
-         :ok <- EventNormaliser.require_readable_batch(doc) do
-      {:ok, EventNormaliser.parse_items(doc)}
+    with {:ok, docs} <- fetch_batches(config, Enum.chunk_every(ids, @get_item_batch_size)),
+         :ok <- EventNormaliser.require_readable_batch(docs),
+         items = Enum.flat_map(docs, &EventNormaliser.parse_items/1),
+         :ok <-
+           EventNormaliser.require_requested_properties(
+             items,
+             Map.get(config, :calendar_integration_id)
+           ) do
+      {:ok, items}
     end
   end
+
+  defp fetch_batches(config, batches) do
+    fetched =
+      Enum.reduce_while(batches, {:ok, []}, fn batch, {:ok, acc} ->
+        case fetch_batch(config, batch) do
+          {:ok, docs} -> {:cont, {:ok, [docs | acc]}}
+          {:error, _reason} = error -> {:halt, error}
+        end
+      end)
+
+    with {:ok, acc} <- fetched, do: {:ok, acc |> Enum.reverse() |> Enum.concat()}
+  end
+
+  # A batch whose bodies outgrow the response budget is halved until each half
+  # fits, so a few very large invitations cost extra round trips rather than
+  # the whole read. Only a single item that is over budget on its own still
+  # fails the read.
+  defp fetch_batch(config, [_first, _second | _rest] = ids) do
+    case Client.call(config, Requests.get_item(ids)) do
+      {:error, :response_too_large} ->
+        {left, right} = Enum.split(ids, div(length(ids), 2))
+
+        with {:ok, left_docs} <- fetch_batch(config, left),
+             {:ok, right_docs} <- fetch_batch(config, right) do
+          {:ok, left_docs ++ right_docs}
+        end
+
+      other ->
+        wrap(other)
+    end
+  end
+
+  defp fetch_batch(config, ids), do: config |> Client.call(Requests.get_item(ids)) |> wrap()
+
+  defp wrap({:ok, doc}), do: {:ok, [doc]}
+  defp wrap({:error, _reason} = error), do: error
 
   defp ids_in(message) do
     message
