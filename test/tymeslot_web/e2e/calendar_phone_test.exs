@@ -38,15 +38,16 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     {:ok, _prefs} =
       CalendarPreferencesQueries.upsert(user.id, %{redesign_enabled: true, time_format: "24h"})
 
-    insert(:calendar_integration,
-      user: user,
-      name: "Work account",
-      provider: "google",
-      is_active: true,
-      calendar_list: [%{"id" => "work", "name" => "Work", "selected" => true}]
-    )
+    integration =
+      insert(:calendar_integration,
+        user: user,
+        name: "Work account",
+        provider: "google",
+        is_active: true,
+        calendar_list: [%{"id" => "work", "name" => "Work", "selected" => true}]
+      )
 
-    session
+    {session, integration}
   end
 
   defp read(session, script, args) do
@@ -102,13 +103,17 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
   feature "on a phone, + adds an event that opens as a sheet and shows in month and agenda", %{
     session: session
   } do
-    day = Date.add(Date.utc_today(), 7)
+    # Ten days past this month's end: always ahead, and with the day, the day
+    # after and the one after that in the same month (a tap on the next day
+    # must not move the month grid).
+    day = Date.utc_today() |> Date.end_of_month() |> Date.add(10)
     iso = Date.to_iso8601(day)
     next = Date.to_iso8601(Date.add(day, 1))
     after_next = Date.to_iso8601(Date.add(day, 2))
 
+    {session, _integration} = organiser(session)
+
     session
-    |> organiser()
     |> resize_window(390, 844)
     |> visit("/dashboard/calendar?view=day&date=#{iso}")
     |> wait_for_live()
@@ -156,21 +161,64 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
   feature "the phone calendar fits the narrowest supported viewport in every tab", %{
     session: session
   } do
+    {session, _integration} = organiser(session)
+
     session =
       session
-      |> organiser()
       |> resize_to_mobile()
       |> visit("/dashboard/calendar")
       |> wait_for_live()
       |> assert_has(css("#calendar-canvas[aria-busy='false']"))
+      # The stored default is a week, which a phone shows as 3 days.
+      |> assert_has(css("#calendar-tab-three_day[aria-current='page']"))
+      |> assert_has(css("#calendar-canvas[data-view='three_day']"))
       |> assert_no_horizontal_overflow("new calendar, 3 days at 320px")
 
-    for tab <- ~w(agenda day month) do
+    # Each tab waits for what only its own view draws.
+    for {tab, drawn} <- [
+          {"agenda", css("#calendar-canvas .cal-agenda")},
+          {"day", css("#calendar-canvas .cal-col", minimum: 1)},
+          {"month", css("button[data-month-day]", count: 42)}
+        ] do
       session
       |> click(css("#calendar-tab-#{tab}"))
       |> assert_has(css("#calendar-tab-#{tab}[aria-current='page']"))
       |> assert_has(css("#calendar-canvas[aria-busy='false']"))
+      |> assert_has(drawn)
       |> assert_no_horizontal_overflow("new calendar, #{tab} at 320px")
     end
+  end
+
+  feature "the agenda loads further weeks as it is scrolled, and the Calendars sheet is a bottom sheet",
+          %{session: session} do
+    {session, integration} = organiser(session)
+    # Past the first window (eight weeks ahead), inside the next chunk.
+    far = Date.add(Date.utc_today(), 70)
+
+    insert(:provider_calendar_event,
+      calendar_integration: integration,
+      provider: "google",
+      provider_calendar_id: "work",
+      summary: "Far trip",
+      start_at: DateTime.new!(far, ~T[10:00:00], "Etc/UTC"),
+      end_at: DateTime.new!(far, ~T[11:00:00], "Etc/UTC"),
+      all_day: false,
+      sync_state: "synced"
+    )
+
+    session
+    |> resize_window(390, 844)
+    |> visit("/dashboard/calendar?view=agenda")
+    |> wait_for_live()
+    |> assert_has(css("#calendar-canvas[aria-busy='false']"))
+    |> assert_has(css("#calendar-canvas .cal-agenda"))
+    |> execute_script("""
+    const scroller = document.querySelector('#calendar-canvas [data-view-scroll]');
+    scroller.scrollTop = scroller.scrollHeight;
+    """)
+    |> assert_has(css("#calendar-canvas [data-event-id]", text: "Far trip"))
+    |> click(css("#calendar-phone-calendars"))
+    |> assert_has(css("#calendar-calendars-sheet[style*='display: flex']"))
+    |> assert_bottom_sheet("#calendar-calendars-sheet .modal-content")
   end
 end
