@@ -122,6 +122,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
            )
   end
 
+  test "on a repeating CalDAV event the toast says the choice covers every repeat", %{
+    conn: conn,
+    user: user
+  } do
+    feed =
+      insert(:calendar_integration,
+        user: user,
+        name: "Shared holidays",
+        provider: "caldav",
+        is_active: true,
+        calendar_list: [
+          %{"id" => "/hol/", "name" => "Shared holidays", "selected" => true, "read_only" => true}
+        ]
+      )
+
+    yearly =
+      all_day(feed, "/hol/", "Founders' day",
+        provider: "caldav",
+        transparency: "transparent",
+        recurrence_rule: "FREQ=YEARLY"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, yearly)
+
+    lv |> element("#calendar-preview-treat-free") |> render_click()
+
+    assert Bookability.for_user(user.id) == %{{feed.id, yearly.uid} => false}
+
+    assert has_element?(
+             lv,
+             "#calendar-toast",
+             "Treated as free for bookings every time this repeats. Guests can book those times."
+           )
+  end
+
   test "Free is kept in Tymeslot, and the preview and toast follow", %{
     conn: conn,
     user: user,

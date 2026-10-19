@@ -20,13 +20,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
   alias Tymeslot.Availability.Bookability
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventBlocking
+  alias Tymeslot.CalendarGrid.Occurrence
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
-  @typedoc "Whether the event is busy for bookings now, and by the rule alone."
-  @type state :: %{busy: boolean(), default: boolean()}
+  @typedoc """
+  Whether the event is busy for bookings now and by the rule alone, and
+  whether a choice for it covers every time its series repeats (choices are
+  kept by uid, which a CalDAV series shares).
+  """
+  @type state :: %{busy: boolean(), default: boolean(), every_repeat: boolean()}
 
   @doc """
   The control's state for `event`, or nil where it is not offered.
@@ -47,7 +52,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
     if integration && Bookability.read_only?(event, integration) do
       %{
         busy: EventBlocking.busy_on_read_only?(event, Map.get(context, :bookability, %{})),
-        default: EventBlocking.busy_on_read_only?(event, %{})
+        default: EventBlocking.busy_on_read_only?(event, %{}),
+        every_repeat: Occurrence.uid_shared_by_series?(event)
       }
     end
   end
@@ -64,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
     user_id = socket.assigns.current_user.id
 
     with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, id),
-         %{treat_as: %{default: default}} <-
+         %{treat_as: %{default: default, every_repeat: every_repeat}} <-
            Preview.build(event, Preview.context(socket.assigns)),
          :ok <- EditGuard.rate_limit(user_id) do
       busy = if choice == "default", do: default, else: choice == "true"
@@ -74,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
         |> assign(:bookability, Bookability.for_user(user_id))
         # Rebuilds the open preview from the new choice.
         |> SurfaceData.refilter()
-        |> Toast.show(toast_text(busy))
+        |> Toast.show(toast_text(busy, every_repeat))
       else
         flash(
           socket,
@@ -101,18 +107,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
   defp saved?(:ok), do: true
   defp saved?({:error, _reason}), do: false
 
-  defp toast_text(false),
+  defp toast_text(false, false),
     do:
       dgettext(
         "dashboard_calendar_booking",
         "Treated as free for bookings. Guests can book this time."
       )
 
-  defp toast_text(true),
+  defp toast_text(true, false),
     do:
       dgettext(
         "dashboard_calendar_booking",
         "Treated as busy for bookings. Guests can't book this time."
+      )
+
+  defp toast_text(false, true),
+    do:
+      dgettext(
+        "dashboard_calendar_booking",
+        "Treated as free for bookings every time this repeats. Guests can book those times."
+      )
+
+  defp toast_text(true, true),
+    do:
+      dgettext(
+        "dashboard_calendar_booking",
+        "Treated as busy for bookings every time this repeats. Guests can't book those times."
       )
 
   defp flash(socket, message) do
