@@ -68,13 +68,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
         </div>
       </div>
       <div
-        class="grid grid-cols-7 text-center text-token-2xs font-semibold text-tymeslot-500"
+        class="grid grid-cols-7 gap-0 text-center text-token-2xs font-semibold text-tymeslot-500"
         aria-hidden="true"
       >
         <span :for={initial <- @initials}>{initial}</span>
       </div>
       <div role="group" aria-labelledby={"#{@id}-label"}>
-        <div :for={week <- @weeks} class="grid grid-cols-7">
+        <div :for={week <- @weeks} class="grid grid-cols-7 gap-0">
           <button
             :for={day <- week}
             type="button"

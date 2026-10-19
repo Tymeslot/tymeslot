@@ -231,6 +231,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
              )
     end
 
+    # The global `.grid` rule adds a 16px gap, which left each day 36px wide
+    # at 360px; the days fill their column instead.
+    test "the month's rows have no gap, so each day spans its column", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+
+      assert has_element?(lv, "#calendar-sheet-month [role='group'] > div[class~='gap-0']")
+      refute has_element?(lv, "#calendar-sheet-month [role='group'] > div:not([class~='gap-0'])")
+      assert has_element?(lv, "#calendar-sheet-month div[aria-hidden='true'][class~='gap-0']")
+    end
+
     test "reopening shows the period's month, not the month last paged to", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open_dates(lv)
