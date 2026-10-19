@@ -115,6 +115,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMonthTest do
       assert lv |> element("#calendar-view-agenda") |> render() =~ "Agenda"
     end
 
+    # With five views the toolbar needs about 920px; at 768px, or 1024px
+    # beside the dashboard sidebar, Month and Agenda ran off the edge.
+    test "the toolbar wraps the views to a second row rather than cutting them off", %{
+      conn: conn
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-toolbar[class~='flex-wrap'][class~='min-h-11']")
+      refute has_element?(lv, "#calendar-toolbar[class~='h-11']")
+
+      assert has_element?(
+               lv,
+               "#calendar-toolbar [role='group'][class~='ml-auto'] #calendar-view-agenda"
+             )
+    end
+
     test "Month patches the URL and pushes six weeks with a month's grid either side", %{
       conn: conn
     } do

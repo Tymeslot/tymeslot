@@ -38,9 +38,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
   def toolbar(assigns) do
     ~H"""
+    <%!-- Five views and the display options need about 920px: narrower, the
+         views wrap to a second row rather than running off the edge. --%>
     <div
       id="calendar-toolbar"
-      class="flex h-11 shrink-0 items-center gap-2 border-b border-tymeslot-200 bg-white px-3 max-sm:hidden"
+      class="flex min-h-11 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-tymeslot-200 bg-white px-3 py-1 max-sm:hidden"
     >
       <.icon_button
         id="calendar-rail-toggle"
@@ -174,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
       <div
         role="group"
         aria-label={dgettext("dashboard_calendar", "View")}
-        class="inline-flex gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5"
+        class="ml-auto inline-flex gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5"
       >
         <button
           :for={view <- Period.views()}
