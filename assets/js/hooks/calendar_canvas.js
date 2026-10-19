@@ -232,7 +232,10 @@ export const CalendarCanvas = {
       return false;
     }
     this.clearPending();
-    if (view !== this.view || date !== this.date) this.cancelMove({ redraw: false });
+    if (view !== this.view || date !== this.date) {
+      this.cancelMove({ redraw: false });
+      this.selectedId = null;
+    }
     this.view = view;
     this.date = date;
     return true;
@@ -292,6 +295,7 @@ export const CalendarCanvas = {
     }
 
     this.cancelMove({ redraw: false });
+    this.selectedId = null;
     this.view = view;
     this.date = date;
     this.clearPending();
@@ -459,7 +463,7 @@ export const CalendarCanvas = {
 
     if (this.viewClick(e)) return undefined;
     // With an event selected on a touch screen, a tap on the empty grid only lets go of it.
-    if (this.selectedId && this.emptyColumn(target)) {
+    if (this.blockFor(this.selectedId) && this.emptyColumn(target)) {
       this.closeList();
       return this.clearSelection();
     }

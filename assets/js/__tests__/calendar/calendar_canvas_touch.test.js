@@ -326,6 +326,30 @@ describe("selection and the resize handle", () => {
     expect(hook.draft).toBeFalsy();
   });
 
+  test("a selection nobody can see does not swallow the next tap on the empty grid", () => {
+    stubMedia({ coarse: true });
+    const { el, hook } = mount(payload({ view: "agenda", range: { from: "2026-09-16", to: "2026-12-08" } }));
+
+    el.querySelector('.cal-agenda [data-event-id="event-1"]').click();
+    hook.navigate({ view: "day", date: "2026-10-14" });
+    hook.gridGeometry = () => ({ left: 0, top: 0, colWidth: 100, days: ["2026-10-14"], scale: makeScale(52, false) });
+    el.querySelector(".cal-col").dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 50, clientY: 520 }));
+
+    expect(hook.draft).toBeTruthy();
+  });
+
+  test("an event that is gone from the payload is no longer selected, so one tap starts a draft", () => {
+    stubMedia({ coarse: true });
+    const { el, hook } = mount();
+
+    block(el, "event-1").click();
+    hook.receive(payload({ reset: false, events: payload().events.filter((e) => e.id !== "event-1"), deleted: ["event-1"] }));
+    expect(block(el, "event-1")).toBeNull();
+    el.querySelector('.cal-col[data-day="2026-10-16"]').dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 450, clientY: 520 }));
+
+    expect(hook.draft).toBeTruthy();
+  });
+
   test("a late click on the handle does not let go of the selection", () => {
     stubMedia({ coarse: true });
     const { el } = mount();

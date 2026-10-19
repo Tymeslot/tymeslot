@@ -161,7 +161,9 @@ export const TouchDragMixin = {
     return true;
   },
 
+  // The block of the event with this id, or null for none (and for no id).
   blockFor(id) {
+    if (!id) return null;
     return [...this.el.querySelectorAll(".cal-col .cal-ev[data-event-id]")].find((node) => node.dataset.eventId === id) ?? null;
   },
 
@@ -173,7 +175,11 @@ export const TouchDragMixin = {
     for (const node of this.el.querySelectorAll(".cal-ev.is-selected")) node.classList.remove("is-selected");
     if (!this.selectedId) return;
     const target = this.blockFor(this.selectedId);
-    if (!target) return;
+    // A selection with no block on screen (the event is gone, or the view has none) is let go.
+    if (!target) {
+      this.selectedId = null;
+      return;
+    }
     target.classList.add("is-selected");
     if (!target.hasAttribute("data-editable")) return;
     const handle = document.createElement("span");
