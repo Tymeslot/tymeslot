@@ -14,4 +14,4 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
 #, elixir-autogen, elixir-format
 msgid "Press T to go to today, J for the next period and K for the previous period."
-msgstr "Prima T para ir para hoje, J para o período seguinte e K para o período anterior."
+msgstr "Pressione T para ir para hoje, J para o próximo período e K para o período anterior."
