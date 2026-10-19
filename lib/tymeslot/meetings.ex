@@ -10,7 +10,6 @@ defmodule Tymeslot.Meetings do
   require Logger
 
   alias Tymeslot.Bookings.{Cancel, CancelSeat, Reschedule, RescheduleRequest}
-
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   alias Tymeslot.Meetings.{
@@ -32,11 +31,14 @@ defmodule Tymeslot.Meetings do
     ParticipantSchema,
     Recipient,
     SeatLookup,
+    VideoRoomAttachment,
     VideoRooms
   }
 
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Security.EncryptedString
+
+  @owner_fixable_video_refusals [:video_integration_needs_reauth, :video_integration_inactive]
 
   # The guests' RSVP tokens and the group participants' seat tokens.
   @impl Tymeslot.Security.EncryptedStorage
@@ -123,9 +125,10 @@ defmodule Tymeslot.Meetings do
 
   Delegates to Bookings.Cancel module.
   """
-  @spec cancel_meeting(Ecto.Schema.t() | String.t()) :: {:ok, Ecto.Schema.t()} | {:error, atom()}
-  def cancel_meeting(meeting_or_uid) do
-    Cancel.execute(meeting_or_uid)
+  @spec cancel_meeting(MeetingSchema.t()) ::
+          {:ok, MeetingSchema.t()} | {:error, term()}
+  def cancel_meeting(%MeetingSchema{} = meeting) do
+    Cancel.execute(meeting)
   end
 
   @doc """
@@ -204,9 +207,10 @@ defmodule Tymeslot.Meetings do
   @doc """
   Cancels a meeting and issues the resolved refund to the attendee.
 
-  Only the host who took the payment may ask for a refund; anyone else gets
-  `{:error, :not_found}` before the meeting is cancelled. Cancelling with
-  `:none` is open to whoever the caller already allows to cancel.
+  Only the meeting's organiser (`acting_user_id` must be its
+  `organizer_user_id`) may cancel through here, and a refund additionally
+  needs the payment to be theirs; anyone else gets `{:error, :not_found}`
+  before the meeting is touched.
 
   Returns `{:error, {:refund_failed, reason}}` when the meeting was cancelled
   but the refund could not be issued, so callers can tell the host to settle it
@@ -229,10 +233,10 @@ defmodule Tymeslot.Meetings do
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
   """
-  @spec reschedule_meeting(String.t(), Reschedule.reschedule_params(), map(), integer()) ::
+  @spec reschedule_meeting(String.t(), Reschedule.reschedule_params(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, term()}
-  def reschedule_meeting(meeting_uid, new_params, form_data, organizer_user_id) do
-    Reschedule.execute(meeting_uid, new_params, form_data, organizer_user_id)
+  def reschedule_meeting(meeting_uid, new_params, organizer_user_id) do
+    Reschedule.execute(meeting_uid, new_params, organizer_user_id)
   end
 
   @doc """
@@ -275,35 +279,57 @@ defmodule Tymeslot.Meetings do
       {:error, :calendar_event_pending} = pending ->
         pending
 
-      {:error, reason} = error ->
-        Logger.error("Failed to add video room",
+      # A video integration switched off or waiting to be reconnected is the
+      # owner's to fix, and the meeting goes ahead without a room: expected,
+      # not a fault.
+      {:error, reason} = error when reason in @owner_fixable_video_refusals ->
+        Logger.info("Video room not added: the video integration is unavailable",
           meeting_id: meeting_id,
-          reason: LogFormat.reason(reason)
+          reason: reason
         )
 
         error
+
+      # `Tymeslot.Workers.VideoRoomWorker` logs a failure once, with what it
+      # does about it.
+      {:error, _reason} = error ->
+        error
     end
   end
+
+  @doc """
+  Lets go of a video room the provider no longer has, and refreshes the
+  calendar event of a booking still to come so it stops carrying the dead
+  join link. See `Tymeslot.Meetings.VideoRoomAttachment.forget/2`.
+  """
+  @spec forget_video_room(MeetingSchema.t()) :: :ok
+  defdelegate forget_video_room(meeting), to: VideoRoomAttachment, as: :forget
+
+  @doc """
+  Clears a video room off `meeting`, writing nothing else, for a caller that
+  pairs the write with another in one transaction.
+  """
+  @spec clear_video_room(MeetingSchema.t()) ::
+          {:ok, MeetingSchema.t()} | {:error, Ecto.Changeset.t()}
+  defdelegate clear_video_room(meeting), to: VideoRoomAttachment, as: :clear
 
   # =====================================
   # Meeting List and Query Functions
   # =====================================
 
   @doc """
-  Lists upcoming meetings for a specific user with a limit.
+  Lists the organiser's upcoming live bookings, soonest first, up to `limit`.
   """
-  @spec list_upcoming_meetings_for_user(String.t(), integer()) :: [MeetingSchema.t()]
-  def list_upcoming_meetings_for_user(user_email, limit) do
-    MeetingListQueries.upcoming_meetings_for_user(user_email, limit)
-  end
+  @spec list_upcoming_meetings_for_organizer(pos_integer(), integer()) :: [MeetingSchema.t()]
+  defdelegate list_upcoming_meetings_for_organizer(organizer_user_id, limit),
+    to: MeetingListQueries,
+    as: :upcoming_meetings_for_organizer
 
   @doc """
-  Lists all upcoming meetings for a specific user.
+  Lists every upcoming meeting the organiser holds, whatever its status.
   """
-  @spec list_upcoming_meetings_for_user(String.t()) :: [MeetingSchema.t()]
-  def list_upcoming_meetings_for_user(user_email) do
-    MeetingListQueries.list_upcoming_meetings_for_user(user_email)
-  end
+  @spec list_upcoming_meetings_for_organizer(pos_integer()) :: [MeetingSchema.t()]
+  defdelegate list_upcoming_meetings_for_organizer(organizer_user_id), to: MeetingListQueries
 
   @doc """
   Lists the organiser's live bookings overlapping the `[from, to)` window,
@@ -315,6 +341,12 @@ defmodule Tymeslot.Meetings do
   defdelegate list_meetings_in_range_for_organizer(organizer_user_id, from, to),
     to: MeetingListQueries,
     as: :list_for_organizer_in_range
+
+  @doc "Every meeting id `user_id` organises, past and future."
+  @spec list_meeting_ids_for_organizer(pos_integer()) :: [Ecto.UUID.t()]
+  defdelegate list_meeting_ids_for_organizer(user_id),
+    to: MeetingListQueries,
+    as: :list_ids_for_organizer
 
   @doc """
   How many booking requests this organiser has not yet answered; drives the
@@ -328,7 +360,7 @@ defmodule Tymeslot.Meetings do
 
   Validates the request against policy and manages the workflow state.
   """
-  @spec send_reschedule_request(MeetingSchema.t()) :: :ok | {:error, String.t() | atom()}
+  @spec send_reschedule_request(MeetingSchema.t()) :: :ok | {:error, term()}
   def send_reschedule_request(meeting) do
     case RescheduleRequest.send_reschedule_request(meeting) do
       :ok ->
@@ -340,10 +372,23 @@ defmodule Tymeslot.Meetings do
         :ok
 
       {:error, reason} = error ->
-        Logger.warning("Reschedule request failed", meeting_id: meeting.id, reason: reason)
+        Logger.warning("Reschedule request failed",
+          meeting_id: meeting.id,
+          reason: LogFormat.reason(reason)
+        )
+
         error
     end
   end
+
+  @doc """
+  The organiser's meeting with `meeting_id`, as a one-item page of dashboard
+  cards (empty when they own no meeting by that id): the dashboard view a
+  meeting's organiser links lead to
+  (`Tymeslot.Bookings.MeetingLinks.host_view_url/1`).
+  """
+  @spec list_user_meeting(integer(), term()) :: {:ok, CursorPage.t()}
+  defdelegate list_user_meeting(user_id, meeting_id), to: Listing
 
   @doc """
   High-level function to list meetings for a user based on a filter string.
@@ -361,25 +406,12 @@ defmodule Tymeslot.Meetings do
   defdelegate get_meeting(id), to: MeetingAccess
 
   @doc """
-  Gets a single meeting by ID for a specific user.
-
-  Verifies that the meeting belongs to the specified user
-  (either as organizer or attendee) before returning it.
-  """
-  @spec get_meeting_for_user(String.t() | integer(), String.t()) ::
-          {:ok, MeetingSchema.t()} | {:error, :not_found}
-  defdelegate get_meeting_for_user(id, user_email), to: MeetingAccess
-
-  @doc """
   Fetches a meeting by ID only if the given `organizer_user_id` owns it.
 
-  Unlike `get_meeting_for_user/2`, this never matches on the attendee side:
-  it is for actions (approving or declining a held request) that only the
-  organiser is allowed to take, where an attendee holding a Tymeslot account
-  under the booking email must not be able to act on their own request.
-
-  Use this instead of `get_meeting_for_user/2` on any organiser-only action
-  that accepts a meeting id from the client.
+  The dashboard's lookup for every action that accepts a meeting id from the
+  client. It never matches on an email address: an attendee holding an account
+  under the booking email, or whoever later verifies an address the organiser
+  gave up, must not be able to open or act on the meeting.
   """
   @spec get_meeting_for_organizer(String.t(), integer()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
@@ -456,6 +488,20 @@ defmodule Tymeslot.Meetings do
   defdelegate apply_external_calendar_change_to_meeting(meeting, signal),
     to: ExternalCalendarChanges,
     as: :apply_change_to_meeting
+
+  @doc """
+  Moves a meeting's end to the one the host gave its provider event, when the
+  host lengthened or shortened it without moving its start.
+  """
+  defdelegate apply_external_end_change(meeting, end_time),
+    to: ExternalCalendarChanges,
+    as: :apply_end_change
+
+  @doc """
+  Records the end the host's calendar event shows for a meeting found in step
+  with it, as the end a later end change is measured against.
+  """
+  defdelegate record_seen_calendar_end(meeting, end_time), to: ExternalCalendarChanges
 
   @doc """
   Clears an `"externally_modified"` flag on a meeting whose provider event
@@ -544,6 +590,14 @@ defmodule Tymeslot.Meetings do
   @doc "Counts distinct converting visitors (bookings carrying a `visitor_hash`) in the window."
   @spec count_converting_visitors(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   defdelegate count_converting_visitors(organizer_user_id, from, to), to: MeetingAnalyticsQueries
+
+  @doc """
+  Of `organizer_user_ids`, those who have had a real booking: not cancelled,
+  booked by someone other than the organiser, group meetings included. See
+  `Tymeslot.Meetings.MeetingAnalyticsQueries.organisers_with_real_booking/1`.
+  """
+  @spec organisers_with_real_booking([integer()]) :: [integer()]
+  defdelegate organisers_with_real_booking(organizer_user_ids), to: MeetingAnalyticsQueries
 
   @doc "Distinct converting-visitor counts grouped by `utm_source`; primitive for `Analytics.attribution_table/3`."
   @spec converting_visitors_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [

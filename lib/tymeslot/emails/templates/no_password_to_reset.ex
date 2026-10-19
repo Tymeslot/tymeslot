@@ -9,13 +9,39 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Greeting, SignInProvider, TemplateHelper, Text}
+  alias Swoosh.Email
+  alias Tymeslot.Emails.RecipientLocale
+
+  alias Tymeslot.Emails.Shared.{
+    Buttons,
+    Greeting,
+    MjmlEmail,
+    SignInProvider,
+    TemplateHelper,
+    Text
+  }
 
   # Account security information, but nothing has changed and nothing is wrong.
   @intent :alert
 
-  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
+  @doc """
+  The email, addressed and rendered in the recipient's locale.
+  """
+  @spec render(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t()
+        ) :: Email.t()
   def render(user, sign_in_url) do
+    RecipientLocale.with_user_locale(user, fn ->
+      MjmlEmail.base_email()
+      |> Email.to({user.name || user.email, user.email})
+      |> Email.subject(dgettext("emails_account", "Your Tymeslot account has no password"))
+      |> Email.html_body(html_body(user, sign_in_url))
+      |> Email.text_body(text_body(user, sign_in_url))
+    end)
+  end
+
+  defp html_body(user, sign_in_url) do
     provider = SignInProvider.display_name(user)
 
     mjml_content = """
@@ -44,8 +70,7 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
     )
   end
 
-  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
-  def render_text(user, sign_in_url) do
+  defp text_body(user, sign_in_url) do
     provider = SignInProvider.display_name(user)
 
     """

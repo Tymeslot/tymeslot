@@ -399,17 +399,5 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
 
       refute AttendeeNotifications.pending?(event)
     end
-
-    test "pending?/1 ignores a job of the other kind that happens to share the id" do
-      event = insert(:provider_calendar_event)
-
-      # `meetings` and `provider_calendar_events` number their rows
-      # independently, so the same integer names a different event in each.
-      # A meeting job must not make this provider event look pending.
-      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :meeting)
-
-      refute AttendeeNotifications.pending?(event)
-      assert Dispatcher.pending?(event.id, :meeting)
-    end
   end
 end

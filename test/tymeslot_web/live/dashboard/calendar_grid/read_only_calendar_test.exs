@@ -21,7 +21,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ReadOnlyCalendarTest do
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock_midweek: 0]
 
+  alias Tymeslot.Clock
+
+  # The grid opens on the week that holds today in the host's zone (Tallinn
+  # by default), and these events sit on today in UTC; late on a Sunday the
+  # two are different weeks. Midweek they are always the same one.
+  setup do: freeze_clock_midweek()
   setup :setup_dashboard_user
 
   describe "an event on a read-only provider (subscribed feed)" do
@@ -127,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ReadOnlyCalendarTest do
   end
 
   defp insert_event(integration, provider, calendar_id, summary) do
-    today = Date.utc_today()
+    today = Clock.utc_today()
 
     insert(:provider_calendar_event,
       calendar_integration: integration,

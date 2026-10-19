@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Shared.LockTest do
 
   1. Hold locks for a duration to simulate long-running operations
   2. Create race conditions to verify lock serialization works correctly
-  3. Test timeout and expiration logic
+  3. Hold a lock while its holder is alive, however long that is
 
   These are integration tests for the locking mechanism itself, so the sleeps are
   part of the test design, not brittle timing dependencies.
@@ -82,10 +82,8 @@ defmodule Tymeslot.Integrations.Shared.LockTest do
       assert :ok = Lock.with_lock("temp_lock", fn -> :ok end)
     end
 
-    test "cleans up monitors when overwriting expired lock" do
-      key = "expired_lock_123"
-
-      # Acquire lock in a process that stays alive
+    test "keeps a lock with its holder for as long as the holder is alive" do
+      key = "long_held_lock_123"
       parent = self()
 
       {pid, ref} =
@@ -96,22 +94,30 @@ defmodule Tymeslot.Integrations.Shared.LockTest do
           end)
         end)
 
-      receive do
-        :locked -> :ok
-      after
-        1000 -> flunk("Failed to acquire initial lock")
-      end
+      assert_receive :locked, 1000
 
-      # Expire the lock manually via test helper
-      expired_timestamp = System.monotonic_time(:millisecond) - 120_000
-      Lock.put_lock(key, expired_timestamp, pid)
+      # Backdate the entry far past any lease: a slow holder still has the
+      # lock, because handing it on would let two callers overlap.
+      long_ago = System.monotonic_time(:millisecond) - 3_600_000
+      Lock.put_lock(key, long_ago, pid)
 
-      # Acquire the lock again from a new process
-      assert :ok = Lock.with_lock(key, fn -> :ok end)
+      assert {:error, :refresh_in_progress} = Lock.with_lock(key, fn -> :ok end)
 
       Process.exit(pid, :kill)
-
       assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
+
+      eventually(fn -> assert :ok = Lock.with_lock(key, fn -> :ok end) end)
+    end
+
+    test "takes over an entry whose holder has died" do
+      key = "dead_holder_lock_123"
+      {pid, ref} = spawn_monitor(fn -> :ok end)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}
+
+      # put_lock does not monitor, so only the liveness check can free this.
+      Lock.put_lock(key, System.monotonic_time(:millisecond), pid)
+
+      assert :ok = Lock.with_lock(key, fn -> :ok end)
     end
 
     test "supports backward compatibility for calendar integrations" do
@@ -129,30 +135,6 @@ defmodule Tymeslot.Integrations.Shared.LockTest do
 
       assert_receive :locked
       assert {:error, :refresh_in_progress} = Lock.with_lock(:google, 999, fn -> :ok end)
-    end
-
-    test "uses configured timeout" do
-      # Set a very short timeout for :test_provider
-      Application.put_env(:tymeslot, :integration_locks, test_provider: 50)
-
-      key = :test_provider
-
-      # Acquire lock
-      assert :ok =
-               Lock.with_lock(key, fn ->
-                 # Wait until just after timeout
-                 Process.sleep(100)
-                 :ok
-               end)
-
-      # Now it should be acquirable because it's expired (even if process still runs)
-      # Wait a bit for the old lock to be considered expired
-      eventually(fn ->
-        assert :ok = Lock.with_lock(key, fn -> :ok end)
-      end)
-
-      # Clean up config
-      Application.delete_env(:tymeslot, :integration_locks)
     end
   end
 end

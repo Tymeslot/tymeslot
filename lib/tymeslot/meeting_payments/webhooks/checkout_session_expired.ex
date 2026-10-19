@@ -12,11 +12,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired do
   `last_event_id`; safe to invoke again on Stripe retry.
   """
 
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "checkout.session.expired"
 
-  @spec handle(map()) :: {:ok, atom()} | {{:error, term()}, :error}
+  @impl WebhookHandler
+  @spec handle(map()) :: WebhookHandler.result()
   def handle(event) do
     FailAndExpire.handle(event, @event_type, :webhook_expired)
   end

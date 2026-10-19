@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
       setup do
         user = insert(:user)
         {:ok, profile} = Profiles.get_or_create_profile(user.id)
-        {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: unquote(theme_id)})
+        {:ok, profile} = Profiles.update_booking_theme(profile, unquote(theme_id))
         meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 
         payment =
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ThemeShellTest do
       test "the cancelled page offers the way back to the meeting type's booking page",
            %{conn: conn, profile: profile, user: user} do
         username = "rebook#{unquote(theme_id)}"
-        {:ok, _profile} = Profiles.update_profile(profile, %{username: username})
+        {:ok, _profile} = Profiles.change_username(profile, username)
 
         meeting_type =
           insert(:meeting_type, user: user, name: "Paid Consultation", slug: "vip-consult")

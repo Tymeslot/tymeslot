@@ -159,11 +159,6 @@ msgstr "Falha no envio"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr "Falha no envio: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Enviando…"
 
@@ -182,7 +177,7 @@ msgstr "seunome"
 msgid "Unknown timezone"
 msgstr "Fuso horário desconhecido"
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Muitas tentativas de trocar o nome de usuário. Tente novamente mais tarde."
@@ -273,3 +268,8 @@ msgstr "Este nome de usuário é reservado"
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
 msgstr "Excluir foto de perfil"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Nome de usuário"

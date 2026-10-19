@@ -14,7 +14,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   @day_minutes 24 * @hour_minutes
 
   @type bucket_key :: String.t()
-  @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
+  @type rate_check_result :: {:allow, non_neg_integer()} | {:deny, non_neg_integer()}
 
   @typedoc "One tier of a multi-bucket limit: its key suffix, its budget, and the window it spans."
   @type tier :: {String.t(), pos_integer(), pos_integer()}
@@ -27,30 +27,17 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   @type bucket :: {bucket_key(), [tier()], String.t(), String.t()}
 
   @spec check_rate(bucket_key(), pos_integer(), pos_integer()) :: rate_check_result()
-  def check_rate(bucket_key, window_ms, limit) do
-    RateLimit.hit(bucket_key, window_ms, limit)
-  rescue
-    # Hammer 7.2.0 has a TOCTOU race in SlidingWindow.hit/4: when count exceeds
-    # the limit, it calls get_earliest_expiry/3 which uses Enum.min/1 on an ETS
-    # select result. If the table is cleared concurrently (e.g. in tests), the
-    # select returns [] and Enum.min/1 raises Enum.EmptyError. Treat this as a
-    # deny — the bucket was already over limit at the moment the race occurred.
-    #
-    # The race is a known upstream defect with a fully understood outcome, and it
-    # fires on the hot path of every rate-limited request, so logging it would be
-    # noise rather than evidence.
-    # credo:disable-for-next-line CredoChecks.NoSwallowedException
-    Enum.EmptyError -> {:deny, 0}
-  end
+  def check_rate(bucket_key, window_ms, limit), do: RateLimit.hit(bucket_key, window_ms, limit)
 
-  @spec check_rate_limit(bucket_key(), pos_integer(), pos_integer()) ::
-          :ok | {:error, :rate_limited}
-  def check_rate_limit(bucket_key, limit, window_ms) do
-    case check_rate(bucket_key, window_ms, limit) do
-      {:allow, _count} -> :ok
-      {:deny, _retry_after} -> {:error, :rate_limited}
-    end
-  end
+  @doc "How many hits a bucket holds inside its window, without charging it."
+  @spec bucket_count(bucket_key(), pos_integer()) :: non_neg_integer()
+  def bucket_count(bucket_key, window_ms), do: RateLimit.get(bucket_key, window_ms)
+
+  @doc """
+  Drops every hit a bucket holds.
+  """
+  @spec clear_bucket(bucket_key()) :: :ok
+  defdelegate clear_bucket(bucket_key), to: RateLimit, as: :clear
 
   @doc """
   Charges one token and, on a refusal, logs it and builds the copy the person
@@ -77,9 +64,33 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
         ) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_with_logging(bucket_key, limit, window_ms, operation, identifier, action \\ nil) do
+    check_window(bucket_key, limit, window_ms,
+      operation: operation,
+      identifier: identifier,
+      action: action
+    )
+  end
+
+  @doc """
+  `check_with_logging/6` with its labels as options, and one more: `log:
+  false` refuses without the log line, for the flood caps on
+  machine-to-machine endpoints, where a line per refused request would turn a
+  flood into a log flood.
+  """
+  @spec check_window(bucket_key(), pos_integer(), pos_integer(), keyword()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_window(bucket_key, limit, window_ms, opts)
+      when is_integer(limit) and limit > 0 and is_integer(window_ms) and window_ms > 0 do
+    operation = Keyword.fetch!(opts, :operation)
+    action = Keyword.get(opts, :action) || "#{operation} actions"
+    log? = Keyword.get(opts, :log, true)
+
     case check_rate(bucket_key, window_ms, limit) do
       {:allow, _count} ->
         :ok
+
+      {:deny, retry_after_ms} when not log? ->
+        {:error, :rate_limited, refusal_message(limit, window_ms, retry_after_ms, action)}
 
       {:deny, retry_after_ms} ->
         # Neither the identifier nor the bucket key reaches the log line raw:
@@ -87,9 +98,9 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
         # rejection under attack would otherwise write it twice per request,
         # on the one path that fires at volume. `operation` already names the
         # bucket, so the bucket key adds nothing but the identifier.
-        refuse(limit, window_ms, retry_after_ms, action || "#{operation} actions",
+        refuse(limit, window_ms, retry_after_ms, action,
           operation: operation,
-          identifier_masked: mask_identifier(identifier)
+          identifier_masked: mask_identifier(opts[:identifier])
         )
     end
   end
@@ -132,7 +143,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   defp window_phrase({count, :hour}), do: dngettext("errors", "hour", "%{count} hours", count)
   defp window_phrase({count, :day}), do: dngettext("errors", "day", "%{count} days", count)
 
-  # Hammer answers in milliseconds, and the wait rounds up rather than down:
+  # The limiter answers in milliseconds, and the wait rounds up rather than down:
   # telling someone to come back in "0 minutes" would send them straight into
   # a second refusal. Unlike the window, the singular carries its number,
   # since "try again in minute" is not a sentence.
@@ -155,7 +166,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   # misstate the limit.
   #
   # The unit is chosen from the rounded-up minutes rather than from the
-  # milliseconds, so a wait Hammer reports a few milliseconds under the hour
+  # milliseconds, so a wait the limiter reports a few milliseconds under the hour
   # still reads "1 hour" rather than "60 minutes".
   defp scale(ms), do: from_minutes(max(1, ceil(ms / @minute_ms)))
 
@@ -191,15 +202,51 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
     {:error, :invalid_user_id}
   end
 
-  @spec normalize_ip(nil | :inet.ip_address() | binary() | any()) :: String.t()
-  def normalize_ip(nil), do: "unknown"
-
-  def normalize_ip(ip) when is_tuple(ip) do
-    ip |> :inet.ntoa() |> to_string()
+  @spec invalid_id(String.t(), any()) :: {:error, :invalid_id}
+  def invalid_id(operation, id) do
+    Logger.error("Invalid id for rate limit", operation: operation, id: LogFormat.reason(id))
+    {:error, :invalid_id}
   end
 
-  def normalize_ip(ip) when is_binary(ip), do: ip
-  def normalize_ip(other), do: to_string(other)
+  @doc """
+  The key a per-IP bucket counts as one client.
+
+  An IPv6 host is usually handed a whole /64 and can pick a fresh address
+  from it for every request, so keying on the full address would give it an
+  unlimited supply of fresh buckets; the /64 is what it actually controls,
+  and is what the key names (`"2001:db8:1:2::/64"`). An IPv4-mapped IPv6
+  address is keyed as the IPv4 address it carries, and IPv4 as it is.
+  A missing address is `"unknown"`, and anything that does not parse is
+  keyed as it came.
+
+  Every per-IP bucket goes through this, so that no endpoint hands an IPv6
+  client a wider budget than the one it is meant to.
+  """
+  @spec source_key(nil | :inet.ip_address() | String.t() | term()) :: String.t()
+  def source_key(nil), do: "unknown"
+
+  def source_key(ip) when is_binary(ip) do
+    case :inet.parse_address(String.to_charlist(ip)) do
+      {:ok, address} -> address_key(address)
+      {:error, _reason} -> ip
+    end
+  end
+
+  def source_key(ip) when tuple_size(ip) in [4, 8] do
+    if :inet.is_ip_address(ip), do: address_key(ip), else: inspect(ip)
+  end
+
+  def source_key(other), do: to_string(other)
+
+  defp address_key({0, 0, 0, 0, 0, 0xFFFF, _hi, _lo} = mapped),
+    do: mapped |> :inet.ipv4_mapped_ipv6_address() |> address_key()
+
+  defp address_key({a, b, c, d, _e, _f, _g, _h}),
+    do: ntoa({a, b, c, d, 0, 0, 0, 0}) <> "/64"
+
+  defp address_key(ipv4), do: ntoa(ipv4)
+
+  defp ntoa(address), do: address |> :inet.ntoa() |> to_string()
 
   @doc """
   Charges one token against every tier of every bucket, halting on the first
@@ -207,37 +254,70 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
 
   Refuses in the same shape as `check_with_logging/6`, and for the same
   reason: a person who is over a limit needs to know which limit and for how
-  long, not that something went wrong.
+  long, not that something went wrong. `log: false` refuses without the log
+  line, as `check_window/4` does.
   """
-  @spec check_multi_bucket_limits([bucket()]) :: :ok | {:error, :rate_limited, String.t()}
-  def check_multi_bucket_limits(buckets) do
-    Enum.reduce_while(buckets, :ok, fn {bucket_base, limits, operation, action}, _acc ->
-      case apply_limits(bucket_base, limits, operation, action) do
-        :ok -> {:cont, :ok}
-        error -> {:halt, error}
+  @spec check_multi_bucket_limits([bucket()], keyword()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_multi_bucket_limits(buckets, opts \\ []) do
+    case first_refusal(buckets) do
+      nil ->
+        :ok
+
+      refusal ->
+        {limit, window_ms, operation, action, retry_after_ms} = binding_tier(buckets, refusal)
+
+        if Keyword.get(opts, :log, true) do
+          # No identifier here: these bucket bases embed one (an email address
+          # on the signup, password-reset and booking-recipient buckets), so
+          # the operation name is all that can go to the log line safely.
+          refuse(limit, window_ms, retry_after_ms, action, operation: operation)
+        else
+          {:error, :rate_limited, refusal_message(limit, window_ms, retry_after_ms, action)}
+        end
+    end
+  end
+
+  # The tiers are walked in list order, shortest window first, and the walk
+  # halts on the first refusal.
+  defp first_refusal(buckets) do
+    Enum.reduce_while(buckets, nil, fn {bucket_base, limits, operation, action}, nil ->
+      case refusing_tier(bucket_base, limits) do
+        nil -> {:cont, nil}
+        {limit, window_ms} -> {:halt, {limit, window_ms, operation, action}}
       end
     end)
   end
 
-  # The tiers are walked in list order and the walk halts on the first
-  # refusal. They are ordered shortest window first, so the tier that halts
-  # the walk is the tightest one that tripped, and its limit and window are
-  # what the sentence names: telling someone about the daily cap when the
-  # per-minute one stopped them would send them away for a day.
-  @spec apply_limits(bucket_key(), [tier()], String.t(), String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  defp apply_limits(bucket_base, limits, operation, action) do
-    Enum.reduce_while(limits, :ok, fn {label, limit, window_ms}, _acc ->
+  defp refusing_tier(bucket_base, limits) do
+    Enum.reduce_while(limits, nil, fn {label, limit, window_ms}, nil ->
       case check_rate("#{bucket_base}:#{label}", window_ms, limit) do
-        {:allow, _count} ->
-          {:cont, :ok}
-
-        {:deny, retry_after_ms} ->
-          # No identifier here: these bucket bases embed one (an email address
-          # on the signup, password-reset and booking-recipient buckets), so
-          # the operation name is all that can go to the log line safely.
-          {:halt, refuse(limit, window_ms, retry_after_ms, action, operation: operation)}
+        {:allow, _count} -> {:cont, nil}
+        {:deny, _retry_after_ms} -> {:halt, {limit, window_ms}}
       end
     end)
+  end
+
+  # The refusal names the tier that binds: the one a retry has to wait
+  # longest for, worked out without charging anything. A retry walks every
+  # tier again, so the walk charged the tiers before the refusing one and the
+  # ones after it may already be full; a wait timed by the refusing tier alone
+  # could send someone straight into another refusal. Naming the binding
+  # tier keeps the limit, window and wait in the sentence in agreement. On a
+  # tie the shorter window speaks: sending somebody away for a day when a
+  # minute would do is the failure that guards against. With nothing to wait
+  # for (the bucket was cleared meanwhile), the refusing tier speaks.
+  defp binding_tier(buckets, refusing) do
+    waits =
+      for {bucket_base, limits, operation, action} <- buckets,
+          {label, limit, window_ms} <- limits do
+        {RateLimit.retry_after("#{bucket_base}:#{label}", limit), -window_ms,
+         {limit, window_ms, operation, action}}
+      end
+
+    case Enum.max_by(waits, fn {wait, shorter, _tier} -> {wait, shorter} end) do
+      {0, _shorter, _tier} -> Tuple.insert_at(refusing, 4, 0)
+      {wait, _shorter, tier} -> Tuple.insert_at(tier, 4, wait)
+    end
   end
 end

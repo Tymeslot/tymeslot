@@ -31,15 +31,24 @@ defmodule Tymeslot.Emails.Shared.Meeting.ActionsBarTest do
       assert html =~ "Reschedule"
     end
 
-    test "rejects non-http URLs and replaces them with '#'" do
+    test "leaves out an action with an unsafe or missing URL" do
       actions = [
-        %{text: "Bad link", url: "javascript:alert(1)"}
+        %{text: "Bad link", url: "javascript:alert(1)"},
+        %{text: "No link", url: nil},
+        %{text: "Good link", url: "https://example.com/good"}
       ]
 
       html = ActionsBar.meeting_actions_bar(:confirmed, actions)
 
       refute html =~ "javascript:"
-      assert html =~ ~s(href="#")
+      refute html =~ ~s(href="#")
+      refute html =~ "Bad link"
+      refute html =~ "No link"
+      assert html =~ ~s(href="https://example.com/good")
+    end
+
+    test "renders nothing when no action has a URL" do
+      assert ActionsBar.meeting_actions_bar(:confirmed, [%{text: "No link", url: nil}]) == ""
     end
 
     test ":danger style always uses the cancelled intent colour" do
@@ -97,11 +106,24 @@ defmodule Tymeslot.Emails.Shared.Meeting.ActionsBarTest do
       assert html =~ "·"
     end
 
-    test "renders an empty mj-text when no actions are supplied" do
-      html = ActionsBar.meeting_actions_bar(:confirmed, [])
+    test "renders nothing when no actions are supplied" do
+      assert ActionsBar.meeting_actions_bar(:confirmed, []) == ""
+    end
+  end
 
-      assert html =~ "<mj-text"
-      refute html =~ "<a href="
+  describe "actions_section/4" do
+    test "renders the heading and footer only with an action to offer" do
+      actions = [%{text: "Go", url: "https://example.com/go"}]
+
+      html = ActionsBar.actions_section(:confirmed, "Heading", actions, footer: "Footnote")
+
+      assert html =~ "Heading"
+      assert html =~ "Footnote"
+      assert html =~ ~s(href="https://example.com/go")
+
+      assert ActionsBar.actions_section(:confirmed, "Heading", [%{text: "Go", url: nil}],
+               footer: "Footnote"
+             ) == ""
     end
   end
 end

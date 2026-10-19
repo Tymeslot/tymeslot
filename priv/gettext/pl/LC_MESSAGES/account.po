@@ -9,30 +9,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} day ago"
-msgid_plural "%{count} days ago"
-msgstr[0] "%{count} dzień temu"
-msgstr[1] "%{count} dni temu"
-msgstr[2] "%{count} dni temu"
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} hour ago"
-msgid_plural "%{count} hours ago"
-msgstr[0] "%{count} godzinę temu"
-msgstr[1] "%{count} godziny temu"
-msgstr[2] "%{count} godzin temu"
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minute ago"
-msgid_plural "%{count} minutes ago"
-msgstr[0] "%{count} minutę temu"
-msgstr[1] "%{count} minuty temu"
-msgstr[2] "%{count} minut temu"
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
 msgstr "E-mail potwierdzający został wysłany na adres"
 
@@ -62,6 +38,7 @@ msgid "Back to Dashboard"
 msgstr "Powrót do panelu"
 
 #: lib/tymeslot_web/live/account_live/components.ex
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Anuluj"
@@ -91,6 +68,7 @@ msgstr "Potwierdź nowe hasło"
 msgid "Confirm your new password"
 msgstr "Potwierdź nowe hasło"
 
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Current Password"
@@ -161,11 +139,6 @@ msgstr "Logowanie hasłem nie jest dostępne dla kont z logowaniem społecznośc
 msgid "Pending change to:"
 msgstr "Oczekująca zmiana na:"
 
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "Sent %{time}"
-msgstr "Wysłano %{time}"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Update Email"
@@ -190,11 +163,6 @@ msgstr "Aktualizowanie hasła"
 #, elixir-autogen, elixir-format
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr "Hasło zostało zmienione. Zaloguj się ponownie nowym hasłem."
-
-#: lib/tymeslot_web/live/account_live/components.ex
-#, elixir-autogen, elixir-format
-msgid "just now"
-msgstr "przed chwilą"
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
@@ -240,3 +208,180 @@ msgstr "Automatyczny"
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
 msgstr "Używaj języka ustawionego w przeglądarce zamiast stałego wyboru."
+
+#: lib/tymeslot/auth/account_deletion/request.ex
+#, elixir-autogen, elixir-format
+msgid "That is not the email address of this account."
+msgstr "To nie jest adres e-mail tego konta."
+
+#: lib/tymeslot/auth/account_deletion/request.ex
+#, elixir-autogen, elixir-format
+msgid "Your account could not be scheduled for deletion. Please try again."
+msgstr "Nie udało się zaplanować usunięcia konta. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Another reason"
+msgstr "Inny powód"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Anything else you would like to tell us? (optional)"
+msgstr "Chcesz nam jeszcze coś przekazać? (opcjonalnie)"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar events and video links that already exist stay as they are. If a meeting will not take place, contact your guests yourself."
+msgstr "Istniejące wydarzenia w kalendarzu i linki do spotkań wideo pozostaną bez zmian. Jeśli spotkanie się nie odbędzie, skontaktuj się z gośćmi samodzielnie."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a reason"
+msgstr "Wybierz powód"
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "Delete account"
+msgstr "Usuń konto"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete account now"
+msgstr "Usuń konto teraz"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete your account"
+msgstr "Usuwanie konta"
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "Delete your account and everything in it immediately. This cannot be undone."
+msgstr "Natychmiast usuń konto wraz z całą zawartością. Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting..."
+msgstr "Usuwanie…"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "I no longer need it"
+msgstr "Już go nie potrzebuję"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "I switched to another tool"
+msgstr "Korzystam teraz z innego narzędzia"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "It costs too much"
+msgstr "Jest za drogi"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "It is hard to use"
+msgstr "Trudno z niego korzystać"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "It is missing something I need"
+msgstr "Brakuje w nim czegoś, czego potrzebuję"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule deletion"
+msgstr "Zaplanuj usunięcie"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Something kept going wrong"
+msgstr "Coś ciągle szło nie tak"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Type your email address to confirm"
+msgstr "Aby potwierdzić, wpisz swój adres e-mail"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Until then it is frozen and your booking page is offline. Sign in before that date to restore it."
+msgstr "Do tego czasu konto jest zamrożone, a strona rezerwacji jest offline. Zaloguj się przed tą datą, aby je przywrócić."
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "Upcoming bookings are deleted from Tymeslot and your guests are not notified."
+msgstr "Nadchodzące rezerwacje są usuwane z Tymeslot, a goście nie są o tym powiadamiani."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Why are you leaving? (optional)"
+msgstr "Dlaczego odchodzisz? (opcjonalnie)"
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your account and everything in it will be deleted immediately. This cannot be undone."
+msgstr "Konto wraz z całą zawartością zostanie natychmiast usunięte. Tej operacji nie można cofnąć."
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your account has been deleted."
+msgstr "Konto zostało usunięte."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your account will be deleted on %{date}."
+msgstr "Konto zostanie usunięte %{date}."
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
+msgstr "Konto zostanie usunięte %{date}. Jeśli zmienisz zdanie, zaloguj się przed tą datą."
+
+#: lib/tymeslot_web/live/account_live/delete_account_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your upcoming bookings will be deleted from Tymeslot. Your guests will not be notified."
+msgstr "Nadchodzące rezerwacje zostaną usunięte z Tymeslot. Goście nie zostaną o tym powiadomieni."
+
+#: lib/tymeslot_web/live/account_live/danger_zone.ex
+#, elixir-autogen, elixir-format
+msgid "If you delete your account, it is frozen for %{count} day, then deleted. Sign in during that time to restore it."
+msgid_plural "If you delete your account, it is frozen for %{count} days, then deleted. Sign in during that time to restore it."
+msgstr[0] "Jeśli usuniesz konto, zostanie ono zamrożone na %{count} dzień, po czym zostanie usunięte. Zaloguj się w tym czasie, aby je przywrócić."
+msgstr[1] "Jeśli usuniesz konto, zostanie ono zamrożone na %{count} dni, po czym zostanie usunięte. Zaloguj się w tym czasie, aby je przywrócić."
+msgstr[2] "Jeśli usuniesz konto, zostanie ono zamrożone na %{count} dni, po czym zostanie usunięte. Zaloguj się w tym czasie, aby je przywrócić."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{count} day ago"
+msgid_plural "Sent %{count} days ago"
+msgstr[0] "Wysłano %{count} dzień temu"
+msgstr[1] "Wysłano %{count} dni temu"
+msgstr[2] "Wysłano %{count} dni temu"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{count} hour ago"
+msgid_plural "Sent %{count} hours ago"
+msgstr[0] "Wysłano %{count} godzinę temu"
+msgstr[1] "Wysłano %{count} godziny temu"
+msgstr[2] "Wysłano %{count} godzin temu"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{count} minute ago"
+msgid_plural "Sent %{count} minutes ago"
+msgstr[0] "Wysłano %{count} minutę temu"
+msgstr[1] "Wysłano %{count} minuty temu"
+msgstr[2] "Wysłano %{count} minut temu"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent just now"
+msgstr "Wysłano przed chwilą"
+
+#: lib/tymeslot/auth/account_deletion/request.ex
+#, elixir-autogen, elixir-format
+msgid "You are the only admin who can sign in, so this account cannot be deleted yet. Make another account an admin first, or ask the server operator to delete it from the release shell."
+msgstr "Jesteś jedynym administratorem, który może się zalogować, więc tego konta nie można jeszcze usunąć. Najpierw nadaj uprawnienia administratora innemu kontu albo poproś operatora serwera o usunięcie go z powłoki release."

@@ -54,16 +54,25 @@ defmodule CredoChecks.GettextDomainBoundary do
     param_defaults: [
       domains: ~w(
         booking booking_manage booking_polls booking_voice embed errors common
+        errors_input
+        datetime booking_errors booking_payments
         emails emails_account emails_booking emails_booking_requests
-        emails_integrations emails_polls
+        emails_booking_changes
+        emails_integrations emails_payments emails_polls
         auth account onboarding onboarding_wizard
         dashboard_common
         dashboard_home dashboard_meeting_types dashboard_meeting_form
+        dashboard_meeting_questions dashboard_meeting_locations
         dashboard_availability dashboard_calendar_settings dashboard_calendar
-        dashboard_calendar_events dashboard_integrations dashboard_calendar_providers
+        dashboard_calendar_events dashboard_calendar_repeat dashboard_integrations
+        dashboard_calendar_recurrence dashboard_calendar_import
+        dashboard_calendar_providers
         dashboard_automation dashboard_automation_chat dashboard_appearance
         dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
         dashboard_analytics dashboard_admin dashboard_video
+        integrations
+        integrations_calendar
+        integrations_video
       )
     ],
     explanations: [

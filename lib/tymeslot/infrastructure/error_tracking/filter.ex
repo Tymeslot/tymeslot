@@ -15,7 +15,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
      `origin` and the proxies' original-URL headers): a page linked from a
      password reset or a meeting's cancel link sends that link as its
      Referer.
-  3. Every string value is scrubbed: `PIIScrubber.mask_emails/1` masks any
+  3. Every string value is scrubbed: `EmailMasker.mask_emails/1` masks any
      email address in it, and `Tymeslot.Infrastructure.Logging.Redactor`
      blanks credentials embedded in text, such as `code=` and `state=` in a
      recorded `request.query` or a bearer token in a message.
@@ -40,7 +40,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
 
   @behaviour ErrorTracker.Filter
 
-  alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Infrastructure.Logging.EmailMasker
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Infrastructure.Logging.PathMasker
@@ -132,7 +132,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
 
   defp scrub_string(string) do
     string
-    |> PIIScrubber.mask_emails()
+    |> EmailMasker.mask_emails()
     |> Redactor.redact()
   end
 

@@ -17,6 +17,8 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
   the palette whose canvas it may show.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
 
   alias Tymeslot.Media.Transcoder
@@ -45,9 +47,6 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
     "video" => :video
   }
 
-  @preset_image_dir "/images/themes/backgrounds/"
-  @preset_video_dir "/videos/backgrounds/"
-  @poster_dir "/images/ui/posters/"
   @preset_video_variants [
     {"-desktop.webm", "video/webm", "(min-width: 1024px)"},
     {"-desktop.mp4", "video/mp4", "(min-width: 1024px)"},
@@ -102,43 +101,69 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
 
   @doc """
   The changes choosing a background makes, or `:error` for a kind the group
-  does not offer. An upload survives only when the new background is that
-  same kind chosen as `"custom"`; every other choice (a preset of either kind,
-  a gradient, or a colour) drops both uploads, so a stored file is never
-  orphaned by a change that stops naming it.
+  does not offer. Choosing never touches the uploads: an uploaded image and
+  an uploaded video both stay stored, whatever is shown, until the organiser
+  removes or replaces that same upload (`removal_changes/3`,
+  `upload_changes/3`). Choosing `"custom"` of a kind shows its upload, which
+  must then be stored. The field `"remove"` with the kind (`"image"` or
+  `"video"`) as its value removes that upload (`removal_changes/3`).
   """
   @impl OptionGroup
-  def changes(kind, value, %{kinds: kinds}) do
-    if kind in Enum.map(kinds, &Atom.to_string/1) do
-      {:ok,
-       Map.merge(
-         %{"background_type" => kind, "background_value" => value},
-         cleared_uploads(kind, value)
-       )}
-    else
-      :error
+  def changes("remove", kind, group) do
+    case Enum.find(asset_fields(group), fn {_field, offered} ->
+           Atom.to_string(offered) == kind
+         end) do
+      {field, _kind} -> {:ok, &removal_changes(field, &1, &2)}
+      nil -> :error
     end
+  end
+
+  def changes(kind, value, %{kinds: kinds}) do
+    if kind in Enum.map(kinds, &Atom.to_string/1),
+      do: {:ok, %{"background_type" => kind, "background_value" => value}},
+      else: :error
   end
 
   @doc """
   The changes an upload into one of the background's asset fields makes: the
-  upload becomes the custom background of its kind, and the background's
-  other upload is dropped, so the save deletes its file.
+  upload becomes the custom background of its kind, replacing (and so
+  deleting) the previous upload of that kind only.
   """
   @impl OptionGroup
   @spec upload_changes(atom(), String.t(), group()) :: map()
   def upload_changes(field, path, group) do
-    fields = asset_fields(group)
-    kind = Keyword.fetch!(fields, field)
+    kind = group |> asset_fields() |> Keyword.fetch!(field)
 
-    fields
-    |> Keyword.delete(field)
-    |> Map.new(fn {other, _kind} -> {Atom.to_string(other), nil} end)
-    |> Map.merge(%{
+    %{
       "background_type" => Atom.to_string(kind),
       "background_value" => "custom",
       Atom.to_string(field) => path
-    })
+    }
+  end
+
+  @doc """
+  The changes removing the upload in `field` makes, given the stored
+  `settings` and the theme's `defaults`: the field is cleared, so the save
+  deletes its file, and a background that was showing that upload falls back
+  to the theme's default background.
+  """
+  @spec removal_changes(atom(), Spec.settings(), Spec.settings()) :: map()
+  def removal_changes(field, settings, defaults) do
+    cleared = %{Atom.to_string(field) => nil}
+
+    if showing_upload?(settings, Keyword.fetch!(@asset_fields, field)),
+      do: Map.merge(cleared, Map.take(defaults, ["background_type", "background_value"])),
+      else: cleared
+  end
+
+  @doc """
+  Whether the stored `settings` show the uploaded background of `kind`
+  (`:image` or `:video`).
+  """
+  @spec showing_upload?(Spec.settings(), :image | :video) :: boolean()
+  def showing_upload?(settings, kind) do
+    settings["background_type"] == Atom.to_string(kind) and
+      settings["background_value"] == "custom"
   end
 
   @doc "The group's presets of one kind as `{id, preset}`, in the group's order."
@@ -148,7 +173,9 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
   @doc """
   Resolves the stored background into a descriptor the theme wrapper renders.
 
-  Every path in it is already safe to emit. Returns `nil` when the settings
+  Every path in it is already safe to emit. An upload is shown only while it
+  is the chosen background (`"custom"`): a preset of the same kind chosen
+  beside a kept upload shows the preset. Returns `nil` when the settings
   name nothing that resolves (an unknown preset, an image kind with neither
   upload nor preset); the wrapper then falls back to the theme's own
   background.
@@ -168,14 +195,18 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
     end
   end
 
-  def descriptor(%{"background_type" => "image", "background_image_path" => path})
+  def descriptor(%{
+        "background_type" => "image",
+        "background_value" => "custom",
+        "background_image_path" => path
+      })
       when is_binary(path) and path != "" do
-    %{kind: :image, url: "/uploads/" <> Validation.sanitize_path(path)}
+    %{kind: :image, url: upload_url(path)}
   end
 
   def descriptor(%{"background_type" => "image"} = settings) do
     case Presets.find_preset_by_id(:image, settings["background_value"]) do
-      %{file: file} -> %{kind: :image, url: preset_image_url(file)}
+      %{file: file} -> %{kind: :image, url: Presets.image_url(file)}
       nil -> nil
     end
   end
@@ -209,11 +240,11 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
   end
 
   @doc """
-  The public URL of a preset image file, as booking pages and the dashboard
-  picker both load it.
+  The public URL of an uploaded background file (its stored path, as the
+  original upload of a video), safe to emit.
   """
-  @spec preset_image_url(String.t()) :: String.t()
-  def preset_image_url(file) when is_binary(file), do: @preset_image_dir <> file
+  @spec upload_url(String.t()) :: String.t()
+  def upload_url(path) when is_binary(path), do: "/uploads/" <> Validation.sanitize_path(path)
 
   @doc """
   The `--theme-background` custom property for a descriptor.
@@ -231,13 +262,10 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
 
   def vars(_media_or_nil, _palette_vars), do: %{}
 
-  defp cleared_uploads("image", "custom"), do: %{"background_video_path" => nil}
-  defp cleared_uploads("video", "custom"), do: %{"background_image_path" => nil}
-
-  defp cleared_uploads(_kind, _value),
-    do: %{"background_image_path" => nil, "background_video_path" => nil}
-
-  defp video_sources(%{"background_video_path" => path}) when is_binary(path) and path != "" do
+  # The upload plays only while it is the chosen background: a preset beside
+  # a kept upload plays the preset.
+  defp video_sources(%{"background_value" => "custom", "background_video_path" => path})
+       when is_binary(path) and path != "" do
     sanitized = Validation.sanitize_path(path)
     base = Path.rootname(sanitized)
 
@@ -247,7 +275,7 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
       end)
 
     # The original upload is always the last fallback.
-    variants ++ [%{src: "/uploads/" <> sanitized, type: "video/mp4", media: nil}]
+    variants ++ [%{src: upload_url(path), type: "video/mp4", media: nil}]
   end
 
   defp video_sources(settings) do
@@ -266,13 +294,13 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
       |> String.replace("-desktop.webm", "")
 
     Enum.map(@preset_video_variants, fn {suffix, type, media} ->
-      %{src: @preset_video_dir <> base <> suffix, type: type, media: media}
+      %{src: Presets.video_url(base <> suffix), type: type, media: media}
     end)
   end
 
   defp poster(value) do
     case Presets.find_preset_by_id(:video, value) do
-      %{poster: poster} when is_binary(poster) -> @poster_dir <> poster
+      %{poster: poster} when is_binary(poster) -> Presets.video_poster_url(poster)
       _other -> nil
     end
   end
@@ -281,7 +309,11 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
     kind = Map.get(@kinds_by_type, get_field(changeset, :background_type))
 
     if kind && kind not in kinds do
-      add_error(changeset, :background_type, "is not supported by this theme")
+      add_error(
+        changeset,
+        :background_type,
+        dgettext_noop("errors", "is not supported by this theme")
+      )
     else
       changeset
     end
@@ -293,17 +325,17 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
         validate_preset(
           changeset,
           preset_ids(group, :gradient),
-          "must be a valid gradient preset"
+          dgettext_noop("errors", "must be a valid gradient preset")
         )
 
       "color" ->
         cast_colour(changeset)
 
       "image" ->
-        validate_media(changeset, preset_ids(group, :image), :background_image_path, "image")
+        validate_media(changeset, preset_ids(group, :image), :background_image_path, :image)
 
       "video" ->
-        validate_media(changeset, preset_ids(group, :video), :background_video_path, "video")
+        validate_media(changeset, preset_ids(group, :video), :background_video_path, :video)
 
       _invalid_type ->
         changeset
@@ -320,23 +352,39 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
 
   defp cast_colour(changeset) do
     case Colour.cast_hex(get_field(changeset, :background_value)) do
-      {:ok, hex} -> put_change(changeset, :background_value, hex)
-      :error -> add_error(changeset, :background_value, "must be a valid hex color")
+      {:ok, hex} ->
+        put_change(changeset, :background_value, hex)
+
+      :error ->
+        add_error(
+          changeset,
+          :background_value,
+          dgettext_noop("errors", "must be a hex colour such as #14b8a6")
+        )
     end
   end
 
-  defp validate_media(changeset, ids, path_field, label) do
+  defp validate_media(changeset, ids, path_field, kind) do
     value = get_field(changeset, :background_value)
 
     cond do
       is_binary(value) and String.starts_with?(value, "preset:") ->
-        validate_preset(changeset, ids, "must be a valid #{label} preset")
+        validate_preset(changeset, ids, invalid_preset(kind))
 
       get_field(changeset, path_field) ->
         changeset
 
       true ->
-        add_error(changeset, path_field, "is required for uploaded #{label} background")
+        add_error(changeset, path_field, missing_upload(kind))
     end
   end
+
+  defp invalid_preset(:image), do: dgettext_noop("errors", "must be a valid image preset")
+  defp invalid_preset(:video), do: dgettext_noop("errors", "must be a valid video preset")
+
+  defp missing_upload(:image),
+    do: dgettext_noop("errors", "is required for an uploaded image background")
+
+  defp missing_upload(:video),
+    do: dgettext_noop("errors", "is required for an uploaded video background")
 end

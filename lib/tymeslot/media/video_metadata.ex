@@ -32,6 +32,26 @@ defmodule Tymeslot.Media.VideoMetadata do
 
   @zero_chunk_bytes 65_536
 
+  # The file extension each container is stored and served under.
+  @extensions %{Mp4 => ".mp4", Webm => ".webm"}
+
+  @doc """
+  The extension (".mp4" or ".webm") of the container the video at `path`
+  actually is, read from its leading bytes rather than from its name.
+  """
+  @spec extension(Path.t()) :: {:ok, String.t()} | {:error, error()}
+  def extension(path) do
+    read_container = fn fd ->
+      container(fn position, length -> :file.pread(fd, position, length) end)
+    end
+
+    case File.open(path, [:read, :binary, :raw], read_container) do
+      {:ok, {:ok, container}} -> {:ok, Map.fetch!(@extensions, container)}
+      {:ok, {:error, reason}} -> {:error, reason}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   @doc """
   Strips the metadata from the video at `path`, in place.
 

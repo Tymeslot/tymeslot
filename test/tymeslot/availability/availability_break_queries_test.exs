@@ -7,48 +7,23 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
   alias Tymeslot.Availability.AvailabilityBreakQueries
   alias Tymeslot.Availability.AvailabilityBreakSchema
 
-  describe "create_break/1" do
-    test "creates a break with valid attributes" do
-      weekly_availability = insert(:weekly_availability)
+  describe "delete_for_day/1" do
+    test "deletes that day's breaks and no other day's" do
+      day = insert(:weekly_availability)
+      other_day = insert(:weekly_availability)
+      insert(:availability_break, weekly_availability: day)
 
-      attrs = %{
-        weekly_availability_id: weekly_availability.id,
-        start_time: ~T[12:00:00],
-        end_time: ~T[13:00:00],
-        label: "Lunch Break"
-      }
+      insert(:availability_break,
+        weekly_availability: day,
+        start_time: ~T[15:00:00],
+        end_time: ~T[15:30:00]
+      )
 
-      assert {:ok, break} = AvailabilityBreakQueries.create_break(attrs)
-      assert break.weekly_availability_id == weekly_availability.id
-      assert break.start_time == ~T[12:00:00]
-      assert break.end_time == ~T[13:00:00]
-      assert break.label == "Lunch Break"
-    end
+      kept = insert(:availability_break, weekly_availability: other_day)
 
-    test "fails to create break with invalid time ordering" do
-      weekly_availability = insert(:weekly_availability)
+      assert {2, nil} = AvailabilityBreakQueries.delete_for_day(day.id)
 
-      attrs = %{
-        weekly_availability_id: weekly_availability.id,
-        start_time: ~T[13:00:00],
-        end_time: ~T[12:00:00]
-      }
-
-      assert {:error, changeset} = AvailabilityBreakQueries.create_break(attrs)
-      assert "must be after start time" in errors_on(changeset).end_time
-    end
-
-    test "assigns default sort_order of 0 when not provided" do
-      weekly_availability = insert(:weekly_availability)
-
-      attrs = %{
-        weekly_availability_id: weekly_availability.id,
-        start_time: ~T[12:00:00],
-        end_time: ~T[13:00:00]
-      }
-
-      assert {:ok, break} = AvailabilityBreakQueries.create_break(attrs)
-      assert break.sort_order == 0
+      assert Enum.map(Repo.all(AvailabilityBreakSchema), & &1.id) == [kept.id]
     end
   end
 

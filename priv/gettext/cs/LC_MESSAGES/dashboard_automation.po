@@ -374,19 +374,19 @@ msgstr "Tato funkce automatizace je k dispozici v tarifu Pro."
 msgid "Total"
 msgstr "Celkem"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Spustí se při změně času rezervace"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Spustí se po úspěšném vytvoření nové rezervace"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -540,17 +540,17 @@ msgstr "Historie doručení – %{name}"
 msgid "Too many requests. Please slow down."
 msgstr "Příliš mnoho požadavků. Zpomalte prosím."
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Cancelled"
 msgstr "Schůzka byla zrušena"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Created"
 msgstr "Schůzka vytvořena"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
 msgstr "Schůzka přesunuta"
@@ -610,37 +610,37 @@ msgstr "URL adresa se překládá na soukromou nebo omezenou adresu"
 msgid "Webhook returned status %{status}"
 msgstr "Webhook vrátil stav %{status}"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Declined"
 msgstr "Rezervace zamítnuta"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Request Expired"
 msgstr "Platnost žádosti o rezervaci vypršela"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Requested"
 msgstr "Rezervace vyžádána"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when nobody answers a booking request before its deadline"
 msgstr "Spustí se, když na žádost o rezervaci nikdo neodpoví do konce lhůty"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
 msgstr "Spustí se, když někdo požádá o rezervaci u typu schůzky, který vyžaduje vaše schválení"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Spustí se, když zamítnete žádost o rezervaci"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Spustí se při této události"
@@ -694,3 +694,23 @@ msgstr "Smazat webhook"
 #, elixir-autogen, elixir-format
 msgid "Regenerate token"
 msgstr "Vygenerovat token znovu"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "For stronger protection, verify the signature. The header has the form t=TIMESTAMP,v1=SIGNATURE. Compute the HMAC-SHA256 of the timestamp, a full stop and the raw request body, keyed with your webhook token, and compare its hexadecimal form with the signature. Reject requests whose timestamp is more than five minutes old."
+msgstr "Pro silnější ochranu ověřujte podpis. Hlavička má tvar t=TIMESTAMP,v1=SIGNATURE. Vypočítejte HMAC-SHA256 z časového razítka, tečky a nezměněného těla požadavku s tokenem webhooku jako klíčem a porovnejte jeho šestnáctkovou podobu s podpisem. Odmítněte požadavky, jejichž časové razítko je starší než pět minut."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Request signature"
+msgstr "Podpis požadavku"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Pozastaveno"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
+msgstr "Pozastaveno: váš tarif nezahrnuje automatizace. Po přechodu na vyšší tarif se webhook sám obnoví."

@@ -47,6 +47,16 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
     end
   end
 
+  describe "cancelled?/1, confirmed?/1 and expired?/1" do
+    @statuses ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed expired)
+
+    test "each holds for its own status alone" do
+      assert Enum.filter(@statuses, &MeetingState.cancelled?(%{status: &1})) == ["cancelled"]
+      assert Enum.filter(@statuses, &MeetingState.confirmed?(%{status: &1})) == ["confirmed"]
+      assert Enum.filter(@statuses, &MeetingState.expired?(%{status: &1})) == ["expired"]
+    end
+  end
+
   describe "awaiting_approval?/1" do
     test "true only for the held status" do
       assert MeetingState.awaiting_approval?(%{status: "awaiting_approval"})

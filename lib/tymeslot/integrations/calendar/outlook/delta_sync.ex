@@ -21,32 +21,48 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
+  alias Tymeslot.Integrations.Calendar.Outlook.FeedCalendar
+  alias Tymeslot.Integrations.Calendar.Outlook.Paging
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
-  alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesMaster
+  alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
 
-  # Microsoft Graph rejects these query parameters on the `events/delta`
-  # change-tracking resource. Stored `graph_delta_link` URLs written before
-  # this was known may still carry them — strip before reuse.
-  @unsupported_delta_params ~w($orderby $filter $select $expand $search)
+  # A delta link tracks the fixed window of the bootstrap that issued it, so
+  # each day it covers one day less of the future. Replacing it after a week
+  # keeps the cache reaching (nearly) the full window ahead.
+  @rebootstrap_after_seconds 7 * 24 * 60 * 60
 
-  @max_delta_pages 100
+  @doc """
+  Whether the stored delta link is old enough to be replaced by a fresh
+  bootstrap. Graph fixes a delta link's window at the bootstrap that issued
+  it, so without one events further ahead than that window never reach the
+  cache. A link with no recorded bootstrap time (written before it was
+  recorded) is due at once.
+  """
+  @spec rebootstrap_due?(map(), DateTime.t()) :: boolean()
+  def rebootstrap_due?(integration, now \\ DateTime.utc_now())
+  def rebootstrap_due?(%{last_full_sync_at: nil}, _now), do: true
+
+  def rebootstrap_due?(%{last_full_sync_at: %DateTime{} = bootstrapped_at}, now),
+    do: DateTime.diff(now, bootstrapped_at) >= @rebootstrap_after_seconds
 
   @doc """
   Fetches and applies Outlook delta changes for an integration that has a
   stored `graph_delta_link`. Returns `:ok` on success, or `{:error, class}` on
   any failure (already logged with context).
 
-  The class distinguishes a remote that is briefly unwell (`:transient` — a
+  `{:error, :unauthorized}` means Graph refused the stored credentials. Any
+  other class distinguishes a remote that is briefly unwell (`:transient` — a
   Graph 5xx, a timeout, an open circuit) from one that needs somebody to act
   (`:hard` — bad credentials, a failed local write). The caller decides what to
   do with a job that runs out of retries; only `:transient` is safe to abandon
   to the next scheduled sweep.
   """
-  @spec fetch_and_apply(map()) :: :ok | {:error, ErrorAnalysis.error_class()}
+  @spec fetch_and_apply(map()) :: :ok | {:error, ErrorAnalysis.error_class() | :unauthorized}
   def fetch_and_apply(integration) do
     delta_link = integration.graph_delta_link
 
@@ -54,7 +70,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
       # Older bootstraps wrote a `/me/events/delta` link whose `$deltatoken`
       # froze a ~30-day window at the moment of bootstrap and never widened.
       # Clearing the link forces the next sync to re-bootstrap via
-      # `calendarView/delta` with a rolling ±365-day window.
+      # `calendarView/delta`, whose window is fixed at ±365 days from that
+      # bootstrap and renewed by `rebootstrap_due?/2`.
       Logger.info(
         "Outlook delta link uses obsolete /events/delta endpoint; clearing for re-bootstrap",
         calendar_integration_id: integration.id
@@ -71,9 +88,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     api_module = Config.outlook_calendar_api_module()
 
     result =
-      AccessToken.with_access_token(integration, &api_module.refresh_token/1, fn token ->
+      Tokens.with_access_token(integration, &api_module.refresh_token/1, fn token ->
         CalendarCircuitBreaker.call(:outlook, fn ->
-          fetch_delta_page(token, delta_link, [])
+          fetch_delta(token, delta_link)
         end)
       end)
 
@@ -108,6 +125,28 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     {:error, :transient}
   end
 
+  # Graph refused the stored credentials: only the owner can fix that, so it
+  # is told apart from every other hard failure and the caller flags the
+  # integration for reconnection rather than retrying.
+  defp handle_fetch_result({:error, :unauthorized}, integration) do
+    Logger.warning("Outlook delta fetch unauthorised",
+      calendar_integration_id: integration.id
+    )
+
+    {:error, :unauthorized}
+  end
+
+  # The same refusal from the token refresh `Tokens.with_access_token/4`
+  # runs first: a revoked refresh token. Retrying cannot bring it back, so it
+  # is flagged like the fetch's own 401 rather than retried as a hard failure.
+  defp handle_fetch_result({:error, :unauthorized, _message}, integration) do
+    Logger.warning("Outlook token refresh unauthorised during delta sync",
+      calendar_integration_id: integration.id
+    )
+
+    {:error, :unauthorized}
+  end
+
   defp handle_fetch_result({:error, reason} = fetch_error, integration) do
     Logger.warning("Outlook delta fetch failed",
       calendar_integration_id: integration.id,
@@ -132,8 +171,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   defp apply_delta(integration, events, new_delta_link) do
     {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
-    calendar_events = build_calendar_events(changed, integration.id)
+    calendar_events = build_calendar_events(changed, integration)
     removed_uids = process_removed(removed, integration)
+
+    :ok =
+      SeriesRules.refresh(integration.id, calendar_events, SeriesMaster.reader(integration),
+        changed: true
+      )
 
     # Writes through `Sync.upsert_cache/2` rather than straight to the queries
     # module so this path gets ownership flagging like every other. A booking
@@ -142,6 +186,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     # this the delta sweep cached every one of them as server-owned.
     with {:ok, _count} <- Sync.upsert_cache(integration, calendar_events),
          :ok <- persist_delta_link(integration, new_delta_link) do
+      FeedCalendar.relabel(integration, Enum.map(calendar_events, & &1.uid))
       uids = Enum.map(calendar_events, & &1.uid) ++ removed_uids
       SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
       :ok
@@ -169,53 +214,21 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     Enum.map(refs, fn ref -> ref.uid || ref.provider_event_id end)
   end
 
-  defp fetch_delta_page(token, url, accumulated, page \\ 0)
-
-  defp fetch_delta_page(_token, _url, _accumulated, page) when page >= @max_delta_pages do
-    {:error, :too_many_pages}
-  end
-
-  defp fetch_delta_page(token, url, accumulated, page) do
-    # The circuit breaker wrapping this loop only counts 2-tuple errors as
-    # failures, so the client's {:error, type, message} shape is flattened.
-    case OutlookCalendarAPI.get_delta_page(token, strip_unsupported_delta_params(url)) do
-      {:ok, response} ->
-        collect_delta_page(response, token, accumulated, page)
-
-      {:error, :unauthorized, _message} ->
-        {:error, :unauthorized}
-
-      {:error, :delta_link_expired, _message} ->
-        {:error, :delta_link_expired}
-
-      {:error, type, message} ->
-        {:error, {type, message}}
+  # The circuit breaker wrapping this read only counts 2-tuple errors as
+  # failures, so the client's {:error, type, message} shape is flattened.
+  defp fetch_delta(token, delta_link) do
+    case Paging.delta_all(token, {:link, delta_link}) do
+      {:ok, _events, _new_delta_link} = ok -> ok
+      {:error, :unauthorized, _message} -> {:error, :unauthorized}
+      {:error, :delta_link_expired, _message} -> {:error, :delta_link_expired}
+      {:error, type, message} -> {:error, {type, message}}
     end
   end
 
-  defp collect_delta_page(response, token, accumulated, page) do
-    events = [response["value"] || [] | accumulated]
-
-    cond do
-      new_delta_link = response["@odata.deltaLink"] ->
-        {:ok, List.flatten(events), new_delta_link}
-
-      next_link = response["@odata.nextLink"] ->
-        fetch_delta_page(token, next_link, events, page + 1)
-
-      true ->
-        {:ok, List.flatten(events), nil}
-    end
-  end
-
-  defp build_calendar_events(events, calendar_integration_id) do
+  defp build_calendar_events(events, integration) do
     context = %{
-      calendar_integration_id: calendar_integration_id,
-      # Microsoft Graph /me/events/delta returns events from the user's primary
-      # calendar. The provider_calendar_events.provider_calendar_id column is NOT
-      # NULL with 'primary' as the documented default; passing nil causes a
-      # Postgres constraint violation.
-      provider_calendar_id: "primary",
+      calendar_integration_id: integration.id,
+      provider_calendar_id: FeedCalendar.id(integration),
       synced_at: DateTime.utc_now(:microsecond)
     }
 
@@ -237,33 +250,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
         )
 
         {:error, :delta_link_persistence_failed}
-    end
-  end
-
-  defp strip_unsupported_delta_params(url) do
-    uri = URI.parse(url)
-
-    case uri.query do
-      query when query in [nil, ""] ->
-        url
-
-      query ->
-        # Split and filter on the raw query string rather than decode-then-encode,
-        # because URI.encode_query/1 percent-encodes '$' as '%24', which turns
-        # '$deltatoken' into '%24deltatoken' and breaks Microsoft Graph requests.
-        cleaned_parts =
-          query
-          |> String.split("&")
-          |> Enum.reject(fn part ->
-            key = part |> String.split("=", parts: 2) |> hd() |> String.downcase()
-            key in @unsupported_delta_params
-          end)
-
-        new_query = if cleaned_parts == [], do: nil, else: Enum.join(cleaned_parts, "&")
-
-        uri
-        |> Map.put(:query, new_query)
-        |> URI.to_string()
     end
   end
 

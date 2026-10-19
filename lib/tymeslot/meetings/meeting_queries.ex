@@ -4,8 +4,10 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   This module provides a clean interface for single-record access, writes,
   and aggregate counts on meetings. Listing, filtering, and pagination
-  queries live in `Tymeslot.Meetings.MeetingListQueries`, and the analytics
-  aggregates in `Tymeslot.Meetings.MeetingAnalyticsQueries`. Business logic
+  queries live in `Tymeslot.Meetings.MeetingListQueries`, the analytics
+  aggregates in `Tymeslot.Meetings.MeetingAnalyticsQueries`, and the
+  delivery bookkeeping (announcement claims, sent-email and reminder flags) in
+  `Tymeslot.Meetings.MeetingDeliveryQueries`. Business logic
   should be handled in the `Tymeslot.Meetings` context module.
   """
 
@@ -16,6 +18,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   @doc "Creates a meeting."
@@ -80,6 +83,24 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     case Repo.get_by(Meeting, uid: uid) do
       nil -> {:error, :not_found}
       meeting -> {:ok, meeting}
+    end
+  end
+
+  @doc "The username the organiser of `uid` has now, if any and not pending deletion."
+  @spec organizer_username_by_uid(String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  def organizer_username_by_uid(uid) when is_binary(uid) do
+    query =
+      from(m in Meeting,
+        join: p in ProfileSchema,
+        on: p.user_id == m.organizer_user_id,
+        join: u in assoc(p, :user),
+        where: m.uid == ^uid and p.username != "" and is_nil(u.deletion_scheduled_at),
+        select: p.username
+      )
+
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      username -> {:ok, username}
     end
   end
 
@@ -209,6 +230,76 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Moves a meeting to `"cancelled"`, atomically, unless it is already over.
+
+  Like `transition_from_awaiting_approval/2`, the guard is in the `WHERE`
+  clause rather than read-then-write: a guest cancelling from the email link,
+  the host cancelling from the dashboard and the external-deletion sync can
+  all act on the same meeting at once, each holding a copy read before the
+  others wrote. Exactly one of them changes the row and receives it; every
+  other gets `{:error, :already_cancelled}` and must not repeat the
+  cancellation's side effects. A meeting that completed or expired in the
+  meantime refuses the same way, since there is nothing left to cancel.
+
+  `changes` carries `cancelled_at` and, where there is one,
+  `cancellation_reason`; `status` is always set here. Bypasses the changeset,
+  as `update_all` does, so `updated_at` is set here too.
+  """
+  @spec transition_to_cancelled(String.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :already_cancelled}
+  def transition_to_cancelled(meeting_id, changes) when is_list(changes) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      MeetingState.where_not_terminal(from(m in Meeting, where: m.id == ^meeting_id, select: m))
+
+    changes =
+      changes
+      |> Keyword.put(:status, "cancelled")
+      |> Keyword.put_new(:updated_at, now)
+
+    case Repo.update_all(query, set: changes) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :already_cancelled}
+    end
+  end
+
+  @doc """
+  Stamps `reschedule_requested_at` on a meeting, atomically, unless a
+  request is already pending, the meeting still awaits the host's approval,
+  it has started by `requested_at`, or it is already over: the same rule
+  `Tymeslot.Bookings.Policy.can_request_reschedule?/1` applies, held by the
+  row as it stands rather than by the caller's copy.
+
+  The guard is in the `WHERE` clause for the same reason as
+  `transition_to_cancelled/2`: two requests for one meeting (a double click,
+  two tabs, a retried request) each hold a copy read before the other wrote,
+  so a check on that copy lets both through. Exactly one changes the row and
+  receives it; the other gets `{:error, :not_requestable}` and must not
+  queue a second email. Bypasses the changeset, so `updated_at` is set here.
+  """
+  @spec mark_reschedule_requested(String.t(), DateTime.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_requestable}
+  def mark_reschedule_requested(meeting_id, %DateTime{} = requested_at) do
+    query =
+      from(m in Meeting,
+        where:
+          m.id == ^meeting_id and is_nil(m.reschedule_requested_at) and
+            m.start_time > ^requested_at,
+        select: m
+      )
+      |> MeetingState.where_not_terminal()
+      |> MeetingState.where_not_awaiting_approval()
+
+    case Repo.update_all(query,
+           set: [reschedule_requested_at: requested_at, updated_at: DateTime.utc_now(:second)]
+         ) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_requestable}
+    end
+  end
+
+  @doc """
   Held requests whose deadline has passed, oldest first.
 
   Backs the expiry sweep, which exists because a per-meeting scheduled job can
@@ -236,30 +327,18 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   @doc """
   Updates a meeting's status transition fields only (`status`,
-  `cancelled_at`, `cancellation_reason`).
+  `cancelled_at`, `cancellation_reason`, `approval_requested_at`,
+  `approval_deadline_at`).
 
-  Used by cancellation flows instead of `update_meeting/2`: those touch
-  only these fields, and group meetings legitimately carry no
-  `attendee_name`/`attendee_email` — fields `Meeting.changeset/2` would
-  otherwise demand.
+  Used by cancellation, expiry and payment-confirmation flows instead of
+  `update_meeting/2`: those touch only these fields, and group meetings
+  legitimately carry no `attendee_name`/`attendee_email` (nor do some
+  older solo rows), fields `Meeting.changeset/2` would otherwise demand.
   """
   @spec update_meeting_status(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting_status(%Meeting{} = meeting, attrs) when is_map(attrs) do
     meeting
     |> Meeting.status_changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Writes a new attendee-notification baseline for a meeting, updating both the
-  serialised `last_notified_state` snapshot and `ical_sequence` atomically.
-  """
-  @spec update_notification_baseline(Meeting.t(), map(), non_neg_integer()) ::
-          {:ok, Meeting.t()} | {:error, Changeset.t()}
-  def update_notification_baseline(%Meeting{} = meeting, state, sequence)
-      when is_map(state) and is_integer(sequence) do
-    meeting
-    |> Changeset.change(last_notified_state: state, ical_sequence: sequence)
     |> Repo.update()
   end
 
@@ -275,228 +354,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     meeting
     |> Changeset.change(approval_nudge_sent_at: DateTime.utc_now(:second))
     |> Repo.update()
-  end
-
-  @doc """
-  Claims the `meeting.created` announcement for a meeting.
-
-  Returns `:ok` to exactly one caller and `:already_announced` to every one
-  after it, so an event deferred to `Tymeslot.Workers.VideoRoomWorker` cannot
-  fan out a second time when a room finally arrives after recovery has already
-  announced the booking without one.
-
-  The claim is a single conditional UPDATE rather than a read followed by a
-  write, so two callers racing on the same meeting cannot both win it.
-
-  A winning claim also says whether the booking has been announced before:
-  `{:ok, :re_announcement}` when a reschedule sent a confirmed booking back
-  into the approval gate (which clears `announced_at` but never
-  `first_announced_at`) and the host has now approved the new time,
-  `{:ok, :first_announcement}` otherwise. The answer is read from the row the
-  UPDATE locks, in the same statement, rather than from the caller's struct,
-  so a stale struct cannot turn a first announcement into a repeat or the
-  other way round.
-  """
-  @spec claim_announcement(term()) ::
-          {:ok, :first_announcement | :re_announcement} | :already_announced
-  def claim_announcement(meeting_id) do
-    case UUID.cast(meeting_id) do
-      {:ok, uuid} -> claim_announcement_for(uuid)
-      # Nothing to dedupe against, so let the caller announce rather than
-      # swallow an event on the strength of an id we cannot look up.
-      :error -> {:ok, :first_announcement}
-    end
-  end
-
-  defp claim_announcement_for(uuid) do
-    now = DateTime.utc_now(:second)
-
-    # The self-join exposes the row as it stood before this UPDATE: RETURNING
-    # on the target itself would only show the COALESCE result, which is
-    # `now` for a first announcement and indistinguishable from an earlier
-    # stamp taken within the same second.
-    {claimed, previous} =
-      Repo.update_all(
-        from(m in Meeting,
-          join: before in Meeting,
-          on: before.id == m.id,
-          where: m.id == ^uuid and is_nil(m.announced_at),
-          select: before.first_announced_at,
-          update: [
-            set: [
-              announced_at: ^now,
-              # `announced_at` is cleared again if a reschedule sends this
-              # booking back into the approval gate, so the fact that it was
-              # once announced has to survive somewhere else. COALESCE keeps
-              # the first stamp across any number of re-gates.
-              first_announced_at: fragment("COALESCE(?, ?)", m.first_announced_at, ^now)
-            ]
-          ]
-        ),
-        []
-      )
-
-    cond do
-      claimed == 1 and previous == [nil] -> {:ok, :first_announcement}
-      claimed == 1 -> {:ok, :re_announcement}
-      Repo.exists?(from(m in Meeting, where: m.id == ^uuid)) -> :already_announced
-      # The meeting is gone, or was never persisted. Either way there is no
-      # stamp to read, and refusing to announce would be the worse failure.
-      true -> {:ok, :first_announcement}
-    end
-  end
-
-  @doc """
-  Marks an email as sent for a meeting.
-
-  ## Examples
-
-      iex> mark_email_sent(meeting, :organizer)
-      {:ok, %Meeting{}}
-
-      iex> mark_email_sent(meeting, :attendee)
-      {:ok, %Meeting{}}
-
-      iex> mark_email_sent(meeting, :reminder)
-      {:ok, %Meeting{}}
-
-      iex> mark_email_sent(meeting, :invalid)
-      {:error, :invalid_email_type}
-
-  """
-  @spec mark_email_sent(Meeting.t(), :organizer | :attendee | :reminder | atom()) ::
-          {:ok, Meeting.t()} | {:error, :invalid_email_type | Changeset.t()}
-  def mark_email_sent(%Meeting{} = meeting, email_type) do
-    attrs =
-      case email_type do
-        :organizer -> %{organizer_email_sent: true}
-        :attendee -> %{attendee_email_sent: true}
-        :reminder -> %{reminder_email_sent: true}
-        _other -> nil
-      end
-
-    if attrs do
-      update_meeting(meeting, attrs)
-    else
-      {:error, :invalid_email_type}
-    end
-  end
-
-  @doc """
-  Records per-recipient reminder delivery for one `(value, unit)` reminder
-  config, upserting rather than appending: an existing entry for that config
-  has its `organizer_sent`/`attendee_sent` flags OR-merged with the new
-  result, so a later send to the still-unsent recipient doesn't clobber an
-  earlier success. A config with no existing entry gets one appended.
-
-  Entries written before per-recipient tracking existed carry only `value`
-  and `unit`. They are treated as already fully sent (both flags default to
-  `true`) so old data can never trigger a fresh send.
-
-  Locks the row for the read-merge-write to stay correct under concurrent
-  workers for the same meeting.
-  """
-  @spec upsert_reminder_sent(Meeting.t(), %{
-          :value => integer(),
-          :unit => String.t(),
-          optional(:organizer_sent) => boolean(),
-          optional(:attendee_sent) => boolean()
-        }) :: {:ok, Meeting.t()} | {:error, :not_found | Changeset.t()}
-  def upsert_reminder_sent(%Meeting{} = meeting, %{value: val, unit: unit} = attrs) do
-    organizer_sent = Map.get(attrs, :organizer_sent, false)
-    attendee_sent = Map.get(attrs, :attendee_sent, false)
-
-    Repo.transaction(fn ->
-      case get_meeting_for_update(meeting.id) do
-        {:ok, locked_meeting} ->
-          updated_list =
-            merge_reminder_sent(
-              locked_meeting.reminders_sent,
-              val,
-              unit,
-              organizer_sent,
-              attendee_sent
-            )
-
-          case update_meeting(locked_meeting, %{
-                 reminder_email_sent: true,
-                 reminders_sent: updated_list
-               }) do
-            {:ok, updated_meeting} -> updated_meeting
-            {:error, changeset} -> Repo.rollback(changeset)
-          end
-
-        {:error, :not_found} ->
-          Repo.rollback(:not_found)
-      end
-    end)
-  end
-
-  defp merge_reminder_sent(existing, val, unit, organizer_sent, attendee_sent) do
-    entries = List.wrap(existing)
-
-    {updated_entries, found?} =
-      Enum.map_reduce(entries, false, fn entry, found? ->
-        if reminder_entry_match?(entry, val, unit) do
-          {merge_reminder_entry(entry, val, unit, organizer_sent, attendee_sent), true}
-        else
-          {entry, found?}
-        end
-      end)
-
-    if found? do
-      updated_entries
-    else
-      updated_entries ++
-        [
-          %{
-            "value" => val,
-            "unit" => unit,
-            "organizer_sent" => organizer_sent,
-            "attendee_sent" => attendee_sent
-          }
-        ]
-    end
-  end
-
-  # Whether a `reminders_sent` entry matches the given `(value, unit)` reminder
-  # config. The single authority on entry-matching: `Tymeslot.Workers.
-  # EmailWorkerHandlers.MeetingEmails` reads `reminders_sent` to decide whether
-  # a reminder still needs sending, so writer and reader must never disagree
-  # about which entry a `(value, unit)` config identifies.
-  defp reminder_entry_match?(entry, val, unit) do
-    case entry do
-      %{"value" => v, "unit" => u} -> v == val and u == unit
-      %{value: v, unit: u} -> v == val and u == unit
-      _other -> false
-    end
-  end
-
-  defp merge_reminder_entry(entry, val, unit, organizer_sent, attendee_sent) do
-    %{
-      "value" => val,
-      "unit" => unit,
-      "organizer_sent" =>
-        reminder_entry_flag(entry, "organizer_sent", :organizer_sent) or organizer_sent,
-      "attendee_sent" =>
-        reminder_entry_flag(entry, "attendee_sent", :attendee_sent) or attendee_sent
-    }
-  end
-
-  # Whether a `reminders_sent` entry records the recipient identified by
-  # `string_key`/`atom_key` as sent.
-  #
-  # Missing keys mean a pre-upsert entry; treated as already sent rather than
-  # guessing, so old rows never trigger a fresh send. This is the authority on
-  # legacy-entry semantics, and the default here cannot silently diverge from
-  # what `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, the reader of
-  # this field, assumes.
-  defp reminder_entry_flag(entry, string_key, atom_key) do
-    case entry do
-      %{^string_key => sent} when is_boolean(sent) -> sent
-      %{^atom_key => sent} when is_boolean(sent) -> sent
-      _other -> true
-    end
   end
 
   @doc """

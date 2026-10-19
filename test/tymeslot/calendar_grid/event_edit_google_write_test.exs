@@ -24,7 +24,7 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
-  alias Tymeslot.Integrations.Calendar.Operations
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!

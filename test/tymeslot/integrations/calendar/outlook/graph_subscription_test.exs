@@ -4,11 +4,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Integrations.Calendar, as: CalendarContext
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -102,6 +106,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
       assert reloaded.graph_delta_link =~ "deltatoken=seeded"
+
+      # The link's window starts now; its age is measured from here.
+      assert DateTime.diff(DateTime.utc_now(), reloaded.last_full_sync_at) < 60
     end
 
     test "does not send unsupported query parameters to /me/calendarView/delta",
@@ -205,9 +212,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
     test "returns an error tuple when Graph paginates past the page limit",
          %{integration: integration} do
-      # Every page carries a nextLink and never a deltaLink, so pagination runs
-      # into @max_delta_pages. `fetch_delta_page/5` reports that as a plain
-      # 2-tuple, which the breaker passes straight through.
+      # Every page carries a nextLink and never a deltaLink, so the read runs
+      # into `Outlook.Paging`'s page cap, the same answer every Graph read
+      # gives past it.
       on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
 
       stub(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
@@ -223,7 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
          }}
       end)
 
-      assert {:error, :pagination_limit_exceeded} = GraphSubscription.bootstrap_sync(integration)
+      assert {:error, :too_many_pages, _message} = GraphSubscription.bootstrap_sync(integration)
     end
 
     test "does not require :webhook_base_url to be configured",
@@ -392,5 +399,100 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       })
 
     integration
+  end
+
+  describe "unregister/1" do
+    test "makes no request when no subscription is stored", %{integration: integration} do
+      # Mox fails the test on any unexpected HTTP call.
+      assert :ok = GraphSubscription.unregister(%{integration | graph_subscription_id: nil})
+    end
+
+    test "treats a subscription Graph no longer knows as gone", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      log =
+        capture_log([level: :warning], fn ->
+          assert :ok =
+                   GraphSubscription.unregister(%{integration | graph_subscription_id: "sub-1"})
+        end)
+
+      refute log =~ "Failed to delete Graph subscription"
+    end
+  end
+
+  # The disconnect journey through the calendar context, with only HTTP
+  # stubbed: removing an Outlook integration must stop Graph pushing to the
+  # webhook, and must never be blocked by Graph failing to answer.
+  describe "disconnecting an Outlook integration" do
+    @subscription_url "https://graph.microsoft.com/v1.0/subscriptions/sub-1"
+
+    setup %{integration: integration} do
+      CalendarCircuitBreaker.reset(:outlook)
+      on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
+
+      integration =
+        integration
+        |> Changeset.change(
+          graph_subscription_id: "sub-1",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(:second), 1, :day)
+        )
+        |> Repo.update!()
+
+      %{integration: integration}
+    end
+
+    defp disconnect(integration),
+      do:
+        CalendarContext.delete_with_primary_reassignment_and_invalidate(
+          integration.user_id,
+          integration.id
+        )
+
+    test "deletes its Graph subscription before the integration is removed", %{
+      integration: integration
+    } do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, opts ->
+        send(test_pid, {:deleted, url, Repo.get(CalendarIntegrationSchema, integration.id)})
+        send(test_pid, {:delete_options, opts})
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:ok, _result} = disconnect(integration)
+
+      assert_receive {:deleted, @subscription_url, %CalendarIntegrationSchema{}}
+
+      # Bounded: the disconnect click waits on this request.
+      assert_receive {:delete_options, opts}
+      assert opts[:request_timeout] == 5_000
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
+
+    test "still disconnects when Graph answers 500", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, @subscription_url, _b, _h, _o ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      log =
+        capture_log([level: :warning], fn -> assert {:ok, _result} = disconnect(integration) end)
+
+      assert log =~ "Failed to delete Graph subscription"
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
+
+    test "still disconnects when the request times out", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, @subscription_url, _b, _h, _o ->
+        {:error, %Req.TransportError{reason: :timeout}}
+      end)
+
+      log =
+        capture_log([level: :warning], fn -> assert {:ok, _result} = disconnect(integration) end)
+
+      assert log =~ "Failed to delete Graph subscription"
+      refute Repo.get(CalendarIntegrationSchema, integration.id)
+    end
   end
 end

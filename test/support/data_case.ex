@@ -21,9 +21,9 @@ defmodule Tymeslot.DataCase do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
-  alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
 
   using do
@@ -102,7 +102,7 @@ defmodule Tymeslot.DataCase do
 
     # Host-keyed breakers are registered dynamically and are not covered by
     # the per-provider reset above
-    CalendarCircuitBreaker.reset_all_hosts()
+    ProviderBreakers.reset_all_hosts()
 
     # Video provider breakers. These matter now that `ProviderAdapter` routes
     # room create/update/delete through them: three induced provider failures
@@ -110,17 +110,10 @@ defmodule Tymeslot.DataCase do
     Enum.each([:mirotalk, :google_meet, :teams, :zoom], &VideoCircuitBreaker.reset/1)
 
     # Reset other circuit breakers
-    Enum.each([:email_service_breaker, :oauth_github_breaker, :oauth_google_breaker], fn name ->
-      if Process.whereis(name), do: CircuitBreaker.reset(name)
-    end)
+    if Process.whereis(:email_service_breaker), do: CircuitBreaker.reset(:email_service_breaker)
 
-    # Clear rate limiter
+    # Clear rate limiter, including the failed-login throttle
     RateLimiter.clear_all()
-
-    # Clear the account-lockout table. It is a second VM-global ETS table,
-    # owned by AccountLockout.TableOwner rather than by Hammer, so the
-    # rate-limiter reset above does not reach it.
-    AccountLockout.clear_all()
 
     # Clear availability cache
     AvailabilityCache.clear_all()

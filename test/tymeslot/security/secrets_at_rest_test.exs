@@ -145,11 +145,9 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
     end
   end
 
-  # The plain column the value used to live in stays empty, and the encrypted
-  # one opens to the value without containing it.
+  # The encrypted column opens to the value without containing it.
   defp assert_encrypted(table, id, column, value) do
     assert byte_size(value) > 0
-    assert raw(table, id, column) == nil
 
     ciphertext = raw(table, id, "#{column}_encrypted")
     refute ciphertext =~ value
@@ -161,10 +159,9 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
     assert raw(table, id, "#{column}_hash") == Token.hash_token(value)
   end
 
-  # The plain column stays empty, and the hash column holds the token's hash.
+  # The hash column holds the token's hash.
   defp assert_hashed(table, id, column, token) do
     assert byte_size(token) > 0
-    assert raw(table, id, column) == nil
     assert raw(table, id, "#{column}_hash") == Token.hash_token(token)
   end
 

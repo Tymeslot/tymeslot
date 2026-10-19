@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias TymeslotWeb.Components.MeetingUtils
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
 
   @doc "Initial assigns for the guest field, set once at scheduling mount."
   @spec assign_defaults(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -30,6 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
     |> assign(:guest_error, nil)
     |> assign(:guests_open, false)
     |> assign(:max_guests, Guests.max_guests())
+    |> assign(:guest_cap_visible, true)
   end
 
   @doc "Tracks the draft guest email as the invitee types."
@@ -138,6 +140,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
 
     socket
     |> assign(:max_guests, cap)
+    |> assign(:guest_cap_visible, cap_visible?(socket.assigns))
     |> assign(:guest_emails, kept)
     |> assign(:guest_error, error)
   end
@@ -164,6 +167,28 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
       max(min(Guests.max_guests(), seats_left - 1), 0)
     else
       _other -> Guests.max_guests()
+    end
+  end
+
+  @doc """
+  Whether the guest field may show its cap (`added/cap`).
+
+  On a group slot the cap is derived from the seats left, so showing it gives
+  away the exact count. It is shown only where the slot itself shows that
+  count (`SeatBadge.display/2` returns `spots_left`); otherwise the field
+  shows just the number added, and the cap surfaces only as the refusal when
+  the booker tries to add one guest too many.
+  """
+  @spec cap_visible?(map()) :: boolean()
+  def cap_visible?(assigns) do
+    with true <- MeetingTypes.group_type?(assigns[:meeting_type]),
+         %{seats_left: seats_left} = slot when is_integer(seats_left) <- selected_slot(assigns) do
+      match?(
+        %{spots_left: spots} when is_integer(spots),
+        SeatBadge.display(slot, assigns[:meeting_type])
+      )
+    else
+      _other -> true
     end
   end
 

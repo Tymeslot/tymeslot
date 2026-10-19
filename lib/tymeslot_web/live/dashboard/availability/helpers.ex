@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
 
   use Phoenix.Component
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   import TymeslotWeb.Components.FlagHelpers
 
@@ -19,10 +20,9 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
           country_code: String.t() | nil
         }
   def get_timezone_info(profile) do
-    # `profile.timezone` is nullable, so a present profile is not a present zone;
-    # the old `if profile` reached `format/1` with nil for a profile that had
-    # simply never had one set.
-    timezone = (profile && profile.timezone) || Timezones.fallback()
+    # The zone the availability engine reads the host's hours in, so the page
+    # labels them with the clock they are applied on.
+    timezone = Profiles.timezone(profile)
 
     %{
       timezone: timezone,

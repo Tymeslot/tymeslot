@@ -50,6 +50,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule}
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
@@ -125,7 +126,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
       }
 
       assert {:ok, rescheduled} =
-               Reschedule.execute(meeting.uid, new_params, form_data(), ctx.user.id)
+               Reschedule.execute(meeting.uid, new_params, ctx.user.id)
 
       assert_fanned_out(ctx, rescheduled, "meeting.rescheduled")
     end
@@ -133,7 +134,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     test "cancelling fans out meeting.cancelled", ctx do
       assert {:ok, meeting} = Create.execute(booking_params(ctx), form_data())
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
 
       assert_fanned_out(ctx, cancelled, "meeting.cancelled")
     end
@@ -160,7 +161,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     test "the deferred event fans out once the room exists", ctx do
       params = booking_params(%{user: ctx.user, meeting_type: ctx.video_type})
 
-      assert {:ok, meeting} = Create.execute_with_video_room(params, form_data())
+      assert {:ok, meeting} = Create.execute(params, form_data(), with_video_room: true)
 
       # Nothing has been announced yet: the booking handed the whole event to
       # the job so the payload can carry the join link.
@@ -185,7 +186,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     test "the event still fans out when the room can never be created", ctx do
       params = booking_params(%{user: ctx.user, meeting_type: ctx.video_type})
 
-      assert {:ok, meeting} = Create.execute_with_video_room(params, form_data())
+      assert {:ok, meeting} = Create.execute(params, form_data(), with_video_room: true)
 
       # A room that cannot be created must not cost the subscriber the booking.
       {:ok, _inactive} = VideoIntegrationQueries.toggle_active(ctx.video_integration)
@@ -253,11 +254,16 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
       }
 
       assert {:ok, %{status: "awaiting_approval"} = moved} =
-               Reschedule.execute(confirmed.uid, new_params, form_data(), ctx.user.id)
+               Reschedule.execute(confirmed.uid, new_params, ctx.user.id)
 
-      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn details ->
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_organizer, fn _email,
+                                                                                _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       assert {:ok, reapproved} = Approval.approve(moved)
@@ -271,6 +277,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
 
       # The invitee's side is unchanged: the approval of the new time is sent
       # as a reschedule notice, and the reminders follow the new time.
+      run_reschedule_emails()
       assert_received {:reschedule_emails, details}
       assert details.is_rescheduled
       assert DateTime.compare(details.start_time, reapproved.start_time) == :eq
@@ -428,5 +435,12 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
       "email" => "attendee@example.com",
       "message" => "Looking forward to it!"
     }
+  end
+
+  # Runs the reschedule notice jobs alone: the queue also holds jobs whose
+  # emails this test does not stub.
+  defp run_reschedule_emails do
+    for job <- all_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"}),
+        do: perform_job(EmailWorker, job.args)
   end
 end

@@ -6,8 +6,8 @@ defmodule Mix.Tasks.Tymeslot.DemoteAdmin do
 
       mix tymeslot.demote_admin user@example.com
 
-  Refuses to demote the only remaining admin, since that would leave the
-  install with no administrator able to reach the admin UI. Pass `--force`
+  Refuses to demote the only admin who can sign in, since that would leave
+  the install with no administrator able to reach the admin UI. Pass `--force`
   to demote them anyway (e.g. to remove a compromised account before
   promoting a replacement with `mix tymeslot.promote_admin`).
 
@@ -54,8 +54,8 @@ defmodule Mix.Tasks.Tymeslot.DemoteAdmin do
 
       {:error, :last_admin} ->
         Mix.raise(
-          "#{email} is the only remaining admin. Demoting them would leave this install " <>
-            "with no administrator. Re-run with --force to proceed anyway."
+          "No other admin can sign in. Demoting #{email} would leave this install " <>
+            "with no administrator able to sign in. Re-run with --force to proceed anyway."
         )
 
       {:error, %Changeset{} = changeset} ->

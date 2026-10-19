@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: cs\n"
@@ -21,22 +21,6 @@ msgstr "1. Vyberte účet kalendáře"
 msgid "2. Select Specific Calendar"
 msgstr "2. Vyberte konkrétní kalendář"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "Add a question and bookers will be asked it when they book this meeting type."
-msgstr "Přidejte otázku a zobrazí se každému, kdo si tento typ schůzky rezervuje."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Add option"
-msgstr "Přidat možnost"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Add question"
-msgstr "Přidat otázku"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
 msgid "All changes saved"
@@ -46,16 +30,6 @@ msgstr "Všechny změny uloženy"
 #, elixir-autogen, elixir-format
 msgid "An error occurred"
 msgstr "Došlo k chybě"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "Ask bookers extra questions during the booking flow."
-msgstr "Položte doplňující otázky v průběhu rezervace."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Body text"
-msgstr "Text upozornění"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -73,17 +47,9 @@ msgid "Calendar availability"
 msgstr "Dostupnost v kalendáři"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Zrušit"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
-msgstr "Změna typu smaže nastavení, které jste zadali (možnosti, text, min./max.). Dřívější rezervace si zachovají původní odpovědi. Chcete pokračovat?"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -105,11 +71,6 @@ msgstr "Vyplňte formulář, aby se změny uložily"
 msgid "Connect a calendar"
 msgstr "Připojit kalendář"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Controls how the booker enters their answer."
-msgstr "Určuje, jakým způsobem se odpověď zadává."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save changes"
@@ -119,28 +80,6 @@ msgstr "Změny se nepodařilo uložit"
 #, elixir-autogen, elixir-format
 msgid "Custom booking questions are available on Pro plans."
 msgstr "Vlastní otázky k rezervaci jsou dostupné v tarifech Pro."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "Custom booking questions are not available on your current plan."
-msgstr "Vlastní otázky k rezervaci nejsou ve vašem současném tarifu dostupné."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "Custom questions"
-msgstr "Vlastní otázky"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Date"
-msgstr "Datum"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Delete"
-msgstr "Smazat"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -157,42 +96,16 @@ msgstr "Hotovo"
 msgid "Duration (minutes)"
 msgstr "Délka (minuty)"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Duration must be a valid number"
 msgstr "Délka musí být platné číslo"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Each entry becomes a selectable choice for the booker."
-msgstr "Každá položka se stane jednou z možností na výběr."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
 msgid "Each guest is emailed a confirmation with their own link to accept or decline. You'll see every guest's response on your dashboard."
 msgstr "Každý host dostane e-mailem potvrzení s vlastním odkazem, kterým účast přijme nebo odmítne. Odpovědi všech hostů uvidíte na nástěnce."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Earliest date the booker may choose."
-msgstr "Nejdřívější datum, které lze zvolit."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Earliest time the booker may choose."
-msgstr "Nejdřívější čas, který lze zvolit."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Edit"
-msgstr "Upravit"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Edit question"
-msgstr "Upravit otázku"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
@@ -214,75 +127,27 @@ msgstr "Typ schůzky se nepodařilo uložit."
 msgid "Guests"
 msgstr "Hosté"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Help text (optional)"
-msgstr "Nápověda (nepovinné)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Highest value the booker may enter."
-msgstr "Nejvyšší hodnota, kterou lze zadat."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Icon"
 msgstr "Ikona"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Label"
-msgstr "Označení"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Latest date the booker may choose."
-msgstr "Nejpozdější datum, které lze zvolit."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Latest time the booker may choose."
-msgstr "Nejpozdější čas, který lze zvolit."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
 msgid "Let invitees add up to %{max_guests} guests to this meeting"
 msgstr "Umožnit pozvaným přidat k této schůzce až %{max_guests} hostů"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Lowest value the booker may enter."
-msgstr "Nejnižší hodnota, kterou lze zadat."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Max"
-msgstr "Max."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type created"
 msgstr "Typ schůzky byl vytvořen."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Min"
-msgstr "Min."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Minimum %{amount}."
 msgstr "Minimálně %{amount}."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Multiple choice"
-msgstr "Výběr více možností"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Název"
@@ -297,54 +162,12 @@ msgstr "Není nastavena žádná integrace kalendáře."
 msgid "No calendars found for this account."
 msgstr "Pro tento účet nebyl nalezen žádný kalendář."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "No custom questions yet"
-msgstr "Zatím žádné vlastní otázky"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "No video integrations configured."
-msgstr "Není nastavena žádná videointegrace."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "Note"
-msgstr "Upozornění"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Note for acknowledgement"
-msgstr "Upozornění k potvrzení"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Number"
-msgstr "Číslo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Option %{number}"
-msgstr "Možnost %{number}"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Options"
-msgstr "Možnosti"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Platby"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Phone"
-msgstr "Telefon"
-
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a video provider for video meetings"
@@ -370,90 +193,20 @@ msgstr "Obnovování kalendářů…"
 msgid "Reminders"
 msgstr "Připomínky"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Remove option"
-msgstr "Odebrat možnost"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Require payment for this meeting type"
 msgstr "Vyžadovat platbu za tento typ schůzky"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Required"
-msgstr "Povinné"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Save question"
-msgstr "Uložit otázku"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Set up video integration"
-msgstr "Nastavit integraci pro video"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Short text"
-msgstr "Krátký text"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/show_as_free_section.ex
 #, elixir-autogen, elixir-format
 msgid "Show these bookings as free on my calendar"
 msgstr "Zobrazovat tyto rezervace v mém kalendáři jako volný čas"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Single choice"
-msgstr "Výběr jedné možnosti"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Text that the booker must acknowledge before proceeding"
-msgstr "Text, který je nutné před pokračováním potvrdit"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "The booker must answer this question before they can continue."
-msgstr "Bez zodpovězení této otázky nelze v rezervaci pokračovat."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/show_as_free_section.ex
 #, elixir-autogen, elixir-format
 msgid "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
 msgstr "Událost se vytvoří i tak, ale označí se jako volný čas, takže neblokuje další rezervace ani se nezobrazuje jako obsazený čas lidem, kteří vidí vaši dostupnost."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "The notice the booker must read and confirm before they can continue."
-msgstr "Upozornění, které je nutné si před pokračováním přečíst a potvrdit."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "The question shown to the booker."
-msgstr "Otázka, která se zobrazí při rezervaci."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Time"
-msgstr "Čas"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Type"
-msgstr "Typ"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "URL"
-msgstr "URL"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
@@ -465,53 +218,22 @@ msgstr "Stav předplatného se nepodařilo ověřit. Zkuste to prosím znovu."
 msgid "Unsaved changes"
 msgstr "Neuložené změny"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Yes / No"
-msgstr "Ano / Ne"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Yes, change type"
-msgstr "Ano, změnit typ"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "e.g., Company name"
-msgstr "např. název firmy"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "e.g., Enter your company's registered name"
-msgstr "např. Zadejte oficiální název své firmy"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Quick Chat"
 msgstr "např. Krátký hovor"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "required"
-msgstr "povinné"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
 msgstr "Chcete-li za tento typ schůzky účtovat platbu, připojte Stripe na stránce %{payments_link}."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Shown below the question - use it to clarify what you're asking or give an example."
-msgstr "Zobrazuje se pod otázkou – využijte ji k upřesnění dotazu nebo pro uvedení příkladu."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
 msgid "Too many changes - saving shortly…"
 msgstr "Příliš mnoho změn – uložíme za okamžik…"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price"
 msgstr "Zadejte platnou cenu"
@@ -521,32 +243,32 @@ msgstr "Zadejte platnou cenu"
 msgid "None of the calendars you selected for this account can accept bookings."
 msgstr "Žádný z kalendářů, které jste pro tento účet vybrali, nemůže přijímat rezervace."
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "None of the calendars you selected for this account can accept bookings. Update your calendar selection in Integration settings, or choose a different account."
 msgstr "Žádný z kalendářů, které jste pro tento účet vybrali, nemůže přijímat rezervace. Upravte výběr kalendářů v nastavení integrací nebo zvolte jiný účet."
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a calendar account"
 msgstr "Vyberte prosím účet kalendáře"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a target calendar"
 msgstr "Vyberte prosím cílový kalendář"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Selected calendar account is invalid"
 msgstr "Vybraný účet kalendáře je neplatný"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Selected calendar is not available for this account"
 msgstr "Vybraný kalendář není pro tento účet dostupný"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Selected video provider is invalid or inactive"
 msgstr "Vybraný poskytovatel videa je neplatný nebo neaktivní"
@@ -606,11 +328,6 @@ msgstr "Podrobnosti"
 msgid "Hide from public booking page"
 msgstr "Skrýt z veřejné rezervační stránky"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Location"
-msgstr "Místo"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Location & Calendar"
@@ -656,7 +373,7 @@ msgstr "Rozvrh"
 msgid "Schedule updated and saved"
 msgstr "Rozvrh aktualizován a uložen"
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr "Vybraný rozvrh vám nepatří"
@@ -686,7 +403,7 @@ msgstr "Pokud neodpovíte včas, žádost propadne, termín se uvolní a host bu
 msgid "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
 msgstr "Hosté místo potvrzení dostanou e-mail „žádost přijata“ a termín se zarezervuje, aby ho nikdo jiný nezabral. Potvrzení a pozvánku do kalendáře dostanou, jakmile souhlasíte."
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a whole number of hours, or leave blank to use the default."
@@ -788,178 +505,15 @@ msgstr "Odebrat tuto délku"
 msgid "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
 msgstr "Časy začátku se řídí délkou, kterou si vybere rezervující, takže každá délka nabízí jiné časy. Zvolte pevný interval, aby byly časy začátku pro všechny délky stejné."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#, elixir-autogen, elixir-format
-msgid "12 High Street, London EC1A 1BB"
-msgstr "Hlavní 12, 110 00 Praha"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Add location"
-msgstr "Přidat místo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Anything the booker needs to know to get there"
-msgstr "Vše, co je potřeba vědět, aby se tam dalo dojít"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Ask the booker for their number"
-msgstr "Zeptat se rezervujícího na jeho číslo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Bookers will be asked to choose one of these."
-msgstr "Rezervující budou požádáni, aby si jedno z těchto míst vybrali."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Decides what happens when a booker picks this."
-msgstr "Určuje, co se stane, když si rezervující vybere toto místo."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Details (optional)"
-msgstr "Podrobnosti (nepovinné)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Edit location"
-msgstr "Upravit místo"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "In person"
 msgstr "Osobně"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "No details"
-msgstr "Žádné podrobnosti"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Number to call"
-msgstr "Číslo, na které volat"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Phone call"
-msgstr "Telefonát"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Phone call: the booker gives their number"
-msgstr "Telefonát: číslo uvede rezervující"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Pick one or more. With several, the booker chooses which one the room is created on."
-msgstr "Vyberte jednoho nebo více. Pokud jich je více, rezervující osoba zvolí, u kterého se místnost vytvoří."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Save location"
-msgstr "Uložit místo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Shown to the booker and written into the calendar invitation."
-msgstr "Zobrazí se rezervujícímu a zapíše se do pozvánky v kalendáři."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Something else"
-msgstr "Něco jiného"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Somewhere else"
-msgstr "Někde jinde"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "The booker picks: %{providers}"
-msgstr "Rezervující osoba vybírá: %{providers}"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Video call"
-msgstr "Videohovor"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Video call: integration no longer available"
-msgstr "Videohovor: integrace již není dostupná"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Video provider"
-msgstr "Poskytovatel videa"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Video providers"
-msgstr "Poskytovatelé videa"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "What the booker sees in the list of locations."
-msgstr "Co rezervující vidí v seznamu míst."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Where this meeting is held. Add a second location and bookers will be asked to choose."
-msgstr "Kde se tato schůzka koná. Přidejte druhé místo a rezervující budou požádáni, aby si vybrali."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "You call them. Leave this off to publish a number for them to call instead."
-msgstr "Voláte vy. Nechte vypnuté, chcete-li místo toho zveřejnit číslo, na které mají volat."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "e.g., Our London office"
-msgstr "např. Naše pražská kancelář"
-
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "A selected location is not one of yours"
 msgstr "Jedno z vybraných míst vám nepatří"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#, elixir-autogen, elixir-format
-msgid "Address and directions (optional)"
-msgstr "Adresa a popis cesty (nepovinné)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Address arranged after booking"
-msgstr "Adresa se domluví po rezervaci"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "No address selected: bookers are told it will be arranged after booking."
-msgstr "Není vybrána žádná adresa: rezervující se dozví, že ji domluvíme po rezervaci."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Pick one or more. With several, the booker chooses where to meet."
-msgstr "Vyberte jedno nebo více. Při více možnostech si rezervující vybere, kde se sejdete."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "You have no saved locations yet. Add one here, or leave this empty to arrange the address after booking."
-msgstr "Zatím nemáte žádná uložená místa. Přidejte ho zde, nebo pole nechte prázdné a adresu domluvíte po rezervaci."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#, elixir-autogen, elixir-format
-msgid "e.g., Berlin office"
-msgstr "např. Kancelář Praha"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -1026,7 +580,7 @@ msgstr "Vypněte skupinové rezervace, chcete-li vyžadovat platbu."
 msgid "Turn off payments to enable group bookings."
 msgstr "Vypněte platby, chcete-li povolit skupinové rezervace."
 
-#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Group bookings are not included in your current plan."
 msgstr "Skupinové rezervace nejsou součástí vašeho aktuálního tarifu."
@@ -1055,21 +609,6 @@ msgstr "Vypněte schvalování, chcete-li zapnout skupinové rezervace."
 #, elixir-autogen, elixir-format
 msgid "Turn off group bookings to require approval."
 msgstr "Vypněte skupinové rezervace, chcete-li vyžadovat schválení."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
-#, elixir-autogen, elixir-format
-msgid "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
-msgstr "Kde se schůzka koná. Skupinové rezervace používají jedno předem určené místo, aby se všichni v termínu setkali na stejném místě."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "+ New saved location"
-msgstr "+ Nové uložené místo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#, elixir-autogen, elixir-format
-msgid "Add to saved locations"
-msgstr "Přidat do uložených míst"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -1111,31 +650,6 @@ msgstr "Skupinové rezervace potřebují adresu předem. Vyberte jedno uložené
 msgid "Group bookings need the address up front. Edit the location and choose a saved location."
 msgstr "Skupinové rezervace potřebují adresu předem. Upravte místo a vyberte uložené místo."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Group bookings use a location fixed in advance: one video provider, one saved location, or a number for bookers to call."
-msgstr "Skupinové rezervace používají místo určené předem: jednoho poskytovatele videa, jedno uložené místo nebo číslo, na které rezervující zavolají."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/new_venue_component.ex
-#, elixir-autogen, elixir-format
-msgid "New saved location"
-msgstr "Nové uložené místo"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Pick one. Group bookings meet in one place."
-msgstr "Vyberte jedno. Skupinové rezervace se konají na jednom místě."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Saved locations"
-msgstr "Uložená místa"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
-#, elixir-autogen, elixir-format
-msgid "You have no saved locations yet. Add one here: group bookings need the address up front."
-msgstr "Zatím nemáte žádná uložená místa. Přidejte ho zde: skupinové rezervace potřebují adresu předem."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "%{time} (+%{count} day)"
@@ -1148,6 +662,141 @@ msgstr[2] "%{time} (+%{count} dní)"
 #, elixir-autogen, elixir-format
 msgid "A group meeting type offers a single duration."
 msgstr "Skupinový typ schůzky nabízí jen jednu délku."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency, %{currency}, is not supported for meeting payments. Choose a supported currency on the %{payments_link} page to charge for this meeting type."
+msgstr "Měna vašeho účtu Stripe, %{currency}, není pro platby za schůzky podporovaná. Chcete-li za tento typ schůzky účtovat platbu, vyberte podporovanou měnu na stránce %{payments_link}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Choose a supported currency on the %{payments_link} page to change what this meeting type charges."
+msgstr "V měně vašeho účtu Stripe, %{currency}, už nelze nastavovat ceny. Chcete-li změnit cenu tohoto typu schůzky, vyberte podporovanou měnu na stránce %{payments_link}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "The current price is %{amount}. Switching to a supported currency clears it, as it clears every paid meeting type's price."
+msgstr "Současná cena je %{amount}. Přechodem na podporovanou měnu se smaže, stejně jako ceny všech placených typů schůzek."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer available. Reload the page and try again."
+msgstr "Kalendář, do kterého tento typ schůzky rezervuje, už není k dispozici. Obnovte stránku a zkuste to znovu."
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Description must be %{max} characters or less"
+msgstr "Popis může mít nejvýše %{max} znaků"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Description must be text"
+msgstr "Popis musí být text"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration cannot exceed 24 hours (%{max} minutes)"
+msgstr "Délka nesmí překročit 24 hodin (%{max} min)"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration is required"
+msgstr "Délka je povinná"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration must be a multiple of %{step} minutes"
+msgstr "Délka musí být násobkem %{step} min"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration must be a number"
+msgstr "Délka musí být číslo"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration must be a valid number of minutes"
+msgstr "Délka musí být platný počet minut"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration must be at least %{min} minutes"
+msgstr "Délka musí být alespoň %{min} min"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid calendar account format"
+msgstr "Neplatný formát účtu kalendáře"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid calendar account selected"
+msgstr "Vybraný účet kalendáře je neplatný"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid field"
+msgstr "Neplatné pole"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid icon format"
+msgstr "Neplatný formát ikony"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid icon selected"
+msgstr "Vybraná ikona je neplatná"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid target calendar format"
+msgstr "Neplatný formát cílového kalendáře"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting name is required"
+msgstr "Název typu schůzky je povinný"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting name must be 100 characters or less"
+msgstr "Název typu schůzky může mít nejvýše 100 znaků"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting name must be at least 2 characters"
+msgstr "Název typu schůzky musí mít alespoň 2 znaky"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting name must be text"
+msgstr "Název typu schůzky musí být text"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting name must contain at least one letter or number"
+msgstr "Název typu schůzky musí obsahovat alespoň jedno písmeno nebo číslici"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Slot interval cannot exceed %{max} minutes"
+msgstr "Interval mezi termíny nesmí překročit %{max} min"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Slot interval must be a number"
+msgstr "Interval mezi termíny musí být číslo"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Slot interval must be a valid number of minutes"
+msgstr "Interval mezi termíny musí být platný počet minut"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Slot interval must be at least %{min} minutes"
+msgstr "Interval mezi termíny musí být alespoň %{min} min"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
@@ -1196,3 +845,18 @@ msgstr "Týdny začínají v pondělí, jak je nastaveno v Nastavení kalendář
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Týdny začínají v neděli, jak je nastaveno v Nastavení kalendáře."
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Each additional duration must be a number of minutes"
+msgstr "Každá další délka musí být počet minut"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Each duration can only be offered once"
+msgstr "Každou délku lze nabídnout jen jednou"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "You can offer at most %{max} durations"
+msgstr "Můžete nabídnout nejvýše %{max} délek"

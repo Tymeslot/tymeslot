@@ -43,11 +43,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.BookingWriteBackTest do
     # what actually reaches the mailbox, so the real implementation runs and
     # the HTTP boundary is the only thing stubbed.
     #
-    # `Calendar.Operations` and not `Calendar.Events`: both read this same key,
+    # `Calendar.Runtime.Operations` and not `Calendar.Events`: both read this same key,
     # so pointing it at the `Events` facade makes it delegate to itself and
     # spin. `Operations` is what `Events` resolves to when the key is unset,
     # which is the production arrangement.
-    with_config(:tymeslot, :calendar_module, Tymeslot.Integrations.Calendar.Operations)
+    with_config(:tymeslot, :calendar_module, Tymeslot.Integrations.Calendar.Runtime.Operations)
     ExchangeCase.reset_breaker(@base_url)
 
     user = insert(:user)

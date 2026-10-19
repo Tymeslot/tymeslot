@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   both call sites, is what keeps that from drifting back.
   """
 
-  alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   @doc """
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   """
   @spec owner_url(String.t(), integer(), keyword()) :: String.t()
   def owner_url(username, user_id, opts \\ []) do
-    Policy.app_url() <> owner_path(username, user_id, opts)
+    UrlBuilder.base_url() <> owner_path(username, user_id, opts)
   end
 
   defp put_theme(query, theme) when theme in [nil, ""], do: query

@@ -31,9 +31,10 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       user_timezone: socket.assigns[:user_timezone],
       meeting_type: socket.assigns[:meeting_type],
       reschedule_uid: socket.assigns[:reschedule_meeting_uid],
+      reschedule: socket.assigns[:reschedule_context],
       reschedule_seat_token: socket.assigns[:reschedule_seat_token],
-      demo_mode?: Demo.demo_mode?(socket),
-      debug_calendar_module: socket.private[:debug_calendar_module]
+      seat_move: socket.assigns[:seat_move_context],
+      demo_mode?: Demo.demo_mode?(socket)
     }
   end
 

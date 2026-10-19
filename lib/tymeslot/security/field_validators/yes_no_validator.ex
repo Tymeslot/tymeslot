@@ -7,6 +7,8 @@ defmodule Tymeslot.Security.FieldValidators.YesNoValidator do
   marked required. Any other shape is rejected as a wire-protocol error.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @spec validate(any(), map(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, definition, opts \\ [])
 
@@ -14,8 +16,11 @@ defmodule Tymeslot.Security.FieldValidators.YesNoValidator do
   def validate(false, _definition, _opts), do: :ok
 
   def validate(nil, _definition, opts) do
-    if Keyword.get(opts, :required, false), do: {:error, "Answer is required"}, else: :ok
+    if Keyword.get(opts, :required, false),
+      do: {:error, dgettext("errors_input", "Answer is required")},
+      else: :ok
   end
 
-  def validate(_value, _definition, _opts), do: {:error, "Answer must be yes or no"}
+  def validate(_value, _definition, _opts),
+    do: {:error, dgettext("errors_input", "Answer must be yes or no")}
 end

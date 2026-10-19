@@ -13,10 +13,11 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   import Ecto.Query, warn: false
   require Logger
 
-  alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
+  alias Tymeslot.Auth.{AdminBootstrap, RegistrationAnnouncement, UserQueries, UserSchema}
   alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -32,22 +33,25 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   ## Parameters
   - provider: The OAuth provider (:github, :google or :oauth)
   - auth_params: Map containing user authentication parameters
+  - profile_params: Profile fields for a new account
+  - metadata: The sign-up's metadata, for the registration hook of a new account
 
   ## Returns
   - {:ok, %{user: user, created: boolean}} where created indicates if user was newly created
   - {:error, reason} on failure
   """
-  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params()) ::
+  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params(), map()) ::
           {:ok, %{user: UserSchema.t(), created: boolean()}}
           | {:error, any()}
-  def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}) do
+  def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}, metadata \\ %{}) do
     provider_uid = auth_params[Atom.to_string(Providers.fetch!(provider).uid_field)]
 
     result =
       Repo.transaction(fn ->
         with {:ok, {user, created}} <-
                find_or_create_by_provider(Repo, provider, provider_uid, auth_params),
-             {:ok, _result} <- ensure_profile(Repo, user, created, profile_params) do
+             {:ok, _result} <- ensure_profile(Repo, user, created, profile_params),
+             :ok <- enqueue_registration_hook(user, created, metadata) do
           {user, created}
         else
           {:error, {operation, reason}} ->
@@ -73,6 +77,13 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   end
 
   # Private functions
+
+  # A new account's registration hook job commits with the account, so the
+  # account never exists without it.
+  defp enqueue_registration_hook(_user, false, _metadata), do: :ok
+
+  defp enqueue_registration_hook(user, true, metadata),
+    do: RegistrationAnnouncement.enqueue_hook(user.id, metadata)
 
   # The failed insert aborted the transaction, so the re-read happens outside
   # it. Found: another request created the account first. Not found: the
@@ -104,7 +115,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   end
 
   # Both signup paths (standard registration and OAuth) must create a default
-  # weekly schedule immediately after the profile. Keep these in sync;
+  # weekly schedule and seed the default meeting types immediately after the
+  # profile. Keep these in sync;
   # see Task 1 in the composition test plan for drift regression.
   defp create_profile(repo, user, profile_params) do
     # Use the repo passed in to ensure we're in the same transaction
@@ -121,7 +133,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       end
 
     with {:ok, profile} <- ProfileQueries.create_profile_in_transaction(repo, profile_attrs),
-         {:ok, _schedule} <- Schedules.create_default(profile.id, repo) do
+         {:ok, _schedule} <- Schedules.create_default(profile.id, repo),
+         :ok <- MeetingTypes.seed_default_meeting_types(user.id, repo) do
       Logger.info("Created profile", user_id: user.id)
       {:ok, profile}
     else

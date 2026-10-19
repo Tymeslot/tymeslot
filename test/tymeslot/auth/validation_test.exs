@@ -28,10 +28,19 @@ defmodule Tymeslot.Auth.ValidationTest do
     end
 
     test "reports each field's problem at once, translated" do
-      assert {:error, %{email: email_error, password: "Password is required"}} =
-               Validation.validate_login_input("not-an-email", "")
+      assert {:error, %{email: "Email is required", password: "Password is required"}} =
+               Validation.validate_login_input("", "")
+    end
 
-      assert byte_size(email_error) > 0
+    test "does not hold the email to the format rules, which govern new addresses" do
+      assert :ok = Validation.validate_login_input(~s("legacy"@example.com), "anything")
+    end
+
+    test "refuses an email longer than any stored address" do
+      overlong = String.duplicate("a", 250) <> "@example.com"
+
+      assert {:error, %{email: message}} = Validation.validate_login_input(overlong, "anything")
+      assert message =~ "maximum length"
     end
 
     test "refuses a password longer than login hashes" do

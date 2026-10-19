@@ -294,6 +294,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             payment_required={@payment_required}
             payment_price={@payment_price}
             currency={@payment_currency}
+            currency_support={@payment_currency_support}
+            account_currency={@payment_account_currency}
+            stored_price={@payment_stored_price}
             currency_minimum_cents={@payment_currency_minimum_cents}
             form_errors={@form_errors}
             myself={@myself}

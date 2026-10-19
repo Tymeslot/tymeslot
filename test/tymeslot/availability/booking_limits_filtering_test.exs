@@ -15,7 +15,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
   @moduletag :integration
 
   alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Meetings.BookingLimits.Checker
 
   import Tymeslot.MeetingTestHelpers
@@ -127,7 +127,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
 
     test "Sunday weeks count the Sunday before into the booked week",
          %{user: user, profile: profile, sunday_before: sunday_before} do
-      {:ok, _prefs} = CalendarManagement.save_preferences(user.id, %{week_start_day: "sunday"})
+      {:ok, _prefs} = Management.save_preferences(user.id, %{week_start_day: "sunday"})
 
       assert {:error, :booking_limit_reached} =
                Checker.check_booking_allowed(user.id, profile, nil, sunday_before)

@@ -198,6 +198,89 @@ defmodule Tymeslot.Infrastructure.CacheStoreTest do
     assert TestCache.get_or_compute(key, fn -> :retried end) == :retried
   end
 
+  describe "invalidating a key while it is being computed" do
+    # The computation read the world as it was before the invalidation, so
+    # its value must not outlive it: a booking that just took a slot calls
+    # `invalidate_for_user/1`, and a range computed a moment earlier would
+    # otherwise keep offering that slot for the whole TTL.
+    test "the value computed before the invalidation is not stored" do
+      key = "superseded"
+
+      {leader, leader_pid} = claim_lead(key)
+      TestCache.invalidate(key)
+
+      send(leader_pid, {:finish, fn -> :stale end})
+      assert Task.await(leader) == :stale
+
+      assert TestCache.get_or_compute(key, fn -> :fresh end) == :fresh
+    end
+
+    test "a caller arriving afterwards computes afresh instead of joining it" do
+      key = "rejoin"
+
+      {leader, leader_pid} = claim_lead(key)
+      early = Task.async(fn -> TestCache.get_or_compute(key, fn -> :never_called end) end)
+      await_waiters(key, 1)
+
+      TestCache.invalidate(key)
+
+      # Not parked behind the superseded computation, which is still running.
+      late = Task.async(fn -> TestCache.get_or_compute(key, fn -> :fresh end) end)
+      assert Task.yield(late, 2_000) == {:ok, :fresh}
+
+      send(leader_pid, {:finish, fn -> :stale end})
+      assert Task.await(leader) == :stale
+      # It asked before the invalidation, so the computation it waited on answers it.
+      assert Task.await(early) == :stale
+
+      # The fresh value is the one that stays cached.
+      assert TestCache.get_or_compute(key, fn -> :recomputed end) == :fresh
+    end
+
+    test "invalidate_pattern detaches the computations whose keys it matches" do
+      matching = {:range, 1, :today}
+      other = {:range, 2, :today}
+
+      {matching_leader, matching_pid} = claim_lead(matching)
+      {other_leader, other_pid} = claim_lead(other)
+
+      TestCache.invalidate_pattern({:range, 1, :_})
+
+      send(matching_pid, {:finish, fn -> :stale end})
+      send(other_pid, {:finish, fn -> :current end})
+      assert Task.await(matching_leader) == :stale
+      assert Task.await(other_leader) == :current
+
+      assert TestCache.get_or_compute(matching, fn -> :fresh end) == :fresh
+      assert TestCache.get_or_compute(other, fn -> :recomputed end) == :current
+    end
+
+    test "invalidating while the cache is restarting does not crash the caller" do
+      # Callers invalidate after committing a change; the table is owned by
+      # the cache process, so with the process down there is nothing to drop.
+      stop_supervised!(TestCache)
+
+      assert TestCache.invalidate("anything") == true
+      assert TestCache.invalidate_pattern({:range, :_}) == true
+    end
+
+    test "a superseded leader that dies hands over without storing" do
+      key = "superseded-promotion"
+
+      {leader, leader_pid} = claim_lead(key)
+      waiter = Task.async(fn -> TestCache.get_or_compute(key, fn -> :from_waiter end) end)
+      await_waiters(key, 1)
+
+      TestCache.invalidate(key)
+
+      Process.unlink(leader.pid)
+      Process.exit(leader_pid, :kill)
+
+      assert Task.await(waiter) == :from_waiter
+      assert TestCache.get_or_compute(key, fn -> :fresh end) == :fresh
+    end
+  end
+
   # Starts a caller that wins the computation for `key` and parks inside its
   # computation until told what to return. Returns the task and the pid the
   # computation is running in — the same pid, which is the point.

@@ -28,6 +28,16 @@ defmodule Tymeslot.MeetingTypes.ExtraLengthsValidationTest do
       refute changeset(%{extra_lengths_minutes: [0]}).valid?
     end
 
+    test "refuses a length off the step the primary one keeps to" do
+      step = Constraints.duration_step_minutes()
+      changeset = changeset(%{extra_lengths_minutes: [60 + step - 1]})
+
+      refute changeset.valid?
+
+      assert {"must each be a multiple of %{step} minutes", [step: ^step]} =
+               changeset.errors[:extra_lengths_minutes]
+    end
+
     test "refuses further lengths on a group type" do
       changeset = changeset(%{max_participants: 5, extra_lengths_minutes: [60]})
 
@@ -67,7 +77,7 @@ defmodule Tymeslot.MeetingTypes.ExtraLengthsValidationTest do
       assert {:error, %{extra_lengths: message}} =
                InputValidation.validate_field(:extra_lengths, {["42"], "30"}, %{})
 
-      assert message =~ "divisible by 5"
+      assert message =~ "multiple of 5"
 
       assert {:error, %{extra_lengths: message}} =
                InputValidation.validate_field(:extra_lengths, {["30"], "30"}, %{})
@@ -100,13 +110,13 @@ defmodule Tymeslot.MeetingTypes.ExtraLengthsValidationTest do
       params = %{"name" => "Video call", "duration" => "30", "extra_lengths" => ["60", "15"]}
 
       assert {:ok, %{extra_lengths_minutes: [60, 15]}} =
-               FormMapper.build_attrs(params, @ui_state)
+               FormMapper.build_attrs(params, @ui_state, "EUR")
     end
 
     test "leaves the lengths alone when the form did not post them" do
       params = %{"name" => "Video call", "duration" => "30"}
 
-      assert {:ok, attrs} = FormMapper.build_attrs(params, @ui_state)
+      assert {:ok, attrs} = FormMapper.build_attrs(params, @ui_state, "EUR")
       refute Map.has_key?(attrs, :extra_lengths_minutes)
     end
   end

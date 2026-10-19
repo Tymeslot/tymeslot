@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
   @moduletag :unit
 
   import ExUnit.CaptureLog
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -138,6 +139,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       synced_at: ~U[2026-04-08 12:00:00Z]
     }
 
+    # The series below start on fixed dates and are expanded over the sync's
+    # window, a year either side of now: pinned to the day they were synced,
+    # so the window keeps them once the suite runs a year past it.
+    setup do: freeze_clock(@context.synced_at)
+
     test "normalises a standard timed VEVENT into a CalendarEvent" do
       raw = %{
         uid: "timed-001@example.com",
@@ -202,6 +208,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert event.end_date == ~D[2030-03-16]
       assert event.start_at == nil
       assert event.end_at == nil
+    end
+
+    # A DATE-TIME DTSTART with no end ends where it starts (RFC 5545 §3.6.1),
+    # so a moment at midnight UTC has a midnight end too; it is not a day.
+    test "keeps a moment at midnight UTC a timed event" do
+      raw = %{
+        uid: "midnight-moment@example.com",
+        summary: "Deadline",
+        dtstart: ~U[2030-03-15 00:00:00Z],
+        dtend: ~U[2030-03-15 00:00:00Z]
+      }
+
+      assert {:ok, [%CalendarEvent{} = event]} = EventProcessor.normalise_events([raw], @context)
+
+      assert event.all_day == false
+      assert event.start_at == ~U[2030-03-15 00:00:00Z]
+      assert event.end_at == ~U[2030-03-15 00:00:00Z]
     end
 
     test "all-day event with only DTSTART and no DTEND defaults end_date to start_date + 1" do

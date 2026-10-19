@@ -7,13 +7,40 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Greeting, SignInProvider, TemplateHelper, Text}
+  alias Swoosh.Email
+  alias Tymeslot.Emails.RecipientLocale
+
+  alias Tymeslot.Emails.Shared.{
+    Buttons,
+    Greeting,
+    MjmlEmail,
+    SignInProvider,
+    TemplateHelper,
+    Text
+  }
 
   # A first-contact email welcoming a new user in.
   @intent :confirmed
 
-  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
+  @doc """
+  The email, addressed and rendered in the recipient's locale.
+  """
+  @spec render(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t(),
+          String.t()
+        ) :: Email.t()
   def render(recipient, provider, confirm_url) do
+    RecipientLocale.with_user_locale(recipient, fn ->
+      MjmlEmail.base_email()
+      |> Email.to({recipient.name || recipient.email, recipient.email})
+      |> Email.subject(dgettext("emails_account", "Confirm your email to finish signing up"))
+      |> Email.html_body(html_body(recipient, provider, confirm_url))
+      |> Email.text_body(text_body(recipient, provider, confirm_url))
+    end)
+  end
+
+  defp html_body(recipient, provider, confirm_url) do
     mjml_content = """
     #{Text.centered_html(Greeting.html(recipient), padding: "8px 0 4px 0", font_size: "16px")}
 
@@ -39,9 +66,7 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
     )
   end
 
-  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) ::
-          String.t()
-  def render_text(recipient, provider, confirm_url) do
+  defp text_body(recipient, provider, confirm_url) do
     """
     #{dgettext("emails_account", "One step to go")}
 

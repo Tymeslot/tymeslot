@@ -117,6 +117,37 @@ defmodule Tymeslot.CalendarGrid.UpcomingRemindersTest do
     assert id == kept.id
   end
 
+  test "busy time with nothing to show does not crowd a match out of the feed", %{
+    integration: integration
+  } do
+    # Busy periods cached for availability alone, all starting before the
+    # one event with a reminder.
+    for n <- 1..3 do
+      event(integration,
+        role: "busy_only",
+        all_day: false,
+        start_at: DateTime.add(@now, n, :hour),
+        provider_event_id: nil
+      )
+    end
+
+    kept =
+      event(integration,
+        summary: "keep",
+        all_day: false,
+        start_at: DateTime.add(@now, 10, :hour),
+        reminders: [%{"method" => "popup", "minutes_before" => 10}]
+      )
+
+    result =
+      CalendarGrid.list_upcoming_events_with_reminders([integration.id], @now, [integration],
+        limit: 3
+      )
+
+    assert [%{id: id}] = result
+    assert id == kept.id
+  end
+
   test "an unbounded run of deselected-calendar rows still can't crowd a selected match out", %{
     integration: integration
   } do

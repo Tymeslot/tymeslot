@@ -266,7 +266,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeSelectionTest do
   end
 
   defp use_theme(profile, theme) do
-    {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: theme.id})
+    {:ok, profile} = Profiles.update_booking_theme(profile, theme.id)
     %{profile: profile}
   end
 

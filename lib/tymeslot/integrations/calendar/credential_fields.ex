@@ -7,6 +7,13 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   input and returns either the cleaned value or a `%{field => message}` error
   ready to render against that field.
 
+  Every field here is an identifier or a credential handed to the calendar
+  server, so each is sanitised in `:plain_text` mode (null bytes, Unicode
+  normalisation, trimming) and then accepted or rejected, never rewritten.
+  `:strict` mode would percent-decode the value and strip `0x<hex>` runs and
+  everything from `--` onwards, quietly turning `crypto0xabc@corp.com` into
+  `crypto@corp.com`: a different mailbox, possibly someone else's.
+
   These are shared by the two surfaces that collect the same credentials — the
   integration form and the discovery/test-connection probe — so that a rule
   tightened for one automatically holds for the other. `validate_calendar_url/1`
@@ -88,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
     case InputValidators.validate_server_url(url, metadata,
            error_message:
              dgettext(
-               "dashboard_calendar_providers",
+               "integrations_calendar",
                "Please enter a valid server URL (e.g., https://cloud.example.com)"
              ),
            internal_names_local: SsrfGuard.allow_private_for_calendar?(),
@@ -100,14 +107,14 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   end
 
   defp validate_server_url(_value, _metadata) do
-    {:error, %{url: dgettext("dashboard_calendar_providers", "Server URL must be text")}}
+    {:error, %{url: dgettext("integrations_calendar", "Server URL must be text")}}
   end
 
   defp validate_username(nil, _metadata), do: {:error, %{username: username_required_message()}}
   defp validate_username("", _metadata), do: {:error, %{username: username_required_message()}}
 
   defp validate_username(username, metadata) when is_binary(username) do
-    case UniversalSanitizer.sanitize_and_validate(username, allow_html: false, metadata: metadata) do
+    case UniversalSanitizer.sanitize_and_validate(username, mode: :plain_text, metadata: metadata) do
       {:ok, sanitized_username} ->
         cond do
           String.length(sanitized_username) > 255 ->
@@ -115,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
              %{
                username:
                  dgettext(
-                   "dashboard_calendar_providers",
+                   "integrations_calendar",
                    "Username must be 255 characters or less"
                  )
              }}
@@ -133,14 +140,14 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   end
 
   defp validate_username(_value, _metadata) do
-    {:error, %{username: dgettext("dashboard_calendar_providers", "Username must be text")}}
+    {:error, %{username: dgettext("integrations_calendar", "Username must be text")}}
   end
 
   defp validate_mailbox(nil, _metadata), do: {:error, %{mailbox: mailbox_required_message()}}
   defp validate_mailbox("", _metadata), do: {:error, %{mailbox: mailbox_required_message()}}
 
   defp validate_mailbox(mailbox, metadata) when is_binary(mailbox) do
-    case UniversalSanitizer.sanitize_and_validate(mailbox, allow_html: false, metadata: metadata) do
+    case UniversalSanitizer.sanitize_and_validate(mailbox, mode: :plain_text, metadata: metadata) do
       {:ok, sanitized} ->
         trimmed = String.trim(sanitized)
 
@@ -168,18 +175,18 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
 
   defp mailbox_required_message do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Enter the mailbox address to check availability for"
     )
   end
 
   defp mailbox_too_long_message do
-    dgettext("dashboard_calendar_providers", "Mailbox address must be 255 characters or less")
+    dgettext("integrations_calendar", "Mailbox address must be 255 characters or less")
   end
 
   defp mailbox_invalid_message do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Enter a mailbox address in the form name@example.com"
     )
   end
@@ -198,8 +205,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
       String.length(password) > 500 ->
         {:error,
          %{
-           password:
-             dgettext("dashboard_calendar_providers", "Password must be 500 characters or less")
+           password: dgettext("integrations_calendar", "Password must be 500 characters or less")
          }}
 
       String.length(String.trim(password)) < 1 ->
@@ -211,7 +217,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   end
 
   defp validate_password(_value, _metadata) do
-    {:error, %{password: dgettext("dashboard_calendar_providers", "Password must be text")}}
+    {:error, %{password: dgettext("integrations_calendar", "Password must be text")}}
   end
 
   defp validate_calendar_paths(nil, _metadata), do: {:ok, ""}
@@ -226,7 +232,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
 
   defp validate_calendar_paths(calendar_paths, metadata) when is_binary(calendar_paths) do
     case UniversalSanitizer.sanitize_and_validate(calendar_paths,
-           allow_html: false,
+           mode: :plain_text,
            metadata: metadata
          ) do
       {:ok, sanitized_paths} ->
@@ -241,14 +247,13 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   end
 
   defp validate_calendar_paths(_value, _metadata) do
-    {:error,
-     %{calendar_paths: dgettext("dashboard_calendar_providers", "Calendar paths must be text")}}
+    {:error, %{calendar_paths: dgettext("integrations_calendar", "Calendar paths must be text")}}
   end
 
   defp validate_calendar_paths_format(paths) do
     if String.length(paths) > 5000 do
       {:error,
-       dgettext("dashboard_calendar_providers", "Calendar paths must be 5000 characters or less")}
+       dgettext("integrations_calendar", "Calendar paths must be 5000 characters or less")}
     else
       # Split by newlines OR commas and validate each path/URL
       separators = if String.contains?(paths, ","), do: [","], else: ["\n", "\r\n"]
@@ -271,7 +276,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
     else
       {:error,
        dgettext(
-         "dashboard_calendar_providers",
+         "integrations_calendar",
          "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
        )}
     end
@@ -315,23 +320,23 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
       internal_names_local: allow_private,
       block_private_ips: not allow_private,
       https_error_message:
-        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
+        dgettext("integrations_calendar", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Private or local network addresses are not allowed"
         )
     )
   end
 
   defp username_required_message,
-    do: dgettext("dashboard_calendar_providers", "Username is required")
+    do: dgettext("integrations_calendar", "Username is required")
 
   defp password_required_message,
-    do: dgettext("dashboard_calendar_providers", "Password is required")
+    do: dgettext("integrations_calendar", "Password is required")
 
   defp password_invalid_characters_message,
-    do: dgettext("dashboard_calendar_providers", "Password contains invalid characters")
+    do: dgettext("integrations_calendar", "Password contains invalid characters")
 
   # Strips any userinfo so credentials embedded in a URL never reach the logs.
   defp do_sanitize_url_for_logging(url) do

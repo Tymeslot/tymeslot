@@ -37,7 +37,7 @@ defmodule Tymeslot.GettextCompletenessCase do
     * **Plural forms**: every plural entry carries exactly as many msgstrs as its
       catalogue's `nplurals`.
     * **Catalogue size**: no domain holds more than `:max_msgids` messages (default
-      300). Catalogues are kept small on purpose, so a change to one area of the app
+      200). Catalogues are kept small on purpose, so a change to one area of the app
       means reading one small file; a domain past the limit should be split by area.
 
   Parsing goes through `Expo`, not a line scanner, so a corrupt or truncated `.po` fails
@@ -58,7 +58,7 @@ defmodule Tymeslot.GettextCompletenessCase do
   the check inspects a test file's direct AST and cannot look inside a `use` macro.
   """
 
-  @default_max_msgids 300
+  @default_max_msgids 200
 
   defmacro __using__(opts) do
     # `gettext_path` typically reads `Path.expand("../../priv/gettext", __DIR__)` at

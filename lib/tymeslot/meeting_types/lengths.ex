@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingTypes.Lengths do
 
   @doc """
   Validates `extra_lengths_minutes` on a meeting type changeset. Each further
-  duration obeys the same range as `duration_minutes`, none may repeat another
+  duration obeys the same range and step as `duration_minutes`, none may repeat another
   (the booker would see the same choice twice), together with
   `duration_minutes` they stay within the per-type maximum, and a group type
   has none.
@@ -120,6 +120,7 @@ defmodule Tymeslot.MeetingTypes.Lengths do
     extras = get_field(changeset, :extra_lengths_minutes) || []
     primary = get_field(changeset, :duration_minutes)
     range = Constraints.duration_minutes_range()
+    step = Constraints.duration_step_minutes()
     max = Constraints.max_lengths_per_meeting_type()
 
     cond do
@@ -127,16 +128,33 @@ defmodule Tymeslot.MeetingTypes.Lengths do
         add_error(
           changeset,
           :extra_lengths_minutes,
-          "must each be between %{min} and %{max} minutes",
+          dgettext_noop("errors", "must each be between %{min} and %{max} minutes"),
           min: range.first,
           max: range.last
         )
 
+      not Enum.all?(extras, &(rem(&1, step) == 0)) ->
+        add_error(
+          changeset,
+          :extra_lengths_minutes,
+          dgettext_noop("errors", "must each be a multiple of %{step} minutes"),
+          step: step
+        )
+
       length(Enum.uniq([primary | extras])) != length(extras) + 1 ->
-        add_error(changeset, :extra_lengths_minutes, "must not repeat a duration")
+        add_error(
+          changeset,
+          :extra_lengths_minutes,
+          dgettext_noop("errors", "must not repeat a duration")
+        )
 
       length(extras) + 1 > max ->
-        add_error(changeset, :extra_lengths_minutes, "allows at most %{max} durations", max: max)
+        add_error(
+          changeset,
+          :extra_lengths_minutes,
+          dgettext_noop("errors", "allows at most %{max} durations"),
+          max: max
+        )
 
       extras != [] and group?(get_field(changeset, :max_participants)) ->
         add_error(

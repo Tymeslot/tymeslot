@@ -1,4 +1,4 @@
-# These tests drive RateLimiter functions through captures held in @functions,
+# Some of these tests drive RateLimiter checks through captures,
 # invoked as fun.(...). VacuousTest cannot see application calls through
 # anonymous-function invocation, so it flags them as false positives.
 # credo:disable-for-this-file Jump.CredoChecks.VacuousTest
@@ -19,49 +19,49 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
   # ---------------------------------------------------------------------------
 
   describe "invalid user_id handling" do
-    @functions [
-      &RateLimiter.check_webhook_write_rate_limit/1,
-      &RateLimiter.check_webhook_test_rate_limit/1,
-      &RateLimiter.check_webhook_token_regen_rate_limit/1,
-      &RateLimiter.check_calendar_refresh_rate_limit/1,
-      &RateLimiter.check_integration_write_rate_limit/1,
-      &RateLimiter.check_integration_appearance_rate_limit/1,
-      &RateLimiter.check_meeting_type_write_rate_limit/1,
-      &RateLimiter.check_avatar_upload_rate_limit/1,
-      &RateLimiter.check_embed_domain_update_rate_limit/1,
-      &RateLimiter.check_dashboard_cancel_rate_limit/1,
-      &RateLimiter.check_dashboard_reschedule_rate_limit/1
+    @limits [
+      :webhook_write,
+      :webhook_test,
+      :webhook_token_regen,
+      :calendar_refresh,
+      :integration_write,
+      :integration_appearance,
+      :meeting_type_write,
+      :avatar_upload,
+      :embed_domain_update,
+      :dashboard_cancel,
+      :dashboard_reschedule
     ]
 
     test "rejects nil user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.(nil)
+      for name <- @limits do
+        assert {:error, :invalid_user_id} = RateLimiter.check(name, nil)
       end
     end
 
     test "rejects zero user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.(0)
+      for name <- @limits do
+        assert {:error, :invalid_user_id} = RateLimiter.check(name, 0)
       end
     end
 
     test "rejects negative user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.(-1)
+      for name <- @limits do
+        assert {:error, :invalid_user_id} = RateLimiter.check(name, -1)
       end
     end
 
     test "rejects non-integer user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.("123")
-        assert {:error, :invalid_user_id} = fun.(123.45)
+      for name <- @limits do
+        assert {:error, :invalid_user_id} = RateLimiter.check(name, "123")
+        assert {:error, :invalid_user_id} = RateLimiter.check(name, 123.45)
       end
     end
 
     test "accepts valid positive integer user_ids" do
-      for fun <- @functions do
-        assert :ok = fun.(1)
-        assert :ok = fun.(999_999)
+      for name <- @limits do
+        assert :ok = RateLimiter.check(name, 1)
+        assert :ok = RateLimiter.check(name, 999_999)
       end
     end
   end
@@ -73,17 +73,16 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
   describe "error message format" do
     test "all new functions produce actionable error messages" do
       cases = [
-        {11_901, &RateLimiter.check_webhook_write_rate_limit/1, 30, "webhook_write"},
-        {11_902, &RateLimiter.check_webhook_test_rate_limit/1, 30, "webhook_test"},
-        {11_903, &RateLimiter.check_webhook_token_regen_rate_limit/1, 10, "webhook_token_regen"},
-        {11_904, &RateLimiter.check_calendar_refresh_rate_limit/1, 10, "calendar_refresh"},
-        {11_905, &RateLimiter.check_integration_write_rate_limit/1, 30, "integration_write"},
-        {11_910, &RateLimiter.check_integration_appearance_rate_limit/1, 150,
-         "integration_appearance"},
-        {11_906, &RateLimiter.check_meeting_type_write_rate_limit/1, 60, "meeting_type_write"},
-        {11_907, &RateLimiter.check_avatar_upload_rate_limit/1, 20, "avatar_upload"},
-        {11_908, &RateLimiter.check_dashboard_cancel_rate_limit/1, 20, "dashboard_cancel"},
-        {11_909, &RateLimiter.check_dashboard_reschedule_rate_limit/1, 20, "dashboard_reschedule"}
+        {11_901, &RateLimiter.check(:webhook_write, &1), 30, "webhook_write"},
+        {11_902, &RateLimiter.check(:webhook_test, &1), 30, "webhook_test"},
+        {11_903, &RateLimiter.check(:webhook_token_regen, &1), 10, "webhook_token_regen"},
+        {11_904, &RateLimiter.check(:calendar_refresh, &1), 10, "calendar_refresh"},
+        {11_905, &RateLimiter.check(:integration_write, &1), 30, "integration_write"},
+        {11_910, &RateLimiter.check(:integration_appearance, &1), 150, "integration_appearance"},
+        {11_906, &RateLimiter.check(:meeting_type_write, &1), 60, "meeting_type_write"},
+        {11_907, &RateLimiter.check(:avatar_upload, &1), 20, "avatar_upload"},
+        {11_908, &RateLimiter.check(:dashboard_cancel, &1), 20, "dashboard_cancel"},
+        {11_909, &RateLimiter.check(:dashboard_reschedule, &1), 20, "dashboard_reschedule"}
       ]
 
       for {user_id, fun, limit, bucket_prefix} <- cases do

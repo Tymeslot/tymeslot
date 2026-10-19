@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Providers.Descriptor do
+defmodule Tymeslot.Integrations.Shared.Providers.Descriptor do
   @moduledoc """
   Unified provider descriptor used by the ProviderDirectory.
 
@@ -6,10 +6,10 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
   can consume without reaching into provider modules directly.
 
   `:family` and `:oauth` both come from the family table in the domain's
-  `ProviderConfig`; see `Tymeslot.Integrations.Providers.Families`.
+  `ProviderConfig`; see `Tymeslot.Integrations.Shared.Providers.Families`.
   """
 
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Shared.Providers.Families
 
   @enforce_keys [:domain, :type, :display_name, :config_schema, :provider_module]
   defstruct domain: nil,
@@ -20,7 +20,6 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
             button_text: nil,
             oauth: false,
             family: :other,
-            capabilities: %{},
             config_schema: %{},
             provider_module: nil,
             registry_module: nil,
@@ -31,7 +30,7 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
   @typedoc """
   How a provider connects, for grouping in the picker. The vocabulary is
   shared across domains and defined once, in
-  `Tymeslot.Integrations.Providers.Families`; this alias exists so descriptor
+  `Tymeslot.Integrations.Shared.Providers.Families`; this alias exists so descriptor
   callers do not need to know that.
   """
   @type family :: Families.t()
@@ -45,7 +44,6 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
           button_text: String.t() | nil,
           oauth: boolean(),
           family: family(),
-          capabilities: map(),
           config_schema: map(),
           provider_module: module(),
           registry_module: module() | nil,

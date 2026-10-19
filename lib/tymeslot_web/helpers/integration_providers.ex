@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   mapping errors to form fields.
 
   For provider metadata (names, icons, OAuth status, listings), use
-  `Tymeslot.Integrations.Providers.Directory` directly.
+  `Tymeslot.Integrations.Shared.Providers.Directory` directly.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

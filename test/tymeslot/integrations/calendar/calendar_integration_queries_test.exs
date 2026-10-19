@@ -97,40 +97,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
     end
   end
 
-  describe "deselect_calendars/2" do
-    test "marks matching calendars as unselected and leaves others untouched" do
-      integration =
-        insert(:calendar_integration,
-          provider: "google",
-          calendar_list: [
-            %{"id" => "primary", "selected" => true, "name" => "Primary"},
-            %{"id" => "gone@example.com", "selected" => true, "name" => "Gone"}
-          ]
-        )
-
-      {:ok, updated} =
-        CalendarIntegrationQueries.deselect_calendars(integration, ["gone@example.com"])
-
-      assert Enum.find(updated.calendar_list, &(&1.id == "gone@example.com")).selected ==
-               false
-
-      assert Enum.find(updated.calendar_list, &(&1.id == "primary")).selected == true
-    end
-
-    test "is a no-op that persists unchanged when no ids match" do
-      integration =
-        insert(:calendar_integration,
-          provider: "google",
-          calendar_list: [%{"id" => "primary", "selected" => true, "name" => "Primary"}]
-        )
-
-      {:ok, updated} =
-        CalendarIntegrationQueries.deselect_calendars(integration, ["nonexistent@example.com"])
-
-      assert updated.calendar_list == integration.calendar_list
-    end
-  end
-
   describe "toggle_active/1 — reactivation conflicts" do
     test "returns {:error, :duplicate_account} instead of raising when the conflicting active row's credentials cannot be decrypted" do
       user = insert(:user)

@@ -182,11 +182,6 @@ msgstr ""
 msgid "Having trouble with the button? Copy and paste this link into your browser:"
 msgstr ""
 
-#: lib/tymeslot/emails/shared/meeting/video_section.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting will start at the scheduled time"
-msgstr ""
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "hour"
@@ -279,11 +274,6 @@ msgstr ""
 msgid "Phone"
 msgstr ""
 
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Reset your password"
-msgstr ""
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Saturday"
@@ -307,11 +297,6 @@ msgstr ""
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Verify your new email address"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
@@ -360,36 +345,6 @@ msgstr ""
 msgid "Join the video call"
 msgstr ""
 
-#: lib/tymeslot/emails/email_service/calendar_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Owner"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Email Address Changed - Tymeslot Account"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Email Address Changed Successfully"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Verify your email address"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/calendar_emails.ex
-#, elixir-autogen, elixir-format
-msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "⚠️ Email Change Request - Security Alert"
-msgstr ""
-
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "You'll receive %{count} reminder before the appointment."
@@ -397,7 +352,7 @@ msgid_plural "You'll receive %{count} reminders before the appointment."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "day"
@@ -405,7 +360,7 @@ msgid_plural "days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "hour"
@@ -413,7 +368,7 @@ msgid_plural "hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "minute"
@@ -478,24 +433,9 @@ msgstr ""
 msgid "Message from attendee:"
 msgstr ""
 
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a Tymeslot account"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot account has no password"
-msgstr ""
-
 #: lib/tymeslot/emails/shared/sign_in_provider.ex
 #, elixir-autogen, elixir-format
 msgid "single sign-on"
-msgstr ""
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm your email to finish signing up"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
@@ -590,6 +530,11 @@ msgstr[1] ""
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
+msgstr ""
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Duration:"
 msgstr ""
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex

@@ -25,8 +25,10 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   Outlook renewals extend the stored Graph subscription in place (see
   `Tymeslot.Integrations.Calendar.Outlook.GraphSubscription.register/1`), so
   even a repeat that gets past that check creates nothing new. Google offers
-  no way to extend a push channel, so a renewal always opens a new one; if the
-  node stops after Google accepted it and before it was stored, the next run
+  no way to extend a push channel, so a renewal always opens a new one and,
+  once it is stored, stops the one it replaces (see
+  `Tymeslot.Integrations.Calendar.Google.PushChannel`). If the node stops
+  after Google accepted the new channel and before it was stored, the next run
   opens another. The unrecorded channel expires on its own, and its
   notifications are rejected because they match no stored channel id.
   """
@@ -34,7 +36,10 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   use Oban.Worker,
     queue: :calendar_integrations,
     max_attempts: 3,
-    unique: [period: 86_400]
+    # Just under the daily crontab interval: uniqueness counts from the
+    # previous job's insertion, so a full day would swallow the next day's
+    # job whenever the cron plugin inserts it a moment early.
+    unique: [period: 85_800]
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -46,7 +51,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Shared.ReauthHandling
 
   # How far ahead an expiring channel or subscription is renewed.
@@ -103,7 +108,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
         {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
+        Management.handle_reauth_required(integration)
     end
   end
 
@@ -243,7 +248,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
       provider: provider
     )
 
-    CalendarManagement.flag_for_reconnection(
+    Management.flag_for_reconnection(
       integration,
       booking_calendar_missing_message(provider),
       @calendar_gone
@@ -270,14 +275,14 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   # extracts literals, so an interpolated msgid could never be translated.
   defp booking_calendar_missing_message("google") do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
     )
   end
 
   defp booking_calendar_missing_message("outlook") do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
     )
   end

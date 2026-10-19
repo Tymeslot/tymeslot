@@ -231,7 +231,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         )
 
       {:ok, profile} ->
-        case ensure_username(profile, user.id) do
+        case Profiles.ensure_default_username(profile) do
           {:ok, _profile} ->
             is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
 
@@ -277,15 +277,6 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end
   end
 
-  defp ensure_username(profile, user_id) do
-    if profile.username && profile.username != "" do
-      {:ok, profile}
-    else
-      default_username = Profiles.generate_default_username(user_id)
-      Profiles.assign_default_username(profile, default_username)
-    end
-  end
-
   defp update_and_proceed(socket, sanitized_params) do
     case BasicSettingsShared.persist_basic_settings(
            socket,
@@ -319,6 +310,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       reason -> ProfileHandlers.put_username_error(socket, reason)
     end
   end
+
+  # A refusal that already says what went wrong in the host's language (the
+  # username change limit, a username the validator refuses) is shown as is.
+  defp handle_update_failure(socket, message) when is_binary(message),
+    do: LiveView.put_flash(socket, :error, message)
 
   defp handle_update_failure(socket, _reason), do: put_generic_input_error(socket)
 

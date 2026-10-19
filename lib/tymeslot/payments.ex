@@ -9,17 +9,29 @@ defmodule Tymeslot.Payments do
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   alias Tymeslot.Payments.{
+    ChargeInvoice,
+    Config,
     CustomerLookup,
     DatabaseOperations,
-    PubSub,
+    PaymentQueries,
     SubscriptionFlow,
     SubscriptionInvoice,
-    SubscriptionInvoices,
-    Subscriptions
+    SubscriptionInvoices
   }
+
+  alias Tymeslot.Payments.Webhooks.Ingress
 
   @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
+
+  @doc """
+  Verifies and processes one Stripe webhook delivery to `endpoint`
+  (`:platform` or `:connect`), reading that endpoint's signing secret from
+  configuration. See `Tymeslot.Payments.Webhooks.Ingress.process/3` for the
+  outcomes.
+  """
+  @spec process_webhook(Ingress.endpoint(), binary(), String.t() | nil) :: Ingress.result()
+  defdelegate process_webhook(endpoint, raw_body, signature), to: Ingress, as: :process
 
   @doc """
   Processes a failed payment.
@@ -113,53 +125,6 @@ defmodule Tymeslot.Payments do
   end
 
   @doc """
-  Cancels an active subscription.
-
-  ## Parameters
-    * subscription_id - The Stripe subscription ID
-    * user_id - The ID of the user canceling the subscription
-    * opts - Options for cancellation (at_period_end: true/false)
-
-  ## Returns
-    * `{:ok, subscription}` - If the subscription is canceled successfully
-    * `{:error, reason}` - If the cancellation fails
-  """
-  @spec cancel_subscription(String.t(), pos_integer(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def cancel_subscription(subscription_id, user_id, opts \\ []) do
-    Subscriptions.cancel_subscription(subscription_id, user_id, opts)
-  end
-
-  @doc """
-  Updates a subscription to a new Stripe price.
-
-  ## Parameters
-    * subscription_id - The Stripe subscription ID
-    * new_stripe_price_id - The new Stripe price ID
-    * user_id - The ID of the user updating the subscription
-    * metadata - Additional metadata
-
-  ## Returns
-    * `{:ok, subscription}` - If the subscription is updated successfully
-    * `{:error, reason}` - If the update fails
-  """
-  @spec update_subscription(String.t(), String.t(), pos_integer(), map()) ::
-          {:ok, map()} | {:error, term()}
-  def update_subscription(
-        subscription_id,
-        new_stripe_price_id,
-        user_id,
-        metadata \\ %{}
-      ) do
-    Subscriptions.update_subscription(
-      subscription_id,
-      new_stripe_price_id,
-      user_id,
-      metadata
-    )
-  end
-
-  @doc """
   Reads a user id out of Stripe metadata, which carries it as a string.
 
   Returns `nil` for anything that is not a whole number, so a malformed or
@@ -167,6 +132,16 @@ defmodule Tymeslot.Payments do
   """
   @spec parse_user_id(any()) :: integer() | nil
   defdelegate parse_user_id(id), to: CustomerLookup
+
+  @doc """
+  The invoice a platform charge paid and the subscription that invoice
+  billed, read from Stripe where the charge and the recorded invoices do not
+  say. Returns `{:error, reason}` when Stripe cannot be reached, so a caller
+  acting on the answer retries rather than guessing. See
+  `Tymeslot.Payments.ChargeInvoice`.
+  """
+  @spec charge_invoice(String.t()) :: {:ok, ChargeInvoice.t()} | {:error, term()}
+  defdelegate charge_invoice(charge_id), to: ChargeInvoice, as: :for_charge_id
 
   @doc """
   Records a checkout session's outcome against its transaction row, attaching
@@ -183,23 +158,50 @@ defmodule Tymeslot.Payments do
               to: DatabaseOperations
 
   @doc """
-  Broadcasts a subscription lifecycle event to the payment-events topic.
+  Lists every distinct Stripe customer id recorded on the user's payment
+  transactions, including customers created by checkouts that were never
+  completed.
   """
-  @spec broadcast_subscription_event(%{
-          required(:event) => atom(),
-          required(:user_id) => integer(),
-          optional(atom()) => term()
-        }) :: :ok
-  defdelegate broadcast_subscription_event(event_data), to: PubSub
+  @spec stripe_customer_ids_for_user(integer()) :: [String.t()]
+  defdelegate stripe_customer_ids_for_user(user_id), to: PaymentQueries
 
   @doc """
-  Subscribes the calling process to payment lifecycle events.
+  Checkouts left pending since before `:cutoff` (required) and not yet
+  marked handled, counted per user as `{user_id, count}` tuples.
 
-  Every subscription, dispute, refund and trial event the payment webhooks
-  produce arrives as a message in the caller's mailbox. Returns
-  `{:error, reason}` rather than raising when no PubSub server is running, so a
-  supervised listener can start regardless.
+  Options:
+
+    * `:cutoff` - the instant before which a pending transaction counts as
+      abandoned. Pass the same value to `mark_abandoned_checkouts_handled/2`
+      so the two cover the same transactions.
+    * `:product_identifiers` - only transactions for these products.
+    * `:payment_type` - only transactions whose metadata `payment_type`
+      matches.
   """
-  @spec subscribe_to_payment_events() :: :ok | {:error, term()}
-  defdelegate subscribe_to_payment_events, to: PubSub
+  @spec list_abandoned_checkouts(keyword()) :: [{pos_integer(), pos_integer()}]
+  defdelegate list_abandoned_checkouts(opts), to: PaymentQueries
+
+  @doc """
+  Marks the user's abandoned checkouts handled, so `list_abandoned_checkouts/1`
+  stops returning them. Takes the same options; a checkout started after
+  `:cutoff` is left alone. Returns the number of transactions marked.
+  """
+  @spec mark_abandoned_checkouts_handled(pos_integer(), keyword()) :: non_neg_integer()
+  defdelegate mark_abandoned_checkouts_handled(user_id, opts), to: PaymentQueries
+
+  @doc """
+  Whether `user_id`'s outgoing material carries the free-tier "Tymeslot"
+  branding. Off unless the instance enables `:show_branding` and a
+  subscription manager is configured to answer for the user; an unknown user
+  never gets it, so a paying customer cannot be branded by a missing id.
+  """
+  @spec show_branding?(pos_integer() | nil) :: boolean()
+  def show_branding?(user_id) when is_integer(user_id) do
+    manager = Config.subscription_manager()
+
+    Application.get_env(:tymeslot, :show_branding, false) == true and
+      not is_nil(manager) and manager.should_show_branding?(user_id) == true
+  end
+
+  def show_branding?(_user_id), do: false
 end

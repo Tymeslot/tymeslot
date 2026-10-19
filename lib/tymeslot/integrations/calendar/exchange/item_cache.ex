@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   Keeps the Exchange item cache — the `display_only` rows the dashboard grid
   renders — up to date from a folder's `SyncFolderItems` change feed.
 
-  The incremental half of `Tymeslot.Workers.SyncExchangeCalendarWorker`'s item
+  The incremental half of `Tymeslot.Integrations.Calendar.Exchange.SyncCycle`'s item
   read, extracted from it because it is a different job with different state:
   the worker owns the cycle, its two halves and their outcomes, while this owns
   the per-folder tokens and what a feed's changes mean for cached rows. The

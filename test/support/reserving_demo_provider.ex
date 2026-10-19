@@ -1,6 +1,6 @@
 defmodule Tymeslot.Test.ReservingDemoProvider do
   @moduledoc """
-  Test-only demo provider that serves one username, `demo-x-1`.
+  Test-only demo provider that reserves one username, `demo-x-1`.
 
   It answers `demo_username?/1` for that username and hands every other
   callback to `Tymeslot.Demo.NoOp`, so pages keep rendering real data. Wire it
@@ -13,7 +13,7 @@ defmodule Tymeslot.Test.ReservingDemoProvider do
 
   @reserved_username "demo-x-1"
 
-  @doc "The one username this provider serves."
+  @doc "The one username this provider reserves."
   @spec reserved_username() :: String.t()
   def reserved_username, do: @reserved_username
 

@@ -32,6 +32,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Meetings
   alias Tymeslot.Onboarding
+  alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
@@ -264,6 +265,8 @@ defmodule TymeslotWeb.DashboardLive do
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
               payments_allowed={@payments_allowed}
+              automations_allowed={@automations_allowed}
+              feature_placeholder_components={@feature_placeholder_components}
             />
           <% else %>
             <ComponentDispatch.feature_placeholder
@@ -540,7 +543,6 @@ defmodule TymeslotWeb.DashboardLive do
   @spec refresh_dashboard_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   defp refresh_dashboard_data(socket) do
     if user = socket.assigns[:current_user] do
-      DashboardContext.invalidate_integration_status(user.id)
       integration_status = DashboardContext.get_integration_status(user.id)
       assign(socket, :integration_status, integration_status)
     else
@@ -552,7 +554,7 @@ defmodule TymeslotWeb.DashboardLive do
   defp load_dashboard_data(socket) do
     user = socket.assigns[:current_user]
     action = socket.assigns[:live_action]
-    timezone = socket.assigns[:profile] && socket.assigns.profile.timezone
+    timezone = Profiles.timezone(socket.assigns[:profile])
 
     if user do
       dashboard_data = DashboardContext.get_dashboard_data_for_action(user, timezone, action)

@@ -80,7 +80,6 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
 
       assert client.provider == :baikal
       assert client.username == "alice"
-      assert client.verify_ssl == true
       assert client.calendar_paths == ["/dav.php/calendars/alice/default/"]
     end
 
@@ -95,7 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
       assert client.base_url == "https://baikal.example.com/dav.php"
     end
 
-    test "returns empty calendar_paths when none configured and no calendar_names given" do
+    test "returns empty calendar_paths when none configured" do
       config = %{
         base_url: "https://baikal.example.com/dav.php",
         username: "alice",
@@ -104,20 +103,6 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
 
       client = Provider.new(config)
       assert client.calendar_paths == []
-    end
-
-    test "builds calendar paths from calendar_names and username" do
-      config = %{
-        base_url: "https://baikal.example.com/dav.php",
-        username: "alice",
-        password: "secret",
-        calendar_names: ["default", "work"]
-      }
-
-      client = Provider.new(config)
-
-      assert Enum.member?(client.calendar_paths, "/dav.php/calendars/alice/default/")
-      assert Enum.member?(client.calendar_paths, "/dav.php/calendars/alice/work/")
     end
 
     test "format_baikal_path is idempotent — does not double-prefix already-formatted paths" do

@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
   @moduletag :payments
 
   import Swoosh.TestAssertions
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
 
   alias Ecto.UUID
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -92,6 +93,23 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       assert_email_sent(fn email ->
         refute email.text_body =~ "mit Alice"
         assert email.text_body =~ "Discovery Call con Alice"
+      end)
+    end
+
+    # With the booking gone (or never linked) there is no booker language to
+    # read, so the notice is written in the booking pages' default, as every
+    # other booking email is, rather than in English.
+    test "writes in the booking pages' default language when the booking is gone" do
+      with_config(:tymeslot, :booking_default_locale, "de")
+      payment = insert_payment(%{meeting_id: nil})
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Rückerstattung veranlasst – €50.00"
       end)
     end
 

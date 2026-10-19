@@ -7,29 +7,35 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   - `MeetingScheduler` — confirmation, cancellation, reminder, reschedule, and
     booking-approval emails
+  - `EndChangeScheduler`: the notices of a booking whose end the host moved
+    in their own calendar
   - `AuthScheduler` — email verification, password reset, and the account
     notices sent instead of an on-screen answer (no password to reset, a
     sign-up attempt with a registered address)
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
+  - `PollScheduler`: poll deadline reminders and host nudges
   - `IntegrationScheduler` — integration health notifications and admin alerts
 
   Callers should reference this module directly — no delegation functions exist
   on `Tymeslot.Workers.EmailWorker`.
   """
 
-  alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.AccountScheduler
   alias Tymeslot.Emails.EmailScheduler.AuthScheduler
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Emails.EmailScheduler.EndChangeScheduler
   alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler.PollScheduler
 
   # Meeting emails
 
   defdelegate schedule_confirmation_emails(meeting_id), to: MeetingScheduler
   defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: MeetingScheduler
   defdelegate schedule_cancellation_emails(meeting_id), to: MeetingScheduler
+  defdelegate schedule_reschedule_emails(meeting, original), to: MeetingScheduler
+  defdelegate schedule_end_change_emails(meeting), to: EndChangeScheduler
 
   defdelegate schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?),
     to: MeetingScheduler
@@ -62,9 +68,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_seat_reschedule_request(meeting_id, participant_id, requested_at),
     to: MeetingScheduler
 
+  defdelegate schedule_guest_invitations(meeting_id, guest_ids), to: MeetingScheduler
+
   defdelegate cancel_reminder_emails(meeting_id), to: MeetingScheduler
 
-  defdelegate schedule_reschedule_request(meeting_id), to: MeetingScheduler
+  defdelegate schedule_reschedule_request(meeting_id, requested_at), to: MeetingScheduler
 
   defdelegate schedule_request_emails(meeting_id, opts \\ []), to: MeetingScheduler
   defdelegate schedule_approval_nudge(meeting_id, send_at), to: MeetingScheduler
@@ -81,11 +89,14 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_no_password_to_reset(user_id), to: AuthScheduler
   defdelegate schedule_signup_attempt_notice(user_id), to: AuthScheduler
   defdelegate schedule_social_signup_confirmation(details), to: AuthScheduler
+  defdelegate schedule_account_deletion_notice(details), to: AuthScheduler
 
   # Account emails
 
   defdelegate schedule_email_change_emails(user_id, new_email, verification_url, token_hash),
     to: AccountScheduler
+
+  defdelegate schedule_email_change_notification(user_id, new_email), to: AccountScheduler
 
   defdelegate schedule_email_change_confirmations(user_id, old_email, new_email),
     to: AccountScheduler
@@ -95,9 +106,21 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_calendar_invitation(params), to: CalendarScheduler
   defdelegate schedule_event_update_notification(params), to: CalendarScheduler
 
+  # Poll emails
+
+  defdelegate schedule_poll_deadline_jobs(poll), to: PollScheduler, as: :schedule_deadline_jobs
+  defdelegate cancel_poll_deadline_jobs(poll_id), to: PollScheduler, as: :cancel_deadline_jobs
+
+  defdelegate schedule_poll_all_voted_nudge(poll),
+    to: PollScheduler,
+    as: :schedule_all_voted_nudge
+
   # Integration emails
 
   defdelegate schedule_integration_unhealthy_notification(user, integration, type),
+    to: IntegrationScheduler
+
+  defdelegate schedule_integration_reauth_notification(user, integration, type),
     to: IntegrationScheduler
 
   defdelegate schedule_integration_paused_notification(user, integration, type, cutoff_days),
@@ -106,116 +129,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_video_room_creation_error_notification(user_id, integration_id, code),
     to: IntegrationScheduler
 
+  defdelegate schedule_calendars_removed_notification(user_id, integration_id, calendar_names),
+    to: IntegrationScheduler
+
   defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: IntegrationScheduler
 
   defdelegate schedule_admin_alert_digest(recipient, digest), to: IntegrationScheduler
-
-  # --- Changeset validation (used by EmailWorker's Oban callback) ---
-
-  @fields_by_action %{
-    "send_confirmation_emails" => ["meeting_id"],
-    "send_seat_confirmation_emails" => ["meeting_id", "participant_id"],
-    "send_cancellation_emails" => ["meeting_id"],
-    "send_seat_cancellation_emails" => ["meeting_id", "participant_id", "slot_freed"],
-    "send_seat_reschedule_emails" => ["meeting_id", "participant_id", "old_participant_id"],
-    "send_reminder_emails" => ["meeting_id", "reminder_value", "reminder_unit"],
-    "send_seat_meeting_cancellation" => ["meeting_id", "participant_id"],
-    "send_seat_reminder" => ["meeting_id", "participant_id", "reminder_value", "reminder_unit"],
-    "send_seat_reschedule_request" => ["meeting_id", "participant_id"],
-    "send_reschedule_request" => ["meeting_id"],
-    "send_booking_request_emails" => ["meeting_id"],
-    "send_booking_approval_nudge" => ["meeting_id"],
-    "send_booking_request_outcome" => ["meeting_id", "variant"],
-    "send_reschedule_request_expired" => ["meeting_id"],
-    "send_email_verification" => ["user_id", "verification_url_encrypted"],
-    "send_password_reset" => ["user_id", "reset_url_encrypted"],
-    "send_no_password_to_reset" => ["user_id"],
-    "send_signup_attempt_notice" => ["user_id"],
-    "send_social_signup_confirmation" => ["email", "provider", "confirm_url_encrypted"],
-    "send_poll_deadline_reminders" => ["poll_id"],
-    "send_poll_host_nudge" => ["poll_id", "variant"],
-    "send_email_change_verification" => [
-      "user_id",
-      "new_email",
-      "verification_url_encrypted",
-      "token_hash"
-    ],
-    "send_email_change_notification" => ["user_id", "new_email"],
-    "send_email_change_confirmations" => ["user_id", "old_email", "new_email"],
-    "send_integration_unhealthy_notification" => [
-      "user_id",
-      "integration_id",
-      "integration_type"
-    ],
-    "send_integration_paused_notification" => [
-      "user_id",
-      "integration_id",
-      "integration_type"
-    ],
-    "send_video_room_creation_error_notification" => [
-      "user_id",
-      "integration_id",
-      "error_code"
-    ],
-    "send_calendar_invitation" => [
-      "user_id",
-      "attendee_email",
-      "event_title",
-      "event_uid",
-      "event_start_at",
-      "event_end_at"
-    ],
-    "send_event_update_notification" => [
-      "user_id",
-      "event_uid",
-      "integration_id",
-      "attendee_emails",
-      "before_title",
-      "before_location",
-      "before_description",
-      "before_start_at",
-      "before_end_at"
-    ],
-    "send_admin_alert" => [
-      "recipient",
-      "category",
-      "severity",
-      "message",
-      "metadata",
-      "alert_hash"
-    ],
-    "send_admin_alert_digest" => ["recipient", "entries"]
-  }
-
-  @doc """
-  Validates required fields for an Oban job changeset based on the action.
-
-  Called by `Tymeslot.Workers.EmailWorker.changeset/2` to keep validation
-  logic co-located with the scheduling functions that define the argument
-  shapes.
-  """
-  @spec validate_args(Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
-  def validate_args(changeset, args) when is_map(args) do
-    required = required_fields_for_action(Map.get(args, "action"))
-    missing = Enum.reject(required, &Map.has_key?(args, &1))
-
-    if missing == [] do
-      changeset
-    else
-      Changeset.add_error(
-        changeset,
-        :args,
-        "missing required fields: #{Enum.join(missing, ", ")}"
-      )
-    end
-  end
-
-  @spec validate_args(Ecto.Changeset.t(), term()) :: Ecto.Changeset.t()
-  def validate_args(changeset, _args) do
-    Changeset.add_error(changeset, :args, "args must be a map")
-  end
-
-  defp required_fields_for_action(nil), do: ["action"]
-  defp required_fields_for_action(action), do: Map.get(@fields_by_action, action, [])
 end

@@ -86,6 +86,38 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     :ok
   end
 
+  @doc """
+  Records a change to the meeting's end on every live participant's seat.
+
+  Each seat is its own calendar entry, so the change is a new revision of
+  every live seat's entry too: its `ical_sequence` advances by one. A seat
+  with no end change pending keeps `previous_end`, the end it knew, as its
+  `notified_end_time`; one already pending keeps the end it was last told.
+  """
+  @spec record_end_change(String.t(), DateTime.t()) :: non_neg_integer()
+  def record_end_change(meeting_id, %DateTime{} = previous_end) do
+    {count, _rows} =
+      Participant
+      |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
+      |> update([p],
+        set: [notified_end_time: fragment("COALESCE(?, ?)", p.notified_end_time, ^previous_end)],
+        inc: [ical_sequence: 1]
+      )
+      |> Repo.update_all([])
+
+    count
+  end
+
+  @doc "Records that the participant has been told the meeting ends at `end_time`."
+  @spec put_notified_end(String.t(), DateTime.t()) :: :ok
+  def put_notified_end(participant_id, %DateTime{} = end_time) do
+    Participant
+    |> where([p], p.id == ^participant_id)
+    |> Repo.update_all(set: [notified_end_time: end_time])
+
+    :ok
+  end
+
   @doc "Counts the live (not cancelled) participants of a meeting."
   @spec count_live_for_meeting(binary()) :: non_neg_integer()
   def count_live_for_meeting(meeting_id) do

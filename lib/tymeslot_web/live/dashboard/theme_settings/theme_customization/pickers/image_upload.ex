@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Media.ImageMetadata
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.Uploads
   alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
 
   attr :id, :string, required: true, doc: "the form's DOM id"
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
         {dgettext(
           "dashboard_appearance",
           "JPG, PNG or WebP. Max %{size} MB and %{megapixels} megapixels (%{webp_megapixels} for WebP).",
-          size: UploadConstraints.max_file_size_mb(:image),
+          size: Uploads.max_file_size_mb(:image),
           megapixels: megapixel_limit(".jpg"),
           webp_megapixels: megapixel_limit(".webp")
         )}
