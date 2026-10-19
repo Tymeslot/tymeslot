@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   booking's calendar copy (`FreeBusy`). A booking offers what
   `BookingPreview` allows: Accept and Decline on a request, Reschedule and
   Cancel on a booking still ahead, or a quiet line once it has passed.
-  A read-only all-day event offers "Treat as Busy | Free" instead (`TreatAs`), a choice kept in Tymeslot.
+  A read-only all-day event offers "Treat as Busy | Free" instead (`TreatAs`), a choice
+  kept in Tymeslot.
   """
 
   use TymeslotWeb, :html

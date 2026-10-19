@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
-  @type state :: %{busy: boolean(), overridden: boolean()}
+  @type state :: %{busy: boolean()}
 
   @doc """
   The control's state for `event`, or nil where it is not offered.
@@ -43,8 +43,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
              Map.get(context, :bookability, %{}),
              {event.calendar_integration_id, event.uid}
            ) do
-        {:ok, busy} -> %{busy: busy, overridden: true}
-        :error -> %{busy: true, overridden: false}
+        {:ok, busy} -> %{busy: busy}
+        :error -> %{busy: true}
       end
     end
   end
@@ -65,6 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
       if saved?(write(user_id, event, choice)) do
         socket
         |> assign(:bookability, Bookability.for_user(user_id))
+        # Rebuilds the open preview from the new choice.
         |> SurfaceData.refilter()
         |> Toast.show(toast_text(choice))
       else
@@ -139,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
             phx-value-busy={choice}
             phx-target={@target}
             class={[
-              "rounded-token-md px-2.5 py-0.5 text-token-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
+              "rounded-token-md min-h-8 px-2.5 py-1 text-token-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
               if(@preview.treat_as.busy == busy,
                 do: "bg-turquoise-50 font-semibold text-turquoise-800",
                 else: "text-tymeslot-600 hover:bg-tymeslot-50"
