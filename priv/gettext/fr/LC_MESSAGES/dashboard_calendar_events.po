@@ -276,7 +276,6 @@ msgstr "Le champ est trop long"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar selected"
 msgstr "Calendrier sélectionné invalide"
