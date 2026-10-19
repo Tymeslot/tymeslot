@@ -175,6 +175,7 @@ describe("pinch", () => {
     touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
     touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
     touch(el, "pointermove", { x: 300, y: 450, pointerId: 2 });
+    vi.advanceTimersByTime(20);
 
     expect(hour(el)).toBe(78);
   });
@@ -185,6 +186,7 @@ describe("pinch", () => {
     touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
     touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
     touch(el, "pointermove", { x: 300, y: 310, pointerId: 2 });
+    vi.advanceTimersByTime(20);
 
     expect(hour(el)).toBe(24);
   });
@@ -222,9 +224,158 @@ describe("pinch", () => {
     touch(el.firstElementChild, "pointerdown", { x: 300, y: 300, pointerId: 1 });
     touch(el.firstElementChild, "pointerdown", { x: 300, y: 400, pointerId: 2 });
     touch(el, "pointermove", { x: 300, y: 450, pointerId: 2 });
+    vi.advanceTimersByTime(20);
 
     expect(hook.zoomHour).toBeNull();
   });
+});
+
+describe("holding the fingers", () => {
+  test("a pinch asks the canvas to keep both fingers", () => {
+    const { el } = mountHook();
+    const captured = [];
+    el.setPointerCapture = (id) => captured.push(id);
+
+    touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
+    touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
+
+    expect(captured.sort()).toEqual([1, 2]);
+  });
+
+  test("a swipe asks the canvas to keep its finger once it is under way", () => {
+    const { el } = mountHook();
+    const captured = [];
+    el.setPointerCapture = (id) => captured.push(id);
+
+    touch(scroller(el), "pointerdown", { x: 600, y: 300 });
+    expect(captured).toEqual([]);
+    touch(el, "pointermove", { x: 560, y: 300 });
+    expect(captured).toEqual([1]);
+  });
+
+  test("a finger whose lift never arrived does not turn the next touch into a pinch", () => {
+    const { el, hook } = mountHook();
+
+    touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
+    touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
+    touch(el, "pointerup", { x: 300, y: 300, pointerId: 1 });
+    swipe(el, scroller(el), { x: 600, y: 300 }, { x: 450, y: 300 });
+
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "week", date: "2026-10-21" }]);
+  });
+});
+
+describe("diagonal moves and where a pinch starts", () => {
+  test("a move steeper than a swipe can be does not pull the grid", () => {
+    const { el } = mountHook();
+
+    touch(scroller(el), "pointerdown", { x: 600, y: 300 });
+    touch(el, "pointermove", { x: 570, y: 322 });
+
+    expect(el.firstElementChild.classList.contains("cal-swiping")).toBe(false);
+    expect(el.querySelector(".cal-swiping")).toBeNull();
+  });
+
+  test("a pinch on the week strip leaves the hours alone", () => {
+    const { el, hook } = mountHook();
+    const strip = document.createElement("nav");
+    strip.className = "cal-strip";
+    el.appendChild(strip);
+
+    touch(strip, "pointerdown", { x: 300, y: 300, pointerId: 1 });
+    touch(strip, "pointerdown", { x: 300, y: 400, pointerId: 2 });
+    touch(el, "pointermove", { x: 300, y: 450, pointerId: 2 });
+    vi.advanceTimersByTime(20);
+
+    expect(hook.zoomHour).toBeNull();
+  });
+
+  test("moves within one frame zoom once", () => {
+    const { el, hook } = mountHook();
+    const zoomTo = vi.spyOn(hook, "zoomTo");
+
+    touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
+    touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
+    for (const y of [420, 440, 460]) touch(el, "pointermove", { x: 300, y, pointerId: 2 });
+    expect(zoomTo).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(20);
+
+    expect(zoomTo).toHaveBeenCalledTimes(1);
+  });
+
+  test("destroying cancels a zoom still waiting for its frame", () => {
+    const { el, hook } = mountHook();
+    const zoomTo = vi.spyOn(hook, "zoomTo");
+
+    touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
+    touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
+    touch(el, "pointermove", { x: 300, y: 450, pointerId: 2 });
+    hook.destroyGestures();
+    vi.advanceTimersByTime(20);
+
+    expect(zoomTo).not.toHaveBeenCalled();
+  });
+});
+
+describe("ending and blocking", () => {
+  test("a third finger stops a pinch", () => {
+    const { el } = mountHook();
+
+    touch(scroller(el), "pointerdown", { x: 300, y: 300, pointerId: 1 });
+    touch(scroller(el), "pointerdown", { x: 300, y: 400, pointerId: 2 });
+    touch(scroller(el), "pointerdown", { x: 400, y: 400, pointerId: 3 });
+    touch(el, "pointermove", { x: 300, y: 450, pointerId: 2 });
+    vi.advanceTimersByTime(20);
+
+    expect(hour(el)).toBe(52);
+  });
+
+  test("a cancelled touch ends the swipe and clears the translation", () => {
+    const { el, hook } = mountHook();
+
+    touch(scroller(el), "pointerdown", { x: 600, y: 300 });
+    touch(el, "pointermove", { x: 540, y: 300 });
+    touch(el, "pointercancel", { x: 540, y: 300 });
+
+    expect(el.querySelector(".cal-swiping")).toBeNull();
+    expect(el.firstElementChild.style.getPropertyValue("--cal-swipe-x")).toBe("");
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+
+  test("destroying removes the listeners", () => {
+    const { el, hook } = mountHook();
+    hook.destroyGestures();
+
+    swipe(el, scroller(el), { x: 600, y: 300 }, { x: 450, y: 300 });
+
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+
+  const blockers = {
+    "quick create": (hook) => (hook.quick = { element: document.createElement("div") }),
+    'a "+N" list': (hook) => (hook.list = document.createElement("div")),
+    "the band explainer": (hook) => (hook.explainer = {}),
+    "the preview": () => {
+      const preview = document.createElement("div");
+      preview.id = "calendar-preview";
+      document.body.appendChild(preview);
+    },
+  };
+
+  for (const [name, open] of Object.entries(blockers)) {
+    test(`while ${name} is open a swipe changes nothing`, () => {
+      const { el, hook } = mountHook();
+      open(hook);
+
+      swipe(el, scroller(el), { x: 600, y: 300 }, { x: 450, y: 300 });
+
+      expect(pushes(hook, "calendar:goto")).toEqual([]);
+      hook.quick = null;
+      hook.list = null;
+      hook.explainer = null;
+      document.getElementById("calendar-preview")?.remove();
+    });
+  }
 });
 
 describe("gesture styles", () => {

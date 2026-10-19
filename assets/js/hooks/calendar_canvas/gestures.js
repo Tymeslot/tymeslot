@@ -16,7 +16,7 @@
  * While either is under way, touchmove is cancelled so the page neither
  * scrolls nor zooms with it.
  */
-import { PRESS_SLOP, pinchDistance, pinchedHour, swipeOffset, swipeStep } from "../../calendar/gestures.js";
+import { PRESS_SLOP, SWIPE_RATIO, pinchDistance, pinchedHour, swipeOffset, swipeStep } from "../../calendar/gestures.js";
 import { isTimeGrid, shiftPeriod } from "../../calendar/time.js";
 
 export const GesturesMixin = {
@@ -43,7 +43,24 @@ export const GesturesMixin = {
     this.el.removeEventListener("touchmove", this.gestureGuard);
     this.endSwipe();
     this.fingers?.clear();
+    this.endPinch();
+  },
+
+  // Hands the fingers to the canvas, so a redraw under them (every pinch step
+  // redraws) does not send their lift somewhere else.
+  holdPointer(id) {
+    try {
+      this.el.setPointerCapture?.(id);
+    } catch {
+      // The pointer is already gone; nothing to hold.
+    }
+  },
+
+  endPinch() {
     this.pinch = null;
+    if (this.pinchFrame) cancelAnimationFrame(this.pinchFrame);
+    this.pinchFrame = null;
+    this.pinchTarget = null;
   },
 
   // Something else has the finger or the screen.
@@ -65,7 +82,13 @@ export const GesturesMixin = {
 
   gestureDown(e) {
     if (e.pointerType !== "touch") return;
-    this.fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // A fresh touch starts from nothing: a lift that never arrived must not
+    // leave a finger behind that turns every later touch into a pinch.
+    if (e.isPrimary) {
+      this.fingers.clear();
+      this.endPinch();
+    }
+    this.fingers.set(e.pointerId, { x: e.clientX, y: e.clientY, grid: !!e.target.closest?.("[data-scroll]") });
     if (this.fingers.size === 2) {
       this.endSwipe();
       this.startPinch();
@@ -73,7 +96,7 @@ export const GesturesMixin = {
     }
     if (this.fingers.size > 2) {
       this.endSwipe();
-      this.pinch = null;
+      this.endPinch();
       return;
     }
     if (this.gestureBlocked() || !this.swipeable(e.target)) return;
@@ -83,15 +106,23 @@ export const GesturesMixin = {
   startPinch() {
     if (this.gestureBlocked() || !isTimeGrid(this.view) || !this.el.querySelector(".cal-cols")) return;
     const [a, b] = [...this.fingers.values()];
+    if (!a.grid || !b.grid) return;
     this.pinch = { distance: pinchDistance(a, b), hour: this.zoomHour ?? this.hourHeight() };
+    for (const id of this.fingers.keys()) this.holdPointer(id);
   },
 
   gestureMove(e) {
     if (e.pointerType !== "touch" || !this.fingers.has(e.pointerId)) return;
-    this.fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.fingers.set(e.pointerId, { ...this.fingers.get(e.pointerId), x: e.clientX, y: e.clientY });
     if (this.pinch) {
       const [a, b] = [...this.fingers.values()];
-      this.zoomTo(pinchedHour(this.pinch.hour, this.pinch.distance, pinchDistance(a, b)), (a.y + b.y) / 2);
+      // One zoom per frame, however many moves arrive in it.
+      this.pinchTarget = { hour: pinchedHour(this.pinch.hour, this.pinch.distance, pinchDistance(a, b)), y: (a.y + b.y) / 2 };
+      this.pinchFrame ||= requestAnimationFrame(() => {
+        this.pinchFrame = null;
+        const target = this.pinchTarget;
+        if (this.pinch && target) this.zoomTo(target.hour, target.y);
+      });
       return;
     }
     const swipe = this.swipe;
@@ -109,8 +140,10 @@ export const GesturesMixin = {
         this.endSwipe();
         return;
       }
-      if (Math.abs(dx) <= PRESS_SLOP) return;
+      // Too steep to ever step the period: leave it to the scroll.
+      if (Math.abs(dx) <= PRESS_SLOP || Math.abs(dx) < SWIPE_RATIO * Math.abs(dy)) return;
       swipe.active = true;
+      this.holdPointer(swipe.pointerId);
     }
     const offset = `${Math.round(swipeOffset(dx, this.el.clientWidth))}px`;
     for (const child of this.el.children) {
@@ -123,7 +156,7 @@ export const GesturesMixin = {
     if (e.pointerType !== "touch") return;
     this.fingers.delete(e.pointerId);
     if (this.pinch) {
-      if (this.fingers.size < 2) this.pinch = null;
+      if (this.fingers.size < 2) this.endPinch();
       return;
     }
     const swipe = this.swipe;
@@ -138,7 +171,7 @@ export const GesturesMixin = {
 
   gestureCancel(e) {
     this.fingers.delete(e.pointerId);
-    if (this.fingers.size < 2) this.pinch = null;
+    if (this.fingers.size < 2) this.endPinch();
     if (this.swipe?.pointerId === e.pointerId) this.endSwipe();
   },
 
