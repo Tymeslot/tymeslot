@@ -9,8 +9,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerOverlays do
 
   use TymeslotWeb, :html
 
+  alias Tymeslot.CalendarGrid.CalendarDirectory
+  alias TymeslotWeb.Dashboard.Calendar.ImportModal
+
   attr :reminders_enabled, :boolean, required: true
   attr :reminder_feed, :list, required: true
+  attr :ics_import, :map, default: nil
+  attr :uploads, :map, required: true
+  attr :accounts, :list, required: true
+  attr :target, :any, required: true
 
   @spec overlays(map()) :: Phoenix.LiveView.Rendered.t()
   def overlays(assigns) do
@@ -25,6 +32,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerOverlays do
       hidden
     >
     </div>
+    <ImportModal.import_modal
+      :if={@ics_import && @ics_import.open}
+      ics_import={@ics_import}
+      uploads={@uploads}
+      choices={CalendarDirectory.choices(@accounts)}
+      target={@target}
+    />
     """
   end
 end

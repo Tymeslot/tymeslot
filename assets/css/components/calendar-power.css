@@ -42,3 +42,10 @@
   align-items: center;
   padding-top: 0;
 }
+
+/* The .ics drop overlay (Task 8), shown by `phx-drop-target-active` on
+   #calendar-surface while a file is dragged over the calendar. */
+
+#calendar-drop-overlay {
+  z-index: var(--cal-z-drop);
+}

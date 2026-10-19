@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
   alias TymeslotWeb.Dashboard.Calendar.FreeBusy
+  alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
@@ -72,10 +73,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # which month the mini month shows.
   @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
 
-  # `calendar:*` events and `send_update/3` actions of the power layer, all
-  # answered by `PowerEvents`.
+  # `calendar:*` events, `send_update/3` actions and `start_async/3` names of
+  # the power layer, all answered by `PowerEvents`.
   @power_events PowerEvents.events()
   @power_updates PowerEvents.update_actions()
+  @power_async PowerEvents.async_keys()
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
   # finished, events changed elsewhere, or a refresh fell back on its timer.
@@ -90,7 +92,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def mount(socket),
     do:
       {:ok,
-       socket |> SurfaceData.defaults() |> BookingActions.defaults() |> PowerEvents.defaults()}
+       socket
+       |> SurfaceData.defaults()
+       |> BookingActions.defaults()
+       |> PowerEvents.defaults()
+       |> IcsImport.allow()}
 
   # A sync cycle sends several messages in a burst; they are coalesced into
   # one reload after `@reload_delay`. What the reload covers is the widest of
@@ -201,9 +207,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: action} = message, socket) when action in @power_updates,
     do: {:ok, PowerEvents.update(message, socket)}
 
-  # Messages for the old grid (an import's progress, a move between
-  # calendars) reach whichever calendar is on screen; this one has nothing
-  # to do with them.
+  # Messages for the old grid (a move between calendars) reach whichever
+  # calendar is on screen; this one has nothing to do with them.
   def update(%{action: _other}, socket), do: {:ok, socket}
 
   def update(assigns, socket),
@@ -277,7 +282,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       )
 
     ~H"""
-    <div id="calendar-surface" class="flex min-h-0 flex-1 flex-col bg-white">
+    <div
+      id="calendar-surface"
+      class="relative flex min-h-0 flex-1 flex-col bg-white"
+      phx-drop-target={@uploads.ics_file.ref}
+    >
+      <IcsImport.drop_zone uploads={@uploads} target={@myself} />
       <h1 class="sr-only">{dgettext("dashboard_calendar", "Calendar")}</h1>
       <p id="calendar-keys-hint" class="sr-only">
         {dgettext(
@@ -393,6 +403,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <PowerOverlays.overlays
         reminders_enabled={@preferences.desktop_reminders_enabled}
         reminder_feed={@reminder_feed}
+        ics_import={@ics_import}
+        uploads={@uploads}
+        accounts={@accounts}
+        target={@myself}
       />
       <SurfaceModals.modals
         series_prompt={@series_prompt}
@@ -583,8 +597,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       else: {:noreply, push_event(socket, "calendar:preview-closed", %{})}
   end
 
-  # Work run off this process (`start_async/3`): a request's answer and the
-  # bookable layer's load (see `SurfaceBookingEvents`).
+  # Work run off this process (`start_async/3`): the import's file plan (see
+  # `PowerEvents`), a request's answer and the bookable layer's load (see
+  # `SurfaceBookingEvents`).
   @impl Phoenix.LiveComponent
+  def handle_async(key, result, socket) when key in @power_async,
+    do: PowerEvents.async(key, result, socket)
+
   def handle_async(key, result, socket), do: SurfaceBookingEvents.async(key, result, socket)
 end

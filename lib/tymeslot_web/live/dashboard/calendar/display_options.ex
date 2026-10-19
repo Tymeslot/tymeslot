@@ -74,6 +74,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         target={@target}
       />
       <div class="flex flex-col items-start gap-1 border-t border-tymeslot-100 pt-3">
+        <.action_button
+          id={"#{@id_prefix}-import-ics"}
+          variant={:ghost}
+          size={:sm}
+          class="max-sm:min-h-11 pointer-coarse:min-h-11"
+          phx-click={JS.push("calendar:ics_open", target: @target)}
+        >
+          {dgettext("dashboard_calendar_power", "Import an .ics file")}
+        </.action_button>
         <%!-- No phx-target: DashboardLive swaps the component. --%>
         <.action_button
           id={"#{@id_prefix}-back-to-old"}

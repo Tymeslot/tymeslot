@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   import Phoenix.Component, only: [assign: 2]
 
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
+  alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -23,8 +24,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
     "calendar:toggle_week_numbers" => DisplayPreferences,
     "calendar:set_week_start" => DisplayPreferences,
     "calendar:set_time_format" => DisplayPreferences,
-    "calendar:toggle_desktop_reminders" => DisplayPreferences
+    "calendar:toggle_desktop_reminders" => DisplayPreferences,
+    "calendar:ics_open" => IcsImport,
+    "calendar:ics_close" => IcsImport,
+    "calendar:ics_validate" => IcsImport,
+    "calendar:ics_calendar" => IcsImport,
+    "calendar:ics_start" => IcsImport
   }
+
+  # The power layer's `start_async/3` work: the task's name, then the module
+  # whose `async/3` takes its result.
+  @async %{ics_import_plan: IcsImport}
 
   @doc "The events `handle/3` answers."
   @spec events() :: [String.t()]
@@ -33,14 +43,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   @spec handle(String.t(), map(), socket()) :: {:noreply, socket()} | {:reply, map(), socket()}
   def handle(event, params, socket), do: Map.fetch!(@routes, event).handle(event, params, socket)
 
+  @doc "The `start_async/3` names `async/3` answers."
+  @spec async_keys() :: [atom()]
+  def async_keys, do: Map.keys(@async)
+
+  @doc """
+  Answers the power layer's `start_async/3` work, which
+  `CalendarSurface.handle_async/3` routes here.
+  """
+  @spec async(atom(), term(), socket()) :: {:noreply, socket()}
+  def async(key, result, socket), do: Map.fetch!(@async, key).async(key, result, socket)
+
   @doc "The power layer's assigns, at their defaults."
   @spec defaults(socket()) :: socket()
   def defaults(socket),
-    do: assign(socket, reminder_feed: [], reminder_ref: nil)
+    do: assign(socket, reminder_feed: [], reminder_ref: nil, ics_import: nil)
 
   # The `send_update/3` actions of the power layer, which
   # `CalendarSurface.update/2` routes to `update/2`.
-  @update_actions [:reminder_tick]
+  @update_actions [:reminder_tick, :ics_import_progress, :ics_import_finished]
 
   @doc "The `send_update/3` actions `update/2` answers."
   @spec update_actions() :: [atom()]
@@ -49,4 +70,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   @doc "Applies one of the power layer's `send_update/3` messages."
   @spec update(map(), socket()) :: socket()
   def update(%{action: :reminder_tick, ref: ref}, socket), do: ReminderFeed.tick(socket, ref)
+
+  # An `.ics` import's progress and end, from `IcsImportRunner`.
+  def update(%{action: :ics_import_progress, done: done}, socket),
+    do: IcsImport.progress(socket, done)
+
+  def update(%{action: :ics_import_finished, result: result}, socket),
+    do: IcsImport.finished(socket, result)
 end

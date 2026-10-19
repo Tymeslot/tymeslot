@@ -362,6 +362,8 @@
      inside the isolated surface row; the dashboard's top bar is 50 and a
      core modal 9999. */
   --cal-z-fab: 45;
+  /* The .ics drop overlay: above the grid and the + button, below popovers. */
+  --cal-z-drop: 55;
   --cal-z-pop: 60;
   --cal-z-scrim: 65;
   --cal-z-sheet: 70;
