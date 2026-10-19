@@ -124,6 +124,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       assert_push_event(lv, "calendar:events", %{view: "three_day"})
     end
 
+    test "a rotation that changes the view keeps an open sheet", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+      ready(lv, %{"phone" => true})
+
+      lv |> element("#calendar-phone-calendars") |> render_click()
+      assert has_element?(lv, "#calendar-calendars-sheet")
+
+      report(lv, %{"phone" => false})
+
+      assert has_element?(lv, "#calendar-calendars-sheet")
+      assert has_element?(lv, "#calendar-view-week[aria-pressed='true']")
+      assert_push_event(lv, "calendar:events", %{view: "week"})
+    end
+
     test "the width the hook reported holds when the page moves on", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")

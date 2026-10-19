@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.AgendaLoader do
   The window stays one contiguous range, so the furthest day loaded is all
   that needs remembering (`:agenda_through`); `extend_window/2` keeps it in
   the window `SurfaceData` reloads after a sync, so the list never shrinks
-  under the organiser. A new period resets it (`SurfaceData.apply_params/1`).
+  under the organiser. A new period resets it (`SurfaceData.apply_params/2`).
   """
 
   import Phoenix.Component, only: [assign: 2]

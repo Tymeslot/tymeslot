@@ -169,19 +169,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     assign(socket, accounts: accounts, hidden_count: CalendarDirectory.hidden_count(accounts))
   end
 
-  @doc "Sets the period from the URL (or the defaults) and resets per-period UI."
-  @spec apply_params(socket()) :: socket()
-  def apply_params(socket) do
+  @doc """
+  Sets the period from the URL (or the defaults) and resets per-period UI.
+  With `keep_open?: true` the preview and the open sheet stay: a rotation
+  changes the view, not what the organiser was looking at.
+  """
+  @spec apply_params(socket(), keyword()) :: socket()
+  def apply_params(socket, opts \\ []) do
     {view, date} = target(socket.assigns)
 
-    assign(socket,
-      view: view,
-      date: date,
-      mini_cursor: Date.beginning_of_month(date),
-      preview: nil,
-      open_menu: nil,
-      agenda_through: nil
-    )
+    socket =
+      assign(socket,
+        view: view,
+        date: date,
+        mini_cursor: Date.beginning_of_month(date),
+        agenda_through: nil
+      )
+
+    if Keyword.get(opts, :keep_open?, false),
+      do: socket,
+      else: assign(socket, preview: nil, open_menu: nil)
   end
 
   @doc "Loads the events for the period plus one period either side (an agenda: as far as it has grown). The bookable layer is loaded for the same window (see BookableLayer)."
@@ -231,8 +238,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   (`calendar:period`), because it holds a navigation as pending until the
   server confirms it and follows nothing else (not even Back) meanwhile.
   """
-  @spec follow(socket()) :: socket()
-  def follow(socket) do
+  @spec follow(socket(), keyword()) :: socket()
+  def follow(socket, opts \\ []) do
     socket = assign_clock(socket)
     %{view: view, date: date, window: loaded} = socket.assigns
 
@@ -241,7 +248,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket |> assign(:open_menu, nil) |> push_period()
 
       _other ->
-        socket = apply_params(socket)
+        socket = apply_params(socket, opts)
 
         if window_for(socket.assigns) == loaded,
           do: push_period(socket),

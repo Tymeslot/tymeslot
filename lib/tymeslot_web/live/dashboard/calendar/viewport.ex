@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Viewport do
   @doc """
   The hook's answer (`phone?`). When the view it implies differs from the
   one shown, the surface follows it as it follows the URL (and pushes the
-  period or the events), unless `push?` is false: `calendar:ready` replies
+  period or the events) but keeps the preview and any open sheet, unless `push?` is false: `calendar:ready` replies
   with the payload itself, so the correction is only assigned. Anything but
   a boolean changes nothing.
   """
@@ -57,8 +57,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Viewport do
 
     cond do
       not (socket.assigns.ready? and view_changed?(socket.assigns)) -> socket
-      push? -> SurfaceData.follow(socket)
-      true -> socket |> SurfaceData.apply_params() |> SurfaceData.load_window()
+      push? -> SurfaceData.follow(socket, keep_open?: true)
+      true -> socket |> SurfaceData.apply_params(keep_open?: true) |> SurfaceData.load_window()
     end
   end
 
