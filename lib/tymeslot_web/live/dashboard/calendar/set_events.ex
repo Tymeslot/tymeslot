@@ -119,9 +119,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
         if Keyword.has_key?(errors, :position),
           do: save_failed(socket),
           else: name_refused(socket)
-
-      {:error, _not_found} ->
-        name_refused(socket)
     end
   end
 

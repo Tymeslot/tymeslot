@@ -101,8 +101,9 @@ defmodule Tymeslot.CalendarGrid.CalendarSets do
   a shown account without a calendar list.
   """
   @spec members_from([map()], %{
-          hidden_integration_ids: [integer()],
-          hidden_calendar_keys: MapSet.t()
+          :hidden_integration_ids => [integer()],
+          :hidden_calendar_keys => MapSet.t(),
+          optional(atom()) => any()
         }) ::
           [member()]
   def members_from(integrations, %{hidden_integration_ids: ids, hidden_calendar_keys: keys}) do
