@@ -349,6 +349,14 @@
   /* A booking request's edge and flag: amber, because it needs an answer. */
   --cal-request: var(--color-warning);
   --cal-on-request: var(--color-neutral-900);
+  /* Booking requests and the bookable layer (components/calendar-booking.css).
+     Request text and the pill hold at least 7:1 on their fills; the band label
+     is turquoise 800 on white (7.6:1). */
+  --cal-request-ink: #78350f;
+  --cal-request-strong: #92400e;
+  --cal-expired: var(--color-neutral-400);
+  --cal-bookable: var(--color-primary-500);
+  --cal-bookable-ink: var(--color-primary-800);
 }
 
 /* Dark Mode Overrides */
