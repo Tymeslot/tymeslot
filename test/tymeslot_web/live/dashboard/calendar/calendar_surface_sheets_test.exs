@@ -327,5 +327,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       refute has_element?(lv, ".cal-scrim")
       refute has_element?(lv, "#calendar-preview")
     end
+
+    test "the panel's header, which the full-screen editor pads and enlarges, holds its close button",
+         %{lv: lv, id: id} do
+      canvas_hook(lv, "calendar:edit", %{"id" => id})
+
+      assert has_element?(lv, "#calendar-panel > .cal-panel-head #calendar-panel-close")
+    end
   end
 end

@@ -73,3 +73,38 @@ describe("phone sheets", () => {
     expect(rule(phone(), ":root:has(.cal-qc.is-sheet) .cal-scroll")).toMatch(/padding-bottom:\s*50dvh/);
   });
 });
+
+describe("phone full-screen editor", () => {
+  test("the panel covers the screen and its foot follows the keyboard", () => {
+    const body = rule(phone(), ".cal-panel");
+    expect(body).toMatch(/position:\s*fixed/);
+    expect(body).toMatch(/inset:\s*0 0 var\(--cal-kb-inset,\s*0px\) 0/);
+    expect(body).toMatch(/z-index:\s*var\(--cal-z-editor\)/);
+    expect(body).toMatch(/width:\s*auto/);
+    expect(body).toMatch(/max-width:\s*none/);
+    expect(body).toMatch(/padding-bottom:\s*env\(safe-area-inset-bottom\)/);
+    expect(body).toMatch(/padding-left:\s*env\(safe-area-inset-left\)/);
+    expect(body).toMatch(/padding-right:\s*env\(safe-area-inset-right\)/);
+  });
+
+  test("the surface row is lifted over the dashboard's nav while the panel is open", () => {
+    expect(rule(phone(), ".cal-row:has(.cal-panel)")).toMatch(/z-index:\s*var\(--cal-z-editor\)/);
+  });
+
+  test("the header clears the notch and its controls are 44px", () => {
+    expect(rule(phone(), ".cal-panel-head")).toMatch(/padding-top:\s*max\(0\.5rem,\s*env\(safe-area-inset-top\)\)/);
+    const controls = rule(phone(), ".cal-panel-head .icon-button");
+    expect(controls).toMatch(/min-width:\s*44px/);
+    expect(controls).toMatch(/min-height:\s*44px/);
+  });
+
+  test("every button in the panel is 44px high and its fields never make iOS zoom", () => {
+    expect(rule(phone(), ".cal-panel button")).toMatch(/min-height:\s*44px/);
+    expect(rule(phone(), ".cal-panel :is(input, select, textarea)")).toMatch(/font-size:\s*var\(--font-size-base\)/);
+  });
+
+  test("the preview sheet's actions are thumb-sized", () => {
+    expect(rule(phone(), ".cal-preview :is(button, a)")).toMatch(/min-height:\s*44px/);
+    expect(rule(phone(), ".cal-preview .icon-button")).toMatch(/min-width:\s*44px/);
+  });
+});

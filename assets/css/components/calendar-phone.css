@@ -124,3 +124,55 @@
     padding-bottom: 50dvh;
   }
 }
+
+/* The full-screen editor. Below 640px the side panel covers the whole
+   screen, nav, header and tabs included: the surface row it lives in is
+   an isolated stacking context, so the row itself is lifted above the
+   dashboard's nav while the panel is open. Its foot follows the on-screen
+   keyboard (--cal-kb-inset), its edges keep clear of the notch and the
+   home indicator, every button in it is at least 44px high and its fields
+   are 16px, so iOS never zooms. The preview sheet's actions are 44px too. */
+@media (width < 40rem) {
+  .cal-row:has(.cal-panel) {
+    z-index: var(--cal-z-editor);
+  }
+
+  .cal-panel {
+    position: fixed;
+    inset: 0 0 var(--cal-kb-inset, 0px) 0;
+    z-index: var(--cal-z-editor);
+    width: auto;
+    max-width: none;
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    border-left: 0;
+    box-shadow: none;
+  }
+
+  .cal-panel-head {
+    min-height: 3.5rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .cal-panel-head .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .cal-panel button {
+    min-height: 44px;
+  }
+
+  .cal-panel :is(input, select, textarea) {
+    font-size: var(--font-size-base);
+  }
+
+  .cal-preview :is(button, a) {
+    min-height: 44px;
+  }
+
+  .cal-preview .icon-button {
+    min-width: 44px;
+  }
+}

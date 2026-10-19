@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
       class="cal-panel flex flex-col"
       aria-label={dgettext("dashboard_calendar_editing", "Event details")}
     >
-      <div class="flex items-center gap-2 border-b border-tymeslot-100 px-4 py-2">
+      <div class="cal-panel-head flex items-center gap-2 border-b border-tymeslot-100 px-4 py-2">
         <h2
           :if={@panel.mode == :new}
           id="calendar-panel-heading"
