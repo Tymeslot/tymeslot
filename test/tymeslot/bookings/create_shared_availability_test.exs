@@ -3,7 +3,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
   Booking a host together with other Tymeslot users named in the link
   (`?with=`): they are re-checked on submit and added as guests.
 
-  The calendar check is skipped throughout, so these tests pin the schedule,
+  Every calendar answers empty, so these tests pin the schedule,
   hosted-booking and guest rules without a calendar provider in the way.
   """
 
@@ -24,6 +24,10 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     # all these tests look at.
     Mox.stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _context ->
       {:error, :no_integration}
+    end)
+
+    Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+      {:ok, []}
     end)
 
     %{user: host} =
@@ -65,8 +69,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     assert {:ok, meeting} =
              Create.execute(
                params(ctx, "14:00", %{guest_emails: ["friend@example.com"]}),
-               @form,
-               skip_calendar_check: true
+               @form
              )
 
     # Guests of one booking are inserted within the same second, so the order
@@ -78,7 +81,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
 
   test "refuses a time outside the named user's working hours", ctx do
     assert {:error, :slot_taken} =
-             Create.execute(params(ctx, "10:00"), @form, skip_calendar_check: true)
+             Create.execute(params(ctx, "10:00"), @form)
   end
 
   test "refuses a time the named user hosts a booking in", ctx do
@@ -92,7 +95,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     )
 
     assert {:error, :slot_taken} =
-             Create.execute(params(ctx, "14:00"), @form, skip_calendar_check: true)
+             Create.execute(params(ctx, "14:00"), @form)
   end
 
   test "refuses a meeting type that does not allow guests", ctx do
@@ -101,8 +104,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     assert {:error, :booking_failed} =
              Create.execute(
                params(ctx, "14:00", %{meeting_type_id: no_guests.id}),
-               @form,
-               skip_calendar_check: true
+               @form
              )
   end
 
@@ -118,8 +120,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     assert {:error, :booking_failed} =
              Create.execute(
                params(ctx, "14:00", %{meeting_type_id: group.id}),
-               @form,
-               skip_calendar_check: true
+               @form
              )
   end
 
@@ -127,8 +128,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     assert {:error, :booking_failed} =
              Create.execute(
                params(ctx, "14:00", %{shared_availability_usernames: ["nobody"]}),
-               @form,
-               skip_calendar_check: true
+               @form
              )
   end
 
@@ -136,8 +136,7 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
     assert {:ok, meeting} =
              Create.execute(
                params(ctx, "10:00", %{shared_availability_usernames: []}),
-               @form,
-               skip_calendar_check: true
+               @form
              )
 
     assert Guests.list_for_meeting(meeting.id) == []

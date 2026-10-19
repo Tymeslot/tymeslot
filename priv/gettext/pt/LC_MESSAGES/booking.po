@@ -703,36 +703,6 @@ msgstr "Buscar fusos horários"
 msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
 msgstr "Modo de prévia: os agendamentos feitos aqui são simulados. Nada é salvo nem enviado."
 
-#: lib/tymeslot_web/themes/shared/payment_return_components.ex
-#, elixir-autogen, elixir-format
-msgid "Booking cancelled"
-msgstr "Agendamento cancelado"
-
-#: lib/tymeslot_web/themes/shared/payment_return_components.ex
-#, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses."
-msgstr "Se não houver resposta até %{deadline}, o pedido expira."
-
-#: lib/tymeslot_web/themes/shared/payment_return_components.ex
-#, elixir-autogen, elixir-format
-msgid "Nobody responded to this request in time, so it has lapsed."
-msgstr "Ninguém respondeu a este pedido a tempo, então ele expirou."
-
-#: lib/tymeslot_web/themes/shared/payment_return_components.ex
-#, elixir-autogen, elixir-format
-msgid "Payment not completed"
-msgstr "Pagamento não concluído"
-
-#: lib/tymeslot_web/themes/shared/payment_return_components.ex
-#, elixir-autogen, elixir-format
-msgid "This booking has been cancelled, so it won't be going ahead."
-msgstr "Este agendamento foi cancelado, então ele não vai acontecer."
-
-#: lib/tymeslot_web/themes/shared/payment_return_components.ex
-#, elixir-autogen, elixir-format
-msgid "This booking wasn't accepted, so it won't be going ahead."
-msgstr "Este agendamento não foi aceito, então ele não vai acontecer."
-
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Additional participants: %{names}"

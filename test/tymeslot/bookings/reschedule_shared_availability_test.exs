@@ -56,14 +56,14 @@ defmodule Tymeslot.Bookings.RescheduleSharedAvailabilityTest do
 
   test "moves the booking to a time the guest user is free for", ctx do
     assert {:ok, updated} =
-             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "14:00"), %{}, ctx.host.id)
+             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "14:00"), ctx.host.id)
 
     assert updated.start_time == DateTime.new!(ctx.date, ~T[14:00:00], "Etc/UTC")
   end
 
   test "refuses a time outside the guest user's working hours", ctx do
     assert {:error, :slot_taken} =
-             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "10:00"), %{}, ctx.host.id)
+             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "10:00"), ctx.host.id)
   end
 
   test "refuses a time the guest user's calendar is busy for", ctx do
@@ -75,7 +75,7 @@ defmodule Tymeslot.Bookings.RescheduleSharedAvailabilityTest do
     end)
 
     assert {:error, :slot_taken} =
-             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "14:00"), %{}, ctx.host.id)
+             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "14:00"), ctx.host.id)
   end
 
   test "does not treat the booking's own invitation in the guest's calendar as a conflict", ctx do
@@ -96,7 +96,7 @@ defmodule Tymeslot.Bookings.RescheduleSharedAvailabilityTest do
     end)
 
     assert {:ok, _updated} =
-             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "14:00"), %{}, ctx.host.id)
+             Reschedule.execute(ctx.meeting.uid, new_params(ctx, "14:00"), ctx.host.id)
   end
 
   test "ignores guests who are not Tymeslot users", ctx do
@@ -104,6 +104,6 @@ defmodule Tymeslot.Bookings.RescheduleSharedAvailabilityTest do
     {:ok, _guests} = Guests.create_for_meeting(other.id, ["friend@example.com"])
 
     assert {:ok, _updated} =
-             Reschedule.execute(other.uid, new_params(ctx, "10:00"), %{}, ctx.host.id)
+             Reschedule.execute(other.uid, new_params(ctx, "10:00"), ctx.host.id)
   end
 end
