@@ -61,6 +61,7 @@ export const BookableMixin = {
   destroyBookable() {
     document.removeEventListener("keydown", this.bookableKey);
     document.removeEventListener("pointerdown", this.explainerOutside);
+    this.dropExplainer();
   },
 
   // Whether a popover over the grid holds redraws back until it closes.

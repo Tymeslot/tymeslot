@@ -87,6 +87,18 @@ test("a redraw that drops an open list takes its sheet state with it", () => {
   expect(sheetOpen()).toBe(false);
 });
 
+test("destroying the hook with the explainer open as a sheet frees the page", () => {
+  mockViewport(true);
+  const { el, handlers } = mountHook();
+  handlers["calendar:bookable"](layer);
+  el.querySelector('.cal-col[data-day="2026-10-15"] [data-bookable-label]').click();
+  expect(sheetOpen()).toBe(true);
+
+  unmountAll();
+
+  expect(sheetOpen()).toBe(false);
+});
+
 test("on a wide screen the +N list stays a popover beside its chip", () => {
   mockViewport(false);
   const { el } = mountHook(payload({ events: crowd() }));
