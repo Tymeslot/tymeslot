@@ -605,7 +605,7 @@
 /* The "+N more" list, drawn by the hook */
 .cal-list {
   position: fixed;
-  z-index: 60;
+  z-index: var(--cal-z-pop);
   display: flex;
   flex-direction: column;
   min-width: 14rem;
@@ -690,7 +690,7 @@
   position: fixed;
   top: var(--cal-pop-y, 30%);
   left: var(--cal-pop-x, 50%);
-  z-index: 70;
+  z-index: var(--cal-z-sheet);
   width: 20rem;
   max-width: calc(100vw - 16px);
   padding: 16px;
@@ -901,7 +901,7 @@
    placed beside the label like the "+N" list. */
 .cal-bookable-pop {
   position: fixed;
-  z-index: 60;
+  z-index: var(--cal-z-pop);
   width: 20rem;
   max-width: calc(100vw - 16px);
   padding: 12px;

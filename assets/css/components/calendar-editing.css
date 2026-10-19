@@ -12,7 +12,7 @@
    viewport is short, max-height. */
 .cal-qc {
   position: fixed;
-  z-index: 70;
+  z-index: var(--cal-z-sheet);
   display: flex;
   flex-direction: column;
   gap: 8px;

@@ -200,7 +200,7 @@
 /* The explainer, placed by the hook like the "+N more" list. */
 .cal-bookable-pop {
   position: fixed;
-  z-index: 60;
+  z-index: var(--cal-z-pop);
   display: flex;
   flex-direction: column;
   gap: 8px;
