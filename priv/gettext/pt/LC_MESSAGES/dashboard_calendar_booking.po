@@ -429,3 +429,23 @@ msgstr "pedido expirado sem resposta"
 #, elixir-autogen, elixir-format
 msgid "request waiting for your answer"
 msgstr "pedido aguardando sua resposta"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't undo the block. It has been moved or renamed since."
+msgstr "Não foi possível desfazer o bloqueio. Ele foi movido ou renomeado desde então."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as busy for bookings every time this repeats. Guests can't book those times."
+msgstr "Tratado como ocupado para agendamentos sempre que se repete. Os convidados não podem agendar esses horários."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as free for bookings every time this repeats. Guests can book those times."
+msgstr "Tratado como livre para agendamentos sempre que se repete. Os convidados podem agendar esses horários."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "You can block at most a week at a time."
+msgstr "Você pode bloquear no máximo uma semana por vez."

@@ -429,3 +429,23 @@ msgstr "Anfrage ohne Antwort verfallen"
 #, elixir-autogen, elixir-format
 msgid "request waiting for your answer"
 msgstr "Anfrage wartet auf Ihre Antwort"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't undo the block. It has been moved or renamed since."
+msgstr "Die Sperre konnte nicht rückgängig gemacht werden. Sie wurde inzwischen verschoben oder umbenannt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as busy for bookings every time this repeats. Guests can't book those times."
+msgstr "Bei jeder Wiederholung für Buchungen als beschäftigt behandelt. Gäste können diese Zeiten nicht buchen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as free for bookings every time this repeats. Guests can book those times."
+msgstr "Bei jeder Wiederholung für Buchungen als frei behandelt. Gäste können diese Zeiten buchen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "You can block at most a week at a time."
+msgstr "Sie können höchstens eine Woche auf einmal sperren."

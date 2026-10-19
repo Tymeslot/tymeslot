@@ -429,3 +429,23 @@ msgstr "žádost vypršela bez odpovědi"
 #, elixir-autogen, elixir-format
 msgid "request waiting for your answer"
 msgstr "žádost čeká na vaši odpověď"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't undo the block. It has been moved or renamed since."
+msgstr "Blokaci se nepodařilo vrátit. Mezitím byla přesunuta nebo přejmenována."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as busy for bookings every time this repeats. Guests can't book those times."
+msgstr "Při každém opakování považováno pro rezervace za obsazené. Hosté si tyto časy nemohou rezervovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as free for bookings every time this repeats. Guests can book those times."
+msgstr "Při každém opakování považováno pro rezervace za volné. Hosté si tyto časy mohou rezervovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "You can block at most a week at a time."
+msgstr "Zablokovat můžete nejvýše týden najednou."

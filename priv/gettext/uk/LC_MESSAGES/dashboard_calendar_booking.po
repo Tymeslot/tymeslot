@@ -429,3 +429,23 @@ msgstr "термін дії запиту минув без відповіді"
 #, elixir-autogen, elixir-format
 msgid "request waiting for your answer"
 msgstr "запит очікує на вашу відповідь"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't undo the block. It has been moved or renamed since."
+msgstr "Не вдалося скасувати блокування. Відтоді його перенесли або перейменували."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as busy for bookings every time this repeats. Guests can't book those times."
+msgstr "Під час кожного повторення вважається зайнятим для бронювань. Гості не можуть бронювати ці години."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as free for bookings every time this repeats. Guests can book those times."
+msgstr "Під час кожного повторення вважається вільним для бронювань. Гості можуть бронювати ці години."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "You can block at most a week at a time."
+msgstr "Можна заблокувати щонайбільше тиждень за раз."
