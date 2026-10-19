@@ -459,3 +459,17 @@
   outline: 2px solid var(--cal-focus);
   outline-offset: -2px;
 }
+
+/* All-day bars fill the row render.js sized from the viewport's metrics
+   (--cal-allday-row): 22px, or 32px on a phone, so a bar is a thumb-sized
+   target. */
+.cal-allday .cal-adbar,
+.cal-allday .cal-admore {
+  height: var(--cal-allday-row, 22px);
+}
+
+/* Day view on a phone: the week strip, drawn just before the grid, keeps its
+   own height and the grid takes the rest of the canvas. */
+.cal-canvas > :has(+ .cal-grid) {
+  flex: none;
+}

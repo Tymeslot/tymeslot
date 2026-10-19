@@ -3,6 +3,7 @@
  */
 import { afterEach, describe, expect, test } from "vitest";
 import { renderGrid, renderList, renderSkeleton } from "../../calendar/render.js";
+import { metricsFor } from "../../calendar/viewport.js";
 import { addDays, normaliseEvent, parseWall } from "../../calendar/time.js";
 
 const strings = {
@@ -424,4 +425,31 @@ test("renderList flags a request", () => {
   );
   expect(container.querySelector('[data-event-id="booking-1"] .cal-list-flag').textContent).toBe("Request");
   expect(container.querySelector('[data-event-id="event-1"] .cal-list-flag')).toBeNull();
+});
+
+describe("renderGrid metrics", () => {
+  const call = [timed("event-1", "Call", "2026-10-14T11:00", "2026-10-14T11:05")];
+  const trip = [normaliseEvent({ id: "event-2", kind: "event", title: "Trip", all_day: true, start: "2026-10-14", end: "2026-10-15", colour: "calendar-sage", free: false, attention: false })];
+
+  test("without metrics a five-minute event is drawn 20px high", () => {
+    const grid = draw({ events: call });
+    expect(grid.querySelector('[data-event-id="event-1"]').style.height).toBe("20px");
+  });
+
+  test("with phone metrics a five-minute event is drawn 24px high", () => {
+    const grid = draw({ events: call, metrics: metricsFor(true) });
+    expect(grid.querySelector('[data-event-id="event-1"]').style.height).toBe("24px");
+  });
+
+  test("without metrics all-day rows are 22px", () => {
+    const grid = draw({ events: trip });
+    expect(grid.querySelector(".cal-allday").getAttribute("style")).toContain("repeat(1, 22px)");
+    expect(grid.querySelector(".cal-grid").getAttribute("style")).toContain("--cal-allday-row:22px");
+  });
+
+  test("with phone metrics all-day rows are 32px, and the bars are told so", () => {
+    const grid = draw({ events: trip, metrics: metricsFor(true) });
+    expect(grid.querySelector(".cal-allday").getAttribute("style")).toContain("repeat(1, 32px)");
+    expect(grid.querySelector(".cal-grid").getAttribute("style")).toContain("--cal-allday-row:32px");
+  });
 });

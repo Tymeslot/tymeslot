@@ -11,6 +11,7 @@ import { layoutAllDay } from "./allday.js";
 import { bandsForColumns, bookableInView, clearLabelTop, labelPlacement, nextInView, windowsForDay } from "./bookable.js";
 import { draggable } from "./drag.js";
 import { LINE_HEIGHT, countLines, isLongWord, layoutColumn } from "./layout.js";
+import { metricsFor } from "./viewport.js";
 import {
   HOUR_HEIGHT,
   MINUTES_PER_DAY,
@@ -28,7 +29,6 @@ import {
 } from "./time.js";
 
 export const AXIS_WIDTH = 56;
-const ALL_DAY_ROW = 22;
 const ALL_DAY_LANES = 3;
 const TOKEN = /^[a-z0-9-]+$/;
 // An event block's border and vertical padding, and the time line under a title.
@@ -94,6 +94,8 @@ export function renderGrid(model) {
   const { view, days, events, settings, strings, now, width, measureWidth, nightOpen } = model;
   // A Ctrl + scroll zoom (hooks/calendar_canvas/zoom.js) overrides the density's height.
   const hourHeight = Math.round(model.hourHeight) || HOUR_HEIGHT[settings.density] || HOUR_HEIGHT.comfortable;
+  // Phones draw taller events and all-day rows (viewport.js); the default is the desktop's.
+  const metrics = model.metrics ?? metricsFor(false);
   const fold = settings.fold_night && !nightOpen;
   const scale = makeScale(hourHeight, fold);
   const colWidth = Math.max(40, (width - AXIS_WIDTH - 1) / days.length);
@@ -106,10 +108,10 @@ export function renderGrid(model) {
   const empty = timedCount === 0 && allDay.bars.length === 0 && allDay.more.every((count) => count === 0);
   const movingId = model.movingId ?? null;
   const layer = bookableLayer(model.bookable, days, scale);
-  const ctx = { settings, strings, now, scale, fold, colWidth, measureWidth, byId, nowDay, nowMinute, nowShown, movingId, layer };
+  const ctx = { settings, strings, now, scale, fold, colWidth, measureWidth, byId, nowDay, nowMinute, nowShown, movingId, layer, metrics };
 
   return (
-    `<div class="cal-grid" data-density="${escapeHtml(settings.density)}" style="--cal-days:${days.length};--cal-axis:${AXIS_WIDTH}px;--cal-hour:${hourHeight}px;--cal-strip:${fold ? NIGHT_STRIP : 0}px">` +
+    `<div class="cal-grid" data-density="${escapeHtml(settings.density)}" style="--cal-days:${days.length};--cal-axis:${AXIS_WIDTH}px;--cal-hour:${hourHeight}px;--cal-strip:${fold ? NIGHT_STRIP : 0}px;--cal-allday-row:${metrics.allDayRow}px">` +
     `<div class="cal-scroll" data-scroll role="application" aria-roledescription="${escapeHtml(strings.calendar_role)}" aria-label="${escapeHtml(periodLabel(days, strings))}">` +
     `<div class="cal-top">${head(days, ctx)}${allDayLane(allDay, days, ctx)}</div>` +
     `<div class="cal-body" style="height:${Math.ceil(scale.height)}px">` +
@@ -137,8 +139,8 @@ function head(days, { strings, nowDay }) {
   return `<div class="cal-head"><div class="cal-head-corner"></div>${cells}</div>`;
 }
 
-function allDayLane({ bars, more, warn, rows }, days, { strings, now, byId }) {
-  const template = rows ? `repeat(${rows}, ${ALL_DAY_ROW}px)` : "8px";
+function allDayLane({ bars, more, warn, rows }, days, { strings, now, byId, metrics }) {
+  const template = rows ? `repeat(${rows}, ${metrics.allDayRow}px)` : "8px";
   let html = `<div class="cal-allday" style="grid-template-rows:${template}"><div class="cal-allday-label" style="grid-row:1 / -1">${rows ? escapeHtml(strings.all_day) : ""}</div>`;
 
   for (const bar of bars) {
@@ -197,7 +199,7 @@ function shortHour(hour, timeFormat) {
 }
 
 function column(iso, events, ctx) {
-  const { scale, fold, colWidth, measureWidth, settings, strings, byId, nowDay, nowMinute, nowShown } = ctx;
+  const { scale, fold, colWidth, measureWidth, settings, strings, byId, nowDay, nowMinute, nowShown, metrics } = ctx;
   const weekday = isoWeekday(dayNumber(iso));
   let html = "";
 
@@ -232,6 +234,7 @@ function column(iso, events, ctx) {
     colWidth: colWidth - 6,
     hourHeight: scale.hourHeight,
     yOf: scale.yOf,
+    minHeight: metrics.minEventHeight,
     measureLines: (text, w) => countLines(text, w, measureWidth),
   });
 

@@ -18,3 +18,12 @@ export const COARSE_QUERY = "(pointer: coarse)";
 export function isCoarse(win = typeof window === "undefined" ? undefined : window) {
   return typeof win?.matchMedia === "function" && win.matchMedia(COARSE_QUERY).matches === true;
 }
+
+// Event and all-day sizes for the time grid. A phone's are taller, so a short
+// event or an all-day bar is a thumb-sized target.
+const PHONE_METRICS = Object.freeze({ minEventHeight: 24, allDayRow: 32 });
+const WIDE_METRICS = Object.freeze({ minEventHeight: 20, allDayRow: 22 });
+
+export function metricsFor(phone) {
+  return phone ? PHONE_METRICS : WIDE_METRICS;
+}

@@ -27,12 +27,14 @@
  * keyboard move (keys.js) where it can move, nothing where it cannot.
  */
 import { agendaDays, agendaGroups } from "../../calendar/agenda.js";
-import { applyPayload, eventsForDays } from "../../calendar/cache.js";
+import { applyPayload, eventsForDays, isLoaded } from "../../calendar/cache.js";
 import { monthStep } from "../../calendar/month.js";
 import { renderAgenda } from "../../calendar/render_agenda.js";
 import { renderMonth } from "../../calendar/render_month.js";
+import { renderWeekStrip } from "../../calendar/render_strip.js";
 import { dateLabel, renderGrid, renderSkeleton } from "../../calendar/render.js";
 import { AGENDA_MAX_DAYS, MINUTES_PER_DAY, addDays, isTimeGrid, isoFromDay, periodDays } from "../../calendar/time.js";
+import { metricsFor } from "../../calendar/viewport.js";
 import { MODALS, TYPING } from "./keys.js";
 
 const VIEW_KEYS = { d: "day", x: "three_day", w: "week", m: "month", a: "agenda" };
@@ -82,9 +84,21 @@ export const ViewsMixin = {
     return renderSkeleton(days, this.strings);
   },
 
+  // Day view on a phone: the week around the day, with dots, above the grid.
+  // Its buttons carry data-goto-day, so a tap takes the grid's own route to
+  // that day. Empty until the week is cached (Day view loads the week's window).
+  weekStrip() {
+    if (!this.phone || this.view !== "day") return "";
+    const days = periodDays("week", this.date, this.settings.week_start, true);
+    if (!isLoaded(this.cache, days)) return "";
+    const today = isoFromDay(Math.floor(this.nowMinute() / MINUTES_PER_DAY));
+    const events = eventsForDays(this.cache, days).filter((event) => event.kind !== "draft");
+    return renderWeekStrip({ days, date: this.date, today, events, strings: this.strings });
+  },
+
   drawView(model) {
     this.keepViewScroll();
-    if (isTimeGrid(this.view)) return renderGrid(model);
+    if (isTimeGrid(this.view)) return this.weekStrip() + renderGrid({ ...model, metrics: metricsFor(Boolean(this.phone)) });
     const today = isoFromDay(Math.floor(model.now / MINUTES_PER_DAY));
 
     if (this.view === "month") {
