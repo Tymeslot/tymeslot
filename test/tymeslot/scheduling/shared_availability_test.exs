@@ -124,18 +124,16 @@ defmodule Tymeslot.Scheduling.SharedAvailabilityTest do
     end
   end
 
-  describe "resolve_for_booking/2" do
-    test "recovers the users among a booking's guests, for its host only" do
+  describe "resolve_for_meeting/1" do
+    test "recovers the users among a booking's guests" do
       host = host()
       %{user: michael} = insert_bookable_guest("michael")
       meeting = insert(:meeting, organizer_user_id: host.id)
-      {:ok, _guests} = Guests.create_for_meeting(meeting.id, [michael.email])
 
-      assert [%Guest{username: "michael"}] =
-               SharedAvailability.resolve_for_booking(meeting.uid, host.id)
+      {:ok, _guests} =
+        Guests.create_for_meeting(meeting.id, [michael.email, "friend@example.com"])
 
-      other_host = insert(:user)
-      assert [] = SharedAvailability.resolve_for_booking(meeting.uid, other_host.id)
+      assert [%Guest{username: "michael"}] = SharedAvailability.resolve_for_meeting(meeting)
     end
   end
 

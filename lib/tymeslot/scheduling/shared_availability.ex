@@ -37,7 +37,6 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -164,23 +163,8 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   end
 
   @doc """
-  The users to check when the host's booking `meeting_uid` is rescheduled
-  (`resolve_for_meeting/1`). A booking that is not the host's has none.
-  """
-  @spec resolve_for_booking(String.t(), pos_integer()) :: [Guest.t()]
-  def resolve_for_booking(meeting_uid, host_user_id)
-      when is_binary(meeting_uid) and is_integer(host_user_id) do
-    case MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, host_user_id) do
-      {:ok, meeting} -> resolve_for_meeting(meeting)
-      {:error, _not_found} -> []
-    end
-  end
-
-  def resolve_for_booking(_meeting_uid, _host_user_id), do: []
-
-  @doc """
-  The users to check when `meeting` is rescheduled, recovered from its guests
-  (`resolve_from_guest_emails/2`).
+  The users to check when the host's booking `meeting` is rescheduled,
+  recovered from its guests (`resolve_from_guest_emails/2`).
   """
   @spec resolve_for_meeting(MeetingSchema.t()) :: [Guest.t()]
   def resolve_for_meeting(%{id: meeting_id, organizer_user_id: host_user_id}) do

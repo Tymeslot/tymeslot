@@ -52,28 +52,34 @@ defmodule TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests do
       )
     else
       {:error, _reason} -> assign_unavailable(socket)
-      _no_guests -> assign_from_rescheduled_booking(socket, params, host_user_id)
+      _no_guests -> assign_defaults(socket)
     end
   end
 
-  # A reschedule link carries no `with`: the users to check come from the
-  # guests of the booking being moved. Nothing here can fail the page, since the
-  # booking already exists; its meeting type stays whatever it was.
-  defp assign_from_rescheduled_booking(socket, params, host_user_id) do
-    case params["reschedule_meeting_uid"] do
-      uid when is_binary(uid) and uid != "" ->
-        socket
-        |> assign_defaults()
-        |> assign(
-          :shared_availability_guests,
-          SharedAvailability.resolve_for_booking(uid, host_user_id)
-        )
-        |> assign(:shared_availability_source, :booking)
+  @doc """
+  Takes the users to check from the guests of the booking a reschedule is
+  moving, which the page has loaded (`:reschedule_context`): a reschedule link
+  carries no `with`. Nothing here can fail the page, since the booking already
+  exists; its meeting type stays whatever it was. Users named in a link are
+  left as they are, and a page that moves nothing has none from a booking.
+  """
+  @spec assign_from_reschedule(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_from_reschedule(%{assigns: %{shared_availability_source: :link}} = socket),
+    do: socket
 
-      _not_rescheduling ->
-        assign_defaults(socket)
-    end
+  def assign_from_reschedule(%{assigns: %{reschedule_context: %{meeting: meeting}}} = socket) do
+    socket
+    |> assign(:shared_availability_guests, SharedAvailability.resolve_for_meeting(meeting))
+    |> assign(:shared_availability_source, :booking)
   end
+
+  def assign_from_reschedule(%{assigns: %{shared_availability_source: :booking}} = socket) do
+    socket
+    |> assign(:shared_availability_guests, [])
+    |> assign(:shared_availability_source, nil)
+  end
+
+  def assign_from_reschedule(socket), do: socket
 
   @doc """
   Refuses a meeting type that does not allow guests, or a group type, once

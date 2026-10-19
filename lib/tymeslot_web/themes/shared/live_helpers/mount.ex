@@ -220,6 +220,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   defp load_reschedule(socket, seat_token) do
     socket
     |> ReschedulePin.load_context()
+    |> SharedAvailabilityGuests.assign_from_reschedule()
     |> SeatMoveLink.assign_from_url(seat_token)
   end
 
