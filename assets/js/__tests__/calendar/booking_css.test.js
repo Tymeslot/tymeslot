@@ -31,7 +31,20 @@ describe("calendar booking layer styles", () => {
 
   test("the label is lifted above the events", () => {
     const [body] = blocks(read("calendar-booking.css"), ".cal-bookable-label");
-    expect(body).toMatch(/z-index:\s*calc\(var\(--cal-lift,\s*\d+\)\s*\+\s*1\)/);
+    expect(body).toMatch(/z-index:\s*max\(calc\(var\(--cal-lift,\s*\d+\)\s*\+\s*1\),\s*3\)/);
+  });
+
+  test("the floating note keeps the surface's z-index and the disabled button keeps full opacity", () => {
+    const booking = read("calendar-booking.css");
+    for (const body of blocks(booking, ".cal-bookable-note")) expect(body).not.toMatch(/z-index/);
+    expect(blocks(read("calendar-surface.css"), ".cal-bookable-note")[0]).toMatch(/z-index:\s*25/);
+    const [disabled] = blocks(booking, ".cal-bookable-pop-button:disabled");
+    expect(disabled).toMatch(/opacity:\s*1/);
+    expect(disabled).toMatch(/color:\s*var\(--cal-text-muted\)/);
+  });
+
+  test("the hint stays muted", () => {
+    expect(blocks(read("calendar-booking.css"), ".cal-bookable-pop-hint")[0]).toMatch(/--cal-text-muted/);
   });
 
   test("the label may extend below a short band", () => {

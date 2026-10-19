@@ -104,7 +104,7 @@
 .cal-bookable-label {
   position: absolute;
   left: 4px;
-  z-index: calc(var(--cal-lift, 3) + 1);
+  z-index: max(calc(var(--cal-lift, 3) + 1), 3);
   display: inline-flex;
   align-items: center;
   max-width: calc(100% - 8px);
@@ -140,7 +140,6 @@
   position: absolute;
   bottom: 12px;
   left: 50%;
-  z-index: 5;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -228,11 +227,24 @@
 }
 
 .cal-bookable-pop-time,
-.cal-bookable-pop-hint,
 .cal-bookable-pop-status {
   margin: 0;
   color: var(--cal-bookable-ink);
   font-size: var(--font-size-xs);
+}
+
+.cal-bookable-pop-hint {
+  margin: 0;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Disabled while a request is in flight: muted ink on the chip fill (7:1),
+   never opacity, which would drop the label under 4.5:1. */
+.cal-bookable-pop-button:disabled {
+  background: var(--cal-chip);
+  color: var(--cal-text-muted);
+  opacity: 1;
 }
 
 /* The note after a failed load: the same place, warning ink. */
