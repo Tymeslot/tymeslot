@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
@@ -173,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
       lv |> element("#calendar-preview-cancel") |> render_click()
 
       meeting
-      |> Ecto.Changeset.change(status: "cancelled", cancelled_at: ~U[2026-10-14 07:59:00Z])
+      |> Changeset.change(status: "cancelled", cancelled_at: ~U[2026-10-14 07:59:00Z])
       |> Repo.update!()
 
       lv |> form("#cancel-meeting-form") |> render_submit()
@@ -214,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
     lv |> element("#calendar-preview-reschedule") |> render_click()
 
     meeting
-    |> Ecto.Changeset.change(status: "cancelled", cancelled_at: ~U[2026-10-14 07:59:00Z])
+    |> Changeset.change(status: "cancelled", cancelled_at: ~U[2026-10-14 07:59:00Z])
     |> Repo.update!()
 
     lv |> element("#calendar-reschedule-booking button", "Send Request") |> render_click()
