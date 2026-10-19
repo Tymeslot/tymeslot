@@ -23,13 +23,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.SyncProblems
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
-  alias TymeslotWeb.Dashboard.Calendar.BookingCancelModal
-  alias TymeslotWeb.Dashboard.Calendar.BookingDeclineModal
-  alias TymeslotWeb.Dashboard.Calendar.BookingRescheduleModal
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.Creation
-  alias TymeslotWeb.Dashboard.Calendar.DeleteConfirmModal
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
@@ -44,11 +40,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
-  alias TymeslotWeb.Dashboard.Calendar.RemoveGuestModal
-  alias TymeslotWeb.Dashboard.Calendar.SeriesMoveModal
-  alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceModals
   alias TymeslotWeb.Dashboard.Calendar.SyncBanner
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -345,46 +339,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         target={@myself}
       />
       <Toast.toast toast={@toast} target={@myself} />
-      <SeriesScopeModal.series_scope_modal
-        :if={@series_prompt}
-        prompt={@series_prompt}
-        target={@myself}
-      />
-      <DeleteConfirmModal.delete_confirm_modal
-        :if={@delete_prompt}
-        prompt={@delete_prompt}
-        target={@myself}
-      />
-      <SeriesMoveModal.series_move_modal
-        :if={@series_move_prompt}
-        prompt={@series_move_prompt}
-        target={@myself}
-      />
-      <RemoveGuestModal.remove_guest_modal
-        :if={@remove_guest_prompt}
-        prompt={@remove_guest_prompt}
-        target={@myself}
-      />
-      <BookingDeclineModal.booking_decline_modal
-        :if={@decline_request_modal_data}
-        meeting={@decline_request_modal_data}
-        declining={MapSet.member?(@answering_request, @decline_request_modal_data.id)}
-        timezone={@timezone}
-        time_format={@time_format}
-        target={@myself}
-      />
-      <BookingCancelModal.booking_cancel_modal
-        :if={@cancel_meeting_modal_data}
-        meeting={@cancel_meeting_modal_data}
-        booking_payment={@cancel_booking_payment}
-        timezone={@timezone}
-        time_format={@time_format}
-        target={@myself}
-      />
-      <BookingRescheduleModal.booking_reschedule_modal
-        :if={@reschedule_request_modal_data}
-        meeting={@reschedule_request_modal_data}
-        sending={not is_nil(@sending_reschedule)}
+      <SurfaceModals.modals
+        series_prompt={@series_prompt}
+        delete_prompt={@delete_prompt}
+        series_move_prompt={@series_move_prompt}
+        remove_guest_prompt={@remove_guest_prompt}
+        decline_request_modal_data={@decline_request_modal_data}
+        cancel_meeting_modal_data={@cancel_meeting_modal_data}
+        cancel_booking_payment={@cancel_booking_payment}
+        reschedule_request_modal_data={@reschedule_request_modal_data}
+        answering_request={@answering_request}
+        sending_reschedule={@sending_reschedule}
         timezone={@timezone}
         time_format={@time_format}
         target={@myself}
