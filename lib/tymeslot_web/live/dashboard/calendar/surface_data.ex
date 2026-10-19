@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Availability.Bookability
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.CalendarDirectory
-  alias Tymeslot.CalendarGrid.CalendarSets
   alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventPayload
@@ -137,7 +136,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     preferences = CalendarGrid.get_or_create_preferences(user_id)
     integrations = CalendarGrid.list_active_integrations(user_id)
     appearances = Appearance.list_for_user(user_id)
-    sets = CalendarSets.list(user_id)
 
     socket
     |> assign_clock()
@@ -148,13 +146,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       integration_tokens: ColourTokens.for_integrations(integrations),
       calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
       manual_hidden_keys: Appearance.hidden_keys(appearances),
-      calendar_sets: sets,
-      active_set: CalendarSets.active_in(sets, preferences),
       working_hours: WorkingHours.for_profile(socket.assigns[:profile]),
       bookable_types: LayerPreferences.meeting_types(user_id),
       bookability: Bookability.for_user(user_id)
     )
-    |> Visibility.resolve()
+    |> Visibility.load_sets(preferences)
     |> assign_accounts()
   end
 

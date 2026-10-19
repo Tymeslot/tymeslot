@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   import Phoenix.LiveView, only: [send_update_after: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.SyncProblems
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -132,6 +133,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   @spec failed_ids(map()) :: MapSet.t()
   def failed_ids(%{failure_counts: counts}),
     do: for({id, count} <- counts, count >= @persistent, into: MapSet.new(), do: id)
+
+  @doc "What the banner and the rail read: the problems, their account ids and the accounts needing reauthorisation."
+  @spec view(map()) :: %{sync_problems: list(), problem_ids: MapSet.t(), reauth_ids: MapSet.t()}
+  def view(assigns) do
+    problems = SyncProblems.list(assigns.integrations, assigns.window_events, failed_ids(assigns))
+
+    %{
+      sync_problems: problems,
+      problem_ids: MapSet.new(problems, & &1.integration_id),
+      reauth_ids: MapSet.new(for(%{needs_reauth: true, id: id} <- assigns.integrations, do: id))
+    }
+  end
 
   defp too_many(socket),
     do:

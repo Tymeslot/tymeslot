@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.Period
-  alias Tymeslot.CalendarGrid.SyncProblems
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.CalendarsSheet
@@ -271,23 +270,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    sync_problems =
-      SyncProblems.list(
-        assigns.integrations,
-        assigns.window_events,
-        SyncStatus.failed_ids(assigns)
-      )
-
     assigns =
-      assign(assigns,
+      assigns
+      |> assign(SyncStatus.view(assigns))
+      |> assign(
         locale: Gettext.get_locale(TymeslotWeb.Gettext),
         days: SurfaceData.days(assigns),
         panel_event: PanelState.current_event(assigns),
         panel_context: PanelState.context(assigns),
-        sync_problems: sync_problems,
-        set_view: RailSets.view(assigns),
-        problem_ids: MapSet.new(sync_problems, & &1.integration_id),
-        reauth_ids: MapSet.new(for(%{needs_reauth: true, id: id} <- assigns.integrations, do: id))
+        set_view: RailSets.view(assigns)
       )
 
     ~H"""

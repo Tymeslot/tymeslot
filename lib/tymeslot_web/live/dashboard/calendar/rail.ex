@@ -94,9 +94,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :problem_ids, :any, default: MapSet.new()
   attr :reauth_ids, :any, default: MapSet.new()
 
-  attr :set_active, :boolean,
-    default: false,
-    doc: "a calendar set is active: ticking a calendar in a hidden account edits the set"
+  attr :set_active, :boolean, default: false, doc: "a set is active: ticks edit it"
 
   attr :target, :any, required: true
 

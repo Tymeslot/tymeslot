@@ -57,6 +57,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
     )
   end
 
+  @doc "Loads the organiser's sets and the active one, then resolves what is hidden."
+  @spec load_sets(socket(), map()) :: socket()
+  def load_sets(socket, preferences) do
+    sets = CalendarSets.list(socket.assigns.current_user.id)
+
+    socket
+    |> assign(calendar_sets: sets, active_set: CalendarSets.active_in(sets, preferences))
+    |> resolve()
+  end
+
   @doc "Resolves again, rebuilds the rail and pushes the re-filtered window."
   @spec refresh(socket()) :: socket()
   def refresh(socket), do: socket |> resolve() |> SurfaceData.refresh()

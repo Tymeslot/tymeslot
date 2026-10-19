@@ -318,3 +318,25 @@ describe("0 to 9: calendar sets", () => {
     expect(powerKeyName(key("+"))).toBeNull();
   });
 });
+
+describe("calendar:focus", () => {
+  afterEach(() => unmountAll());
+
+  test("focuses the first listed control that is on screen", () => {
+    const { handlers } = mountHook();
+    const [rail, sheet] = ["calendar-rail-new-set", "calendar-sheet-new-set"].map((id) => {
+      const button = document.createElement("button");
+      button.id = id;
+      document.body.appendChild(button);
+      return button;
+    });
+    rail.getClientRects = () => [];
+    sheet.getClientRects = () => [{}];
+
+    handlers["calendar:focus"]({ ids: [rail.id, sheet.id, "missing"] });
+
+    expect(document.activeElement).toBe(sheet);
+    rail.remove();
+    sheet.remove();
+  });
+});

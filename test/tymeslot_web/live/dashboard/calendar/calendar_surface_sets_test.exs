@@ -64,6 +64,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSetsTest do
     assert has_element?(lv, "#calendar-rail-set-1[aria-pressed='true']", "Work")
     refute has_element?(lv, "#calendar-rail-set-form")
 
+    assert_push_event(lv, "calendar:focus", %{
+      ids: ["calendar-rail-set-1", "calendar-sheet-set-1"]
+    })
+
     assert_push_event(lv, "calendar:events", %{
       settings: %{sets: [%{position: 1, name: "Work"}], active_set: 1}
     })
@@ -268,6 +272,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSetsTest do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     apply_set(lv, 1)
     assert pushed_titles(lv) == ["School run"]
+    assert has_element?(lv, "#calendar-rail [data-calendar-id='extra'][aria-checked='false']")
 
     lv |> element("#calendar-rail [data-calendar-id='extra']") |> render_click()
 

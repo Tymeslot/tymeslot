@@ -60,6 +60,11 @@ export const PowerKeysMixin = {
   mountPowerKeys() {
     this.powerKeyListener = (e) => this.powerKey(e);
     document.addEventListener("keydown", this.powerKeyListener);
+    // The server hands focus back to a control whose editor closed: the first of `ids` on screen.
+    this.handleEvent("calendar:focus", ({ ids = [] }) => {
+      const target = ids.map((id) => document.getElementById(id)).find((el) => el && el.getClientRects().length > 0);
+      target?.focus();
+    });
   },
 
   destroyPowerKeys() {

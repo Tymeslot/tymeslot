@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.LiveView, only: [push_event: 3]
 
   alias Tymeslot.CalendarGrid.CalendarSets
   alias Tymeslot.CalendarGrid.EffectiveVisibility
@@ -46,15 +47,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
     end
   end
 
-  def handle("calendar:cancel_set_edit", _params, socket),
-    do: {:noreply, assign(socket, :set_editor, nil)}
+  def handle("calendar:cancel_set_edit", _params, socket) do
+    target =
+      case socket.assigns.set_editor do
+        {:rename, position} -> "set-#{position}"
+        _new_or_none -> "new-set"
+      end
+
+    {:noreply, socket |> assign(:set_editor, nil) |> focus(target)}
+  end
 
   def handle("calendar:save_set", %{"name" => name}, socket) when is_binary(name),
-    do: {:noreply, save(socket, socket.assigns.set_editor, name)}
+    do: {:noreply, limited(socket, &save(&1, &1.assigns.set_editor, name))}
 
   def handle("calendar:delete_set", %{"position" => raw}, socket) do
     case parse_position(raw, 1..9) do
-      {:ok, position} -> {:noreply, delete(socket, position)}
+      {:ok, position} -> {:noreply, limited(socket, &delete(&1, position))}
       :error -> {:noreply, socket}
     end
   end
@@ -76,16 +84,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
     end
   end
 
+  # Saving and deleting share the visibility budget with applying a set.
+  defp limited(socket, fun) do
+    case RateLimiter.check(:calendar_visibility, socket.assigns.current_user.id) do
+      :ok -> fun.(socket)
+      {:error, :rate_limited, message} -> Flash.put_flash(socket, :warning, message)
+    end
+  end
+
   defp save(socket, :new, name) do
     %{current_user: %{id: user_id}, integrations: integrations} = socket.assigns
     members = CalendarSets.members_from(integrations, shown(socket.assigns))
 
     with {:ok, created} <- CalendarSets.create(user_id, name, members),
-         {:ok, set} <- CalendarSets.activate(user_id, created.position) do
+         {:created, {:ok, set}} <- {:created, CalendarSets.activate(user_id, created.position)} do
       socket
       |> assign(set_editor: nil, calendar_sets: CalendarSets.list(user_id))
       |> activated(set)
+      |> focus("set-#{set.position}")
     else
+      # The set exists but could not be switched on: show it, and say so.
+      {:created, _failure} ->
+        socket |> assign(:calendar_sets, CalendarSets.list(user_id)) |> save_failed()
+
       {:error, :limit} ->
         Flash.put_flash(
           socket,
@@ -95,7 +116,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
 
       {:error, %Ecto.Changeset{errors: errors}} ->
         # Two tabs saving at once can take the same position: not the name's fault.
-        if Keyword.has_key?(errors, :position), do: save_raced(socket), else: name_refused(socket)
+        if Keyword.has_key?(errors, :position),
+          do: save_failed(socket),
+          else: name_refused(socket)
 
       {:error, _not_found} ->
         name_refused(socket)
@@ -109,6 +132,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
         |> assign(:set_editor, nil)
         |> Visibility.put_set(set)
         |> SurfaceData.push_settings()
+        |> focus("set-#{position}")
 
       {:error, :not_found} ->
         assign(socket, :set_editor, nil)
@@ -127,9 +151,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
         socket = assign(socket, calendar_sets: sets, set_editor: nil)
 
         # The foreign key has already cleared the stored active set.
-        if active_position(socket) == position,
-          do: activated(socket, nil),
-          else: SurfaceData.push_settings(socket)
+        socket =
+          if active_position(socket) == position,
+            do: activated(socket, nil),
+            else: SurfaceData.push_settings(socket)
+
+        focus(socket, "new-set")
 
       {:error, _not_found} ->
         assign(socket, :set_editor, nil)
@@ -165,13 +192,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.SetEvents do
 
   defp parse_position(_raw, _range), do: :error
 
-  defp save_raced(socket) do
+  defp save_failed(socket) do
     Flash.put_flash(
       socket,
       :error,
-      dgettext("dashboard_calendar_power", "Could not save the set. Try again.")
+      dgettext("dashboard_calendar_power", "Couldn't save the set. Please try again.")
     )
   end
+
+  # Gives focus back to a control once the editor that held it closes: the
+  # rail's or the sheet's, whichever is on screen (the hook picks).
+  defp focus(socket, id),
+    do:
+      push_event(socket, "calendar:focus", %{ids: ["calendar-rail-#{id}", "calendar-sheet-#{id}"]})
 
   defp name_refused(socket) do
     Flash.put_flash(

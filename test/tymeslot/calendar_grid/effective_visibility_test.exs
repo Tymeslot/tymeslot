@@ -62,8 +62,11 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibilityTest do
     end
 
     test "an account with no member is hidden whole" do
-      result = EffectiveVisibility.resolve([], MapSet.new(), @integrations, set([{1, "work"}]))
-      assert result.hidden_integration_ids == [2]
+      result = EffectiveVisibility.resolve([], MapSet.new(), @integrations, set([{2, nil}]))
+
+      assert result.hidden_integration_ids == [1]
+      # Its calendars are keyed hidden too, so the rail never ticks one under an unticked account.
+      assert result.hidden_calendar_keys == MapSet.new([{1, "work"}, {1, "family"}])
     end
 
     test "a whole-account member shows every calendar in the account" do
@@ -102,7 +105,7 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibilityTest do
         EffectiveVisibility.resolve([], MapSet.new(), @integrations, set([{1, "gone"}, {2, nil}]))
 
       assert result.hidden_integration_ids == [1]
-      assert result.hidden_calendar_keys == MapSet.new()
+      assert result.hidden_calendar_keys == MapSet.new([{1, "work"}, {1, "family"}])
       assert EffectiveVisibility.visible_integration_ids(@integrations, result) == [2]
     end
   end
