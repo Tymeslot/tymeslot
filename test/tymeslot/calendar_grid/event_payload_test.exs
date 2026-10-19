@@ -147,10 +147,12 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
     assert %{title: "Workshop"} = EventPayload.event(event, @context)
   end
 
-  test "a booking missing its meeting type or its guest's name keeps its own title" do
-    assert %{title: "Intro call with Anna Kowalski"} =
-             EventPayload.event(booking(meeting_type: nil), @context)
+  test "a booking missing its meeting type leads with its guest, then its own title" do
+    assert %{title: "Anna Kowalski · Coffee chat"} =
+             EventPayload.event(booking(meeting_type: nil, summary: "Coffee chat"), @context)
+  end
 
+  test "a booking missing its guest's name keeps its own title" do
     assert %{title: "Intro call with Anna Kowalski"} =
              EventPayload.event(booking(attendee_name: nil), @context)
   end

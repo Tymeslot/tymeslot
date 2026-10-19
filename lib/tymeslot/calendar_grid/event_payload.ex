@@ -23,8 +23,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   create still saving, or the side panel's unsaved "New event") are drawn as
   `kind: "draft"` (`draft/4`), never editable or movable.
 
-  A booking's title leads with its guest and names its meeting type
-  ("Anna Kowalski · Intro call"), and every event says whether it is a
+  A one-to-one booking's title leads with its guest and names its meeting
+  type ("Anna Kowalski · Intro call"), or its own title without one, and every event says whether it is a
   booking request awaiting an answer (`request`) and whether that request
   expired unanswered (`expired`); both are false for anything but a booking.
   """
@@ -150,11 +150,23 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   defp free?(event),
     do: Map.get(event, :transparency) == "transparent" or Map.get(event, :expired, false)
 
-  @doc "The title the grid and the preview show; a one-to-one booking leads with its guest and names its meeting type, else keeps its own title."
+  @doc """
+  The title the grid and the preview show. A one-to-one booking leads with
+  its guest, then names its meeting type, or its own title when it has no
+  meeting type; any other event keeps its own title.
+  """
   @spec title(map()) :: String.t()
   def title(%{kind: :booking, participants: [], attendee_name: name, meeting_type: type})
       when is_binary(name) and name != "" and is_binary(type) and type != "",
       do: "#{name} · #{type}"
+
+  def title(%{kind: :booking, participants: [], attendee_name: name, summary: summary})
+      when is_binary(name) and name != "" do
+    case summary |> to_string() |> String.trim() do
+      "" -> name
+      trimmed -> "#{name} · #{trimmed}"
+    end
+  end
 
   def title(%{summary: summary}) when is_binary(summary) do
     case String.trim(summary) do
