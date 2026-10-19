@@ -246,10 +246,7 @@ defmodule TymeslotWeb.DashboardLive do
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
           <div
-            :if={
-              @calendar_redesign != true and
-                OnboardingChecklist.visible?(@current_user, @integration_status)
-            }
+            :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
             class="shrink-0 px-3 pt-2 md:px-4"
           >
             <OnboardingChecklist.onboarding_checklist
@@ -259,12 +256,18 @@ defmodule TymeslotWeb.DashboardLive do
               profile={@profile}
             />
           </div>
-          <CalendarUpNextStrip.up_next_strip
-            :if={@agenda && @agenda.next && @calendar_redesign != true}
-            entry={@agenda.next}
-            timezone={@agenda.timezone}
-            time_format={@time_format}
-          />
+          <%!-- The new calendar leaves Up next to its agenda tab on phones. --%>
+          <div
+            :if={@agenda && @agenda.next}
+            id="calendar-up-next"
+            class={["shrink-0", @calendar_redesign == true && "max-sm:hidden"]}
+          >
+            <CalendarUpNextStrip.up_next_strip
+              entry={@agenda.next}
+              timezone={@agenda.timezone}
+              time_format={@time_format}
+            />
+          </div>
         <% end %>
         <div class={
           if @live_action == :calendar, do: "flex-1 min-h-0 flex flex-col", else: "contents"

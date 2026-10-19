@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CompactChromeTest do
   @moduledoc """
   The chrome above the new calendar stays small so the grid takes the
-  screen: a compact top bar with no padding around its row, no Up-next strip
-  (the grid's now line and preview do its job) and no "Finish setting up"
-  strip (the overview keeps the checklist). The old calendar keeps all three.
+  screen: a compact top bar with no padding around its row. The old
+  calendar keeps the full top bar. Both calendars carry the Up next strip
+  and the setup checklist (see `CalendarSurfaceStripsTest`).
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CompactChromeTest do
     )
   end
 
-  test "the new calendar has a compact top bar and neither strip above the grid", %{conn: conn} do
+  test "the new calendar has a compact top bar", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn)
     upcoming_booking(user)
 
@@ -38,26 +38,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CompactChromeTest do
 
     assert has_element?(lv, "#dashboard-top-nav[data-compact='true'] nav.brand-nav-compact")
     assert has_element?(lv, "#dashboard-top-nav[data-compact='true'] .h-11")
-    refute has_element?(lv, "[data-testid='up-next-strip']")
-    refute has_element?(lv, "[data-testid='onboarding-checklist']")
-  end
-
-  # The agenda feeds only the Up-next strip, which the new surface does not
-  # draw: neither a navigation nor the agenda's minute tick brings it back or
-  # changes anything on the page.
-  test "the agenda tick leaves the new calendar's markup unchanged", %{conn: conn} do
-    %{conn: conn, user: user} = owner(conn)
-    upcoming_booking(user)
-
-    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    lv |> element("#calendar-next") |> render_click()
-    before = render(lv)
-
-    send(lv.pid, :agenda_tick)
-
-    assert render(lv) == before
-    refute has_element?(lv, "[data-testid='up-next-strip']")
-    refute before =~ "Strategy sync"
   end
 
   test "switching back to the old calendar shows the Up-next strip with the next booking", %{

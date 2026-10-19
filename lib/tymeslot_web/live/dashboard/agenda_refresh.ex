@@ -3,9 +3,7 @@ defmodule TymeslotWeb.Dashboard.AgendaRefresh do
   Which dashboard sections show the day's agenda, and the timer that keeps
   it current while one is open.
 
-  The agenda feeds the overview and the old calendar's Up-next strip. The
-  new calendar surface hides the strip, so it neither queries the agenda nor
-  keeps the timer.
+  The agenda feeds the overview and the Up next strip above either calendar.
 
   Unlike the calendar grid's query-free `:tick` (which only re-sends
   `current_time`), the `:agenda_tick` this schedules makes `DashboardLive`
@@ -25,17 +23,14 @@ defmodule TymeslotWeb.Dashboard.AgendaRefresh do
   @doc "Whether the section the assigns describe shows the agenda."
   @spec shown?(map()) :: boolean()
   def shown?(%{live_action: :overview}), do: true
-  def shown?(%{live_action: :calendar} = assigns), do: assigns[:calendar_redesign] != true
+  def shown?(%{live_action: :calendar}), do: true
   def shown?(_assigns), do: false
 
   @doc """
   Loads the data the current section shows: the day's agenda on the
-  overview and the old calendar, nothing elsewhere. The new calendar
-  surface reads its own events, so it loads nothing either.
+  overview and on either calendar, nothing elsewhere.
   """
   @spec load(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def load(%{assigns: %{live_action: :calendar, calendar_redesign: true}} = socket), do: socket
-
   def load(socket) do
     if user = socket.assigns[:current_user] do
       timezone = Profiles.timezone(socket.assigns[:profile])
