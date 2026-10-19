@@ -82,7 +82,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
 
   attr :preview, :map, required: true
   attr :target, :any, required: true
-  attr :answering, :any, default: nil, doc: "the meeting whose request answer is in flight"
+
+  attr :answering, :any,
+    default: MapSet.new(),
+    doc: "the ids of the meetings whose request answer is in flight"
 
   @spec preview(map()) :: Phoenix.LiveView.Rendered.t()
   def preview(assigns) do

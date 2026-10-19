@@ -89,7 +89,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :time_format, :string, required: true
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
-  attr :answering_request, :any, default: nil
+
+  attr :answering_request, :any,
+    default: MapSet.new(),
+    doc: "the ids of the requests whose answer is in flight"
+
   attr :target, :any, required: true
   attr :meetings_stream, :any, required: true
 

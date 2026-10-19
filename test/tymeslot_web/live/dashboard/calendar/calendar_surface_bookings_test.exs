@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
   import Mox
 
   import Tymeslot.Factory
+  import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Meetings.Approval
@@ -461,6 +462,50 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       html = render(lv)
       assert html =~ "Booking confirmed. The invitee has been told."
       refute html =~ "That request had already been answered."
+    end
+
+    test "another request's dialog is not shown as declining while Accept runs", %{
+      conn: conn,
+      user: user
+    } do
+      first = request(user, ~U[2026-10-15 10:00:00Z])
+      second = request(user, ~U[2026-10-15 13:00:00Z], attendee_name: "Ben Ode")
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      ref = hold_answer(first)
+
+      hook(lv, "booking:accept", %{"id" => first.id})
+      assert_receive {:held, ^ref, task}, @async_timeout
+      hook(lv, "booking:decline", %{"id" => second.id})
+
+      assert has_element?(lv, "#calendar-decline-request #decline-request-form", "Ben Ode")
+      refute render(lv) =~ "Declining..."
+
+      send(task, {:release, ref})
+      render_async(lv, @async_timeout)
+    end
+
+    test "one request's answer finishing leaves another's still in flight", %{
+      conn: conn,
+      user: user
+    } do
+      first = request(user, ~U[2026-10-15 10:00:00Z])
+      second = request(user, ~U[2026-10-15 13:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      ref = hold_answer(first)
+
+      hook(lv, "booking:accept", %{"id" => first.id})
+      assert_receive {:held, ^ref, task}, @async_timeout
+      hook(lv, "booking:accept", %{"id" => second.id})
+      eventually(fn -> render(lv) =~ "Booking confirmed. The invitee has been told." end)
+
+      # The first answer is still running, so its Accept stays refused.
+      hook(lv, "booking:accept", %{"id" => first.id})
+      send(task, {:release, ref})
+      render_async(lv, @async_timeout)
+
+      assert reload(first).status == "confirmed"
+      assert reload(second).status == "confirmed"
+      refute render(lv) =~ "That request had already been answered."
     end
   end
 

@@ -50,7 +50,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
   def state(_event, _now), do: nil
 
   attr :preview, :map, required: true
-  attr :answering, :any, default: nil, doc: "the meeting whose answer is in flight"
+
+  attr :answering, :any,
+    default: MapSet.new(),
+    doc: "the ids of the meetings whose answer is in flight"
+
   attr :target, :any, required: true
 
   @spec booking_actions(map()) :: Phoenix.LiveView.Rendered.t()
@@ -72,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
         variant={:secondary}
         size={:sm}
         icon="hero-x-mark"
-        disabled={@answering == @preview.meeting_id}
+        disabled={MapSet.member?(@answering, @preview.meeting_id)}
         phx-click="booking:decline"
         phx-value-id={@preview.meeting_id}
         phx-target={@target}
@@ -83,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
         id="calendar-preview-accept"
         size={:sm}
         icon="hero-check"
-        loading={@answering == @preview.meeting_id}
+        loading={MapSet.member?(@answering, @preview.meeting_id)}
         loading_text={dgettext("dashboard_calendar_booking", "Accepting…")}
         phx-click="booking:accept"
         phx-value-id={@preview.meeting_id}

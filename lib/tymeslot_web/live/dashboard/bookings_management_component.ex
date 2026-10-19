@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:cancelling_meeting, nil)
      |> assign(:cancel_booking_payment, nil)
      |> assign(:sending_reschedule, nil)
-     |> assign(:answering_request, nil)
+     |> assign(:answering_request, MapSet.new())
      |> assign(:answering_opts, %{})
      |> assign(:awaiting_approval_count, 0)
      |> assign(:per_page, 20)
@@ -437,7 +437,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         cancelling={@cancelling_meeting != nil}
         decline_request={@decline_request_modal_data}
         show_decline={@show_decline_request_modal || false}
-        declining={@answering_request != nil}
+        declining={
+          @decline_request_modal_data != nil and
+            RequestActions.answering?(@answering_request, @decline_request_modal_data.id)
+        }
         reschedule_request={@reschedule_request_modal_data}
         show_reschedule={@show_reschedule_request_modal || false}
         sending_reschedule={@sending_reschedule}

@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
       reschedule_request: false
     )
     |> assign(
-      answering_request: nil,
+      answering_request: MapSet.new(),
       answering_opts: %{},
       cancel_booking_payment: nil,
       sending_reschedule: nil
@@ -72,17 +72,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   # Declining while this request's Accept is in flight would restart its
   # answer under the same async name and drop the Accept's result.
   def handle("confirm_decline", params, socket) do
-    answering = socket.assigns.answering_request
-
     case socket.assigns.decline_request_modal_data do
       nil ->
         socket
 
-      %{id: ^answering} ->
-        socket
-
       meeting ->
-        with_limit(socket, :meeting_approval, approval_key(socket), &decline(&1, meeting, params))
+        if RequestActions.answering?(socket.assigns.answering_request, meeting.id),
+          do: socket,
+          else:
+            with_limit(
+              socket,
+              :meeting_approval,
+              approval_key(socket),
+              &decline(&1, meeting, params)
+            )
     end
   end
 
@@ -172,12 +175,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   # answer is already in flight is recognised however its id is spelt; an id
   # that is not a UUID changes nothing.
   defp with_idle_request(socket, id, fun) do
-    answering = socket.assigns.answering_request
-
     case UUID.cast(id) do
-      {:ok, ^answering} -> socket
-      {:ok, id} -> fun.(socket, id)
-      :error -> socket
+      {:ok, id} ->
+        if RequestActions.answering?(socket.assigns.answering_request, id),
+          do: socket,
+          else: fun.(socket, id)
+
+      :error ->
+        socket
     end
   end
 

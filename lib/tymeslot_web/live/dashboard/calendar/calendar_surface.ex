@@ -364,7 +364,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <BookingDeclineModal.booking_decline_modal
         :if={@decline_request_modal_data}
         meeting={@decline_request_modal_data}
-        declining={not is_nil(@answering_request)}
+        declining={MapSet.member?(@answering_request, @decline_request_modal_data.id)}
         timezone={@timezone}
         time_format={@time_format}
         target={@myself}

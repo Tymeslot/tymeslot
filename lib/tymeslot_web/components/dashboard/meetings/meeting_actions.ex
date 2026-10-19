@@ -18,7 +18,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
 
   attr :meeting, :map, required: true
   attr :target, :any, required: true
-  attr :answering_request, :any, required: true
+
+  attr :answering_request, :any,
+    required: true,
+    doc: "the ids of the requests whose answer is in flight (a `MapSet`)"
+
   attr :cancelling_meeting, :any, required: true
 
   @doc "The action column for one booking card."
@@ -41,7 +45,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           phx-click="approve_request"
           phx-value-id={@meeting.id}
           phx-target={@target}
-          loading={@answering_request == @meeting.id}
+          loading={MapSet.member?(@answering_request, @meeting.id)}
           loading_text={dgettext("dashboard_bookings", "Approve")}
           data-testid="approve-request"
           size={:sm}
@@ -55,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           phx-click="show_decline_modal"
           phx-value-id={@meeting.id}
           phx-target={@target}
-          disabled={@answering_request == @meeting.id}
+          disabled={MapSet.member?(@answering_request, @meeting.id)}
           data-testid="decline-request"
           variant={:danger_soft}
           size={:sm}
