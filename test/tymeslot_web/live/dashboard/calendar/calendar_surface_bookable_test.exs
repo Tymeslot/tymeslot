@@ -163,8 +163,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookableTest do
     end
 
     # With the layer off every reload pushes at once (and computes nothing),
-    # so the pushes count the reloads exactly; with it on, a second load
-    # cancels the first, which hides whether it ran.
+    # so the pushes count the reloads exactly; with it on, a load asked for
+    # while another runs is folded into it, which hides whether it ran.
     test "changes in quick succession reload the layer once", %{conn: conn, user: user} do
       {:ok, _preferences} = CalendarPreferencesQueries.upsert(user.id, %{bookable_layer: false})
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -199,6 +199,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookableTest do
 
       layer = await_bookable(lv, &(&1.meeting_type == %{id: workshop.id, name: "Workshop"}))
       assert on_day?(layer, "2026-10-15")
+    end
+
+    test "a change while a load runs waits for it, then loads once for the latest choice", %{
+      conn: conn,
+      user: user
+    } do
+      workshop = meeting_type(user, name: "Workshop", duration_minutes: 120, sort_order: 1)
+      test_pid = self()
+      calls = :counters.new(1, [])
+
+      # The first fetch holds the first load in flight until the test says go.
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        :counters.add(calls, 1, 1)
+        send(test_pid, {:fetching, self()})
+        if :counters.get(calls, 1) == 1, do: receive(do: (:go -> :ok))
+        {:ok, []}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert_receive {:fetching, first}, 1_000
+
+      lv
+      |> form("#calendar-rail-bookable-form")
+      |> render_change(%{"id" => to_string(workshop.id)})
+
+      refute_receive {:fetching, _task}, 200
+      send(first, :go)
+
+      # The first load's answer is never pushed: the next push is the fresh
+      # load for the workshop, and nothing follows it.
+      assert_push_event(lv, "calendar:bookable", layer, 1_000)
+      assert %{meeting_type: %{name: "Workshop"}, error: false} = layer
+      assert on_day?(layer, "2026-10-15")
+      refute_push_event(lv, "calendar:bookable", _payload, 300)
     end
 
     test "the hook's calendar:ready reply carries the layer", %{conn: conn} do

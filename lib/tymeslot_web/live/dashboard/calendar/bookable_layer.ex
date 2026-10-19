@@ -13,10 +13,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
       %{on, meeting_type: %{id, name} | nil, windows: [%{start, end}],
         next: %{at, label} | nil, error, timezone}
 
-  with wall-clock times in the organiser's zone (`BookablePayload`). A newer
-  load replaces an older one: LiveView drops the answer of a task started
-  under the same name before the latest. The last payload is kept in
-  `:bookable` for the hook's `calendar:ready` reply.
+  with wall-clock times in the organiser's zone (`BookablePayload`). One
+  load runs at a time (`:bookable_load`): a load asked for while another is
+  in flight marks it `:stale`, and when it answers its result is dropped and
+  exactly one fresh load starts, so a stale result is never pushed. A load
+  in flight is never cancelled, since killing a task mid-query takes its
+  database connection down with it. The last payload is kept in `:bookable`
+  for the hook's `calendar:ready` reply.
 
   `SurfaceData.load_window/1` loads it with every window; the surface also
   reloads it when availability changes, and `LayerChoices` when the switch
@@ -24,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
   """
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [cancel_async: 2, push_event: 3, start_async: 3]
+  import Phoenix.LiveView, only: [push_event: 3, start_async: 3]
 
   require Logger
 
@@ -43,32 +46,44 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
 
   @doc """
   Loads the layer for the loaded window: computed off the process when it
-  is on and has a meeting type, else pushed at once with no windows.
+  is on and has a meeting type, else pushed at once with no windows. While
+  a load is in flight it only marks that load stale; another starts once it
+  answers.
   """
   @spec load(socket()) :: socket()
   def load(socket) do
-    %{preferences: preferences, bookable_types: types, current_user: user} = socket.assigns
+    %{preferences: preferences, bookable_types: types} = socket.assigns
 
-    case {preferences.bookable_layer, LayerPreferences.meeting_type(preferences, types)} do
-      {true, %{id: type_id}} ->
-        range = range(socket.assigns)
-        today = socket.assigns.today
-        now = Clock.utc_now()
+    case {preferences.bookable_layer, LayerPreferences.meeting_type(preferences, types),
+          socket.assigns.bookable_load} do
+      {true, %{}, :idle} ->
+        start(socket)
 
-        # Stop a load still in flight: its answer would be dropped anyway,
-        # and it may be waiting on a calendar provider.
+      {true, %{}, _running_or_stale} ->
+        assign(socket, :bookable_load, :stale)
+
+      # A load still in flight now answers into a layer that is off or has
+      # no meeting type, which drops its result, so no fresh one is needed.
+      {on, type, load} ->
         socket
-        |> cancel_async(:bookable)
-        |> start_async(
-          :bookable,
-          Tasks.with_context(fn -> compute(user.id, type_id, range, today, now) end)
-        )
-
-      {on, type} ->
-        socket
-        |> cancel_async(:bookable)
+        |> assign(:bookable_load, if(load == :idle, do: :idle, else: :running))
         |> push(%{on: on, meeting_type: shown(type), windows: [], next: nil, error: false})
     end
+  end
+
+  defp start(socket) do
+    %{preferences: preferences, bookable_types: types, current_user: user} = socket.assigns
+    %{id: type_id} = LayerPreferences.meeting_type(preferences, types)
+    range = range(socket.assigns)
+    today = socket.assigns.today
+    now = Clock.utc_now()
+
+    socket
+    |> assign(:bookable_load, :running)
+    |> start_async(
+      :bookable,
+      Tasks.with_context(fn -> compute(user.id, type_id, range, today, now) end)
+    )
   end
 
   @doc "Reads the meeting types again, then loads the layer."
@@ -80,11 +95,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
   end
 
   @doc """
-  The answer of a load. It is pushed only while the layer is still on with
-  a meeting type; a load that raised or failed pushes `error: true`.
+  The answer of a load. A stale one is dropped and the layer loads again;
+  otherwise it is pushed only while the layer is still on with a meeting
+  type, and a load that raised or failed pushes `error: true`.
   """
   @spec loaded(socket(), {:ok, term()} | {:exit, term()}) :: socket()
+  def loaded(%{assigns: %{bookable_load: :stale}} = socket, _result),
+    do: socket |> assign(:bookable_load, :idle) |> load()
+
   def loaded(socket, result) do
+    socket = assign(socket, :bookable_load, :idle)
     %{preferences: preferences, bookable_types: types, timezone: timezone} = socket.assigns
 
     case {preferences.bookable_layer, LayerPreferences.meeting_type(preferences, types), result} do

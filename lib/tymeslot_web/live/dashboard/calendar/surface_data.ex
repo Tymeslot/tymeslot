@@ -83,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       guest_form_key: 0,
       bookable_types: [],
       bookable: nil,
+      bookable_load: :idle,
       bookable_pending: false
     )
   end
