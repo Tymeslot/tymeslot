@@ -113,13 +113,13 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
 
   # ---- File cleanup when switching background type ----
 
-  describe "update_theme_customization/2 file cleanup" do
+  describe "upsert_theme_customization/3 file cleanup" do
     test "cleans up old image path when switching to gradient (new path is nil)" do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "image",
           "background_value" => "custom",
@@ -128,11 +128,15 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
 
       # Switch to gradient — new image path is nil
       {:ok, updated} =
-        ThemeCustomizations.update_theme_customization(customization, %{
-          "background_type" => "gradient",
-          "background_value" => "gradient_1",
-          "background_image_path" => nil
-        })
+        ThemeCustomizations.upsert_theme_customization(
+          customization.profile_id,
+          customization.theme_id,
+          %{
+            "background_type" => "gradient",
+            "background_value" => "gradient_1",
+            "background_image_path" => nil
+          }
+        )
 
       assert updated.settings["background_image_path"] == nil
       assert updated.settings["background_type"] == "gradient"
@@ -143,7 +147,7 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "2", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "2", %{
           "color_scheme" => "default",
           "background_type" => "video",
           "background_value" => "custom",
@@ -151,11 +155,15 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
         })
 
       {:ok, updated} =
-        ThemeCustomizations.update_theme_customization(customization, %{
-          "background_type" => "gradient",
-          "background_value" => "gradient_1",
-          "background_video_path" => nil
-        })
+        ThemeCustomizations.upsert_theme_customization(
+          customization.profile_id,
+          customization.theme_id,
+          %{
+            "background_type" => "gradient",
+            "background_value" => "gradient_1",
+            "background_video_path" => nil
+          }
+        )
 
       assert updated.settings["background_video_path"] == nil
       assert updated.settings["background_type"] == "gradient"
@@ -164,14 +172,14 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
 
   # ---- upsert race condition retry ----
 
-  describe "create_theme_customization/3 unique constraint retry" do
+  describe "upsert_theme_customization/3 unique constraint retry" do
     test "falls through to update when customization already exists (simulating race)" do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
       # Pre-create the customization to simulate a race condition
       {:ok, _existing} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "gradient",
           "background_value" => "gradient_1"
@@ -212,7 +220,7 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
       {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
           "color_scheme" => "default",
           "background_type" => "gradient",
           "background_value" => "gradient_1"

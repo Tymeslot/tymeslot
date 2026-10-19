@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} asked to move their confirmed booking to this time, and the request wasn't answered before its deadline. The previous time had already been given up for it, so the booking has been cancelled. %{name} has been told and can book a new time."
-msgstr "%{name} a demandé à déplacer sa réservation confirmée à ce créneau, et la demande n'a pas reçu de réponse avant l'échéance. Le créneau précédent avait déjà été libéré pour cela, la réservation a donc été annulée. %{name} a été prévenu(e) et peut réserver un nouveau créneau."
+msgstr "%{name} a demandé à déplacer sa réservation confirmée à ce créneau, et la demande n’a pas reçu de réponse avant l’échéance. Le créneau précédent avait déjà été libéré pour cela, la réservation a donc été annulée. %{name} a reçu une notification et peut réserver un nouveau créneau."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -39,32 +39,32 @@ msgstr "%{name} souhaite déplacer sa réservation confirmée vers un nouveau cr
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each booking personally, so this isn't final yet."
-msgstr "%{organizer} confirme personnellement chaque réservation : ce n'est donc pas encore définitif."
+msgstr "%{organizer} confirme personnellement chaque réservation : ce n’est donc pas encore définitif."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
-msgstr "%{organizer} confirme personnellement chaque modification : le nouveau créneau n'est donc pas encore définitif."
+msgstr "%{organizer} confirme personnellement chaque modification : le nouveau créneau n’est donc pas encore définitif."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
-msgstr "%{organizer} n'a pas traité votre demande à temps, le créneau a donc été libéré. Vous pouvez choisir un autre créneau."
+msgstr "%{organizer} n’a pas traité votre demande à temps, le créneau a donc été libéré. Vous pouvez choisir un autre créneau."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
-msgstr "%{organizer} n'a pas répondu à temps à votre demande de report. Votre créneau précédent avait déjà été libéré pour cela, votre réservation a donc été annulée. Le fichier de calendrier joint la retire de votre agenda."
+msgstr "%{organizer} n’a pas répondu à temps à votre demande de report. Votre créneau précédent avait déjà été libéré pour cela, votre réservation a donc été annulée. Le fichier de calendrier joint la retire de votre agenda."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
-msgstr "%{organizer} n'a pas pu accepter le nouveau créneau. Votre créneau précédent avait déjà été libéré pour cela, votre réservation a donc été annulée. Le fichier de calendrier joint la retire de votre agenda."
+msgstr "%{organizer} n’a pas pu accepter le nouveau créneau. Votre créneau précédent avait déjà été libéré pour cela, votre réservation a donc été annulée. Le fichier de calendrier joint la retire de votre agenda."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} wasn't able to take this booking, so the time is no longer held for you."
-msgstr "%{organizer} n'a pas pu accepter cette réservation, le créneau n'est donc plus réservé pour vous."
+msgstr "%{organizer} n’a pas pu accepter cette réservation, le créneau n’est donc plus réservé pour vous."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -125,12 +125,12 @@ msgstr "Demande de réservation : %{name} - %{date}"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Both buttons open the request for you to confirm. Nothing is decided until you choose there."
-msgstr "Les deux boutons ouvrent la demande pour confirmation. Rien n'est décidé avant votre choix sur cette page."
+msgstr "Les deux boutons ouvrent la demande pour confirmation. Rien n’est décidé avant votre choix sur cette page."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Both links open the request for you to confirm. Nothing is decided until you choose there."
-msgstr "Les deux liens ouvrent la demande pour confirmation. Rien n'est décidé avant votre choix sur cette page."
+msgstr "Les deux liens ouvrent la demande pour confirmation. Rien n’est décidé avant votre choix sur cette page."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -158,10 +158,6 @@ msgid "Choose a New Time:"
 msgstr "Choisir un nouvel horaire :"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Date:"
 msgstr "Date :"
@@ -177,10 +173,6 @@ msgid "Decline:"
 msgstr "Refuser :"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Duration:"
 msgstr "Durée :"
@@ -206,22 +198,22 @@ msgstr "Bonjour %{name},"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make the new time."
-msgstr "Bonjour %{name}, %{organizer} n'est pas disponible au nouveau créneau."
+msgstr "Bonjour %{name}, %{organizer} n’est pas disponible au nouveau créneau."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make this time."
-msgstr "Bonjour %{name}, %{organizer} n'est pas disponible à cet horaire."
+msgstr "Bonjour %{name}, %{organizer} n’est pas disponible à cet horaire."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} confirms each booking personally, so this isn't final yet."
-msgstr "Bonjour %{name}, %{organizer} confirme personnellement chaque réservation : ce n'est donc pas encore définitif."
+msgstr "Bonjour %{name}, %{organizer} confirme personnellement chaque réservation : ce n’est donc pas encore définitif."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
-msgstr "Bonjour %{name}, %{organizer} confirme personnellement chaque modification : le nouveau créneau n'est donc pas encore définitif."
+msgstr "Bonjour %{name}, %{organizer} confirme personnellement chaque modification : le nouveau créneau n’est donc pas encore définitif."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -236,17 +228,17 @@ msgstr "Bonjour %{name}, je dois reporter notre prochaine réunion. Pourriez-vou
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, this request wasn't answered in time."
-msgstr "Bonjour %{name}, cette demande n'a pas reçu de réponse à temps."
+msgstr "Bonjour %{name}, cette demande n’a pas reçu de réponse à temps."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, we've passed your request to %{organizer}. It isn't confirmed yet."
-msgstr "Bonjour %{name}, nous avons transmis votre demande à %{organizer}. Elle n'est pas encore confirmée."
+msgstr "Bonjour %{name}, nous avons transmis votre demande à %{organizer}. Elle n’est pas encore confirmée."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, your reschedule request wasn't answered in time."
-msgstr "Bonjour %{name}, votre demande de report n'a pas reçu de réponse à temps."
+msgstr "Bonjour %{name}, votre demande de report n’a pas reçu de réponse à temps."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -264,10 +256,6 @@ msgid "Let's find a new time"
 msgstr "Trouvons un nouveau créneau"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Location:"
 msgstr "Lieu :"
@@ -464,17 +452,17 @@ msgstr "Merci de votre compréhension et de votre flexibilité."
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
-msgstr "Le nouveau créneau vous est réservé en attendant, personne d'autre ne peut donc le prendre. Vous recevrez un e-mail avec l'entrée d'agenda mise à jour dès que %{organizer} aura accepté."
+msgstr "Le nouveau créneau vous est réservé en attendant, personne d’autre ne peut donc le prendre. Vous recevrez un e-mail avec l’entrée d’agenda mise à jour dès que %{organizer} aura accepté."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "Le créneau reste réservé jusqu'à votre réponse. Sans réponse avant le %{deadline}, la demande expire et %{name} est informé que le créneau est de nouveau libre."
+msgstr "Le créneau reste réservé jusqu’à votre réponse. Sans réponse avant le %{deadline}, la demande expire et %{name} est informé que le créneau est de nouveau libre."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "The slot stays held for %{name} until you answer."
-msgstr "Le créneau reste réservé pour %{name} jusqu'à votre réponse."
+msgstr "Le créneau reste réservé pour %{name} jusqu’à votre réponse."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -484,7 +472,7 @@ msgstr "Message ajouté :"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "This time is held for you in the meantime, so nobody else can take it. You'll get a confirmation with the calendar invite as soon as %{organizer} accepts."
-msgstr "Ce créneau vous est réservé entre-temps : personne d'autre ne peut le prendre. Dès que %{organizer} accepte, vous recevrez une confirmation avec l'invitation d'agenda."
+msgstr "Ce créneau vous est réservé entre-temps : personne d’autre ne peut le prendre. Dès que %{organizer} accepte, vous recevrez une confirmation avec l’invitation d’agenda."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
@@ -497,21 +485,9 @@ msgid "Time:"
 msgstr "Heure :"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone:"
 msgstr "Fuseau horaire :"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Type:"
-msgstr "Type :"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format

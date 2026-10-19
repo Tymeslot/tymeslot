@@ -43,11 +43,16 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.InvalidEventReport
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Shared.ReauthHandling
-  alias Tymeslot.Workers.SyncHealth
+  alias Tymeslot.Workers.CalendarSyncJob
   alias Tymeslot.Workers.SyncRequest
+
+  # Without one Oban lets a job run for ever. A sync is the offline queue's
+  # bounded replay (see `CalDAV.OfflineQueue`) followed by the pull; this is
+  # far above what either needs, and only ends a job that is truly stuck.
+  @impl Oban.Worker
+  def timeout(_job), do: :timer.minutes(15)
 
   @doc """
   Enqueues a full fetch of the CalDAV integration `integration_id`, the sync
@@ -77,6 +82,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   @no_calendar "CalDAV integration has no calendar selected — user action required"
   @server_error "CalDAV server returned a server error; the next scheduled sync will retry"
   @server_unreachable "CalDAV server did not respond; the next scheduled sync will retry"
+  @too_large "CalDAV server returned more data than Tymeslot can process at once"
+  @free_busy_unreadable "A CalDAV calendar shared as busy times only could not be read; its last busy times are kept and the next scheduled sync will retry"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
@@ -87,37 +94,22 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         @calendar_gone,
         @no_calendar,
         @server_error,
-        @server_unreachable
+        @server_unreachable,
+        @too_large,
+        @free_busy_unreadable
       ] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    integration_id = Map.fetch!(args, "calendar_integration_id")
     force_full_fetch? = Map.get(args, "force_full_fetch", false) == true
+    CalendarSyncJob.run(job, &sync(&1, force_full_fetch?))
+  end
 
-    Logger.metadata(calendar_integration_id: integration_id)
-
-    case CalendarIntegrationQueries.get(integration_id) do
-      {:ok, integration} ->
-        fn ->
-          integration
-          |> Sync.run(force_full_fetch?)
-          |> handle_sync_result(integration)
-          |> tap(&SyncHealth.record_outcome(integration, &1))
-        end
-        |> InvalidEventReport.collect()
-        |> SyncRequest.rerun_if_requested(job)
-
-      {:error, :not_found} ->
-        Logger.warning("CalDAV integration not found, discarding sync job",
-          calendar_integration_id: integration_id
-        )
-
-        {:discard, @integration_gone}
-
-      {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
-    end
+  defp sync(integration, force_full_fetch?) do
+    integration
+    |> Sync.run(force_full_fetch?)
+    |> tap(&record_failure(integration, &1))
+    |> handle_sync_result(integration)
   end
 
   # Every clause below that discards is a failure no operator or user would
@@ -139,10 +131,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    CalendarManagement.flag_for_reconnection(
+    Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "CalDAV server rejected the stored credentials. Please reconnect the integration."
       ),
       @credentials_rejected
@@ -157,10 +149,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    CalendarManagement.flag_for_reconnection(
+    Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
       ),
       @calendar_gone
@@ -179,10 +171,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    CalendarManagement.flag_for_reconnection(
+    Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
       ),
       @no_calendar
@@ -208,7 +200,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # permanent-failure admin alert each time about an outage no operator here
   # can fix. Discard and let the scheduled sync retry minutes later; the health
   # check is what surfaces a remote that never comes back.
-  defp handle_sync_result({:error, :server_error}, _integration) do
+  defp handle_sync_result({:error, reason}, _integration)
+       when reason in [:server_error, :service_unavailable] do
     {:discard, @server_error}
   end
 
@@ -227,6 +220,20 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     {:discard, @server_unreachable}
   end
 
+  # The server answered, past the read's byte budget. Retrying downloads the
+  # same answer, and it is the size of the owner's calendar rather than a
+  # fault an operator could fix, so it is an expected end of the job. The
+  # health check surfaces the integration.
+  defp handle_sync_result({:error, :response_too_large}, _integration),
+    do: {:discard, @too_large}
+
+  # A calendar shared as busy times only that would not answer its
+  # free-busy-query. Never a reason to reconnect: a 403 there means the share
+  # changed, and discovery is what drops a calendar that is gone. Its last
+  # busy times stay cached; the next cycle asks again.
+  defp handle_sync_result({:error, {:free_busy_unreadable, _reason}}, _integration),
+    do: {:discard, @free_busy_unreadable}
+
   # A 4xx there is no talking the request out of (415, 400…, and the modelled
   # `:method_not_allowed`) is the server
   # refusing the request itself: the remaining attempts re-send the same bytes
@@ -235,9 +242,33 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # server's own explanation, and the health check surfaces the integration.
   defp handle_sync_result({:error, reason} = result, _integration) do
     if CalDAVErrors.terminal_error?(reason) do
-      {:discard, "CalDAV server refused the sync request: #{CalDAVErrors.describe_error(reason)}"}
+      {:discard, "CalDAV server refused the sync request: #{refusal(reason)}"}
     else
       result
     end
   end
+
+  # The failures that flag the integration for reconnection record their own
+  # reason with the flag, and the deletion breaker's refusal resolves itself
+  # without the owner. Every other failure is stored as the owner-facing
+  # sentence, which the integration card shows while the sync is unhealthy.
+  # A successful cycle clears it in `SyncHealth.record_outcome/2`.
+  @recorded_elsewhere [
+    :unauthorized,
+    :forbidden,
+    :booking_calendar_missing,
+    :no_calendar_paths,
+    :suspicious_bulk_deletion
+  ]
+
+  defp record_failure(integration, {:error, reason}) when reason not in @recorded_elsewhere do
+    CalendarIntegrationQueries.mark_sync_error(integration, CalDAVErrors.describe_error(reason))
+  end
+
+  defp record_failure(_integration, _result), do: :ok
+
+  # The discard reason is what an operator reads on the job record, so it keeps
+  # the status the owner-facing sentence leaves out.
+  defp refusal({:unexpected_status, status}), do: "HTTP #{status}"
+  defp refusal(reason), do: CalDAVErrors.describe_error(reason)
 end

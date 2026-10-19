@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesSplitTest do
   import Tymeslot.Test.ICalSeriesFixtures
 
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
+  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   @vtimezone vtimezone()
 
@@ -240,6 +241,35 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesSplitTest do
 
       assert {:ok, head} = Series.truncate(document, "20260301T100000", nil)
       assert rrule_of(head) == "RRULE:FREQ=MONTHLY;BYMONTHDAY=1,15;UNTIL=20260301T095959Z"
+    end
+
+    test "counts a start off the rule as the first occurrence" do
+      # Monday and Wednesday from Tuesday 6 January: the Tuesday counts
+      # (RFC 5545 3.3.10), so 6, 7 and 12 January are the first three, and
+      # two come before the 12th.
+      document = utc_series("FREQ=WEEKLY;BYDAY=MO,WE;COUNT=10", "20260106")
+
+      {head, tail, _uid} = split!(document, "20260112T100000")
+
+      assert rrule_of(head) == "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20260112T095959Z"
+      assert rrule_of(tail) == "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=8"
+    end
+
+    test "split at the rule's first date leaves the start alone in the head" do
+      document = utc_series("FREQ=WEEKLY;BYDAY=MO,WE;COUNT=10", "20260106")
+
+      {head, tail, _uid} = split!(document, "20260107T100000")
+
+      head_rule = "FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20260107T095959Z"
+      assert rrule_of(head) == "RRULE:" <> head_rule
+
+      assert RecurrenceExpander.count_before(
+               head_rule,
+               ~U[2026-01-06 10:00:00Z],
+               ~U[2027-01-01 00:00:00Z]
+             ) == 1
+
+      assert rrule_of(tail) == "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=9"
     end
 
     test "counts past the expander's cap on occurrences" do

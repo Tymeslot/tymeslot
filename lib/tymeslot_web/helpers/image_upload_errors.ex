@@ -1,13 +1,15 @@
 defmodule TymeslotWeb.Helpers.ImageUploadErrors do
   @moduledoc """
-  User-facing messages for the reasons `Tymeslot.Media.ImageMetadata.strip/3`
-  refuses a stored image, shared by every image upload (avatars in the
-  dashboard and in onboarding, theme backgrounds).
+  User-facing messages for the reasons an image upload is refused, shared by
+  every image upload (avatars in the dashboard and in onboarding, theme
+  backgrounds): `Tymeslot.Media.ImageMetadata.strip/3`'s refusals (an image
+  whose dimensions are over the bound, a node too busy with other uploads)
+  and an avatar's (`Tymeslot.Profiles.Avatars`: a file type, size or content
+  it does not take, or a file it cannot read).
 
-  Only the refusals a user can act on have a message of their own: an image
-  whose dimensions are over the bound, and a node too busy with other uploads
-  to take this one. Every other reason returns `nil`, leaving the caller's own
-  generic failure message in place.
+  Only the refusals a user can act on have a message of their own. Every
+  other reason returns `nil`, leaving the caller's own generic failure
+  message in place.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -37,6 +39,27 @@ defmodule TymeslotWeb.Helpers.ImageUploadErrors do
       "errors",
       "We are busy processing other uploads. Please try again in a moment."
     )
+  end
+
+  def message(:invalid_file_type) do
+    dgettext(
+      "errors",
+      "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
+    )
+  end
+
+  def message({:file_too_large, max_mb}) do
+    dgettext("errors", "This file is too large. Please upload a file of at most %{size} MB.",
+      size: max_mb
+    )
+  end
+
+  def message(:invalid_image_format) do
+    dgettext("errors", "This file is not an image we can read. Please upload a different image.")
+  end
+
+  def message(:unreadable_file) do
+    dgettext("errors", "The file could not be read. Please upload it again.")
   end
 
   def message(_reason), do: nil

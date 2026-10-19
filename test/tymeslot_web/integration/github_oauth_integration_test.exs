@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
 
   alias Phoenix.Flash
 
-  # `RateLimiter.OAuth.check_initiation/1` allows this many initiations per IP
+  # The `:oauth_initiation` rate limit allows this many initiations per IP
   # per 600s window; the next one is refused.
   @initiation_limit 10
 

@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
+  alias Tymeslot.Integrations.Calendar.HTTP
 
   # Google's own maximum per page. Set here rather than by any caller, so the
   # page size cannot drift between listings again: the incremental path was
@@ -60,10 +61,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
     path =
       case Keyword.fetch(opts, :instances_of) do
         {:ok, master_id} ->
-          "/calendars/#{URI.encode(calendar_id)}/events/#{URI.encode(master_id)}/instances"
+          "/calendars/#{HTTP.segment(calendar_id)}/events/#{HTTP.segment(master_id)}/instances"
 
         :error ->
-          "/calendars/#{URI.encode(calendar_id)}/events"
+          "/calendars/#{HTTP.segment(calendar_id)}/events"
       end
 
     fetch_page(request, token, path, base_params, nil, [], 1)

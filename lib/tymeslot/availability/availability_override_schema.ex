@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
   `extra_hours` adds a time on a date besides whatever else is open then;
   a date may hold several (see `Tymeslot.Availability.ExtraAvailability`).
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -70,7 +71,9 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
 
     if override_type in ["custom_hours", "extra_hours"] do
       changeset
-      |> validate_required([:start_time, :end_time], message: "are required for custom hours")
+      |> validate_required([:start_time, :end_time],
+        message: dgettext_noop("errors", "are required for custom hours")
+      )
       |> AvailabilityWindow.validate_window()
     else
       changeset
@@ -79,6 +82,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
 
   defp validate_reason(changeset) do
     max = Constraints.override_reason_max_length()
-    validate_length(changeset, :reason, max: max, message: "must be #{max} characters or less")
+
+    validate_length(changeset, :reason,
+      max: max,
+      message: dgettext("errors", "must be %{max} characters or less", max: max)
+    )
   end
 end

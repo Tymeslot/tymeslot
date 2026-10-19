@@ -5,37 +5,30 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
 
   import Ecto.Query
   alias Ecto.Changeset
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
   @doc """
-  Gets all active video integrations for a user.
+  Gets all active video integrations for a user, credentials left encrypted:
+  its callers only need the id, name and provider.
   """
   @spec list_active_for_user(integer()) :: [VideoIntegrationSchema.t()]
   def list_active_for_user(user_id) do
-    user_id
-    |> base_active_query()
-    |> Repo.all()
-    |> Enum.map(&VideoIntegrationSchema.decrypt_credentials/1)
-  end
-
-  @doc """
-  Gets all active video integrations for a user without decrypting credentials.
-  Use this in UI contexts that only need id/name/provider.
-  """
-  @spec list_active_for_user_public(integer()) :: [VideoIntegrationSchema.t()]
-  def list_active_for_user_public(user_id) do
-    user_id
-    |> base_active_query()
-    |> Repo.all()
-  end
-
-  # Private helper for shared query pattern
-  defp base_active_query(user_id) do
     VideoIntegrationSchema
     |> exclude_deleted()
     |> where([v], v.user_id == ^user_id and v.is_active == true)
     |> order_by([v], asc: v.name)
+    |> Repo.all()
+  end
+
+  @doc "Whether the user has an active video integration."
+  @spec active_exists_for_user?(integer()) :: boolean()
+  def active_exists_for_user?(user_id) do
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where([v], v.user_id == ^user_id and v.is_active == true)
+    |> Repo.exists?()
   end
 
   # Soft-deleted rows exist only so background cleanup can still authenticate
@@ -55,11 +48,20 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   """
   @spec list_all_active() :: list(VideoIntegrationSchema.t())
   def list_all_active do
+    active_query()
+    |> order_by([v], asc: v.name)
+    |> Repo.all()
+  end
+
+  @doc """
+  The query for every active integration across all users: switched on and
+  not disconnected. For other queries modules to join against.
+  """
+  @spec active_query() :: Ecto.Query.t()
+  def active_query do
     VideoIntegrationSchema
     |> exclude_deleted()
     |> where([v], v.is_active == true)
-    |> order_by([v], asc: v.name)
-    |> Repo.all()
   end
 
   @doc """
@@ -76,6 +78,20 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     |> where([v], v.provider == ^provider and v.is_active == true)
     |> order_by([v], asc: v.id)
     |> Repo.all()
+  end
+
+  @doc """
+  Every video integration of a user, disconnected (soft-deleted) ones
+  included: a disconnected row keeps its grant until its room cleanup has
+  drained, so deleting the account must still revoke it.
+  """
+  @spec list_all_for_user_including_disconnected(integer()) :: [VideoIntegrationSchema.t()]
+  def list_all_for_user_including_disconnected(user_id) do
+    VideoIntegrationSchema
+    |> where([v], v.user_id == ^user_id)
+    |> order_by([v], asc: v.id)
+    |> Repo.all()
+    |> Enum.map(&VideoIntegrationSchema.decrypt_credentials/1)
   end
 
   @doc """
@@ -150,12 +166,25 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
           | {:error, :not_found}
           | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get_for_user(id, user_id) do
-    result =
-      VideoIntegrationSchema
-      |> where([v], v.id == ^id and v.user_id == ^user_id)
-      |> Repo.one()
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id and v.user_id == ^user_id)
+    |> one_decrypted()
+  end
 
-    case result do
+  @doc "As `get_for_user/2`, but a disconnected (soft-deleted) integration is not found."
+  @spec get_live_for_user(integer(), integer()) ::
+          {:ok, VideoIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
+  def get_live_for_user(id, user_id) do
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id and v.user_id == ^user_id)
+    |> exclude_deleted()
+    |> one_decrypted()
+  end
+
+  defp one_decrypted(query) do
+    case Repo.one(query) do
       nil ->
         {:error, :not_found}
 
@@ -309,7 +338,13 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
 
   @doc """
   Updates a video integration and removes the named stored credentials in the
-  same write, leaving any outstanding `needs_reauth` flag in place.
+  same write, clearing `needs_reauth` and what goes with it as
+  `update_credentials/2` does.
+
+  The flag says the stored credentials were refused; with them removed there
+  is nothing left to refuse (a Jitsi server that dropped token
+  authentication), and keeping it would have room creation refuse the
+  integration for good.
 
   `fields` are virtual credential names (`:client_id`), as in
   `VideoIntegrationSchema.remove_credentials/2`.
@@ -320,7 +355,17 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     integration
     |> VideoIntegrationSchema.changeset(attrs)
     |> VideoIntegrationSchema.remove_credentials(fields)
+    |> clear_reauth()
     |> Repo.update()
+  end
+
+  defp clear_reauth(changeset) do
+    changeset
+    |> Changeset.force_change(:needs_reauth, false)
+    |> Changeset.force_change(:sync_error, nil)
+    |> Changeset.force_change(:room_creation_error, nil)
+    |> Changeset.force_change(:room_creation_error_since, nil)
+    |> Changeset.force_change(:room_creation_error_notices, %{})
   end
 
   @doc """
@@ -328,7 +373,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   clearing `needs_reauth`, the message explaining it, and any recorded room
   creation error.
 
-  `sync_error` is written alongside `needs_reauth` by `mark_needs_reauth/2` and
+  `sync_error` is written alongside `needs_reauth` by `flag_needs_reauth/2` and
   describes why the integration stopped working. Leaving it behind outlives the
   flag it belongs to, and the row then carries an explanation of a problem it no
   longer has: the dashboard reads it for the reconnect prompt's reason, and the
@@ -374,11 +419,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
         changeset =
           integration
           |> VideoIntegrationSchema.changeset(attrs)
-          |> Changeset.force_change(:needs_reauth, false)
-          |> Changeset.force_change(:sync_error, nil)
-          |> Changeset.force_change(:room_creation_error, nil)
-          |> Changeset.force_change(:room_creation_error_since, nil)
-          |> Changeset.force_change(:room_creation_error_notices, %{})
+          |> clear_reauth()
 
         case Repo.update(changeset) do
           {:ok, updated} -> {updated, was_flagged? == true}
@@ -393,115 +434,35 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
-  Records that the provider refuses to create rooms for the integration `id`
-  with `code`, stamping the time only when the code is new, so the time stays
-  the one the refusal was first seen.
+  Flags an integration as needing reauthentication and records `message` as
+  its sync error, so the dashboard banner stays consistent.
+
+  Whether this is a new flag is decided by the row, not by `integration`,
+  which may be stale: of two concurrent flaggers, exactly one sees
+  `newly_flagged?` true. `{:error, :not_found}` when the row is gone.
   """
-  @spec record_room_creation_error(integer(), atom()) :: :ok
-  def record_room_creation_error(id, code) when is_integer(id) and is_atom(code) do
-    VideoIntegrationSchema
-    |> where([v], v.id == ^id)
-    |> where([v], is_nil(v.room_creation_error) or v.room_creation_error != ^code)
-    |> Repo.update_all(
-      set: [room_creation_error: code, room_creation_error_since: DateTime.utc_now(:second)]
-    )
+  @spec flag_needs_reauth(VideoIntegrationSchema.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t(), newly_flagged? :: boolean()}
+          | {:error, :not_found}
+  def flag_needs_reauth(%VideoIntegrationSchema{id: id} = integration, message) do
+    row = where(VideoIntegrationSchema, id: ^id)
 
-    :ok
-  end
-
-  @doc """
-  Clears the room creation error recorded for the integration `id`.
-  """
-  @spec clear_room_creation_error(integer()) :: :ok
-  def clear_room_creation_error(id) when is_integer(id) do
-    VideoIntegrationSchema
-    |> where([v], v.id == ^id and not is_nil(v.room_creation_error))
-    |> Repo.update_all(set: [room_creation_error: nil, room_creation_error_since: nil])
-
-    :ok
-  end
-
-  @doc """
-  Claims the email about room creation error `code` for the integration `id`,
-  stamping `now` as the time the owner was told: returns `true` for the caller
-  that claims it, and `false` while a claim made since `resend_after` stands.
-
-  One conditional update, so concurrent callers serialise on the row and only
-  the first one's condition still holds. `release_room_creation_error_notice/2`
-  gives a claim back when its email never went out.
-  """
-  @spec claim_room_creation_error_notice(integer(), atom(), DateTime.t(), DateTime.t()) ::
-          boolean()
-  def claim_room_creation_error_notice(id, code, now, resend_after)
-      when is_integer(id) and is_atom(code) do
-    code = Atom.to_string(code)
-
-    {count, _rows} =
-      VideoIntegrationSchema
-      |> where([v], v.id == ^id)
-      |> where(
-        [v],
-        fragment(
-          "? -> ? IS NULL OR (? ->> ?)::timestamptz < ?::timestamptz",
-          v.room_creation_error_notices,
-          type(^code, :string),
-          v.room_creation_error_notices,
-          type(^code, :string),
-          type(^DateTime.to_iso8601(resend_after), :string)
-        )
-      )
-      |> update([v],
-        set: [
-          room_creation_error_notices:
-            fragment(
-              "jsonb_set(coalesce(?, '{}'::jsonb), array[?], to_jsonb(?::text))",
-              v.room_creation_error_notices,
-              type(^code, :string),
-              type(^DateTime.to_iso8601(now), :string)
-            )
-        ]
-      )
-      |> Repo.update_all([])
-
-    count == 1
-  end
-
-  @doc """
-  Gives back the claim on the email about `code` for the integration `id`, for
-  an email that was never sent: the next refusal with that code claims it
-  again.
-  """
-  @spec release_room_creation_error_notice(integer(), atom()) :: :ok
-  def release_room_creation_error_notice(id, code) when is_integer(id) and is_atom(code) do
-    code = Atom.to_string(code)
-
-    VideoIntegrationSchema
-    |> where([v], v.id == ^id)
-    |> update([v],
-      set: [
-        room_creation_error_notices:
-          fragment("? - ?", v.room_creation_error_notices, type(^code, :string))
-      ]
-    )
-    |> Repo.update_all([])
-
-    :ok
-  end
-
-  @doc """
-  Flags an integration as needing reauthentication — used when the stored
-  credentials can no longer be decrypted. Also records a sync error so the
-  dashboard banner stays consistent.
-  """
-  @spec mark_needs_reauth(VideoIntegrationSchema.t(), String.t()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_needs_reauth(%VideoIntegrationSchema{} = integration, error_message) do
-    integration
-    |> Changeset.change(%{
+    flag = [
       needs_reauth: true,
-      sync_error: error_message
-    })
-    |> Repo.update()
+      sync_error: message,
+      updated_at: DateTime.truncate(Clock.utc_now(), :second)
+    ]
+
+    case Repo.update_all(where(row, needs_reauth: false), set: flag) do
+      {1, _rows} ->
+        {:ok, struct(integration, flag), true}
+
+      {0, _rows} ->
+        case Repo.update_all(row, set: flag) do
+          {1, _rows} -> {:ok, struct(integration, flag), false}
+          {0, _rows} -> {:error, :not_found}
+        end
+    end
   end
 
   @doc """
@@ -561,6 +522,21 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Whether a user other than `user_id` has an integration of `provider` on the
+  external account `provider_account_id` that still holds a token, whatever
+  its state: a disconnected row keeps its grant until its room cleanup drains.
+  """
+  @spec account_held_by_other_user?(String.t(), String.t(), integer()) :: boolean()
+  def account_held_by_other_user?(provider, provider_account_id, user_id)
+      when is_binary(provider) and is_binary(provider_account_id) and is_integer(user_id) do
+    VideoIntegrationSchema
+    |> where([v], v.provider == ^provider and v.provider_account_id == ^provider_account_id)
+    |> where([v], v.user_id != ^user_id)
+    |> where([v], not is_nil(v.refresh_token_encrypted) or not is_nil(v.access_token_encrypted))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Deletes every integration matching `(provider, provider_account_id)` regardless
   of the owning user. Used by provider-initiated revocation flows (e.g. the Zoom
   deauthorization webhook) where the only identifier we receive is the provider's
@@ -569,15 +545,38 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec delete_by_provider_account(String.t(), String.t()) :: {:ok, non_neg_integer()}
   def delete_by_provider_account(provider, provider_account_id)
       when is_binary(provider) and is_binary(provider_account_id) and provider_account_id != "" do
-    {count, _rows} =
-      VideoIntegrationSchema
-      |> where(
-        [v],
-        v.provider == ^provider and v.provider_account_id == ^provider_account_id
-      )
-      |> Repo.delete_all()
+    # The rows are locked in ascending id order before any is deleted: a
+    # calendar sync key-shares its owner's video integrations in that order
+    # (`Calendar.IntegrationCacheQueries.lock/1`), and a delete that reached
+    # two of them the other way round could deadlock against it.
+    Repo.transaction(fn ->
+      ids =
+        Repo.all(
+          from(v in VideoIntegrationSchema,
+            where: v.provider == ^provider and v.provider_account_id == ^provider_account_id,
+            order_by: v.id,
+            lock: "FOR UPDATE",
+            select: v.id
+          )
+        )
 
-    {:ok, count}
+      {count, _rows} = Repo.delete_all(from(v in VideoIntegrationSchema, where: v.id in ^ids))
+      count
+    end)
+  end
+
+  @doc """
+  Sets the integration inactive, never the other way round: the write forces
+  `is_active` to false whatever the struct says, so a stale struct cannot turn
+  a pause into a reactivation.
+  """
+  @spec deactivate(VideoIntegrationSchema.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Changeset.t()}
+  def deactivate(%VideoIntegrationSchema{} = integration) do
+    integration
+    |> Changeset.change()
+    |> Changeset.force_change(:is_active, false)
+    |> Repo.update()
   end
 
   @doc """

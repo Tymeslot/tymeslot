@@ -6,7 +6,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   The contract shared by `issue_refund/3` (system refunds, unscoped) and
   `issue_host_refund/4` (a host refunding a payment they took):
 
-    * Validates the payment is within the 60-day refund window.
+    * Refuses a payment `refusal/1` rules out, before any Stripe call:
+      one never paid (`:not_paid`), one past the 60-day refund window
+      (`:outside_refund_window`), and one Stripe holds for a dispute
+      (`:under_dispute`).
     * Validates the requested amount is positive and does not exceed
       the remaining refundable balance.
     * Calls Stripe with an idempotency key keyed on the payment id,
@@ -27,12 +30,23 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   @refund_window_days 60
+
+  # The refund call runs while its transaction holds the payment's row lock,
+  # so it is bounded tighter than hackney's defaults (8_000 ms to connect,
+  # 5_000 ms per receive). stripity_stripe passes these through to hackney
+  # and retries a timed-out request up to three more times, with at most
+  # 2_000 ms between attempts, safely under the same idempotency key: four
+  # attempts at 3_000 + 5_000 ms plus 3_500 ms of backoff bound the call at
+  # about 35 seconds instead of about 55.
+  @stripe_connect_timeout_ms 3_000
+  @stripe_recv_timeout_ms 5_000
 
   @type refund_error ::
           :not_paid
@@ -87,6 +101,30 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defp within_refund_window?(_payment), do: false
 
   @doc """
+  Returns why the payment cannot be refunded at all, from what is recorded
+  locally: `:not_paid` without a paid time, `:outside_refund_window` past the
+  #{@refund_window_days}-day window, `:under_dispute` while Stripe holds the
+  money for a dispute.
+
+  These are the refusals no retry turns round, and they need no Stripe call,
+  so a caller about to make one (fetching a missing charge id, say) can check
+  them first. `issue_refund/3` and `issue_host_refund/4` apply them too.
+  """
+  @spec refusal(BookingPaymentSchema.t()) ::
+          :ok | {:error, :not_paid | :outside_refund_window | :under_dispute}
+  def refusal(%{paid_at: nil}), do: {:error, :not_paid}
+
+  # Stripe's Refund API rejects a disputed charge, so the dispute is caught
+  # here rather than by a wasted round-trip that errors.
+  def refusal(payment) do
+    cond do
+      not within_refund_window?(payment) -> {:error, :outside_refund_window}
+      payment.status == "disputed" -> {:error, :under_dispute}
+      true -> :ok
+    end
+  end
+
+  @doc """
   Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
   a tagged `{:error, atom()}`.
 
@@ -108,7 +146,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   end
 
   def parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => raw}) do
-    case parse_amount_cents(raw) do
+    case Money.parse(raw, payment.currency) do
       {:ok, cents} ->
         if cents <= refundable_remaining_cents(payment) do
           {:ok, cents}
@@ -116,8 +154,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
           {:error, :exceeds_remaining}
         end
 
-      :error ->
-        {:error, :invalid_amount}
+      {:error, :invalid_amount} = error ->
+        error
     end
   end
 
@@ -176,7 +214,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defp refund_locked(lock_payment, amount_cents, reason) do
     Repo.transaction(fn ->
       with {:ok, locked} <- lock_payment.(),
-           :ok <- validate_within_window(locked),
+           :ok <- refusal(locked),
            :ok <- validate_amount(locked, amount_cents),
            :ok <- validate_charge(locked),
            {:ok, _stripe_refund} <- create_stripe_refund(locked, amount_cents, reason),
@@ -189,19 +227,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     end)
   end
 
-  defp validate_within_window(%{paid_at: nil}), do: {:error, :not_paid}
-
-  defp validate_within_window(payment) do
-    if within_refund_window?(payment), do: :ok, else: {:error, :outside_refund_window}
-  end
-
   defp validate_amount(%{status: "refunded"}, _amount_cents), do: {:error, :already_refunded}
-
-  # A disputed charge cannot be refunded through the normal Refund API — Stripe
-  # rejects it, and the funds are already held pending the dispute outcome.
-  # Catch it during local validation so the host gets a meaningful message
-  # instead of a wasted Stripe round-trip that errors.
-  defp validate_amount(%{status: "disputed"}, _amount_cents), do: {:error, :under_dispute}
 
   defp validate_amount(
          %{amount_cents: amount, refunded_amount_cents: refunded},
@@ -235,7 +261,9 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
     StripeAdapter.create_refund(params,
       connect_account: payment.stripe_account_id,
-      idempotency_key: "refund:#{payment.id}:#{cumulative_after}:#{amount_cents}"
+      idempotency_key: "refund:#{payment.id}:#{cumulative_after}:#{amount_cents}",
+      connect_timeout: @stripe_connect_timeout_ms,
+      recv_timeout: @stripe_recv_timeout_ms
     )
   end
 
@@ -291,54 +319,4 @@ defmodule Tymeslot.MeetingPayments.Refunds do
         :ok
     end
   end
-
-  # Parses a decimal-string amount (e.g. "29.99" or "10,00") into a positive
-  # integer number of cents. Only accepts canonical INT or INT.NN forms — no
-  # scientific notation, no sub-cent precision, no non-positive values.
-  defp parse_amount_cents(amount) when is_binary(amount) do
-    cleaned = amount |> String.replace(",", ".") |> String.trim()
-
-    # Reject immediately if the string contains a scientific-notation marker.
-    if String.contains?(cleaned, ["e", "E"]) do
-      :error
-    else
-      parse_canonical(cleaned)
-    end
-  end
-
-  defp parse_amount_cents(_amount), do: :error
-
-  defp parse_canonical(str) do
-    case String.split(str, ".") do
-      [major_str] ->
-        with {:ok, major} <- parse_non_negative_integer(major_str),
-             true <- major > 0 do
-          {:ok, major * 100}
-        else
-          _error -> :error
-        end
-
-      [major_str, minor_str] when byte_size(minor_str) == 2 ->
-        with {:ok, major} <- parse_non_negative_integer(major_str),
-             {:ok, minor} <- parse_non_negative_integer(minor_str),
-             cents = major * 100 + minor,
-             true <- cents > 0 do
-          {:ok, cents}
-        else
-          _error -> :error
-        end
-
-      _other ->
-        :error
-    end
-  end
-
-  defp parse_non_negative_integer(str) when is_binary(str) and str != "" do
-    case Integer.parse(str) do
-      {n, ""} when n >= 0 -> {:ok, n}
-      _other -> :error
-    end
-  end
-
-  defp parse_non_negative_integer(_str), do: :error
 end

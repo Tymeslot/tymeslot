@@ -1,0 +1,232 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee email is required"
+msgstr "Die E-Mail-Adresse des Teilnehmers ist erforderlich"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee name is required"
+msgstr "Der Name des Teilnehmers ist erforderlich"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Booking requires at least %{hours} hours in advance"
+msgstr "Die Buchung muss mindestens %{hours} Stunden im Voraus erfolgen"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Booking time must be in the future"
+msgstr "Der Buchungszeitpunkt muss in der Zukunft liegen"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot cancel a completed meeting"
+msgstr "Ein abgeschlossener Termin kann nicht abgesagt werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot cancel a meeting that has already occurred"
+msgstr "Ein bereits stattgefundener Termin kann nicht abgesagt werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot cancel a meeting that has already started"
+msgstr "Ein bereits begonnener Termin kann nicht abgesagt werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot cancel an expired meeting"
+msgstr "Ein abgelaufener Termin kann nicht abgesagt werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot request a reschedule while the booking awaits approval"
+msgstr "Solange die Buchung noch bestätigt werden muss, kann keine Verschiebung angefragt werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule a cancelled meeting"
+msgstr "Ein abgesagter Termin kann nicht verschoben werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule a completed meeting"
+msgstr "Ein abgeschlossener Termin kann nicht verschoben werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule a meeting that has already occurred"
+msgstr "Ein bereits stattgefundener Termin kann nicht verschoben werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule a meeting that has already started"
+msgstr "Ein bereits begonnener Termin kann nicht verschoben werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule an expired meeting"
+msgstr "Ein abgelaufener Termin kann nicht verschoben werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time"
+msgstr "Die Endzeit muss nach der Startzeit liegen"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create appointment. Please try again."
+msgstr "Termin konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting"
+msgstr "Der Termin konnte nicht erstellt werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to process booking. Please try again."
+msgstr "Buchung konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to save meeting to database"
+msgstr "Termin konnte nicht in der Datenbank gespeichert werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Host could not be found. Please refresh and try again."
+msgstr "Der Gastgeber konnte nicht gefunden werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid date/time"
+msgstr "Datum/Uhrzeit ungültig"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting duration selected"
+msgstr "Ungültige Termindauer ausgewählt"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Organiser is required for booking"
+msgstr "Für die Buchung ist ein Organisator erforderlich"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Payments are not available for this booking. Please contact the host."
+msgstr "Für diese Buchung sind keine Zahlungen möglich. Bitte wenden Sie sich an den Gastgeber."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please fill in all required fields before submitting."
+msgstr "Bitte füllen Sie alle Pflichtfelder aus, bevor Sie absenden."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please select a date"
+msgstr "Bitte wählen Sie ein Datum"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please select a date and time"
+msgstr "Bitte wählen Sie ein Datum und eine Uhrzeit"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please select a meeting duration"
+msgstr "Bitte wählen Sie eine Termindauer"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please select a time"
+msgstr "Bitte wählen Sie eine Uhrzeit"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The guest email must differ from your own address"
+msgstr "Die E-Mail-Adresse des Gastes muss sich von Ihrer eigenen unterscheiden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The host is no longer accepting bookings for this period. Please pick a different day."
+msgstr "Der Gastgeber nimmt für diesen Zeitraum keine Buchungen mehr an. Bitte wählen Sie einen anderen Tag."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has already been cancelled or moved."
+msgstr "Diese Buchung wurde bereits storniert oder verschoben."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
+msgstr "Dies ist eine Gruppenbuchung: Jede Teilnehmerin und jeder Teilnehmer verschiebt den eigenen Platz über die Bestätigungs-E-Mail."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is your current time. Pick a different time to move your spot."
+msgstr "Das ist Ihre aktuelle Zeit. Wählen Sie eine andere Zeit, um Ihren Platz zu verschieben."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting could not be found. Please refresh and try again."
+msgstr "Dieser Termin konnte nicht gefunden werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is no longer available. Please go back and select another."
+msgstr "Dieser Termintyp ist nicht mehr verfügbar. Bitte gehen Sie zurück und wählen Sie einen anderen."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is no longer available. Please refresh the page."
+msgstr "Dieser Termintyp ist nicht mehr verfügbar. Bitte laden Sie die Seite neu."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be moved. Cancel it and book a new time instead, or contact the host."
+msgstr "Dieser Platz kann nicht mehr verschoben werden. Stornieren Sie ihn und buchen Sie stattdessen eine neue Zeit, oder wenden Sie sich an den Gastgeber."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This time slot is no longer available. Please select a different time."
+msgstr "Dieses Zeitfenster ist nicht mehr verfügbar. Bitte wählen Sie eine andere Zeit."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Title is required"
+msgstr "Titel ist erforderlich"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't check the host's calendar right now. Please try again in a few minutes."
+msgstr "Wir konnten den Kalender des Gastgebers gerade nicht prüfen. Bitte versuchen Sie es in ein paar Minuten erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't start the payment process. Please try again."
+msgstr "Der Zahlungsvorgang konnte nicht gestartet werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a spot at this time. Check your email for your booking confirmation."
+msgstr "Sie haben zu dieser Zeit bereits einen Platz. Ihre Buchungsbestätigung finden Sie in Ihren E-Mails."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "You cannot book more than %{days} days in advance"
+msgstr "Sie können nicht mehr als %{days} Tage im Voraus buchen"

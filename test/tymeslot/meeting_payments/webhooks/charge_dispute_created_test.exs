@@ -5,6 +5,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
   @moduletag :payments
   @moduletag :integration
 
+  # Every booking_payment is charged on this connected account, and every
+  # event arrives from it, as Stripe delivers them for a genuine booking.
+  @account "acct_TEST_HOST"
+
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
@@ -15,6 +19,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     test "transitions a paid booking_payment to disputed" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "paid",
           amount_cents: 5000,
           stripe_charge_id: "ch_DISPUTED"
@@ -32,6 +37,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     test "preserves refunded_amount_cents on a partially_refunded booking_payment" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "partially_refunded",
           amount_cents: 5000,
           refunded_amount_cents: 1500,
@@ -50,6 +56,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     test "is idempotent — replaying the same event id is a no-op" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "disputed",
           amount_cents: 5000,
           stripe_charge_id: "ch_REPLAY_DISP",
@@ -76,6 +83,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       # (captured at session creation), so the dispute must match on that.
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "paid",
           amount_cents: 5000,
           stripe_charge_id: nil,
@@ -84,6 +92,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
 
       event = %{
         "id" => "evt_RACE_DISP",
+        "account" => @account,
         "type" => "charge.dispute.created",
         "created" => System.os_time(:second),
         "data" => %{
@@ -108,6 +117,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     test "enqueues the host dispute email after marking disputed" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "paid",
           amount_cents: 5000,
           stripe_charge_id: "ch_EMAIL_DISP"
@@ -126,6 +136,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     test "does not enqueue the email when replaying the same event id" do
       bp =
         insert(:booking_payment,
+          stripe_account_id: @account,
           status: "disputed",
           amount_cents: 5000,
           stripe_charge_id: "ch_REPLAY_NOEMAIL",
@@ -143,9 +154,34 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     end
   end
 
+  describe "handle/1 with an event from another connected account" do
+    test "neither marks the booking disputed nor emails the host" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: "paid",
+          amount_cents: 5000,
+          stripe_charge_id: "ch_FOREIGN_DISP"
+        )
+
+      event =
+        "evt_FOREIGN_DISP"
+        |> dispute_event("ch_FOREIGN_DISP")
+        |> Map.put("account", "acct_ATTACKER")
+
+      assert :ok = ChargeDisputeCreated.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == "paid"
+      assert reloaded.last_event_id == nil
+      refute_enqueued(worker: SendChargeDisputeOpened)
+    end
+  end
+
   defp dispute_event(event_id, charge_id) do
     %{
       "id" => event_id,
+      "account" => @account,
       "type" => "charge.dispute.created",
       "created" => System.os_time(:second),
       "data" => %{

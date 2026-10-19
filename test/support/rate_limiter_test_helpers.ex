@@ -4,6 +4,43 @@ defmodule Tymeslot.RateLimiterTestHelpers do
   """
 
   import ExUnit.Assertions
+  import ExUnit.Callbacks, only: [on_exit: 1]
+
+  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.RateLimiter.Helpers
+  alias Tymeslot.Security.RateLimiter.Limits
+
+  @doc """
+  Spends the named limit's whole budget for `key`, through `RateLimiter.check/2`
+  as the code under test would, and returns the refusal's message. The bucket
+  is cleared when the test exits.
+
+  The bucket is shared by every test charging the same key, so an IP-scoped
+  limit wants an address of the test's own (a unique `remote_ip`).
+  """
+  @spec exhaust_limit!(Limits.name(), term()) :: String.t()
+  def exhaust_limit!(name, key) do
+    entry = Limits.fetch!(name)
+    on_exit(fn -> RateLimiter.clear_bucket("#{entry[:prefix]}:#{bucket_suffix(entry, key)}") end)
+
+    result =
+      Enum.reduce_while(0..Keyword.fetch!(entry, :limit), nil, fn _hit, _result ->
+        case RateLimiter.check(name, key) do
+          :ok -> {:cont, :ok}
+          refused -> {:halt, refused}
+        end
+      end)
+
+    assert {:error, :rate_limited, message} = result
+    message
+  end
+
+  defp bucket_suffix(entry, key) do
+    case entry[:scope] do
+      :source -> Helpers.source_key(key)
+      _user_id_or_key -> to_string(key)
+    end
+  end
 
   @doc """
   Tests that multiple users can operate concurrently without interfering with each other's rate limits.
@@ -25,7 +62,7 @@ defmodule Tymeslot.RateLimiterTestHelpers do
       test_multiple_users_operate_independently(
         [1000, 2000, 3000, 4000, 5000],
         100,
-        &RateLimiter.check_theme_customization_rate_limit/1
+        &RateLimiter.check(:theme_customization, &1)
       )
   """
   @spec test_multiple_users_operate_independently(

@@ -7,6 +7,10 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
   - Testing proxy connectivity
   - Verifying traffic flows through the proxy
 
+  In a release, where Mix tasks cannot run, use
+  `bin/tymeslot eval 'Tymeslot.Release.verify_proxy()'` instead; this task
+  runs the same check.
+
   ## Usage
 
       # Basic verification with default test URL
@@ -43,7 +47,7 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
 
   use Mix.Task
 
-  alias Tymeslot.Infrastructure.ProxyVerifier
+  alias Tymeslot.Release
 
   @shortdoc "Verifies HTTP proxy configuration"
 
@@ -76,11 +80,16 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
     # Display current environment
     print_environment()
 
-    # Run verification
-    if opts[:quick] do
-      run_quick_check()
-    else
-      run_full_verification(opts)
+    # The release helper holds the check, so `bin/tymeslot eval` and this
+    # task run the same one.
+    release_opts =
+      [quick: opts[:quick] == true]
+      |> maybe_add_opt(:test_url, opts[:url])
+      |> maybe_add_opt(:timeout, opts[:timeout])
+
+    case Release.verify_proxy(release_opts) do
+      :ok -> :ok
+      {:error, _reason} -> Mix.raise("Proxy verification failed")
     end
   end
 
@@ -110,129 +119,6 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
     end)
 
     Mix.shell().info("")
-  end
-
-  defp run_quick_check do
-    Mix.shell().info("=== Running Quick Proxy Check ===\n")
-
-    case ProxyVerifier.quick_check() do
-      :ok ->
-        Mix.shell().info(IO.ANSI.format([:green, "✓ SUCCESS: Proxy is working correctly\n"]))
-        :ok
-
-      {:error, reason} ->
-        Mix.shell().error(IO.ANSI.format([:red, "✗ FAILED: #{reason}\n"]))
-        Mix.raise("Proxy verification failed")
-    end
-  end
-
-  defp run_full_verification(opts) do
-    Mix.shell().info("=== Running Full Proxy Verification ===\n")
-
-    verify_opts =
-      []
-      |> maybe_add_opt(:test_url, opts[:url])
-      |> maybe_add_opt(:timeout, opts[:timeout])
-
-    result = ProxyVerifier.verify(verify_opts)
-
-    print_result(result)
-
-    if result.traffic_flows_through_proxy do
-      :ok
-    else
-      Mix.raise("Proxy verification failed")
-    end
-  end
-
-  defp print_result(result) do
-    Mix.shell().info("Results:")
-    print_check("Proxy Configured", result.proxy_configured)
-    print_check("Proxy Reachable", result.proxy_reachable)
-    print_check("Traffic Flows Through Proxy", result.traffic_flows_through_proxy)
-
-    if result.errors != [] do
-      Mix.shell().info(["\n", IO.ANSI.format([:red, :bright, "Errors:"])])
-
-      Enum.each(result.errors, fn error ->
-        Mix.shell().error("  - #{error}")
-      end)
-    end
-
-    if map_size(result.details) > 0 do
-      Mix.shell().info(["\n", IO.ANSI.format([:bright, "Details:"])])
-      print_details(result.details)
-    end
-
-    Mix.shell().info("")
-
-    if result.traffic_flows_through_proxy do
-      Mix.shell().info(
-        IO.ANSI.format([:green, :bright, "✓ SUCCESS: Proxy verification passed\n"])
-      )
-    else
-      Mix.shell().error(IO.ANSI.format([:red, :bright, "✗ FAILED: Proxy verification failed\n"]))
-    end
-  end
-
-  defp print_check(label, true) do
-    Mix.shell().info("  #{IO.ANSI.format([:green, "✓"])} #{label}")
-  end
-
-  defp print_check(label, false) do
-    Mix.shell().info("  #{IO.ANSI.format([:red, "✗"])} #{label}")
-  end
-
-  defp print_details(details) do
-    # Print config if present
-    if config = details[:config] do
-      Mix.shell().info("  Proxy Config:")
-
-      if config.http_proxy do
-        Mix.shell().info("    HTTP:  #{format_proxy(config.http_proxy)}")
-      end
-
-      if config.https_proxy do
-        Mix.shell().info("    HTTPS: #{format_proxy(config.https_proxy)}")
-      end
-
-      if config.no_proxy != [] do
-        Mix.shell().info("    NO_PROXY: #{Enum.join(config.no_proxy, ", ")}")
-      end
-    end
-
-    # Print test details
-    if proxy_used = details[:proxy_used] do
-      Mix.shell().info("  Proxy Used: #{proxy_used}")
-    end
-
-    if test_url = details[:test_url] do
-      Mix.shell().info("  Test URL: #{test_url}")
-    end
-
-    if status = details[:status] do
-      Mix.shell().info("  Response Status: #{status}")
-    end
-
-    if origin_ip = details[:origin_ip] do
-      Mix.shell().info("  Origin IP through the proxy: #{origin_ip}")
-    end
-
-    # The address the destination sees when the proxy is bypassed. Printing it
-    # beside the proxied one shows the operator the evidence the verdict rests
-    # on: two different origins mean the proxy carried the request.
-    if direct_origin_ip = details[:direct_origin_ip] do
-      Mix.shell().info("  Origin IP without the proxy: #{direct_origin_ip}")
-    end
-
-    if details[:direct_egress] == :unreachable do
-      Mix.shell().info("  Origin IP without the proxy: unreachable (no direct route out)")
-    end
-  end
-
-  defp format_proxy(proxy) do
-    auth = if proxy[:auth], do: "[#{proxy[:auth]}]", else: ""
-    "#{proxy[:scheme]}://#{auth}#{proxy[:host]}:#{proxy[:port]}"
   end
 
   defp sanitize_proxy_url(url) when is_binary(url) do

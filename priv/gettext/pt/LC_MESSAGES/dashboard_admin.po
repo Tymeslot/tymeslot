@@ -13,16 +13,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
-msgid "%{name} disabled."
-msgstr "Configuração desativada: %{name}."
-
-#: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} enabled."
-msgstr "Configuração ativada: %{name}."
-
-#: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format
 msgid "%{name} updated."
 msgstr "Configuração atualizada: %{name}."
 
@@ -43,7 +33,7 @@ msgstr "Ações"
 msgid "Admin"
 msgstr "Administração"
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Admin UI is disabled."
 msgstr "A interface de administração está desativada."
@@ -89,22 +79,18 @@ msgstr "Pontuação mínima no agendamento"
 msgid "Booking slug"
 msgstr "Slug de agendamento"
 
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format
-msgid "Cannot demote the last admin. Promote someone else first."
-msgstr "Não é possível rebaixar o último administrador. Promova outra pessoa antes."
-
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Could not demote user."
 msgstr "Não foi possível rebaixar o usuário."
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Could not promote user."
 msgstr "Não foi possível promover o usuário."
@@ -198,12 +184,12 @@ msgstr "Login com GitHub"
 msgid "Google login"
 msgstr "Login com Google"
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid request."
 msgstr "Requisição inválida."
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid user id."
 msgstr "ID de usuário inválido."
@@ -305,17 +291,17 @@ msgstr "Total de usuários"
 msgid "User"
 msgstr "Usuário"
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "User demoted from admin."
 msgstr "Usuário rebaixado de administrador."
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "User not found."
 msgstr "Usuário não encontrado."
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "User promoted to admin."
 msgstr "Usuário promovido a administrador."
@@ -325,7 +311,7 @@ msgstr "Usuário promovido a administrador."
 msgid "Users"
 msgstr "Usuários"
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "You have been demoted from admin."
 msgstr "Seu acesso de administrador foi removido."
@@ -334,11 +320,6 @@ msgstr "Seu acesso de administrador foi removido."
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
 msgstr "Você perde o acesso às configurações de administração e ao gerenciamento de usuários, e volta para seu painel."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "You're the only admin. Promote someone else before demoting yourself."
-msgstr "Só há um administrador: você. Promova outra pessoa antes de remover seu próprio acesso."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -435,7 +416,7 @@ msgstr "Rebaixar %{email} de administrador?"
 msgid "Promote %{email} to admin?"
 msgstr "Promover %{email} a administrador?"
 
-#: lib/tymeslot_web/live/admin_live.ex
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #: lib/tymeslot_web/plugs/require_admin.ex
 #, elixir-autogen, elixir-format
 msgid "Admin access required."
@@ -635,6 +616,171 @@ msgstr "Idioma usado no painel, nas páginas de conta e nos e-mails de conta qua
 #, elixir-autogen, elixir-format
 msgid "General"
 msgstr "Geral"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete user."
+msgstr "Não foi possível excluir o usuário."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot demote this admin: no other admin can sign in. Make sure another admin can sign in first."
+msgstr "Não é possível rebaixar este administrador: nenhum outro administrador consegue entrar. Primeiro, garanta que outro administrador consiga entrar."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Excluir"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{email}"
+msgstr "Excluir %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{email} and all their data now?"
+msgstr "Excluir %{email} e todos os dados agora?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete user"
+msgstr "Excluir usuário"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting %{email}. The account leaves this list once the deletion has run."
+msgstr "Excluindo %{email}. A conta sai desta lista assim que a exclusão for concluída."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting..."
+msgstr "Excluindo…"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This cannot be undone. Their bookings are deleted and their guests are not notified; existing calendar events and video links stay as they are."
+msgstr "Isso não pode ser desfeito. Os agendamentos são excluídos e os convidados não são avisados; os eventos de calendário e os links de vídeo existentes continuam como estão."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "You cannot delete your own account here. Use your account settings instead."
+msgstr "Você não pode excluir sua própria conta aqui. Use as configurações da sua conta."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Deletion pending"
+msgstr "Exclusão pendente"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "No other admin can sign in. Make sure another admin can sign in before demoting yourself."
+msgstr "Nenhum outro administrador consegue entrar. Garanta que outro administrador consiga entrar antes de remover seu acesso de administrador."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot delete this admin: no other admin can sign in. Make sure another admin can sign in first."
+msgstr "Não é possível excluir este administrador: nenhum outro administrador consegue entrar. Primeiro, garanta que outro administrador consiga entrar."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Admin alerts turned off."
+msgstr "Alertas de administração desativados."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Admin alerts turned on."
+msgstr "Alertas de administração ativados."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Booking analytics turned off."
+msgstr "Análises de agendamento desativadas."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Booking analytics turned on."
+msgstr "Análises de agendamento ativadas."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Generic OIDC login turned off."
+msgstr "Login OIDC genérico desativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Generic OIDC login turned on."
+msgstr "Login OIDC genérico ativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "GitHub login turned off."
+msgstr "Login com GitHub desativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "GitHub login turned on."
+msgstr "Login com GitHub ativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Google login turned off."
+msgstr "Login com Google desativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Google login turned on."
+msgstr "Login com Google ativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting payments turned off."
+msgstr "Pagamentos em reuniões desativados."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting payments turned on."
+msgstr "Pagamentos em reuniões ativados."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication turned off."
+msgstr "Autenticação por senha desativada."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication turned on."
+msgstr "Autenticação por senha ativada."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Registration turned off."
+msgstr "Cadastro desativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Registration turned on."
+msgstr "Cadastro ativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA on booking turned off."
+msgstr "reCAPTCHA no agendamento desativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA on booking turned on."
+msgstr "reCAPTCHA no agendamento ativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA on signup turned off."
+msgstr "reCAPTCHA no cadastro desativado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA on signup turned on."
+msgstr "reCAPTCHA no cadastro ativado."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format

@@ -13,9 +13,9 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Common.OAuth.State
-  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.{MicrosoftConfig, ZoomConfig}
+  alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.OAuth.State
 
   @type provider :: :google | :outlook | :zoom
   @type failure_reason :: :invalid_state | :unauthenticated | :state_user_mismatch

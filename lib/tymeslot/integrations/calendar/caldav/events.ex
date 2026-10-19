@@ -29,13 +29,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   Callers receive parsed domain types — never raw HTTP responses, XML, or iCal.
   """
 
-  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, RetryLogic}
+  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, ProviderBreakers, Retry}
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
     ConditionalWrite,
     ConflictResolution,
     EventProcessor,
+    FreeBusy,
     Http,
     Scheduling,
     SeriesWrites,
@@ -57,35 +58,69 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec fetch_events(Base.client(), String.t(), DateTime.t(), DateTime.t(), keyword()) ::
           {:ok, list(XmlHandler.parsed_event())} | {:error, Base.error_reason()}
   def fetch_events(client, calendar_path, start_time, end_time, opts \\ []) do
+    report(
+      client,
+      calendar_path,
+      XmlHandler.build_calendar_query(start_time, end_time),
+      opts,
+      {207, &XmlHandler.parse_calendar_query/1}
+    )
+  end
+
+  @doc """
+  Fetches the busy periods of a calendar shared with the account as busy
+  times only, which answers `fetch_events/5`'s `calendar-query` with 403
+  (see `CalDAV.FreeBusy`). Retried, breaker-guarded and mapped exactly as
+  `fetch_events/5` is, so a refusal is an unreadable calendar as there.
+  """
+  @spec fetch_free_busy(Base.client(), String.t(), DateTime.t(), DateTime.t(), keyword()) ::
+          {:ok, list(XmlHandler.parsed_event())} | {:error, Base.error_reason()}
+  def fetch_free_busy(client, calendar_path, start_time, end_time, opts \\ []) do
+    report(
+      client,
+      calendar_path,
+      FreeBusy.build_query(start_time, end_time),
+      opts,
+      # Answered with the iCalendar document itself, not a Multi-Status.
+      {200, &FreeBusy.parse(&1, calendar_path)}
+    )
+  end
+
+  # The one REPORT read both fetches share: breaker, retry, size and time
+  # limits, and the status mapping, with `parse` applied to the body of any
+  # 2xx answer; a 2xx other than the `expected` one is logged.
+  defp report(client, calendar_path, report_body, opts, {expected, parse}) do
     result =
       with_events_breaker(client, opts, fn ->
         url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
-        report_body = XmlHandler.build_calendar_query(start_time, end_time)
 
-        retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
+        retry_opts = Base.retry_opts(opts)
 
         report_opts =
-          Keyword.put(opts, :timeout, Keyword.get(opts, :timeout, Base.report_timeout_ms()))
+          opts
+          |> Keyword.put(:timeout, Keyword.get(opts, :timeout, Base.report_timeout_ms()))
+          |> Keyword.put(:max_response_bytes, Base.max_report_bytes())
 
-        case RetryLogic.with_retry(
+        case Retry.with_backoff(
                fn ->
                  Http.report(url, client.username, client.password, report_body, report_opts)
                end,
                retry_opts
              ) do
-          {:ok, %Req.Response{status: 207, body: body}} ->
-            XmlHandler.parse_calendar_query(body)
+          {:ok, %Req.Response{status: ^expected, body: body}} ->
+            parse.(body)
 
           {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
-            # Some servers return 200 instead of the CalDAV-mandated 207 Multi-Status
+            # Some servers return 200 instead of the CalDAV-mandated 207
+            # Multi-Status.
             Logger.warning("CalDAV REPORT returned unexpected status",
               status: status,
-              expected: 207,
+              expected: expected,
               url: url,
               provider: Map.get(client, :provider, :caldav)
             )
 
-            XmlHandler.parse_calendar_query(body)
+            parse.(body)
 
           {:error, :not_found} ->
             # A missing calendar collection is a per-resource condition, not a
@@ -235,8 +270,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       {_raw_ical, _no_etag} ->
         refresh_and_put(client, url, uid, event_data, policy, opts)
 
+      # Open-Xchange silently drops an update that names another `ORGANIZER`
+      # than the stored one, and the organiser a rebuild writes depends on
+      # the account's addresses (see `CalDAV.Scheduling`), which may have
+      # changed since the create. Its own copy is patched instead, and the
+      # patch never touches `ORGANIZER`.
       :none ->
-        rebuild_and_put(client, url, uid, event_data, policy, opts)
+        if Scheduling.open_xchange?(client),
+          do: refresh_and_put(client, url, uid, event_data, policy, opts),
+          else: rebuild_and_put(client, url, uid, event_data, policy, opts)
     end
   end
 
@@ -538,7 +580,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     # the breaker as a success.
     result =
       with_events_breaker(client, [], fn ->
-        case Http.report(url, client.username, client.password, XmlHandler.build_uid_query(uid)) do
+        case Http.report(url, client.username, client.password, XmlHandler.build_uid_query(uid),
+               max_response_bytes: Base.max_report_bytes()
+             ) do
           {:ok, %Req.Response{body: body}} -> XmlHandler.parse_calendar_query(body)
           {:error, reason} when reason in [:not_found, :gone] -> {:ok, []}
           {:error, reason} -> {:error, reason}
@@ -594,7 +638,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   defp with_events_breaker(client, opts, fun) when is_function(fun, 0) do
     provider = Map.get(client, :provider, :caldav)
-    host = Base.extract_host_from_url(client.base_url)
+    host = ProviderBreakers.host_from_base_url(client.base_url)
     opts = Keyword.put(opts, :host, host)
     CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end

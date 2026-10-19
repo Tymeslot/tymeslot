@@ -55,11 +55,25 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestrictedTest do
       assert email.text_body =~ "https://dashboard.stripe.com/"
     end
 
-    test "is English-only" do
+    test "is written in English for a host who reads English" do
       email = ConnectAccountRestricted.render(build_context())
 
-      # English-only — no localised strings expected
+      assert email.subject == "Stripe account restricted: action required"
       assert email.text_body =~ "RESTORE YOUR ACCOUNT"
+    end
+
+    test "is written in the host's own language" do
+      host = insert(:user, locale: "de")
+      english = ConnectAccountRestricted.render(build_context())
+      email = ConnectAccountRestricted.render(build_context(%{host_user_id: host.id}))
+
+      refute email.subject == english.subject
+      assert email.text_body =~ "Hallo Bob Host,"
+      assert email.text_body =~ "requirements.past_due"
+      refute email.text_body =~ "RESTORE YOUR ACCOUNT"
+      refute email.text_body =~ "Charges enabled: no"
+      refute email.html_body =~ "Restore your account"
+      assert email.html_body =~ "Hallo Bob Host,"
     end
 
     test "falls back to a generic stage subtitle when reason is blank" do
@@ -71,7 +85,7 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestrictedTest do
     test "delivers to the bare email when host_name is nil (no placeholder name)" do
       email = ConnectAccountRestricted.render(build_context(%{host_name: nil}))
       assert email.to == [{"", "host@example.com"}]
-      assert email.html_body =~ "Hi there —"
+      assert email.html_body =~ "Hi there,"
     end
 
     test "omits charges/payouts lines when nil" do

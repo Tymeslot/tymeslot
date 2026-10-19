@@ -194,8 +194,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   """
   @spec base_mjml_template(String.t(), organizer_details()) :: String.t()
   def base_mjml_template(content, organizer_details) when is_map(organizer_details) do
-    intent = fetch_required!(organizer_details, :intent)
-    stage_eyebrow = fetch_required!(organizer_details, :eyebrow)
+    intent = Stage.fetch_required!(organizer_details, :intent)
+    stage_eyebrow = Stage.fetch_required!(organizer_details, :eyebrow)
 
     raw_organizer_name = organizer_details[:name] || fetch_from_name()
     organizer_name = Sanitise.sanitize_for_email(raw_organizer_name)
@@ -252,19 +252,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
       </mj-column>
     </mj-section>
     """
-  end
-
-  @spec fetch_required!(map(), atom()) :: term()
-  defp fetch_required!(map, key) do
-    case Map.fetch(map, key) do
-      {:ok, value} ->
-        value
-
-      :error ->
-        raise ArgumentError,
-              "Tymeslot.Emails.Shared.MjmlEmail: missing required organiser detail `#{inspect(key)}`. " <>
-                "Transactional emails must declare `:intent` and `:eyebrow` at the call site."
-    end
   end
 
   defp organizer_strip(avatar, name, title) do

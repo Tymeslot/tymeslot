@@ -142,7 +142,7 @@ defmodule Tymeslot.CalendarGrid.IcsImport.Series do
       series?(raw) ->
         {:ok, raw.recurrence_rule}
 
-      not Map.has_key?(RRule.parse(rule), :count) ->
+      not Map.has_key?(RRule.options(rule), :count) ->
         {:ok, rule}
 
       RecurrenceExpander.countable?(rule) ->

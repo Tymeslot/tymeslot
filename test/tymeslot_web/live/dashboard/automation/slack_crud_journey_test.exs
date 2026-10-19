@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
       real Slack OAuth round trip and belongs with the `:oauth_integration`
       tagged tests, which are excluded by default.
     * Message formatting and delivery — `Tymeslot.Slack.MessageBuilder` and
-      `Slack.Dispatcher` own that, and both are covered.
+      `Notifications.ChannelFanout` own that, and both are covered.
   """
 
   use TymeslotWeb.ConnCase, async: false
@@ -37,8 +37,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
   import Tymeslot.Factory
   import Tymeslot.TestFixtures
 
+  alias Ecto.Changeset
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Onboarding.OnboardingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
 
@@ -220,6 +223,43 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
       assert [updated] = Slack.list_integrations(user.id)
       assert updated.name == "Renamed Workspace"
       assert Enum.sort(updated.events) == ["meeting.cancelled", "meeting.rescheduled"]
+    end
+
+    # The form offers every event, so a row subscribed to all of them keeps
+    # all of them through an edit that touches only its name.
+    test "editing a row subscribed to every event keeps every event", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      all_events = EventTypes.all()
+      assert length(all_events) == 6
+
+      integration
+      |> Changeset.change(events: all_events)
+      |> Repo.update!()
+
+      view = open_slack_tab(conn)
+
+      view
+      |> element(edit_button(integration))
+      |> render_click()
+
+      view
+      |> form("form[phx-submit='slack_update']", %{
+        "slack" => %{
+          "name" => "Every Event",
+          "webhook_url" => "",
+          "webhook_channel_hint" => "#general"
+        }
+      })
+      |> render_submit()
+
+      # No events were submitted by hand: the form carries the boxes it
+      # rendered checked, so every one of them must have been.
+      assert [updated] = Slack.list_integrations(user.id)
+      assert updated.name == "Every Event"
+      assert Enum.sort(updated.events) == Enum.sort(all_events)
     end
 
     test "leaving the webhook URL blank keeps the stored credential", %{

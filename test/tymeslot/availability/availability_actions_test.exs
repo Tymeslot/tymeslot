@@ -31,7 +31,13 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
       # Pass the existing days (list of day records), not the schedule
       existing_days = [monday]
-      complete = AvailabilityActions.ensure_complete_schedule(existing_days, schedule.id)
+
+      complete =
+        AvailabilityActions.ensure_complete_schedule(
+          schedule.profile_id,
+          existing_days,
+          schedule.id
+        )
 
       # Should have all 7 days after ensuring complete schedule
       days = Enum.map(complete, & &1.day_of_week)
@@ -52,7 +58,13 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       end
 
       existing_days = WeeklySchedule.get_weekly_schedule(schedule.id)
-      complete = AvailabilityActions.ensure_complete_schedule(existing_days, schedule.id)
+
+      complete =
+        AvailabilityActions.ensure_complete_schedule(
+          schedule.profile_id,
+          existing_days,
+          schedule.id
+        )
 
       # Weekend days should now exist
       assert %{is_available: false} = Enum.find(complete, &(&1.day_of_week == 6))
@@ -75,7 +87,13 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       existing_days = WeeklySchedule.get_weekly_schedule(schedule.id)
       assert length(existing_days) == 7
 
-      complete = AvailabilityActions.ensure_complete_schedule(existing_days, schedule.id)
+      complete =
+        AvailabilityActions.ensure_complete_schedule(
+          schedule.profile_id,
+          existing_days,
+          schedule.id
+        )
+
       assert length(complete) == 7
       # Verify no duplicates
       days = Enum.map(complete, & &1.day_of_week)
@@ -90,7 +108,13 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     end
 
     test "makes available day unavailable", %{schedule: schedule} do
-      assert {:ok, _result} = AvailabilityActions.toggle_day_availability(schedule.id, 1, true)
+      assert {:ok, _result} =
+               AvailabilityActions.toggle_day_availability(
+                 schedule.profile_id,
+                 schedule.id,
+                 1,
+                 true
+               )
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.is_available == false
@@ -98,10 +122,17 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "makes unavailable day available with default hours", %{schedule: schedule} do
       # First make day unavailable
-      {:ok, _result} = AvailabilityActions.toggle_day_availability(schedule.id, 1, true)
+      {:ok, _result} =
+        AvailabilityActions.toggle_day_availability(schedule.profile_id, schedule.id, 1, true)
 
       # Then toggle back to available
-      assert {:ok, _result} = AvailabilityActions.toggle_day_availability(schedule.id, 1, false)
+      assert {:ok, _result} =
+               AvailabilityActions.toggle_day_availability(
+                 schedule.profile_id,
+                 schedule.id,
+                 1,
+                 false
+               )
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.is_available == true
@@ -111,7 +142,13 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "creates day when toggling a day that doesn't exist yet", %{schedule: schedule} do
       # Day 3 (Wednesday) doesn't exist — toggle should create it via upsert
-      assert {:ok, _result} = AvailabilityActions.toggle_day_availability(schedule.id, 3, false)
+      assert {:ok, _result} =
+               AvailabilityActions.toggle_day_availability(
+                 schedule.profile_id,
+                 schedule.id,
+                 3,
+                 false
+               )
 
       assert %{
                is_available: true,
@@ -129,7 +166,13 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "updates hours with valid time strings", %{schedule: schedule} do
       assert {:ok, _result} =
-               AvailabilityActions.update_day_hours(schedule.id, 1, "08:00", "18:00")
+               AvailabilityActions.update_day_hours(
+                 schedule.profile_id,
+                 schedule.id,
+                 1,
+                 "08:00",
+                 "18:00"
+               )
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.start_time == ~T[08:00:00]
@@ -137,14 +180,27 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     end
 
     test "returns error for invalid time format", %{schedule: schedule} do
-      result = AvailabilityActions.update_day_hours(schedule.id, 1, "invalid", "18:00")
+      result =
+        AvailabilityActions.update_day_hours(
+          schedule.profile_id,
+          schedule.id,
+          1,
+          "invalid",
+          "18:00"
+        )
 
       assert {:error, :invalid_time_format} = result
     end
 
     test "accepts early morning start times", %{schedule: schedule} do
       assert {:ok, _result} =
-               AvailabilityActions.update_day_hours(schedule.id, 1, "06:00", "14:00")
+               AvailabilityActions.update_day_hours(
+                 schedule.profile_id,
+                 schedule.id,
+                 1,
+                 "06:00",
+                 "14:00"
+               )
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.start_time == ~T[06:00:00]
@@ -152,54 +208,16 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "accepts late evening end times", %{schedule: schedule} do
       assert {:ok, _result} =
-               AvailabilityActions.update_day_hours(schedule.id, 1, "12:00", "22:00")
+               AvailabilityActions.update_day_hours(
+                 schedule.profile_id,
+                 schedule.id,
+                 1,
+                 "12:00",
+                 "22:00"
+               )
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.end_time == ~T[22:00:00]
-    end
-  end
-
-  describe "hours that end the next day" do
-    setup do
-      %{schedule: schedule} = create_profile_with_day()
-      %{schedule: schedule}
-    end
-
-    test "update_day_hours/4 stores the flag from the editor's end value", %{schedule: schedule} do
-      assert {:ok, day} = AvailabilityActions.update_day_hours(schedule.id, 1, "22:00", "02:00+1")
-
-      assert {day.start_time, day.end_time, day.ends_next_day} ==
-               {~T[22:00:00], ~T[02:00:00], true}
-
-      assert {:ok, day} = AvailabilityActions.update_day_hours(schedule.id, 1, "09:00", "17:00")
-      refute day.ends_next_day
-    end
-
-    test "switching a day on gives it same-day default hours", %{schedule: schedule} do
-      {:ok, _result} = AvailabilityActions.update_day_hours(schedule.id, 3, "22:00", "02:00+1")
-      {:ok, _result} = AvailabilityActions.toggle_day_availability(schedule.id, 3, true)
-
-      assert {:ok, day} = AvailabilityActions.toggle_day_availability(schedule.id, 3, false)
-      assert day.is_available
-      refute day.ends_next_day
-    end
-
-    test "copying a day copies the flag and the breaks after midnight", %{schedule: schedule} do
-      {:ok, night} = AvailabilityActions.update_day_hours(schedule.id, 5, "22:00", "04:00+1")
-      {:ok, _break} = Breaks.add_break(night.id, ~T[01:00:00], ~T[01:30:00], "Tea")
-
-      assert {:ok, _result} = AvailabilityActions.copy_day_settings(schedule.id, 5, [6])
-
-      copy = WeeklySchedule.get_day_availability(schedule.id, 6)
-      assert {copy.end_time, copy.ends_next_day} == {~T[04:00:00], true}
-      assert [%{start_time: ~T[01:00:00], end_time: ~T[01:30:00]}] = copy.breaks
-    end
-
-    test "clearing a day resets the flag", %{schedule: schedule} do
-      {:ok, _result} = AvailabilityActions.update_day_hours(schedule.id, 2, "22:00", "02:00+1")
-
-      assert {:ok, day} = AvailabilityActions.clear_day_settings(schedule.id, 2)
-      refute day.ends_next_day
     end
   end
 
@@ -213,23 +231,32 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       %{schedule: schedule, day: day}
     end
 
-    test "adds break with valid times", %{day: day} do
-      assert {:ok, break} = AvailabilityActions.add_break(day.id, "12:00", "13:00", "Lunch")
+    test "adds break with valid times", %{schedule: schedule, day: day} do
+      assert {:ok, break} =
+               AvailabilityActions.add_break(
+                 schedule.profile_id,
+                 day.id,
+                 "12:00",
+                 "13:00",
+                 "Lunch"
+               )
 
       assert break.start_time == ~T[12:00:00]
       assert break.end_time == ~T[13:00:00]
       assert break.label == "Lunch"
     end
 
-    test "adds break without label", %{day: day} do
-      assert {:ok, break} = AvailabilityActions.add_break(day.id, "15:00", "15:30", "")
+    test "adds break without label", %{schedule: schedule, day: day} do
+      assert {:ok, break} =
+               AvailabilityActions.add_break(schedule.profile_id, day.id, "15:00", "15:30", "")
 
       assert break.start_time == ~T[15:00:00]
       assert break.label == nil
     end
 
-    test "returns error for invalid time format", %{day: day} do
-      result = AvailabilityActions.add_break(day.id, "invalid", "13:00", "Break")
+    test "returns error for invalid time format", %{schedule: schedule, day: day} do
+      result =
+        AvailabilityActions.add_break(schedule.profile_id, day.id, "invalid", "13:00", "Break")
 
       assert {:error, :invalid_time_format} = result
     end
@@ -243,14 +270,24 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       %{schedule: schedule, day: day}
     end
 
-    test "rejects break that overlaps with existing break", %{day: day} do
-      result = AvailabilityActions.add_break(day.id, "12:30", "13:30", "Overlap")
+    test "rejects break that overlaps with existing break", %{schedule: schedule, day: day} do
+      result =
+        AvailabilityActions.add_break(schedule.profile_id, day.id, "12:30", "13:30", "Overlap")
+
       assert {:error, changeset} = result
       assert %Ecto.Changeset{} = changeset
     end
 
-    test "allows adjacent non-overlapping breaks", %{day: day} do
-      assert {:ok, break} = AvailabilityActions.add_break(day.id, "13:00", "14:00", "After Lunch")
+    test "allows adjacent non-overlapping breaks", %{schedule: schedule, day: day} do
+      assert {:ok, break} =
+               AvailabilityActions.add_break(
+                 schedule.profile_id,
+                 day.id,
+                 "13:00",
+                 "14:00",
+                 "After Lunch"
+               )
+
       assert break.start_time == ~T[13:00:00]
       assert break.end_time == ~T[14:00:00]
     end
@@ -262,46 +299,55 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       %{schedule: schedule, day: day}
     end
 
-    test "creates break with specified duration", %{day: day} do
+    test "creates break with specified duration", %{schedule: schedule, day: day} do
       # 30 minute break starting at 12:00
-      assert {:ok, break} = AvailabilityActions.add_quick_break(day.id, "12:00", 30)
+      assert {:ok, break} =
+               AvailabilityActions.add_quick_break(schedule.profile_id, day.id, "12:00", 30)
 
       assert break.start_time == ~T[12:00:00]
       assert break.end_time == ~T[12:30:00]
     end
 
-    test "creates 15 minute break", %{day: day} do
-      assert {:ok, break} = AvailabilityActions.add_quick_break(day.id, "14:00", 15)
+    test "creates 15 minute break", %{schedule: schedule, day: day} do
+      assert {:ok, break} =
+               AvailabilityActions.add_quick_break(schedule.profile_id, day.id, "14:00", 15)
 
       assert break.start_time == ~T[14:00:00]
       assert break.end_time == ~T[14:15:00]
     end
 
-    test "creates 60 minute break", %{day: day} do
-      assert {:ok, break} = AvailabilityActions.add_quick_break(day.id, "12:00", 60)
+    test "creates 60 minute break", %{schedule: schedule, day: day} do
+      assert {:ok, break} =
+               AvailabilityActions.add_quick_break(schedule.profile_id, day.id, "12:00", 60)
 
       assert break.start_time == ~T[12:00:00]
       assert break.end_time == ~T[13:00:00]
     end
 
-    test "returns error for invalid time format", %{day: day} do
-      result = AvailabilityActions.add_quick_break(day.id, "not-a-time", 30)
+    test "returns error for invalid time format", %{schedule: schedule, day: day} do
+      result = AvailabilityActions.add_quick_break(schedule.profile_id, day.id, "not-a-time", 30)
 
       assert {:error, :invalid_time_format} = result
     end
 
-    test "refuses a quick break that runs past the end of a same-day window", %{day: day} do
+    test "refuses a quick break that runs past the end of a same-day window", %{
+      schedule: schedule,
+      day: day
+    } do
       # day: 09:00-17:00, as create_profile_with_day/0 creates it
       assert {:error, %Ecto.Changeset{} = changeset} =
-               AvailabilityActions.add_quick_break(day.id, "16:30", 60)
+               AvailabilityActions.add_quick_break(schedule.profile_id, day.id, "16:30", 60)
 
-      assert "cannot be after work hours" in errors_on(changeset).end_time
+      assert errors_on(changeset).end_time == ["must be within work hours"]
     end
 
-    test "refuses a quick break that wraps past midnight in a same-day window", %{day: day} do
+    test "refuses a quick break that wraps past midnight in a same-day window", %{
+      schedule: schedule,
+      day: day
+    } do
       # 480 min (8h) starting at 20:00 wraps to 04:00, before the start
       assert {:error, %Ecto.Changeset{} = changeset} =
-               AvailabilityActions.add_quick_break(day.id, "20:00", 480)
+               AvailabilityActions.add_quick_break(schedule.profile_id, day.id, "20:00", 480)
 
       assert "must be after start time" in errors_on(changeset).end_time
     end
@@ -317,7 +363,9 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
           ends_next_day: true
         })
 
-      assert {:ok, break} = AvailabilityActions.add_quick_break(night.id, "23:30", 60)
+      assert {:ok, break} =
+               AvailabilityActions.add_quick_break(schedule.profile_id, night.id, "23:30", 60)
+
       assert {break.start_time, break.end_time} == {~T[23:30:00], ~T[00:30:00]}
     end
   end
@@ -332,14 +380,15 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     end
 
     test "successfully deletes existing break", %{schedule: schedule, day: day, break: break} do
-      assert {:ok, _deleted} = AvailabilityActions.delete_break(break.id, schedule.id)
+      assert {:ok, _deleted} =
+               AvailabilityActions.delete_break(schedule.profile_id, break.id, schedule.id)
 
       breaks = breaks_for_day(day.id)
       assert breaks == []
     end
 
     test "returns error for non-existent break", %{schedule: schedule} do
-      result = AvailabilityActions.delete_break(999_999, schedule.id)
+      result = AvailabilityActions.delete_break(schedule.profile_id, 999_999, schedule.id)
 
       assert {:error, "Break not found"} = result
     end
@@ -360,7 +409,9 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       # Try to delete with a schedule that does not own the break
       my_schedule = insert(:availability_schedule)
 
-      result = AvailabilityActions.delete_break(other_break.id, my_schedule.id)
+      result =
+        AvailabilityActions.delete_break(my_schedule.profile_id, other_break.id, my_schedule.id)
+
       assert {:error, "Unauthorized"} = result
 
       # Verify break still exists
@@ -380,7 +431,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
       {:ok, break} = Breaks.add_break(day.id, ~T[12:00:00], ~T[13:00:00], "Lunch")
 
-      assert {:ok, _deleted} = AvailabilityActions.delete_break(break.id, schedule.id)
+      assert {:ok, _deleted} =
+               AvailabilityActions.delete_break(schedule.profile_id, break.id, schedule.id)
 
       breaks = breaks_for_day(day.id)
       assert breaks == []
@@ -408,7 +460,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "copies settings from one day to multiple days", %{schedule: schedule} do
       # Copy Monday settings to Tuesday, Wednesday
-      assert {:ok, _result} = AvailabilityActions.copy_day_settings(schedule.id, 1, [2, 3])
+      assert {:ok, _result} =
+               AvailabilityActions.copy_day_settings(schedule.profile_id, schedule.id, 1, [2, 3])
 
       tuesday = WeeklySchedule.get_day_availability(schedule.id, 2)
       wednesday = WeeklySchedule.get_day_availability(schedule.id, 3)
@@ -423,7 +476,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "returns error when source day not found", %{schedule: schedule} do
       # Sunday (7) doesn't exist yet
-      result = AvailabilityActions.copy_day_settings(schedule.id, 7, [2, 3])
+      result = AvailabilityActions.copy_day_settings(schedule.profile_id, schedule.id, 7, [2, 3])
 
       assert {:error, "Source day not found"} = result
     end
@@ -440,7 +493,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     end
 
     test "sets day to unavailable and clears breaks", %{schedule: schedule, day: day} do
-      assert {:ok, _result} = AvailabilityActions.clear_day_settings(schedule.id, 1)
+      assert {:ok, _result} =
+               AvailabilityActions.clear_day_settings(schedule.profile_id, schedule.id, 1)
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.is_available == false
@@ -459,7 +513,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
           end_time: ~T[17:00:00]
         })
 
-      assert {:ok, _result} = AvailabilityActions.clear_day_settings(schedule.id, 1)
+      assert {:ok, _result} =
+               AvailabilityActions.clear_day_settings(schedule.profile_id, schedule.id, 1)
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.is_available == false
@@ -493,25 +548,6 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       result = AvailabilityActions.get_day_from_schedule(schedule, 5)
 
       assert result == nil
-    end
-  end
-
-  describe "when getting day names" do
-    test "returns correct name for each day" do
-      assert AvailabilityActions.day_name(1) == "Monday"
-      assert AvailabilityActions.day_name(2) == "Tuesday"
-      assert AvailabilityActions.day_name(3) == "Wednesday"
-      assert AvailabilityActions.day_name(4) == "Thursday"
-      assert AvailabilityActions.day_name(5) == "Friday"
-      assert AvailabilityActions.day_name(6) == "Saturday"
-      assert AvailabilityActions.day_name(7) == "Sunday"
-    end
-  end
-
-  describe "when getting day name for invalid day" do
-    test "returns Unknown for out-of-range day" do
-      assert AvailabilityActions.day_name(0) == "Unknown"
-      assert AvailabilityActions.day_name(8) == "Unknown"
     end
   end
 

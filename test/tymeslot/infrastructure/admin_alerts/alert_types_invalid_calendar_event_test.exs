@@ -28,7 +28,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesInvalidCalendarEventTest
       assert message ==
                "3 invalid caldav calendar event(s) skipped for integration 7 " <>
                  "(most common reason: uid is required). " <>
-                 "First skipped: evt-1 (uid is required); evt-2 (uid is required)"
+                 "First affected: evt-1 (uid is required); evt-2 (uid is required)"
     end
 
     test "a caller with only a summary gets its summary" do

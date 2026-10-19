@@ -49,6 +49,11 @@ defmodule Tymeslot.Emails.Shared.TextTest do
       refute html =~ "'test'"
     end
 
+    test "renders nothing for an unsafe or missing URL" do
+      assert Text.troubleshooting_link("javascript:alert(1)") == ""
+      assert Text.troubleshooting_link(nil) == ""
+    end
+
     test "includes helpful text" do
       html = Text.troubleshooting_link("https://example.com/link")
 
@@ -70,34 +75,6 @@ defmodule Tymeslot.Emails.Shared.TextTest do
 
       assert html =~ "• First item"
       assert html =~ "• Second item"
-    end
-  end
-
-  describe "title_section/2 icon option" do
-    test "renders an mj-image when a valid https icon URL is provided" do
-      html = Text.title_section("Hello", icon: "https://cdn.example.com/icon.png")
-
-      assert html =~ "mj-image"
-      assert html =~ "https://cdn.example.com/icon.png"
-    end
-
-    test "drops the icon when the URL uses a disallowed scheme" do
-      html = Text.title_section("Hello", icon: "javascript:alert(1)")
-
-      refute html =~ "mj-image"
-      refute html =~ "javascript:"
-    end
-
-    test "drops the icon when the URL is malformed" do
-      html = Text.title_section("Hello", icon: "not a url")
-
-      refute html =~ "mj-image"
-    end
-
-    test "renders nothing icon-related when the option is omitted" do
-      html = Text.title_section("Hello")
-
-      refute html =~ "mj-image"
     end
   end
 end

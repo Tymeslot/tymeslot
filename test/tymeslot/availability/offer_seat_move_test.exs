@@ -26,6 +26,7 @@ defmodule Tymeslot.Availability.OfferSeatMoveTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Scheduling.ThemeFlow
   alias Tymeslot.TestMocks
 
   @timezone "Etc/UTC"
@@ -96,12 +97,13 @@ defmodule Tymeslot.Availability.OfferSeatMoveTest do
     Create.execute(params, %{"name" => "Booker", "email" => email, "message" => ""})
   end
 
-  defp offered_times(ctx, seat_token) do
+  defp offered_times(ctx, seat_token, loaded \\ nil) do
     request = %{
       profile: ctx.profile,
       user_timezone: @timezone,
       meeting_type: ctx.meeting_type,
-      reschedule_seat_token: seat_token
+      reschedule_seat_token: seat_token,
+      seat_move: loaded
     }
 
     {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(ctx.date), "60min")
@@ -156,5 +158,54 @@ defmodule Tymeslot.Availability.OfferSeatMoveTest do
 
     assert id == ctx.meeting.id
     assert RescheduleSeat.vacated_meeting(ctx.mover.management_token, other_user.id) == nil
+  end
+
+  describe "a request carrying the page's loaded seat" do
+    # The page loaded the seat when it applied its link
+    # (`ThemeFlow.seat_move_context/2`); a fetch takes that load rather than
+    # looking the token up again, but still decides whether the move vacates
+    # the meeting, which another booker can change meanwhile.
+    test "leaves the meeting out without looking the seat up again", ctx do
+      token = ctx.mover.management_token
+      {:ok, loaded} = ThemeFlow.seat_move_context(token, ctx.user.id)
+      count_lookups_of(token)
+
+      assert "2:30 PM" in offered_times(ctx, token, loaded)
+      refute_received {:seat_lookup, _token}
+    end
+
+    test "keeps the meeting busy once another seat has been taken on it since", ctx do
+      token = ctx.mover.management_token
+      {:ok, loaded} = ThemeFlow.seat_move_context(token, ctx.user.id)
+
+      {:ok, _joined} = book(ctx.params, "joiner@example.com")
+
+      refute "2:30 PM" in offered_times(ctx, token, loaded)
+    end
+
+    test "ignores a load of a seat other than the one the link names", ctx do
+      {:ok, loaded} = ThemeFlow.seat_move_context(ctx.mover.management_token, ctx.user.id)
+
+      refute "2:30 PM" in offered_times(ctx, "not-a-token", loaded)
+    end
+  end
+
+  # The lookup by token, which filters on the token's hash (every read of a
+  # participant selects the column).
+  defp count_lookups_of(token) do
+    parent = self()
+    handler_id = "offer-seat-lookup-#{token}"
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, %{source: source, query: query}, _config ->
+        if source == "meeting_participants" and query =~ ~r/WHERE .*"management_token_hash" = /,
+          do: send(parent, {:seat_lookup, token})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
   end
 end

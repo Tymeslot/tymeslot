@@ -28,6 +28,34 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
   end
 
   describe "format_message/2 — per-type output" do
+    test ":configured_email_exhausted is an error naming the template, the job and the reason" do
+      assert %{severity: :error} = AlertTypes.get(:configured_email_exhausted)
+
+      msg =
+        AlertTypes.format_message(:configured_email_exhausted, %{
+          template: "refund_processed_template.refund_processed_email",
+          job_id: 81,
+          reason_code: :econnrefused
+        })
+
+      assert msg =~ "refund_processed_template.refund_processed_email"
+      assert msg =~ "job 81"
+      assert msg =~ "econnrefused"
+    end
+
+    test ":user_registered_hook_failed is an error naming the user and the reason" do
+      assert %{severity: :error} = AlertTypes.get(:user_registered_hook_failed)
+
+      msg =
+        AlertTypes.format_message(:user_registered_hook_failed, %{
+          user_id: 42,
+          reason_code: :database_unavailable
+        })
+
+      assert msg =~ "user 42"
+      assert msg =~ "database_unavailable"
+    end
+
     test ":unhandled_webhook includes event type and ID" do
       msg =
         AlertTypes.format_message(:unhandled_webhook, %{
@@ -102,11 +130,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
         })
 
       assert message == "Calendar sync error for unknown: timeout"
-    end
-
-    test ":pubsub_broadcast_failed includes event name" do
-      msg = AlertTypes.format_message(:pubsub_broadcast_failed, %{event: :payment_successful})
-      assert msg =~ "payment_successful"
     end
 
     test ":integration_health_failure includes integration_id" do
@@ -186,6 +209,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg == "New error: RuntimeError in Tymeslot.Bookings.create_booking/2: boom"
     end
 
+    test ":reconciliation_incomplete names how many subscriptions could not be looked up" do
+      assert AlertTypes.format_message(:reconciliation_incomplete, %{unresolved_count: 12}) ==
+               "Payment reconciliation could not look up 12 subscriptions at Stripe, " <>
+                 "so it did not check for subscriptions missing there"
+    end
+
     test ":reconciliation_discrepancies includes count" do
       msg =
         AlertTypes.format_message(:reconciliation_discrepancies, %{discrepancies_count: 3})
@@ -209,6 +238,55 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
                })
     end
 
+    test ":account_deletion_billing_sync_failed names the user and the failure" do
+      msg =
+        AlertTypes.format_message(:account_deletion_billing_sync_failed, %{
+          user_id: 4242,
+          reason_message: "stripe_down"
+        })
+
+      assert msg =~ "4242"
+      assert msg =~ "stripe_down"
+    end
+
+    # The daily sweep re-queues a stuck deletion, so each day's final attempt
+    # raises this type again, possibly with a different refusal.
+    test ":account_deletion_stalled dedups per account, whatever the refusal" do
+      key = fn user_id, reason ->
+        AlertTypes.dedup_key(:account_deletion_stalled, %{
+          user_id: user_id,
+          reason_message: reason
+        })
+      end
+
+      assert key.(4242, "billing_unreachable") == key.(4242, "timeout")
+      refute key.(4242, "billing_unreachable") == key.(4243, "billing_unreachable")
+
+      msg =
+        AlertTypes.format_message(:account_deletion_stalled, %{
+          user_id: 4242,
+          reason_message: "billing_unreachable"
+        })
+
+      assert msg =~ "4242"
+      assert msg =~ "billing_unreachable"
+    end
+
+    # A last-admin hold is not a failure: it says what to do, and neither alert
+    # may suppress the other for the same account.
+    test ":account_deletion_held_last_admin says it is a hold, and dedups apart from a failure" do
+      held = %{user_id: 4242, reason_message: "last_admin"}
+
+      msg = AlertTypes.format_message(:account_deletion_held_last_admin, held)
+      assert msg =~ "4242"
+      assert msg =~ "on hold"
+      assert msg =~ "last admin"
+      refute msg =~ "failed"
+
+      refute AlertTypes.dedup_key(:account_deletion_held_last_admin, held) ==
+               AlertTypes.dedup_key(:account_deletion_stalled, held)
+    end
+
     # The daily dunning run raises this type afresh each pass, with the day
     # count one higher. Keyed on the message, every pass looked new and the
     # admin was emailed daily about a condition nobody had resolved yet.
@@ -230,6 +308,52 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
                  stripe_subscription_id: "sub_stalled_1",
                  days_past_due: 313
                })
+    end
+
+    test ":upload_delete_failed asks for the file to be removed by hand" do
+      msg =
+        AlertTypes.format_message(:upload_delete_failed, %{
+          file_path: "avatars/12/a.png",
+          reason_code: :eacces,
+          reason_message: "eacces"
+        })
+
+      assert msg =~ "avatars/12/a.png"
+      assert msg =~ "remove it by hand (eacces)"
+    end
+
+    # The path was never touched, and may not be an upload at all.
+    test ":upload_delete_failed for a path outside the upload directory never says to delete it" do
+      msg =
+        AlertTypes.format_message(:upload_delete_failed, %{
+          file_path: "/etc/passwd",
+          reason_code: :path_traversal_attempt,
+          reason_message: "path_traversal_attempt"
+        })
+
+      assert msg =~ "/etc/passwd"
+      assert msg =~ "outside the upload directory"
+      refute msg =~ "by hand"
+    end
+
+    # A volume refusing every delete is one incident, not one alert per file.
+    test ":upload_delete_failed dedups on the reason, whatever the file" do
+      key = fn path, code ->
+        AlertTypes.dedup_key(:upload_delete_failed, %{file_path: path, reason_code: code})
+      end
+
+      assert key.("avatars/1/a.png", :eacces) == key.("themes/2/1/images/b.jpg", :eacces)
+      refute key.("avatars/1/a.png", :eacces) == key.("avatars/1/a.png", :erofs)
+    end
+
+    test ":late_payment_refund_failed names the payment, the job and how to settle it" do
+      metadata = %{booking_payment_id: "bp_late_1", oban_job_id: 4242, reason: :stripe_down}
+      msg = AlertTypes.format_message(:late_payment_refund_failed, metadata)
+
+      assert msg =~ "bp_late_1"
+      assert msg =~ "still owed"
+      assert msg =~ "refund the booking from the host's payments settings"
+      assert msg =~ "retry Oban job 4242"
     end
 
     test ":subscription_not_in_database includes stripe subscription ID" do

@@ -15,28 +15,40 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
     * `"deployment"`: the instance's deployment context
     * `"kind"`: `"errors"` for the roll-up, which also gives each entry its
       error's stored `"error_occurrences"`; absent or `"daily"` otherwise
+
+  Always English, like `Tymeslot.Emails.Templates.AdminAlert`: it goes to the
+  operator's configured alert address, not to a user with a stored locale,
+  and inbox rules file it by its `[SEVERITY] Tymeslot:` subject prefix.
+  Keeping operator mail untranslated is a deliberate decision, so the text
+  below is plain English with no gettext.
   """
 
-  alias Tymeslot.Emails.Shared.{Sanitise, Styles, TemplateHelper, Text}
+  alias Swoosh.Email
+  alias Tymeslot.Emails.Shared.{MjmlEmail, Sanitise, Styles, TemplateHelper, Text}
 
   @doc """
-  The digest's subject, carrying the severity like every admin alert and the
-  number of alerts it reports, repeats and omitted ones included.
+  The digest email to the operator at `recipient`. Its subject carries the
+  severity like every admin alert and the number of alerts it reports,
+  repeats and omitted ones included.
   """
-  @spec subject(map()) :: String.t()
-  def subject(%{"kind" => "errors"} = digest) do
+  @spec render(String.t(), map()) :: Email.t()
+  def render(recipient, digest) do
+    MjmlEmail.base_email()
+    |> Email.to({"Tymeslot Operator", recipient})
+    |> Email.subject(subject(digest))
+    |> Email.html_body(html_body(digest))
+    |> Email.text_body(text_body(digest))
+  end
+
+  defp subject(%{"kind" => "errors"} = digest) do
     "[ERROR] Tymeslot: #{pluralise(total_alerts(digest), "more error alert")} this hour"
   end
 
-  def subject(digest) do
+  defp subject(digest) do
     "[INFO] Tymeslot: daily digest (#{pluralise(total_alerts(digest), "alert")})"
   end
 
-  @doc """
-  Renders the HTML body.
-  """
-  @spec render(map()) :: String.t()
-  def render(digest) do
+  defp html_body(digest) do
     entries = Map.get(digest, "entries", [])
 
     copy = copy(digest)
@@ -66,11 +78,7 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
     )
   end
 
-  @doc """
-  Renders the plain-text body.
-  """
-  @spec render_text(map()) :: String.t()
-  def render_text(digest) do
+  defp text_body(digest) do
     copy = copy(digest)
 
     """

@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Integrations.Video.TemplateSyntax
-  alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
@@ -21,6 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
     as: SharedForm
 
   alias TymeslotWeb.Dashboard.VideoSettingsComponent
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -383,7 +383,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   defp update_error_message(message, _provider) when is_binary(message), do: message
 
   # The schema calls the server address `base_url`, which reads as "Base url"
-  # in `ChangesetUtils.get_first_error/1`; a URL error is instead named the way
+  # in `FormErrors.first/1`; a URL error is instead named the way
   # this dialog labels the field. Any other error keeps the generic wording.
   defp update_error_message(%Ecto.Changeset{errors: errors} = changeset, provider) do
     case {url_field_label(provider), Keyword.get(errors, :base_url)} do
@@ -391,7 +391,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
         "#{label} #{Forms.translate_error(error)}"
 
       _other ->
-        ChangesetUtils.get_first_error(changeset) || update_error_message(:unknown, provider)
+        FormErrors.first(changeset, field_labels()) || update_error_message(:unknown, provider)
     end
   end
 
@@ -452,4 +452,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   defp map_field_to_atom("api_key"), do: :api_key
   defp map_field_to_atom("custom_meeting_url"), do: :custom_meeting_url
   defp map_field_to_atom(_other), do: :unknown
+
+  # Shown as one notice away from the fields, so a refused field is named.
+  defp field_labels do
+    %{
+      base_url: dgettext("dashboard_video", "Server URL"),
+      api_key: dgettext("dashboard_video", "API Key")
+    }
+  end
 end

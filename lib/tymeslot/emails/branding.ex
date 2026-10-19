@@ -22,23 +22,21 @@ defmodule Tymeslot.Emails.Branding do
   and it would put a filesystem path from user input into a column that later
   feeds `File.read/1`.
 
-  Each stored file gets a random suffix. The admin preview is served from
+  Each stored file gets a fresh random name. The admin preview is served from
   `/uploads`, and reusing one filename would leave browsers showing the
   previous logo from cache after a replacement.
   """
 
   alias Tymeslot.AppSettings
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Media.MediaValidator
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Utils.Colour
-  alias Tymeslot.Utils.MediaValidator
-  alias TymeslotWeb.Helpers.FileOperations
-  alias TymeslotWeb.Helpers.UploadHandler
 
   require Logger
 
   @logo_dir "branding"
   @logo_extension ".png"
-  @random_suffix_bytes 8
 
   @stock_logo_path "priv/static/images/brand/logo-with-text.png"
 
@@ -135,7 +133,7 @@ defmodule Tymeslot.Emails.Branding do
   def custom_logo_path do
     case configured_logo_relative_path() do
       nil -> nil
-      relative -> Path.join(upload_dir(), relative)
+      relative -> Path.join(Uploads.root(), relative)
     end
   end
 
@@ -153,7 +151,7 @@ defmodule Tymeslot.Emails.Branding do
   end
 
   defp logo_on_disk?(relative) do
-    path = Path.join(upload_dir(), relative)
+    path = Path.join(Uploads.root(), relative)
 
     if File.regular?(path) do
       true
@@ -281,11 +279,9 @@ defmodule Tymeslot.Emails.Branding do
   end
 
   defp write_logo(source_path) do
-    dir = Path.join(upload_dir(), @logo_dir)
+    filename = Uploads.stored_name(@logo_extension)
 
-    case UploadHandler.store_file_atomically(source_path, dir, random_filename(), %{
-           context: :email_logo
-         }) do
+    case Uploads.store_atomically(source_path, @logo_dir, filename, %{context: :email_logo}) do
       {:ok, filename} ->
         {:ok, Path.join(@logo_dir, filename)}
 
@@ -298,17 +294,6 @@ defmodule Tymeslot.Emails.Branding do
   defp delete_stored_logo(nil), do: :ok
 
   defp delete_stored_logo(relative) do
-    FileOperations.safe_delete_file(Path.join(upload_dir(), relative), %{context: :email_logo})
+    Uploads.delete_safely(relative, %{context: :email_logo})
   end
-
-  defp random_filename do
-    suffix =
-      @random_suffix_bytes
-      |> :crypto.strong_rand_bytes()
-      |> Base.url_encode64(padding: false)
-
-    "email-logo-#{suffix}#{@logo_extension}"
-  end
-
-  defp upload_dir, do: Application.get_env(:tymeslot, :upload_directory, "uploads")
 end

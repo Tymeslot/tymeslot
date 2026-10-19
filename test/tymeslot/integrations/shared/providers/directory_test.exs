@@ -1,10 +1,10 @@
-defmodule Tymeslot.Integrations.Providers.DirectoryTest do
+defmodule Tymeslot.Integrations.Shared.Providers.DirectoryTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Providers.Descriptor
-  alias Tymeslot.Integrations.Providers.Directory
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Shared.Providers.Descriptor
+  alias Tymeslot.Integrations.Shared.Providers.Directory
+  alias Tymeslot.Integrations.Shared.Providers.Families
 
   describe "list/1" do
     test "lists calendar providers" do
@@ -100,18 +100,13 @@ defmodule Tymeslot.Integrations.Providers.DirectoryTest do
     end
   end
 
-  describe "helpers" do
-    test "config_schema/2 returns the provider's own schema" do
-      schema = Directory.config_schema(:calendar, :google)
+  describe "config schema" do
+    test "the descriptor carries the provider's own schema" do
+      %Descriptor{config_schema: schema} = Directory.get(:calendar, :google)
 
       assert schema[:access_token] == %{type: :string, required: true}
       assert schema[:refresh_token] == %{type: :string, required: true}
       assert schema[:token_expires_at] == %{type: :datetime, required: true}
-    end
-
-    test "default_provider/1 returns each domain's default" do
-      assert Directory.default_provider(:calendar) == :caldav
-      assert Directory.default_provider(:video) == :mirotalk
     end
   end
 end

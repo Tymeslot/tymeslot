@@ -1,5 +1,5 @@
 defmodule Tymeslot.Utils.DateTimeUtils.Duration do
-  @moduledoc "ISO 8601 duration parsing and URL duration slugs."
+  @moduledoc "ISO 8601 and booking-link duration parsing, and URL duration slugs."
 
   @doc """
   Parses an ISO 8601 duration string (simplified).
@@ -26,6 +26,25 @@ defmodule Tymeslot.Utils.DateTimeUtils.Duration do
 
       true ->
         {:error, "Invalid duration format"}
+    end
+  end
+
+  @doc """
+  Parses a meeting length in minutes as booking links and forms write it:
+  `"30min"`, `"45 minutes"`, `"60"`. The inverse of `format_for_url/1`.
+
+  ## Examples
+      iex> Tymeslot.Utils.DateTimeUtils.Duration.parse_minutes("45min")
+      {:ok, 45}
+
+      iex> Tymeslot.Utils.DateTimeUtils.Duration.parse_minutes("soon")
+      :error
+  """
+  @spec parse_minutes(String.t()) :: {:ok, non_neg_integer()} | :error
+  def parse_minutes(value) when is_binary(value) do
+    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, value) do
+      [_match, minutes] -> {:ok, String.to_integer(minutes)}
+      nil -> :error
     end
   end
 

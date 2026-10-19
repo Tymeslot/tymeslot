@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
       event ->
         socket
         |> assign(:selected_event, event)
+        |> assign(:recurrence_edit, Shared.recurrence_edit(event))
         |> assign(:pending_attendees, [])
         |> assign(:attendee_input, "")
         |> assign(:pending_notification, false)

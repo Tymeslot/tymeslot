@@ -4,25 +4,28 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
-  alias Tymeslot.Emails.Shared.Formatting
+  alias Tymeslot.Emails.Shared.{Formatting, Sanitise}
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
-  Formats basic meeting details for text body.
+  The plain-text meeting details, from the same meeting-details map the HTML
+  card receives (`Tymeslot.Emails.Shared.MeetingComponents.meeting_details_table/2`):
+  the recipient's date, time and zone, duration, location and meeting type.
+  The time line is `Tymeslot.Emails.Shared.Formatting.format_meeting_time/2`,
+  word for word what the card shows.
   """
   @spec format_meeting_details(map(), String.t()) :: String.t()
-  def format_meeting_details(appointment_details, locale) do
+  def format_meeting_details(meeting_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      details = [
-        "#{dgettext("emails", "Date:")} #{Formatting.format_date(appointment_details.date, locale)}",
-        format_time_line(appointment_details, locale),
-        format_location_line(appointment_details),
-        Formatting.location_note(appointment_details),
-        format_meeting_type_line(appointment_details.meeting_type)
+      [
+        "#{dgettext("emails", "Date:")} #{Formatting.format_date(meeting_details.date, locale)}",
+        format_time_line(meeting_details, locale),
+        format_duration_line(meeting_details, locale),
+        format_location_line(meeting_details),
+        Formatting.location_note(meeting_details),
+        format_meeting_type_line(Map.get(meeting_details, :meeting_type))
       ]
-
-      details
       |> Enum.filter(& &1)
       |> Enum.join("\n")
     end)
@@ -43,10 +46,18 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   end
 
   @doc """
-  Formats video meeting section for text body.
+  The join link block of a text body, or `""` unless `meeting_url` is a web
+  address (`Sanitise.safe_web_url?/1`): a bare room id or a `mailto:` address
+  is no way into the meeting, as the HTML join section also refuses.
   """
   @spec format_video_section(String.t() | nil, String.t()) :: String.t()
-  def format_video_section(meeting_url, locale) when is_binary(meeting_url) do
+  def format_video_section(meeting_url, locale) do
+    if Sanitise.safe_web_url?(meeting_url),
+      do: video_section(meeting_url, locale),
+      else: ""
+  end
+
+  defp video_section(meeting_url, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       """
 
@@ -57,52 +68,63 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     end)
   end
 
-  def format_video_section(_meeting_url, _locale), do: ""
-
   @doc """
-  Formats action links for text body.
+  The ACTIONS block of a text body: one line per action the payload carries a
+  linkable URL for (`Sanitise.safe_url?/1`), or `""` when there is none.
   """
   @spec format_action_links(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
           String.t()
   def format_action_links(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      links = []
+      lines =
+        for {label, url} <- [
+              {dgettext("emails", "Reschedule:"), Map.get(appointment_details, :reschedule_url)},
+              {dgettext("emails", "Cancel:"), Map.get(appointment_details, :cancel_url)},
+              {dgettext("emails", "Open in dashboard:"),
+               Map.get(appointment_details, :dashboard_url)}
+            ],
+            Sanitise.safe_url?(url),
+            do: "#{label} #{url}"
 
-      links =
-        if appointment_details[:reschedule_url] do
-          ["#{dgettext("emails", "Reschedule:")} #{appointment_details.reschedule_url}" | links]
-        else
-          links
-        end
-
-      links =
-        if appointment_details[:cancel_url] do
-          ["#{dgettext("emails", "Cancel:")} #{appointment_details.cancel_url}" | links]
-        else
-          links
-        end
-
-      links =
-        if appointment_details[:dashboard_url] do
-          [
-            "#{dgettext("emails", "Open in dashboard:")} #{appointment_details.dashboard_url}"
-            | links
-          ]
-        else
-          links
-        end
-
-      if Enum.empty?(links) do
-        ""
-      else
-        """
-
-        #{dgettext("emails", "ACTIONS:")}
-        #{Enum.join(Enum.reverse(links), "\n")}
-        """
+      case lines do
+        [] -> ""
+        lines -> "\n#{dgettext("emails", "ACTIONS:")}\n#{Enum.join(lines, "\n")}\n"
       end
     end)
   end
+
+  @doc """
+  A guest's answer links as a text block under `heading`, with an optional
+  closing `footer`: one line per answer the payload carries a linkable URL
+  for, or `""` when there is none, so no heading asks a question the email
+  gives no way to answer. Mirrors `TemplateHelper.guest_answer_actions/1`.
+  Must be called within a `Gettext.with_locale` block.
+  """
+  @spec format_guest_answers(map(), String.t(), String.t() | nil) :: String.t()
+  def format_guest_answers(appointment_details, heading, footer \\ nil) do
+    lines =
+      for {url, line} <- [
+            {Map.get(appointment_details, :guest_accept_url),
+             &dgettext("emails_booking", "Yes, I'll attend: %{url}", url: &1)},
+            {Map.get(appointment_details, :guest_decline_url),
+             &dgettext("emails_booking", "Can't make it: %{url}", url: &1)}
+          ],
+          Sanitise.safe_url?(url),
+          do: line.(url)
+
+    case lines do
+      [] -> ""
+      lines -> "\n\n#{heading}\n#{Enum.join(lines, "\n")}#{if footer, do: "\n\n" <> footer}"
+    end
+  end
+
+  @doc """
+  A list as plain-text bullet lines, one item each: the text counterpart of
+  `Tymeslot.Emails.Shared.Text.bullet_list/1`, which marks its items the
+  same way.
+  """
+  @spec format_bullets([String.t()]) :: String.t()
+  def format_bullets(items), do: Enum.map_join(items, "\n", &"• #{&1}")
 
   @doc """
   The organiser's note to the guest, as a plain-text block, or `""` when the
@@ -182,36 +204,17 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     end)
   end
 
-  defp format_time_line(
-         %{all_day: true, date: %Date{} = first, last_date: %Date{} = last},
-         locale
-       ),
-       do: "#{dgettext("emails", "Time:")} #{Formatting.format_all_day(first, last, locale)}"
+  defp format_time_line(meeting_details, locale) do
+    case Formatting.format_meeting_time(meeting_details, locale) do
+      nil -> nil
+      line -> "#{dgettext("emails", "Time:")} #{line}"
+    end
+  end
 
-  defp format_time_line(appointment_details, locale) do
-    time_key =
-      cond do
-        appointment_details[:start_time_attendee_tz] -> :start_time_attendee_tz
-        appointment_details[:start_time_owner_tz] -> :start_time_owner_tz
-        appointment_details[:start_time] -> :start_time
-        true -> nil
-      end
-
-    if time_key && appointment_details[:duration] do
-      time_format = Map.get(appointment_details, :time_format)
-      time_str = Formatting.format_time(appointment_details[time_key], locale, time_format)
-      duration_str = Formatting.format_duration(appointment_details.duration, locale)
-      line = "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
-
-      case Formatting.format_next_day_end(
-             appointment_details[time_key],
-             appointment_details.duration,
-             locale,
-             time_format
-           ) do
-        nil -> line
-        note -> "#{line}, #{note}"
-      end
+  defp format_duration_line(meeting_details, locale) do
+    case Formatting.format_meeting_duration(meeting_details, locale) do
+      "" -> nil
+      duration -> "#{dgettext("emails", "Duration:")} #{duration}"
     end
   end
 

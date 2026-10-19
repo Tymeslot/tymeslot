@@ -40,26 +40,23 @@ defmodule Tymeslot.MeetingTypesTest do
       assert hd(result).id == active_type.id
     end
 
-    test "creates default meeting types if user has none" do
+    # Listing is a pure read: the defaults are seeded once, with the
+    # profile, and never re-created.
+    test "lists nothing for a host with no meeting types" do
       user = insert(:user)
 
-      # User has no meeting types initially
-      result = MeetingTypes.get_active_meeting_types(user.id)
-
-      # Should have created defaults
-      assert result != []
+      assert MeetingTypes.get_active_meeting_types(user.id) == []
     end
 
-    test "defaults do not set calendar integration without booking target" do
+    test "a host who deletes every meeting type keeps none" do
       user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-      _profile = insert(:profile, user: user, primary_calendar_integration_id: integration.id)
+      :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
-      result = MeetingTypes.get_active_meeting_types(user.id)
+      for type <- MeetingTypes.get_all_meeting_types(user.id),
+          do: {:ok, _deleted} = MeetingTypes.delete_meeting_type(type)
 
-      assert result != []
-      assert Enum.all?(result, &is_nil(&1.calendar_integration_id))
-      assert Enum.all?(result, &is_nil(&1.target_calendar_id))
+      assert MeetingTypes.get_active_meeting_types(user.id) == []
+      assert MeetingTypes.get_all_meeting_types(user.id) == []
     end
 
     test "returns all meeting types including inactive ones" do
@@ -177,49 +174,41 @@ defmodule Tymeslot.MeetingTypesTest do
   # Publishing via default meeting types
   # =====================================
 
-  describe "when default meeting types are created" do
-    test "stamps the booking page as published for a user with a username" do
+  describe "seed_default_meeting_types/2" do
+    test "seeds the two defaults, with no booking calendar" do
       user = insert(:user)
-      insert(:profile, user: user, username: "host")
 
-      assert {:ok, defaults} = MeetingTypes.create_default_meeting_types(user.id)
-      assert defaults != []
+      assert :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
-      assert %DateTime{} = Profiles.get_profile(user.id).booking_page_published_at
+      assert [
+               %{name: "15 Minutes", duration_minutes: 15},
+               %{name: "30 Minutes", duration_minutes: 30}
+             ] =
+               user.id |> MeetingTypes.get_all_meeting_types() |> Enum.sort_by(& &1.sort_order)
+
+      assert Enum.all?(
+               MeetingTypes.get_all_meeting_types(user.id),
+               &is_nil(&1.calendar_integration_id)
+             )
     end
 
-    test "does not stamp the booking page when the user has no username" do
+    test "seeding again inserts nothing more" do
+      user = insert(:user)
+
+      :ok = MeetingTypes.seed_default_meeting_types(user.id)
+      :ok = MeetingTypes.seed_default_meeting_types(user.id)
+
+      assert length(MeetingTypes.get_all_meeting_types(user.id)) == 2
+    end
+
+    # A new account has no username, so there is no page to publish.
+    test "does not publish the booking page" do
       user = insert(:user)
       insert(:profile, user: user, username: nil)
 
-      assert {:ok, defaults} = MeetingTypes.create_default_meeting_types(user.id)
-      assert defaults != []
+      :ok = MeetingTypes.seed_default_meeting_types(user.id)
 
       assert Profiles.get_profile(user.id).booking_page_published_at == nil
-    end
-
-    test "emits the publish telemetry once even though several defaults are created" do
-      user = insert(:user)
-      insert(:profile, user: user, username: "host", booking_theme: "2")
-
-      test_pid = self()
-
-      :telemetry.attach(
-        "test-default-publish",
-        [:tymeslot, :booking_page, :published],
-        fn _event, measurements, metadata, _config ->
-          send(test_pid, {:telemetry, measurements, metadata})
-        end,
-        nil
-      )
-
-      on_exit(fn -> :telemetry.detach("test-default-publish") end)
-
-      assert {:ok, defaults} = MeetingTypes.create_default_meeting_types(user.id)
-      assert defaults != []
-
-      assert_received {:telemetry, %{count: 1}, %{theme: "2"}}
-      refute_received {:telemetry, _measurements, _metadata}
     end
   end
 
@@ -353,12 +342,10 @@ defmodule Tymeslot.MeetingTypesTest do
       assert length(result) == 2
     end
 
-    test "creates defaults if user has no meeting types" do
+    test "lists nothing for a host with no meeting types" do
       user = insert(:user)
 
-      result = MeetingTypes.get_all_meeting_types(user.id)
-
-      assert result != []
+      assert MeetingTypes.get_all_meeting_types(user.id) == []
     end
   end
 

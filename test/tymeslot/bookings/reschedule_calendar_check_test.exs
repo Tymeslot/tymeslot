@@ -138,7 +138,10 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
 
       stub_calendar_result({:error, :some_calendars_unavailable})
 
-      assert {:error, :slot_taken} = reschedule(meeting, date, "3:00 PM", user.id)
+      # Refused as unverifiable rather than as taken: every other time would
+      # be refused the same way, so the invitee is told to try again later.
+      assert {:error, :availability_unverifiable} =
+               reschedule(meeting, date, "3:00 PM", user.id)
 
       assert {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
       assert DateTime.compare(unchanged.start_time, meeting.start_time) == :eq
@@ -166,7 +169,6 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
         duration: "15min",
         user_timezone: @timezone
       },
-      %{},
       organizer_user_id
     )
   end

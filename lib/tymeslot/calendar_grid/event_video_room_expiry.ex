@@ -46,7 +46,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.CalendarGrid.EventVideoRoomTimes
-  alias Tymeslot.Integrations.Calendar.Operations, as: CalendarOperations
+  alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations, as: CalendarOperations
+  alias Tymeslot.Integrations.Calendar.SeriesRules
 
   @seconds_per_day 86_400
 
@@ -133,6 +135,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
   # answer) unless they show it over.
   defp judge(room, events, cutoff) do
     current = {room.lobby_opens_at, room.ends_at}
+    events = SeriesRules.with_series_start(events)
 
     if Enum.any?(events, &EventVideoRoomTimes.recurring?/1) do
       {lobby, ends} = widen(current, events)
@@ -187,7 +190,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
 
   defp synced_since_due?(_room), do: false
 
-  defp cutoff, do: DateTime.add(DateTime.utc_now(), -retention_seconds(), :second)
+  defp cutoff, do: DateTime.add(Clock.utc_now(), -retention_seconds(), :second)
 
   # Read at run time: `config/runtime.exs` sets it from the environment.
   defp retention_seconds,

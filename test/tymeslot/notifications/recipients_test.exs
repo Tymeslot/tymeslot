@@ -25,47 +25,6 @@ defmodule Tymeslot.Notifications.RecipientsTest do
     struct!(meeting, attrs)
   end
 
-  describe "determine_recipients/2" do
-    test "confirmation, reminder, cancellation, and reschedule go to both" do
-      meeting = meeting_with_organizer()
-
-      for type <- [:confirmation, :reminder, :cancellation, :reschedule] do
-        assert {:both, %{organizer: organizer, attendee: attendee}} =
-                 Recipients.determine_recipients(meeting, type)
-
-        assert organizer.name == "Alice Organizer"
-        assert attendee.name == "Bob Attendee"
-      end
-    end
-
-    test "unknown notification type defaults to both recipients" do
-      meeting = meeting_with_organizer()
-
-      assert {:both, _recipients} = Recipients.determine_recipients(meeting, :something_new)
-    end
-
-    test "organiser participant uses the organiser's profile timezone" do
-      meeting = meeting_with_organizer()
-
-      assert {:both, %{organizer: %{timezone: "Europe/London"}}} =
-               Recipients.determine_recipients(meeting, :confirmation)
-    end
-
-    test "attendee participant uses attendee_timezone when set" do
-      meeting = meeting_with_organizer(%{attendee_timezone: "Asia/Tokyo"})
-
-      assert {:both, %{attendee: %{timezone: "Asia/Tokyo"}}} =
-               Recipients.determine_recipients(meeting, :confirmation)
-    end
-
-    test "attendee participant falls back to organiser timezone when attendee_timezone is nil" do
-      meeting = meeting_with_organizer(%{attendee_timezone: nil})
-
-      assert {:both, %{attendee: %{timezone: "Europe/London"}}} =
-               Recipients.determine_recipients(meeting, :confirmation)
-    end
-  end
-
   describe "get_organizer_timezone/1" do
     test "returns the organiser's profile timezone" do
       meeting = meeting_with_organizer()
@@ -100,35 +59,38 @@ defmodule Tymeslot.Notifications.RecipientsTest do
     end
   end
 
-  describe "validate_recipients/1" do
-    test "accepts a complete :both pair" do
-      meeting = meeting_with_organizer()
-      recipients = Recipients.determine_recipients(meeting, :confirmation)
-
-      assert Recipients.validate_recipients(recipients) == :ok
+  describe "validate/2" do
+    test "a complete one-to-one meeting can be emailed" do
+      assert Recipients.validate(meeting_with_organizer()) == :ok
+      assert Recipients.validate(meeting_with_organizer(), :recipients) == :ok
     end
 
-    test "rejects when the organiser is missing an email" do
-      meeting = meeting_with_organizer(%{organizer_email: nil})
-      recipients = Recipients.determine_recipients(meeting, :confirmation)
+    for field <- [:organizer_name, :organizer_email, :attendee_name, :attendee_email] do
+      test "a one-to-one meeting without #{field} is refused, by its field name" do
+        meeting = meeting_with_organizer(%{unquote(field) => nil})
 
-      assert {:error, message} = Recipients.validate_recipients(recipients)
-      assert message =~ "organizer"
-      assert message =~ "email"
+        assert Recipients.validate(meeting, :recipients) ==
+                 {:error, "Missing meeting fields: #{unquote(field)}"}
+      end
     end
 
-    test "rejects when the attendee is missing required fields" do
-      meeting = meeting_with_organizer(%{attendee_name: nil})
-      recipients = Recipients.determine_recipients(meeting, :confirmation)
+    test "a booking also needs its calendar event and its start" do
+      meeting = meeting_with_organizer(%{calendar_uid: nil, start_time: nil})
 
-      assert {:error, message} = Recipients.validate_recipients(recipients)
-      assert message =~ "attendee"
-      assert message =~ "name"
+      assert {:error, "Missing meeting fields: calendar_uid, start_time"} =
+               Recipients.validate(meeting)
+
+      # Cancellation asks only for who to tell.
+      assert Recipients.validate(meeting, :recipients) == :ok
     end
 
-    test "rejects an unknown recipient structure" do
-      assert {:error, "Invalid recipient structure"} =
-               Recipients.validate_recipients(:not_a_tuple)
+    test "a group meeting is not asked for an attendee its row cannot carry" do
+      meeting = meeting_with_organizer(%{capacity: 5, attendee_name: nil, attendee_email: nil})
+
+      assert Recipients.validate(meeting) == :ok
+
+      assert {:error, "Missing meeting fields: organizer_email"} =
+               Recipients.validate(%{meeting | organizer_email: nil})
     end
   end
 end

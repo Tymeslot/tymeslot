@@ -7,10 +7,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
 
   alias Tymeslot.GoogleOAuthHelperMock
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
+  alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
 
@@ -114,8 +117,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         insert(:video_integration,
           user: user,
           provider: "google_meet",
-          access_token: "expired",
-          refresh_token: "refresh",
+          access_token_encrypted: Encryption.encrypt("expired"),
+          refresh_token_encrypted: Encryption.encrypt("refresh"),
           token_expires_at: expires_at
         )
 
@@ -209,7 +212,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:error, "Token refresh failed: invalid_grant"}
       end)
 
-      assert {:error, "Failed to refresh token: Token refresh failed: invalid_grant"} =
+      assert {:error, "Token refresh failed: invalid_grant"} =
                GoogleMeetProvider.precheck_create_meeting_room(config)
     end
 
@@ -224,8 +227,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:error, "Network error during token refresh: timeout"}
       end)
 
-      assert {:provider_error,
-              "Failed to refresh token: Network error during token refresh: timeout"} =
+      assert {:provider_error, "Network error during token refresh: timeout"} =
                GoogleMeetProvider.precheck_create_meeting_room(config)
     end
 
@@ -233,6 +235,62 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
       config = valid_token_config()
 
       assert {:ok, ^config} = GoogleMeetProvider.precheck_create_meeting_room(config)
+    end
+  end
+
+  # A grant the provider refused for good while refreshing is the owner's to
+  # fix: the integration is flagged at once and room creation fails as
+  # unauthorised, the reason it treats as final, rather than as provider text
+  # it would retry as an outage.
+  describe "ProviderAdapter.create_meeting_room/2 with a revoked grant" do
+    test "flags the integration and fails as unauthorised" do
+      user = insert(:user)
+      # The refresh spends the refresh token stored on the row, not the
+      # caller's copy, so the row holds the one the provider refuses.
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          refresh_token_encrypted: Encryption.encrypt("refresh_token")
+        )
+
+      config = %{
+        access_token: "expired",
+        refresh_token: "refresh_token",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+        integration_id: integration.id,
+        user_id: user.id
+      }
+
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil, _opts ->
+        {:error, "Token refresh failed: invalid_grant"}
+      end)
+
+      assert {:error, :unauthorized} = ProviderAdapter.create_meeting_room(:google_meet, config)
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    end
+
+    test "leaves a provider outage during refresh to be retried" do
+      on_exit(fn -> VideoCircuitBreaker.reset(:google_meet) end)
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "google_meet")
+
+      config = %{
+        access_token: "expired",
+        refresh_token: "refresh_token",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+        integration_id: integration.id,
+        user_id: user.id
+      }
+
+      # The refresh spends the refresh token stored on the row.
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn _stored_refresh_token, nil, _opts ->
+        {:error, "Network error during token refresh: timeout"}
+      end)
+
+      assert {:error, reason} = ProviderAdapter.create_meeting_room(:google_meet, config)
+      assert reason != :unauthorized
+      refute Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
     end
   end
 

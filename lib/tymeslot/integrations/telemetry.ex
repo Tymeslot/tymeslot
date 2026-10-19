@@ -39,25 +39,11 @@ defmodule Tymeslot.Integrations.Telemetry do
   """
   @spec handle_event([atom()], map(), map(), any()) :: :ok
   def handle_event(event, measurements, metadata, _config) do
-    log_level = determine_log_level(event, metadata)
-
-    Logger.log(
-      log_level,
-      fn ->
-        format_log_message(event, measurements, metadata)
-      end,
-      metadata
-    )
-
+    # Debug only: a failed probe is already logged once, as a warning with its
+    # integration and provider, by `HealthCheck.ErrorAnalysis`.
+    Logger.debug(fn -> format_log_message(event, measurements, metadata) end, metadata)
     :ok
   end
-
-  defp determine_log_level([:tymeslot, :integration, :health_check], metadata)
-       when metadata.success == false do
-    :warning
-  end
-
-  defp determine_log_level(_event, _metadata), do: :debug
 
   defp format_log_message(event, measurements, metadata) do
     event_name = Enum.join(event, ".")
@@ -78,7 +64,7 @@ defmodule Tymeslot.Integrations.Telemetry do
          metadata,
          _event_name
        ) do
-    status = if metadata.success, do: "healthy", else: "unhealthy"
+    status = if metadata.success, do: "passed", else: "failed"
     "Health check: #{metadata.provider} - #{status} (#{measurements.duration}ms)"
   end
 

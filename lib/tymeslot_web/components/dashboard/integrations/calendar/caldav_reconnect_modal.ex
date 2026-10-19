@@ -24,13 +24,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Utils.ChangesetUtils
+  alias Tymeslot.Utils.UriUtils
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -73,15 +74,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
     case Calendar.reconnect_caldav_integration(user_id, integration.id, params) do
       {:ok, :needs_calendar_selection, payload} ->
-        selected_paths = Enum.filter(integration.calendar_paths || [], &is_binary/1)
-
-        {:noreply,
-         socket
-         |> assign(:phase, :calendar_selection)
-         |> assign(:discovery_payload, payload)
-         |> assign(:selected_paths, selected_paths)
-         |> assign(:form_errors, %{})
-         |> assign(:is_submitting, false)}
+        {:noreply, open_selection(socket, integration, payload)}
 
       {:error, :invalid_credentials} ->
         {:noreply,
@@ -163,7 +156,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       {:error, {:changeset, cs}} ->
         Flash.error(
           dgettext("dashboard_calendar_providers", "Could not save: %{reason}",
-            reason: ChangesetUtils.get_first_error(cs)
+            reason: FormErrors.first(cs, field_labels())
           )
         )
 
@@ -200,6 +193,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
             <.calendar_selection
               payload={@discovery_payload}
               selected_paths={@selected_paths}
+              booking_paths={@booking_paths}
               form_errors={@form_errors}
               is_submitting={@is_submitting}
               target={@myself}
@@ -308,6 +302,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   attr :payload, :map, required: true
   attr :selected_paths, :list, required: true
+
+  attr :booking_paths, :list,
+    required: true,
+    doc: "paths of the calendars bookings go to, which stay ticked and blocking"
+
   attr :form_errors, :map, required: true
   attr :is_submitting, :boolean, required: true
   attr :target, :any, required: true
@@ -350,12 +349,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
             <%= for calendar <- @payload.calendars do %>
               <% path = calendar.path %>
               <% name = calendar.name || path %>
+              <% booking? = booking_path?(path, @booking_paths) %>
               <div class="flex items-center space-x-3 p-3 rounded-token-lg hover:bg-white/20 transition-colors">
+                <%!-- A disabled box is not submitted; the hidden input sends its path. --%>
+                <input :if={booking?} type="hidden" name="selected_paths[]" value={path} />
                 <.input
                   type="checkbox"
                   name="selected_paths[]"
                   value={path}
-                  checked={path in @selected_paths}
+                  checked={booking? or path in @selected_paths}
+                  disabled={booking?}
                   id={"reconnect-calendar-#{String.replace(path, "/", "-")}"}
                 />
                 <label
@@ -364,6 +367,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
                 >
                   <div class="font-semibold text-tymeslot-800">{name}</div>
                   <div class="text-sm text-tymeslot-600">{path}</div>
+                  <div :if={booking?} class="text-token-xs text-tymeslot-500">
+                    {dgettext(
+                      "dashboard_calendar_providers",
+                      "Your booking calendar always blocks your availability."
+                    )}
+                  </div>
                 </label>
               </div>
             <% end %>
@@ -405,6 +414,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     })
     |> assign(:discovery_payload, nil)
     |> assign(:selected_paths, [])
+    |> assign(:booking_paths, [])
     |> assign(:is_submitting, false)
   end
 
@@ -418,8 +428,31 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     |> assign(:form_errors, %{})
     |> assign(:discovery_payload, nil)
     |> assign(:selected_paths, [])
+    |> assign(:booking_paths, [])
     |> assign(:is_submitting, false)
   end
+
+  # The calendars synced so far come up ticked, and the ones bookings go to
+  # ticked and locked.
+  defp open_selection(socket, integration, payload) do
+    booking_paths =
+      socket.assigns.current_user.id
+      |> Calendar.booking_calendar_ids_by_integration([integration])
+      |> Map.get(integration.id, [])
+
+    assign(socket,
+      phase: :calendar_selection,
+      discovery_payload: payload,
+      selected_paths: Enum.filter(integration.calendar_paths || [], &is_binary/1),
+      booking_paths: booking_paths,
+      form_errors: %{},
+      is_submitting: false
+    )
+  end
+
+  # The same id matcher the context holds booking calendars by.
+  defp booking_path?(path, booking_paths),
+    do: Enum.any?(booking_paths, &UriUtils.uri_safe_match?(&1, path))
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
 
@@ -448,4 +481,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   defp normalize_error_message(_other),
     do: dgettext("dashboard_calendar_providers", "Something went wrong. Please try again.")
+
+  # The flash is away from the form, so a refused field is named.
+  defp field_labels do
+    %{
+      name: dgettext("dashboard_calendar_providers", "Name"),
+      base_url: dgettext("dashboard_calendar_providers", "Server URL"),
+      username: dgettext("dashboard_calendar_providers", "Username"),
+      password: dgettext("dashboard_calendar_providers", "Password")
+    }
+  end
 end

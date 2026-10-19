@@ -105,6 +105,28 @@ defmodule Tymeslot.AppSettings do
   end
 
   @doc """
+  Child spec that applies the DB overrides while the supervision tree starts.
+
+  Placed after the Repo and before Oban and the Endpoint, so no request or job
+  ever runs on the config-layer values an admin has overridden (registration
+  disabled, reCAPTCHA required). The child calls `load!/0` synchronously and
+  returns `:ignore`, leaving no process behind. Not `:temporary`: the
+  supervisor keeps an ignored child's spec only for the other restart types,
+  and that spec is what shows the loader's place in the tree.
+  """
+  @spec loader_child_spec() :: Supervisor.child_spec()
+  def loader_child_spec do
+    %{id: __MODULE__.Loader, start: {__MODULE__, :start_loader, []}, restart: :transient}
+  end
+
+  @doc false
+  @spec start_loader() :: :ignore
+  def start_loader do
+    load!()
+    :ignore
+  end
+
+  @doc """
   Returns the singleton settings row (typically used to seed the admin form).
   """
   @spec get!() :: AppSettingsSchema.t()

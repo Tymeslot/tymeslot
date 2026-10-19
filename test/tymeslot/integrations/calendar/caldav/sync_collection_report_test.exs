@@ -174,6 +174,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
       assert {:error, :invalid_response} = SyncCollectionReport.parse_response("not xml at all")
     end
 
+    # Every `response` element is matched and then searched again for its
+    # properties, so a response nested hundreds of thousands deep inside
+    # itself would take quadratic time if it were ever parsed.
+    test "refuses a response nested past the depth limit, quickly" do
+      depth = 200_000
+
+      body =
+        ~s(<?xml version="1.0" encoding="utf-8"?><d:multistatus xmlns:d="DAV:">) <>
+          String.duplicate("<d:response>", depth) <>
+          "<d:href>/cal/a.ics</d:href>" <>
+          String.duplicate("</d:response>", depth) <> "</d:multistatus>"
+
+      log =
+        capture_log(fn ->
+          {microseconds, result} =
+            :timer.tc(fn -> SyncCollectionReport.parse_response(body) end)
+
+          assert result == {:error, :invalid_response}
+          assert microseconds < 5_000_000
+        end)
+
+      refute log =~ "/cal/a.ics"
+    end
+
     test "a changed resource returned without its calendar data is never read as deleted" do
       body = """
       <?xml version="1.0" encoding="utf-8"?>

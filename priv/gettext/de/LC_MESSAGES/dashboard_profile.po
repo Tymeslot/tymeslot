@@ -159,11 +159,6 @@ msgstr "Hochladen fehlgeschlagen"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr "Hochladen fehlgeschlagen: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Wird hochgeladen…"
 
@@ -182,7 +177,7 @@ msgstr "ihrname"
 msgid "Unknown timezone"
 msgstr "Unbekannte Zeitzone"
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Zu viele Versuche, den Nutzernamen zu ändern. Bitte versuchen Sie es später erneut."
@@ -273,3 +268,8 @@ msgstr "Dieser Nutzername ist reserviert"
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
 msgstr "Avatar löschen"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Nutzername"

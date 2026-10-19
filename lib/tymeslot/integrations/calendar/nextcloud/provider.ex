@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, PathUtils, ProviderCommon}
+  alias Tymeslot.Integrations.Shared.ProviderConfigHelper
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :nextcloud
@@ -87,22 +88,19 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
     missing_fields = Enum.filter(required_fields, &blank?(config[&1]))
 
-    cond do
-      !Enum.empty?(missing_fields) ->
-        {:error,
-         dgettext("dashboard_calendar_providers", "Missing required fields: %{fields}",
-           fields: Enum.join(missing_fields, ", ")
-         )}
-
-      !valid_nextcloud_url?(config[:base_url]) ->
-        {:error,
-         dgettext(
-           "dashboard_calendar_providers",
-           "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"
-         )}
-
-      true ->
-        :ok
+    if Enum.empty?(missing_fields) do
+      # The address may be typed without a scheme, which `new/1` completes
+      # the same way before connecting.
+      ProviderCommon.validate_caldav_url(
+        :nextcloud,
+        PathUtils.ensure_scheme(config[:base_url]),
+        dgettext(
+          "integrations_calendar",
+          "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"
+        )
+      )
+    else
+      ProviderConfigHelper.missing_fields_error(missing_fields)
     end
   end
 
@@ -135,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       password: config[:password],
       calendar_paths: build_nextcloud_calendar_paths(config),
       writable_calendar_paths: config[:writable_calendar_paths],
-      verify_ssl: true,
+      skip_breaker: config[:skip_breaker] || false,
       provider: :nextcloud
     }
 
@@ -175,7 +173,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
     case CaldavCommon.test_connection(client) do
       {:ok, _message} ->
-        {:ok, dgettext("dashboard_calendar_providers", "Nextcloud connection successful")}
+        {:ok, dgettext("integrations_calendar", "Nextcloud connection successful")}
 
       # Reported as a reason, not as copy: see
       # `ProviderCommon.test_caldav_provider_connection/2`, which every other
@@ -186,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       {:error, :not_found} ->
         {:error,
          dgettext(
-           "dashboard_calendar_providers",
+           "integrations_calendar",
            "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."
          )}
 
@@ -264,6 +262,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   def list_events_representation, do: :raw
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def convert_events(events), do: events
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate create_event(client, event_data), to: CalDAVProvider
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -279,17 +280,6 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   def find_moved_event(client, event_ref), do: CalDAVProvider.find_moved_event(client, event_ref)
 
   # Private helper functions
-
-  defp valid_nextcloud_url?(url) when is_binary(url) do
-    # First normalize the URL to ensure it has a scheme
-    normalized = PathUtils.ensure_scheme(url)
-    uri = URI.parse(normalized)
-
-    # Now check if it's valid
-    uri.scheme in ["http", "https"] and uri.host != nil
-  end
-
-  defp valid_nextcloud_url?(_url), do: false
 
   defp maybe_extract_username_from_url(config) do
     url = config[:base_url] || ""

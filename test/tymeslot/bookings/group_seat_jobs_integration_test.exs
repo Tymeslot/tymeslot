@@ -33,11 +33,11 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Notifications.Email.SeatEmails
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
-  alias Tymeslot.Workers.EmailWorkerHandlers.SeatEmails
 
   setup :verify_on_exit!
 

@@ -162,20 +162,6 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
     end
   end
 
-  describe "room_url?/1" do
-    test "accepts an HTTP URL with a room segment, including under a sub-path" do
-      assert LinkRoom.room_url?("https://meet.example.com/abc123")
-      assert LinkRoom.room_url?("https://example.com/jitsi/abc123")
-    end
-
-    test "rejects a bare host, a non-HTTP URL and a non-binary" do
-      refute LinkRoom.room_url?("https://meet.example.com")
-      refute LinkRoom.room_url?("https://meet.example.com/")
-      refute LinkRoom.room_url?("ftp://meet.example.com/abc123")
-      refute LinkRoom.room_url?(nil)
-    end
-  end
-
   describe "validate_length/1" do
     test "accepts a URL at the limit" do
       prefix = "https://e.com/"

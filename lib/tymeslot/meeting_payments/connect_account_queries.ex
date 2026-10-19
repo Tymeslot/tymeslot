@@ -19,6 +19,21 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
     )
   end
 
+  @doc """
+  The user's live account, locked (`SELECT ... FOR UPDATE`) until the
+  surrounding transaction ends. Serialises a change of the account's
+  currency against a checkout reading it.
+  """
+  @spec lock_live_for_user(integer()) :: ConnectAccountSchema.t() | nil
+  def lock_live_for_user(user_id) do
+    Repo.one(
+      from c in ConnectAccountSchema,
+        where: c.user_id == ^user_id and is_nil(c.deleted_at),
+        limit: 1,
+        lock: "FOR UPDATE"
+    )
+  end
+
   @spec by_stripe_account_id(String.t()) :: ConnectAccountSchema.t() | nil
   def by_stripe_account_id(stripe_account_id) do
     Repo.one(

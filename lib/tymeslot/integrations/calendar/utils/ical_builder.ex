@@ -39,6 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Patcher
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
 
   # Emitted alongside an ATTENDEE block Tymeslot authored, and read back by
   # `Patcher` to tell it apart from the organiser's own.
@@ -82,15 +83,14 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   Used for simple events without complex properties.
 
-  Timed events are always serialised in UTC with a `Z` suffix — Tymeslot
-  deliberately avoids TZID / VTIMEZONE emission because a spec-compliant
-  VTIMEZONE body (RFC 5545 §3.6.5) requires authored STANDARD/DAYLIGHT
-  subcomponents with real TZOFFSETFROM/TO and RRULE rules, which we don't
-  generate from our tzdata-backed clock. Stricter CalDAV servers (Radicale's
-  vobject) reject a VTIMEZONE without those subcomponents as HTTP 400. The
-  UTC wall-clock is preserved correctly, and the per-user timezone label is
-  reconstructed at display time from the user's profile timezone — the iCal
-  payload never drives user-facing labels.
+  A timed event is serialised in UTC with a `Z` suffix, except a timed
+  series given its zone in `:series_timezone` (`TimeZoneComponent.series_zone/1`):
+  its `DTSTART`, `DTEND` and `EXDATE` are wall clocks in that zone, with a
+  `VTIMEZONE` built from the time zone database beside them, because RFC 5545
+  expands a rule in its `DTSTART`'s zone and a UTC series would move by an
+  hour across every DST change. The `VTIMEZONE` lists each offset change
+  with its full `STANDARD`/`DAYLIGHT` subcomponent, which strict servers
+  (Radicale's vobject) require.
 
   The `mode` decides whether the attendee is advertised as a real `ATTENDEE`
   (beside the organiser, for a server that would otherwise add its owner) or
@@ -102,41 +102,49 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   @spec build_simple_event(String.t(), simple_event_data() | map(), Scheduling.mode()) ::
           String.t()
   def build_simple_event(uid, event_data, mode \\ :contact) do
+    zone = TimeZoneComponent.series_zone(event_data)
+
     lines =
       Enum.reject(
         [
           "BEGIN:VCALENDAR",
           "VERSION:2.0",
-          "PRODID:-//Tymeslot//CalDAV Client//EN",
-          "BEGIN:VEVENT",
-          "UID:#{uid}",
-          "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
-          Properties.build_dtstart(event_data),
-          Properties.build_dtend(event_data),
-          "SUMMARY:#{Format.escape_text(Map.get(event_data, :summary) || "")}",
-          "DESCRIPTION:#{Format.escape_text(event_data[:description] || "")}",
-          "LOCATION:#{Format.escape_text(event_data[:location] || "")}",
-          Properties.build_conference_line(event_data),
-          Properties.build_attachment_lines(event_data),
-          Properties.build_transp(event_data),
-          Properties.build_status(event_data),
-          Properties.build_class(event_data),
-          Properties.build_colour_line(event_data),
-          Properties.build_rrule_line(event_data),
-          Properties.build_exdate(event_data),
-          Properties.build_organizer_line(event_data),
-          Properties.build_attendee_lines(event_data, mode),
-          attendee_marker(event_data, mode),
-          Alarms.build_reminders(event_data),
-          "END:VEVENT",
-          "END:VCALENDAR"
-        ],
+          "PRODID:-//Tymeslot//CalDAV Client//EN"
+        ] ++
+          time_zone_lines(event_data, zone) ++
+          [
+            "BEGIN:VEVENT",
+            "UID:#{uid}",
+            "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
+            Properties.build_dtstart(event_data, zone),
+            Properties.build_dtend(event_data, zone),
+            "SUMMARY:#{Format.escape_text(Map.get(event_data, :summary) || "")}",
+            "DESCRIPTION:#{Format.escape_text(event_data[:description] || "")}",
+            "LOCATION:#{Format.escape_text(event_data[:location] || "")}",
+            Properties.build_conference_line(event_data),
+            Properties.build_attachment_lines(event_data),
+            Properties.build_transp(event_data),
+            Properties.build_status(event_data),
+            Properties.build_class(event_data),
+            Properties.build_colour_line(event_data),
+            Properties.build_rrule_line(event_data),
+            Properties.build_exdate(event_data, zone),
+            Properties.build_organizer_line(event_data, mode),
+            Properties.build_attendee_lines(event_data, mode),
+            attendee_marker(event_data, mode),
+            Alarms.build_reminders(event_data),
+            "END:VEVENT",
+            "END:VCALENDAR"
+          ],
         &(&1 == nil or &1 == "")
       )
 
     raw = Enum.join(lines, "\r\n") <> "\r\n"
     LineFolder.fold_lines(raw)
   end
+
+  defp time_zone_lines(_event_data, nil), do: []
+  defp time_zone_lines(event_data, zone), do: TimeZoneComponent.for_series(event_data, zone) || []
 
   @doc """
   Applies the property changes `event_data` describes to an existing raw

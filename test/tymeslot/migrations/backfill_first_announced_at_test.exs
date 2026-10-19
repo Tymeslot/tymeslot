@@ -8,7 +8,7 @@ defmodule Tymeslot.Migrations.BackfillFirstAnnouncedAtTest do
   The migration is driven from `priv` (`MigrationRunner.replay!/2`, since its
   `down/0` is a no-op) so the assertions are about the SQL that ships. What
   matters is which rows it touches: a booking left unstamped is one
-  `Meetings.Approval.refund_unapproved_request/1` will auto-refund in full
+  `Meetings.ApprovalRefunds.refund_unapproved_request/1` will auto-refund in full
   after a decline, and a booking stamped wrongly is one it will refuse to
   refund at all.
   """

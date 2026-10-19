@@ -155,11 +155,6 @@ msgstr "Przesyłanie nie powiodło się"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr "Przesyłanie nie powiodło się: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Przesyłanie…"
 
@@ -178,7 +173,7 @@ msgstr "twojanazwa"
 msgid "Unknown timezone"
 msgstr "Nieznana strefa czasowa"
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Zbyt wiele prób zmiany nazwy użytkownika. Spróbuj ponownie później."
@@ -270,3 +265,8 @@ msgstr "Ta nazwa użytkownika jest zarezerwowana"
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
 msgstr "Usuń awatar"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Nazwa użytkownika"

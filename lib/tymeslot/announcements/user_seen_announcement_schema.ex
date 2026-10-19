@@ -1,7 +1,7 @@
 defmodule Tymeslot.Announcements.UserSeenAnnouncementSchema do
   @moduledoc """
   Records that a user has seen a specific feature announcement.
-  Inserted via `Tymeslot.Announcements.mark_seen!/2`.
+  Inserted via `Tymeslot.Announcements.mark_seen/2`.
   """
   use Ecto.Schema
   import Ecto.Changeset

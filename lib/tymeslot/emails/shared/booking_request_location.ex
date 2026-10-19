@@ -32,9 +32,9 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
 
   def type(%Meeting{meeting_url: url}) when is_binary(url), do: :video
 
-  # A held request has no room yet — `Approval.approve/1` only creates one via
-  # `Activation.activate(confirmed, with_video_room: true)` once the host
-  # says yes — but `video_integration_id` is already set at booking time and
+  # A held request has no room yet — `Approval.approve/1` only schedules one,
+  # through `Activation.activate_in_transaction(confirmed, with_video_room: true)`,
+  # once the host says yes — but `video_integration_id` is already set at booking time and
   # is the same signal `Bookings.Activation.wants_video_room?/2` uses to know
   # a meeting is heading for a video room. Reading it here means a held video
   # request shows "Video Call" instead of "TBD" while the room is still

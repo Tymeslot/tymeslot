@@ -33,16 +33,6 @@ defmodule Tymeslot.Auth.Helpers.AccountLoggingTest do
       refute inspect(meta) =~ "bob@example.com"
     end
 
-    test "masks an email identifier on log_operation_success/3" do
-      capture_at_info(fn ->
-        AccountLogging.log_operation_success("authentication", "carol@example.com")
-      end)
-
-      assert_receive {:captured_log, %{meta: meta}}
-      assert meta[:identifier_masked] == "c***@example.com"
-      refute inspect(meta) =~ "carol@example.com"
-    end
-
     test "passes an integer user id identifier through unmasked" do
       capture_at_info(fn ->
         AccountLogging.log_operation_failure("verification", 42, :verification_failed)

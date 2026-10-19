@@ -14,7 +14,11 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
   attr :size, :atom, default: :medium, values: [:small, :medium, :large], doc: "Size variant"
   attr :on_change, :string, required: true, doc: "Phoenix event name to trigger on change"
   attr :target, :any, default: nil, doc: "Phoenix LiveView target"
-  attr :disabled, :boolean, default: false, doc: "Disabled state"
+
+  attr :disabled, :boolean,
+    default: false,
+    doc: "Disabled state: the switch renders greyed out and pushes no event"
+
   attr :class, :string, default: "", doc: "Additional CSS classes"
 
   attr :aria_label, :string,
@@ -28,8 +32,8 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
     ~H"""
     <button
       type="button"
-      phx-click={@on_change}
-      phx-target={@target}
+      phx-click={!@disabled && @on_change}
+      phx-target={!@disabled && @target}
       disabled={@disabled}
       class={[
         "status-toggle",

@@ -19,6 +19,7 @@ defmodule Tymeslot.Polls.PollQueries do
 
     PollSchema
     |> where([p], p.token_hash == ^token_hash)
+    |> owner_not_pending_deletion()
     |> preload(^@voting_preloads)
     |> Repo.one()
   end
@@ -90,4 +91,10 @@ defmodule Tymeslot.Polls.PollQueries do
 
   @spec update(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(changeset), do: Repo.update(changeset)
+
+  # A host whose account waits to be deleted is frozen: their poll's public
+  # token answers as if the poll did not exist.
+  defp owner_not_pending_deletion(query) do
+    from(p in query, join: u in assoc(p, :user), where: is_nil(u.deletion_scheduled_at))
+  end
 end

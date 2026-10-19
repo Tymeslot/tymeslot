@@ -5,6 +5,27 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
   alias Ecto.Changeset
   alias Tymeslot.Auth.ErrorFormatter
 
+  defmodule Item do
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      field :title, :string
+    end
+
+    @spec changeset(%__MODULE__{}, map()) :: Changeset.t()
+    def changeset(item, attrs),
+      do: item |> Changeset.cast(attrs, [:title]) |> Changeset.validate_required([:title])
+  end
+
+  defmodule Parent do
+    use Ecto.Schema
+
+    embedded_schema do
+      embeds_many :items, Item
+    end
+  end
+
   describe "format_auth_error/1" do
     test "answers every failed-credentials reason with one generic message" do
       for reason <- [:not_found, :invalid_password] do
@@ -55,76 +76,107 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
   end
 
   describe "format_validation_errors/1" do
-    test "formats changeset errors" do
-      data = %{}
-      types = %{email: :string, name: :string}
-
-      changeset =
-        {data, types}
-        |> Changeset.cast(%{email: "invalid"}, [:email, :name])
-        |> Changeset.validate_required([:name])
-        |> Changeset.add_error(:email, "is invalid")
-
-      result = ErrorFormatter.format_validation_errors(changeset)
-      assert result =~ "Email is invalid"
-      assert result =~ "Name can't be blank"
-    end
-
-    test "formats error map" do
-      errors = %{email: ["is invalid"], password: ["is too short"]}
+    # The messages are already in the reader's language; no field name is
+    # made up in English in front of them.
+    test "joins the messages without field names" do
+      errors = %{terms_accepted: "Terms of service must be accepted", email: ["is invalid"]}
       result = ErrorFormatter.format_validation_errors(errors)
-      assert result =~ "Email is invalid"
-      assert result =~ "Password is too short"
+
+      assert result =~ "Terms of service must be accepted"
+      assert result =~ "is invalid"
+      refute result =~ "Terms accepted"
+      refute result =~ "Email"
     end
   end
 
-  describe "format_changeset_errors/1" do
-    test "formats Ecto changeset errors" do
-      changeset = %Changeset{
-        data: %{},
-        errors: [email: {"has already been taken", [validation: :unsafe]}]
-      }
-
-      assert ErrorFormatter.format_changeset_errors(changeset) == "Email has already been taken"
-    end
-
-    test "interpolates options in error messages" do
+  describe "first_error/2" do
+    test "is the first field's first message alone, interpolated" do
       changeset = %Changeset{
         data: %{},
         errors: [
           password:
-            {"should be at least %{count} characters",
+            {"should be at least %{count} character(s)",
+             [count: 8, validation: :length, kind: :min]},
+          email: {"can't be blank", [validation: :required]},
+          email: {"has invalid format", [validation: :format]}
+        ]
+      }
+
+      assert ErrorFormatter.first_error(changeset) == "can't be blank"
+
+      assert ErrorFormatter.first_error(changeset, %{email: "Email address"}) ==
+               "Email address: can't be blank"
+    end
+
+    test "translates the message into the current locale" do
+      changeset = %Changeset{
+        data: %{},
+        errors: [
+          new_password:
+            {"should be at least %{count} character(s)",
              [count: 8, validation: :length, kind: :min]}
         ]
       }
 
-      assert ErrorFormatter.format_changeset_errors(changeset) ==
-               "Password should be at least 8 characters"
+      assert Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+               ErrorFormatter.first_error(changeset)
+             end) == "sollte mindestens 8 Zeichen lang sein"
+    end
+
+    test "is nil without errors" do
+      assert ErrorFormatter.first_error(%Changeset{data: %{}, errors: []}) == nil
+    end
+
+    test "reaches a message nested under an embedded field" do
+      changeset =
+        %Parent{}
+        |> Changeset.cast(%{items: [%{title: "fine"}, %{title: ""}]}, [])
+        |> Changeset.cast_embed(:items, with: &Item.changeset/2)
+
+      assert ErrorFormatter.first_error(changeset) == "can't be blank"
     end
   end
 
   describe "format_user_friendly_error/2" do
-    test "formats general taken error" do
-      assert ErrorFormatter.format_user_friendly_error(
-               "registration",
-               "username: has already been taken"
-             ) ==
+    test "answers a unique-constraint refusal on any field with the generic in-use message" do
+      changeset = %Changeset{
+        data: %{},
+        errors: [name: {"has already been taken", [constraint: :unique, constraint_name: "x"]}]
+      }
+
+      assert ErrorFormatter.format_user_friendly_error("registration", changeset) ==
                "This information is already in use. Please try with different details."
     end
 
-    test "formats password too short error" do
-      assert ErrorFormatter.format_user_friendly_error("registration", "password is too short") ==
-               "Password must be at least 8 characters long."
+    # Classified by the refusal's metadata, so it works in every language.
+    test "names a refused field in the reader's language" do
+      changeset = %Changeset{
+        data: %{},
+        errors: [
+          password:
+            {"should be at least %{count} character(s)",
+             [count: 8, validation: :length, kind: :min]}
+        ]
+      }
+
+      message =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+          ErrorFormatter.format_user_friendly_error("registration", changeset)
+        end)
+
+      assert message ==
+               "Registrierung fehlgeschlagen: Passwort: sollte mindestens 8 Zeichen lang sein"
     end
 
-    test "formats invalid email error" do
-      assert ErrorFormatter.format_user_friendly_error("registration", "email is invalid") ==
-               "Please enter a valid email address."
-    end
+    test "is generic in-use in German too" do
+      changeset = %Changeset{
+        data: %{},
+        errors: [email: {"has already been taken", [constraint: :unique]}]
+      }
 
-    test "formats unknown string reason" do
-      assert ErrorFormatter.format_user_friendly_error("registration", "something went wrong") ==
-               "Registration failed: something went wrong"
+      assert Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+               ErrorFormatter.format_user_friendly_error("registration", changeset)
+             end) =~ "Diese Angaben werden bereits verwendet"
     end
   end
 

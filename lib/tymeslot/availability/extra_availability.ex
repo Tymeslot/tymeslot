@@ -16,10 +16,9 @@ defmodule Tymeslot.Availability.ExtraAvailability do
   """
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.{AvailabilityOverrideQueries, AvailabilityOverrideSchema}
   alias Tymeslot.Availability.AvailabilityScheduleSchema
-  alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Profiles.ProfileQueries
 
   @type_name "extra_hours"
   # Plenty for office hours a few times a month for a year or more, and a
@@ -122,12 +121,8 @@ defmodule Tymeslot.Availability.ExtraAvailability do
     if clash?, do: {:error, :overlap}, else: :ok
   end
 
-  defp invalidate({:ok, _row} = result, %{profile_id: profile_id}) do
-    case ProfileQueries.get_with_user(profile_id) do
-      %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
-      _no_profile -> :ok
-    end
-
+  defp invalidate({:ok, _row} = result, schedule) do
+    Availability.changed(schedule)
     result
   end
 

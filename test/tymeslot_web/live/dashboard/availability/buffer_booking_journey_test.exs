@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
-  alias Tymeslot.Utils.DateTimeUtils.Display
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
 
   @timezone "America/New_York"
 
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.Availability.BufferBookingJourneyTest do
     |> Floki.attribute(~s([data-testid="time-slot"]), "phx-value-time")
   end
 
-  defp time(time), do: Display.format_time_for_display(time)
+  defp time(time), do: TimeFormat.format(time, "12h")
 
   defp book(view, slot, email) do
     view |> element(~s([data-testid="time-slot"][phx-value-time="#{slot}"])) |> render_click()

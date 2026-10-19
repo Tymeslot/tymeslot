@@ -3,74 +3,14 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   Business logic for connection validation and provider checks.
   """
 
-  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Exchange.ClientConfig, as: ExchangeClientConfig
   alias Tymeslot.Integrations.Calendar.Provider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
-  alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.ConnectionProbe
-
-  require Logger
-
-  require Logger
-
-  @type user_id :: pos_integer()
-
-  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
-
-  @spec validate_connection(CalendarIntegrationSchema.t(), user_id()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
-  def validate_connection(%{provider: provider} = integration, user_id)
-      when provider in ["google", "outlook"] do
-    with {:ok, updated} <- Tokens.ensure_valid_token(integration, user_id),
-         {:ok, _result} <- test_connection(updated) do
-      {:ok, updated}
-    else
-      {:error, reason} when reason in [:token_refresh_failed, :token_persistence_failed] ->
-        {:error, :token_expired}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  def validate_connection(%{provider: provider} = integration, user_id)
-      when provider in @caldav_provider_strings do
-    client_config = %{
-      base_url: integration.base_url,
-      username: integration.username,
-      password: integration.password
-    }
-
-    provider_atom =
-      case ProviderConfig.parse_known(provider) do
-        {:ok, atom} -> atom
-        _other -> :unknown
-      end
-
-    # Reaches `Discovery` directly rather than through `probe/3` — metering
-    # happens at the `Discovery` funnel itself, charged to the acting user,
-    # so no second charge is needed here.
-    case Discovery.discover_calendars(provider_atom, client_config, actor: {:user, user_id}) do
-      {:ok, _result} -> {:ok, integration}
-      {:error, _msg} -> {:error, :network_error}
-    end
-  rescue
-    error ->
-      # `client_config` carries the CalDAV password; never include it here.
-      Logger.warning("CalDAV calendar discovery raised during connection validation",
-        provider: provider,
-        integration_id: integration.id,
-        error: LogFormat.reason(error)
-      )
-
-      {:error, :network_error}
-  end
-
-  def validate_connection(_integration, _user_id), do: {:error, :unsupported_provider}
 
   @doc """
   Test provider connectivity via registry.
@@ -107,7 +47,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
     result =
       with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
            {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
-        config = to_probe_config(provider_atom, integration)
+        config = provider_atom |> to_probe_config(integration) |> past_breaker(scope)
 
         provider_module
         |> ConnectionProbe.probe_provider(integration,
@@ -116,6 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
           validate: fn -> :ok end,
           run: fn -> provider_module.perform_connection_test(config) end
         )
+        |> tap(&reset_host_breaker_on_success(&1, provider_atom, integration))
         |> present_failure(scope, provider_atom)
       else
         _other -> {:error, :unsupported_provider}
@@ -130,6 +71,40 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
     result
   end
 
+  # A self-hosted server's calls run through a breaker keyed by its host. Once
+  # it has opened, an integration whose syncs are paused sends that server no
+  # traffic, so nothing closes it again until it times out, and a fixed
+  # server stays refused after "test connection succeeded". A test that
+  # reached the server is the evidence it is back, so the host's breaker is
+  # closed. A server shared by many accounts is left alone; see
+  # `reset_host_breaker/1`.
+  defp reset_host_breaker_on_success({:ok, _message}, _provider_atom, integration),
+    do: reset_host_breaker(integration)
+
+  defp reset_host_breaker_on_success(_failure, _provider_atom, _integration), do: :ok
+
+  @doc """
+  Closes the circuit breaker of `integration`'s self-hosted server, for a
+  caller that has just reached that server successfully (a connection test,
+  a reconnect's discovery).
+
+  A no-op for a server shared by many accounts: Google and Outlook, whose
+  breaker covers every account, and the CalDAV services at a fixed address
+  (iCloud, mailbox.org), whose host breaker does. One account reaching such a
+  server says nothing about the failures the others saw.
+  """
+  @spec reset_host_breaker(map()) :: :ok
+  def reset_host_breaker(%{provider: provider} = integration) do
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
+         nil <- ProviderConfig.locked_url_for(provider_atom),
+         {breaker_provider, host} when is_binary(host) <-
+           CalendarCircuitBreaker.breaker_key(provider_atom, Map.get(integration, :base_url)) do
+      CalendarCircuitBreaker.reset(breaker_provider, host)
+    end
+
+    :ok
+  end
+
   # CalDAV-family `validate_config/1` and `perform_connection_test/1` callbacks read
   # `config` with bracket access, which the persisted `CalendarIntegrationSchema`
   # struct doesn't support. Converts it to the same atom-keyed map
@@ -138,14 +113,29 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   # already passes a plain map is left untouched; OAuth providers read the
   # struct directly (dot/`Map` access) and are never converted.
   defp to_probe_config(provider_atom, %CalendarIntegrationSchema{} = integration) do
-    if ProviderConfig.caldav_based?(provider_atom) do
-      CalendarIntegrationSchema.to_provider_config(integration)
-    else
-      integration
+    cond do
+      ProviderConfig.caldav_based?(provider_atom) ->
+        CalendarIntegrationSchema.to_provider_config(integration)
+
+      ProviderConfig.ews?(provider_atom) ->
+        ExchangeClientConfig.new(integration)
+
+      true ->
+        integration
     end
   end
 
   defp to_probe_config(_provider_atom, config), do: config
+
+  # A person pressing "Test connection" is asking whether the server is back,
+  # which a test refused by the host breaker an earlier outage opened cannot
+  # answer; the press is rate-limited, so it is let past. A CalDAV test needs
+  # no flag: its probe never runs through the breaker.
+  # A `:background` probe stays behind the breaker like any other traffic.
+  defp past_breaker(%ExchangeClientConfig{} = config, :interactive),
+    do: %{config | skip_breaker: true}
+
+  defp past_breaker(config, _scope), do: config
 
   # Copy for the reader of an `:interactive` test, per `test_connection/2`.
   # Everything else is passed through: a `:background` probe wants the reason

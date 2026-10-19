@@ -78,6 +78,17 @@ defmodule Tymeslot.AppSettingsTest do
     end
   end
 
+  describe "the boot loader" do
+    test "applies the stored overrides and leaves no process behind" do
+      assert {:ok, _updated} = AppSettings.update(%{registration_enabled: false})
+      # What a fresh node holds before the loader runs: the config value.
+      Application.put_env(:tymeslot, :registration_enabled, true)
+
+      assert AppSettings.start_loader() == :ignore
+      assert Application.get_env(:tymeslot, :registration_enabled) == false
+    end
+  end
+
   describe "effective_values/0" do
     test "marks a DB-overridden setting as :db" do
       {:ok, _settings} = AppSettings.update(%{registration_enabled: false})

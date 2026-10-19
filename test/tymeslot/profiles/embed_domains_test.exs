@@ -81,6 +81,27 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert "example.com" in updated_profile.allowed_embed_domains
     end
 
+    # Duplicates are judged on the host validation extracts, so a URL and
+    # its bare host are one domain.
+    test "stores a URL and its bare host once", %{profile: profile} do
+      assert {:ok, updated} =
+               Profiles.update_allowed_embed_domains(profile, "https://a.com, a.com")
+
+      assert updated.allowed_embed_domains == ["a.com"]
+    end
+
+    test "adding the URL form of a stored domain keeps one copy", %{profile: profile} do
+      {:ok, stored} = Profiles.update_allowed_embed_domains(profile, ["example.com"])
+
+      assert {:ok, updated} =
+               Profiles.update_allowed_embed_domains(
+                 stored,
+                 stored.allowed_embed_domains ++ ["https://example.com"]
+               )
+
+      assert updated.allowed_embed_domains == ["example.com"]
+    end
+
     test "rejects domains with paths", %{profile: profile} do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["example.com/path"])
@@ -226,6 +247,28 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
                Profiles.update_allowed_embed_domains(profile, ["none", "example.com"])
 
       assert updated_profile.allowed_embed_domains == ["example.com"]
+    end
+  end
+
+  describe "normalize/1" do
+    alias Tymeslot.Profiles.EmbedDomains
+
+    test "trims, lower-cases and deduplicates, returning a plain list" do
+      assert EmbedDomains.normalize([" Example.COM ", "example.com", "test.org"]) ==
+               ["example.com", "test.org"]
+
+      assert EmbedDomains.normalize(" A.com , b.org ,a.com") == ["a.com", "b.org"]
+    end
+
+    test "empty, blank and none inputs become [\"none\"]" do
+      assert EmbedDomains.normalize([]) == ["none"]
+      assert EmbedDomains.normalize("") == ["none"]
+      assert EmbedDomains.normalize(["", " "]) == ["none"]
+      assert EmbedDomains.normalize("none") == ["none"]
+    end
+
+    test "does not validate" do
+      assert EmbedDomains.normalize(["not a domain"]) == ["not a domain"]
     end
   end
 

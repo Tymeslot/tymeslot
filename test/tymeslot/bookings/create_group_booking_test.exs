@@ -22,11 +22,19 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
   alias Tymeslot.Workers.WebhookWorker
+
+  # The booking reads the host's calendars before committing; these hosts have
+  # nothing in them.
+  setup do
+    TestMocks.stub_no_calendar_events()
+    :ok
+  end
 
   setup :verify_on_exit!
 
@@ -69,8 +77,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   defp execute(ctx, email, extra_params \\ %{}) do
     Create.execute(
       Map.merge(ctx.meeting_params, extra_params),
-      form_data(email),
-      skip_calendar_check: true
+      form_data(email)
     )
   end
 
@@ -138,7 +145,9 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
         Date.utc_today(),
         Date.add(Date.utc_today(), 41),
         "Etc/UTC",
-        30
+        30,
+        nil,
+        nil
       )
 
     AvailabilityCache.put(cache_key, {:ok, %{"seeded" => true}})
@@ -200,7 +209,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     # A group meeting type with an auto-creating video provider used to never
     # send the first booker a confirmation: the room worker released a
     # solo-shaped `meeting.created` event against a meeting with no
-    # `attendee_*` fields of its own, which `ContentBuilder.validate_content/2`
+    # `attendee_*` fields of its own, which the content check of the time
     # then refused as missing fields. Running the real job end to end is the
     # point — a hand-called helper would not have caught that.
     test "the first booker's confirmation reaches them once the room worker runs for real", ctx do
@@ -246,8 +255,8 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     end
 
     # The same missing-attendee `meeting.created` used to fan out a SECOND
-    # time once the room existed, on top of the one `seat_booked/4` already
-    # sent at booking time.
+    # time once the room existed, on top of the one `seat_booked_deferred/3`
+    # already sent at booking time.
     test "the room worker never re-dispatches meeting.created for a group meeting", ctx do
       {:ok, _webhook} =
         Webhooks.create_webhook(ctx.user.id, %{
@@ -286,7 +295,6 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
 
       assert {:ok, meeting} =
                Create.execute(ctx.meeting_params, form_data("zoom@example.com"),
-                 skip_calendar_check: true,
                  with_video_room: true
                )
 
@@ -322,6 +330,8 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
 
       defdelegate schedule_reminder_emails(meeting_id, value, unit, scheduled_at),
         to: EmailScheduler
+
+      defdelegate cancel_reminder_emails(meeting_id), to: EmailScheduler
     end
 
     defp fail_seat_confirmations do

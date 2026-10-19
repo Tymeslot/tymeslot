@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   @outstanding_refunds_limit 50
@@ -102,7 +103,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   @doc """
   Lists all `pending` booking payments for a host that still carry a
-  `stripe_checkout_session_id`, with the associated meeting preloaded.
+  `stripe_checkout_session_id`.
 
   Used by `Tymeslot.MeetingPayments.ConnectAccounts.disconnect/1` to
   collect open checkout sessions that must be expired before disconnecting.
@@ -114,8 +115,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         where:
           b.host_user_id == ^host_user_id and
             b.status == "pending" and
-            not is_nil(b.stripe_checkout_session_id),
-        preload: [:meeting]
+            not is_nil(b.stripe_checkout_session_id)
 
     Repo.all(query)
   end
@@ -159,12 +159,17 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   @doc """
   Lists the host's payments whose meeting has been cancelled while the host
-  still holds the attendee's money.
+  still holds the attendee's money, and those whose meeting expired before
+  it was settled: a payment that completed after its slot was taken, or a
+  paid request that lapsed unapproved, whose automatic refund has not gone
+  through (yet).
 
   Derived from the meeting's status and the payment's own balance rather than
   from a stored "refund owed" flag, so it cannot drift out of step with either
-  side. Ordered oldest cancellation first: the longer an attendee has been out
-  of pocket, the more urgent the row.
+  side. Oldest first, the longer an attendee has been out of pocket the more
+  urgent the row: a cancelled booking dated by its cancellation, an expired
+  one, which has no cancellation date, by its payment. Ties go by id, so the
+  bounded window below is the same rows on every read.
 
   Deliberately not bounded by `for_host/2`'s recent-payments window, which is
   what let an older unrefunded cancellation drop off the dashboard entirely.
@@ -177,8 +182,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     limit = Keyword.get(opts, :limit, @outstanding_refunds_limit)
 
     query =
-      from [_b, m] in outstanding_refunds_query(host_user_id),
-        order_by: [asc: m.cancelled_at],
+      from [b, m] in outstanding_refunds_query(host_user_id),
+        order_by: [asc: coalesce(m.cancelled_at, b.paid_at), asc: b.id],
         limit: ^limit,
         preload: [meeting: m]
 
@@ -226,17 +231,25 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     }
   end
 
-  # Cancelled bookings whose money the host still holds. Derived from the
-  # meeting's status and the payment's own balance rather than from a stored
-  # "refund owed" flag, so it cannot drift out of step with either side.
+  # Cancelled or expired bookings whose money the host still holds. A paid
+  # booking ends expired when its payment completed after the slot was taken
+  # (`CheckoutSessionCompleted`), or when a paid request lapsed unapproved
+  # (`Meetings.Approval`); both owe a full refund and refund it on their own,
+  # so a row here is one whose refund has not gone through yet. Derived
+  # from the meeting's status and the payment's own balance rather than from
+  # a stored "refund owed" flag, so it cannot drift out of step with either
+  # side.
   defp outstanding_refunds_query(host_user_id) do
-    from b in BookingPaymentSchema,
-      join: m in assoc(b, :meeting),
-      where:
-        b.host_user_id == ^host_user_id and
-          b.status in ^BookingPaymentSchema.refundable_statuses() and
-          b.refunded_amount_cents < b.amount_cents and
-          m.status == "cancelled"
+    query =
+      from b in BookingPaymentSchema,
+        join: m in assoc(b, :meeting),
+        as: :meeting,
+        where:
+          b.host_user_id == ^host_user_id and
+            b.status in ^BookingPaymentSchema.refundable_statuses() and
+            b.refunded_amount_cents < b.amount_cents
+
+    MeetingState.where_released(query, :meeting)
   end
 
   @doc """
@@ -255,24 +268,36 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     Repo.one(query)
   end
 
-  @spec lifetime_stats(integer()) :: %{
-          received: integer(),
-          refunded: integer(),
-          platform_fee: integer()
-        }
+  @doc """
+  Lifetime totals for a host, one row per currency, ordered by currency.
+
+  Grouped because a host who changed their default currency holds money in
+  more than one, and amounts in different currencies cannot be added up.
+  """
+  @spec lifetime_stats(integer()) :: [
+          %{
+            currency: String.t(),
+            received: integer(),
+            refunded: integer(),
+            platform_fee: integer()
+          }
+        ]
   def lifetime_stats(host_user_id) do
     query =
       from b in BookingPaymentSchema,
         where:
           b.host_user_id == ^host_user_id and
             b.status in ["paid", "partially_refunded", "refunded"],
+        group_by: b.currency,
+        order_by: [asc: b.currency],
         select: %{
-          received: coalesce(sum(b.amount_cents), 0),
-          refunded: coalesce(sum(b.refunded_amount_cents), 0),
-          platform_fee: coalesce(sum(b.application_fee_cents), 0)
+          currency: b.currency,
+          received: type(coalesce(sum(b.amount_cents), 0), :integer),
+          refunded: type(coalesce(sum(b.refunded_amount_cents), 0), :integer),
+          platform_fee: type(coalesce(sum(b.application_fee_cents), 0), :integer)
         }
 
-    Repo.one(query)
+    Repo.all(query)
   end
 
   @spec insert(map()) :: {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}

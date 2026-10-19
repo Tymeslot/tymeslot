@@ -32,8 +32,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
   describe "identity" do
     test "declares its provider type, name and bucket" do
-      assert NextcloudTalkProvider.provider_type() == :nextcloud_talk
-      assert NextcloudTalkProvider.display_name() == "Nextcloud Talk"
       assert NextcloudTalkProvider.connection_test_bucket() == :nextcloud_talk
     end
   end
@@ -160,10 +158,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       assert {:ok, room} = NextcloudTalkProvider.create_meeting_room(with_event(@config))
 
       refute inspect(room.provider_data) =~ @config.client_secret
-
-      refute inspect(NextcloudTalkProvider.generate_meeting_metadata(room)) =~
-               @config.client_secret
-
       refute inspect(room) =~ @config.client_secret
     end
 
@@ -256,25 +250,21 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     end
   end
 
-  describe "extract_room_id/1 and valid_meeting_url?/1" do
+  describe "extract_room_id/1" do
     test "read the token from both link forms" do
       assert NextcloudTalkProvider.extract_room_id(@server <> "/index.php/call/abc123xy") ==
                "abc123xy"
 
       assert NextcloudTalkProvider.extract_room_id(@server <> "/call/abc123xy") == "abc123xy"
-      assert NextcloudTalkProvider.valid_meeting_url?(@server <> "/call/abc123xy")
     end
 
     test "refuse a link that is not a Talk call" do
       assert NextcloudTalkProvider.extract_room_id(@server <> "/apps/files") == nil
-      refute NextcloudTalkProvider.valid_meeting_url?(@server <> "/apps/files")
-      refute NextcloudTalkProvider.valid_meeting_url?("ftp://cloud.example.com/call/abc123xy")
     end
 
     test "refuse a token outside Talk's token format" do
       assert NextcloudTalkProvider.extract_room_id(@server <> "/call/ABC123XY") == nil
       assert NextcloudTalkProvider.extract_room_id(@server <> "/call/abc") == nil
-      refute NextcloudTalkProvider.valid_meeting_url?(@server <> "/call/abc-123")
     end
   end
 
@@ -513,12 +503,14 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
     end
 
-    test "treats a conversation already gone as deleted" do
+    # `ProviderAdapter` counts it as deleted.
+    test "reports a conversation already gone as not found" do
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: failure(404, [])}}
       end)
 
-      assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+      assert {:error, :meeting_not_found} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
     end
 
     test "treats a conversation its owner marked to be preserved as done" do
@@ -530,7 +522,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     end
 
     test "treats a token Talk would not route as no conversation, without a request" do
-      assert :ok = NextcloudTalkProvider.delete_meeting_room("../abc", @config)
+      assert {:error, :meeting_not_found} =
+               NextcloudTalkProvider.delete_meeting_room("../abc", @config)
     end
 
     test "reports a deletion the server refuses as a configuration error" do

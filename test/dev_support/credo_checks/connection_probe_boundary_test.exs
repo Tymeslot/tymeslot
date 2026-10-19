@@ -27,13 +27,13 @@ defmodule CredoChecks.ConnectionProbeBoundaryTest do
       |> refute_issues()
     end
 
-    test "no issues inside video/providers/provider_registry.ex" do
+    test "no issues inside video/providers/provider_adapter.ex" do
       """
       defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
         def test_provider_connection(module, config), do: module.perform_connection_test(config)
       end
       """
-      |> to_source_file("lib/tymeslot/integrations/video/providers/provider_registry.ex")
+      |> to_source_file("lib/tymeslot/integrations/video/providers/provider_adapter.ex")
       |> run_check(ConnectionProbeBoundary)
       |> refute_issues()
     end

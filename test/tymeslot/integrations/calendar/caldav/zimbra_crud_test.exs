@@ -42,7 +42,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
-        verify_ssl: true,
         provider: :zimbra
       }
 
@@ -83,7 +82,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
-        verify_ssl: true,
         provider: :zimbra
       }
 
@@ -117,7 +115,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
-        verify_ssl: true,
         provider: :zimbra
       }
 
@@ -141,7 +138,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
-        verify_ssl: true,
         provider: :zimbra
       }
 
@@ -232,7 +228,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user",
         password: "pass",
         calendar_paths: [],
-        verify_ssl: true,
         provider: :zimbra
       }
 
