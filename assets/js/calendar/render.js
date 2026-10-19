@@ -12,6 +12,7 @@ import { bandsForColumns, bookableInView, clearLabelTop, labelPlacement, nextInV
 import { draggable } from "./drag.js";
 import { LINE_HEIGHT, countLines, isLongWord, layoutColumn } from "./layout.js";
 import { metricsFor } from "./viewport.js";
+import { rowWeek } from "./week_numbers.js";
 import {
   HOUR_HEIGHT,
   MINUTES_PER_DAY,
@@ -77,6 +78,14 @@ export function dateLabel(iso, strings) {
   return `${strings.weekdays[isoWeekday(dayNumber(iso)) - 1]} ${day} ${strings.months[month - 1]}`;
 }
 
+// A row's ISO week (week_numbers.js), for the head corner and the month and
+// mini-month gutters; empty while week numbers are off.
+export function weekNumberHtml(days, settings, strings) {
+  if (!settings.show_week_numbers) return "";
+  const week = rowWeek(days);
+  return `<span class="cal-weeknum" role="img" aria-label="${escapeHtml(interpolate(strings.week_number, { number: week }))}">${week}</span>`;
+}
+
 function emptyText(view, strings) {
   if (view === "day") return strings.empty_day;
   if (view === "three_day") return strings.empty_three_day;
@@ -124,7 +133,7 @@ export function renderGrid(model) {
   );
 }
 
-function head(days, { strings, nowDay }) {
+function head(days, { strings, nowDay, settings }) {
   const cells = days
     .map((iso) => {
       const n = dayNumber(iso);
@@ -136,7 +145,7 @@ function head(days, { strings, nowDay }) {
       );
     })
     .join("");
-  return `<div class="cal-head"><div class="cal-head-corner"></div>${cells}</div>`;
+  return `<div class="cal-head"><div class="cal-head-corner">${weekNumberHtml(days, settings, strings)}</div>${cells}</div>`;
 }
 
 function allDayLane({ bars, more, warn, rows }, days, { strings, now, byId, metrics }) {

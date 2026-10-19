@@ -11,7 +11,7 @@
 import { agendaGroups } from "./agenda.js";
 import { chipCapacity, dayDots, eventsOnDay, monthLayout, monthWeeks } from "./month.js";
 import { renderAgendaDay } from "./render_agenda.js";
-import { colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag } from "./render.js";
+import { colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
 import { MINUTES_PER_DAY, dayNumber, formatMinutes, isoFromDay, isoWeekday } from "./time.js";
 
 const HEAD_ROW = 24;
@@ -28,7 +28,7 @@ export function renderMonth({ days, date, today, events, settings, strings, phon
   const body = phone ? weeks.map((week) => phoneWeek(week, ctx)).join("") : wideWeeks(weeks, cellHeight, ctx);
 
   return (
-    `<div class="cal-month${phone ? " is-phone" : ""}" data-view-scroll role="region" aria-label="${escapeHtml(label)}">` +
+    `<div class="cal-month${phone ? " is-phone" : ""}${settings.show_week_numbers ? " has-weeknums" : ""}" data-view-scroll role="region" aria-label="${escapeHtml(label)}">` +
     `<div class="cal-month-head" aria-hidden="true">${head}</div>` +
     `<div class="cal-month-weeks">${body}</div>` +
     (phone ? chosenDay(ctx) : "") +
@@ -49,7 +49,7 @@ function wideWeeks(weeks, cellHeight, ctx) {
   const byId = new Map(ctx.events.map((e) => [e.id, e]));
   return monthLayout(weeks, ctx.events, { maxLanes: lanes })
     .map((week) => {
-      let html = `<div class="cal-mweek" style="grid-template-rows:${HEAD_ROW}px repeat(${lanes}, ${LANE}px) minmax(0, 1fr)">`;
+      let html = `<div class="cal-mweek" style="grid-template-rows:${HEAD_ROW}px repeat(${lanes}, ${LANE}px) minmax(0, 1fr)">${weekNumberHtml(week.days, ctx.settings, ctx.strings)}`;
       // Each day's cell is followed by its bars (from the day they start on),
       // chips and "+N", so the document reads day by day; the grid placement
       // is explicit, so the picture does not depend on this order.
@@ -126,7 +126,7 @@ function moreButton(iso, column, row, count, warn, { strings }) {
 }
 
 function phoneWeek(week, ctx) {
-  return `<div class="cal-mweek is-phone">${week.map((iso) => phoneCell(iso, ctx)).join("")}</div>`;
+  return `<div class="cal-mweek is-phone">${weekNumberHtml(week, ctx.settings, ctx.strings)}${week.map((iso) => phoneCell(iso, ctx)).join("")}</div>`;
 }
 
 function phoneCell(iso, ctx) {

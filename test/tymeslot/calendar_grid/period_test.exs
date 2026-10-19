@@ -216,4 +216,36 @@ defmodule Tymeslot.CalendarGrid.PeriodTest do
     window = Period.window(:day, ~D[2026-10-18], :sunday, true)
     assert {window.first, window.last} == {~D[2026-10-11], ~D[2026-10-31]}
   end
+
+  describe "week_number/1" do
+    defp row(first, count \\ 7), do: Enum.map(0..(count - 1), &Date.add(first, &1))
+
+    test "numbers a Monday-start row by its Monday" do
+      assert Period.week_number(row(~D[2026-10-12])) == 42
+    end
+
+    test "numbers a Sunday-start row by the Monday after its Sunday" do
+      assert Period.week_number(row(~D[2026-10-11])) == 42
+      assert Period.week_number(row(~D[2026-09-27])) == 40
+      assert Period.week_number(row(~D[2027-01-03])) == 1
+    end
+
+    test "numbers a row without a Monday by its first day" do
+      assert Period.week_number([~D[2026-10-18]]) == 42
+      assert Period.week_number(row(~D[2027-01-01], 3)) == 53
+    end
+
+    test "week 53 and week 1 across the turn of the year" do
+      assert Period.week_number([~D[2026-12-31]]) == 53
+      assert Period.week_number([~D[2024-12-30]]) == 1
+    end
+
+    test "every row of a month matrix, either week start" do
+      assert ~D[2026-10-14] |> Period.month_matrix(:monday) |> Enum.map(&Period.week_number/1) ==
+               [40, 41, 42, 43, 44, 45]
+
+      assert ~D[2026-10-14] |> Period.month_matrix(:sunday) |> Enum.map(&Period.week_number/1) ==
+               [40, 41, 42, 43, 44, 45]
+    end
+  end
 end

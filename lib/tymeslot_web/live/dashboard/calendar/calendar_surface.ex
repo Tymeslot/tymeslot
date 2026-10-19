@@ -288,6 +288,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>
       <div id="calendar-live" class="sr-only" aria-live="polite" phx-update="ignore"></div>
       <Toolbar.toolbar
+        week_numbers={@preferences.show_week_numbers}
         view={@view}
         date={@date}
         today={@today}
@@ -316,6 +317,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       <div class="cal-row relative isolate flex min-h-0 flex-1">
         <Rail.rail
           :if={@rail_open}
+          week_numbers={@preferences.show_week_numbers}
           accounts={@accounts}
           mini_cursor={@mini_cursor}
           view={@view}
@@ -372,6 +374,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       />
       <DateSheet.date_sheet
         :if={@open_menu == :date_sheet}
+        week_numbers={@preferences.show_week_numbers}
         mini_cursor={@mini_cursor}
         view={@view}
         date={@date}

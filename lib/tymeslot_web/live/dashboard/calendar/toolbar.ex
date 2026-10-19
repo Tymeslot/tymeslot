@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :hidden_count, :integer, required: true
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :target, :any, required: true
+  attr :week_numbers, :boolean, default: false
 
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
   def toolbar(assigns) do
@@ -140,6 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             week_start={@week_start}
             locale={@locale}
             target={@target}
+            week_numbers={@week_numbers}
           />
         </:panel>
       </.dropdown>

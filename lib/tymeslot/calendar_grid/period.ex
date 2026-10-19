@@ -151,4 +151,17 @@ defmodule Tymeslot.CalendarGrid.Period do
 
     first |> Date.range(Date.add(first, 41)) |> Enum.chunk_every(7)
   end
+
+  @doc """
+  The ISO week a row of days belongs to: the week of its Monday, or of its
+  first day when it has none (a day, three days). A row that starts on a
+  Sunday is numbered by the Monday after it, the week six of its seven days
+  are in. `assets/js/calendar/week_numbers.js` (`rowWeek`) mirrors it.
+  """
+  @spec week_number([Date.t(), ...]) :: 1..53
+  def week_number([first | _rest] = days) do
+    day = Enum.find(days, first, &(Date.day_of_week(&1) == 1))
+    {_year, week} = :calendar.iso_week_number(Date.to_erl(day))
+    week
+  end
 end

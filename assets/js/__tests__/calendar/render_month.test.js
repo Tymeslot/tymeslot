@@ -11,6 +11,7 @@ const strings = {
   weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   all_day: "All day",
+  week_number: "Week %{number}",
   today: "Today",
   ended: "ended",
   shown_as_free: "shown as free",
@@ -150,5 +151,39 @@ describe("phone", () => {
   test("a chosen day with nothing on it says so", () => {
     const below = draw({ phone: true, date: "2026-10-20" }).querySelector(".cal-month-agenda");
     expect(below.textContent).toContain("Nothing planned on this day.");
+  });
+});
+
+describe("week numbers", () => {
+  const on = { time_format: "24h", show_week_numbers: true };
+  const numbers = (holder) => [...holder.querySelectorAll(".cal-weeknum")].map((cell) => cell.textContent);
+
+  test("off: no gutter and no numbers", () => {
+    const holder = draw();
+    expect(holder.querySelector(".cal-month").classList.contains("has-weeknums")).toBe(false);
+    expect(holder.querySelector(".cal-weeknum")).toBeNull();
+  });
+
+  test("on: one number per week, each named for screen readers", () => {
+    const holder = draw({ settings: on });
+    expect(holder.querySelector(".cal-month").classList.contains("has-weeknums")).toBe(true);
+    expect(numbers(holder)).toEqual(["40", "41", "42", "43", "44", "45"]);
+    expect(holder.querySelector(".cal-mweek .cal-weeknum").getAttribute("aria-label")).toBe("Week 40");
+  });
+
+  test("on a phone too", () => {
+    expect(numbers(draw({ settings: on, phone: true }))).toEqual(["40", "41", "42", "43", "44", "45"]);
+  });
+
+  test("Sunday-start rows are numbered by the Monday after their Sunday", () => {
+    const sundayDays = periodDays("month", "2026-10-14", "sunday", true);
+    expect(sundayDays[0]).toBe("2026-09-27");
+    expect(numbers(draw({ days: sundayDays, settings: on }))[0]).toBe("40");
+  });
+
+  test("the numbers leave every day cell in its own column", () => {
+    const holder = draw({ settings: on });
+    expect(holder.querySelector('[data-month-cell="2026-09-28"]').getAttribute("style")).toContain("grid-column:1;");
+    expect(holder.querySelectorAll("[data-month-cell]")).toHaveLength(42);
   });
 });

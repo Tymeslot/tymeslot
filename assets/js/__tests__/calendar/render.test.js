@@ -10,6 +10,7 @@ const strings = {
   weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   all_day: "All day",
+  week_number: "Week %{number}",
   more: "more",
   allday_more: "%{count} more all-day events on %{date}",
   also_here: "Also here: %{titles}",
@@ -68,6 +69,27 @@ afterEach(() => {
 });
 
 describe("renderGrid", () => {
+  test("with week numbers on, the head corner names the week", () => {
+    const grid = draw({ settings: { ...settings, show_week_numbers: true } });
+    const cell = grid.querySelector(".cal-head-corner .cal-weeknum");
+    expect(cell.textContent).toBe("42");
+    expect(cell.getAttribute("aria-label")).toBe("Week 42");
+    expect(cell.getAttribute("role")).toBe("img");
+  });
+
+  test("a Sunday-start week is numbered by its Monday, and a day by itself", () => {
+    const sundayWeek = Array.from({ length: 7 }, (_, k) => addDays("2026-10-18", k));
+    const on = { ...settings, show_week_numbers: true };
+    expect(draw({ days: sundayWeek, settings: on }).querySelector(".cal-weeknum").textContent).toBe("43");
+    expect(draw({ view: "day", days: ["2026-10-18"], settings: on }).querySelector(".cal-weeknum").textContent).toBe("42");
+  });
+
+  test("with week numbers off, the head corner is empty", () => {
+    const grid = draw();
+    expect(grid.querySelector(".cal-weeknum")).toBeNull();
+    expect(grid.querySelector(".cal-head-corner").innerHTML).toBe("");
+  });
+
   test("one column per day, each with a header that opens it", () => {
     const grid = draw();
     expect(grid.querySelectorAll(".cal-col")).toHaveLength(7);

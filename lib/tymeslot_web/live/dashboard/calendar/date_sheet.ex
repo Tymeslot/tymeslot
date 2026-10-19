@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DateSheet do
   attr :week_start, :atom, required: true
   attr :locale, :string, required: true
   attr :target, :any, required: true
+  attr :week_numbers, :boolean, default: false
 
   @spec date_sheet(map()) :: Phoenix.LiveView.Rendered.t()
   def date_sheet(assigns) do
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DateSheet do
           week_start={@week_start}
           locale={@locale}
           target={@target}
+          week_numbers={@week_numbers}
         />
       </div>
       <:footer>

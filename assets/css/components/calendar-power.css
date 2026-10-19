@@ -2,3 +2,43 @@
    keys shown in <kbd>, week numbers, the month and mini-month gutters, the
    calendar sets in the rail and the .ics drop overlay. Colours through
    tokens only; every motion respects prefers-reduced-motion. */
+
+/* Week numbers (Task 5): the time grid's head corner, the month's gutter
+   and the mini month's column. The month keeps its seven grid columns: the
+   number sits in the row's left padding, so no chip changes column. */
+
+.cal-weeknum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-head-corner .cal-weeknum {
+  height: 100%;
+  font-weight: 600;
+}
+
+.cal-month.has-weeknums .cal-month-head,
+.cal-month.has-weeknums .cal-mweek {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.cal-month.has-weeknums .cal-mweek > .cal-weeknum {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2rem;
+  align-items: flex-start;
+  padding-top: 6px;
+  border-right: 1px solid var(--cal-line);
+}
+
+.cal-month.has-weeknums .cal-mweek.is-phone > .cal-weeknum {
+  align-items: center;
+  padding-top: 0;
+}

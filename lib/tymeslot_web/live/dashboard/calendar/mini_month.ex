@@ -2,8 +2,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   @moduledoc """
   A month of day buttons with the visible range marked, used in the rail, in
   the period title's date picker and in the phone's date sheet
-  (`size={:touch}`). A day click navigates like every other control
-  (`Navigation.js/3`), keeping the current view.
+  (`size={:touch}`), with an optional column of ISO week numbers. A day click
+  navigates like every other control (`Navigation.js/3`), keeping the current
+  view.
   """
 
   use TymeslotWeb, :html
@@ -15,6 +16,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
 
   @day_sizes %{compact: "h-7 text-token-xs", touch: "h-11 text-token-sm"}
   @arrow_sizes %{compact: nil, touch: "h-11 w-11"}
+  @columns %{
+    true => "grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-0",
+    false => "grid grid-cols-7 gap-0"
+  }
 
   attr :id, :string, required: true
   attr :cursor, :any, required: true, doc: "the first of the month shown"
@@ -26,6 +31,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   attr :locale, :string, required: true
   attr :target, :any, required: true
 
+  attr :week_numbers, :boolean,
+    default: false,
+    doc: "a leading column with each row's ISO week (`Period.week_number/1`)"
+
   attr :size, :atom,
     default: :compact,
     values: [:compact, :touch],
@@ -36,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
     assigns =
       assign(assigns,
         arrow: Map.fetch!(@arrow_sizes, assigns.size),
+        columns: Map.fetch!(@columns, assigns.week_numbers),
         weeks: Period.month_matrix(assigns.cursor, assigns.week_start),
         initials: initials(assigns.locale, assigns.week_start)
       )
@@ -68,13 +78,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
         </div>
       </div>
       <div
-        class="grid grid-cols-7 gap-0 text-center text-token-2xs font-semibold text-tymeslot-500"
+        class={[@columns, "text-center text-token-2xs font-semibold text-tymeslot-500"]}
         aria-hidden="true"
       >
+        <span :if={@week_numbers}></span>
         <span :for={initial <- @initials}>{initial}</span>
       </div>
       <div role="group" aria-labelledby={"#{@id}-label"}>
-        <div :for={week <- @weeks} class="grid grid-cols-7 gap-0">
+        <div :for={week <- @weeks} class={@columns}>
+          <span :if={@week_numbers} class="cal-weeknum" role="img" aria-label={week_label(week)}>
+            {Period.week_number(week)}
+          </span>
           <button
             :for={day <- week}
             type="button"
@@ -96,6 +110,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
     </div>
     """
   end
+
+  defp week_label(week),
+    do: dgettext("dashboard_calendar_power", "Week %{number}", number: Period.week_number(week))
 
   defp day_class(day, cursor, days, today, size) do
     [

@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :locale, :string, required: true
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
   attr :target, :any, required: true
+  attr :week_numbers, :boolean, default: false
 
   @spec rail(map()) :: Phoenix.LiveView.Rendered.t()
   def rail(assigns) do
@@ -53,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         week_start={@week_start}
         locale={@locale}
         target={@target}
+        week_numbers={@week_numbers}
       />
       <.calendar_list
         accounts={@accounts}
