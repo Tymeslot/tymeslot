@@ -111,6 +111,7 @@ msgid "Calendar"
 msgstr "Calendario"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
 #, elixir-autogen, elixir-format
@@ -496,6 +497,7 @@ msgid "Repeats"
 msgstr "Si ripete"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "Salva"

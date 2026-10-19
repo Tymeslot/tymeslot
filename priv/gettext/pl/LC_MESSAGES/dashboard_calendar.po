@@ -82,6 +82,7 @@ msgid "3 Days"
 msgstr "3 dni"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -107,6 +108,7 @@ msgstr "Ustawienia kalendarza"
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -119,18 +121,22 @@ msgid "Connect a calendar"
 msgstr "Podłącz kalendarz"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "Dzień"
 
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Skróty klawiszowe"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -143,6 +149,7 @@ msgstr "Miesiąc"
 msgid "My Calendars"
 msgstr "Moje kalendarze"
 
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Next period"
@@ -173,6 +180,7 @@ msgstr "Nic nie zaplanowano na najbliższe 30 dni. Wydarzenia, które dodasz lub
 msgid "Now"
 msgstr "Teraz"
 
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Previous period"
@@ -220,6 +228,7 @@ msgstr "Synchronizacja kalendarzy%{progress}…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/date_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
@@ -233,6 +242,7 @@ msgid "Toggle calendars"
 msgstr "Pokaż lub ukryj kalendarze"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -381,7 +391,7 @@ msgid "%{calendar} · %{account}"
 msgstr "%{calendar} · %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} calendar hidden"
 msgid_plural "%{count} calendars hidden"
@@ -429,6 +439,7 @@ msgid "(No title)"
 msgstr "(Bez tytułu)"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "3 days"
 msgstr "3 dni"
@@ -476,6 +487,7 @@ msgid "Choose a date"
 msgstr "Wybierz datę"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Zamknij"
@@ -491,6 +503,7 @@ msgid "Compact"
 msgstr "Kompaktowy"
 
 #: lib/tymeslot_web/live/dashboard/calendar/display_preferences.ex
+#: lib/tymeslot_web/live/dashboard/calendar/set_events.ex
 #: lib/tymeslot_web/live/dashboard/calendar/visibility.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
@@ -644,7 +657,7 @@ msgid "Saved here, waiting to reach %{account}"
 msgstr "Zapisano tutaj, czeka na synchronizację: %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
 #, elixir-autogen, elixir-format
 msgid "Show all calendars"
 msgstr "Pokaż wszystkie kalendarze"
@@ -780,6 +793,7 @@ msgid "Couldn't delete the event. Please try again."
 msgstr "Nie udało się usunąć wydarzenia. Spróbuj ponownie."
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Usuń"
@@ -994,7 +1008,7 @@ msgstr "Za późno na cofnięcie: „%{title}” zostało już usunięte."
 msgid "Another event is moving. Try again in a moment."
 msgstr "Inne wydarzenie jest właśnie przenoszone. Spróbuj ponownie za chwilę."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
 msgstr "Strzałkami przechodzisz między wydarzeniami. Naciśnij C, aby dodać wydarzenie w najbliższym wolnym terminie. Naciśnij Enter, aby otworzyć zaznaczone wydarzenie, E, aby je edytować, i M, aby je przenieść: wtedy strzałki je przesuwają, Shift ze strzałkami zmienia czas trwania, Enter zatwierdza, a Escape anuluje. Naciśnij Delete, aby usunąć wydarzenie, i Ctrl Z (Cmd Z na Macu), aby cofnąć."

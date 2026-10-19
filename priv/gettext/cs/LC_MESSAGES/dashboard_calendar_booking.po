@@ -275,7 +275,7 @@ msgstr "Otevřít pro rezervace"
 msgid "Press B to hide bookable times."
 msgstr "Klávesou B termíny k rezervaci skryjete."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Press B to show or hide your bookable times."
 msgstr "Klávesou B zobrazíte nebo skryjete své termíny k rezervaci."

@@ -275,7 +275,7 @@ msgstr "Für Buchungen öffnen"
 msgid "Press B to hide bookable times."
 msgstr "Drücken Sie B, um die buchbaren Zeiten auszublenden."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Press B to show or hide your bookable times."
 msgstr "Drücken Sie B, um Ihre buchbaren Zeiten ein- oder auszublenden."

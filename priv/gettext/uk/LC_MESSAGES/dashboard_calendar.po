@@ -86,6 +86,7 @@ msgid "3 Days"
 msgstr "3 дні"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -111,6 +112,7 @@ msgstr "Налаштування календаря"
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -123,18 +125,22 @@ msgid "Connect a calendar"
 msgstr "Підключити календар"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "День"
 
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Комбінації клавіш"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -147,6 +153,7 @@ msgstr "Місяць"
 msgid "My Calendars"
 msgstr "Мої календарі"
 
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Next period"
@@ -177,6 +184,7 @@ msgstr "На найближчі 30 днів нічого не запланова
 msgid "Now"
 msgstr "Зараз"
 
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Previous period"
@@ -224,6 +232,7 @@ msgstr "Синхронізація календарів%{progress}..."
 
 #: lib/tymeslot_web/live/dashboard/calendar/date_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
@@ -237,6 +246,7 @@ msgid "Toggle calendars"
 msgstr "Перемкнути календарі"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -385,7 +395,7 @@ msgid "%{calendar} · %{account}"
 msgstr "%{calendar} · %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} calendar hidden"
 msgid_plural "%{count} calendars hidden"
@@ -433,6 +443,7 @@ msgid "(No title)"
 msgstr "(Без назви)"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "3 days"
 msgstr "3 дні"
@@ -480,6 +491,7 @@ msgid "Choose a date"
 msgstr "Вибрати дату"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Закрити"
@@ -495,6 +507,7 @@ msgid "Compact"
 msgstr "Компактний"
 
 #: lib/tymeslot_web/live/dashboard/calendar/display_preferences.ex
+#: lib/tymeslot_web/live/dashboard/calendar/set_events.ex
 #: lib/tymeslot_web/live/dashboard/calendar/visibility.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
@@ -648,7 +661,7 @@ msgid "Saved here, waiting to reach %{account}"
 msgstr "Збережено тут, очікує надсилання в %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
 #, elixir-autogen, elixir-format
 msgid "Show all calendars"
 msgstr "Показати всі календарі"
@@ -784,6 +797,7 @@ msgid "Couldn't delete the event. Please try again."
 msgstr "Не вдалося видалити подію. Спробуйте ще раз."
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Видалити"
@@ -998,7 +1012,7 @@ msgstr "Скасувати вже запізно: подію «%{title}» вже
 msgid "Another event is moving. Try again in a moment."
 msgstr "Інша подія саме переміщується. Спробуйте ще раз за мить."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
 msgstr "Клавіші зі стрілками переходять між подіями. Натисніть C, щоб додати подію на найближчий вільний час. Натисніть Enter, щоб відкрити вибрану подію, E, щоб її редагувати, і M, щоб перемістити: тоді стрілки зсувають її, Shift зі стрілками змінює тривалість, Enter підтверджує, а Escape скасовує. Натисніть Delete, щоб видалити подію, і Ctrl Z (Cmd Z на Mac), щоб скасувати дію."

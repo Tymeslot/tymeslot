@@ -86,6 +86,7 @@ msgid "3 Days"
 msgstr "3 dny"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -111,6 +112,7 @@ msgstr "Nastavení kalendáře"
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -123,18 +125,22 @@ msgid "Connect a calendar"
 msgstr "Připojit kalendář"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "Den"
 
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Klávesové zkratky"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -147,6 +153,7 @@ msgstr "Měsíc"
 msgid "My Calendars"
 msgstr "Moje kalendáře"
 
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Next period"
@@ -177,6 +184,7 @@ msgstr "V následujících 30 dnech nemáte nic naplánováno. Události, kter�
 msgid "Now"
 msgstr "Nyní"
 
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Previous period"
@@ -224,6 +232,7 @@ msgstr "Synchronizace kalendářů%{progress}…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/date_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
@@ -237,6 +246,7 @@ msgid "Toggle calendars"
 msgstr "Zobrazit nebo skrýt kalendáře"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -385,7 +395,7 @@ msgid "%{calendar} · %{account}"
 msgstr "%{calendar} · %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} calendar hidden"
 msgid_plural "%{count} calendars hidden"
@@ -433,6 +443,7 @@ msgid "(No title)"
 msgstr "(Bez názvu)"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "3 days"
 msgstr "3 dny"
@@ -480,6 +491,7 @@ msgid "Choose a date"
 msgstr "Vybrat datum"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Zavřít"
@@ -495,6 +507,7 @@ msgid "Compact"
 msgstr "Kompaktní"
 
 #: lib/tymeslot_web/live/dashboard/calendar/display_preferences.ex
+#: lib/tymeslot_web/live/dashboard/calendar/set_events.ex
 #: lib/tymeslot_web/live/dashboard/calendar/visibility.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
@@ -648,7 +661,7 @@ msgid "Saved here, waiting to reach %{account}"
 msgstr "Uloženo zde, čeká na odeslání do %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
 #, elixir-autogen, elixir-format
 msgid "Show all calendars"
 msgstr "Zobrazit všechny kalendáře"
@@ -784,6 +797,7 @@ msgid "Couldn't delete the event. Please try again."
 msgstr "Událost se nepodařilo smazat. Zkuste to prosím znovu."
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Smazat"
@@ -998,7 +1012,7 @@ msgstr "Na vrácení je pozdě: událost „%{title}“ už byla smazána."
 msgid "Another event is moving. Try again in a moment."
 msgstr "Přesouvá se jiná událost. Zkuste to za chvíli znovu."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
 msgstr "Šipkami se pohybujete mezi událostmi. Klávesou C přidáte událost v nejbližším volném čase. Klávesou Enter otevřete vybranou událost, klávesou E ji upravíte a klávesou M ji přesunete: šipky ji pak posouvají, Shift se šipkami mění její délku, Enter potvrdí a Escape zruší. Klávesou Delete událost smažete a klávesami Ctrl Z (na Macu Cmd Z) akci vrátíte zpět."

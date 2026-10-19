@@ -113,6 +113,7 @@ msgid "Calendar"
 msgstr "Kalendář"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
 #, elixir-autogen, elixir-format
@@ -498,6 +499,7 @@ msgid "Repeats"
 msgstr "Opakuje se"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "Uložit"
