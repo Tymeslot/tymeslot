@@ -6,6 +6,9 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   Every action takes the acting profile's id and reaches the schedule or day
   only through it: an id that belongs to another profile's schedule gives
   `{:error, :not_found}` and changes nothing, whatever the caller passed.
+
+  A write that lands calls `Tymeslot.Availability.changed/1`; a refusal
+  does not.
   """
 
   alias Tymeslot.Availability
@@ -210,7 +213,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   # Private Helper Functions
 
   # Runs `fun` only for a schedule the profile owns, then refreshes that
-  # schedule's booking pages.
+  # schedule's booking pages if it wrote.
   defp with_owned_schedule(profile_id, schedule_id, fun) do
     case AvailabilityScheduleQueries.get_for_profile(schedule_id, profile_id) do
       nil -> {:error, :not_found}
@@ -226,9 +229,10 @@ defmodule Tymeslot.Availability.AvailabilityActions do
     end
   end
 
+  # A refusal wrote nothing, so there is nothing for anyone to recompute.
   defp run_and_invalidate(schedule, fun) do
     result = fun.()
-    Availability.changed(schedule)
+    unless match?({:error, _reason}, result), do: Availability.changed(schedule)
     result
   end
 end

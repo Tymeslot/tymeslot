@@ -18,6 +18,7 @@ defmodule Tymeslot.Availability.AvailabilityBroadcastTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.Availability
+  alias Tymeslot.Availability.AvailabilityActions
   alias Tymeslot.Availability.Opening
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Meetings.Approval
@@ -132,6 +133,23 @@ defmodule Tymeslot.Availability.AvailabilityBroadcastTest do
                )
 
       assert_receive {:availability_changed, user_id} when user_id == user.id
+    end
+  end
+
+  describe "a refused write tells nobody" do
+    test "weekly hours the editor refuses" do
+      %{user: user, profile: profile, schedule: schedule} = create_bookable_profile()
+      :ok = Availability.subscribe(user.id)
+
+      assert {:error, :invalid_time_format} =
+               AvailabilityActions.update_day_hours(profile.id, schedule.id, 1, "nine", "17:00")
+
+      refute_received {:availability_changed, _user_id}
+
+      assert {:ok, _day} =
+               AvailabilityActions.update_day_hours(profile.id, schedule.id, 1, "09:00", "17:00")
+
+      assert_received {:availability_changed, user_id} when user_id == user.id
     end
   end
 end
