@@ -12,9 +12,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabelsTest do
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.PeriodLabels
 
-  defp days(view, date), do: Period.days(view, date, :monday, true)
-  defp title(view, date), do: PeriodLabels.title(view, date, days(view, date), "en")
-  defp short(view, date), do: PeriodLabels.short_title(view, date, days(view, date), "en")
+  defp title(view, date), do: label(&PeriodLabels.title/4, view, date)
+  defp short(view, date), do: label(&PeriodLabels.short_title/4, view, date)
+
+  defp label(fun, view, date), do: fun.(view, date, Period.days(view, date, :monday, true), "en")
 
   describe "title/4" do
     test "a day is its full date" do
