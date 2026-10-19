@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3]
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.ColourTokens
@@ -82,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       remove_guest_prompt: nil,
       guest_form_key: 0,
       bookable_types: [],
+      bookability: %{},
       bookable: nil,
       bookable_load: :idle,
       bookable_pending: false
@@ -134,7 +136,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       hidden_integration_ids: preferences.hidden_integration_ids,
       hidden_calendar_keys: Appearance.hidden_keys(appearances),
       working_hours: WorkingHours.for_profile(socket.assigns[:profile]),
-      bookable_types: LayerPreferences.meeting_types(user_id)
+      bookable_types: LayerPreferences.meeting_types(user_id),
+      bookability: Bookability.for_user(user_id)
     )
     |> assign_accounts()
   end

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   booking's calendar copy (`FreeBusy`). A booking offers what
   `BookingPreview` allows: Accept and Decline on a request, Reschedule and
   Cancel on a booking still ahead, or a quiet line once it has passed.
+  A read-only all-day event offers "Treat as Busy | Free" instead (`TreatAs`), a choice kept in Tymeslot.
   """
 
   use TymeslotWeb, :html
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.BookingPreview
+  alias TymeslotWeb.Dashboard.Calendar.TreatAs
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @guest_limit 5
@@ -45,7 +47,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       now: Clock.utc_now(),
       integrations: assigns.integrations,
       integration_tokens: assigns.integration_tokens,
-      calendar_tokens: assigns.calendar_tokens
+      calendar_tokens: assigns.calendar_tokens,
+      bookability: Map.get(assigns, :bookability, %{})
     }
   end
 
@@ -70,6 +73,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       editable: EditGuard.editable?(context.integrations, event),
       free_busy: free_busy(event, context.integrations),
       free: Map.get(event, :transparency) == "transparent",
+      treat_as: TreatAs.state(event, blocking?(integration, entry), context),
       meeting_id: Map.get(event, :meeting_id),
       booking: BookingPreview.state(event, context.now)
     }
@@ -154,7 +158,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
             </div>
             <span>{@preview.availability.note}</span>
           </div>
-          <span :if={@preview.free_busy != :editable}>
+          <TreatAs.control :if={@preview.treat_as} preview={@preview} target={@target} />
+          <span :if={@preview.free_busy != :editable and is_nil(@preview.treat_as)}>
             <strong class="font-semibold">{@preview.availability.label}</strong>
             · {@preview.availability.note}
           </span>

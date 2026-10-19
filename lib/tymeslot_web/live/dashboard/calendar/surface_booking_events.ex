@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
   alias TymeslotWeb.Dashboard.Calendar.OpenBooking
+  alias TymeslotWeb.Dashboard.Calendar.TreatAs
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -47,6 +48,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
     {reply, socket} = OpenBooking.open(socket, params)
     {:reply, reply, socket}
   end
+
+  # The preview's "Treat as" for a read-only all-day event (see `TreatAs`);
+  # anything else it could not have sent is ignored.
+  def handle("calendar:bookability", %{"id" => id, "busy" => busy}, socket)
+      when is_binary(id) and busy in ["true", "false", "default"],
+      do: {:noreply, TreatAs.set(socket, id, busy)}
+
+  def handle("calendar:bookability", _params, socket), do: {:noreply, socket}
 
   @doc "Answers work started off the process, as `CalendarSurface.handle_async/3` would."
   @spec async(term(), {:ok, term()} | {:exit, term()}, socket()) :: {:noreply, socket()}
