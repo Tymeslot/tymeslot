@@ -38,10 +38,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules
+  alias TymeslotWeb.Helpers.ContextErrors
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   attr :group_bookings_enabled, :boolean, required: true
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
               so a misconfiguration is noticed. --%>
         <.card class="text-center">
           <p class="text-token-sm text-tymeslot-500">
-            {FormHelpers.group_bookings_not_allowed_message()}
+            {ContextErrors.group_bookings_not_allowed_message()}
           </p>
         </.card>
       <% end %>
@@ -218,7 +218,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
     """
   end
 
-  defp blocker_message(:plan), do: FormHelpers.group_bookings_not_allowed_message()
+  defp blocker_message(:plan), do: ContextErrors.group_bookings_not_allowed_message()
 
   defp blocker_message(:payment),
     do: dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")

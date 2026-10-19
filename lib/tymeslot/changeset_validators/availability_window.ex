@@ -9,11 +9,16 @@ defmodule Tymeslot.ChangesetValidators.AvailabilityWindow do
   What makes a window valid is `Tymeslot.Availability.Window.valid?/3`.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
 
   alias Tymeslot.Availability.Window
 
-  @next_day_message "must be at or before the start time when the hours end the next day"
+  @next_day_message dgettext_noop(
+                      "errors",
+                      "must be at or before the start time when the hours end the next day"
+                    )
 
   @doc """
   Settles `:ends_next_day` to a boolean and attaches the table's next-day
@@ -51,7 +56,7 @@ defmodule Tymeslot.ChangesetValidators.AvailabilityWindow do
       is_nil(start_time) or is_nil(end_time) -> changeset
       Window.valid?(start_time, end_time, ends_next_day) -> changeset
       ends_next_day -> add_error(changeset, :end_time, @next_day_message)
-      true -> add_error(changeset, :end_time, "must be after start time")
+      true -> add_error(changeset, :end_time, dgettext_noop("errors", "must be after start time"))
     end
   end
 

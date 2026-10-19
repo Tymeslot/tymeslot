@@ -32,7 +32,7 @@ defmodule Tymeslot.Auth.Session do
   def create_session(user_id, opts \\ []) do
     revoke_token(opts[:replacing])
 
-    token = Token.generate_session_token()
+    token = Token.generate()
 
     expires_at =
       DateTime.truncate(DateTime.add(DateTime.utc_now(), @session_ttl_hours, :hour), :second)
@@ -102,17 +102,51 @@ defmodule Tymeslot.Auth.Session do
   disconnects any live sockets still bound to them.
 
   Used by the security flows that invalidate all sessions at once (password
-  reset, password change, email change). Without the disconnect, a revoked
-  session keeps working on an already-connected LiveView socket until it next
-  reconnects.
+  reset, password change, email change, a deletion request). Without the
+  disconnect, a revoked session keeps working on an already-connected
+  LiveView socket until it next reconnects.
+
+  `leave_connected: token` deletes that session's row like the others but
+  does not disconnect its socket, so the LiveView that asked for the
+  revocation can still deliver its own redirect; it is unusable from the next
+  request on.
   """
-  @spec revoke_all_sessions(integer()) :: :ok
-  def revoke_all_sessions(user_id) do
+  @spec revoke_all_sessions(integer(), keyword()) :: :ok
+  def revoke_all_sessions(user_id, opts \\ []) do
+    user_id
+    |> delete_session_rows()
+    |> disconnect_sessions(opts)
+  end
+
+  @doc """
+  The database half of `revoke_all_sessions/2`: deletes every session row of a
+  user and returns their token hashes. Safe inside a transaction; pass the
+  hashes to `disconnect_sessions/2` once it has committed.
+  """
+  @spec delete_session_rows(integer()) :: [String.t()]
+  def delete_session_rows(user_id) do
     hashes = UserSessionQueries.list_user_session_token_hashes(user_id)
     UserSessionQueries.delete_user_sessions(user_id)
-    Enum.each(hashes, &disconnect_session_hash/1)
+    hashes
+  end
+
+  @doc """
+  The socket half of `revoke_all_sessions/2`: disconnects the live sockets
+  bound to the given token hashes, sparing the `:leave_connected` token's.
+  """
+  @spec disconnect_sessions([String.t()], keyword()) :: :ok
+  def disconnect_sessions(hashes, opts \\ []) do
+    spared_hash = spared_hash(Keyword.get(opts, :leave_connected))
+
+    hashes
+    |> Enum.reject(&(&1 == spared_hash))
+    |> Enum.each(&disconnect_session_hash/1)
+
     :ok
   end
+
+  defp spared_hash(token) when is_binary(token), do: Token.hash_token(token)
+  defp spared_hash(_none), do: nil
 
   @doc """
   Force-disconnects any live socket bound to the given session token hash by

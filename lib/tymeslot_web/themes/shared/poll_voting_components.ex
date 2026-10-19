@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   """
   @spec identity_form(map()) :: Phoenix.LiveView.Rendered.t()
   def identity_form(assigns) do
-    # The token is verified with `maybe_verify_booking_token/2`, which pins the
+    # The token is verified with `RecaptchaHelpers.verify/3`, which pins the
     # expected action to `booking_action/0`. Sending anything else here fails
     # verification with `recaptcha_action_mismatch`, so the action must be read
     # from the same place the verifier reads it.

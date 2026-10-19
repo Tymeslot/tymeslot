@@ -34,7 +34,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
 
   @debounce_seconds 120
 
-  @type event_kind :: :meeting | :provider_calendar_event
+  @type event_kind :: :provider_calendar_event
 
   @spec schedule_update(integer, event_kind) :: {:ok, :scheduled} | {:error, term}
   def schedule_update(event_id, kind) when is_integer(event_id) do

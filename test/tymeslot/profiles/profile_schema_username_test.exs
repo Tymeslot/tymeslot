@@ -19,11 +19,8 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
       ]
 
       for username <- valid_usernames do
-        user = insert(:user)
-
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{
-            user_id: user.id,
+          ProfileSchema.username_changeset(%ProfileSchema{}, %{
             username: username,
             timezone: "Europe/Kyiv"
           })
@@ -50,7 +47,10 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
 
       for {username, expected_error} <- invalid_usernames do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{username: username, timezone: "Europe/Kyiv"})
+          ProfileSchema.username_changeset(%ProfileSchema{}, %{
+            username: username,
+            timezone: "Europe/Kyiv"
+          })
 
         refute changeset.valid?, "Username '#{username}' should be invalid"
         assert expected_error in (errors_on(changeset)[:username] || [])
@@ -99,7 +99,10 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
 
       for username <- reserved do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{username: username, timezone: "Europe/Kyiv"})
+          ProfileSchema.username_changeset(%ProfileSchema{}, %{
+            username: username,
+            timezone: "Europe/Kyiv"
+          })
 
         refute changeset.valid?, "Username '#{username}' should be reserved"
         errors = errors_on(changeset)[:username] || []
@@ -114,7 +117,10 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
       # matched in its lowercase spelling.
       for username <- ["jesus-christ", "christ-sake"] do
         changeset =
-          ProfileSchema.changeset(%ProfileSchema{}, %{username: username, timezone: "Europe/Kyiv"})
+          ProfileSchema.username_changeset(%ProfileSchema{}, %{
+            username: username,
+            timezone: "Europe/Kyiv"
+          })
 
         assert "is reserved" in (errors_on(changeset)[:username] || []),
                "Username '#{username}' should be reserved"
@@ -122,10 +128,7 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
     end
 
     test "username is optional" do
-      user = insert(:user)
-
-      changeset =
-        ProfileSchema.changeset(%ProfileSchema{}, %{user_id: user.id, timezone: "Europe/Kyiv"})
+      changeset = ProfileSchema.basic_changeset(%ProfileSchema{}, %{timezone: "Europe/Kyiv"})
 
       assert changeset.valid?
     end

@@ -70,6 +70,36 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
       refute html =~ "Continue onboarding"
     end
 
+    test "a legacy currency checkout cannot charge renders the unsupported-currency state" do
+      html =
+        render_card(%{
+          deleted_at: nil,
+          disabled_reason: nil,
+          charges_enabled: true,
+          payouts_enabled: true,
+          details_submitted: true,
+          default_currency: "jpy"
+        })
+
+      assert html =~ "Currency not supported"
+      assert html =~ "Payments cannot be taken in your account&#39;s currency, JPY."
+      refute html =~ "Connected and ready"
+    end
+
+    test "a legacy currency checkout still charges stays connected and ready" do
+      html =
+        render_card(%{
+          deleted_at: nil,
+          disabled_reason: nil,
+          charges_enabled: true,
+          payouts_enabled: true,
+          details_submitted: true,
+          default_currency: "ron"
+        })
+
+      assert html =~ "Connected and ready"
+    end
+
     test "details submitted but charges disabled renders the pending-review (warning) state" do
       html =
         render_card(%{

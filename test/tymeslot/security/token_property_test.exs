@@ -1,9 +1,7 @@
 defmodule Tymeslot.Security.TokenPropertyTest do
   @moduledoc """
-  Property-based tests for token generation and verification in `Tymeslot.Security.Token`.
-
-  Since token generation functions take no meaningful input, we use the
-  `constant(nil)` generator pattern to drive repeated invocations.
+  Property-based tests for `Tymeslot.Security.Token.generate/1`, the one place
+  the app mints random tokens.
   """
   use ExUnit.Case, async: true
   @moduletag :unit
@@ -12,34 +10,22 @@ defmodule Tymeslot.Security.TokenPropertyTest do
 
   alias Tymeslot.Security.Token
 
-  describe "session token properties" do
-    property "session tokens are valid base64url without padding" do
-      check all(_run <- constant(nil), max_runs: 50) do
-        token = Token.generate_session_token()
-        assert token =~ ~r/\A[A-Za-z0-9_-]+\z/, "Token contains invalid base64url characters"
-        refute String.contains?(token, "="), "Token contains padding character"
-        refute String.contains?(token, "+"), "Token contains + (standard base64, not url-safe)"
-        refute String.contains?(token, "/"), "Token contains / (standard base64, not url-safe)"
-      end
-    end
+  property "tokens are base64url without padding, and as long as their byte count implies" do
+    check all(bytes <- integer(1..64), max_runs: 100) do
+      token = Token.generate(bytes)
 
-    property "session tokens have consistent length (43 chars for 32 random bytes)" do
-      check all(_run <- constant(nil), max_runs: 50) do
-        token = Token.generate_session_token()
-        assert String.length(token) == 43
-      end
+      assert token =~ ~r/\A[A-Za-z0-9_-]+\z/
+      assert String.length(token) == ceil(bytes * 4 / 3)
+      assert byte_size(Base.url_decode64!(token, padding: false)) == bytes
     end
   end
 
-  describe "generic token properties" do
-    property "generic tokens are valid base64url without padding" do
-      check all(_run <- constant(nil), max_runs: 50) do
-        token = Token.generate_token()
-        assert token =~ ~r/\A[A-Za-z0-9_-]+\z/, "Token contains invalid base64url characters"
-        refute String.contains?(token, "="), "Token contains padding character"
-        refute String.contains?(token, "+"), "Token contains + (standard base64, not url-safe)"
-        refute String.contains?(token, "/"), "Token contains / (standard base64, not url-safe)"
-      end
-    end
+  test "the default is 32 bytes, 43 characters" do
+    assert String.length(Token.generate()) == 43
+  end
+
+  test "tokens do not repeat" do
+    tokens = for _i <- 1..200, do: Token.generate(24)
+    assert Enum.uniq(tokens) == tokens
   end
 end

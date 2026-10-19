@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.Repo
 
   setup :setup_dashboard_user
 
@@ -52,6 +54,38 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       view |> element("[phx-click='duplicate_schedule']") |> render_click()
 
       assert render(view) =~ "date overrides were not copied"
+    end
+  end
+
+  describe "duplicating a schedule with a break outside its day's hours" do
+    test "is stopped with the day and break named, and creates no copy", %{
+      conn: conn,
+      default_schedule: default_schedule
+    } do
+      # A break left behind by an hours edit from before narrowing was refused.
+      day =
+        default_schedule.id
+        |> WeeklySchedule.get_weekly_schedule()
+        |> Enum.find(&match?(%Time{}, &1.start_time))
+
+      insert(:availability_break,
+        weekly_availability: day,
+        start_time: ~T[23:00:00],
+        end_time: ~T[23:30:00]
+      )
+
+      count = Repo.aggregate(AvailabilityScheduleSchema, :count)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+      view |> element("[phx-click='duplicate_schedule']") |> render_click()
+
+      assert view
+             |> element("#app-flash-group-error")
+             |> render() =~
+               "The 11:00 PM - 11:30 PM break on #{weekday(day.day_of_week)} falls outside that day&#39;s hours."
+
+      assert Repo.aggregate(AvailabilityScheduleSchema, :count) == count
     end
   end
 
@@ -358,4 +392,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       refute render(view) =~ "Schedule deleted"
     end
   end
+
+  defp weekday(n),
+    do: Enum.at(~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday), n - 1)
 end

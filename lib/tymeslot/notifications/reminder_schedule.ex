@@ -17,10 +17,11 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
   """
 
   alias Tymeslot.Clock
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ReminderEntry
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Notifications.SchedulingRules
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorker
 
   @legacy_default "30 minutes"
@@ -48,7 +49,7 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
   def configured(meeting) do
     case Map.get(meeting, :reminders) do
       nil -> [legacy_reminder(meeting)]
-      reminders -> ReminderUtils.normalize_reminders(reminders)
+      reminders -> Reminders.normalize_reminders(reminders)
     end
   end
 
@@ -68,7 +69,7 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
     ids = Enum.map(meetings, & &1.id)
 
     EmailWorker
-    |> ObanJobQueries.pending_reminder_jobs(ids)
+    |> Jobs.pending_reminder_jobs(ids)
     |> Enum.flat_map(&scheduled_entry/1)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Map.new(fn {id, reminders} -> {id, MapSet.new(reminders)} end)
@@ -129,7 +130,7 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
   # Args written by an older scheduler, or by hand, that do not normalise are
   # a job this module cannot match to a reminder, so they are left out.
   defp scheduled_entry({meeting_id, value, unit}) do
-    case ReminderUtils.normalize_reminder(%{value: value, unit: unit}) do
+    case Reminders.normalize_reminder(%{value: value, unit: unit}) do
       {:ok, %{value: value, unit: unit}} -> [{meeting_id, {value, unit}}]
       _invalid -> []
     end
@@ -141,38 +142,14 @@ defmodule Tymeslot.Notifications.ReminderSchedule do
         @legacy_default
 
     %{
-      value: ReminderUtils.parse_reminder_value(label),
-      unit: ReminderUtils.normalize_reminder_unit(label)
+      value: Reminders.parse_reminder_value(label),
+      unit: Reminders.normalize_reminder_unit(label)
     }
   end
 
+  # Sent once either recipient has it (`ReminderEntry`).
   defp sent?(entries, %{value: value, unit: unit}) do
-    case Enum.find(entries, &entry_match?(&1, value, unit)) do
-      nil ->
-        false
-
-      entry ->
-        flag(entry, "organizer_sent", :organizer_sent) or
-          flag(entry, "attendee_sent", :attendee_sent)
-    end
-  end
-
-  defp entry_match?(entry, value, unit) do
-    case entry do
-      %{"value" => v, "unit" => u} -> v == value and u == unit
-      %{value: v, unit: u} -> v == value and u == unit
-      _other -> false
-    end
-  end
-
-  # A pre-upsert entry carries no per-recipient flags. It is read as sent
-  # rather than guessed at, the same way the reminder worker reads it: the
-  # entry exists because the reminder fired.
-  defp flag(entry, string_key, atom_key) do
-    case entry do
-      %{^string_key => sent} when is_boolean(sent) -> sent
-      %{^atom_key => sent} when is_boolean(sent) -> sent
-      _other -> true
-    end
+    status = ReminderEntry.status(entries, value, unit)
+    status.organizer or status.attendee
   end
 end

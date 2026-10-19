@@ -368,6 +368,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   @doc """
+  The message shown when an event's repeat rule has no Outlook pattern
+  (see `Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter`), so
+  the event was not written.
+  """
+  @spec rule_not_supported_by_outlook_message() :: String.t()
+  def rule_not_supported_by_outlook_message,
+    do: dgettext("dashboard_calendar_events", "This repeat pattern can't be saved to Outlook.")
+
+  @doc """
   The message shown when the grid cannot tell which series, or which
   occurrence of it, an event is.
   """

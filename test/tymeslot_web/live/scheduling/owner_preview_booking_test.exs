@@ -150,6 +150,39 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBookingTest do
     end
   end
 
+  describe "the confirmation's calendar download" do
+    # A simulated booking stores no meeting, so a calendar link on its
+    # confirmation would point at a file that does not exist.
+    test "is not offered after a simulated booking", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      event_type: event_type
+    } do
+      view = navigate_to_preview(conn, profile, event_type, PreviewToken.sign(user.id))
+
+      html = submit_booking(view, "owner-preview@example.com")
+
+      assert html =~ ~s(data-testid="confirmation-heading")
+      refute html =~ ~s(data-testid="add-to-calendar")
+      refute html =~ "/meeting/"
+    end
+
+    test "is offered after a real booking, for the stored meeting", %{
+      conn: conn,
+      profile: profile,
+      event_type: event_type
+    } do
+      view = navigate_to_booking_form(conn, profile, event_type)
+
+      html = submit_booking(view, "visitor@example.com")
+
+      assert %MeetingSchema{uid: uid} = Repo.one(MeetingSchema)
+      assert html =~ ~s(data-testid="add-to-calendar")
+      assert html =~ "/previewowner/meeting/#{uid}/calendar.ics"
+    end
+  end
+
   describe "the preview notice" do
     test "is shown whenever a valid owner-preview token is verified", %{
       conn: conn,
@@ -195,7 +228,7 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBookingTest do
 
       # Saturating from here takes 9 more, not 10, because this attempt counted.
       client_ip = client_ip_for(view)
-      Enum.each(1..9, fn _i -> RateLimiter.check_booking_submission_limit(client_ip) end)
+      Enum.each(1..9, fn _i -> RateLimiter.check(:booking_submit, client_ip) end)
 
       visitor = navigate_to_booking_form(conn, profile, event_type)
       assert submit_booking(visitor, "blocked@example.com") =~ "Too many booking attempts"
@@ -223,7 +256,7 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBookingTest do
       |> navigate_to_booking_form(profile, event_type)
       |> client_ip_for()
 
-    Enum.each(1..9, fn _i -> RateLimiter.check_booking_submission_limit(client_ip) end)
+    Enum.each(1..9, fn _i -> RateLimiter.check(:booking_submit, client_ip) end)
 
     client_ip
   end

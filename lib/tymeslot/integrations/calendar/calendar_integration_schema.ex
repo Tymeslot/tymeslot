@@ -24,10 +24,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.RemovedCalendar
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Encryption
-  alias Tymeslot.Security.LegacyPlainColumn
   alias Tymeslot.Security.SsrfGuard
 
   # The partial unique index allowing one active integration per user,
@@ -50,6 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           oauth_scope: String.t() | nil,
           calendar_paths: [String.t()],
           calendar_list: [CalendarEntry.t()],
+          removed_calendars: [RemovedCalendar.t()],
           default_booking_calendar_id: String.t() | nil,
           verify_ssl: boolean(),
           is_active: boolean(),
@@ -97,6 +98,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:oauth_scope, :string)
     field(:calendar_paths, {:array, :string}, default: [])
     field(:calendar_list, {:array, CalendarEntry}, default: [])
+    # Calendars the server stopped listing, until the owner dismisses the
+    # notice. Written only by `RemovedCalendars`, never cast from a form.
+    embeds_many(:removed_calendars, RemovedCalendar, on_replace: :delete)
     field(:default_booking_calendar_id, :string)
     # Stored and threaded through the provider config maps, but no transport
     # reads it yet: no CalDAV request builds a TLS option from it, so
@@ -129,18 +133,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     # it is enough to forge a sync callback: encrypted at rest, and redacted
     # because Google and Outlook hand this whole struct to the availability
     # fan-out as the provider client, where anything that inspects a client
-    # (an OTP crash report included) would print it. The plain
-    # `google_channel_secret` column predates this and is no longer read; it
-    # is only emptied when the secret changes (see
-    # `Tymeslot.Security.LegacyPlainColumn`).
+    # (an OTP crash report included) would print it.
     field(:google_channel_secret, EncryptedString,
       source: :google_channel_secret_encrypted,
-      redact: true
-    )
-
-    field(:legacy_google_channel_secret, :string,
-      source: :google_channel_secret,
-      load_in_query: false,
       redact: true
     )
 
@@ -155,12 +150,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     # it back to Graph.
     field(:graph_client_state, EncryptedString,
       source: :graph_client_state_encrypted,
-      redact: true
-    )
-
-    field(:legacy_graph_client_state, :string,
-      source: :graph_client_state,
-      load_in_query: false,
       redact: true
     )
 
@@ -336,18 +325,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   Changeset for the state the application itself records on an integration:
   the push channel or Graph subscription, sync tokens and timestamps. `attrs`
   are trusted and applied without `changeset/2`'s validation.
-
-  A new push secret empties its legacy plain column, as
-  `Tymeslot.Security.LegacyPlainColumn` describes.
   """
   @spec bookkeeping_changeset(t(), map()) :: Ecto.Changeset.t()
   def bookkeeping_changeset(%__MODULE__{} = integration, attrs) when is_map(attrs) do
-    integration
-    |> change(attrs)
-    |> LegacyPlainColumn.clear_on_change(
-      google_channel_secret: :legacy_google_channel_secret,
-      graph_client_state: :legacy_graph_client_state
-    )
+    change(integration, attrs)
   end
 
   # Read at runtime rather than bound into a module attribute: the list is only
@@ -465,9 +446,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   under the current keyring. Returns `:ok` when every ciphertext is either
   absent or decryptable, `:requires_reencryption` otherwise.
 
-  Used by sync workers to short-circuit jobs when SECRET_KEY_BASE has been
-  rotated without keeping the previous key on the keyring — the worker can
-  then flag `needs_reauth` so the user sees a reconnect prompt.
+  Used by sync workers to short-circuit jobs when no configured key opens a
+  credential: a data key removed from `DATA_ENCRYPTION_KEYS` while values
+  remained under it, `LEGACY_KEY_RETIRED` set too early, or `SECRET_KEY_BASE`
+  changed while values were still on the legacy key. The worker can then flag
+  `needs_reauth` so the user sees a reconnect prompt.
   """
   @spec decryption_status(t()) :: :ok | :requires_reencryption
   def decryption_status(%__MODULE__{} = integration) do

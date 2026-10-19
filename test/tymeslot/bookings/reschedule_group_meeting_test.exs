@@ -44,7 +44,7 @@ defmodule Tymeslot.Bookings.RescheduleGroupMeetingTest do
     }
 
     assert {:error, :group_meeting_not_reschedulable} =
-             Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+             Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
     assert {:ok, %{start_time: unchanged}} = MeetingQueries.get_meeting(meeting.id)
     assert unchanged == meeting.start_time
@@ -68,7 +68,7 @@ defmodule Tymeslot.Bookings.RescheduleGroupMeetingTest do
     }
 
     assert {:ok, %{id: rescheduled_id}} =
-             Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+             Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
     assert rescheduled_id == meeting.id
   end

@@ -8,8 +8,9 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
   held against the circuit breaker, and only a real session produces them.
   """
 
-  # async: false — the mailer configuration, the send deadline and the email
-  # circuit breaker are all global.
+  # async: false — the mailer configuration and the send deadline are global.
+  # The circuit breaker is not: each test delivers through its own, so a
+  # delivery elsewhere in the suite cannot add to the counts asserted here.
   use ExUnit.Case, async: false
 
   @moduletag :emails
@@ -27,29 +28,32 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
   alias Tymeslot.Test.FakeSmtpRelay
 
   setup do
-    breaker = CircuitBreakerSupervisor.email_breaker_name()
-    CircuitBreaker.reset(breaker)
-    on_exit(fn -> CircuitBreaker.reset(breaker) end)
+    # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
+    breaker = :"smtp_delivery_test_breaker_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {CircuitBreaker, name: breaker, config: CircuitBreakerSupervisor.email_breaker_config()}
+    )
 
     %{breaker: breaker}
   end
 
   describe "a working relay" do
-    test "delivers the message over an authenticated session" do
+    test "delivers the message over an authenticated session", %{breaker: breaker} do
       relay = FakeSmtpRelay.start()
       use_relay(relay)
 
-      assert {:ok, _receipt} = Delivery.deliver(email("Booking confirmed"))
+      assert {:ok, _receipt} = Delivery.deliver(email("Booking confirmed"), breaker: breaker)
       assert_receive {:smtp_relay, {:auth, _mechanism}}
       assert_receive {:smtp_relay, {:message, data}}
       assert data =~ "Subject: Booking confirmed"
     end
 
-    test "delivers without logging in when no credentials are configured" do
+    test "delivers without logging in when no credentials are configured", %{breaker: breaker} do
       relay = FakeSmtpRelay.start()
       use_relay(relay, username: nil, password: nil)
 
-      assert {:ok, _receipt} = Delivery.deliver(email("Unauthenticated relay"))
+      assert {:ok, _receipt} = Delivery.deliver(email("Unauthenticated relay"), breaker: breaker)
       assert_receive {:smtp_relay, {:message, data}}
       assert data =~ "Subject: Unauthenticated relay"
       refute_received {:smtp_relay, {:auth, _mechanism}}
@@ -60,12 +64,12 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
     # With `auth: :if_available` gen_smtp shrugged off the 535 and sent the
     # message unauthenticated, so the operator saw the relay's 530 on MAIL
     # FROM instead of an authentication failure.
-    test "fails as an authentication error without attempting the message" do
+    test "fails as an authentication error without attempting the message", %{breaker: breaker} do
       relay = FakeSmtpRelay.start(auth: :reject)
       use_relay(relay)
 
       assert {:error, {:no_more_hosts, {:permanent_failure, _host, :auth_failed}}} =
-               Delivery.deliver(email("Wrong password"))
+               Delivery.deliver(email("Wrong password"), breaker: breaker)
 
       refute_received {:smtp_relay, {:mail_from, _line}}
     end
@@ -74,13 +78,13 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
   describe "credentials configured for a relay that offers no login" do
     # `auth: :always` alone refused such a relay outright, so an operator who
     # left the credentials filled in lost every email on upgrading.
-    test "delivers without logging in and warns about the unused credentials" do
+    test "delivers without logging in and warns about the unused credentials", %{breaker: breaker} do
       relay = FakeSmtpRelay.start(auth: :not_offered)
       use_relay(relay)
 
       log =
         capture_log(fn ->
-          assert {:ok, _receipt} = Delivery.deliver(email("No AUTH offered"))
+          assert {:ok, _receipt} = Delivery.deliver(email("No AUTH offered"), breaker: breaker)
         end)
 
       assert_receive {:smtp_relay, {:message, data}}
@@ -93,12 +97,12 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
   describe "a recipient the relay rejects" do
     @unknown_user "550 5.1.1 <guest@example.com>: Recipient address rejected: User unknown"
 
-    test "is reported as a permanent rejection" do
+    test "is reported as a permanent rejection", %{breaker: breaker} do
       relay = FakeSmtpRelay.start(rcpt_reply: @unknown_user)
       use_relay(relay)
 
       assert {:error, {:recipient_rejected, {:send, {:permanent_failure, _host, message}}}} =
-               Delivery.deliver(email("Dead address"))
+               Delivery.deliver(email("Dead address"), breaker: breaker)
 
       assert message =~ "5.1.1"
     end
@@ -111,7 +115,8 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
       threshold = CircuitBreaker.status(breaker).config.failure_threshold
 
       for _attempt <- 1..(threshold * 2) do
-        assert {:error, {:recipient_rejected, _reason}} = Delivery.deliver(email("Dead address"))
+        assert {:error, {:recipient_rejected, _reason}} =
+                 Delivery.deliver(email("Dead address"), breaker: breaker)
       end
 
       assert CircuitBreaker.status(breaker).status == :closed
@@ -124,18 +129,18 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
       use_relay(relay)
 
       assert {:error, {:send, {:permanent_failure, _host, _message}}} =
-               Delivery.deliver(email("Relay denied"))
+               Delivery.deliver(email("Relay denied"), breaker: breaker)
 
       assert CircuitBreaker.status(breaker).failure_count == 1
     end
   end
 
   describe "an unreachable relay" do
-    test "returns a retryable error instead of assuming delivery" do
+    test "returns a retryable error instead of assuming delivery", %{breaker: breaker} do
       use_relay(%{port: closed_port()})
 
       assert {:error, {:retries_exceeded, {:network_failure, _host, {:error, :econnrefused}}}} =
-               Delivery.deliver(email("Nobody listening"))
+               Delivery.deliver(email("Nobody listening"), breaker: breaker)
     end
   end
 
@@ -149,7 +154,7 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
       use_relay(relay, session_timeout: 200)
 
       assert {:error, {:retries_exceeded, {:network_failure, _host, {:error, :timeout}}}} =
-               Delivery.deliver(email("Relay never greets"))
+               Delivery.deliver(email("Relay never greets"), breaker: breaker)
 
       assert CircuitBreaker.status(breaker).failure_count == 1
     end
@@ -167,14 +172,20 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
       breaker: breaker
     } do
       use_relay(FakeSmtpRelay.start())
-      assert {:ok, _receipt} = Delivery.deliver(email("Warm-up"))
+      assert {:ok, _receipt} = Delivery.deliver(email("Warm-up"), breaker: breaker)
+      # A warm-up slow enough to hit the send deadline is assumed delivered,
+      # which the breaker counts as a failure; say so here rather than as a
+      # wrong count below.
+      assert CircuitBreaker.status(breaker).failure_count == 0
       flush_relay_messages()
 
       relay = FakeSmtpRelay.start(after_data: :silent)
       use_relay(relay)
       setup_config(:tymeslot, :email_send_deadline_ms, 1_000)
 
-      assert {:ok, :assumed_delivered} = Delivery.deliver(email("Relay stalls after DATA"))
+      assert {:ok, :assumed_delivered} =
+               Delivery.deliver(email("Relay stalls after DATA"), breaker: breaker)
+
       assert_received {:smtp_relay, {:message, data}}
       assert data =~ "Subject: Relay stalls after DATA"
       assert CircuitBreaker.status(breaker).failure_count == 1

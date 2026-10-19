@@ -34,9 +34,9 @@ defmodule TymeslotWeb.Dashboard.EmbedSettingsCompositionTest do
       guard rather than a LiveComponent composition test.
     * Profile update with whitespace-only display name "rejected"
       (plan line 1882) — the premise is contradicted by the
-      production code. `FullNameValidator.validate/2` treats
-      whitespace-only input as equivalent to empty (trims to "")
-      and returns `:ok`; the form then clears the field via
+      production code. The `:full_name` field type (`NameValidator`
+      with `required: false`) treats whitespace-only input as
+      equivalent to empty and returns `:ok`; the form then clears the field via
       Ecto's `:string` coercion. Existing coverage:
       `profile_settings_test.exs:189`.
   """

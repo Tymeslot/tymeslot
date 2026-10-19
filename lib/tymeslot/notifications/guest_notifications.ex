@@ -4,19 +4,20 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   invited.
 
   A guest receives an invitation with RSVP links when a booking is confirmed
-  (`Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`). Before this module a
+  (`Tymeslot.Notifications.Email.MeetingEmails`). Before this module a
   guest heard nothing more: not when the booking moved, and not when it was
   cancelled. Here:
 
-    * **Rescheduled** (`notify_rescheduled/2`): every guest's answer and
-      reminder history is reset, since both applied to the previous time, and
-      every guest, including those who declined, gets a reschedule email with
-      their RSVP links and an updated calendar entry.
-    * **Rescheduled into the approval gate** (`prepare_for_reapproval/1`): no
+    * **Rescheduled** (`reset_for_new_time/1`, then `notify_rescheduled/3`
+      from the reschedule email job): every guest's answer and reminder
+      history is reset, since both applied to the previous time, and every
+      guest, including those who declined, gets a reschedule email with their
+      RSVP links and an updated calendar entry.
+    * **Rescheduled into the approval gate** (`reset_for_new_time/1`): no
       email yet, since nobody has agreed to the new time; the answers and
       reminder history are reset. Once the host approves the new time
-      (`notify_reapproved/1`), the guests who had been invited get the
-      reschedule email. A request that was never approved has guests who were
+      (`notify_reapproved/3`, from the same job), the guests who had been
+      invited get the reschedule email. A request that was never approved has guests who were
       never invited; the confirmation that follows its approval invites them
       as usual.
     * **Cancelled, declined or expired** (`notify_cancelled/3`): every guest gets
@@ -29,13 +30,18 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   (`with_inviter_details/4`): that participant's language, timezone and seat
   calendar entry, not the slot row's.
 
-  Guest emails never fail the operation that triggered them: a failed send is
-  logged, and the booking and the host's and booker's emails are unaffected.
+  Guest emails never fail the booking change that triggered them, nor undo the
+  host's and booker's emails. A failed send is logged and, for the reschedule
+  and cancellation notices, returned as `{:error, {:guest_emails_failed,
+  count}}`, so the email job retries; each guest's send is claimed on the job,
+  so the retry writes only to the guests who were missed.
   """
+
+  @type result :: :ok | {:error, {:guest_emails_failed, pos_integer()}}
 
   require Logger
 
-  alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -46,36 +52,32 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Meetings.Recipient
 
   @doc """
-  Resets the guests' answers and reminder history, and sends each guest the
-  reschedule email.
+  Sends every guest the reschedule email, declined ones included. Their
+  answers were reset when the booking moved (`reset_for_new_time/1`).
 
   `content` is the reschedule payload built by
-  `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`.
+  `Tymeslot.Emails.AppointmentBuilder.for_reschedule/2`. `once`
+  wraps each guest's send as in `notify_cancelled/3`.
   """
-  @spec notify_rescheduled(map(), map()) :: :ok
-  def notify_rescheduled(%{id: meeting_id} = _meeting, content) do
-    case GuestQueries.list_live_for_meeting(meeting_id) do
-      [] ->
-        :ok
+  @spec notify_rescheduled(map(), map(), (String.t(), (-> term()) -> term())) :: result()
+  def notify_rescheduled(meeting, content, once \\ fn _key, send -> send.() end)
 
-      guests ->
-        GuestQueries.reset_for_new_time(meeting_id)
-
-        guests
-        |> Enum.map(&{&1, content})
-        |> send_to_guests(meeting_id, "reschedule", fn guest, details ->
-          Config.email_service_module().send_guest_reschedule(guest.email, details)
-        end)
-    end
+  def notify_rescheduled(%{id: meeting_id} = _meeting, content, once) do
+    meeting_id
+    |> GuestQueries.list_live_for_meeting()
+    |> send_reschedules(meeting_id, content, once)
   end
 
   @doc """
-  Prepares the guests of a booking that a reschedule sent back into the
-  approval gate: their answers and reminder history applied to the previous
-  time and are reset. Nobody is emailed until the host approves the new time.
+  Resets the guests' answers and reminder history, which applied to the
+  booking's previous time: when it is rescheduled, and when a reschedule sends
+  it back into the approval gate. Nobody is emailed here: the reschedule
+  notice tells the guests (`notify_rescheduled/3`), or, for a booking held
+  for approval, the notice that follows the host's approval
+  (`notify_reapproved/3`).
   """
-  @spec prepare_for_reapproval(map()) :: :ok
-  def prepare_for_reapproval(%{id: meeting_id}) do
+  @spec reset_for_new_time(map()) :: :ok
+  def reset_for_new_time(%{id: meeting_id}) do
     GuestQueries.reset_for_new_time(meeting_id)
     :ok
   end
@@ -86,27 +88,26 @@ defmodule Tymeslot.Notifications.GuestNotifications do
 
   Only a booking that was confirmed before has invited guests, so for a first
   approval this sends nothing and the confirmation invites the guests instead.
-  The previous time is no longer known at this point, so the email states the
-  new time without it.
+  The previous time is no longer known at this point, so `details` (the
+  booking's payload) states the new time without it. `once` wraps each
+  guest's send as in `notify_cancelled/3`.
   """
-  @spec notify_reapproved(map()) :: :ok
-  def notify_reapproved(%{id: meeting_id} = meeting) do
-    case Enum.reject(
-           GuestQueries.list_live_for_meeting(meeting_id),
-           &is_nil(&1.confirmation_sent_at)
-         ) do
-      [] ->
-        :ok
+  @spec notify_reapproved(map(), map(), (String.t(), (-> term()) -> term())) :: result()
+  def notify_reapproved(%{id: meeting_id} = _meeting, details, once) do
+    meeting_id
+    |> GuestQueries.list_live_for_meeting()
+    |> Enum.reject(&is_nil(&1.confirmation_sent_at))
+    |> send_reschedules(meeting_id, details, once)
+  end
 
-      invited ->
-        details = AppointmentBuilder.from_meeting(meeting)
-
-        invited
-        |> Enum.map(&{&1, details})
-        |> send_to_guests(meeting_id, "reschedule", fn guest, details ->
-          Config.email_service_module().send_guest_reschedule(guest.email, details)
-        end)
-    end
+  defp send_reschedules(guests, meeting_id, details, once) do
+    guests
+    |> Enum.map(&{&1, details})
+    |> send_to_guests(meeting_id, "reschedule", fn guest, details ->
+      once.("reschedule:guest:#{guest.id}", fn ->
+        Config.email_service_module().send_guest_reschedule(guest.email, details)
+      end)
+    end)
   end
 
   @doc """
@@ -119,7 +120,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   `&Tymeslot.Workers.DeliveryClaims.once(job, &1, &2)`, so a rescued run
   skips the guests already told and still reaches the rest.
   """
-  @spec notify_cancelled(map(), map(), (String.t(), (-> term()) -> term())) :: :ok
+  @spec notify_cancelled(map(), map(), (String.t(), (-> term()) -> term())) :: result()
   def notify_cancelled(meeting, appointment_details, once \\ fn _key, send -> send.() end)
 
   def notify_cancelled(meeting, appointment_details, once) do
@@ -156,7 +157,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
           [GuestSchema.t()],
           map(),
           (String.t(), (-> term()) -> term())
-        ) :: :ok
+        ) :: result()
   def notify_seat_cancelled(%{id: meeting_id}, guests, seat_details, once) do
     guests
     |> Enum.reject(&is_nil(&1.confirmation_sent_at))
@@ -213,7 +214,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   the booking is off. Only a request a reschedule sent back into the gate had
   invited guests; `notify_cancelled/3` sends nothing for any other.
   """
-  @spec notify_released(map()) :: :ok
+  @spec notify_released(map()) :: result()
   def notify_released(%{first_announced_at: nil}), do: :ok
 
   def notify_released(meeting),
@@ -250,7 +251,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   """
   @spec guest_details(map(), map()) :: map()
   def guest_details(appointment_details, guest) do
-    urls = Policy.guest_rsvp_urls(guest.rsvp_token)
+    urls = MeetingLinks.guest_rsvp_urls(guest.rsvp_token)
 
     appointment_details
     |> Map.drop(@booker_private_keys)
@@ -273,23 +274,31 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   defp ever_confirmed?(%MeetingSchema{} = meeting), do: MeetingSchema.group?(meeting)
   defp ever_confirmed?(_meeting), do: false
 
+  # Every guest is tried, whatever became of the others. Returns
+  # `{:error, {:guest_emails_failed, count}}` when any of them failed, so a
+  # job whose sends are claimed per guest can retry and reach only those.
   defp send_to_guests(guests_with_details, meeting_id, kind, send_fun) do
-    Enum.each(guests_with_details, fn {guest, appointment_details} ->
-      case send_fun.(guest, guest_details(appointment_details, guest)) do
-        {:ok, _result} ->
-          :ok
+    failed =
+      Enum.count(guests_with_details, fn {guest, appointment_details} ->
+        case send_fun.(guest, guest_details(appointment_details, guest)) do
+          {:ok, _result} ->
+            false
 
-        # Already sent by an earlier run of the same job (see `notify_cancelled/3`).
-        :ok ->
-          :ok
+          # Already sent by an earlier run of the same job (see `notify_cancelled/3`).
+          :ok ->
+            false
 
-        other ->
-          Logger.error("Guest email failed",
-            email_kind: kind,
-            meeting_id: meeting_id,
-            result: LogFormat.reason(other)
-          )
-      end
-    end)
+          other ->
+            Logger.error("Guest email failed",
+              email_kind: kind,
+              meeting_id: meeting_id,
+              result: LogFormat.reason(other)
+            )
+
+            true
+        end
+      end)
+
+    if failed == 0, do: :ok, else: {:error, {:guest_emails_failed, failed}}
   end
 end

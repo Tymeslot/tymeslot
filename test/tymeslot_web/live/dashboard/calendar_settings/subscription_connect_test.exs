@@ -23,8 +23,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Primary
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-  alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncIcsCalendarWorker
@@ -53,20 +53,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
     end)
   end
 
-  defp subscribe(view, url \\ @feed_url) do
+  defp subscribe(view, url \\ @feed_url, extra \\ %{}) do
     view
     |> element("button[phx-click='connect_provider'][phx-value-provider='ics_url']")
     |> render_click()
 
     view
     |> form("#calendar-subscription-form", %{
-      "integration" => %{"name" => "Work calendar", "url" => url}
+      "integration" => Map.merge(%{"name" => "Work calendar", "url" => url}, extra)
     })
     |> render_submit()
 
     # `add_subscription` runs the feed probe off the socket's process (see
     # `ConfigViewComponent.handle_event/3`), which comfortably exceeds
-    # `render_async/1`'s 100ms default under load.
+    # `render_async/1`'s 1 s default under load.
     render_async(view, 5000)
   end
 
@@ -166,6 +166,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
       assert Calendar.writable_calendars(integration.calendar_list) == []
     end
 
+    test "the subscription blocks unless the form's box is unticked", %{conn: conn, user: user} do
+      stub_feed()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+      subscribe(view, @feed_url, %{"blocks_availability" => "false"})
+
+      assert %{calendar_list: [%{blocks_availability: false}]} =
+               Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: "ics_url")
+    end
+
     @tag :capture_log
     test "a subscription is never promoted to the primary calendar", %{conn: conn, user: user} do
       stub_feed()
@@ -175,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
 
       # Even as the user's first and only integration: a primary that cannot
       # receive a booking would break every booking write.
-      assert {:error, _reason} = CalendarPrimary.get_primary_calendar_integration(user.id)
+      assert {:error, _reason} = Primary.get_primary_calendar_integration(user.id)
     end
 
     @tag :capture_log

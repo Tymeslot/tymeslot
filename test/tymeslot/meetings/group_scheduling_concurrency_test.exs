@@ -1,22 +1,14 @@
 defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   @moduledoc """
-  Races on group seats, on real connections.
+  Races on group seats, on real connections, staged by
+  `Tymeslot.Test.RaceConductor` (see its moduledoc for why the module is
+  synchronous and why `on_exit` deletes what it committed).
 
-  The sandbox cannot show these races: it gives a test one connection, so
-  "concurrent" transactions queue on it and each sees the previous one
-  committed, whether or not the code takes the row locks it relies on. Each
-  contender here therefore runs on its own connection
-  (`Ecto.Adapters.SQL.Sandbox.unboxed_run/2`) and commits for real, which is
-  why the module is synchronous and why `on_exit` deletes what it committed.
-
-  The races are staged rather than left to timing. Every contender parks
-  inside its seat transaction once it holds a seat (through `book_seat/3`'s
-  `:on_booked` hook), and the conductor releases the parked ones only when
-  every unfinished contender is either parked or waiting on a database lock,
-  that is, when nobody can get any further before somebody commits. With the
-  row locks in place a single contender parks at a time and the rest queue
-  behind it; without them every contender reads the same free seats, parks,
-  and all of them commit.
+  Every contender parks inside its seat transaction once it holds a seat
+  (through `book_seat/3`'s `:on_booked` hook). With the row locks in place a
+  single contender parks at a time and the rest queue behind it; without
+  them every contender reads the same free seats, parks, and all of them
+  commit.
   """
 
   use Tymeslot.DataCase, async: false
@@ -29,16 +21,17 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
+  import Tymeslot.Test.RaceConductor, only: [race: 1, unboxed: 1]
 
-  alias Ecto.Adapters.SQL
-  alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
+  alias Tymeslot.Test.RaceConductor
   alias Tymeslot.TestMocks
 
   @capacity 3
@@ -123,13 +116,11 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   end
 
   # The other interleaving of two first bookers: the late one reads the slot
-  # empty, then the early one commits the slot's meeting before the late
-  # one's conflict check runs. That check sees the early meeting as a clash,
-  # so the late booker used to be told the slot was taken with seats still
-  # free on it. It is the same lost race as the unique-index one, and must
-  # end the same way: the late booker joins the early one's meeting.
-  test "a first booker overtaken between its slot read and its conflict check joins the meeting",
-       ctx do
+  # empty and the early one tries to book before the late one's conflict
+  # check runs. The late booker already holds the organiser's schedule lock,
+  # so the early one queues behind it instead of committing in between, and
+  # then finds the late one's meeting and joins it, with seats still free.
+  test "a first booker that reads the slot empty keeps it until it commits", ctx do
     slot = slot_at(ctx, 10)
     park_after_slot_read()
     conductor = self()
@@ -151,12 +142,15 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
 
     assert_receive {:parked, late_pid}, 5_000
 
-    assert {:ok, %{created_meeting?: true, meeting: meeting}} =
-             unboxed(fn -> book(slot, "early@example.com") end)
+    early = Task.async(fn -> unboxed(fn -> book(slot, "early@example.com") end) end)
+
+    # Queued on the schedule lock, not committing past the parked booker.
+    assert Task.yield(early, 500) == nil
 
     send(late_pid, :release)
 
-    assert {:ok, %{created_meeting?: false, meeting: joined}} = Task.await(late, 30_000)
+    assert {:ok, %{created_meeting?: true, meeting: meeting}} = Task.await(late, 30_000)
+    assert {:ok, %{created_meeting?: false, meeting: joined}} = Task.await(early, 30_000)
     assert joined.id == meeting.id
 
     assert ["early@example.com", "late@example.com"] =
@@ -196,8 +190,8 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   # from inside the seat transaction under the old meeting's row lock. Two
   # moves in opposite directions each want both rows; taken in id order they
   # queue, taken target first they deadlock. The move has no hook of its own,
-  # so each contender parks once its new seat is inserted (`park_on_seat/1`),
-  # the point `:on_booked` would hold it at.
+  # so each contender parks once its new seat is inserted
+  # (`RaceConductor.arm/2`), the point `:on_booked` would hold it at.
   test "two seat moves in opposite directions both complete", ctx do
     slot_a = slot_at(ctx, 8)
     slot_b = slot_at(ctx, 9)
@@ -211,7 +205,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
         {meeting_a, mover_a, meeting_b, mover_b}
       end)
 
-    park_on_seat()
+    RaceConductor.attach_parking()
 
     results =
       race([
@@ -234,8 +228,50 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
     assert live_emails.(meeting_b) == ["mover-a@example.com", "stays-b@example.com"]
   end
 
-  defp move(participant, new_slot, hold) do
-    Process.put(:park_on_seat, hold)
+  # A seat move onto an empty slot locks the old meeting's row and then
+  # creates the new slot under the organiser's schedule lock; the organiser
+  # rescheduling that old meeting holds the schedule lock and then writes the
+  # row. Unless the move takes the schedule lock before the row, each holds
+  # what the other waits for. The move parks once it holds the old row, the
+  # reschedule once it holds the schedule lock.
+  test "a seat move and a reschedule of the meeting it leaves both complete", ctx do
+    slot_a = slot_at(ctx, 10)
+    slot_c = slot_at(ctx, 11)
+    new_start = slot_at(ctx, 12).start_time
+
+    {meeting_a, mover} =
+      unboxed(fn ->
+        {:ok, %{meeting: meeting_a, participant: mover}} = book(slot_a, "mover@example.com")
+        {:ok, _stays} = book(slot_a, "stays@example.com")
+        {meeting_a, mover}
+      end)
+
+    RaceConductor.attach_parking()
+
+    results =
+      race([
+        fn hold -> move(mover, slot_c, hold, RaceConductor.lock_of("meetings")) end,
+        fn hold ->
+          RaceConductor.arm(hold, RaceConductor.advisory_lock())
+
+          Scheduling.update_meeting_with_conflict_check(meeting_a, %{
+            start_time: new_start,
+            end_time: DateTime.add(new_start, 30, :minute)
+          })
+        end
+      ])
+
+    assert [{:ok, %{created_meeting?: true}}, {:ok, %MeetingSchema{}}] = results
+    assert unboxed(fn -> Repo.get!(MeetingSchema, meeting_a.id).start_time end) == new_start
+  end
+
+  defp move(
+         participant,
+         new_slot,
+         hold,
+         park_at \\ RaceConductor.insert_into("meeting_participants")
+       ) do
+    RaceConductor.arm(hold, park_at)
 
     RescheduleSeat.execute(
       participant.management_token,
@@ -247,28 +283,6 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
       },
       new_slot.user.id
     )
-  end
-
-  # Parks a contender (a process that stored its `hold` under
-  # `:park_on_seat`) right after it inserts its new participant row, inside
-  # the seat transaction, once.
-  defp park_on_seat do
-    handler_id = "park-on-seat-#{inspect(make_ref())}"
-
-    :telemetry.attach(
-      handler_id,
-      [:tymeslot, :repo, :query],
-      fn _event, _measurements, metadata, _config ->
-        with "meeting_participants" <- metadata[:source],
-             "INSERT" <> _rest <- metadata[:query],
-             hold when is_function(hold, 1) <- Process.delete(:park_on_seat) do
-          {:ok, :released} = hold.(nil)
-        end
-      end,
-      nil
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
   end
 
   defp slot_at(ctx, days_ahead) do
@@ -308,92 +322,4 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
       opts
     )
   end
-
-  # Runs each contender on its own connection. A contender is given a `hold`
-  # hook to call inside its transaction; the call parks it until released.
-  # Returns each contender's result, in order; a raised error (a deadlock
-  # Postgres broke by aborting one side) comes back as `{:raised, error}`.
-  defp race(contenders) do
-    conductor = self()
-
-    hold = fn _booking ->
-      send(conductor, {:parked, self()})
-
-      receive do
-        :release -> {:ok, :released}
-      end
-    end
-
-    tasks =
-      Enum.map(contenders, fn contender ->
-        Task.async(fn ->
-          unboxed(fn ->
-            try do
-              contender.(hold)
-            rescue
-              error -> {:raised, error}
-            end
-          end)
-        end)
-      end)
-
-    tasks
-    |> conduct(%{}, [], System.monotonic_time(:millisecond) + 30_000)
-    |> then(fn results -> Enum.map(tasks, &Map.fetch!(results, &1.ref)) end)
-  end
-
-  defp conduct(pending, results, parked, deadline) do
-    if System.monotonic_time(:millisecond) > deadline, do: flunk("race did not settle")
-
-    {pending, results} = collect_finished(pending, results)
-    parked = drain_parked(parked)
-
-    cond do
-      pending == [] ->
-        results
-
-      parked != [] and length(parked) + lock_waiters() >= length(pending) ->
-        Enum.each(parked, &send(&1, :release))
-        conduct(pending, results, [], deadline)
-
-      true ->
-        receive do
-          {:parked, pid} -> conduct(pending, results, [pid | parked], deadline)
-        after
-          10 -> conduct(pending, results, parked, deadline)
-        end
-    end
-  end
-
-  defp collect_finished(pending, results) do
-    Enum.reduce(pending, {[], results}, fn task, {still_pending, results} ->
-      case Task.yield(task, 0) do
-        {:ok, result} -> {still_pending, Map.put(results, task.ref, result)}
-        nil -> {[task | still_pending], results}
-      end
-    end)
-  end
-
-  defp drain_parked(parked) do
-    receive do
-      {:parked, pid} -> drain_parked([pid | parked])
-    after
-      0 -> parked
-    end
-  end
-
-  defp lock_waiters do
-    %{rows: [[count]]} =
-      unboxed(fn ->
-        SQL.query!(
-          Repo,
-          "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
-          []
-        )
-      end)
-
-    count
-  end
-
-  defp unboxed(fun), do: Sandbox.unboxed_run(Repo, fun)
 end

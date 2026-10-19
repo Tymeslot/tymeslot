@@ -4,7 +4,8 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
 
   import Mox
 
-  alias Tymeslot.Integrations.Common.OAuth.State
+  alias ExUnit.CaptureLog
+  alias Tymeslot.Integrations.Shared.OAuth.State
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
   setup :verify_on_exit!
@@ -75,9 +76,9 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
     end
   end
 
-  describe "exchange_code_for_tokens/3" do
+  describe "exchange_code_for_tokens/2" do
     test "exchanges code, fetches profile, and returns merged tokens" do
-      %{user_id: user_id, state: state, resp_body: resp_body} = oauth_test_data()
+      %{resp_body: resp_body} = oauth_test_data()
 
       profile_body =
         Jason.encode!(%{
@@ -100,22 +101,105 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
       end)
 
       assert {:ok, tokens} =
-               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb", state)
+               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb")
 
       assert tokens.access_token == "at-123"
       assert tokens.refresh_token == "rt-123"
-      assert tokens.user_id == user_id
       assert tokens.provider_account_id == "zoom-user-123"
       assert tokens.provider_account_email == "alice@example.com"
     end
 
-    test "rejects invalid state without making HTTP calls" do
-      assert {:error, _reason} =
-               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb", "bogus")
+    # A profile request Zoom keeps failing is retried, and the error names the
+    # last status rather than only that the attempts ran out.
+    test "retries a failing profile request and reports its last status" do
+      %{resp_body: resp_body} = oauth_test_data()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, 3, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 503, body: "busy"}}
+      end)
+
+      assert {:error, "Failed to fetch user profile: HTTP 503"} =
+               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb",
+                 profile_retry: [initial_delay: 0]
+               )
+    end
+
+    # Zoom names how long to wait; waiting less only earns another 429.
+    test "retries a rate-limited profile request after the wait Zoom names" do
+      %{resp_body: resp_body} = oauth_test_data()
+      profile_body = Jason.encode!(%{"id" => "zoom-user-429", "email" => "alice@example.com"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, headers: %{"retry-after" => ["1"]}, body: ""}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: profile_body}}
+      end)
+
+      # The usual backoff here is no wait; the named second, capped at 60 ms.
+      {elapsed_us, result} =
+        :timer.tc(fn ->
+          CaptureLog.with_log(fn ->
+            ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb",
+              profile_retry: [initial_delay: 0, max_delay: 60, jitter: 0.0]
+            )
+          end)
+        end)
+
+      assert {{:ok, tokens}, _log} = result
+      assert tokens.provider_account_id == "zoom-user-429"
+      assert div(elapsed_us, 1_000) >= 60
+    end
+
+    # The owner is waiting on the callback page.
+    test "fails at once when Zoom asks for a longer wait than a page can hold" do
+      %{resp_body: resp_body} = oauth_test_data()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, headers: %{"retry-after" => ["30"]}, body: ""}}
+      end)
+
+      {elapsed_us, {result, _log}} =
+        :timer.tc(fn ->
+          CaptureLog.with_log(fn ->
+            ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb")
+          end)
+        end)
+
+      assert result == {:error, :provider_rate_limited}
+      assert div(elapsed_us, 1_000) < 1_000
+    end
+
+    test "does not retry a profile request Zoom refuses" do
+      %{resp_body: resp_body} = oauth_test_data()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: "no"}}
+      end)
+
+      assert {:error, "Failed to fetch user profile: HTTP 401"} =
+               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb")
     end
 
     test "fails when profile is missing id" do
-      %{state: state, resp_body: resp_body} = oauth_test_data()
+      %{resp_body: resp_body} = oauth_test_data()
       profile_body = Jason.encode!(%{"email" => "alice@example.com"})
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
@@ -127,7 +211,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
       end)
 
       assert {:error, "Zoom profile missing unique ID"} =
-               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb", state)
+               ZoomOAuthHelper.exchange_code_for_tokens("code", "https://example.com/cb")
     end
   end
 
@@ -177,15 +261,42 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
       assert {:ok, :needs_refresh} = ZoomOAuthHelper.validate_token(%{token_expires_at: soon})
     end
 
-    test "returns error when expiration info is missing" do
-      assert {:error, _reason} = ZoomOAuthHelper.validate_token(%{})
+    # A token whose lifetime was never stored is renewed, not refused.
+    test "asks for a refresh when the expiry is unknown" do
+      assert {:ok, :needs_refresh} = ZoomOAuthHelper.validate_token(%{})
+      assert {:ok, :needs_refresh} = ZoomOAuthHelper.validate_token(%{token_expires_at: nil})
+    end
+  end
+
+  describe "PKCE" do
+    @pkce [pkce: %{nonce: "flow-nonce", code_challenge: "flow-challenge"}]
+
+    test "the authorisation URL carries the flow's challenge, and its state the nonce" do
+      query =
+        ZoomOAuthHelper.authorization_url(123, "http://cb", @pkce)
+        |> URI.parse()
+        |> Map.fetch!(:query)
+        |> URI.decode_query()
+
+      assert query["code_challenge"] == "flow-challenge"
+      assert query["code_challenge_method"] == "S256"
+      assert {:ok, %{nonce: "flow-nonce"}} = State.validate(query["state"], "zoom-state-secret")
+    end
+
+    test "the code exchange presents the flow's verifier" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
+        assert URI.decode_query(body)["code_verifier"] == "flow-verifier"
+        {:ok, %{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      assert {:error, _reason} =
+               ZoomOAuthHelper.exchange_code_for_tokens("code", "http://cb",
+                 code_verifier: "flow-verifier"
+               )
     end
   end
 
   defp oauth_test_data do
-    user_id = 123
-    state = State.generate(user_id, "zoom-state-secret")
-
     resp_body =
       Jason.encode!(%{
         "access_token" => "at-123",
@@ -194,6 +305,33 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
         "scope" => "meeting:write:meeting meeting:read:meeting user:read:user"
       })
 
-    %{user_id: user_id, state: state, resp_body: resp_body}
+    %{resp_body: resp_body}
+  end
+
+  describe "revoke_token/1" do
+    test "a 400 saying the token is invalid counts as revoked" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{status: 400, body: %{"reason" => "Invalid token.", "status" => "failed"}}}
+      end)
+
+      assert ZoomOAuthHelper.revoke_token("gone") == :ok
+    end
+
+    test "a 400 for another reason stays a failure" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: %{"reason" => "Invalid client secret."}}}
+      end)
+
+      assert ZoomOAuthHelper.revoke_token("tok") == {:error, {:http_error, 400}}
+    end
+
+    test "a 400 with an unreadable body stays a failure" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: "<html>"}}
+      end)
+
+      assert ZoomOAuthHelper.revoke_token("tok") == {:error, {:http_error, 400}}
+    end
   end
 end

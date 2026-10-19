@@ -6,6 +6,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   making it easy for users to parse in their automation tools (n8n, Zapier, etc.).
   """
 
+  alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
 
@@ -118,10 +119,12 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   defp build_guests_data(_meeting), do: []
 
   defp build_urls(meeting) do
+    links = MeetingLinks.for_meeting(meeting)
+
     %{
-      view: meeting.view_url,
-      reschedule: meeting.reschedule_url,
-      cancel: meeting.cancel_url,
+      view: links.view_url,
+      reschedule: links.reschedule_url,
+      cancel: links.cancel_url,
       meeting: meeting.meeting_url
     }
   end

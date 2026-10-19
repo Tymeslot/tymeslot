@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
 
   describe "analyze/2 with success" do
@@ -115,6 +116,38 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
       assert ErrorAnalysis.classify_error("access_denied") == :hard
     end
 
+    # The same calendar meets the same cap on every retry.
+    test "classifies a read past the page cap as hard" do
+      assert ErrorAnalysis.classify_error(:too_many_pages) == :hard
+
+      assert ErrorAnalysis.classify_error({:too_many_pages, "Graph read exceeded 100 pages"}) ==
+               :hard
+    end
+
+    # The badge (this classifier) and the reconnect email (the fast path in
+    # `ResponseHandler`) read one rule, so they cannot disagree.
+    test "agrees with the reauth fast path on every permanent credential error" do
+      reasons = [
+        :unauthorized,
+        :invalid_credentials,
+        :token_expired,
+        "invalid_grant",
+        "Token has been expired or revoked. (invalid_grant)",
+        "OAuth: invalid_client",
+        {:exception, "access_denied: user revoked"}
+      ]
+
+      assert Enum.all?(reasons, &BreakerOutcome.permanent_credential_error?/1)
+      assert Enum.reject(reasons, &(ErrorAnalysis.classify_error(&1) == :hard)) == []
+    end
+
+    # Whole words, as the fast path matches them: a marker inside a longer
+    # token is not one.
+    test "does not read a marker embedded in a longer word as hard" do
+      assert ErrorAnalysis.classify_error("invalid_grant_period_started") == :transient
+      assert ErrorAnalysis.classify_error("xaccess_denied") == :transient
+    end
+
     test "classifies exception wrappers with hard auth markers as hard" do
       assert ErrorAnalysis.classify_error({:exception, "invalid_grant"}) == :hard
       assert ErrorAnalysis.classify_error({:exception, "access_denied: user revoked"}) == :hard
@@ -147,10 +180,8 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
   end
 
   describe "calculate_next_backoff/2" do
-    test "resets to short interval on first transient failure from normal check interval" do
-      # When coming from the normal 30min check interval, the first transient failure
-      # resets to the short 5min initial interval.
-      health_state = %{backoff_ms: :timer.minutes(30)}
+    test "starts the ramp at the short interval on the first failure after a passing probe" do
+      health_state = %{backoff_ms: :timer.minutes(30), last_error_class: nil}
 
       next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
 
@@ -189,6 +220,23 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
 
       # Should cap at 1 hour
       assert next_backoff == :timer.hours(1)
+    end
+
+    # The first probe after an integration goes unhealthy comes 15 minutes
+    # later. A transient failure from there used to double to exactly the
+    # healthy interval, which the next one read as "coming from healthy" and
+    # restarted at 5 minutes: 15, 30, 5, 10...
+    test "a transient failure after the first unhealthy probe keeps climbing" do
+      after_unhealthy = %{backoff_ms: :timer.minutes(15), last_error_class: :hard}
+      first = ErrorAnalysis.calculate_next_backoff(after_unhealthy, :transient)
+
+      second =
+        ErrorAnalysis.calculate_next_backoff(
+          %{backoff_ms: first, last_error_class: :transient},
+          :transient
+        )
+
+      assert [first, second] == [:timer.minutes(30), :timer.hours(1)]
     end
 
     test "transient backoff sequence from initial 5min" do

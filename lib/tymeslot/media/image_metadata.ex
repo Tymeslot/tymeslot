@@ -73,6 +73,12 @@ defmodule Tymeslot.Media.ImageMetadata do
   """
   @type oversize :: %{pixels: pos_integer(), max_pixels: pos_integer()}
 
+  # The file extension each accepted format is stored and served under.
+  @extensions %{jpeg: ".jpg", png: ".png", gif: ".gif", webp: ".webp"}
+
+  # Enough of the file for every accepted format's signature.
+  @header_bytes 64
+
   @type error :: :invalid_image_format | {:image_too_large, oversize()} | :busy | File.posix()
 
   @doc """
@@ -111,12 +117,34 @@ defmodule Tymeslot.Media.ImageMetadata do
   end
 
   @doc """
+  The extension (".jpg", ".png", ".gif" or ".webp") of the format the image
+  at `path` actually is, read from its leading bytes rather than from its
+  name. Any other format is `:invalid_image_format`.
+  """
+  @spec extension(Path.t()) :: {:ok, String.t()} | {:error, :invalid_image_format}
+  def extension(path) do
+    with {:ok, header} <- read_header(path),
+         {:ok, extension} <- Map.fetch(@extensions, ExImageInfo.seems?(header)) do
+      {:ok, extension}
+    else
+      _unrecognised -> {:error, :invalid_image_format}
+    end
+  end
+
+  @doc """
   The largest canvas `strip/3` accepts for an image of `extension`, in
   pixels: WebP's lower bound for `.webp`, the general one for any other.
   """
   @spec pixel_limit(String.t()) :: pos_integer()
   def pixel_limit(".webp"), do: @max_webp_pixels
   def pixel_limit(_extension), do: @max_pixels
+
+  defp read_header(path) do
+    case File.open(path, [:read, :binary, :raw], &:file.read(&1, @header_bytes)) do
+      {:ok, {:ok, header}} -> {:ok, header}
+      _empty_or_unreadable -> {:error, :invalid_image_format}
+    end
+  end
 
   @doc """
   Whether the image at `path` carries metadata `strip/3` would remove.

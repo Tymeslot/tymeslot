@@ -26,8 +26,8 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncRequest
 

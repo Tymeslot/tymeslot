@@ -84,12 +84,19 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "an asynchronous payment failure is failed, not processing" do
       meeting = insert(:meeting, status: "awaiting_payment")
-      insert(:booking_payment, meeting_id: meeting.id, status: "pending", paid_at: nil)
+
+      insert(:booking_payment,
+        meeting_id: meeting.id,
+        stripe_account_id: "acct_TEST",
+        status: "pending",
+        paid_at: nil
+      )
 
       assert :ok =
                FailAndExpire.handle(
                  %{
                    "id" => "evt_async_failed",
+                   "account" => "acct_TEST",
                    "data" => %{"object" => %{"client_reference_id" => meeting.id}}
                  },
                  "checkout.session.async_payment_failed",

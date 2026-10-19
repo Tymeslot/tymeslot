@@ -25,7 +25,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     username: "user",
     password: "pass",
     calendar_paths: ["/cal/"],
-    verify_ssl: true,
     provider: :caldav
   }
 
@@ -80,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert is_nil(reloaded.sync_last_error)
     end
 
-    test "increments sync_attempts and stays queued on 502",
+    test "stays queued on 502 without counting the attempt",
          %{integration: integration} do
       row = insert_pending_row(integration, sync_state: "locally_modified")
 
@@ -92,7 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
-      assert reloaded.sync_attempts == 1
+      assert reloaded.sync_attempts == 0
 
       # `sync_last_error` is a human-readable field, not a dump of the internal
       # error term: an inspected atom such as `":server_error"` must never
@@ -315,7 +314,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert :ok = OfflineQueue.flush(integration, @client)
 
       assert is_nil(Repo.reload(row))
-      assert QueueQueries.list_pending(integration.id) == []
+      assert QueueQueries.list_pending(integration.id, 100, 100) == []
       assert :counters.get(counter, 1) == 3
     end
 
@@ -332,7 +331,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
-      assert reloaded.sync_attempts == 1
+      assert reloaded.sync_attempts == 0
 
       assert reloaded.sync_last_error ==
                "The calendar server reported an error. Tymeslot will retry automatically."
@@ -557,7 +556,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       uids =
         integration.id
-        |> QueueQueries.list_pending()
+        |> QueueQueries.list_pending(100, 100)
         |> Enum.map(& &1.uid)
 
       assert uids == ["older", "newer"]

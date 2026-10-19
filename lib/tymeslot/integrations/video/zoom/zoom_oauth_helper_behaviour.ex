@@ -5,8 +5,9 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperBehaviour do
 
   @callback authorization_url(integer(), String.t()) :: String.t()
   @callback authorization_url(integer(), String.t(), keyword()) :: String.t()
-  @callback exchange_code_for_tokens(String.t(), String.t(), String.t()) ::
-              {:ok, map()} | {:error, String.t()}
+  # The code, the redirect URI, and the flow's `:code_verifier`.
+  @callback exchange_code_for_tokens(String.t(), String.t(), keyword()) ::
+              {:ok, map()} | {:error, String.t() | :provider_rate_limited}
   @callback refresh_access_token(String.t(), String.t() | nil) ::
               {:ok, map()} | {:error, String.t()}
   # With options, used to carry a `:log_context` naming the integration behind

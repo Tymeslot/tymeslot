@@ -70,15 +70,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Video.NeedsReauth
-  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.ServerRefusals
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Security.SsrfGuard
-  alias Tymeslot.Security.UrlValidation
 
   require Logger
 
@@ -94,16 +91,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   @max_account_id_length 255
 
   @call_path "/index.php/call/"
-
-  @capabilities Capabilities.new!(
-                  waiting_room: true,
-                  recording: false,
-                  dial_in: false,
-                  max_participants: nil,
-                  breakout_rooms: false,
-                  screen_sharing: true,
-                  chat: true
-                )
 
   @impl ProviderBehaviour
   def create_meeting_room(%{needs_reauth: true}), do: {:error, :unauthorized}
@@ -142,11 +129,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   def delete_meeting_room(_room_id, %{needs_reauth: true}), do: {:error, :unauthorized}
 
   def delete_meeting_room(room_id, config) when is_binary(room_id) do
-    case config |> credentials() |> Client.delete_room(room_id) |> tolerate_preserved(config) do
-      # Already gone, which is what a delete wants: cancelling stays idempotent.
-      {:error, :meeting_not_found} -> :ok
-      result -> result
-    end
+    config |> credentials() |> Client.delete_room(room_id) |> tolerate_preserved(config)
   end
 
   @impl ProviderBehaviour
@@ -162,15 +145,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   def extract_room_id(_meeting_url), do: nil
 
   @impl ProviderBehaviour
-  def valid_meeting_url?(meeting_url),
-    do: LinkRoom.http_url?(meeting_url) and extract_room_id(meeting_url) != nil
-
-  @impl ProviderBehaviour
   def perform_connection_test(%{needs_reauth: true}) do
     {:error,
      {:unauthorized,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud refused this integration's app password earlier. Edit the integration and enter a new app password."
       )}}
   end
@@ -183,12 +162,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       check_talk(capabilities, config)
     end
   end
-
-  @impl ProviderBehaviour
-  def provider_type, do: :nextcloud_talk
-
-  @impl ProviderBehaviour
-  def display_name, do: "Nextcloud Talk"
 
   @impl ProviderBehaviour
   def connection_test_bucket, do: :nextcloud_talk
@@ -208,30 +181,15 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
          {:ok, login} <-
            require_present(
              config[:client_id],
-             dgettext("dashboard_video", "Login name is required")
+             dgettext("integrations_video", "Login name is required")
            ),
          {:ok, _app_password} <-
            require_present(
              config[:client_secret],
-             dgettext("dashboard_video", "App password is required")
+             dgettext("integrations_video", "App password is required")
            ) do
       validate_account_length(base_url, login)
     end
-  end
-
-  @impl ProviderBehaviour
-  def capabilities, do: @capabilities
-
-  @impl ProviderBehaviour
-  def handle_meeting_event(_event, _room_data, _additional_data), do: :ok
-
-  @impl ProviderBehaviour
-  def generate_meeting_metadata(room_data) do
-    %{
-      provider: "nextcloud_talk",
-      meeting_id: room_data.room_id,
-      join_url: room_data.meeting_url
-    }
   end
 
   @impl ProviderBehaviour
@@ -444,7 +402,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
          :ok <- check_conversation_rights(spreed, config) do
       {:ok,
        String.trim(
-         dgettext("dashboard_video", "Connected to Nextcloud Talk %{version}",
+         dgettext("integrations_video", "Connected to Nextcloud Talk %{version}",
            version: Map.get(spreed, "version", "")
          )
        )}
@@ -455,7 +413,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Talk is not available to this account. Check that the Talk app is installed and enabled for your user."
       )}}
   end
@@ -467,7 +425,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       {:error,
        {:unreachable,
         dgettext(
-          "dashboard_video",
+          "integrations_video",
           "This Nextcloud Talk is too old. Tymeslot needs Talk 21.1 or later."
         )}}
     end
@@ -486,7 +444,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
     {:unauthorized,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "Nextcloud refused the login name or app password. Create an app password in Nextcloud under Personal settings, Security, and enter it with your login name."
      )}
   end
@@ -494,7 +452,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure(:rate_limited, _config) do
     {:throttled,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "Nextcloud is refusing requests from Tymeslot for now, usually after too many failed logins. Wait a few minutes before trying again."
      )}
   end
@@ -502,7 +460,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure(:not_found, _config) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "No Nextcloud answered at this address. Enter the address you open Nextcloud at, including any subfolder."
      )}
   end
@@ -510,7 +468,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure({:redirected, _location}, _config) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "The server redirected the request. Enter the address your browser ends up on when you open Nextcloud, starting with https://."
      )}
   end
@@ -518,7 +476,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure(:invalid_response, _config) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "The server did not answer like a Nextcloud server. Check the address."
      )}
   end
@@ -534,7 +492,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp status_failure(status) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "Nextcloud answered with status %{status}. Check the address, or try again later.",
        status: status
      )}
@@ -542,7 +500,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp unreachable_failure(reason) do
     {:unreachable,
-     dgettext("dashboard_video", "Could not reach the server: %{reason}", reason: reason)}
+     dgettext("integrations_video", "Could not reach the server: %{reason}", reason: reason)}
   end
 
   # Only a saved integration can be flagged. The check a new integration runs
@@ -554,7 +512,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       event: "nextcloud_talk_credentials_rejected",
       message:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "Nextcloud refused the app password. Edit this integration and enter a new app password."
         )
     )
@@ -562,31 +520,21 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp flag_rejected_credentials(_config), do: :ok
 
-  defp validate_base_url(nil),
-    do: {:error, dgettext("dashboard_video", "Base URL is required")}
-
   # Every request carries the app password over Basic auth, so a public server
   # must be reached over https; a server on localhost or a private network stays
   # allowed, as it is for CalDAV, and so does one on an internal name (a Docker
   # service name, `.lan`, `.home.arpa`) once the operator allows private video
-  # addresses. API paths are appended to the server address,
-  # so `LinkRoom.validate_base_url/1` refuses a query string or a fragment, and
-  # credentials embedded in the address, which would reach guests in the link.
+  # addresses.
   defp validate_base_url(base_url) do
-    allow_private = SsrfGuard.allow_private_for_video?()
-
     with :ok <-
-           UrlValidation.validate_http_url(base_url,
-             block_private_ips: not allow_private,
-             enforce_https_for_public: true,
-             internal_names_local: allow_private,
+           LinkRoom.validate_server_url(base_url,
+             https: :for_public,
              https_error_message:
                dgettext(
-                 "dashboard_video",
+                 "integrations_video",
                  "Use an https:// server URL. Nextcloud receives your app password with every request."
                )
-           ),
-         :ok <- LinkRoom.validate_base_url(base_url) do
+           ) do
       {:ok, base_url}
     end
   end
@@ -598,7 +546,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     else
       {:error,
        dgettext(
-         "dashboard_video",
+         "integrations_video",
          "The server URL and login name are too long to store together. Use a shorter server address."
        )}
     end

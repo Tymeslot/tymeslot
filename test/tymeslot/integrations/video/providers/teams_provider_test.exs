@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
-  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
@@ -18,18 +17,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
   @booking_start ~U[2030-03-14 09:30:00Z]
   @booking_end ~U[2030-03-14 10:15:00Z]
-
-  describe "provider_type/0" do
-    test "returns :teams" do
-      assert TeamsProvider.provider_type() == :teams
-    end
-  end
-
-  describe "display_name/0" do
-    test "returns correct display name" do
-      assert TeamsProvider.display_name() == "Microsoft Teams"
-    end
-  end
 
   describe "config_schema/0" do
     test "returns schema with required OAuth fields" do
@@ -41,20 +28,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert schema[:refresh_token][:required] == true
       assert schema[:token_expires_at][:type] == :datetime
       assert schema[:token_expires_at][:required] == true
-    end
-  end
-
-  describe "capabilities/0" do
-    test "returns correct capabilities for Teams" do
-      capabilities = TeamsProvider.capabilities()
-
-      assert capabilities[:waiting_room] == true
-      assert capabilities[:recording] == true
-      assert capabilities[:dial_in] == true
-      assert capabilities[:max_participants] == 300
-      assert capabilities[:breakout_rooms] == true
-      assert capabilities[:screen_sharing] == true
-      assert capabilities[:chat] == true
     end
   end
 
@@ -520,44 +493,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     end
   end
 
-  describe "valid_meeting_url?/1" do
-    test "accepts valid Teams meeting URL" do
-      url = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc123%40thread.v2/0"
-
-      assert TeamsProvider.valid_meeting_url?(url)
-    end
-  end
-
-  describe "handle_meeting_event/3" do
-    test "returns :ok for meeting_ended event" do
-      room_data = %{room_id: "meeting123"}
-
-      assert TeamsProvider.handle_meeting_event(:meeting_ended, room_data, %{}) == :ok
-    end
-  end
-
-  describe "generate_meeting_metadata/1" do
-    test "returns metadata with Teams-specific features" do
-      room_data = %RoomData{
-        room_id: "meeting123",
-        meeting_url: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0",
-        provider_data: %{
-          passcode: "123456",
-          toll_number: "+1-555-0100",
-          conference_id: "987654321"
-        }
-      }
-
-      metadata = TeamsProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:provider] == "teams"
-      assert metadata[:meeting_id] == "meeting123"
-      assert metadata[:passcode] == "123456"
-      assert metadata[:dial_in_number] == "+1-555-0100"
-      assert metadata[:conference_id] == "987654321"
-    end
-  end
-
   # Pins the circuit-breaker split from `ProviderAdapter`: per-tenant scope
   # and credential failures must never reach `finish_create_meeting_room/2`
   # (and so never count against the shared Teams breaker), while a
@@ -579,7 +514,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
         {:error, "Token refresh failed: invalid_grant"}
       end)
 
-      assert {:error, "Token refresh failed: Token refresh failed: invalid_grant"} =
+      assert {:error, "Token refresh failed: invalid_grant"} =
                TeamsProvider.precheck_create_meeting_room(config)
     end
 
@@ -592,8 +527,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
         {:error, "Network error during token refresh: timeout"}
       end)
 
-      assert {:provider_error,
-              "Token refresh failed: Network error during token refresh: timeout"} =
+      assert {:provider_error, "Network error during token refresh: timeout"} =
                TeamsProvider.precheck_create_meeting_room(config)
     end
 

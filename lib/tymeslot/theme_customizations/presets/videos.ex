@@ -1,9 +1,11 @@
 defmodule Tymeslot.ThemeCustomizations.Presets.Videos do
   @moduledoc """
   The background video presets. The files ship under
-  `priv/static/videos/backgrounds/` and their posters under
-  `priv/static/images/ui/posters/`; `Options.Background` builds the URLs. Read
-  through `Tymeslot.ThemeCustomizations.Presets`.
+  `priv/static/videos/backgrounds/`, their thumbnails under
+  `priv/static/videos/thumbnails/` and their posters under
+  `priv/static/images/ui/posters/`; `url/1`, `thumbnail_url/1` and
+  `poster_url/1` build the URLs. Read through
+  `Tymeslot.ThemeCustomizations.Presets`.
   """
 
   @type preset :: %{
@@ -13,6 +15,10 @@ defmodule Tymeslot.ThemeCustomizations.Presets.Videos do
           required(:poster) => String.t(),
           required(:description) => String.t()
         }
+
+  @dir "/videos/backgrounds/"
+  @thumbnail_dir "/videos/thumbnails/"
+  @poster_dir "/images/ui/posters/"
 
   @videos %{
     "preset:rhythm-default" => %{
@@ -62,4 +68,16 @@ defmodule Tymeslot.ThemeCustomizations.Presets.Videos do
   @doc "Every background video, keyed by id."
   @spec all() :: %{String.t() => preset()}
   def all, do: @videos
+
+  @doc "The public URL of a preset video file."
+  @spec url(String.t()) :: String.t()
+  def url(file) when is_binary(file), do: @dir <> file
+
+  @doc "The public URL of a preset video's thumbnail."
+  @spec thumbnail_url(String.t()) :: String.t()
+  def thumbnail_url(file) when is_binary(file), do: @thumbnail_dir <> file
+
+  @doc "The public URL of a preset video's poster."
+  @spec poster_url(String.t()) :: String.t()
+  def poster_url(file) when is_binary(file), do: @poster_dir <> file
 end

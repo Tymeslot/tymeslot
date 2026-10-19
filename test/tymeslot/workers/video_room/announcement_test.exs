@@ -38,9 +38,13 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       test_pid = self()
 
-      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+      stub(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
+        {:ok, :sent}
+      end)
+
+      stub(EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, details ->
         send(test_pid, {:reschedule_emails, details})
-        {{:ok, :sent}, {:ok, :sent}}
+        {:ok, :sent}
       end)
 
       Map.put(scenario, :original, moved_back(scenario.meeting))
@@ -53,6 +57,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       assert :ok = perform_job(VideoRoomWorker, args)
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, details}
       assert details.attendee_video_url =~ "https://test.mirotalk.com/join/test-room-123"
       assert details.original_start_time == original.start_time
@@ -78,6 +83,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
                  attempt: 1
                )
 
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, %{attendee_video_url: nil}}
       assert_enqueued(worker: WebhookWorker, args: %{"event_type" => "meeting.rescheduled"})
     end
@@ -99,6 +105,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       assert :ok = perform_job(VideoRoomWorker, args)
 
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
       refute_enqueued(worker: WebhookWorker)
       assert Repo.get!(MeetingSchema, meeting.id).video_room_id
@@ -113,6 +120,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
       end)
 
       assert {:snooze, _seconds} = perform_job(VideoRoomWorker, args, attempt: 5)
+      Oban.drain_queue(queue: :emails)
       assert_received {:reschedule_emails, %{attendee_video_url: nil}}
 
       expect_mirotalk_success()
@@ -121,6 +129,7 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
 
       # The link reaches the attendee through the meeting page and reminders;
       # a second email and event for the same move would not help.
+      Oban.drain_queue(queue: :emails)
       refute_received {:reschedule_emails, _details}
       assert Repo.get!(MeetingSchema, meeting.id).video_room_id
     end

@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
     key = {integration_id, calendar_id}
     hide? = not MapSet.member?(socket.assigns.hidden_calendar_keys, key)
 
-    with :ok <- RateLimiter.check_calendar_visibility_rate_limit(user_id),
+    with :ok <- RateLimiter.check(:calendar_visibility, user_id),
          {:ok, _appearance} <- Appearance.set_hidden(user_id, integration_id, calendar_id, hide?) do
       keys =
         if hide?,
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
   def handle_refresh(_params, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_calendar_refresh_rate_limit(user_id) do
+    case RateLimiter.check(:calendar_refresh, user_id) do
       :ok ->
         {:noreply, do_refresh(socket, user_id)}
 

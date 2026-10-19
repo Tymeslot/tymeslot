@@ -17,11 +17,19 @@ defmodule Tymeslot.Integrations.Calendar.EventRole do
 
   It composes with `transparency` and `status` rather than replacing them, and
   neither side overrides the other. `role` is a **query-level** filter, applied
-  in `CalendarEventQueries.in_range/2` and
+  in `CalendarEventQueries.in_range/3` and
   `ProviderCalendarEventQueries.list_for_range/4`; `transparency` and `status`
   are **row-level**, and `CalendarEvent.blocking?/1` — the one function the
   whole availability calculation routes through — reads those two and never
   this one. A `busy_only` row that is not opaque therefore blocks nothing.
+
+  It is also not the owner's choice whether a calendar blocks: that is
+  `CalendarEntry.blocks_availability`, a filter on whole calendars applied
+  before this one (`AvailabilityView.of/1` for live reads,
+  `AvailabilityView.rules/1` for cached ones). `role` answers whether the
+  provider's data for a row can be trusted to block at all; a row passes
+  both before it blocks, and a calendar set to show only blocks nothing
+  whatever its rows' roles.
 
   It exists as a module rather than as literals spelled at each site because a
   mistyped literal compiles fine and silently never matches, and the two

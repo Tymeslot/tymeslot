@@ -159,11 +159,6 @@ msgstr "Помилка завантаження"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr "Помилка завантаження: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Завантаження..."
 
@@ -182,7 +177,7 @@ msgstr "vashe_imia"
 msgid "Unknown timezone"
 msgstr "Невідомий часовий пояс"
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Забагато спроб змінити ім'я користувача. Спробуйте пізніше."
@@ -274,3 +269,8 @@ msgstr "Це ім'я користувача зарезервоване"
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
 msgstr "Видалити аватар"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Ім'я користувача"

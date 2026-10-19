@@ -196,7 +196,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # pinned setting whose value is off.
   defp row_header(assigns) do
     ~H"""
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 basis-full sm:basis-0 min-w-0">
       <div class={["transition-opacity", @muted && "opacity-60"]}>
         <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
           {Formatters.humanise(@key)}

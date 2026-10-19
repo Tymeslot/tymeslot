@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data(%{name: "John Doe", email: "john@example.com"})
       verification_url = "https://example.com/verify/token123"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       assert html =~ "<html"
       assert html =~ "</html>"
@@ -22,7 +22,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data(%{name: "Jane Smith", email: "jane@example.com"})
       verification_url = "https://example.com/verify/token456"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       assert html =~ "Jane Smith"
     end
@@ -30,7 +30,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
     test "escapes an HTML-significant name exactly once" do
       user = build_user_data(%{name: "O'Brien & Sons", email: "brien@example.com"})
 
-      html = EmailVerification.render(user, "https://example.com/verify/token")
+      html = EmailVerification.render(user, "https://example.com/verify/token").html_body
 
       # Escaped once, so the client renders "Hi O'Brien & Sons,". Escaping it
       # twice mails out the literal text "Hi O&#39;Brien &amp; Sons,".
@@ -42,7 +42,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
     test "keeps a hostile name inert in the rendered email" do
       user = build_user_data(%{name: "<script>alert('xss')</script>", email: "x@example.com"})
 
-      html = EmailVerification.render(user, "https://example.com/verify/token")
+      html = EmailVerification.render(user, "https://example.com/verify/token").html_body
 
       refute html =~ "<script>"
       assert html =~ "&lt;script&gt;"
@@ -52,7 +52,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data(%{name: nil, email: "user@example.com"})
       verification_url = "https://example.com/verify/token789"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       assert html =~ "Hi there,"
       refute html =~ "Hi user@example.com"
@@ -62,7 +62,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data()
       verification_url = "https://example.com/verify/unique-token"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       assert html =~ verification_url
     end
@@ -71,7 +71,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data()
       verification_url = "https://example.com/verify/token"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       assert html =~ "Confirm Email"
       assert html =~ verification_url
@@ -81,7 +81,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data()
       verification_url = "https://example.com/verify/token"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       assert html =~ "this link expires in 24 hours"
     end
@@ -90,7 +90,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data(%{name: "O'Brien & Sons", email: "obrien@example.com"})
       verification_url = "https://example.com/verify/token"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       # `&` and `'` are entity-encoded, so match the parts of the name that
       # escaping leaves untouched rather than a specific entity spelling.
@@ -105,7 +105,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data(%{name: "John Doe", email: "john@example.com"})
       verification_url = "https://example.com/verify/token123"
 
-      text = EmailVerification.render_text(user, verification_url)
+      text = EmailVerification.render(user, verification_url).text_body
 
       assert text =~ "John Doe"
       assert text =~ verification_url
@@ -114,7 +114,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
     test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "user@example.com"})
-      text = EmailVerification.render_text(user, "https://example.com/verify/token")
+      text = EmailVerification.render(user, "https://example.com/verify/token").text_body
 
       assert text =~ "Hi there,"
       refute text =~ "Hi user@example.com"
@@ -126,7 +126,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       user = build_user_data(%{name: "<script>alert('xss')</script>", email: "test@example.com"})
       verification_url = "https://example.com/verify/token"
 
-      html = EmailVerification.render(user, verification_url)
+      html = EmailVerification.render(user, verification_url).html_body
 
       # The injected markup is neutralised, and the email is still complete.
       assert html =~ verification_url
@@ -144,7 +144,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
     test "EmailVerification.render_text returns a valid binary and preserves URL with malicious name" do
       user = build_user_data(%{name: "<script>alert('xss')</script>", email: "test@example.com"})
       url = "https://example.com/verify/token"
-      text = EmailVerification.render_text(user, url)
+      text = EmailVerification.render(user, url).text_body
 
       assert text =~ "Hi <script>alert('xss')</script>,"
       assert text =~ url
@@ -153,7 +153,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
     test "EmailVerification.render_text URL is intact even when name contains newlines" do
       user = build_user_data(%{name: "Attacker\n\n", email: "test@example.com"})
       url = "https://example.com/verify/token"
-      text = EmailVerification.render_text(user, url)
+      text = EmailVerification.render(user, url).text_body
 
       assert text =~ url
     end

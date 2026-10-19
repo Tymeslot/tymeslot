@@ -15,14 +15,14 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheck do
   (`MeetingPayments.platform_configured?/0`, the same test the admin
   settings use before meeting payments can be switched on):
 
-    * `STRIPE_WEBHOOK_SECRET` (the platform endpoint, read the way
-      `Tymeslot.Payments.Webhooks.Delivery` reads it) when a subscription
+    * `STRIPE_WEBHOOK_SECRET` (the platform endpoint) when a subscription
       manager is configured, since the platform events drive subscriptions
       and their refunds and disputes;
-    * `STRIPE_CONNECT_WEBHOOK_SECRET` (the Connect endpoint, read the way
-      `Tymeslot.MeetingPayments.Webhooks.WebhookProcessor` reads it) when
-      meeting payments are enabled, since those events record booking
-      payments.
+    * `STRIPE_CONNECT_WEBHOOK_SECRET` (the Connect endpoint) when meeting
+      payments are enabled, since those events record booking payments.
+
+  Both are read through `Tymeslot.Payments.Webhooks.Ingress.signing_secret/1`,
+  as the deliveries themselves read them.
   """
 
   require Logger
@@ -30,6 +30,7 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheck do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Payments.Config
+  alias Tymeslot.Payments.Webhooks.Ingress
 
   @platform_secret "STRIPE_WEBHOOK_SECRET"
   @connect_secret "STRIPE_CONNECT_WEBHOOK_SECRET"
@@ -70,8 +71,8 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheck do
   defp connect_required?,
     do: Application.get_env(:tymeslot, :meeting_payments_enabled, false) == true
 
-  defp platform_secret, do: Config.stripe_provider().webhook_secret()
-  defp connect_secret, do: Application.get_env(:tymeslot, :stripe_connect_webhook_secret)
+  defp platform_secret, do: Ingress.signing_secret(:platform)
+  defp connect_secret, do: Ingress.signing_secret(:connect)
 
   defp blank?(secret), do: not is_binary(secret) or String.trim(secret) == ""
 

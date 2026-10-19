@@ -52,6 +52,27 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
     end
   end
 
+  describe "cap_visible?/1" do
+    test "solo types show the flat cap" do
+      assigns = %{meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{max_participants: 1}}
+      assert GuestBooking.cap_visible?(assigns)
+    end
+
+    test "a group slot that hides its count hides the cap" do
+      refute GuestBooking.cap_visible?(group_assigns(6))
+    end
+
+    test "a group slot at or below the last-spots threshold shows the cap" do
+      meeting_type = %Tymeslot.MeetingTypes.MeetingTypeSchema{
+        max_participants: 10,
+        last_spots_threshold: 6
+      }
+
+      assert GuestBooking.cap_visible?(group_assigns(6, %{meeting_type: meeting_type}))
+      refute GuestBooking.cap_visible?(group_assigns(7, %{meeting_type: meeting_type}))
+    end
+  end
+
   describe "assign_seat_cap/1" do
     # A booker who added guests while the slot was roomy, then lost seats to
     # other bookers, used to carry all of them into every later slot: the

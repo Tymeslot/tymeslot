@@ -6,7 +6,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.OAuthHelper
-  alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   import Tymeslot.Factory
   import Mox
@@ -41,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
     test "creates new integration and performs discovery" do
       user = insert(:user)
       insert(:profile, user: user)
-      state = State.generate(user.id, "outlook-state")
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response("at-123", "rt-123")
 
@@ -50,7 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
         {:ok, [%{"id" => "cal1", "name" => "Calendar", "isDefaultCalendar" => true}]}
       end)
 
-      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", "http://uri", state)
       assert integration.user_id == user.id
       assert integration.provider == "outlook"
 
@@ -73,7 +72,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
     test "handles 3-tuple error from discovery without crashing" do
       user = insert(:user)
       insert(:profile, user: user)
-      state = State.generate(user.id, "outlook-state")
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response("at-ok", "rt-ok")
 
@@ -83,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       end)
 
       # Should still succeed — discovery failure is non-fatal
-      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", "http://uri", state)
       assert integration.provider == "outlook"
     end
   end
@@ -91,20 +90,55 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
   # The token exchange is the only HTTP call `handle_callback/3` makes — calendar
   # discovery goes through `OutlookCalendarAPIMock`, and the initial delta fetch
   # is the enqueued worker's job, not the callback's.
-  defp expect_token_response(access_token, refresh_token) do
+  # A sync that kept failing pauses the integration, and a paused calendar
+  # gives up its place as the primary. Reconnecting reactivates it, and a user
+  # with no other calendar has to get it back as the primary too.
+  describe "handle_callback/3 reconnecting a paused integration" do
+    test "makes it the primary again when the user has none" do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+
+      paused =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          provider_account_id: "outlook-oid-paused",
+          is_active: false,
+          calendar_list: [%{"id" => "cal1", "name" => "Calendar", "selected" => true}]
+        )
+
+      state = %{user_id: user.id, integration_id: paused.id}
+      expect_token_response("at-new", "rt-new", id_token("outlook-oid-paused"))
+
+      assert {:ok, reconnected} = OAuthHelper.handle_callback("code", "http://uri", state)
+      assert {reconnected.id, reconnected.is_active} == {paused.id, true}
+
+      assert Repo.reload!(profile).primary_calendar_integration_id == paused.id
+    end
+  end
+
+  defp expect_token_response(access_token, refresh_token, id_token \\ nil) do
+    tokens = %{
+      "access_token" => access_token,
+      "refresh_token" => refresh_token,
+      "expires_in" => 3600,
+      "scope" => "Calendars.ReadWrite"
+    }
+
+    body = if id_token, do: Map.put(tokens, "id_token", id_token), else: tokens
+
     expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-      {:ok,
-       %{
-         status: 200,
-         body:
-           Jason.encode!(%{
-             "access_token" => access_token,
-             "refresh_token" => refresh_token,
-             "expires_in" => 3600,
-             "scope" => "Calendars.ReadWrite"
-           })
-       }}
+      {:ok, %{status: 200, body: Jason.encode!(body)}}
     end)
+  end
+
+  defp id_token(oid) do
+    payload =
+      Base.url_encode64(Jason.encode!(%{"oid" => oid, "email" => "a@example.com"}),
+        padding: false
+      )
+
+    "#{Base.url_encode64("{}", padding: false)}.#{payload}.#{Base.url_encode64("sig", padding: false)}"
   end
 
   describe "token operations" do
@@ -128,45 +162,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       assert tokens.access_token == "at"
       assert is_nil(tokens.refresh_token)
       assert tokens.scope =~ "https://graph.microsoft.com/Calendars.ReadWrite"
-    end
-
-    test "refresh_access_token uses TokenExchange" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "access_token" => "new",
-               "expires_in" => 3600
-             })
-         }}
-      end)
-
-      assert {:ok, _result} = OAuthHelper.refresh_access_token("rt")
-    end
-
-    test "refresh_access_token surfaces OAuth error type on 400 with invalid_client body" do
-      resp_body = Jason.encode!(%{"error" => "invalid_client"})
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %{status: 400, body: resp_body}}
-      end)
-
-      assert {:error, msg} = OAuthHelper.refresh_access_token("bad-rt")
-      assert msg == "Token refresh failed: invalid_client"
-    end
-
-    test "refresh_access_token returns generic message for 5xx responses" do
-      resp_body = Jason.encode!(%{"error" => "access_denied"})
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %{status: 503, body: resp_body}}
-      end)
-
-      assert {:error, msg} = OAuthHelper.refresh_access_token("rt")
-      assert msg == "Token refresh failed: HTTP 503 (see logs for details)"
-      refute msg =~ "access_denied"
     end
   end
 end

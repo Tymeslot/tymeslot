@@ -14,7 +14,7 @@ defmodule Tymeslot.SlotPickerTestHelpers do
   import Tymeslot.Factory
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Utils.DateTimeUtils.Display
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
 
   @doc """
   Inserts an organiser bookable 09:00–17:00 every day, on the given theme.
@@ -89,6 +89,6 @@ defmodule Tymeslot.SlotPickerTestHelpers do
     |> List.first()
     |> TimeSlots.parse_time_slot()
     |> Map.put(:hour, hour)
-    |> Display.format_time_for_display()
+    |> TimeFormat.format("12h")
   end
 end

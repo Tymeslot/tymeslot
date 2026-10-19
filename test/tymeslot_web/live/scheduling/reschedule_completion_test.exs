@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   alias Tymeslot.Repo
   alias Tymeslot.RescheduleTestSetup
   alias Tymeslot.Workers.CalendarEventWorker
+  alias TymeslotWeb.BookingDriver
 
   setup :verify_on_exit!
 
@@ -353,6 +354,165 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       assert DateTime.to_date(moved.start_time) == tomorrow
       assert DateTime.compare(moved.start_time, original_start) != :eq
       assert meeting_count_for(user) == 1
+    end
+  end
+
+  describe "a booking whose meeting type has since been deleted" do
+    # Deliberately not refused, unlike a seat whose type is gone: a whole
+    # booking with no type moves like an ad-hoc one, on the type its length
+    # matches (`Reschedule`), so the page offers the organiser's types as a
+    # real choice rather than pinning one.
+    @tag :capture_log
+    test "is offered the organiser's types, and moves", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting,
+      original_start: original_start
+    } do
+      replacement =
+        insert(:meeting_type, user: user, duration_minutes: 30, name: "New Chat", is_active: true)
+
+      Repo.delete!(meeting_type)
+
+      view =
+        navigate_to_booking_form(conn, profile, replacement, reschedule_meeting_uid: meeting.uid)
+
+      refute :sys.get_state(view.pid).socket.assigns.meeting_type_pinned
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      assert meeting_count_for(user) == 1
+    end
+  end
+
+  describe "a booking cancelled while its reschedule page is open" do
+    # The page checks the meeting when it applies its URL; nothing re-checks
+    # it as the booker moves from step to step. Whatever the page has kept of
+    # the meeting meanwhile, the submit asks the rules again, and a booking
+    # cancelled in between is refused there, with the reason.
+    @tag :capture_log
+    test "the submit is refused with the reason, and the meeting is not moved", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting,
+      original_start: original_start
+    } do
+      view =
+        navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
+
+      meeting |> Changeset.change(%{status: "cancelled"}) |> Repo.update!()
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn -> render(view) =~ "Cannot reschedule a cancelled meeting" end)
+
+      kept = Repo.get!(MeetingSchema, meeting.id)
+      assert kept.status == "cancelled"
+      assert DateTime.compare(kept.start_time, original_start) == :eq
+      assert meeting_count_for(user) == 1
+    end
+
+    # Applying the URL again (a patch, back and forward in the browser) asks
+    # the rules afresh, as arriving does, rather than trusting what the page
+    # learnt about the meeting when it opened.
+    @tag :capture_log
+    test "applying the page's URL again refuses it, as arriving would", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      path = "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}"
+      {:ok, view, _html} = live(conn, path)
+
+      meeting |> Changeset.change(%{status: "cancelled"}) |> Repo.update!()
+
+      assert {:error, {:live_redirect, %{to: to}}} = render_patch(view, path)
+      assert to == "/#{profile.username}?timezone=UTC"
+      assert assert_redirect(view, to)["error"] == "Cannot reschedule a cancelled meeting"
+    end
+  end
+
+  describe "a URL that no longer names the reschedule" do
+    # The URL decides whether the page is a reschedule (`is_rescheduling` is
+    # read from it), so the booking it names has to follow it too. Kept from
+    # an earlier URL (browser history across "Schedule another meeting"), it
+    # left a fresh booking pinned to the old meeting's type and prefilled
+    # with its attendee's details.
+    @tag :capture_log
+    test "leaves the reschedule behind", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting: meeting
+    } do
+      insert(:meeting_type, user: user, duration_minutes: 45, name: "Deep Dive", is_active: true)
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      render_patch(view, "/#{profile.username}?timezone=UTC")
+
+      # The pin had narrowed the overview to the meeting's own type.
+      assert Enum.sort(BookingDriver.meeting_types(view)) == ["deep-dive", "quick-chat"]
+
+      view = walk_to_booking_form(view, "UTC", "quick-chat")
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.reschedule_meeting_uid == nil
+      assert assigns.reschedule_context == nil
+      refute render(view) =~ ~s(value="Test Attendee")
+    end
+
+    # The pin had made the meeting's own type the selection; once it is gone
+    # from the catalogue the overview offers, no card matches it, and "next"
+    # would book a type the page no longer shows.
+    @tag :capture_log
+    test "drops the meeting's type from the selection when the overview no longer offers it", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting
+    } do
+      insert(:meeting_type, user: user, duration_minutes: 45, name: "Deep Dive", is_active: true)
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      assert :sys.get_state(view.pid).socket.assigns.selected_duration == "quick-chat"
+
+      meeting_type |> Changeset.change(%{is_active: false}) |> Repo.update!()
+      render_patch(view, "/#{profile.username}?timezone=UTC")
+
+      assert BookingDriver.meeting_types(view) == ["deep-dive"]
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.selected_duration == nil
+      assert assigns.meeting_type == nil
     end
   end
 

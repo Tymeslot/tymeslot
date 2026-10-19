@@ -1,4 +1,312 @@
 
+[1.27.0]
+* [BREAKING] encryption: Refuse to start with an unusable data encryption key: an install whose DATA_ENCRYPTION_KEY is not valid Base64 or decodes to fewer than 32 bytes no longer starts. Such an install could not store or read any credential, so it holds none encrypted under that key: replace the value with one from `openssl rand -base64 48` and restart.
+* calendar: Show a custom-domain organiser once on mailbox.org
+* reminders: Keep a typed custom reminder instead of discarding it
+* booking: Keep the guest field from revealing a hidden spots-left count
+* admin: Stack admin setting rows on phones instead of squeezing the text
+* account: Stop the account settings header scrolling sideways on small phones
+* booking: Translate the remaining booking question errors
+* calendar: Write French and Polish short weekday names with their stop
+* profiles: Keep a username chosen in another tab when onboarding moves on
+* calendar: Count what is left of a series when its change is saved
+* calendar: Write weekday names in repeat summaries as each language does
+* payments: Stop prices being set in a Stripe currency no longer supported
+* payments: Release a booking awaiting payment when its host leaves Stripe
+* booking: Send no reschedule email for a booking that has already lapsed
+* calendar: Show the reconnection reason in the owner's language
+* booking: Drop a pinned type the overview no longer offers
+* booking: Leave a reschedule behind when the page's URL drops it
+* booking: Say a group spot cannot move when its meeting type is gone
+* booking: Keep a seat move whose link names a renamed meeting type
+* booking: Open a reschedule link whose meeting type was renamed
+* themes: Show the preset you chose, not a kept upload of the same kind
+* themes: Make the uploaded background caption agree in every language
+* profiles: Say why an avatar upload was refused, in your language
+* themes: Translate the theme customisation validation messages
+* profiles: Refuse a reserved username before it counts as a change attempt
+* themes: Keep an uploaded background image and video until you replace them
+* themes: Keep the previous background video when a new one cannot be queued
+* themes: Keep both changes when two theme saves land together
+* calendar: Check Outlook series against the organiser's own date
+* security: Name the limit that sets the wait in tiered refusals
+* calendar: Show the repeat pattern of synced Outlook and Google series
+* security: Time tiered rate-limit refusals so the retry passes every tier
+* security: Let a refused request through when told to retry
+* security: Stop simultaneous requests slipping past rate limits
+* calendar: Keep every-other-week Outlook series on the right weeks
+* calendar: Keep "second Tuesday" style series on their days in Outlook
+* calendar: Keep a series edit from being undone by another tab's edit
+* security: Drop the plain-text copies of encrypted secrets and link tokens
+* admin: Show a whole confirmation sentence when a setting is switched
+* emails: Say the payout amount is before Stripe processing fees
+* bookings: Translate the bookings filter tabs as a plural set
+* calendar: Import calendar file events without an end as an hour long
+* calendar: Stop a CalDAV queue write from clearing an event's end
+* calendar: Keep calendar search working past an event with no end
+* calendar: List events with no length at midnight in the agenda
+* calendar: Open the calendar on days whose midnight the clocks skip
+* auth: Keep the login page working for a very long return link
+* auth: Send a lapsed live session to the plain login page
+* calendar: Report calendar events kept with a default duration
+* calendar: Calendar feed events without an end time no longer block an hour
+* auth: Sign a host in onto the booking they were linked to
+* calendar: Never cache, or draw, an event with no end
+* availability: Keep the day hours error id unique
+* calendar: Show a refused calendar config in the user's language
+* webhooks: Word webhook event refusals as translated sentences
+* auth: Show registration refusals in the visitor's language
+* meeting-types: Seed the default meeting types once, at sign-up
+* profiles: Rate limit and publish onboarding username changes
+* Stop prefixing translated form errors with English field names
+* meeting-types: Show meeting type form errors in the user's language
+* i18n: Build background task messages in the caller's language
+* availability: Refuse hours that would strand a break, and say which
+* calendar: Keep the private address hint when the dashboard is translated
+* webhooks: Show webhook form errors in the user's language
+* i18n: Correct buffer, typography and mismatched translations
+* profiles: Return the profile when two first loads race to create it
+* Translate the domain's own validation messages
+* meeting-types: Refuse durations that are not a multiple of five minutes
+* availability: Show booking policy errors in the dashboard's language
+* availability: Show weekday names in the dashboard's language
+* Show dashboard form errors in the user's language
+* calendar: Show evening events on the last day of the calendar
+* booking: Stop offering a broken calendar link after a preview booking
+* auth: Keep trying to remove a deleted account's uploaded files
+* uploads: Alert the operator when an uploaded file cannot be deleted
+* themes: Transcode a background video replaced while the previous one encodes
+* uploads: Store uploaded images and videos as the type they really are
+* payments: Send payment webhook emails from a job
+* themes: Keep the uploaded background video when uploading a background image
+* emails: Record an ambiguous retry the moment the timeout happens
+* emails: Retry an email once after a timeout that may have sent it
+* emails: Give an email job a retry budget that outlasts a short outage
+* booking: Stop a reminder for the time a meeting moved from
+* booking: Keep retrying the others when one recipient's address is rejected
+* emails: Retry an email whose error only mentioned a timeout
+* booking: Retry a reschedule or cancellation notice that reached only one side
+* emails: Count the days in the video room email in every language
+* i18n: Tidy the integration email wording and punctuation
+* account: Say when an email change's verification email was not sent
+* booking: Never confirm a booking without queuing its confirmation
+* emails: Name providers in integration emails as the dashboard does
+* booking: Drop a reminder a rescheduled meeting is now too close for
+* i18n: Polish French email wording and punctuation
+* i18n: Drop inclusive brackets from French emails
+* i18n: Rephrase three French emails without inclusive brackets
+* i18n: Lowercase reader pronouns in Polish booking emails
+* i18n: Tidy email translations after review
+* calendar: Keep the booking calendar selected when it goes missing
+* emails: State the time in the text of booking request emails
+* emails: State a rescheduled meeting's old time on the reader's clock
+* emails: Name the zone a meeting time is actually in
+* emails: Link join buttons only to web addresses
+* emails: Leave out booking email actions that have no working link
+* emails: Give bookers the room link when no personal join link exists
+* emails: Date booking email subjects in the recipient's own timezone
+* emails: Show each recipient the meeting's date in their own timezone
+* emails: Show organisers their own time in plain-text booking emails
+* booking: Show a host's new timezone and booking limits on the booking page at once
+* video: Tell the owner Zoom or Teams is busy when a connect is rate limited
+* emails: Keep the host's end on a retry with no end to offer
+* workers: Keep the first value remembered on a job, whoever wrote it
+* emails: Give a waiting end change notice the latest change's start
+* emails: Tell the host the end a change replaced, on a retry too
+* emails: Stamp the email change confirmation from Clock
+* proxy: Match an address in NO_PROXY only exactly or by CIDR range
+* availability: Show a zoneless host's hours on the clock bookings use
+* profiles: Treat a blank or unknown zone as none in the owner's clock
+* calendar: Read an event's days in a zone that exists, and a one-off's in the viewer's
+* emails: Say exactly who the end change notice reached
+* meetings: Announce an end change from what each seat was told
+* infrastructure: Release connection pools for destinations no longer in use
+* infrastructure: Match NO_PROXY entries the way other tools do
+* security: Let each embed domain problem be read in the reader's language
+* security: Log security events at deliberate levels, sessions by hash
+* calendar: Show a calendar card's sync state in the viewer's language
+* calendar: Show when a calendar last synced in the viewer's language
+* security: Translate timezone and embed domain errors
+* emails: Give an older booking's reminder in each recipient's language
+* emails: State email-change times in the account owner's own zone
+* emails: Write a 90-minute meeting as 1 hour 30 minutes in every language
+* calendar: Stop the all-day toggle adding a day to events that end at midnight
+* admin: Stop the last admin deleting their account and stranding the install
+* dashboard: Show a host without a timezone their agenda on the default zone
+* calendar: Stop flagging a booking the host turned into a recurring series
+* auth: Answer an email change to a registered address as a free one
+* calendar: File synced Outlook events under their own calendar
+* admin: Stop two simultaneous demotions removing the last admin
+* security: Stop rate limits promising week, month and year windows
+* calendar: Say a calendar is no longer available when switching a deleted one
+* calendar: Refuse event colours set on another user's calendar or meeting
+* calendar: Only connect CalDAV servers through the calendar connection form
+* slack: Drop unfinished Slack installs after a day, and survive a mid-flow config change
+* calendar: Never make a calendar awaiting reconnection the primary
+* telegram: Show Telegram test failures in the organiser's language
+* calendar: Stop a calendar deleted twice at once from failing the second delete
+* notifications: Never take a seat's delivery for the meeting's own
+* notifications: Keep a paused Slack or Telegram integration paused when the plan lapses
+* integrations: Allow integration names of 1 to 100 characters everywhere
+* calendar: Keep the calendars chosen on reconnect when a refresh overlaps
+* calendar: Keep availability answering when a calendar is removed mid-read
+* timezones: Show today's UTC offsets in the timezone picker's default list
+* availability: Read a host without a timezone on one clock everywhere
+* calendar: Follow a booking's new end when the host resizes it in their calendar
+* telegram: Switch Telegram notifications off when the plan no longer includes them
+* calendar: Keep a primary calendar when calendars change at the same time
+* auth: Stop repeated sign-up attempts silencing an owner's notices
+* security: Stop stripping "--" and "0x" runs from form text
+* calendar: Name Outlook series zones given by a linked zone name
+* calendar: Withdraw the saved notice when an event edit is reverted
+* payments: Keep charging hosts in a legacy two-decimal currency
+* calendar: Say a calendar server's address is private when a connection test refuses it
+* calendar: Report a repeat rule that could not be saved
+* payments: Show the payments page for an account without a currency
+* payments: Keep the meeting type editor working for an unsupported currency
+* calendar: Stop showing internal error terms when a Radicale or Baikal connection test fails
+* payments: Keep a host's currency supported and its prices in it
+* payments: Show and read money amounts the same way everywhere
+* calendar: Create repeating Google and Outlook events in your time zone
+* calendar: Keep accented characters and emoji whole in folded lines
+* calendar: Show why a calendar keeps failing to sync on its card
+* calendar: Read backslashes and line breaks in synced event text correctly
+* email: Write calendar invitations with standard line endings
+* calendar: Keep a repeating event on a CalDAV calendar at its local time
+* booking: Stop a failing chat or webhook notice losing a group seat
+* polls: Stop a failing chat or webhook notice losing a poll confirmation
+* calendar: Show a repeating event's end date in the reader's language
+* calendar: Connect CalDAV addresses that list up to 10 MB again
+* calendar: Keep an imported repeat rule's other parts when editing it
+* calendar: End a recurring event on its last day in its own time zone
+* calendar: Keep Exchange sync working past a few very large invitations
+* booking: Stop a failing chat or webhook notice losing the booking
+* billing: Record voided and uncollectible subscription invoices
+* calendar: Stop a late calendar update putting a cancelled booking back
+* video: Check a self-hosted video server's address the same way everywhere
+* video: Keep cancelled bookings off the calendar when Nextcloud Talk is disconnected
+* video: Check every video provider the same way before connecting it
+* video: Stop flagging a working Zoom integration after a 401 on a fresh token
+* calendar: Stop pasted control characters breaking Exchange event writes
+* calendar: Stop oversized Exchange and CalDAV discovery responses
+* integrations: Show the missing-fields error for video and calendar connections in the user's language
+* booking: Say why a cancel or reschedule request was refused
+* booking: Refuse a reschedule link for a booking that can no longer move
+* booking: Show every booking refusal in the visitor's language
+* polls: Stop a cancel or edit overwriting a just-confirmed poll
+* booking: Send one reschedule request email per request
+* calendar: Sync Google calendars whose ids contain special characters
+* calendar: Use a self-hosted calendar again as soon as it reconnects
+* calendar: Pick up a second Outlook change to an event within a minute
+* calendar: Track Outlook sync health and ask to reconnect when refused
+* Stop calendar and payment email jobs waiting for ever on an outage
+* calendar: Stop oversized CalDAV calendar reads exhausting memory
+* calendar: Stop unsent CalDAV changes stalling the calendar sync
+* calendar: Keep calendar choices made while the list refreshes
+* calendar: Never leave a paused calendar as the primary booking calendar
+* calendar: Free the time of Google invitations you have declined
+* calendar: Keep syncing Outlook events far ahead after the first year
+* calendar: Read every page of a busy Outlook calendar
+* calendar: Stop overlapping token refreshes losing a calendar's sign-in
+* emails: Word the host's reminder line in their own language
+* emails: Show calendar sync failure times on the host's own clock
+* emails: Write to attendees in the booking pages' default language
+* payments: Explain declined bookings with a failed refund correctly
+* payments: Read webhook events in the shape Stripe sends them
+* booking: Open the booking itself from "View Meeting Details" links
+* booking: Tell bookers to try again later when the host's calendar cannot be checked
+* i18n: Translate form validation messages
+* booking: Retry reschedule notices instead of losing them
+* emails: Use the host's 24-hour clock in approval and booking change emails
+* calendar: Block time for read-only CalDAV calendars you selected
+* calendar: Show event invitations and updates in the organiser's time and language
+* emails: Word the organiser's reminder time in the organiser's language
+* notifications: Offer every booking event in the Slack and Telegram settings
+* integrations: Stop false "integration unhealthy" emails after recovery
+* payments: Let Stripe redeliver events that failed for a passing reason
+* themes: Stop a stalled background video encode blocking all others
+* video: Stop retrying video rooms on a revoked Zoom, Teams or Meet grant
+* video: Delete the video room a losing concurrent request created
+* calendar: Stop health-checking a self-hosted calendar server while it is down
+* calendar: Keep the latest video choice for a recurring event
+* notifications: Deliver a second webhook, Slack or Telegram event for a meeting
+* notifications: Schedule booking reminders even when the confirmation fails
+* booking: Stop offering a slot that was just booked
+* payments: Show lifetime payment totals per currency
+* calendar: Stop dropping a second event update sent to attendees
+* auth: Apply admin sign-up and login settings before serving requests
+* emails: Give each reminder recipient their own video join link
+* Stop background jobs failing with errors during a restart
+* calendar: Keep booking pages and dashboards up when a calendar can't be decrypted
+* calendar: Block every "second Tuesday" and "last Friday" meeting
+* payments: Explain expired bookings on the outstanding refunds card
+* payments: Release a slot still held behind a failed payment
+* payments: Refund a late payment even when Stripe cannot find its charge yet
+* payments: Stop retrying a late-payment refund Stripe cannot make
+* calendar: Keep long-running recurring events blocking availability
+* booking: Keep old booking links working after another host takes the username
+* booking: Block calendar events without an end time on the booking page
+* booking: Refuse a booking onto a far-from-UTC host's all-day event
+* payments: Refund a late payment for a taken slot even when Stripe is slow
+* payments: Keep a paid booking paid when its checkout expiry arrives late
+* calendar: Keep CalDAV recurring events at their local time on booking pages
+* dashboard: Keep bookings with their host when an email address changes
+* booking: Keep cancel and reschedule links working after a username change
+* booking: Keep the booking page alive when a calendar check fails
+* booking: Show a day's times without re-reading every calendar
+* booking: Show the booker's open days when the host is far ahead
+* booking: Offer slots that end at or cross the booker's midnight
+* booking: Honour the host's timezone for all-day calendar events
+* booking: Keep calendar updates in order after a reschedule
+* booking: Report a cancelled meeting as already cancelled
+* booking: Say a withdrawn request was already cancelled
+* booking: Tell the host a booking was already cancelled
+* payments: Refund a payment that completes after its slot was taken
+* payments: Stop a paid booking confirming twice when payment events race
+* telegram: Let an own-bot integration be saved without retyping its token
+* webhooks: Count a failing delivery once and retry a 425 response
+* profile: Keep usernames containing -- or 0x exactly as typed
+* auth: Let accounts with older-format addresses sign in and be booked
+* booking: Stop a cancelled booking being cancelled twice or moved
+* analytics: Say analytics are unavailable when the plan check fails
+* telegram: Edit an integration against its own bot mode
+* webhooks: Stop retrying deliveries the endpoint rejects for good
+* admin: Explain that no other admin can sign in when demotion is refused
+* admin: Stop counting password admins when password sign-in is off
+* auth: Stop one client blocking an address from signing up
+* auth: Refuse email addresses with characters no mailbox uses
+* integrations: Keep calendar and video logins, keys and ids as typed
+* booking: Stop two overlapping bookings of one host both confirming
+* emails: Show organiser notes in emails exactly as written
+* webhooks: Sign webhook requests and retry failed ones for hours
+* auth: Stop an expired email change from holding the address
+* admin: Stop admins demoting themselves when no other admin can sign in
+* telegram: Only link a shared-bot chat through the bot's deep link
+* auth: Stop failed sign-ins from growing memory without bound
+* security: Limit IPv6 clients per network on every rate limit
+* auth: Stop one client locking an address out of password reset
+* payments: Ignore payment webhooks from other Stripe accounts
+* auth: Keep email addresses exactly as typed at sign-up and reset
+* calendar: Stop a hostile calendar server from crashing the app
+* themes: Switch back to or remove an uploaded background from the dashboard
+* calendar: Build monthly and yearly repeat patterns in the event editor
+* emails: Send integration health and reconnect emails in the owner's language
+* calendar: Tell owners when their calendar server removes a calendar
+* emails: Send Stripe dispute and restricted-account alerts in the host's language
+* emails: Show the organiser's preparation checklist in HTML emails
+* encryption: Rotate the data encryption key without losing secrets
+* meetings: Keep each seat's known end through an end change
+* infrastructure: Let self-hosters check their proxy from a running container
+* integrations: Flag unsaved calendar changes in the integrations banner
+* calendar: Let CalDAV calendars shared as busy times only block your booking page
+* calendar: Choose per calendar whether it blocks times on your booking page
+* meetings: Record the end each seat was last told
+* calendar: Show and retry the changes a CalDAV server kept refusing
+* calendar: Email attendees when the host changes a meeting's end in their calendar
+* admin: Delete user accounts from the admin users tab or a release shell
+* account: Let users delete their account from account settings
+
+
 [1.26.0]
 * [BREAKING] admin: Let environment variables outrank settings saved on the admin page: an environment variable such as REGISTRATION_ENABLED or ENABLE_GOOGLE_AUTH, when set, now takes precedence over a value saved on the admin settings page; before, the saved value won. Before upgrading, check your .env for the lines older versions of .env.example shipped uncommented: ENABLE_GOOGLE_AUTH=false, ENABLE_GITHUB_AUTH=false and ENABLE_OAUTH_AUTH=false. Left in place, they now switch those sign-in methods off; if you turned SSO on from the admin page, comment them out or no one can sign in. Unset any variable for a setting you want to manage from the admin page. Values already saved there are kept, and apply again once the variable is removed.
 * admin: Warn at boot when an environment variable overrides a saved setting

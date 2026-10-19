@@ -102,11 +102,11 @@ defmodule Tymeslot.AnnouncementsTest do
     end
   end
 
-  describe "AnnouncementQueries.mark_seen!/2" do
+  describe "AnnouncementQueries.mark_seen/2" do
     test "writes a row" do
       user = insert(:user)
 
-      assert :ok = AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      assert :ok = AnnouncementQueries.mark_seen(user.id, "feature_a")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
     end
@@ -114,8 +114,8 @@ defmodule Tymeslot.AnnouncementsTest do
     test "is idempotent — calling twice does not raise and does not duplicate" do
       user = insert(:user)
 
-      assert :ok = AnnouncementQueries.mark_seen!(user.id, "feature_a")
-      assert :ok = AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      assert :ok = AnnouncementQueries.mark_seen(user.id, "feature_a")
+      assert :ok = AnnouncementQueries.mark_seen(user.id, "feature_a")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
     end
@@ -126,7 +126,7 @@ defmodule Tymeslot.AnnouncementsTest do
           # A non-existent user_id triggers an FK violation. Marking-seen is a
           # non-critical dashboard side effect, so it must swallow the error
           # and return :ok rather than crashing the LiveView.
-          assert :ok = AnnouncementQueries.mark_seen!(-1, "feature_a")
+          assert :ok = AnnouncementQueries.mark_seen(-1, "feature_a")
         end)
 
       # The schema declares foreign_key_constraint(:user_id), so the FK violation
@@ -140,7 +140,7 @@ defmodule Tymeslot.AnnouncementsTest do
   describe "FK cascade on user delete" do
     test "deleting a user removes their seen records" do
       user = insert(:user)
-      AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      AnnouncementQueries.mark_seen(user.id, "feature_a")
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
 
       Repo.delete!(user)
@@ -149,11 +149,11 @@ defmodule Tymeslot.AnnouncementsTest do
     end
   end
 
-  describe "Announcements.mark_seen!/2" do
+  describe "Announcements.mark_seen/2" do
     test "marks the announcement as seen" do
       user = insert(:user)
 
-      assert :ok = Announcements.mark_seen!(user, "test_alpha")
+      assert :ok = Announcements.mark_seen(user, "test_alpha")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["test_alpha"]
     end
@@ -161,8 +161,8 @@ defmodule Tymeslot.AnnouncementsTest do
     test "is idempotent" do
       user = insert(:user)
 
-      assert :ok = Announcements.mark_seen!(user, "test_alpha")
-      assert :ok = Announcements.mark_seen!(user, "test_alpha")
+      assert :ok = Announcements.mark_seen(user, "test_alpha")
+      assert :ok = Announcements.mark_seen(user, "test_alpha")
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["test_alpha"]
     end
@@ -170,7 +170,7 @@ defmodule Tymeslot.AnnouncementsTest do
     test "is a no-op for a nil user rather than crashing" do
       # A modal event can arrive on a socket whose current_user is nil; the
       # context must guard this rather than raise a FunctionClauseError.
-      assert :ok = Announcements.mark_seen!(nil, "test_alpha")
+      assert :ok = Announcements.mark_seen(nil, "test_alpha")
     end
   end
 
@@ -196,7 +196,7 @@ defmodule Tymeslot.AnnouncementsTest do
 
     test "filters out announcements the user has already seen" do
       user = insert(:user, inserted_at: ~N[2025-12-01 00:00:00])
-      Announcements.mark_seen!(user, "test_alpha")
+      Announcements.mark_seen(user, "test_alpha")
 
       assert [%{key: "test_beta"}] = Announcements.list_for(user)
     end

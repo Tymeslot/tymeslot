@@ -11,8 +11,12 @@ defmodule Tymeslot.Payments.SubscriptionInvoicesTest do
   alias Tymeslot.Payments.Webhooks.InvoiceEvent
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.TestFixtures
+  alias Tymeslot.TestMocks
 
+  # No subscription manager records these subscriptions: owners resolve from
+  # payment transactions, as in Core standalone.
   setup do
+    TestMocks.setup_subscription_mocks()
     %{user: TestFixtures.create_user_fixture()}
   end
 

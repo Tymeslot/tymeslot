@@ -7,8 +7,10 @@ defmodule Tymeslot.Auth.SignupSecurity do
 
   1. **Honeypot** — a hidden form field that legitimate browsers leave empty;
      bots that auto-fill all fields trip it.
-  2. **Rate limit** — fast per-email + per-IP gate that runs before
-     reCAPTCHA so distributed bots cannot burn Google API quota.
+  2. **Rate limit** — fast per-IP gate that runs before reCAPTCHA so
+     distributed bots cannot burn Google API quota. The per-address limit is
+     not part of the gate: `Tymeslot.Auth.Registration` charges it once the
+     input is valid, and answers it without refusing.
   3. **reCAPTCHA v3** — score-based human verification.
 
   This module owns the gate decision only. `Tymeslot.Auth.Registration`
@@ -87,7 +89,7 @@ defmodule Tymeslot.Auth.SignupSecurity do
     email = user_params["email"]
 
     if is_binary(email) and email != "" do
-      RateLimit.check(RateLimiter.check_signup_rate_limit(email, metadata[:ip]),
+      RateLimit.check(RateLimiter.check(:signup_ip, metadata[:ip]),
         event: "signup",
         identifier: email,
         ip: metadata[:ip],
@@ -102,7 +104,7 @@ defmodule Tymeslot.Auth.SignupSecurity do
   defp verify_recaptcha(user_params, metadata) do
     token = Map.get(user_params, "g-recaptcha-response", "")
 
-    case RecaptchaHelpers.maybe_verify_signup_token(token, metadata) do
+    case RecaptchaHelpers.verify(:signup, token, metadata) do
       :ok ->
         :ok
 

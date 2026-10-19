@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
     create user →
     create profile →
     create default availability schedule with its weekly days (7 rows) →
+    enqueue the registration hook with the sign-up's metadata →
     broadcast `:user_registered` on PubSub
 
   The critical invariant here — asserted nowhere else — is that a
@@ -32,14 +33,30 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.UserRegisteredHookWorker
   alias TymeslotWeb.Helpers.ClientIP
+
+  defmodule NoopHook do
+    @spec on_user_registered(pos_integer(), map()) :: :ok
+    def on_user_registered(_user_id, _metadata), do: :ok
+  end
 
   setup do
     :ok = Auth.subscribe_to_user_registrations()
+
+    original_hook = Application.get_env(:tymeslot, :user_registered_hook)
+    Application.put_env(:tymeslot, :user_registered_hook, NoopHook)
+
+    on_exit(fn ->
+      if original_hook,
+        do: Application.put_env(:tymeslot, :user_registered_hook, original_hook),
+        else: Application.delete_env(:tymeslot, :user_registered_hook)
+    end)
 
     RateLimiter.clear_all()
 
@@ -89,6 +106,10 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       assert length(weekly_rows) == 7
       assert Enum.map(weekly_rows, & &1.day_of_week) == Enum.to_list(1..7)
 
+      # The two default meeting types are seeded with the profile, once.
+      assert user.id |> MeetingTypes.get_all_meeting_types() |> Enum.map(& &1.name) |> Enum.sort() ==
+               ["15 Minutes", "30 Minutes"]
+
       # Weekdays are available by default; weekends are not.
       weekday_rows = Enum.filter(weekly_rows, &(&1.day_of_week in 1..5))
       weekend_rows = Enum.filter(weekly_rows, &(&1.day_of_week in 6..7))
@@ -101,16 +122,23 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
         args: %{"action" => "send_email_verification", "user_id" => user.id}
       )
 
-      # PubSub event for cross-app listeners (SaaS, etc.).
-      assert_received {:user_registered, %{user: broadcast_user, metadata: metadata}}
-      assert broadcast_user.id == user.id
+      # The registration hook receives the sign-up's metadata.
+      assert [hook_job] = all_enqueued(worker: UserRegisteredHookWorker)
+      assert hook_job.args["user_id"] == user.id
 
-      assert metadata == %{
-               source: "signup",
-               ip: "203.0.113.41",
-               user_agent: "Composition/1.0",
-               terms_accepted: true
+      assert hook_job.args["metadata"] == %{
+               "source" => "signup",
+               "ip" => "203.0.113.41",
+               "user_agent" => "Composition/1.0",
+               "terms_accepted" => true
              }
+
+      # The PubSub event, delivered to every subscriber in the node, names
+      # the account and its provider and carries nothing else: no password
+      # hash, email or request data.
+      user_id = user.id
+      assert_received {:user_registered, payload}
+      assert payload == %{user_id: user_id, provider: user.provider}
     end
   end
 
@@ -129,18 +157,20 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
                  via: :provisioning
                )
 
-      user_id = user.id
-      assert_received {:user_registered, %{user: %{id: ^user_id}, metadata: metadata}}
-      assert metadata == %{source: "provisioning"}
+      assert [hook_job] = all_enqueued(worker: UserRegisteredHookWorker)
+      assert hook_job.args["user_id"] == user.id
+      assert hook_job.args["metadata"] == %{"source" => "provisioning"}
     end
   end
 
   describe "register_user/2 — rate limit refuses creation" do
     test "does not create a user when the signup rate limit is already exhausted" do
       email = "rate-#{System.unique_integer([:positive])}@example.com"
-      # Burn through the 10-minute / 5-attempt signup bucket for this email.
+      opts = ClientIP.request_opts(%Plug.Conn{})
+
+      # Burn through the requester's 10-minute / 5-attempt signup bucket.
       for _i <- 1..5 do
-        RateLimiter.check_signup_rate_limit(email, nil)
+        RateLimiter.check(:signup_ip, opts[:ip])
       end
 
       params = %{
@@ -153,7 +183,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       }
 
       assert {:error, :rate_limited, _message} =
-               Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
+               Registration.register_user(params, opts)
 
       # No user row was created despite the matching password and terms.
       refute Repo.get_by(UserSchema, email: email)

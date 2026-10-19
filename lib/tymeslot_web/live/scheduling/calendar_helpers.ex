@@ -187,10 +187,9 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       Demo.demo_profile?(organizer_profile) ->
         # Demo profiles answer the fallback question with the same demo
         # generator the month grid uses, not Core's hard-coded business
-        # hours. `Demo.demo_profile?/1` also matches on username, which
-        # `Demo.get_calendar_days/6` does not — for such a profile the
-        # generator returns an empty grid, so fall back to business hours
-        # rather than render every day of the week as unavailable.
+        # hours. Should the provider's generator have no days for a profile
+        # it calls a demo one, fall back to business hours rather than
+        # render every day of the week as unavailable.
         demo_days =
           demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone)
 
@@ -604,10 +603,9 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   # place, on the scheduling rules `Schedules.config/2` assembles for the real
   # availability path and the booking submit alike.
   #
-  # `owner_timezone` falls back to `Profiles.get_default_timezone()` for a
-  # profile with none set, as `Tymeslot.Availability.Offer` and
-  # `Tymeslot.Bookings.Policy.scheduling_config/2` do, so a nil profile
-  # timezone resolves to the same zone everywhere.
+  # `owner_timezone` is read through `Profiles.timezone/1`, as everywhere an
+  # owner's clock is read, so a nil profile timezone resolves to the same zone
+  # here as on the real availability path.
   @spec availability_config(map() | nil, map(), map() | nil) :: %{
           required(:schedule_id) => integer() | nil,
           required(:max_advance_booking_days) => pos_integer(),
@@ -623,7 +621,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     |> Schedules.config(meeting_type)
     |> Map.merge(%{
       duration_minutes: Offer.duration_minutes(meeting_type, nil),
-      owner_timezone: organizer_profile.timezone || Profiles.get_default_timezone()
+      owner_timezone: Profiles.timezone(organizer_profile)
     })
   end
 end

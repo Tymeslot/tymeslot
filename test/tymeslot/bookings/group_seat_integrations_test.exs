@@ -316,12 +316,16 @@ defmodule Tymeslot.Bookings.GroupSeatIntegrationsTest do
           attendee_email: "solo@example.com"
         )
 
-      assert :ok = Webhooks.trigger_webhook(webhook, "meeting.created", meeting)
+      assert {webhook.id, :ok} in Webhooks.schedule_for_event(user.id, "meeting.created", meeting)
 
       assert [job] = jobs(WebhookWorker, "meeting.created")
 
       assert job.args |> Map.keys() |> Enum.sort() ==
-               ["event_type", "meeting_id", "snapshot", "webhook_id"]
+               ["event_type", "meeting_id", "participant_id", "snapshot", "webhook_id"]
+
+      # No seat: the key is there, empty, so this job and a seat's can never
+      # be taken for duplicates of each other.
+      assert job.args["participant_id"] == nil
 
       refute Map.has_key?(job.args["snapshot"], "seats_taken")
 

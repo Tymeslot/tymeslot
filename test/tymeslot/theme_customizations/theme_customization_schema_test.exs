@@ -26,7 +26,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchemaTest do
 
       refute changeset.valid?
 
-      assert "is required for uploaded video background" in errors_on(changeset).background_video_path
+      assert "is required for an uploaded video background" in errors_on(changeset).background_video_path
     end
 
     test "uploaded image backgrounds require image path" do
@@ -47,7 +47,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchemaTest do
 
       refute changeset.valid?
 
-      assert "is required for uploaded image background" in errors_on(changeset).background_image_path
+      assert "is required for an uploaded image background" in errors_on(changeset).background_image_path
     end
 
     test "preset backgrounds work without upload paths" do
@@ -125,8 +125,10 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchemaTest do
         |> ThemeCustomizationSchema.changeset(attrs)
         |> Repo.insert()
 
-      # The error must be on :profile_id with constraint: :unique so that
-      # ThemeCustomizations.create_theme_customization/3 can detect and recover from it
+      # A plain insert that meets the row is refused on :profile_id, so no
+      # write can add a second customisation of a theme. Saves never get
+      # here: they insert with ON CONFLICT DO NOTHING and update the row
+      # they then lock (ThemeCustomizationQueries.create/1).
       assert Enum.any?(changeset.errors, fn {field, {_msg, opts}} ->
                field == :profile_id and Keyword.get(opts, :constraint) == :unique
              end)

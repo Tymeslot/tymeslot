@@ -37,13 +37,13 @@ defmodule TymeslotWeb.ZoomDeauthController do
 
   @spec deauthorize(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def deauthorize(conn, params) do
-    with :ok <- RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)),
+    with :ok <- RateLimiter.check(:webhook, ClientIP.get(conn)),
          {:ok, secret} <- ZoomConfig.fetch_deauth_secret(),
          {:ok, raw_body} <- fetch_raw_body(conn),
          :ok <- verify_signature(conn, raw_body, secret) do
       handle_event(conn, params, secret)
     else
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         Logger.warning("Zoom deauth webhook rate limited", client_ip: ClientIP.get(conn))
         send_json(conn, 429, %{error: "rate_limited"})
 

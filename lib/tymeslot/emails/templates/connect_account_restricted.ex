@@ -4,33 +4,39 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestricted do
   restricted state — for example, missing capability information, identity
   verification needed, or platform suspension.
 
-  English-only host operational alert.
+  Written in the host's own language.
   """
 
   import Swoosh.Email
 
-  alias Tymeslot.Emails.Shared.Cards
+  alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
     Buttons,
+    Cards,
+    Greeting,
     MjmlEmail,
     Sanitise,
     TemplateHelper,
     Text
   }
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @intent :cancelled
 
   defmodule RestrictionContext do
     @moduledoc """
     Normalised data for the account-restricted email. The worker looks up the
-    user and Stripe account state once and hands a flat struct to the template.
+    user and Stripe account state once and hands a flat struct to the template;
+    `host_user_id` picks the language the email is written in.
     """
 
     @enforce_keys [:host_email, :disabled_reason]
     defstruct [
       :host_email,
       :host_name,
+      :host_user_id,
       :disabled_reason,
       :previous_disabled_reason,
       :charges_enabled,
@@ -41,6 +47,7 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestricted do
     @type t :: %__MODULE__{
             host_email: String.t(),
             host_name: String.t() | nil,
+            host_user_id: integer() | nil,
             disabled_reason: String.t(),
             previous_disabled_reason: String.t() | nil,
             charges_enabled: boolean() | nil,
@@ -49,46 +56,81 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestricted do
           }
   end
 
+  @doc """
+  The restriction alert, in the language of the host identified by
+  `host_user_id` (the default locale when there is none).
+  """
   @spec render(RestrictionContext.t()) :: Swoosh.Email.t()
   def render(%RestrictionContext{} = context) do
-    greeting_name = context.host_name || "there"
-    reason_label = humanise_reason(context.disabled_reason)
-    dashboard_url = context.dashboard_url || "https://dashboard.stripe.com/"
+    RecipientLocale.with_user_id_locale(context.host_user_id, fn ->
+      host = %{name: context.host_name}
+      reason_label = humanise_reason(context.disabled_reason)
+      dashboard_url = context.dashboard_url || "https://dashboard.stripe.com/"
+      status = status(context, reason_label)
 
-    intro =
-      "Hi #{Sanitise.sanitize_for_email(greeting_name)} — Stripe has flagged your connected account as restricted. New paid bookings will continue to work only while charges remain enabled, so please act on this promptly."
+      MjmlEmail.base_email()
+      |> to(recipient(context.host_name, context.host_email))
+      |> subject(dgettext("emails_payments", "Stripe account restricted: action required"))
+      |> header("X-Priority", "1")
+      |> html_body(html(host, reason_label, status, dashboard_url))
+      |> text_body(text(host, status, dashboard_url))
+    end)
+  end
 
+  defp html(host, reason_label, status, dashboard_url) do
     mjml_content = """
-    #{Text.centered_text(intro, padding: "8px 0 16px 0")}
+    #{Text.centered_html(Greeting.html(host), padding: "8px 0 4px 0", font_size: "16px")}
 
-    #{restriction_card(context, reason_label)}
+    #{Text.centered_text(intro(), padding: "0 0 16px 0")}
 
-    #{Text.section_title("Restore your account")}
-    #{Text.centered_text("Open the Stripe dashboard to see exactly what Stripe needs from you and complete any outstanding requirements.", padding: "0 0 14px 0")}
-    #{Buttons.action_button(@intent, "Open Stripe dashboard", dashboard_url, full_width: true)}
+    #{Cards.details_card(Sanitise.sanitize_for_email(dgettext("emails_payments", "Account status")), status_html(status))}
 
-    #{Text.system_footer_note("Once Stripe is satisfied, your account state updates automatically — no further action is needed on Tymeslot's side.")}
+    #{Text.section_title(dgettext("emails_payments", "Restore your account"))}
+    #{Text.centered_text(dgettext("emails_payments", "Open the Stripe dashboard to see exactly what Stripe needs from you and complete any outstanding requirements."), padding: "0 0 14px 0")}
+    #{Buttons.action_button(@intent, dgettext("emails_payments", "Open Stripe dashboard"), dashboard_url, full_width: true)}
+
+    #{Text.system_footer_note(resolution())}
     """
 
     # This is a platform-to-host operational alert, not a message from an
     # organiser — use the system layout so no organiser strip is rendered.
-    html_body =
-      TemplateHelper.compile_system_template(
-        mjml_content,
-        "Stripe account restricted",
-        "Your Stripe account needs attention to keep taking payments.",
-        intent: @intent,
-        eyebrow: "Action required",
-        stage_title: "Your Stripe account is restricted",
-        stage_subtitle: reason_label
-      )
+    TemplateHelper.compile_system_template(
+      mjml_content,
+      dgettext("emails_payments", "Stripe account restricted"),
+      dgettext(
+        "emails_payments",
+        "Your Stripe account needs attention to keep taking payments."
+      ),
+      intent: @intent,
+      eyebrow: dgettext("emails_payments", "Action required"),
+      stage_title: dgettext("emails_payments", "Your Stripe account is restricted"),
+      stage_subtitle: reason_label
+    )
+  end
 
-    MjmlEmail.base_email()
-    |> to(recipient(context.host_name, context.host_email))
-    |> subject("Stripe account restricted — action required")
-    |> header("X-Priority", "1")
-    |> html_body(html_body)
-    |> text_body(text_body(context, greeting_name, reason_label, dashboard_url))
+  defp text(host, status, dashboard_url) do
+    Enum.join(
+      [
+        dgettext("emails_payments", "STRIPE ACCOUNT RESTRICTED"),
+        "",
+        Greeting.text(host),
+        "",
+        intro(),
+        "",
+        dgettext("emails_payments", "ACCOUNT STATUS:"),
+        Enum.map_join(status, "\n", fn {label, value} -> "#{label} #{value}" end),
+        "",
+        dgettext("emails_payments", "RESTORE YOUR ACCOUNT:"),
+        dgettext(
+          "emails_payments",
+          "Open the Stripe dashboard to see what Stripe needs from you:"
+        ),
+        dashboard_url,
+        "",
+        resolution()
+      ],
+      "\n"
+    )
   end
 
   # Only attach a display name when the host actually has one — otherwise a
@@ -96,55 +138,52 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestricted do
   defp recipient(name, email) when is_binary(name) and name != "", do: {name, email}
   defp recipient(_name, email), do: email
 
-  defp restriction_card(context, reason_label) do
-    label = Sanitise.sanitize_for_email("Account status")
+  defp intro,
+    do:
+      dgettext(
+        "emails_payments",
+        "Stripe has flagged your connected account as restricted. New paid bookings will continue to work only while charges remain enabled, so please act on this promptly."
+      )
 
-    lines =
-      [
-        "Restriction: <strong>#{Sanitise.sanitize_for_email(reason_label)}</strong>",
-        if(context.charges_enabled != nil,
-          do: "Charges enabled: #{enabled_label(context.charges_enabled)}"
-        ),
-        if(context.payouts_enabled != nil,
-          do: "Payouts enabled: #{enabled_label(context.payouts_enabled)}"
-        )
-      ]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.join("<br/>\n")
+  defp resolution,
+    do:
+      dgettext(
+        "emails_payments",
+        "Once Stripe is satisfied, your account state updates automatically. Nothing more is needed on Tymeslot's side."
+      )
 
-    Cards.details_card(label, lines)
-  end
-
-  defp text_body(context, host_name, reason_label, dashboard_url) do
-    [
-      "STRIPE ACCOUNT RESTRICTED",
-      "",
-      "Hi #{host_name}, Stripe has flagged your connected account as restricted.",
-      "",
-      "ACCOUNT STATUS:",
-      "Restriction: #{reason_label}",
-      context.charges_enabled != nil &&
-        "Charges enabled: #{enabled_label(context.charges_enabled)}",
-      context.payouts_enabled != nil &&
-        "Payouts enabled: #{enabled_label(context.payouts_enabled)}",
-      "",
-      "RESTORE YOUR ACCOUNT:",
-      "Open the Stripe dashboard to see what Stripe needs from you:",
-      dashboard_url,
-      "",
-      "Once Stripe is satisfied, your account state updates automatically — no further action is needed on Tymeslot's side."
+  # The account's state as label and value, the same in both parts; a state
+  # Stripe did not report is left out.
+  defp status(context, reason_label) do
+    rows = [
+      {dgettext("emails_payments", "Restriction:"), reason_label},
+      {dgettext("emails_payments", "Charges enabled:"), enabled_label(context.charges_enabled)},
+      {dgettext("emails_payments", "Payouts enabled:"), enabled_label(context.payouts_enabled)}
     ]
-    |> Enum.reject(&(&1 in [nil, false]))
-    |> Enum.join("\n")
+
+    Enum.reject(rows, fn {_label, value} -> is_nil(value) end)
   end
 
-  defp enabled_label(true), do: "yes"
-  defp enabled_label(false), do: "no"
-  defp enabled_label(_other), do: "unknown"
+  # The restriction, first, is the one fact set in bold.
+  defp status_html([{label, reason} | rest]) do
+    first =
+      "#{Sanitise.sanitize_for_email(label)} <strong>#{Sanitise.sanitize_for_email(reason)}</strong>"
+
+    rest_html =
+      Enum.map(rest, fn {l, v} ->
+        "#{Sanitise.sanitize_for_email(l)} #{Sanitise.sanitize_for_email(v)}"
+      end)
+
+    Enum.join([first | rest_html], "<br/>\n")
+  end
+
+  defp enabled_label(true), do: dgettext("emails_payments", "yes")
+  defp enabled_label(false), do: dgettext("emails_payments", "no")
+  defp enabled_label(nil), do: nil
 
   # Stripe's `disabled_reason` strings are dot-separated machine codes (e.g.
   # "requirements.past_due", "rejected.fraud"). Show them as-is so the host
   # can match the wording against Stripe's own dashboard messages.
   defp humanise_reason(reason) when is_binary(reason) and reason != "", do: reason
-  defp humanise_reason(_reason), do: "Account restricted"
+  defp humanise_reason(_reason), do: dgettext("emails_payments", "Account restricted")
 end

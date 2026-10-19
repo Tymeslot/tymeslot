@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
   @moduletag :calendar
   @moduletag :live
 
+  import TymeslotWeb.RepeatEditorHelpers
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
@@ -226,17 +227,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
+      # A weekly pattern repeats on its start's weekday: today's, and one more.
+      today = Date.day_of_week(DateTime.to_date(event.start_at)) - 1
+      tokens = ~w(mo tu we th fr sa su)
+      labels = ~w(Mon Tue Wed Thu Fri Sat Sun)
+      days = Enum.sort([today, rem(today + 2, 7)])
+
       html =
         lv
         |> element("#calendar-grid")
-        |> render_hook("update_event_recurrence", %{
+        |> render_repeat_save(%{
           "freq" => "weekly",
           "interval" => "1",
-          "by_day" => ["mo", "we"],
+          "by_day" => Enum.map(days, &Enum.at(tokens, &1)),
           "end_type" => "never"
         })
 
-      assert html =~ "Repeats weekly on Mon, Wed"
+      assert html =~ "Repeats weekly on #{Enum.map_join(days, ", ", &Enum.at(labels, &1))}"
     end
 
     test "editing the rule of a recurring series opens the scope prompt", %{
@@ -252,7 +259,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
           end_at: DateTime.new!(today, ~T[09:15:00], "Etc/UTC"),
           all_day: false,
           recurrence_rule: "FREQ=DAILY",
-          recurring_event_id: "series-1"
+          recurring_event_id: "series-1",
+          # Google ends an occurrence's uid in its original start, where a
+          # change of it and the following ones splits the series.
+          uid: "series-1_#{Calendar.strftime(today, "%Y%m%d")}T090000Z"
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -261,7 +271,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       html =
         lv
         |> element("#calendar-grid")
-        |> render_hook("update_event_recurrence", %{
+        |> render_repeat_save(%{
           "freq" => "weekly",
           "interval" => "1",
           "by_day" => ["mo"],

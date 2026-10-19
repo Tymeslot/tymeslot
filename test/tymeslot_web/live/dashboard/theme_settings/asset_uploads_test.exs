@@ -4,15 +4,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
   @moduletag :themes
 
   alias Phoenix.LiveView.Socket
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
 
   @user_id 4_242
-  @bucket "theme_upload:#{@user_id}"
   @limit 5
-  @window_ms 600_000
 
   setup do
     RateLimiter.clear_all()
@@ -33,9 +31,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
 
   defp budget_remaining do
     Enum.reduce_while(1..(@limit + 1), 0, fn _i, spent ->
-      case RateLimiter.check_rate_limit(@bucket, @limit, @window_ms) do
+      case RateLimiter.check(:theme_upload, @user_id) do
         :ok -> {:cont, spent + 1}
-        {:error, :rate_limited} -> {:halt, spent}
+        {:error, :rate_limited, _message} -> {:halt, spent}
       end
     end)
   end
@@ -60,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
 
     test "refuses a finished upload once the limit is spent" do
       for _i <- 1..@limit,
-          do: assert(:ok = RateLimiter.check_rate_limit(@bucket, @limit, @window_ms))
+          do: assert(:ok = RateLimiter.check(:theme_upload, @user_id))
 
       socket = socket_with([%{ref: "0", done?: true, cancelled?: false}])
 
@@ -90,10 +88,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
           background_video_path: :video
         ).assigns.uploads
 
-      assert uploads.logo_path.max_file_size == UploadConstraints.max_file_size(:image)
+      assert uploads.logo_path.max_file_size == Uploads.max_file_size(:image)
 
       assert uploads.background_video_path.max_file_size ==
-               UploadConstraints.max_file_size(:video)
+               Uploads.max_file_size(:video)
 
       assert uploads.logo_path.max_entries == 1
       refute Map.has_key?(uploads, :background_image_path)

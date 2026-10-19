@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   about error patterns and backoff strategies.
   """
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
@@ -19,31 +20,27 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   @hard_backoff_ms :timer.hours(1)
   @max_backoff_ms :timer.hours(1)
 
-  # Normal check interval — used to detect the first failure after a healthy run
-  @check_interval :timer.minutes(30)
-
   @doc """
   Analyzes a check result and classifies any errors.
   Returns a tuple suitable for Monitor.update_health/2.
+
+  A failure is logged once, as a warning carrying `metadata` (the
+  integration's type, id and provider).
   """
-  @spec analyze({:ok, any()} | {:error, any()}, map()) :: analysis_result()
-  def analyze({:ok, result}, _health_state) do
+  @spec analyze({:ok, any()} | {:error, any()}, map(), keyword()) :: analysis_result()
+  def analyze(check_result, health_state, metadata \\ [])
+
+  def analyze({:ok, result}, _health_state, _metadata) do
     {:ok, result}
   end
 
-  def analyze({:error, reason}, health_state) do
+  def analyze({:error, reason}, health_state, metadata) do
     error_class = classify_error(reason)
 
-    log_error(reason, error_class, health_state)
+    log_error(reason, error_class, health_state, metadata)
 
     {:error, reason, error_class}
   end
-
-  # Markers in lowercased error strings that indicate a permanent OAuth/auth
-  # failure. Mirrors `ResponseHandler.@permanent_auth_error_strings` so the
-  # classifier and the fast-path reauth handler agree on which strings are
-  # genuinely hard.
-  @hard_auth_string_markers ~w(invalid_grant invalid_client access_denied)
 
   @doc """
   Classifies an error as either transient (temporary, will retry) or
@@ -80,15 +77,24 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   def classify_error({:http_error, _status, _message}), do: :transient
 
-  def classify_error(reason) when reason in [:timeout, :nxdomain, :econnrefused, :network_error],
-    do: :transient
-
   def classify_error(reason)
-      when reason in [:unauthorized, :invalid_credentials, :token_expired],
-      do: :hard
+      when reason in [:timeout, :nxdomain, :econnrefused, :network_error, :server_error],
+      do: :transient
+
+  # A read past Graph's or Google's page cap meets the same calendar, and the
+  # same cap, on every retry: waiting does not shorten it.
+  def classify_error(:too_many_pages), do: :hard
+  def classify_error({:too_many_pages, _message}), do: :hard
 
   def classify_error({:exception, message}) when is_binary(message),
     do: classify_error(message)
+
+  # A credential the provider refused for good. The same rule as the reauth
+  # fast path (`ResponseHandler`) reads, so the badge and the reconnect email
+  # cannot disagree on whether an error is permanent.
+  def classify_error(reason) when is_atom(reason) do
+    if BreakerOutcome.permanent_credential_error?(reason), do: :hard, else: :transient
+  end
 
   def classify_error(reason) when is_binary(reason) do
     if String.valid?(reason) do
@@ -99,7 +105,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
         String.contains?(reason_downcased, "rate limited") -> :transient
         String.contains?(reason_downcased, "too many") -> :transient
         String.contains?(reason_downcased, "timeout") -> :transient
-        contains_hard_auth_marker?(reason_downcased) -> :hard
+        BreakerOutcome.permanent_credential_error?(reason) -> :hard
         true -> :transient
       end
     else
@@ -109,25 +115,23 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   def classify_error(_reason), do: :transient
 
-  defp contains_hard_auth_marker?(reason_downcased) do
-    Enum.any?(@hard_auth_string_markers, &String.contains?(reason_downcased, &1))
-  end
-
   @doc """
   Calculates the next backoff duration based on error class and current health state.
 
   Transient failures use an exponential backoff starting at 5 minutes:
     5min → 10 → 20 → 40 → 60min (capped)
 
+  The ramp starts on the first failure after a passing probe, which the state
+  records as `last_error_class: nil`; any other failure doubles the current
+  backoff. (It used to be inferred from the backoff equalling the healthy
+  interval, which a first-unhealthy 15-minute probe doubled into, restarting
+  the ramp at 5 minutes.)
+
   Hard failures (auth errors, bad credentials) always use a fixed 60-minute interval
   since retrying quickly is pointless when credentials are invalid.
   """
   @spec calculate_next_backoff(map(), error_class()) :: pos_integer()
-  def calculate_next_backoff(%{backoff_ms: current}, :transient)
-      when current == @check_interval do
-    # Coming from a healthy/normal state (exactly at 30min interval) — start the ramp from initial
-    @transient_initial_ms
-  end
+  def calculate_next_backoff(%{last_error_class: nil}, :transient), do: @transient_initial_ms
 
   def calculate_next_backoff(%{backoff_ms: current}, :transient) do
     min(current * 2, @max_backoff_ms)
@@ -139,21 +143,27 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   # Private Functions
 
-  defp log_error(reason, :transient, health_state) do
-    Logger.warning("Integration health check transient failure",
-      reason: LogFormat.reason(reason),
-      backoff_ms: calculate_next_backoff(health_state, :transient),
-      error_class: :transient
+  defp log_error(reason, :transient, health_state, metadata) do
+    Logger.warning(
+      "Integration health check transient failure",
+      metadata ++
+        [
+          reason: LogFormat.reason(reason),
+          backoff_ms: calculate_next_backoff(health_state, :transient),
+          error_class: :transient
+        ]
     )
   end
 
-  defp log_error(reason, :hard, health_state) do
-    failures = health_state.failures + 1
-
-    Logger.warning("Integration health check failed",
-      reason: LogFormat.reason(reason),
-      failures: failures,
-      error_class: :hard
+  defp log_error(reason, :hard, health_state, metadata) do
+    Logger.warning(
+      "Integration health check failed",
+      metadata ++
+        [
+          reason: LogFormat.reason(reason),
+          failures: health_state.failures + 1,
+          error_class: :hard
+        ]
     )
   end
 end

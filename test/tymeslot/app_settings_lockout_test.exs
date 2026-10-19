@@ -20,32 +20,6 @@ defmodule Tymeslot.AppSettingsLockoutTest do
 
   setup :restore_app_settings_env
 
-  # Enables the generic OIDC provider and gives it client credentials so it
-  # counts as a usable auth path. The outer setup snapshots/restores
-  # :social_auth; we restore :oauth_provider here since it isn't an
-  # AppSettings leaf key.
-  defp enable_credentialed_oauth do
-    original = Application.get_env(:tymeslot, :oauth_provider)
-
-    on_exit(fn ->
-      case original do
-        nil -> Application.delete_env(:tymeslot, :oauth_provider)
-        value -> Application.put_env(:tymeslot, :oauth_provider, value)
-      end
-    end)
-
-    Application.put_env(:tymeslot, :oauth_provider,
-      client_id: "oidc-client-id",
-      client_secret: "oidc-client-secret"
-    )
-
-    Application.put_env(:tymeslot, :social_auth,
-      google_enabled: false,
-      github_enabled: false,
-      oauth_enabled: true
-    )
-  end
-
   # Enables the generic OIDC provider WITHOUT any client credentials — the
   # brick scenario: a login button that cannot complete a sign-in.
   defp enable_credentialless_oauth do
@@ -210,6 +184,29 @@ defmodule Tymeslot.AppSettingsLockoutTest do
 
       System.delete_env("GOOGLE_CLIENT_SECRET")
       refute LockoutPolicy.sso_credentials_present?(:google_auth_enabled)
+    end
+
+    test "usable_signin_paths lists only SSO providers that are enabled and credentialed" do
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+
+      enable_credentialless_oauth()
+      assert LockoutPolicy.usable_signin_paths() == []
+
+      enable_credentialed_oauth()
+      assert LockoutPolicy.usable_signin_paths() == [:oauth]
+
+      clamp_sso_disabled()
+      assert LockoutPolicy.usable_signin_paths() == []
+    end
+
+    test "usable_signin_paths lists password only while password sign-in is on" do
+      clamp_sso_disabled()
+
+      Application.put_env(:tymeslot, :password_auth_enabled, true)
+      assert LockoutPolicy.usable_signin_paths() == [:password]
+
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      assert LockoutPolicy.usable_signin_paths() == []
     end
   end
 

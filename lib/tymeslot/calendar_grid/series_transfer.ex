@@ -111,13 +111,13 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   move is still reported.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesEdit
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -343,7 +343,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     SeriesCarry.carry(carried)
 
     after_move("invalidate cached availability", context, fn ->
-      AvailabilityCache.invalidate_for_user(user_id)
+      Availability.changed(user_id)
     end)
 
     after_move("request a sync", context, fn ->

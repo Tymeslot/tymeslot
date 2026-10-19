@@ -16,18 +16,22 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   use Oban.Worker,
     queue: :emails,
-    max_attempts: 5,
+    # With the backoff below, ten attempts ride out about six minutes of a
+    # failing provider. An open mail circuit snoozes instead and spends none.
+    max_attempts: 10,
     # Higher priority (0-3, lower number = higher priority)
     priority: 1
 
   alias Tymeslot.Emails.Delivery
-  alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
-  alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Notifications.EmailHandlers
+  alias Tymeslot.Workers.Bounded
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
-  alias Tymeslot.Workers.EmailWorkerHandlers
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.TransactionalEmailDelivery
   require Logger
@@ -43,6 +47,8 @@ defmodule Tymeslot.Workers.EmailWorker do
   @sends_beyond_guests 2
   @headroom_deadlines 1
   # 1 second base for exponential backoff
+  @backoff_cap_ms 120_000
+  @ambiguous_retry "ambiguous_timeout"
   @backoff_base_ms 1_000
   # The actions that deliver admin alerts (`AdminAlertScheduler.actions/0`),
   # as a literal for use in guards.
@@ -65,9 +71,19 @@ defmodule Tymeslot.Workers.EmailWorker do
   def expected_outcome?(reason),
     do:
       reason in [@meeting_gone, @meeting_cancelled] or
-        EmailWorkerHandlers.expected_discard?(reason) or
+        EmailHandlers.expected_discard?(reason) or
         TransactionalEmailDelivery.recipient_rejected?(reason) or
         reason == ReauthHandling.discard_reason()
+
+  # Every job is checked against `EmailActions` as it is built, so an unknown
+  # action or a missing required arg fails the insert, where the caller can
+  # see it, rather than the job.
+  @impl Oban.Worker
+  def new(args, opts) when is_map(args) and is_list(opts) do
+    args
+    |> super(opts)
+    |> EmailActions.validate(args)
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"action" => action} = args, attempt: attempt} = job) do
@@ -145,36 +161,76 @@ defmodule Tymeslot.Workers.EmailWorker do
     {:discard, @meeting_cancelled}
   end
 
-  defp handle_email_error(reason, _job) when is_binary(reason) do
-    # Generic error - retry with backoff
-    {:error, reason}
+  # Some guests were not reached; their sends are claimed per guest, so the
+  # retry writes only to them.
+  defp handle_email_error({:guest_emails_failed, count}, _job) do
+    {:error, "#{count} guest email(s) failed"}
   end
 
-  defp handle_email_error(_other_reason, _job) do
-    # Unknown error format - retry
-    {:error, "Unknown error"}
-  end
+  # Any other reason retries with backoff. It is recorded on the job, so it
+  # says what went wrong, but redacted and with addresses masked, as a
+  # provider's error body can name the recipient. A message a handler wrote
+  # is its own text and kept as it is.
+  defp handle_email_error(reason, _job) when is_binary(reason), do: {:error, reason}
+  defp handle_email_error(reason, _job), do: {:error, LogFormat.reason(reason)}
 
   defp handle_unexpected_email_result(result) do
-    Logger.error("Unexpected result from email job", result: result)
-    {:error, "Unexpected result"}
+    formatted = LogFormat.reason(result)
+    Logger.error("Unexpected result from email job", result: formatted)
+    {:error, "Unexpected result: " <> formatted}
   end
 
   defp execute_email_job_with_timeout(action, args, job) do
     timeout_ms = email_timeout_ms()
+    policy = ambiguous_timeout_policy(job)
 
-    task =
-      Tasks.async(Tymeslot.TaskSupervisor, fn ->
-        EmailWorkerHandlers.execute_email_action(action, args, job.id)
-      end)
-
-    case Task.yield(task, timeout_ms) || Task.shutdown(task) do
-      {:ok, result} ->
+    case Bounded.run(
+           fn ->
+             Delivery.with_ambiguous_timeouts(
+               policy,
+               fn -> EmailHandlers.execute_email_action(action, args, job.id) end,
+               on_ambiguous: fn -> record_ambiguous_retry(job, action) end
+             )
+           end,
+           timeout_ms
+         ) do
+      {:ok, {result, _ambiguous?}} ->
         handle_result(result, job)
 
-      nil ->
+      {:exit, reason} ->
+        Logger.error("Email job crashed",
+          action: action,
+          job_id: job.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, "Email job crashed: #{LogFormat.reason(reason)}"}
+
+      :timeout ->
         handle_timeout(action, timeout_ms, job)
     end
+  end
+
+  # A send that timed out after the message may have been handed over is
+  # retried once, never more (decision of 2026-10-07: a rare duplicate over a
+  # lost email, at most one extra copy). The first such timeout records it on
+  # the job as it happens, from inside the run, so the record stands even if
+  # the run then crashes; every later run assumes such a send delivered. The
+  # record is per job, not per copy: once one copy has had its retry, an
+  # ambiguous timeout on another copy of the same job is assumed delivered. Copies a
+  # handler claims (`DeliveryClaims`) are kept once sent or assumed sent, so
+  # none of them goes out again whatever happens after.
+  defp ambiguous_timeout_policy(%Oban.Job{id: job_id}) do
+    if DeliveryClaims.recall(job_id, @ambiguous_retry), do: :assume_delivered, else: :retry_once
+  end
+
+  defp record_ambiguous_retry(%Oban.Job{id: job_id}, action) do
+    _kept = DeliveryClaims.remember(job_id, @ambiguous_retry, "retried")
+
+    Logger.warning("Email job retrying a send that may have gone out; it will not retry it again",
+      action: action,
+      job_id: job_id
+    )
   end
 
   # An admin alert, or the daily digest of them, is the one email where a
@@ -214,9 +270,11 @@ defmodule Tymeslot.Workers.EmailWorker do
         Delivery.send_deadline_ms()
   end
 
+  # 1 s, 2 s, 4 s ... capped at 2 minutes: about six minutes over the ten
+  # attempts. A job's legs share those attempts, each retry sending only the
+  # copies not yet sent, so a short outage costs a delay rather than a copy.
   defp calculate_backoff(attempt) do
-    # Exponential backoff: 1s, 2s, 4s, 8s, 16s
-    round(min(@backoff_base_ms * :math.pow(2, attempt - 1), 16_000))
+    round(min(@backoff_base_ms * :math.pow(2, attempt - 1), @backoff_cap_ms))
   end
 
   # Admin alerts and their daily digest retry on their own, much longer
@@ -230,9 +288,4 @@ defmodule Tymeslot.Workers.EmailWorker do
     # convert ms to seconds for Oban backoff
     div(calculate_backoff(attempt), 1_000)
   end
-
-  # Validate required fields based on action; delegates to EmailScheduler
-  # which owns the field definitions alongside the scheduling functions.
-  @spec changeset(Ecto.Changeset.t(), term()) :: Ecto.Changeset.t()
-  def changeset(changeset, args), do: EmailScheduler.validate_args(changeset, args)
 end

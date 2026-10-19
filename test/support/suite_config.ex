@@ -164,8 +164,7 @@ defmodule Tymeslot.Test.SuiteConfig do
   `Tymeslot.Workers.UploadMetadataSweepWorker`), which `test_helper.exs`
   commits when it migrates the database; left in place, it would show up in
   every `all_enqueued/1` and every drain of its queue. Run from
-  `test_helper.exs`, after migrating and before the sandbox goes manual, and
-  by any test that rebuilds the schema outside the sandbox.
+  `test_helper.exs`, after migrating and before the sandbox goes manual.
   """
   @spec discard_committed_jobs!() :: :ok
   def discard_committed_jobs! do

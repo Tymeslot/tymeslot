@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   alias TymeslotWeb.Dashboard.Availability.DayCardComponent
   alias TymeslotWeb.Dashboard.Availability.Helpers
   alias TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   # UI Helper Functions
 
@@ -55,6 +56,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          {:ok, updated_day} <-
            AvailabilityActions.toggle_day_availability(
+             profile_id(socket),
              schedule_id(socket),
              day,
              current_availability.is_available
@@ -63,9 +65,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         self(),
         {:flash,
          {:info,
-          dgettext("dashboard_availability", "%{day} availability updated",
-            day: AvailabilityActions.day_name(day)
-          )}}
+          dgettext("dashboard_availability", "%{day} availability updated", day: day_name(day))}}
       )
 
       updated_schedule =
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     metadata = DashboardHelpers.get_security_metadata(socket)
 
     with {:ok, day} <- BreakHelpers.parse_day(day_str),
-         :ok <- check_rate_limit(socket, "availability:add_break", 8, 60_000),
+         :ok <- check_rate_limit(socket, :availability_add_break),
          %{} = day_availability <-
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          {:ok, sanitized_params} <-
@@ -139,8 +139,9 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
              %{"start" => start_str, "end" => end_str, "label" => label},
              metadata: metadata
            ) do
-      day_availability.id
+      profile_id(socket)
       |> AvailabilityActions.add_break(
+        day_availability.id,
         sanitized_params["start"],
         sanitized_params["end"],
         sanitized_params["label"]
@@ -208,7 +209,11 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   def handle_event("confirm_delete_break", _params, socket) do
     ModalHook.with_modal_data(socket, :delete_break, fn break_data ->
-      case AvailabilityActions.delete_break(break_data.id, schedule_id(socket)) do
+      case AvailabilityActions.delete_break(
+             profile_id(socket),
+             break_data.id,
+             schedule_id(socket)
+           ) do
         {:ok, _break} ->
           Flash.info(dgettext("dashboard_availability", "Break deleted"))
           send(self(), {:reload_schedule})
@@ -230,7 +235,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     metadata = DashboardHelpers.get_security_metadata(socket)
 
     with {:ok, day} <- BreakHelpers.parse_day(day_str),
-         :ok <- check_rate_limit(socket, "availability:quick_break", 8, 60_000),
+         :ok <- check_rate_limit(socket, :availability_quick_break),
          %{} = day_availability <-
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          {:ok, sanitized_params} <-
@@ -240,8 +245,12 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
            ) do
       duration = String.to_integer(sanitized_params["duration"])
 
-      day_availability.id
-      |> AvailabilityActions.add_quick_break(sanitized_params["start"], duration)
+      profile_id(socket)
+      |> AvailabilityActions.add_quick_break(
+        day_availability.id,
+        sanitized_params["start"],
+        duration
+      )
       |> handle_break_result(socket, dgettext("dashboard_availability", "Quick break added"))
     else
       nil ->
@@ -270,8 +279,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
          {:ok, to_days} <-
            AvailabilityInputValidation.validate_day_selections(to_days_str, metadata: metadata),
          {:ok, _result} <-
-           AvailabilityActions.copy_day_settings(schedule_id(socket), from_day, to_days) do
-      day_names = Enum.map_join(to_days, ", ", &AvailabilityActions.day_name/1)
+           AvailabilityActions.copy_day_settings(
+             profile_id(socket),
+             schedule_id(socket),
+             from_day,
+             to_days
+           ) do
+      day_names = Enum.map_join(to_days, ", ", &day_name/1)
 
       Flash.info(
         dgettext("dashboard_availability", "Settings copied to %{day_names}",
@@ -287,6 +301,14 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         Flash.error(validation_error)
         {:noreply, socket}
 
+      # The refusal names the source day: the break lives there.
+      {:error, {:break_outside_hours, source_day, break}} ->
+        Flash.error(
+          BreakHelpers.stale_break_message(source_day, break, socket.assigns.time_format)
+        )
+
+        {:noreply, socket}
+
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_availability", "Failed to copy settings"))
         {:noreply, socket}
@@ -296,7 +318,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   def handle_event("show_clear_day_modal", %{"day" => day_str}, socket) do
     case BreakHelpers.parse_day(day_str) do
       {:ok, day} ->
-        day_name = AvailabilityActions.day_name(day)
+        day_name = day_name(day)
 
         {:noreply,
          socket
@@ -311,7 +333,11 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   def handle_event("confirm_clear_day", _params, socket) do
     ModalHook.with_modal_data(socket, :clear_day, fn day_data ->
-      case AvailabilityActions.clear_day_settings(schedule_id(socket), day_data.day) do
+      case AvailabilityActions.clear_day_settings(
+             profile_id(socket),
+             schedule_id(socket),
+             day_data.day
+           ) do
         {:ok, _result} ->
           Flash.info(
             dgettext("dashboard_availability", "%{day_name} settings cleared",
@@ -334,7 +360,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   defp do_update_day_hours(params, socket, metadata) do
     with {:ok, day} <- BreakHelpers.parse_day(params),
-         :ok <- check_rate_limit(socket, "availability:update_hours", 10, 10_000),
+         :ok <- check_rate_limit(socket, :availability_update_hours),
          %{} = day_availability <-
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          strings <- resolve_day_strings(params, day_availability),
@@ -342,12 +368,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
            AvailabilityInputValidation.validate_day_hours(strings, metadata: metadata),
          result <-
            AvailabilityActions.update_day_hours(
+             profile_id(socket),
              schedule_id(socket),
              day,
              sanitized_params["start"],
              sanitized_params["end"]
            ) do
-      handle_update_day_hours_result(day, result, socket)
+      handle_update_day_hours_result(day, result, socket, params)
     else
       nil ->
         {:noreply, socket}
@@ -394,14 +421,10 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   defp present(value) when value in [nil, ""], do: nil
   defp present(value), do: value
 
-  defp handle_update_day_hours_result(day, result, socket) do
+  defp handle_update_day_hours_result(day, result, socket, params) do
     case result do
       {:ok, _updated} ->
-        Flash.info(
-          dgettext("dashboard_availability", "%{day} hours updated",
-            day: AvailabilityActions.day_name(day)
-          )
-        )
+        Flash.info(dgettext("dashboard_availability", "%{day} hours updated", day: day_name(day)))
 
         send(self(), {:reload_schedule})
 
@@ -410,6 +433,22 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:error, :invalid_time_format} ->
         Flash.error(dgettext("dashboard_availability", "Invalid time format"))
         {:noreply, socket}
+
+      # Shown under the day's hours with the refused times kept, like any
+      # other refused hours, so the selects do not look saved.
+      {:error, {:breaks_outside_hours, [break | _others]}} ->
+        day_availability =
+          AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day)
+
+        message =
+          dgettext(
+            "dashboard_availability",
+            "The %{break} break no longer fits these hours. Move or delete it first.",
+            break:
+              BreakHelpers.break_time_label(day_availability, break, socket.assigns.time_format)
+          )
+
+        {:noreply, assign_refused_hours(socket, params, %{breaks: message})}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_availability", "Failed to update availability"))
@@ -451,15 +490,17 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   # Small helpers to reduce duplication
   defp schedule_id(socket), do: socket.assigns.selected_schedule.id
+  defp profile_id(socket), do: socket.assigns.profile.id
 
-  defp check_rate_limit(socket, action_prefix, limit, window_ms) do
-    key = "#{action_prefix}:#{schedule_id(socket)}"
+  defp day_name(day),
+    do: LocaleFormat.format_weekday_name(day, Gettext.get_locale(TymeslotWeb.Gettext), :full)
 
-    case RateLimiter.check_rate_limit(key, limit, window_ms) do
+  defp check_rate_limit(socket, limit) do
+    case RateLimiter.check(limit, schedule_id(socket)) do
       :ok ->
         :ok
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         Flash.error(
           dgettext(
             "dashboard_availability",
@@ -487,7 +528,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         <%= for day_availability <- @weekly_schedule do %>
           <DayCardComponent.day_card
             day_availability={day_availability}
-            day_name={AvailabilityActions.day_name(day_availability.day_of_week)}
+            day_name={day_name(day_availability.day_of_week)}
             break_duration_presets={@break_duration_presets}
             form_errors={@form_errors}
             hours_errors={@hours_errors}

@@ -186,19 +186,42 @@ credentials undecryptable. No action is required for new installs.
 **Upgrading an existing install:** the key is generated on the first boot after the upgrade.
 New credentials are written under it immediately; existing credentials keep decrypting under
 the old (`SECRET_KEY_BASE`-derived) key automatically. To migrate the existing rows onto the
-new key, run the re-encryption sweep once. `cloudron exec` starts a fresh session that does
-not see the key unless it is read from the file it was generated into, so export it first:
+new key, run the re-encryption sweep. The container also writes the generated key into
+`/app/data/.env`, which is how a `cloudron exec` session sees it:
 
 ```bash
-cloudron exec --app tymeslot.yourdomain.com -- sh -c '
-  export DATA_ENCRYPTION_KEY=$(cat /app/data/data_encryption_key)
-  /app/bin/tymeslot eval "Ecto.Migrator.with_repo(Tymeslot.Repo, fn _ -> IO.inspect(Tymeslot.Security.CredentialReencryption.run(), label: \"reencryption\") end)"
-'
+cloudron exec --app tymeslot.yourdomain.com -- \
+  /app/bin/tymeslot eval "Tymeslot.Release.Encryption.reencrypt_credentials()"
 ```
 
-Re-run until the reported `migrated_values` is `0`. The sweep is idempotent and safe to
-repeat. Do not delete `/app/data/data_encryption_key` — losing it makes stored credentials
-unrecoverable.
+Re-run until it reports `migrated values: 0`. The sweep is idempotent and safe to repeat. Then
+check that nothing is left on the legacy key:
+
+```bash
+cloudron exec --app tymeslot.yourdomain.com -- \
+  /app/bin/tymeslot eval "Tymeslot.Release.Encryption.key_report()"
+```
+
+Once no `v0` appears, add `LEGACY_KEY_RETIRED=true` to `/app/data/.env` and restart; from then
+on `SECRET_KEY_BASE` plays no part in data-at-rest encryption. Do not delete
+`/app/data/data_encryption_key` (losing it makes stored credentials unrecoverable), except to
+retire it after a rotation, as below.
+
+**Rotating the key.** The procedure, and what each report means, is in
+[README-Docker.md, "Rotating the data key"](README-Docker.md#rotating-the-data-key). On Cloudron:
+
+1. Read the current key with
+   `cloudron exec --app tymeslot.yourdomain.com -- cat /app/data/data_encryption_key`. It is
+   key 1, and stays loaded as key 1 while that file exists.
+2. Put `DATA_ENCRYPTION_KEYS` in `/app/data/.env` rather than in `cloudron env set`, so that it
+   travels with the app's backups together with the key file. A Cloudron app runs as a single
+   container, stopped before its replacement starts, so phases 1 and 2 may be one restart:
+   `DATA_ENCRYPTION_KEYS=2:<new key>,1:<current key>`. Back up the app first.
+3. Run the sweep and the key report as above until no `v1` remains, `oban_jobs.email_links`
+   included (links in emails still queued; they clear as the emails go out).
+4. Retire key 1: remove the `1:` entry, delete `/app/data/data_encryption_key` and the
+   `DATA_ENCRYPTION_KEY=` line in `/app/data/.env`, and restart. With `DATA_ENCRYPTION_KEYS`
+   set, the container no longer generates a replacement key.
 
 ### Adding Variables After Installation
 

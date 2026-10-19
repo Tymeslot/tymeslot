@@ -294,7 +294,15 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         destination
         |> Changeset.change(%{
           default_booking_calendar_id: "/dest/deleted/",
-          calendar_list: [%{id: "/dest/home/", path: "/dest/home/", name: "Home"}]
+          calendar_list: [
+            %{
+              id: "/dest/home/",
+              path: "/dest/home/",
+              name: "Home",
+              selected: true,
+              read_only: false
+            }
+          ]
         })
         |> Repo.update!()
 

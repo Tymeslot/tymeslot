@@ -61,8 +61,8 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
   def validate(username, opts \\ [])
 
-  def validate(nil, _opts), do: {:error, dgettext("errors", "Username is required")}
-  def validate("", _opts), do: {:error, dgettext("errors", "Username is required")}
+  def validate(nil, _opts), do: {:error, dgettext("errors_input", "Username is required")}
+  def validate("", _opts), do: {:error, dgettext("errors_input", "Username is required")}
 
   def validate(username, opts) when is_binary(username) do
     min_length = Keyword.get(opts, :min_length, @username_min_length)
@@ -78,7 +78,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   end
 
   def validate(_username, _opts) do
-    {:error, dgettext("errors", "Username must be a text value")}
+    {:error, dgettext("errors_input", "Username must be a text value")}
   end
 
   # Private helper functions
@@ -90,7 +90,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
       length < min_length ->
         {:error,
          dngettext(
-           "errors",
+           "errors_input",
            "Username must be at least %{count} character long",
            "Username must be at least %{count} characters long",
            min_length
@@ -99,7 +99,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
       length > max_length ->
         {:error,
          dngettext(
-           "errors",
+           "errors_input",
            "Username must be at most %{count} character long",
            "Username must be at most %{count} characters long",
            max_length
@@ -116,7 +116,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
     else
       {:error,
        dgettext(
-         "errors",
+         "errors_input",
          "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
        )}
     end
@@ -128,7 +128,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
     lowercase_username = String.downcase(username)
 
     if lowercase_username in reserved_words do
-      {:error, dgettext("errors", "This username is reserved")}
+      {:error, dgettext("errors_input", "This username is reserved")}
     else
       :ok
     end

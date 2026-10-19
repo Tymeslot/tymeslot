@@ -65,6 +65,24 @@ defmodule Tymeslot.CalendarGrid.ProviderPayload do
     end
   end
 
+  @doc """
+  Gives a timed payload with a recurrence rule the zone its series is written
+  in, `zone`; any other payload is returned unchanged.
+
+  RFC 5545 expands a rule in its start's zone, so a series written in UTC
+  moves an hour against local time at every DST change. Google and Outlook
+  read `:timezone` (wall clocks plus that zone; Google rejects a recurring
+  event with none), and the CalDAV writer reads `:series_timezone`
+  (`ICalBuilder.TimeZoneComponent.series_zone/1`). One-offs keep the UTC
+  form they have always been written in.
+  """
+  @spec put_series_zone(map(), String.t() | nil) :: map()
+  def put_series_zone(%{recurrence_rule: rule, start_time: %DateTime{}} = payload, zone)
+      when is_binary(rule) and rule != "" and is_binary(zone),
+      do: Map.merge(payload, %{timezone: zone, series_timezone: zone})
+
+  def put_series_zone(payload, _zone), do: payload
+
   # Adapters read a `Date` as an all-day boundary and a `DateTime` as an
   # instant, so the type itself carries the distinction.
   defp timing(%{all_day: true, start_date: %Date{} = start_date, end_date: %Date{} = end_date}),

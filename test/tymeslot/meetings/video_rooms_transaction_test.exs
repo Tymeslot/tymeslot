@@ -20,8 +20,10 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.RoomData
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.Repo
@@ -130,6 +132,72 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
              "video provider must be called outside any Repo.transaction even on race"
 
       refute_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+    end
+
+    # The losing creator's room exists on the provider and nothing records
+    # it, so it is released rather than left for nothing to ever find.
+    test "releases the room a losing concurrent creator made" do
+      %{meeting: meeting, integration: integration} = build_mirotalk_scenario()
+      __MODULE__.FakeVideoModule.attach_before_return(meeting.id, "racer-room-id")
+
+      assert {:ok, returned} = VideoRooms.add_video_room_to_meeting(meeting.id)
+      assert returned.video_room_id == "racer-room-id"
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.VideoSyncWorker,
+        args: %{
+          "action" => "release",
+          "meeting_id" => meeting.id,
+          "room_id" => "https://fake.video/join/abc",
+          "video_provider" => "mirotalk",
+          "video_integration_id" => integration.id
+        }
+      )
+    end
+
+    test "releases nothing when the provider handed back the room that won" do
+      %{meeting: meeting} = build_mirotalk_scenario()
+      __MODULE__.FakeVideoModule.attach_before_return(meeting.id, "https://fake.video/join/abc")
+
+      assert {:ok, _returned} = VideoRooms.add_video_room_to_meeting(meeting.id)
+
+      refute_enqueued(worker: Tymeslot.Workers.VideoSyncWorker)
+    end
+
+    # A Teams meeting placed on the booking's own calendar event is that
+    # event; releasing it would replace the booking's calendar entry.
+    test "never releases a room that is the booking's own calendar event" do
+      %{meeting: meeting} = build_mirotalk_scenario()
+
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{
+          provider_event_id: "https://fake.video/join/abc"
+        })
+
+      __MODULE__.FakeVideoModule.attach_before_return(meeting.id, "racer-room-id")
+
+      assert {:ok, _returned} = VideoRooms.add_video_room_to_meeting(meeting.id)
+
+      refute_enqueued(worker: Tymeslot.Workers.VideoSyncWorker)
+      # Releasing a room placed on the booking's calendar event goes through
+      # the calendar job, which deletes that event.
+      refute_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+    end
+
+    # The owner was told to reconnect; until they do every call would be
+    # refused, so room creation fails as unauthorised at once instead of
+    # spending the job's retries on it.
+    test "refuses an integration flagged for reconnection without calling the provider" do
+      %{meeting: meeting, integration: integration} = build_mirotalk_scenario()
+
+      integration
+      |> Changeset.change(needs_reauth: true)
+      |> Repo.update!()
+
+      assert {:error, :video_integration_needs_reauth} =
+               VideoRooms.add_video_room_to_meeting(meeting.id)
+
+      refute __MODULE__.FakeVideoModule.called?()
     end
 
     test "releases instead of attaching a room when the meeting changed location mid-call" do

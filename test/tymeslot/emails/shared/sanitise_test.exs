@@ -4,6 +4,29 @@ defmodule Tymeslot.Emails.Shared.SanitiseTest do
 
   alias Tymeslot.Emails.Shared.Sanitise
 
+  describe "sanitize_multiline_for_email/1" do
+    test "returns empty string for nil" do
+      assert Sanitise.sanitize_multiline_for_email(nil) == ""
+    end
+
+    test "escapes markup and turns both newline styles into line breaks" do
+      assert Sanitise.sanitize_multiline_for_email("<b>a</b> -- b\r\nc\nd") ==
+               "&lt;b&gt;a&lt;/b&gt; -- b<br>c<br>d"
+    end
+
+    test "truncates text longer than 10,000 characters" do
+      result = Sanitise.sanitize_multiline_for_email(String.duplicate("a", 10_001))
+
+      assert result == String.duplicate("a", 9_997) <> "..."
+    end
+
+    test "keeps text of exactly 10,000 characters whole" do
+      text = String.duplicate("a", 10_000)
+
+      assert Sanitise.sanitize_multiline_for_email(text) == text
+    end
+  end
+
   describe "sanitize_for_email/1" do
     test "returns empty string for nil" do
       assert Sanitise.sanitize_for_email(nil) == ""
@@ -56,6 +79,74 @@ defmodule Tymeslot.Emails.Shared.SanitiseTest do
 
     test "handles empty string" do
       assert Sanitise.sanitize_for_email("") == ""
+    end
+  end
+
+  describe "sanitize_url/1" do
+    test "escapes a safe http(s) or mailto URL for an href" do
+      assert Sanitise.sanitize_url("https://example.com/a?b=1&c=2") ==
+               "https://example.com/a?b=1&amp;c=2"
+
+      assert Sanitise.sanitize_url("mailto:someone@example.com") == "mailto:someone@example.com"
+    end
+
+    test "is nil for an unsafe, empty or missing URL" do
+      assert Sanitise.sanitize_url("javascript:alert(1)") == nil
+      assert Sanitise.sanitize_url("#") == nil
+      assert Sanitise.sanitize_url("mailto:") == nil
+      assert Sanitise.sanitize_url("") == nil
+      assert Sanitise.sanitize_url(nil) == nil
+    end
+  end
+
+  describe "safe_url?/1" do
+    test "accepts http(s) and mailto, whatever the scheme's case" do
+      for url <- [
+            "https://example.com/a",
+            "http://example.com",
+            "HTTPS://Example.com/a",
+            "HtTpS://example.com",
+            "mailto:someone@example.com",
+            "MailTo:someone@example.com"
+          ] do
+        assert Sanitise.safe_url?(url), url
+      end
+    end
+
+    test "rejects other schemes, scheme-relative and whitespace-prefixed URLs" do
+      for url <- [
+            " https://example.com",
+            "\thttps://example.com",
+            "\nhttps://example.com",
+            "data:text/html,<script>alert(1)</script>",
+            "vbscript:msgbox(1)",
+            "JaVaScRiPt:alert(1)",
+            "//evil.example.com/x",
+            "mailto:",
+            "MAILTO:",
+            "#",
+            "",
+            nil
+          ] do
+        refute Sanitise.safe_url?(url), inspect(url)
+      end
+    end
+  end
+
+  describe "safe_web_url?/1" do
+    test "accepts http(s) only: a join link must open a page" do
+      assert Sanitise.safe_web_url?("https://meet.example.com/room")
+      assert Sanitise.safe_web_url?("HTTP://meet.example.com/room")
+      refute Sanitise.safe_web_url?("mailto:someone@example.com")
+      refute Sanitise.safe_web_url?("room-1234")
+      refute Sanitise.safe_web_url?(nil)
+    end
+
+    test "sanitize_web_url/1 escapes a web URL and is nil for anything else" do
+      assert Sanitise.sanitize_web_url("https://example.com/?a=1&b=2") ==
+               "https://example.com/?a=1&amp;b=2"
+
+      assert Sanitise.sanitize_web_url("mailto:someone@example.com") == nil
     end
   end
 

@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
   @moduletag :payments
   @moduletag :integration
 
+  import ExUnit.CaptureLog
   import Ecto.Query
   import Mox
 
@@ -57,7 +58,9 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
            "payment_status" => "paid",
            "status" => "complete",
            "client_reference_id" => meeting.id,
-           "payment_intent" => "pi_RECONCILED"
+           "payment_intent" => "pi_RECONCILED",
+           "amount_total" => bp.amount_cents,
+           "currency" => bp.currency
          }}
       end)
 
@@ -96,6 +99,40 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
 
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
       assert reloaded_meeting.status == "expired"
+    end
+
+    test "a handler failure is logged and leaves the payment pending for the next sweep" do
+      {meeting, bp} = insert_stale_pending(session_id: "cs_HANDLER_FAILS")
+
+      expect(StripeAdapterMock, :retrieve_checkout_session, fn "cs_HANDLER_FAILS", _opts ->
+        {:ok,
+         %{
+           "id" => "cs_HANDLER_FAILS",
+           "payment_status" => "paid",
+           "status" => "complete",
+           "client_reference_id" => meeting.id,
+           "payment_intent" => "pi_HANDLER_FAILS",
+           "amount_total" => bp.amount_cents,
+           "currency" => bp.currency
+         }}
+      end)
+
+      # The handler's calendar enqueue fails, so it answers `{:error, :retry_later, _}`.
+      :meck.new(Oban, [:passthrough])
+      :meck.expect(Oban, :insert, fn _job -> {:error, :queue_not_available} end)
+
+      log =
+        try do
+          capture_log(fn ->
+            assert {:ok, %{reconciled: 1, skipped: 0}} =
+                     perform_job(ReconcileAwaitingPayments, %{})
+          end)
+        after
+          :meck.unload(Oban)
+        end
+
+      assert log =~ "ReconcileAwaitingPayments handler failed"
+      assert BookingPaymentQueries.get(bp.id).status == "pending"
     end
 
     test "leaves still-open sessions alone" do
@@ -149,7 +186,9 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
            payment_status: "paid",
            status: "complete",
            client_reference_id: meeting.id,
-           payment_intent: "pi_STRUCT_PAID"
+           payment_intent: "pi_STRUCT_PAID",
+           amount_total: bp.amount_cents,
+           currency: bp.currency
          }}
       end)
 

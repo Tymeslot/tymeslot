@@ -6,8 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.CalendarGrid.AllDay
-  alias Tymeslot.CalendarGrid.SeriesEdit
+  alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -26,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply,
          socket
          |> assign(:selected_event, event)
+         |> assign(:recurrence_edit, Shared.recurrence_edit(event))
          |> assign(:pending_attendees, [])
          |> assign(:attendee_input, "")
          |> assign(:pending_notification, pending?)}
@@ -126,9 +126,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_seat_lock(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          optimistic_event = AllDay.toggle(event, socket.assigns.user_timezone)
-
-          push_all_day_change(socket, event, optimistic_event)
+          push_all_day_change(socket, event, &EventEdit.toggle_all_day(event, &1))
         else
           {:error, reason} = error
           when reason in [:unauthorized, :read_only, :group_booking] ->
@@ -161,8 +159,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
                Date.compare(exclusive_end, event.end_date) == :eq do
             {:noreply, socket}
           else
-            optimistic_event = %{event | start_date: start_date, end_date: exclusive_end}
-            push_all_day_change(socket, event, optimistic_event)
+            push_all_day_change(socket, event, fn _timezone ->
+              %{event | start_date: start_date, end_date: exclusive_end}
+            end)
           end
         else
           {:error, reason} = error
@@ -234,45 +233,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
           :error ->
             {:noreply, socket}
-        end
-    end
-  end
-
-  @spec handle_update_event_recurrence(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_event_recurrence(params, socket) do
-    case socket.assigns.selected_event do
-      nil ->
-        {:noreply, socket}
-
-      event ->
-        event_context = %{
-          all_day: Map.get(event, :all_day, false),
-          start_date: AllDay.start_date(event),
-          timezone: Shared.recurrence_timezone(event, socket.assigns.user_timezone)
-        }
-
-        case Shared.compose_recurrence_rule(params, event_context) do
-          {:error, :until_before_start} = error ->
-            Shared.flash_guard_error(socket, error)
-
-          new_rule ->
-            if new_rule == event.recurrence_rule do
-              {:noreply, socket}
-            else
-              with :ok <- EditWorkflow.assert_event_writable(socket, event),
-                   :ok <- Shared.check_seat_lock(socket, event),
-                   :ok <- Shared.check_edit_rate_limit(socket) do
-                push_recurrence_change(socket, event, new_rule)
-              else
-                {:error, reason} = error
-                when reason in [:unauthorized, :read_only, :group_booking] ->
-                  Shared.flash_guard_error(socket, error)
-
-                {:error, :rate_limited, _message} = error ->
-                  Shared.flash_guard_error(socket, error)
-              end
-            end
         end
     end
   end
@@ -411,9 +371,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           {:error, :rate_limited, _message} = error ->
             Shared.flash_guard_error(socket, error)
 
+          # The sanitiser's reason is translated text, so tell the cases
+          # apart by the input itself rather than by the reason's wording.
           {:error, reason} when is_binary(reason) ->
             message =
-              if String.starts_with?(reason, "Input exceeds"),
+              if String.length(new_value) > max_length,
                 do: dgettext("dashboard_calendar_events", "Input too long"),
                 else: dgettext("dashboard_calendar_events", "Input contains invalid characters")
 
@@ -450,90 +412,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     result
   end
 
-  # Applies a recurrence-rule change. When the event is part of a series whose
-  # provider takes a scope (see `EditWorkflow.series_edit?/1`), the scope
-  # prompt is shown first and the actual write is deferred to confirmation;
-  # otherwise the rule is written straight away.
-  #
-  # Recurrence changes deviate from the standard `apply_optimistic_update`
-  # pattern: the async step is conditional on whether the event belongs to a
-  # series, so the update and the flash are handled inline here.
-  #
-  # A member of a series cannot have its repeat rule removed for any scope
-  # the prompt would offer (`SeriesEdit`'s `rule_refused?/3` refuses
-  # `:following` and `:all` unconditionally when the rule is being taken
-  # away), so that choice is refused here rather than sent to a scope prompt
-  # every button of which is a dead end.
-  defp push_recurrence_change(socket, original_event, nil) do
-    if EditWorkflow.series_edit?(original_event) do
-      refuse_rule_removal(socket)
-    else
-      apply_recurrence_change(socket, original_event, nil)
-    end
-  end
-
-  defp push_recurrence_change(socket, original_event, new_rule),
-    do: apply_recurrence_change(socket, original_event, new_rule)
-
-  defp apply_recurrence_change(socket, original_event, new_rule) do
-    optimistic_event = %{original_event | recurrence_rule: new_rule}
-
-    updated_events =
-      Shared.replace_event(socket.assigns.events, original_event.id, optimistic_event)
-
-    socket =
-      socket
-      |> assign(:selected_event, optimistic_event)
-      |> assign(:events, updated_events)
-      |> Helpers.precompute_derived()
-
-    if EditWorkflow.series_edit?(original_event) do
-      prompt = %{
-        kind: :recurrence_rule,
-        event: original_event,
-        optimistic_event: optimistic_event,
-        recurrence_rule: new_rule,
-        original_event: original_event,
-        following_notes: SeriesEdit.following_notes(original_event, %{recurrence_rule: new_rule})
-      }
-
-      {:noreply, assign(socket, :recurrence_prompt, prompt)}
-    else
-      socket =
-        EditWorkflow.update_event_async(socket, original_event, %{recurrence_rule: new_rule})
-
-      send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
-      {:noreply, socket}
-    end
-  end
-
-  defp refuse_rule_removal(socket) do
-    send(
-      self(),
-      {:flash,
-       {:error,
-        dgettext(
-          "dashboard_calendar_events",
-          "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
-        )}}
-    )
-
-    {:noreply, socket}
-  end
-
   # Flipping all-day refits a recurring event's UNTIL to the value type its new
   # DTSTART calls for, and a timed UNTIL is an instant, so the domain needs a
   # timezone to end the chosen day in: the event's own, which is the calendar
-  # the series sits on.
-  defp push_all_day_change(socket, original_event, optimistic_event) do
-    timezone = Shared.recurrence_timezone(original_event, socket.assigns.user_timezone)
+  # the series sits on. `build` derives the new copy of the event in that same
+  # zone. A one-off has no UNTIL and keeps the day the viewer saw it on
+  # (`Shared.all_day_timezone/2`).
+  defp push_all_day_change(socket, original_event, build) do
+    timezone = Shared.all_day_timezone(original_event, socket.assigns.user_timezone)
+    optimistic_event = build.(timezone)
 
     result =
       Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
         EditWorkflow.update_event_async(
           s,
           original_event,
-          Map.take(optimistic_event, [:all_day, :start_at, :end_at, :start_date, :end_date]),
+          EventEdit.timing_changes(optimistic_event),
           timezone: timezone
         )
       end)

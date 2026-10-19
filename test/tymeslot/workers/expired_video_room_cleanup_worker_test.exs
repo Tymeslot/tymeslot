@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Infrastructure.ObanCron
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -346,24 +347,13 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     end
   end
 
-  # The production crontab is only assembled in runtime.exs and never loaded in
-  # test, so a typo in the schedule or the module name would otherwise ship
-  # silently and leave every conversation in place. The pattern is anchored to
-  # the start of a line so a commented-out entry does not count.
-  for file <- ["dev.exs", "runtime.exs"] do
-    test "is scheduled in the #{file} crontab with a schedule Oban can parse" do
-      config =
-        [__DIR__, "..", "..", "..", "config", unquote(file)]
-        |> Path.join()
-        |> Path.expand()
-        |> File.read!()
+  # The cron service is off in test, so a typo in the schedule or the module
+  # name would otherwise ship silently and leave every conversation in place.
+  test "is scheduled in the shared crontab with a schedule Oban can parse" do
+    assert {schedule, ExpiredVideoRoomCleanupWorker} =
+             List.keyfind(ObanCron.base_crontab(), ExpiredVideoRoomCleanupWorker, 1)
 
-      pattern =
-        ~r/^\s*\{\s*"([^"]+)"\s*,\s*Tymeslot\.Workers\.ExpiredVideoRoomCleanupWorker\s*\}/m
-
-      assert [_match, schedule] = Regex.run(pattern, config)
-      assert {:ok, _expression} = Expression.parse(schedule)
-    end
+    assert {:ok, _expression} = Expression.parse(schedule)
   end
 
   defp assert_delete_enqueued(meeting),
