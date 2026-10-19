@@ -21,6 +21,14 @@
     0 0 0 4px var(--cal-ev);
 }
 
+/* Both at once: the ring stays, the press shadow joins it. */
+.cal-ev.is-selected.is-pressing {
+  box-shadow:
+    0 0 0 2px var(--cal-surface),
+    0 0 0 4px var(--cal-ev),
+    var(--shadow-md);
+}
+
 /* The handle under a selected event's bottom edge: a 44px hit area outside
    the event, so it never covers the title, with a 24px grip at its top.
    touch_drag.js copies the block's --l, --w and --cal-ev onto it. */

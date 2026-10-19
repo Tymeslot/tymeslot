@@ -111,6 +111,8 @@ export const TouchDragMixin = {
     const { event, target, start, pointerId } = this.touchPress;
     this.touchPress = null;
     target.classList.remove("is-pressing");
+    // A redraw since the press detached the block: the finger is on a new one, so the press is void.
+    if (!target.isConnected) return;
     this.press = { event, target, mode: "move", x: start.x, y: start.y, pointerId, touch: true, slot: slotAt(start, this.gridGeometry()) };
     if (this.startDrag()) this.select(event.id);
   },
@@ -127,8 +129,8 @@ export const TouchDragMixin = {
     const point = { x: e.clientX, y: e.clientY };
     const geometry = this.gridGeometry();
     this.press = { event, target, mode: "end", x: point.x, y: point.y, pointerId: e.pointerId, touch: true, slot: slotAt(point, geometry) };
-    handle.remove();
     if (!this.startDrag()) return;
+    handle.remove();
     const edge = geometry.top + geometry.scale.yOf(event.endMin - event.startDay * MINUTES_PER_DAY);
     this.drag.shiftY = edge - point.y;
   },

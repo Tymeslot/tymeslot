@@ -25,7 +25,7 @@ import { openingLook } from "../../calendar/opening.js";
 import { MINUTES_PER_DAY, formatMinutes, isoFromDay, normaliseEvent } from "../../calendar/time.js";
 
 // What a press on a column must not start on to count as empty.
-const NOT_EMPTY = ".cal-ev, .cal-more, .cal-early, .cal-list, button, [data-draft-id]";
+const NOT_EMPTY = ".cal-ev, .cal-more, .cal-early, .cal-list, button, [data-draft-id], [data-touch-handle]";
 
 const samePointer = (press, e) => press.pointerId === undefined || e.pointerId === undefined || press.pointerId === e.pointerId;
 

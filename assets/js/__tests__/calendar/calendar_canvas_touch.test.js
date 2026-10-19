@@ -187,6 +187,76 @@ describe("long-press", () => {
   });
 });
 
+describe("press robustness", () => {
+  test("a redraw during the press drops it, so no drag starts on a detached block", () => {
+    stubMedia({ coarse: true });
+    const { el, hook } = mount();
+
+    touch(block(el, "event-1"), "pointerdown", { x: 250, y: 582 });
+    hook.scrollTop = 0;
+    hook.render();
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+
+    expect(hook.drag).toBeNull();
+    expect(dragging(el)).toBe(false);
+  });
+
+  test("a pointercancel during the press cancels it", () => {
+    stubMedia({ coarse: true });
+    const { el } = mount();
+
+    touch(block(el, "event-1"), "pointerdown", { x: 250, y: 582 });
+    touch(el, "pointercancel", { x: 250, y: 582 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+
+    expect(dragging(el)).toBe(false);
+  });
+
+  test("unmounting during the press clears its timer", () => {
+    stubMedia({ coarse: true });
+    const { el, hook } = mount();
+
+    touch(block(el, "event-1"), "pointerdown", { x: 250, y: 582 });
+    hook.destroyed();
+    expect(() => vi.advanceTimersByTime(LONG_PRESS_MS)).not.toThrow();
+    expect(hook.drag ?? null).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  test("the touchmove guard lets the page scroll again after the drop", () => {
+    stubMedia({ coarse: true });
+    const { el } = mount();
+    const scroll = () => {
+      const move = new Event("touchmove", { bubbles: true, cancelable: true });
+      el.dispatchEvent(move);
+      return move.defaultPrevented;
+    };
+
+    touch(block(el, "event-1"), "pointerdown", { x: 250, y: 582 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    expect(scroll()).toBe(true);
+    touch(el, "pointerup", { x: 250, y: 582 });
+    expect(scroll()).toBe(false);
+  });
+
+  test("a context menu still cancels a mouse drag", () => {
+    stubMedia({ coarse: false });
+    const { el, hook } = mount();
+    const press = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 250, clientY: 582, button: 0, buttons: 1 });
+    Object.defineProperty(press, "pointerType", { value: "mouse" });
+    Object.defineProperty(press, "pointerId", { value: 1 });
+    block(el, "event-1").dispatchEvent(press);
+    const move = new MouseEvent("pointermove", { bubbles: true, cancelable: true, clientX: 350, clientY: 634, buttons: 1 });
+    Object.defineProperty(move, "pointerId", { value: 1 });
+    el.dispatchEvent(move);
+    expect(hook.drag).not.toBeNull();
+
+    el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+
+    expect(hook.drag).toBeNull();
+  });
+});
+
 describe("selection and the resize handle", () => {
   test("tapping an event on a touch screen selects it and puts a handle under its bottom edge", () => {
     stubMedia({ phone: true, coarse: true });
@@ -256,6 +326,38 @@ describe("selection and the resize handle", () => {
     expect(hook.draft).toBeFalsy();
   });
 
+  test("a late click on the handle does not let go of the selection", () => {
+    stubMedia({ coarse: true });
+    const { el } = mount();
+
+    block(el, "event-1").click();
+    handle(el).dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 250, clientY: 640 }));
+
+    expect(block(el, "event-1").classList.contains("is-selected")).toBe(true);
+  });
+
+  test("a handle press whose drag cannot start leaves the handle", () => {
+    stubMedia({ coarse: true });
+    const { el, hook } = mount();
+
+    block(el, "event-1").click();
+    hook.startDrag = () => false;
+    touch(handle(el), "pointerdown", { x: 250, y: 646 });
+
+    expect(handle(el)).not.toBeNull();
+  });
+
+  test("tapping the empty grid with the selection closes an open list first", () => {
+    stubMedia({ coarse: true });
+    const { el, hook } = mount();
+
+    block(el, "event-1").click();
+    const spy = vi.spyOn(hook, "closeList");
+    el.querySelector('.cal-col[data-day="2026-10-16"]').dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 450, clientY: 520 }));
+
+    expect(spy).toHaveBeenCalled();
+  });
+
   test("dragging the handle resizes the end, which follows the edge rather than the finger", () => {
     stubMedia({ phone: true, coarse: true });
     const { el, hook } = mount();
@@ -277,6 +379,10 @@ describe("touch styles", () => {
 
   test("the stylesheet is loaded", () => {
     expect(readFileSync(resolve(css, "app.css"), "utf8")).toContain('@import "./components/calendar-touch.css";');
+  });
+
+  test("a pressed, selected event keeps its ring and gains the press shadow", () => {
+    expect(touchCss).toMatch(/\.cal-ev\.is-selected\.is-pressing\s*\{[^}]*box-shadow:[^}]*var\(--cal-ev\)[^}]*var\(--shadow-md\)/);
   });
 
   test("a press on the handle is never a scroll", () => {

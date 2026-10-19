@@ -452,7 +452,10 @@ export const CalendarCanvas = {
 
     if (this.viewClick(e)) return undefined;
     // With an event selected on a touch screen, a tap on the empty grid only lets go of it.
-    if (this.selectedId && this.emptyColumn(target)) return this.clearSelection();
+    if (this.selectedId && this.emptyColumn(target)) {
+      this.closeList();
+      return this.clearSelection();
+    }
     if (this.slotClick(e)) return undefined;
     return this.closeList();
   },

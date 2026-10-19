@@ -14,7 +14,8 @@
  * move with no button held cancels; only the pointer that pressed counts.
  * The columns' position is read afresh on every move, and a scroll (or the
  * auto-scroll near the scroller's edge) re-runs the last move, so the block
- * stays under the pointer. Touch enters through touch_drag.js, which fills `this.press` after a long-press and calls `startDrag`.
+ * stays under the pointer. Touch enters through touch_drag.js, which
+ * fills `this.press` after a long-press and calls `startDrag`.
  */
 import { DRAG_THRESHOLD, beginDrag, dragRange, draggable, previewBox, slotAt } from "../../calendar/drag.js";
 import { MINUTES_PER_DAY, formatMinutes, formatWall, isoFromDay, normaliseEvent, periodDays } from "../../calendar/time.js";
