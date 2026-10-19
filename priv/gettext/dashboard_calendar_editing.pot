@@ -386,6 +386,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/phone_tabs.ex
 #, elixir-autogen, elixir-format
 msgid "New event"
 msgstr ""

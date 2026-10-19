@@ -633,6 +633,7 @@ msgstr "Ненадіслані запрошення"
 msgid "Video"
 msgstr "Відео"
 
+#: lib/tymeslot_web/live/dashboard/calendar/phone_tabs.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Views"

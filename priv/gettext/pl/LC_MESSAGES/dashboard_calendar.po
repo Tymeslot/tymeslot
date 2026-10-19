@@ -81,6 +81,8 @@ msgstr[2] "+%{count} więcej"
 msgid "3 Days"
 msgstr "3 dni"
 
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -102,7 +104,10 @@ msgstr "Dane kalendarza mogą być nieaktualne (ostatnia synchronizacja: %{age})
 msgid "Calendar settings"
 msgstr "Ustawienia kalendarza"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
+#: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars"
@@ -113,7 +118,7 @@ msgstr "Kalendarze"
 msgid "Connect a calendar"
 msgstr "Podłącz kalendarz"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -125,6 +130,7 @@ msgstr "Dzień"
 msgid "Keyboard shortcuts"
 msgstr "Skróty klawiszowe"
 
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -212,7 +218,10 @@ msgstr "Zmień widok"
 msgid "Syncing calendars%{progress}..."
 msgstr "Synchronizacja kalendarzy%{progress}…"
 
+#: lib/tymeslot_web/live/dashboard/calendar/date_sheet.ex
+#: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -223,7 +232,7 @@ msgstr "Dziś"
 msgid "Toggle calendars"
 msgstr "Pokaż lub ukryj kalendarze"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -370,6 +379,7 @@ msgstr "Nie blokuje"
 msgid "%{calendar} · %{account}"
 msgstr "%{calendar} · %{account}"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} calendar hidden"
@@ -393,8 +403,8 @@ msgstr "%{date}, cały dzień"
 msgid "%{date}, open day view"
 msgstr "%{date}, otwórz widok dnia"
 
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "%{first} – %{last}"
 msgstr "%{first} – %{last}"
@@ -417,7 +427,7 @@ msgstr "%{start_day}, %{start_time} – %{end_day}, %{end_time}"
 msgid "(No title)"
 msgstr "(Bez tytułu)"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "3 days"
 msgstr "3 dni"
@@ -437,6 +447,7 @@ msgstr "Cały dzień"
 msgid "Also here: %{titles}"
 msgstr "Również tutaj: %{titles}"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Back to the old calendar"
@@ -458,6 +469,7 @@ msgstr "Zajęty"
 msgid "Calendar"
 msgstr "Kalendarz"
 
+#: lib/tymeslot_web/live/dashboard/calendar/date_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a date"
@@ -468,11 +480,13 @@ msgstr "Wybierz datę"
 msgid "Close"
 msgstr "Zamknij"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Comfortable"
 msgstr "Wygodny"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Compact"
@@ -489,11 +503,13 @@ msgstr "Nie udało się zapisać zmiany. Spróbuj ponownie."
 msgid "Couldn't switch calendars. Please try again."
 msgstr "Nie udało się przełączyć kalendarza. Spróbuj ponownie."
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Density"
 msgstr "Gęstość"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Display options"
@@ -509,6 +525,7 @@ msgstr "Zakończone"
 msgid "Events at this time"
 msgstr "Wydarzenia o tej porze"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Fold early hours"
@@ -558,22 +575,23 @@ msgstr "Ładowanie kalendarza"
 msgid "New calendar"
 msgstr "Nowy kalendarz"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Next day"
 msgstr "Następny dzień"
 
 #: lib/tymeslot_web/live/dashboard/calendar/mini_month.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Next month"
 msgstr "Następny miesiąc"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Next three days"
 msgstr "Następne trzy dni"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Next week"
 msgstr "Następny tydzień"
@@ -593,22 +611,23 @@ msgstr "W tym dniu nic nie zaplanowano."
 msgid "Nothing planned this week."
 msgstr "W tym tygodniu nic nie zaplanowano."
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Previous day"
 msgstr "Poprzedni dzień"
 
 #: lib/tymeslot_web/live/dashboard/calendar/mini_month.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Previous month"
 msgstr "Poprzedni miesiąc"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Previous three days"
 msgstr "Poprzednie trzy dni"
 
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Previous week"
 msgstr "Poprzedni tydzień"
@@ -628,6 +647,7 @@ msgstr "Powtarza się"
 msgid "Saved here, waiting to reach %{account}"
 msgstr "Zapisano tutaj, czeka na synchronizację: %{account}"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Show all calendars"
@@ -701,6 +721,7 @@ msgstr "pokazane jako wolne"
 msgid "waiting to sync"
 msgstr "czeka na synchronizację"
 
+#: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a date, %{period}"

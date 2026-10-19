@@ -629,6 +629,7 @@ msgstr "Niewysłane zaproszenia"
 msgid "Video"
 msgstr "Wideo"
 
+#: lib/tymeslot_web/live/dashboard/calendar/phone_tabs.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Views"
