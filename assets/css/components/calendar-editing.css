@@ -332,6 +332,16 @@ button.cal-qc-chip:hover,
   cursor: progress;
 }
 
+/* The surface's toast sits above everything: sheets, popovers and core
+   modals (which hold two of the phone's sheets). The layer is the same at
+   every width; calendar-phone.css moves its placement on a phone. */
+.cal-toast-region {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 1rem;
+  z-index: var(--cal-z-toast);
+}
+
 /* The hook's own notice (a save it could not confirm), shaped like the
    surface's toast (TymeslotWeb.Dashboard.Calendar.Toast) and in its place. */
 .cal-notice {

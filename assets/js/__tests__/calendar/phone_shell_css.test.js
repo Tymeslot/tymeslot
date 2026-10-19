@@ -91,7 +91,7 @@ describe("the z-index ladder", () => {
 
 describe("toasts on every screen", () => {
   test("the toast region and the hook's notice use the toast token", () => {
-    const [region] = blocks(read("components/calendar-phone.css"), ".cal-toast-region");
+    const [region] = blocks(read("components/calendar-editing.css"), ".cal-toast-region");
     expect(region).toMatch(/position:\s*fixed/);
     expect(region).toMatch(/z-index:\s*var\(--cal-z-toast\)/);
     const notice = blocks(read("components/calendar-editing.css"), ".cal-notice");

@@ -35,7 +35,12 @@ function rules(source) {
 
   for (const ch of text) {
     if (ch === "{") {
-      stack.push(buffer.split(";").pop().trim());
+      const head = buffer.split(";").pop().trim();
+      // Nesting would hide a rule from this parser, so refuse it outright.
+      if (stack.some((s) => !s.startsWith("@")) || head.includes("&")) {
+        throw new Error(`CSS nesting is not supported by this guard: ${head}`);
+      }
+      stack.push(head);
       buffer = "";
     } else if (ch === "}") {
       const head = stack.pop();
@@ -65,11 +70,21 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // True when the last compound of `selector` (what the rule styles) names
 // `name`: `.cal-scroll[data-scroll]` names `.cal-scroll`; `.cal-scroll .x` does not.
 function styles(selector, name) {
-  const last = selector.split(/\s*[\s>+~]\s*/).pop();
+  // What sits inside :has(), :not(), :is() and :where() does not make the
+  // rule style that element.
+  let bare = selector;
+  for (let prev = ""; prev !== bare; ) {
+    prev = bare;
+    bare = bare.replace(/:(?:has|not|is|where)\([^()]*\)/g, "");
+  }
+  const last = bare.split(/\s*[\s>+~]\s*/).pop();
   return new RegExp(`${escape(name)}(?![\\w-])`).test(last);
 }
 
-const zOf = (rule) => decl(rule.body, "z-index");
+const zOf = (rule) => {
+  const value = decl(rule.body, "z-index");
+  return value && value.replace(/\s*!important$/, "");
+};
 const where = (list, name) => list.filter((r) => r.selectors.some((s) => styles(s, name)));
 
 function tokenValue(name) {
@@ -102,7 +117,7 @@ describe("the calendar's z-index ladder", () => {
 
     const offenders = CALENDAR.filter((file) => existsSync(resolve(cssDir, "components", file))).flatMap((file) =>
       rules(component(file))
-        .filter((rule) => /^\d+$/.test(zOf(rule) || "") && Number(zOf(rule)) >= 45 && !local(file, rule))
+        .filter((rule) => /^\d+/.test(zOf(rule) || "") && Number(zOf(rule)) >= 45 && !local(file, rule))
         .map((rule) => `${file} ${rule.selectors.join(", ")}: ${zOf(rule)}`),
     );
 
@@ -160,8 +175,6 @@ describe("the phone, views and touch stylesheets", () => {
   });
 
   test("every phone rule applies only under the phone query", () => {
-    // The toast's z-index holds at every width, so its rule may sit here.
-    const allWidths = new Set([".cal-toast-region", ".cal-notice"]);
     const tokensOnly = (body) =>
       body
         .split(";")
@@ -171,7 +184,6 @@ describe("the phone, views and touch stylesheets", () => {
 
     const offenders = rules(component("calendar-phone.css"))
       .filter((r) => !r.at.some((a) => a.includes(PHONE)))
-      .filter((r) => !r.selectors.every((s) => allWidths.has(s)))
       .filter((r) => !tokensOnly(r.body))
       .map((r) => r.selectors.join(", "));
 
@@ -180,7 +192,10 @@ describe("the phone, views and touch stylesheets", () => {
 
   test("the phone breakpoint is spelt one way", () => {
     const queries = NEW.flatMap((file) => component(file).match(/@media[^{]*width[^{]*/g) || []).map((q) => q.trim());
-    const others = queries.filter((q) => !/\(width (<|>=) (40|64)rem\)/.test(q));
+    const others = queries
+      .flatMap((q) => q.replace(/^@media\s*/, "").split(","))
+      .flatMap((part) => part.match(/\(\s*[a-z-]*width[^)]*\)/g) || [])
+      .filter((cond) => !/^\(width (<|>=) (40|64)rem\)$/.test(cond));
 
     expect(others).toEqual([]);
   });
@@ -211,8 +226,11 @@ describe("the phone, views and touch stylesheets", () => {
     const list = rules(component(file));
     const moves = (body) =>
       /(?:^|;)\s*(transition|transition-duration|animation|animation-name)\s*:\s*(?!none|0s)/.test(body);
+    const stills = (body) => /(?:^|;)\s*(?:transition|animation|transform)\s*:\s*none\b/.test(body);
     const calmed = new Set(
-      list.filter((r) => r.at.some((a) => a.includes("prefers-reduced-motion: reduce"))).flatMap((r) => r.selectors),
+      list
+        .filter((r) => r.at.some((a) => a.includes("prefers-reduced-motion: reduce")) && stills(r.body))
+        .flatMap((r) => r.selectors),
     );
 
     const offenders = list

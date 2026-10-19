@@ -136,7 +136,7 @@ describe("quick create on touch", () => {
     expect(chips).toMatch(/min-height:\s*44px/);
     expect(chips).toMatch(/font-size:\s*var\(--font-size-sm\)/);
     expect(rule(phone(), ".cal-qc-native.is-open")).toMatch(/min-height:\s*44px/);
-    expect(rule(phone(), "span.cal-qc-chip")).toMatch(/line-height:\s*42px/);
+    expect(rule(phone(), "span.cal-qc-chip")).toMatch(/line-height:\s*40px/);
     expect(rule(phone(), ".cal-qc-seg button, .cal-qc-more, .cal-qc-save")).toMatch(/min-height:\s*44px/);
   });
 
