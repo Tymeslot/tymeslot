@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @day_sizes %{compact: "h-7 text-token-xs", touch: "h-11 text-token-sm"}
+  @arrow_sizes %{compact: nil, touch: "h-11 w-11"}
 
   attr :id, :string, required: true
   attr :cursor, :any, required: true, doc: "the first of the month shown"
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   def mini_month(assigns) do
     assigns =
       assign(assigns,
+        arrow: Map.fetch!(@arrow_sizes, assigns.size),
         weeks: Period.month_matrix(assigns.cursor, assigns.week_start),
         initials: initials(assigns.locale, assigns.week_start)
       )
@@ -41,19 +43,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
     ~H"""
     <div id={@id} class="select-none">
       <div class="mb-1 flex items-center justify-between">
-        <span class="text-token-sm font-semibold text-tymeslot-800">
+        <span
+          id={"#{@id}-label"}
+          aria-live="polite"
+          class="text-token-sm font-semibold text-tymeslot-800"
+        >
           {LocaleFormat.format_month_year(@cursor.month, @cursor.year, @locale)}
         </span>
         <div class="flex items-center">
           <.icon_button
             icon="hero-chevron-left-mini"
             size={:sm}
+            class={@arrow}
             label={dgettext("dashboard_calendar", "Previous month")}
             phx-click={JS.push("calendar:mini_shift", value: %{dir: -1}, target: @target)}
           />
           <.icon_button
             icon="hero-chevron-right-mini"
             size={:sm}
+            class={@arrow}
             label={dgettext("dashboard_calendar", "Next month")}
             phx-click={JS.push("calendar:mini_shift", value: %{dir: 1}, target: @target)}
           />
@@ -65,23 +73,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
       >
         <span :for={initial <- @initials}>{initial}</span>
       </div>
-      <div :for={week <- @weeks} class="grid grid-cols-7">
-        <button
-          :for={day <- week}
-          type="button"
-          phx-click={
-            Navigation.js(@view, day,
-              from: {@view, @date},
-              unchanged: JS.push("calendar:close_menu", target: @target)
-            )
-          }
-          aria-label={LocaleFormat.format_weekday_date(day, @locale)}
-          aria-current={if(day == @today, do: "date")}
-          aria-pressed={to_string(day in @days)}
-          class={day_class(day, @cursor, @days, @today, @size)}
-        >
-          {day.day}
-        </button>
+      <div role="group" aria-labelledby={"#{@id}-label"}>
+        <div :for={week <- @weeks} class="grid grid-cols-7">
+          <button
+            :for={day <- week}
+            type="button"
+            phx-click={
+              Navigation.js(@view, day,
+                from: {@view, @date},
+                unchanged: JS.push("calendar:close_menu", target: @target)
+              )
+            }
+            aria-label={LocaleFormat.format_weekday_date(day, @locale)}
+            aria-current={if(day == @today, do: "date")}
+            aria-pressed={to_string(day in @days)}
+            class={day_class(day, @cursor, @days, @today, @size)}
+          >
+            {day.day}
+          </button>
+        </div>
       </div>
     </div>
     """

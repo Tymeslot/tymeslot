@@ -192,6 +192,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       assert has_element?(lv, "#calendar-rail-month button[class~='h-7']")
     end
 
+    test "the sheet's arrows are 44px, the rail's are not", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+
+      assert has_element?(
+               lv,
+               "#calendar-sheet-month button[aria-label='Next month'][class~='h-11']"
+             )
+
+      assert has_element?(
+               lv,
+               "#calendar-sheet-month button[aria-label='Previous month'][class~='w-11']"
+             )
+
+      refute has_element?(
+               lv,
+               "#calendar-rail-month button[aria-label='Next month'][class~='h-11']"
+             )
+    end
+
+    test "the month bleeds into the body's padding on a phone and is named", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+
+      assert has_element?(lv, "#calendar-date-sheet div[class~='-mx-10'] #calendar-sheet-month")
+      assert has_element?(lv, "#calendar-sheet-month-label[aria-live='polite']", "October 2026")
+
+      assert has_element?(
+               lv,
+               "#calendar-sheet-month [role='group'][aria-labelledby='calendar-sheet-month-label']"
+             )
+    end
+
     test "a day goes there in the current view and closes the sheet", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       open_dates(lv)

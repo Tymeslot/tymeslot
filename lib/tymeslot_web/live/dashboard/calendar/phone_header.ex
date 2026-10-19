@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   @moduledoc """
   The calendar's header on a phone, in place of the toolbar: previous, the
-  period (which opens `DateSheet`), next, Today and Calendars (which turns amber with a count while
-  calendars are hidden), each at least 44px. Rendered at every width and
-  shown only below 40rem (`sm:hidden`), where the toolbar is hidden
-  (`max-sm:hidden`), so a phone's first paint is right before any script
-  runs. Its controls navigate like the toolbar's (`Navigation.js/3`).
+  period (which opens `DateSheet`), next, Today and Calendars (which turns
+  amber with a count while calendars are hidden), each at least 44px.
+  Rendered at every width and shown only below 40rem (`sm:hidden`), where
+  the toolbar is hidden (`max-sm:hidden`), so a phone's first paint is
+  right before any script runs. Its controls navigate like the toolbar's
+  (`Navigation.js/3`).
   """
 
   use TymeslotWeb, :html

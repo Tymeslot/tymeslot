@@ -31,18 +31,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.DateSheet do
     ~H"""
     <.modal id="calendar-date-sheet" show size={:small} on_cancel={@close}>
       <:header>{dgettext("dashboard_calendar", "Choose a date")}</:header>
-      <MiniMonth.mini_month
-        id="calendar-sheet-month"
-        size={:touch}
-        cursor={@mini_cursor}
-        view={@view}
-        date={@date}
-        days={@days}
-        today={@today}
-        week_start={@week_start}
-        locale={@locale}
-        target={@target}
-      />
+      <%!-- On a phone the modal body pads 40px a side, which would squeeze seven
+           days below 44px at 360px: the month bleeds into that padding. --%>
+      <div class="-mx-10 px-1 sm:mx-0 sm:px-0">
+        <MiniMonth.mini_month
+          id="calendar-sheet-month"
+          size={:touch}
+          cursor={@mini_cursor}
+          view={@view}
+          date={@date}
+          days={@days}
+          today={@today}
+          week_start={@week_start}
+          locale={@locale}
+          target={@target}
+        />
+      </div>
       <:footer>
         <.action_button
           id="calendar-sheet-today"
