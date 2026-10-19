@@ -186,6 +186,46 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRemindersTest do
       assert ticked.assigns.reminder_ref == started.assigns.reminder_ref
     end
 
+    test "switching off makes an in-flight tick stale", %{conn: conn} do
+      %{integration: integration} = owner(conn)
+      started = ReminderFeed.refresh(socket(integration, true))
+      first = started.assigns.reminder_ref
+
+      off = %{
+        started
+        | assigns: %{
+            started.assigns
+            | preferences: %CalendarPreferencesSchema{desktop_reminders_enabled: false}
+          }
+      }
+
+      stopped = ReminderFeed.refresh(off)
+      reminded(integration, "work", "Design review")
+      ticked = ReminderFeed.tick(stopped, first)
+
+      assert ticked.assigns.reminder_feed == []
+      assert ticked.assigns.reminder_ref == nil
+    end
+
+    test "assign_feed starts a loop when the preference is on and none is live", %{conn: conn} do
+      %{integration: integration} = owner(conn)
+      reminded(integration, "work", "Design review")
+
+      started = ReminderFeed.assign_feed(socket(integration, true))
+
+      assert is_reference(started.assigns.reminder_ref)
+      assert [%{title: "Reminder: Design review"}] = started.assigns.reminder_feed
+    end
+
+    test "assign_feed leaves a live loop unchanged", %{conn: conn} do
+      %{integration: integration} = owner(conn)
+      started = ReminderFeed.refresh(socket(integration, true))
+
+      again = ReminderFeed.assign_feed(started)
+
+      assert again.assigns.reminder_ref == started.assigns.reminder_ref
+    end
+
     test "nothing is scheduled while the preference is off", %{conn: conn} do
       %{integration: integration} = owner(conn)
       reminded(integration, "work", "Design review")

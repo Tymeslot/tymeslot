@@ -72,12 +72,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # which month the mini month shows.
   @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
 
-  # `calendar:*` events of the power layer (display options, and later the
-  # import, calendar sets and the command bar), answered by `PowerEvents`.
+  # `calendar:*` events and `send_update/3` actions of the power layer, all
+  # answered by `PowerEvents`.
   @power_events PowerEvents.events()
-
-  # `send_update/3` actions of the power layer (the reminder feed's loop, and
-  # later the import's progress), answered by `PowerEvents.update/2`.
   @power_updates PowerEvents.update_actions()
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync

@@ -407,7 +407,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
   @doc """
   After a visibility change: rebuild the rail, re-filter the loaded window
-  (no query) and push with a cache reset.
+  (no window query; the reminder feed is rebuilt) and push with a cache reset.
   """
   @spec refresh(socket()) :: socket()
   def refresh(socket),

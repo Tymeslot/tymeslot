@@ -29,17 +29,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.ReminderFeed do
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  @doc "Rebuilds the feed; empty while the preference is off or the socket is not connected."
+  @doc """
+  Rebuilds the feed; empty while the preference is off or the socket is not
+  connected. Starts the loop when the preference is on and none is live (the
+  preference may have been switched on elsewhere), and drops the ref when it
+  is off, so an in-flight tick goes stale. A live loop is left alone.
+  """
   @spec assign_feed(socket()) :: socket()
   def assign_feed(socket) do
-    if live?(socket),
-      do: assign(socket, :reminder_feed, build(socket.assigns)),
-      else: assign(socket, :reminder_feed, [])
+    socket = rebuild(socket)
+
+    cond do
+      not live?(socket) -> assign(socket, :reminder_ref, nil)
+      socket.assigns.reminder_ref == nil -> schedule(socket)
+      true -> socket
+    end
   end
 
   @doc "Rebuilds the feed and restarts its loop (the first load, the switch, a live tick)."
   @spec refresh(socket()) :: socket()
-  def refresh(socket), do: socket |> assign_feed() |> schedule()
+  def refresh(socket), do: socket |> rebuild() |> schedule()
+
+  defp rebuild(socket) do
+    if live?(socket),
+      do: assign(socket, :reminder_feed, build(socket.assigns)),
+      else: assign(socket, :reminder_feed, [])
+  end
 
   @doc "Asks for the next tick under a fresh ref; while off, forgets the ref instead."
   @spec schedule(socket()) :: socket()
