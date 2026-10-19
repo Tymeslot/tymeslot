@@ -7,10 +7,13 @@ defmodule TymeslotWeb.GettextCompletenessTest do
 
   `booking_voice` holds the themes' own wording of the shared booking lines, and
   no shipped theme has a voice yet, so its template is a header only.
+
+  `dashboard_calendar_power` is registered before its strings are extracted
+  (calendar redesign plan 6); its catalogue task removes it from this list.
   """
   use Tymeslot.GettextCompletenessCase,
     gettext_path: Path.expand("../../priv/gettext", __DIR__),
-    empty_domains: ~w(booking_voice),
+    empty_domains: ~w(booking_voice dashboard_calendar_power),
     async: true
 
   @moduletag :utils

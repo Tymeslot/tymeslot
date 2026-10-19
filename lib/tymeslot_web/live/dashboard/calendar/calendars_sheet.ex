@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
 
   While calendars are hidden its first row says how many and shows them
   all, since the phone header has no room for the toolbar's filter chip.
-  The display options (density, the folded early hours and the way back to
-  the old calendar) sit at its foot, since a phone has no toolbar. Every
+  The display options (`DisplayOptions`, the toolbar's own) sit at its foot,
+  since a phone has no toolbar. Every
   control sends the event the rail's or the toolbar's does, so the grid
   behind changes at once and the sheet stays open.
   """
@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.Calendar.DisplayOptions
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.RailLayers
 
@@ -27,8 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   attr :problem_ids, :any, default: MapSet.new()
   attr :reauth_ids, :any, default: MapSet.new()
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
-  attr :density, :string, required: true
-  attr :fold_night, :boolean, required: true
+  attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :target, :any, required: true
 
   @spec calendars_sheet(map()) :: Phoenix.LiveView.Rendered.t()
@@ -85,45 +84,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
           >
             {dgettext("dashboard_calendar", "Display options")}
           </h2>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar", "Density")}
-            </span>
-            <.segmented_control
-              id="calendar-sheet-density"
-              size={:sm}
-              value={@density}
-              on_change="calendar:set_density"
-              param="option"
-              target={@target}
-              aria_label={dgettext("dashboard_calendar", "Density")}
-            >
-              <:option value="comfortable" label={dgettext("dashboard_calendar", "Comfortable")} />
-              <:option value="compact" label={dgettext("dashboard_calendar", "Compact")} />
-            </.segmented_control>
-          </div>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar", "Fold early hours")}
-            </span>
-            <StatusSwitch.status_switch
-              id="calendar-sheet-fold-night"
-              checked={@fold_night}
-              on_change="calendar:toggle_fold_night"
-              target={@target}
-              size={:small}
-              aria_label={dgettext("dashboard_calendar", "Fold early hours")}
-            />
-          </div>
-          <%!-- No phx-target: DashboardLive swaps the component. --%>
-          <.action_button
-            id="calendar-sheet-back-to-old"
-            variant={:ghost}
-            size={:sm}
-            phx-click={JS.push("calendar:switch_surface", value: %{enabled: false})}
-          >
-            {dgettext("dashboard_calendar", "Back to the old calendar")}
-          </.action_button>
+          <DisplayOptions.display_options
+            id_prefix="calendar-sheet"
+            preferences={@preferences}
+            target={@target}
+          />
         </section>
       </div>
     </.modal>

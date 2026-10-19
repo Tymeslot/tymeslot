@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Period
-  alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.Calendar.DisplayOptions
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PeriodLabels
@@ -29,8 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :open_menu, :atom, default: nil
   attr :mini_cursor, :any, required: true
   attr :week_start, :atom, required: true
-  attr :density, :string, required: true
-  attr :fold_night, :boolean, required: true
+  attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :rail_open, :boolean, required: true
   attr :hidden_count, :integer, required: true
   attr :target, :any, required: true
@@ -207,53 +206,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         panel_label={dgettext("dashboard_calendar", "Display options")}
         aria-label={dgettext("dashboard_calendar", "Display options")}
         trigger_class="icon-button icon-button--neutral icon-button--sm"
-        class="mt-1 w-72 space-y-4 rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
+        class="mt-1 max-h-[min(36rem,80dvh)] w-80 overflow-y-auto rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
       >
         <:trigger>
           <.icon name="hero-adjustments-horizontal" class="h-4 w-4" />
         </:trigger>
         <:panel>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar", "Density")}
-            </span>
-            <.segmented_control
-              id="calendar-density"
-              size={:sm}
-              value={@density}
-              on_change="calendar:set_density"
-              param="option"
-              target={@target}
-              aria_label={dgettext("dashboard_calendar", "Density")}
-            >
-              <:option value="comfortable" label={dgettext("dashboard_calendar", "Comfortable")} />
-              <:option value="compact" label={dgettext("dashboard_calendar", "Compact")} />
-            </.segmented_control>
-          </div>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-token-sm font-medium text-tymeslot-700">
-              {dgettext("dashboard_calendar", "Fold early hours")}
-            </span>
-            <StatusSwitch.status_switch
-              id="calendar-fold-night"
-              checked={@fold_night}
-              on_change="calendar:toggle_fold_night"
-              target={@target}
-              size={:small}
-              aria_label={dgettext("dashboard_calendar", "Fold early hours")}
-            />
-          </div>
-          <div class="border-t border-tymeslot-100 pt-3">
-            <%!-- No phx-target: DashboardLive swaps the component. --%>
-            <.action_button
-              id="calendar-back-to-old"
-              variant={:ghost}
-              size={:sm}
-              phx-click={JS.push("calendar:switch_surface", value: %{enabled: false})}
-            >
-              {dgettext("dashboard_calendar", "Back to the old calendar")}
-            </.action_button>
-          </div>
+          <DisplayOptions.display_options
+            id_prefix="calendar"
+            preferences={@preferences}
+            target={@target}
+          />
         </:panel>
       </.dropdown>
     </div>

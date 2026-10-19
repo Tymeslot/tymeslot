@@ -1,0 +1,4 @@
+/* The calendar's power layer (plan 6): the command bar and its rows, the
+   keys shown in <kbd>, week numbers, the month and mini-month gutters, the
+   calendar sets in the rail and the .ics drop overlay. Colours through
+   tokens only; every motion respects prefers-reduced-motion. */

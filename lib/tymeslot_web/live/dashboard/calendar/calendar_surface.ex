@@ -29,7 +29,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.DateSheet
   alias TymeslotWeb.Dashboard.Calendar.Deletion
-  alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
   alias TymeslotWeb.Dashboard.Calendar.FreeBusy
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
@@ -42,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.PhoneHeader
   alias TymeslotWeb.Dashboard.Calendar.PhoneTabs
+  alias TymeslotWeb.Dashboard.Calendar.PowerEvents
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
@@ -71,6 +71,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # which month the mini month shows.
   @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
 
+  # `calendar:*` events of the power layer (display options, and later the
+  # import, calendar sets and the command bar), answered by `PowerEvents`.
+  @power_events PowerEvents.events()
+
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
   # finished, events changed elsewhere, or a refresh fell back on its timer.
   @refresh_actions [:events_updated, :integration_synced, :refresh_events]
@@ -81,7 +85,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @repeat_scopes ~w(following all)
 
   @impl Phoenix.LiveComponent
-  def mount(socket), do: {:ok, socket |> SurfaceData.defaults() |> BookingActions.defaults()}
+  def mount(socket),
+    do:
+      {:ok,
+       socket |> SurfaceData.defaults() |> BookingActions.defaults() |> PowerEvents.defaults()}
 
   # A sync cycle sends several messages in a burst; they are coalesced into
   # one reload after `@reload_delay`. What the reload covers is the widest of
@@ -285,8 +292,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         open_menu={@open_menu}
         mini_cursor={@mini_cursor}
         week_start={Period.week_start(@preferences.week_start_day)}
-        density={@preferences.density}
-        fold_night={@preferences.fold_night}
+        preferences={@preferences}
         rail_open={@rail_open}
         hidden_count={@hidden_count}
         target={@myself}
@@ -355,8 +361,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         problem_ids={@problem_ids}
         reauth_ids={@reauth_ids}
         bookable={LayerChoices.rail(@preferences, @bookable_types)}
-        density={@preferences.density}
-        fold_night={@preferences.fold_night}
+        preferences={@preferences}
         target={@myself}
       />
       <DateSheet.date_sheet
@@ -416,14 +421,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
     {:noreply, push_patch(socket, to: path)}
   end
-
-  def handle_event("calendar:set_density", %{"option" => density}, socket),
-    do: {:noreply, DisplayPreferences.set_density(socket, density)}
-
-  def handle_event("calendar:set_density", _params, socket), do: {:noreply, socket}
-
-  def handle_event("calendar:toggle_fold_night", _params, socket),
-    do: {:noreply, DisplayPreferences.toggle_fold_night(socket)}
 
   def handle_event("calendar:toggle_rail", _params, socket),
     do: {:noreply, assign(socket, :rail_open, !socket.assigns.rail_open)}
@@ -489,6 +486,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def handle_event(event, params, socket) when event in @view_events,
     do: ViewEvents.handle(event, params, socket)
+
+  def handle_event(event, params, socket) when event in @power_events,
+    do: PowerEvents.handle(event, params, socket)
 
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}
