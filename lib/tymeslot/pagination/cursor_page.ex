@@ -7,15 +7,13 @@ defmodule Tymeslot.Pagination.CursorPage do
   decodes to `{:error, :invalid_cursor}`, preventing attackers from forging
   an `after_id` to probe another user's row ordering.
 
-  Cursors are intentionally permanent (`max_age: :infinity`): they represent
-  bookmarkable pagination state and must remain valid across server restarts
-  and indefinitely long-lived browser sessions. Both `encode_cursor/1` and
-  `decode_cursor/1` pass `max_age: :infinity` explicitly so the intent is
-  auditable at both call sites.
+  Cursors are intentionally permanent (the `:cursor_page` purpose in
+  `Tymeslot.SignedToken` never expires): they represent bookmarkable
+  pagination state and must remain valid across server restarts and
+  indefinitely long-lived browser sessions.
   """
 
-  alias Phoenix.Token
-  alias TymeslotWeb.Endpoint
+  alias Tymeslot.SignedToken
 
   @enforce_keys [:items]
   defstruct items: [], next_cursor: nil, prev_cursor: nil, page_size: nil, has_more: false
@@ -29,19 +27,13 @@ defmodule Tymeslot.Pagination.CursorPage do
         }
   @type t :: t(map())
 
-  # Bump the salt when the cursor payload shape changes; it also invalidates
-  # every cursor currently in the wild.
-  @salt "cursor-page:v1"
-
   @doc """
   Encodes a cursor map like %{after_start: DateTime.t(), after_id: binary()} to a signed URL-safe string.
   """
   @spec encode_cursor(%{after_start: DateTime.t(), after_id: binary()}) :: String.t()
   def encode_cursor(%{after_start: %DateTime{} = after_start, after_id: after_id})
       when is_binary(after_id) do
-    Token.sign(Endpoint, @salt, %{after_start: after_start, after_id: after_id},
-      max_age: :infinity
-    )
+    SignedToken.sign(:cursor_page, %{after_start: after_start, after_id: after_id})
   end
 
   @doc """
@@ -52,7 +44,7 @@ defmodule Tymeslot.Pagination.CursorPage do
   @spec decode_cursor(String.t()) ::
           {:ok, %{after_start: DateTime.t(), after_id: binary()}} | {:error, :invalid_cursor}
   def decode_cursor(cursor) when is_binary(cursor) do
-    case Token.verify(Endpoint, @salt, cursor, max_age: :infinity) do
+    case SignedToken.verify(:cursor_page, cursor) do
       {:ok, %{after_start: %DateTime{} = after_start, after_id: after_id}}
       when is_binary(after_id) ->
         {:ok, %{after_start: after_start, after_id: after_id}}

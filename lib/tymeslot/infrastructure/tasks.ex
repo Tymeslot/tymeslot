@@ -7,8 +7,8 @@ defmodule Tymeslot.Infrastructure.Tasks do
   ties them to the request or job that started it, and a crash in it is
   recorded with no user, request or job attached. Each function here mirrors
   the `Task` or `Task.Supervisor` function of the same name, capturing the
-  caller's context with `ErrorTracking.capture_context/0` and restoring it in
-  the task before the task's function runs.
+  caller's context with `ErrorTracking.capture_context/0`, and its Gettext
+  locale, and restoring both in the task before the task's function runs.
 
   Every task in the application is spawned through this module;
   `CredoChecks.TaskSpawnBoundary` flags a direct `Task` or `Task.Supervisor`
@@ -78,22 +78,31 @@ defmodule Tymeslot.Infrastructure.Tasks do
         options
       )
 
-  # Captured here, in the caller; restored in the task.
+  # Captured here, in the caller; restored in the task. The Gettext locale
+  # is process state too, so text a task builds (a refusal, a flash) is in
+  # the caller's language rather than the default.
   defp with_caller_context(fun) when is_function(fun, 0) do
-    context = ErrorTracking.capture_context()
+    context = capture()
 
     fn ->
-      ErrorTracking.restore_context(context)
+      restore(context)
       fun.()
     end
   end
 
   defp with_caller_context(fun) when is_function(fun, 1) do
-    context = ErrorTracking.capture_context()
+    context = capture()
 
     fn element ->
-      ErrorTracking.restore_context(context)
+      restore(context)
       fun.(element)
     end
+  end
+
+  defp capture, do: {ErrorTracking.capture_context(), Gettext.get_locale(TymeslotWeb.Gettext)}
+
+  defp restore({error_context, locale}) do
+    ErrorTracking.restore_context(error_context)
+    Gettext.put_locale(TymeslotWeb.Gettext, locale)
   end
 end

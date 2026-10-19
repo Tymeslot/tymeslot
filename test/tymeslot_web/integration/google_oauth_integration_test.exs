@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Security.Encryption
 
-  # `RateLimiter.OAuth.check_initiation/1` allows this many initiations per IP
+  # The `:oauth_initiation` rate limit allows this many initiations per IP
   # per 600s window; the next one is refused.
   @initiation_limit 10
 

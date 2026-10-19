@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
 
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Integrations.Calendar.IcsGenerator
 
   alias Tymeslot.Emails.Templates.{
@@ -15,6 +16,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     BookingApprovalRequest,
     BookingRequestOutcome,
     BookingRequestReceived,
+    MeetingEndChanged,
     RescheduleRequestExpired,
     SeatUpdateForOrganizer
   }
@@ -135,7 +137,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_seat_reschedule_to_participant(String.t(), map(), map()) ::
           {:ok, any()} | {:error, any()}
   def send_seat_reschedule_to_participant(participant_email, appointment_details, old_event) do
-    locale = Map.get(appointment_details, :attendee_locale, "en")
+    locale = RecipientLocale.attendee_locale(appointment_details)
 
     old_event_details =
       Map.merge(appointment_details, %{
@@ -213,7 +215,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   Sends a reschedule notice to a meeting guest, asking again whether they can
   attend. `appointment_details` must carry `:guest_name`, `:guest_accept_url`
   and `:guest_decline_url`, plus the reschedule context of
-  `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`.
+  `Tymeslot.Emails.AppointmentBuilder.for_reschedule/2`.
   """
   @spec send_guest_reschedule(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           {:ok, any()} | {:error, any()}
@@ -246,6 +248,28 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
+  Tells the attendee, or one group participant, that the meeting's end moved
+  in the host's calendar, with an updated calendar entry.
+  """
+  @spec send_end_change_to_attendee(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) :: {:ok, any()} | {:error, any()}
+  def send_end_change_to_attendee(attendee_email, appointment_details) do
+    Delivery.deliver(MeetingEndChanged.render(:attendee, attendee_email, appointment_details))
+  end
+
+  @doc """
+  Tells a guest that the meeting's end moved in the host's calendar, with an
+  updated calendar entry.
+  """
+  @spec send_guest_end_change(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
+          {:ok, any()} | {:error, any()}
+  def send_guest_end_change(guest_email, appointment_details) do
+    Delivery.deliver(MeetingEndChanged.render(:guest, guest_email, appointment_details))
+  end
+
+  @doc """
   Sends a reschedule notice to the attendee.
   """
   @spec send_reschedule_email_to_attendee(
@@ -257,38 +281,6 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     Delivery.deliver(
       AppointmentRescheduled.render(:attendee, attendee_email, appointment_details)
     )
-  end
-
-  @doc """
-  Sends reschedule notices to both organizer and attendee.
-
-  The payload must be built by
-  `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`, which
-  carries the previous slot alongside the new one.
-  """
-  @spec send_reschedule_emails(Tymeslot.Emails.EmailService.appointment_details()) ::
-          {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
-  def send_reschedule_emails(appointment_details) do
-    Logger.info("Sending reschedule notices")
-
-    organizer_result =
-      send_reschedule_email_to_organizer(
-        appointment_details.organizer_email,
-        appointment_details
-      )
-
-    attendee_result =
-      send_reschedule_email_to_attendee(
-        appointment_details.attendee_email,
-        appointment_details
-      )
-
-    Logger.info("Reschedule notices sent",
-      organizer_sent: match?({:ok, _}, organizer_result),
-      attendee_sent: match?({:ok, _}, attendee_result)
-    )
-
-    {organizer_result, attendee_result}
   end
 
   @doc """
@@ -327,18 +319,6 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
 
   @doc """
   Sends appointment reminders to both organizer and attendee.
-  """
-  @spec send_appointment_reminders(Tymeslot.Emails.EmailService.appointment_details()) ::
-          {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
-  def send_appointment_reminders(appointment_details) do
-    time_until =
-      appointment_details[:time_until] || appointment_details[:reminder_time] || "30 minutes"
-
-    send_appointment_reminders(appointment_details, time_until)
-  end
-
-  @doc """
-  Sends appointment reminders to both organizer and attendee.
   Takes a time_until parameter (e.g., "30 minutes", "1 hour", "24 hours").
   """
   @spec send_appointment_reminders(
@@ -371,22 +351,6 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     )
 
     {organizer_result, attendee_result}
-  end
-
-  @doc """
-  Sends a cancellation email. Dispatches to organizer or attendee based on the email address.
-  """
-  @spec send_appointment_cancellation(
-          String.t(),
-          Tymeslot.Emails.EmailService.appointment_details()
-        ) ::
-          {:ok, any()} | {:error, any()}
-  def send_appointment_cancellation(email, appointment_details) do
-    if email == appointment_details.organizer_email do
-      send_cancellation_email_to_organizer(email, appointment_details)
-    else
-      send_cancellation_email_to_attendee(email, appointment_details)
-    end
   end
 
   @doc """
@@ -433,33 +397,5 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     )
 
     result
-  end
-
-  @doc """
-  Sends cancellation emails to both organizer and attendee.
-  """
-  @spec send_cancellation_emails(Tymeslot.Emails.EmailService.appointment_details()) ::
-          {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
-  def send_cancellation_emails(appointment_details) do
-    Logger.info("Sending appointment cancellations")
-
-    organizer_result =
-      send_cancellation_email_to_organizer(
-        appointment_details.organizer_email,
-        appointment_details
-      )
-
-    attendee_result =
-      send_cancellation_email_to_attendee(
-        appointment_details.attendee_email,
-        appointment_details
-      )
-
-    Logger.info("Appointment cancellations sent",
-      organizer_sent: match?({:ok, _}, organizer_result),
-      attendee_sent: match?({:ok, _}, attendee_result)
-    )
-
-    {organizer_result, attendee_result}
   end
 end

@@ -82,7 +82,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
     answers = %{@topic_id => "Contract renewal", @size_id => "team"}
     %{user: user, meeting: meeting} = booking_with(snapshot, answers)
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, snapshot) == answers
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), snapshot) == answers
   end
 
   test "never carries a note's acknowledgement, even when the note is unchanged" do
@@ -95,7 +95,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
 
     %{user: user, meeting: meeting} = booking_with(snapshot, answers)
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, snapshot) ==
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), snapshot) ==
              %{@topic_id => "Contract renewal"}
   end
 
@@ -108,7 +108,9 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
 
     edited = [topic_question(%{"label" => "What would you like to discuss?"}), size_question()]
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, edited) == %{@size_id => "team"}
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), edited) == %{
+             @size_id => "team"
+           }
   end
 
   test "drops the answer to a question whose options changed" do
@@ -128,7 +130,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
       })
     ]
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, edited) == %{
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), edited) == %{
              @topic_id => "Contract renewal"
            }
   end
@@ -142,7 +144,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
 
     reordered = [size_question(%{"position" => 0}), topic_question(%{"position" => 1})]
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, reordered) == %{
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), reordered) == %{
              @topic_id => "Contract renewal",
              @size_id => "team"
            }
@@ -155,7 +157,7 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
         %{@topic_id => "Contract renewal", @size_id => "team"}
       )
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, [topic_question()]) == %{
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), [topic_question()]) == %{
              @topic_id => "Contract renewal"
            }
   end
@@ -164,23 +166,23 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
     %{user: user, meeting: meeting} =
       booking_with([topic_question()], %{@topic_id => "Contract renewal"})
 
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, [topic_question(), size_question()]) ==
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), [
+             topic_question(),
+             size_question()
+           ]) ==
              %{@topic_id => "Contract renewal"}
   end
 
-  test "carries nothing when there is no reschedule, no organiser or no questions" do
+  test "carries nothing when there is no reschedule or no questions" do
     %{user: user, meeting: meeting} =
       booking_with([topic_question()], %{@topic_id => "Contract renewal"})
 
-    assert ThemeFlow.reschedule_answers(nil, user.id, [topic_question()]) == %{}
-    assert ThemeFlow.reschedule_answers(meeting.uid, nil, [topic_question()]) == %{}
-    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, []) == %{}
+    assert ThemeFlow.reschedule_answers(nil, [topic_question()]) == %{}
+    assert ThemeFlow.reschedule_answers(context!(meeting.uid, user.id), []) == %{}
   end
 
-  test "carries nothing for a meeting belonging to another organiser" do
-    %{meeting: meeting} = booking_with([topic_question()], %{@topic_id => "Contract renewal"})
-    other = insert(:user)
-
-    assert ThemeFlow.reschedule_answers(meeting.uid, other.id, [topic_question()]) == %{}
+  defp context!(uid, user_id) do
+    {:ok, context} = ThemeFlow.reschedule_context(uid, user_id)
+    context
   end
 end

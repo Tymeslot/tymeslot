@@ -374,19 +374,19 @@ msgstr "Este recurso de automação está disponível no plano Pro."
 msgid "Total"
 msgstr "Total"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Dispara quando o horário de um agendamento muda"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Dispara quando um novo agendamento é criado com sucesso"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -539,17 +539,17 @@ msgstr "Histórico de entregas: %{name}"
 msgid "Too many requests. Please slow down."
 msgstr "Muitas requisições. Aguarde um pouco e tente novamente."
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Cancelled"
 msgstr "Reunião cancelada"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Created"
 msgstr "Reunião criada"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
 msgstr "Reunião remarcada"
@@ -609,37 +609,37 @@ msgstr "A URL aponta para um endereço privado ou restrito"
 msgid "Webhook returned status %{status}"
 msgstr "O webhook devolveu status %{status}"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Declined"
 msgstr "Agendamento recusado"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Request Expired"
 msgstr "Pedido de agendamento expirado"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Requested"
 msgstr "Agendamento solicitado"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when nobody answers a booking request before its deadline"
 msgstr "Dispara quando ninguém responde a um pedido de agendamento antes do prazo"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
 msgstr "Dispara quando alguém pede um agendamento num tipo de reunião que precisa da sua aprovação"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Dispara quando você recusa um pedido de agendamento"
 
-#: lib/tymeslot/webhooks.ex
+#: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Dispara neste evento"
@@ -693,3 +693,23 @@ msgstr "Excluir webhook"
 #, elixir-autogen, elixir-format
 msgid "Regenerate token"
 msgstr "Gerar novo token"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "For stronger protection, verify the signature. The header has the form t=TIMESTAMP,v1=SIGNATURE. Compute the HMAC-SHA256 of the timestamp, a full stop and the raw request body, keyed with your webhook token, and compare its hexadecimal form with the signature. Reject requests whose timestamp is more than five minutes old."
+msgstr "Para uma proteção maior, verifique a assinatura. O cabeçalho tem o formato t=TIMESTAMP,v1=SIGNATURE. Calcule o HMAC-SHA256 do carimbo de data/hora, de um ponto (.) e do corpo bruto da requisição, usando seu token de webhook como chave, e compare a forma hexadecimal do resultado com a assinatura. Rejeite as requisições cujo carimbo de data/hora tenha mais de cinco minutos."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Request signature"
+msgstr "Assinatura da requisição"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Pausado"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
+msgstr "Pausado: seu plano não inclui automações. Ao fazer upgrade, ele é retomado automaticamente."

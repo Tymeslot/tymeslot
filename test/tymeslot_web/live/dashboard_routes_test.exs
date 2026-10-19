@@ -49,7 +49,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     test "dashboard requires login", %{conn: conn} do
       conn = get(conn, ~p"/dashboard")
 
-      assert redirected_to(conn) == "/auth/login"
+      assert redirected_to(conn) == "/auth/login?redirect_to=%2Fdashboard"
       assert Flash.get(conn.assigns.flash, :error) =~ "You must be logged in"
     end
   end
@@ -273,6 +273,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
     test "shows upcoming meeting title and attendee name", %{conn: conn, user: user} do
       insert(:meeting,
+        organizer_user_id: user.id,
         organizer_email: user.email,
         title: "Strategy Session",
         attendee_name: "Jane Smith"
@@ -298,6 +299,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       assert html =~ "Nothing on your plate today or tomorrow"
 
       insert(:meeting,
+        organizer_user_id: user.id,
         organizer_email: user.email,
         title: "Newly Scheduled Meeting"
       )
@@ -479,6 +481,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       user: user
     } do
       insert(:meeting,
+        organizer_user_id: user.id,
         organizer_email: user.email,
         title: "Timeless Meeting",
         attendee_name: "Jane"

@@ -3,15 +3,14 @@ defmodule TymeslotWeb.StripeWebhookController do
   Receives Stripe webhooks on two endpoints with distinct signing secrets:
 
     * `webhook/2` (`/webhooks/stripe`): platform events such as
-      subscriptions and invoices, verified with `STRIPE_WEBHOOK_SECRET` and
-      processed by `Tymeslot.Payments.Webhooks.Delivery`.
+      subscriptions and invoices, verified with `STRIPE_WEBHOOK_SECRET`.
     * `connect/2` (`/webhooks/stripe/connect`): Connect events for booking
-      payments, verified with `STRIPE_CONNECT_WEBHOOK_SECRET` and processed by
-      `Tymeslot.MeetingPayments.process_webhook/2`.
+      payments, verified with `STRIPE_CONNECT_WEBHOOK_SECRET`.
 
   Both run behind `TymeslotWeb.Plugs.StripeWebhookPlug` (rate limiting) and
-  share one deduplication policy, `Tymeslot.Payments.Webhooks.Idempotency`,
-  so this controller only maps the domain outcome to a status. Every response
+  through `Tymeslot.Payments.process_webhook/3`, which verifies, deduplicates
+  and dispatches either kind, so this controller only maps the domain
+  outcome to a status. Every response
   has an empty body; the reason is in the logs, never sent to the caller.
 
     * 200: processed, a duplicate, or failed permanently (acknowledged so
@@ -22,16 +21,16 @@ defmodule TymeslotWeb.StripeWebhookController do
 
   use TymeslotWeb, :controller
 
-  alias Tymeslot.MeetingPayments
-  alias Tymeslot.Payments.Webhooks.Delivery
+  alias Tymeslot.Payments
 
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def webhook(conn, _params),
-    do: respond(conn, Delivery.process(raw_body(conn), signature(conn)))
+  def webhook(conn, _params), do: process(conn, :platform)
 
   @spec connect(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def connect(conn, _params),
-    do: respond(conn, MeetingPayments.process_webhook(raw_body(conn), signature(conn)))
+  def connect(conn, _params), do: process(conn, :connect)
+
+  defp process(conn, endpoint),
+    do: respond(conn, Payments.process_webhook(endpoint, raw_body(conn), signature(conn)))
 
   # `WebhookBodyCachePlug` caches the raw body for the configured webhook
   # paths; without it there is nothing a signature can verify against.

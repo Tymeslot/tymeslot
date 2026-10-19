@@ -439,6 +439,7 @@ msgid "Schedule duplicated"
 msgstr "Zeitplan dupliziert"
 
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule name"
 msgstr "Name des Zeitplans"
@@ -875,3 +876,48 @@ msgstr "Pause löschen"
 #, elixir-autogen, elixir-format
 msgid "Delete schedule"
 msgstr "Zeitplan löschen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} cannot be more than %{max}"
+msgstr "%{setting} darf höchstens %{max} betragen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be a whole number"
+msgstr "%{setting} muss eine ganze Zahl sein"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be at least %{min}"
+msgstr "%{setting} muss mindestens %{min} betragen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking days"
+msgstr "Vorausbuchungszeitraum in Tagen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr "Puffer nach Terminen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr "Puffer vor Terminen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum advance hours"
+msgstr "Mindestvorlaufzeit in Stunden"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break no longer fits these hours. Move or delete it first."
+msgstr "Die Pause %{break} passt nicht mehr in diese Zeiten. Verschieben oder löschen Sie sie zuerst."
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break on %{day} falls outside that day's hours. Move or delete it, then try again."
+msgstr "Die Pause %{break} am %{day} liegt außerhalb der Zeiten dieses Tages. Verschieben oder löschen Sie sie und versuchen Sie es dann erneut."

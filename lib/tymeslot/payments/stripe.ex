@@ -8,10 +8,10 @@ defmodule Tymeslot.Payments.Stripe do
   require Logger
 
   alias Ecto.UUID
-  alias Stripe.{BillingPortal, Checkout.Session, Customer, Subscription, Webhook}
+  alias Stripe.{BillingPortal, Checkout.Session, Customer, Subscription}
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Behaviours.StripeProvider
-  alias Tymeslot.Payments.RetryHelper
+  alias Tymeslot.Payments.Config
   alias Tymeslot.Security.SecurityLogger
 
   @type stripe_result :: {:ok, map()} | {:error, any()}
@@ -23,9 +23,11 @@ defmodule Tymeslot.Payments.Stripe do
   defp subscription_mod,
     do: Application.get_env(:tymeslot, :stripe_subscription_mod, Subscription)
 
-  defp webhook_mod, do: Application.get_env(:tymeslot, :stripe_webhook_mod, Webhook)
-
   defp charge_mod, do: Application.get_env(:tymeslot, :stripe_charge_mod, Stripe.Charge)
+  defp invoice_mod, do: Application.get_env(:tymeslot, :stripe_invoice_mod, Stripe.Invoice)
+
+  defp invoice_payment_mod,
+    do: Application.get_env(:tymeslot, :stripe_invoice_payment_mod, Stripe.InvoicePayment)
 
   @doc """
   Creates a Stripe customer for the given email.
@@ -52,68 +54,23 @@ defmodule Tymeslot.Payments.Stripe do
 
     idempotency_key = generate_idempotency_key("customer_create", email)
 
-    RetryHelper.execute_with_retry(fn ->
-      customer_mod().create(customer_params, api_key_opts(idempotency_key))
-    end)
+    with {:ok, opts} <- api_key_opts(idempotency_key),
+         do: customer_mod().create(customer_params, opts)
   end
 
   # Private functions
 
+  # Each call is made once: a failure goes back to the caller, whose own
+  # retry (Stripe redelivering a webhook, Oban rerunning a job, a person
+  # trying again) decides whether it is worth another attempt.
   defp api_key_opts(idempotency_key \\ nil) do
-    case stripe_api_key() do
+    case Config.stripe_api_key() do
       nil ->
-        throw({:error, :missing_api_key})
+        {:error, :missing_api_key}
 
       key ->
-        base_opts = [api_key: key]
-
-        if idempotency_key do
-          Keyword.put(base_opts, :idempotency_key, idempotency_key)
-        else
-          base_opts
-        end
+        {:ok, Enum.reject([api_key: key, idempotency_key: idempotency_key], &is_nil(elem(&1, 1)))}
     end
-  end
-
-  defp stripe_api_key do
-    Application.get_env(:tymeslot, :stripe_secret_key) ||
-      Application.get_env(:stripity_stripe, :api_key)
-  end
-
-  # Finds the subscription item to update
-  # Can either use the subscription_item_id from opts or default to the first item
-  defp find_subscription_item(subscription, opts) do
-    items = Map.get(subscription, :items) || %{data: []}
-
-    subscription_item =
-      if item_id = Map.get(opts, :subscription_item_id) do
-        Enum.find(items.data, fn item -> item.id == item_id end)
-      else
-        List.first(items.data)
-      end
-
-    if subscription_item do
-      {:ok, subscription_item}
-    else
-      Logger.error("No subscription items found for subscription")
-      {:error, :no_subscription_items}
-    end
-  end
-
-  # Updates a subscription item with a new price
-  defp update_subscription_item(subscription_id, subscription_item, new_price_id, idempotency_key) do
-    subscription_mod().update(
-      subscription_id,
-      %{
-        items: [
-          %{
-            id: subscription_item.id,
-            price: new_price_id
-          }
-        ]
-      },
-      api_key_opts(idempotency_key)
-    )
   end
 
   @doc false
@@ -140,9 +97,7 @@ defmodule Tymeslot.Payments.Stripe do
   def expire_checkout_session(session_id) when is_binary(session_id) do
     Logger.info("Expiring Stripe checkout session", session_id: session_id)
 
-    RetryHelper.execute_with_retry(fn ->
-      session_mod().expire(session_id, %{}, api_key_opts())
-    end)
+    with {:ok, opts} <- api_key_opts(), do: session_mod().expire(session_id, %{}, opts)
   end
 
   @doc """
@@ -160,13 +115,15 @@ defmodule Tymeslot.Payments.Stripe do
 
     idempotency_key = generate_idempotency_key("subscription_checkout", request_id)
 
-    RetryHelper.execute_with_retry(fn ->
-      session_mod().create(params, api_key_opts(idempotency_key))
-    end)
+    with {:ok, opts} <- api_key_opts(idempotency_key), do: session_mod().create(params, opts)
   end
 
   @doc """
   Cancels a Stripe subscription.
+
+  The idempotency key defaults to one scoped to the operation, subscription and
+  day. A caller whose repeated cancels on the same day are each meant to reach
+  Stripe passes its own `:idempotency_key`.
   """
   @impl StripeProvider
   @spec cancel_subscription(String.t(), keyword()) :: stripe_result()
@@ -183,44 +140,116 @@ defmodule Tymeslot.Payments.Stripe do
       end
 
     operation = if at_period_end, do: "cancel_at_period_end", else: "cancel_now"
-    idempotency_key = generate_idempotency_key("subscription_#{operation}", subscription_id)
 
-    RetryHelper.execute_with_retry(fn ->
-      if at_period_end do
-        subscription_mod().update(subscription_id, params, api_key_opts(idempotency_key))
-      else
-        subscription_mod().cancel(subscription_id, %{}, api_key_opts(idempotency_key))
-      end
-    end)
+    idempotency_key =
+      Keyword.get_lazy(opts, :idempotency_key, fn ->
+        generate_idempotency_key("subscription_#{operation}", subscription_id)
+      end)
+
+    with {:ok, opts} <- api_key_opts(idempotency_key) do
+      if at_period_end,
+        do: subscription_mod().update(subscription_id, params, opts),
+        else: subscription_mod().cancel(subscription_id, %{}, opts)
+    end
   end
 
   @doc """
-  Updates a Stripe subscription to a new price.
+  Undoes a cancel-at-period-end, so the subscription renews again.
+
+  Sent without an idempotency key: setting the flag to false is idempotent by
+  itself, and a day-scoped key would make a second resume on the same day
+  replay the first response without reaching Stripe.
   """
   @impl StripeProvider
-  @spec update_subscription(String.t(), String.t(), map()) :: stripe_result()
-  def update_subscription(subscription_id, new_price_id, opts \\ %{})
-      when is_binary(subscription_id) and is_binary(new_price_id) do
-    Logger.info("Updating Stripe subscription",
+  @spec resume_subscription(String.t()) :: stripe_result()
+  def resume_subscription(subscription_id) when is_binary(subscription_id) do
+    Logger.info("Resuming Stripe subscription", subscription_id: subscription_id)
+
+    with {:ok, opts} <- api_key_opts(),
+         do: subscription_mod().update(subscription_id, %{cancel_at_period_end: false}, opts)
+  end
+
+  @doc """
+  Lists charges from Stripe, one page at a time, with Stripe's own filters
+  (`customer`, `created`, `limit`, `starting_after`, `expand`). A charge's
+  refunds come back only when expanded (`expand: ["data.refunds"]`).
+  """
+  @impl StripeProvider
+  @spec list_charges(map()) :: stripe_result()
+  def list_charges(params) when is_map(params) do
+    Logger.info("Listing Stripe charges", params: LogFormat.reason(params))
+
+    with {:ok, opts} <- api_key_opts(), do: charge_mod().list(params, opts)
+  end
+
+  @doc """
+  Lists invoices from Stripe, one page at a time, with Stripe's own filters
+  (`customer`, `subscription`, `status`, `created`, `limit`,
+  `starting_after`).
+  """
+  @impl StripeProvider
+  @spec list_invoices(map()) :: stripe_result()
+  def list_invoices(params) when is_map(params) do
+    Logger.info("Listing Stripe invoices", params: LogFormat.reason(params))
+
+    with {:ok, opts} <- api_key_opts(), do: invoice_mod().list(params, opts)
+  end
+
+  @doc """
+  Retrieves a Stripe invoice.
+  """
+  @impl StripeProvider
+  @spec get_invoice(String.t()) :: stripe_result()
+  def get_invoice(invoice_id) when is_binary(invoice_id) do
+    Logger.info("Retrieving Stripe invoice", invoice_id: invoice_id)
+
+    with {:ok, opts} <- api_key_opts(), do: invoice_mod().retrieve(invoice_id, %{}, opts)
+  end
+
+  @doc """
+  Lists the payments made against invoices, one page at a time, with
+  Stripe's own filters (`invoice`, `payment`, `status`, `limit`,
+  `starting_after`). Filtering on `payment` finds the invoice a payment
+  intent paid: `%{payment: %{type: "payment_intent", payment_intent: id}}`.
+  """
+  @impl StripeProvider
+  @spec list_invoice_payments(map()) :: stripe_result()
+  def list_invoice_payments(params) when is_map(params) do
+    Logger.info("Listing Stripe invoice payments", params: LogFormat.reason(params))
+
+    with {:ok, opts} <- api_key_opts(), do: invoice_payment_mod().list(params, opts)
+  end
+
+  @doc """
+  Turns Stripe Tax's automatic calculation on or off for a subscription, from
+  its next invoice on.
+
+  Sent without an idempotency key: setting the flag is idempotent by itself.
+  """
+  @impl StripeProvider
+  @spec update_subscription_automatic_tax(String.t(), boolean()) :: stripe_result()
+  def update_subscription_automatic_tax(subscription_id, enabled)
+      when is_binary(subscription_id) and is_boolean(enabled) do
+    Logger.info("Updating Stripe subscription automatic tax",
       subscription_id: subscription_id,
-      new_price_id: new_price_id
+      enabled: enabled
     )
 
-    idempotency_key =
-      generate_idempotency_key("subscription_update", "#{subscription_id}_#{new_price_id}")
+    with {:ok, opts} <- api_key_opts(),
+         do:
+           subscription_mod().update(subscription_id, %{automatic_tax: %{enabled: enabled}}, opts)
+  end
 
-    RetryHelper.execute_with_retry(fn ->
-      with {:ok, subscription} <-
-             subscription_mod().retrieve(subscription_id, %{}, api_key_opts()),
-           {:ok, subscription_item} <- find_subscription_item(subscription, opts) do
-        update_subscription_item(
-          subscription_id,
-          subscription_item,
-          new_price_id,
-          idempotency_key
-        )
-      end
-    end)
+  @doc """
+  Deletes a Stripe customer. Stripe keeps the customer's invoices and charges
+  for its own records; the customer object and its stored details go.
+  """
+  @impl StripeProvider
+  @spec delete_customer(String.t()) :: stripe_result()
+  def delete_customer(customer_id) when is_binary(customer_id) do
+    Logger.info("Deleting Stripe customer", customer_id: customer_id)
+
+    with {:ok, opts} <- api_key_opts(), do: customer_mod().delete(customer_id, opts)
   end
 
   @doc """
@@ -231,9 +260,8 @@ defmodule Tymeslot.Payments.Stripe do
   def get_subscription(subscription_id) when is_binary(subscription_id) do
     Logger.info("Retrieving Stripe subscription", subscription_id: subscription_id)
 
-    RetryHelper.execute_with_retry(fn ->
-      subscription_mod().retrieve(subscription_id, %{}, api_key_opts())
-    end)
+    with {:ok, opts} <- api_key_opts(),
+         do: subscription_mod().retrieve(subscription_id, %{}, opts)
   end
 
   @doc """
@@ -244,20 +272,7 @@ defmodule Tymeslot.Payments.Stripe do
   def get_charge(charge_id) when is_binary(charge_id) do
     Logger.info("Retrieving Stripe charge", charge_id: charge_id)
 
-    RetryHelper.execute_with_retry(fn ->
-      charge_mod().retrieve(charge_id, %{}, api_key_opts())
-    end)
-  end
-
-  @doc """
-  Constructs and verifies a webhook event from Stripe.
-  This is primarily used by the webhook signature verifier.
-  """
-  @impl StripeProvider
-  @spec construct_webhook_event(binary(), String.t(), String.t()) :: stripe_result()
-  def construct_webhook_event(payload, signature, secret)
-      when is_binary(payload) and is_binary(signature) and is_binary(secret) do
-    webhook_mod().construct_event(payload, signature, secret)
+    with {:ok, opts} <- api_key_opts(), do: charge_mod().retrieve(charge_id, %{}, opts)
   end
 
   @doc """
@@ -268,19 +283,7 @@ defmodule Tymeslot.Payments.Stripe do
   def list_subscriptions(params) when is_map(params) do
     Logger.info("Listing Stripe subscriptions", params: LogFormat.reason(params))
 
-    RetryHelper.execute_with_retry(fn ->
-      subscription_mod().list(params, api_key_opts())
-    end)
-  end
-
-  @doc """
-  Returns the Stripe webhook secret from configuration or environment.
-  """
-  @impl StripeProvider
-  @spec webhook_secret() :: String.t() | nil
-  def webhook_secret do
-    Application.get_env(:stripity_stripe, :webhook_secret) ||
-      Application.get_env(:tymeslot, :stripe_webhook_secret)
+    with {:ok, opts} <- api_key_opts(), do: subscription_mod().list(params, opts)
   end
 
   @doc """
@@ -292,11 +295,7 @@ defmodule Tymeslot.Payments.Stripe do
       when is_binary(customer_id) and is_binary(return_url) do
     Logger.info("Creating Stripe billing portal session", customer_id: customer_id)
 
-    RetryHelper.execute_with_retry(fn ->
-      BillingPortal.Session.create(
-        %{customer: customer_id, return_url: return_url},
-        api_key_opts()
-      )
-    end)
+    with {:ok, opts} <- api_key_opts(),
+         do: BillingPortal.Session.create(%{customer: customer_id, return_url: return_url}, opts)
   end
 end

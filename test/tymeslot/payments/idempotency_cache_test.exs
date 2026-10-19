@@ -2,63 +2,30 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
   use Tymeslot.DataCase, async: false
   @moduletag :payments
 
+  import ExUnit.CaptureLog
+  import Tymeslot.ConfigTestHelpers
+
+  alias ErrorTracker.Error
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
+  alias Tymeslot.Payments.Webhooks.StripeEventSchema, as: WebhookEvent
   alias Tymeslot.Repo
-  alias Tymeslot.Webhooks.WebhookEventSchema, as: WebhookEvent
-
-  setup do
-    # Clear cache before each test
-    IdempotencyCache.clear_all()
-    :ok
-  end
-
-  describe "check_idempotency/1" do
-    test "returns :not_processed for new event" do
-      event_id = generate_event_id()
-      assert {:ok, :not_processed} = IdempotencyCache.check_idempotency(event_id)
-    end
-
-    test "returns :already_processed for previously processed event" do
-      event_id = generate_event_id()
-
-      # Mark as processed
-      IdempotencyCache.mark_processed(event_id)
-
-      # Check again
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id)
-    end
-  end
 
   describe "mark_processed/1" do
     test "marks an event as processed" do
       event_id = generate_event_id()
 
-      # Initially not processed
-      assert {:ok, :not_processed} = IdempotencyCache.check_idempotency(event_id)
-
-      # Mark as processed
       assert :ok = IdempotencyCache.mark_processed(event_id)
 
-      # Now should be processed
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id)
+      assert {:ok, :already_processed} = IdempotencyCache.reserve(event_id)
     end
 
-    test "can mark multiple events independently" do
+    test "marks each event independently" do
       {event_id1, event_id2} = generate_two_event_ids()
 
-      # Mark first event
       IdempotencyCache.mark_processed(event_id1)
 
-      # First is processed, second is not
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id1)
-      assert {:ok, :not_processed} = IdempotencyCache.check_idempotency(event_id2)
-
-      # Mark second event
-      IdempotencyCache.mark_processed(event_id2)
-
-      # Both are now processed
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id1)
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id2)
+      assert {:ok, :already_processed} = IdempotencyCache.reserve(event_id1)
+      assert {:ok, :reserved} = IdempotencyCache.reserve(event_id2)
     end
   end
 
@@ -85,6 +52,23 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
 
       record = Repo.get_by!(WebhookEvent, stripe_event_id: event_id)
       assert is_nil(record.payload)
+    end
+
+    test "an event that could not be recorded is reported, and still marked in memory" do
+      with_config(:error_tracker, enabled: true)
+      # An event without a type fails the changeset, as any write error would.
+      event_id = generate_event_id()
+
+      log = capture_log(fn -> assert :ok = IdempotencyCache.mark_processed(event_id, "") end)
+
+      assert log =~ "processed Stripe event was not recorded"
+      refute Repo.get_by(WebhookEvent, stripe_event_id: event_id)
+      assert {:ok, :already_processed} = IdempotencyCache.reserve(event_id)
+
+      assert [%Error{reason: ":stripe_event_not_recorded"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert [%{context: %{"event_id" => ^event_id}}] = error.occurrences
     end
   end
 
@@ -164,27 +148,6 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
                  match?({:ok, :already_processed}, result)
              end),
              "non-winners must resolve to :in_progress or :already_processed, got: #{inspect(losers)}"
-    end
-  end
-
-  describe "clear_all/0" do
-    test "clears all cached events" do
-      {event_id1, event_id2} = generate_two_event_ids()
-
-      # Mark events as processed
-      IdempotencyCache.mark_processed(event_id1)
-      IdempotencyCache.mark_processed(event_id2)
-
-      # Verify they are processed
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id1)
-      assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id2)
-
-      # Clear all
-      IdempotencyCache.clear_all()
-
-      # Both should now be not processed
-      assert {:ok, :not_processed} = IdempotencyCache.check_idempotency(event_id1)
-      assert {:ok, :not_processed} = IdempotencyCache.check_idempotency(event_id2)
     end
   end
 

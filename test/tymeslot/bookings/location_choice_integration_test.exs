@@ -99,7 +99,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       "message" => ""
     }
 
-    Create.execute_with_video_room(params, form_data)
+    Create.execute(params, form_data, with_video_room: true)
   end
 
   describe "an in-person location" do

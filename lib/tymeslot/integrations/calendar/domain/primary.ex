@@ -1,19 +1,21 @@
-defmodule Tymeslot.Integrations.CalendarPrimary do
+defmodule Tymeslot.Integrations.Calendar.Primary do
   @moduledoc """
-  Context for managing primary and booking calendar selection.
+  Sets a user's primary calendar integration when they choose one, and reads
+  it back; `Calendar.PrimaryElection` is what picks one without being asked.
 
-  Handles setting primary calendars, managing booking calendars,
-  and automatic primary calendar selection logic.
+  Making an integration the primary checks that it is active and bookable,
+  and gives it a booking calendar. An integration just connected through
+  OAuth has its booking calendar chosen here too, from what discovery finds.
   """
 
-  alias Tymeslot.Integrations.Calendar, as: CalendarContext
+  alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.BookingEligibility
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Profiles.ProfileQueries
 
   require Logger
@@ -26,7 +28,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   """
   @spec set_primary_calendar_integration(user_id(), integration_id()) ::
           {:ok, CalendarIntegrationSchema.t()}
-          | {:error, :not_found | :unauthorized | :not_bookable | Ecto.Changeset.t()}
+          | {:error, :not_found | :unauthorized | :not_bookable | :inactive | Ecto.Changeset.t()}
   def set_primary_calendar_integration(user_id, integration_id) do
     with {:ok, integration} <- validate_and_prepare_integration(user_id, integration_id),
          {:ok, _profile} <- update_profile_primary(user_id, integration_id) do
@@ -50,7 +52,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
         {:error, :no_primary_set}
 
       {:ok, %{primary_calendar_integration_id: id}} ->
-        CalendarManagement.get_calendar_integration(id, user_id)
+        Management.get_calendar_integration(id, user_id)
 
       {:error, _reason} ->
         {:error, :not_found}
@@ -58,101 +60,14 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   end
 
   @doc """
-  Deletes a calendar integration with primary calendar handling.
-  If deleting the primary calendar, automatically promotes another one.
-  """
-  @spec delete_with_primary_handling(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_with_primary_handling(integration) do
-    user_id = integration.user_id
-    integration_id = integration.id
-
-    # Check if this is the primary integration
-    is_primary =
-      case ProfileQueries.get_by_user_id(user_id) do
-        {:ok, profile} -> profile.primary_calendar_integration_id == integration_id
-        _error -> false
-      end
-
-    # Delete the integration
-    case CalendarIntegrationQueries.delete(integration) do
-      {:ok, _deleted} = success ->
-        # If we deleted the primary calendar, auto-promote the next one
-        if is_primary do
-          handle_primary_deletion(user_id)
-        end
-
-        success
-
-      error ->
-        error
-    end
-  end
-
-  @doc """
-  Auto-selects the primary calendar after discovery for all providers.
-  For OAuth providers, looks for a calendar marked as primary.
-  For CalDAV/Radicale, selects the first available calendar.
-  """
-  @spec auto_select_primary_calendar(CalendarIntegrationSchema.t(), [map()]) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def auto_select_primary_calendar(integration, calendars) do
-    oauth? =
-      case ProviderConfig.parse_known(integration.provider) do
-        {:ok, provider_atom} -> ProviderConfig.oauth_provider?(provider_atom)
-        {:error, :unknown} -> false
-      end
-
-    # Restrict the ladder to calendars eligible for booking (not read-only)
-    # so the id persisted here is never one `Defaults.resolve_default_calendar_id/1`
-    # — the read path — would then refuse to honour.
-    eligible = Defaults.eligible_for_booking(calendars)
-
-    # Find the default booking calendar
-    default_calendar_id =
-      if oauth? do
-        # For OAuth, prefer provider primary, then selected, then first
-        Defaults.primary_id(eligible) || Defaults.selected_id(eligible) ||
-          Defaults.first_id_from_list(eligible)
-      else
-        # For CalDAV/Radicale, prefer selected, else first
-        Defaults.selected_id(eligible) || Defaults.first_id_from_list(eligible)
-      end
-
-    # Update with calendar list and default booking calendar if found.
-    # For CalDAV-family providers, `calendar_list_attrs/1` keeps `calendar_paths`
-    # in sync with the selection — required so the CalDAV worker only fetches
-    # calendars the user has activated.
-    # For OAuth providers (Google, Outlook), the discovery maps are atom-keyed
-    # and carry no `:path` key, so passing them through `calendar_list_attrs/1`
-    # would write provider IDs (e.g. "primary") into `calendar_paths` — a field
-    # that must stay empty for OAuth integrations. Only write `calendar_list`
-    # for those providers.
-    attrs =
-      if oauth? do
-        %{calendar_list: calendars}
-      else
-        Selection.calendar_list_attrs(calendars)
-      end
-
-    attrs =
-      if default_calendar_id do
-        Map.put(attrs, :default_booking_calendar_id, default_calendar_id)
-      else
-        attrs
-      end
-
-    CalendarManagement.update_calendar_integration(integration, attrs)
-  end
-
-  @doc """
-  Discovers calendars for an integration and auto-selects the primary.
-  Falls back to returning the integration unchanged if discovery fails.
+  Discovers the calendars of an integration just connected through OAuth
+  (Google, Outlook) and picks its default booking calendar. Falls back to
+  returning the integration unchanged if discovery fails.
   """
   @spec discover_and_configure_calendars(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
   def discover_and_configure_calendars(integration) do
-    case CalendarContext.discover_calendars_for_integration(integration) do
+    case Discovery.discover_calendars_for_integration(integration) do
       {:ok, calendars} ->
         auto_select_primary_calendar(integration, calendars)
 
@@ -168,10 +83,40 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
 
   # Private helpers
 
+  # Stores the discovered list and picks the default booking calendar: the
+  # one already stored while discovery still finds it, so a reconnect never
+  # moves the owner's bookings, else the provider's primary, else a selected
+  # one, else the first. Only calendars a booking can be written to are
+  # considered (`Defaults.default_booking_calendar/2`), so the id stored here
+  # is never one `Defaults.resolve_default_calendar_id/1` would refuse. Only
+  # an OAuth connection reaches this, and its discovered entries carry no
+  # path, so `calendar_paths` is left alone: it must stay empty for those
+  # providers.
+  #
+  # Both the carried choices and the stored default are read from the row
+  # under its lock, not from `integration`, which was read before discovery
+  # went to the network: a change the owner made meanwhile is kept.
+  defp auto_select_primary_calendar(integration, discovered) do
+    discovered = Enum.map(discovered, &CalendarEntry.normalize/1)
+
+    Blocking.replace_selection(integration, fn stored ->
+      # A reconnected account keeps whether each calendar it already knew
+      # blocks availability; the selection is discovery's, as on any
+      # connect, but for its booking calendars, which `Blocking` keeps
+      # selected and blocking whatever discovery says.
+      calendars = Selection.carry_blocking_choices(discovered, stored.calendar_list)
+
+      case Defaults.default_booking_calendar(calendars, stored.default_booking_calendar_id) do
+        %CalendarEntry{id: id} -> {calendars, %{default_booking_calendar_id: id}}
+        nil -> {calendars, %{}}
+      end
+    end)
+  end
+
   defp validate_and_prepare_integration(user_id, integration_id) do
     with {:ok, integration} <-
-           CalendarManagement.get_calendar_integration(integration_id, user_id),
-         :ok <- verify_integration_ownership(integration, user_id),
+           Management.get_calendar_integration(integration_id, user_id),
+         :ok <- verify_active(integration),
          :ok <- verify_bookable(integration) do
       {:ok, integration}
     else
@@ -192,53 +137,27 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
     end
   end
 
+  # A paused integration is never the calendar bookings are written to: the
+  # booking path would refuse it and fall back elsewhere, while the dashboard
+  # went on showing it as the primary.
+  defp verify_active(%CalendarIntegrationSchema{is_active: true}), do: :ok
+  defp verify_active(%CalendarIntegrationSchema{}), do: {:error, :inactive}
+
   defp update_profile_primary(user_id, integration_id) do
     ProfileQueries.set_primary_calendar_integration(user_id, integration_id)
   end
-
-  defp verify_integration_ownership(%CalendarIntegrationSchema{user_id: user_id}, user_id),
-    do: :ok
-
-  defp verify_integration_ownership(_integration, _different_user_id), do: {:error, :unauthorized}
 
   defp ensure_default_booking_calendar(%CalendarIntegrationSchema{} = integration) do
     if is_nil(integration.default_booking_calendar_id) do
       with calendar_id when is_binary(calendar_id) <-
              Defaults.resolve_default_calendar_id(integration),
-           {:ok, updated} <-
-             CalendarManagement.update_calendar_integration(integration, %{
-               default_booking_calendar_id: calendar_id
-             }) do
+           {:ok, updated} <- Blocking.set_default_booking_calendar(integration, calendar_id) do
         updated
       else
         _error -> integration
       end
     else
       integration
-    end
-  end
-
-  defp handle_primary_deletion(user_id) do
-    eligible_integrations =
-      user_id
-      |> CalendarManagement.list_calendar_integrations()
-      |> BookingEligibility.filter_bookable()
-
-    case eligible_integrations do
-      [] ->
-        # No bookable calendars left, clear the primary in the profile
-        ProfileQueries.clear_primary_calendar_integration(user_id)
-        :ok
-
-      integrations ->
-        # Promote the last available integration deterministically by insertion time
-        next_integration =
-          integrations
-          |> Enum.sort_by(& &1.inserted_at)
-          |> List.last()
-
-        set_primary_calendar_integration(user_id, next_integration.id)
-        :ok
     end
   end
 end

@@ -47,4 +47,41 @@ defmodule Tymeslot.ClockTest do
       end)
     end
   end
+
+  # `config/test.exs` sets `:clock_follows_callers`; see the moduledoc.
+  describe "a process spawned by the test" do
+    test "reads the test's frozen clock through its $callers" do
+      freeze_clock(~U[2026-07-03 12:00:00Z])
+
+      assert Task.await(Task.async(&Clock.utc_now/0)) == ~U[2026-07-03 12:00:00Z]
+    end
+
+    test "prefers its own freeze to its caller's" do
+      freeze_clock(~U[2026-07-03 12:00:00Z])
+
+      own =
+        Task.async(fn ->
+          freeze_clock(~U[2030-01-01 00:00:00Z])
+          Clock.utc_now()
+        end)
+
+      assert Task.await(own) == ~U[2030-01-01 00:00:00Z]
+    end
+
+    test "skips a caller that has exited" do
+      gone = spawn(fn -> :ok end)
+      ref = Process.monitor(gone)
+      assert_receive {:DOWN, ^ref, :process, ^gone, _reason}
+      freeze_clock(~U[2026-07-03 12:00:00Z])
+      test_pid = self()
+
+      task =
+        Task.async(fn ->
+          Process.put(:"$callers", [gone, test_pid])
+          Clock.utc_now()
+        end)
+
+      assert Task.await(task) == ~U[2026-07-03 12:00:00Z]
+    end
+  end
 end

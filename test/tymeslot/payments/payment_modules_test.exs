@@ -3,10 +3,8 @@ defmodule Tymeslot.Payments.PaymentModulesTest do
   use Tymeslot.DataCase, async: false
   @moduletag :payments
 
+  import Tymeslot.Test.PaymentEventCapture
   alias Tymeslot.Payments.{ErrorHandler, PubSub}
-  alias Tymeslot.Payments.Errors.WebhookError.ProcessingError
-  alias Tymeslot.Payments.Errors.WebhookError.SignatureError
-  alias Tymeslot.Payments.Errors.WebhookError.ValidationError
   alias Tymeslot.Test.LogCapture
 
   describe "ErrorHandler" do
@@ -51,56 +49,16 @@ defmodule Tymeslot.Payments.PaymentModulesTest do
   end
 
   describe "PubSub" do
-    setup do
-      # Ensure we use the app PubSub in tests
-      Application.put_env(:tymeslot, :test_mode, true)
-      pubsub_server = PubSub.get_pubsub_server()
-      assert pubsub_server == Tymeslot.PubSub
+    setup :capture_payment_events
 
-      {:ok, pubsub_server: pubsub_server}
-    end
+    test "hand_off_payment_event hands the event to the payment-event handler" do
+      assert :ok =
+               PubSub.hand_off_payment_event(:charge_succeeded, %{
+                 charge_id: "ch_123",
+                 user_id: 42
+               })
 
-    test "broadcast_subscription_event broadcasts to topic", %{pubsub_server: pubsub_server} do
-      Phoenix.PubSub.subscribe(pubsub_server, "payment_events:tymeslot")
-
-      event_data = %{event: "sub_created", user_id: 1}
-      PubSub.broadcast_subscription_event(event_data)
-
-      assert_receive ^event_data
-    end
-
-    test "broadcast_payment_event broadcasts to payment_events topic", %{
-      pubsub_server: pubsub_server
-    } do
-      Phoenix.PubSub.subscribe(pubsub_server, "payment_events:tymeslot")
-
-      PubSub.broadcast_payment_event(:charge_succeeded, %{charge_id: "ch_123", user_id: 42})
-
-      assert_receive %{event: :charge_succeeded, data: %{charge_id: "ch_123", user_id: 42}}
-    end
-
-    test "get_pubsub_server returns Tymeslot.PubSub in test mode" do
-      assert PubSub.get_pubsub_server() == Tymeslot.PubSub
-    end
-  end
-
-  describe "WebhookError" do
-    test "SignatureError can be created" do
-      error = %SignatureError{message: "test", reason: :invalid}
-      assert error.message == "test"
-      assert SignatureError.message(error) == "test"
-    end
-
-    test "ValidationError can be created" do
-      error = %ValidationError{message: "test", reason: :invalid}
-      assert error.message == "test"
-      assert ValidationError.message(error) == "test"
-    end
-
-    test "ProcessingError can be created" do
-      error = %ProcessingError{message: "test", reason: :failed}
-      assert error.message == "test"
-      assert ProcessingError.message(error) == "test"
+      assert_received %{event: :charge_succeeded, data: %{charge_id: "ch_123", user_id: 42}}
     end
   end
 end

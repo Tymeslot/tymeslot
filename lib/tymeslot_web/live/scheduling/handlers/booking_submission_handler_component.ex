@@ -34,9 +34,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Bookings.DemoOrchestrator
+  alias Tymeslot.Bookings.Errors
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.Honeypot
@@ -125,13 +127,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # on phones and in embeds. A demo booking keeps one, because the
   # confirmation step says a confirmation email was sent and a demo sends
   # none.
-  @spec handle_booking_success(Phoenix.LiveView.Socket.t(), map(), map()) ::
+  @spec handle_booking_success(Phoenix.LiveView.Socket.t(), map(), map(), module()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  defp handle_booking_success(socket, meeting, validated_data) do
+  defp handle_booking_success(socket, meeting, validated_data, orchestrator) do
     socket =
       socket
       |> assign(:submitting, false)
-      |> assign_booked_identity(meeting)
+      |> assign_booked_identity(meeting, orchestrator)
       |> assign(:meeting_status, meeting.status)
       |> BookingLocation.assign_booked(meeting)
       |> assign(:name, validated_data["name"])
@@ -170,7 +172,16 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # is the seat's, under its management token. The meeting uid of a group
   # meeting names the shared slot, which a booker must never be handed: it
   # opens the slot's public cancel and reschedule pages.
-  defp assign_booked_identity(socket, meeting) do
+  #
+  # A simulated booking (`DemoOrchestrator`) stores no meeting, so there is
+  # no calendar file to download and the confirmation offers none.
+  defp assign_booked_identity(socket, _meeting, DemoOrchestrator) do
+    socket
+    |> assign(:meeting_uid, nil)
+    |> assign(:seat_calendar_url, nil)
+  end
+
+  defp assign_booked_identity(socket, meeting, _orchestrator) do
     {meeting_uid, seat_calendar_url} =
       case Meetings.booker_calendar(meeting) do
         {:meeting, uid} -> {uid, nil}
@@ -185,7 +196,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   # Handles booking submission errors: updates the socket with the
   # appropriate error message and state.
-  @spec handle_booking_error(Phoenix.LiveView.Socket.t(), atom() | String.t()) ::
+  @spec handle_booking_error(Phoenix.LiveView.Socket.t(), Errors.classified_error()) ::
           {:error, Phoenix.LiveView.Socket.t()}
   defp handle_booking_error(socket, reason) do
     socket =
@@ -193,10 +204,18 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> BookingGuards.release_submission()
       |> Flash.put_flash(:error, BookingErrorMessage.message(reason))
 
-    Logger.error("Failed to create meeting appointment", reason: LogFormat.reason(reason))
+    log_booking_error(reason)
 
     {:error, socket}
   end
+
+  # A refusal because the organiser's calendars could not all be read is the
+  # check working as meant; `CalendarCheck` has already logged its cause.
+  defp log_booking_error(:availability_unverifiable),
+    do: Logger.info("Booking refused: the organiser's availability could not be verified")
+
+  defp log_booking_error(reason),
+    do: Logger.error("Failed to create meeting appointment", reason: LogFormat.reason(reason))
 
   # Private functions
 
@@ -260,20 +279,22 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         handle_expired_preview(socket)
 
       orchestrator ->
-        handle_submit_result(socket, orchestrator.submit_booking(params, opts), sanitized_params)
+        handle_submit_result(
+          socket,
+          orchestrator.submit_booking(params, opts),
+          sanitized_params,
+          orchestrator
+        )
     end
   end
 
-  defp handle_submit_result(socket, result, sanitized_params) do
+  defp handle_submit_result(socket, result, sanitized_params, orchestrator) do
     case result do
       {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
         handle_payment_required(socket, meeting, url, sanitized_params)
 
       {:ok, meeting} ->
-        handle_booking_success(socket, meeting, sanitized_params)
-
-      {:error, errors} when is_list(errors) ->
-        handle_field_errors(socket, errors, sanitized_params)
+        handle_booking_success(socket, meeting, sanitized_params, orchestrator)
 
       {:error, :slot_taken} ->
         handle_slot_taken(socket)
@@ -307,22 +328,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     {:error, socket}
   end
 
-  defp handle_field_errors(socket, errors, sanitized_params) do
-    socket =
-      socket
-      |> assign(:form, Component.to_form(sanitized_params))
-      |> assign(:validation_errors, Enum.into(errors, %{}))
-      |> BookingGuards.release_submission()
-      |> Flash.put_flash(
-        :error,
-        dgettext("booking", "Please correct the errors below before submitting.")
-      )
-
-    {:error, socket}
-  end
-
   # The slot was booked out from under this attendee between selecting it and
-  # submitting (server-side `FOR UPDATE NOWAIT` correctly refused the double
+  # submitting (the server-side conflict check correctly refused the double
   # booking). The domain layer signals this with the semantic `:slot_taken`
   # atom (see `Tymeslot.Bookings.Orchestrator.submit_booking/2`) rather than a
   # display string, so this routing decision never depends on copy text. Stop
@@ -442,7 +449,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     )
 
     if LiveView.connected?(socket) do
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "meeting_payment:#{meeting.id}")
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting.id))
     end
 
     # Seed the custom-answer assigns now so the confirmation view can render

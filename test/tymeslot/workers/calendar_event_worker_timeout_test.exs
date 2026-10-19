@@ -1,7 +1,5 @@
 defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
-  # async: false because the test toggles the global :test_mode flag and puts
-  # Mox in global mode (so the Task.Supervisor child process can see the stub).
-  # Both would leak into concurrent async tests and break unrelated mocks.
+  # async: false because the test lowers the global calendar timeout.
   use Tymeslot.DataCase, async: false
 
   @moduletag :workers
@@ -17,12 +15,9 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
 
   describe "perform/1 - timeout handling" do
     test "snoozes on timeout when CalDAV operation blocks" do
-      # Exercises the Task.yield timeout path, which only fires when test_mode
-      # is false and the spawned task outlives the calendar timeout. That
-      # timeout is 90s in production and read from config, so this lowers it to
-      # 50ms rather than waiting out the real one; the branch under test is the
-      # same either way, and the wait was previously half of this suite's
-      # runtime on its own.
+      # The calendar timeout is 90s in production and read from config, so
+      # this lowers it to 50ms rather than waiting out the real one; the
+      # branch under test is the same either way.
       meeting = insert(:meeting)
 
       Mox.stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
@@ -30,8 +25,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
         Process.sleep(:infinity)
       end)
 
-      original_test_mode = Application.get_env(:tymeslot, :test_mode, false)
-      Application.put_env(:tymeslot, :test_mode, false)
       Application.put_env(:tymeslot, :calendar_timeout_ms, 50)
 
       try do
@@ -41,7 +34,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
                    "meeting_id" => meeting.id
                  })
       after
-        Application.put_env(:tymeslot, :test_mode, original_test_mode)
         Application.delete_env(:tymeslot, :calendar_timeout_ms)
       end
     end
@@ -58,27 +50,15 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
         exit({:request_failed, %{"authorization" => "Basic c2VjcmV0LWNhbGRhdg=="}})
       end)
 
-      original_test_mode = Application.get_env(:tymeslot, :test_mode, false)
-      Application.put_env(:tymeslot, :test_mode, false)
+      CaptureLog.capture_log(fn ->
+        assert {:error, message} =
+                 perform_job(CalendarEventWorker, %{
+                   "action" => "create",
+                   "meeting_id" => meeting.id
+                 })
 
-      # The task is linked, so its exit would kill this process before the
-      # worker reads it; trapping exits is what lets the crash reach the
-      # worker's `{:exit, reason}` branch.
-      Process.flag(:trap_exit, true)
-
-      try do
-        CaptureLog.capture_log(fn ->
-          assert {:error, message} =
-                   perform_job(CalendarEventWorker, %{
-                     "action" => "create",
-                     "meeting_id" => meeting.id
-                   })
-
-          send(self(), {:message, message})
-        end)
-      after
-        Application.put_env(:tymeslot, :test_mode, original_test_mode)
-      end
+        send(self(), {:message, message})
+      end)
 
       assert_received {:message, message}
       assert message =~ "Calendar operation crashed"

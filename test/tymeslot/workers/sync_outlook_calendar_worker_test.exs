@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Oban.Job
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.Encryption
@@ -93,6 +94,35 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       # Reset to avoid polluting other tests
       CalendarCircuitBreaker.reset(:outlook)
     end
+
+    # A snooze costs no attempt, so without a bound a breaker that never
+    # closes keeps the job snoozing for ever.
+    test "fails once the snooze bound is reached" do
+      integration = outlook_integration()
+
+      for _n <- 1..6 do
+        CalendarCircuitBreaker.call(:outlook, fn -> {:provider_error, :simulated_failure} end)
+      end
+
+      on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: ~s({"id":"event-abc-123","subject":"Test"})}}
+      end)
+
+      args = %{
+        "calendar_integration_id" => integration.id,
+        "graph_resource_id" => "event-abc-123"
+      }
+
+      assert {:snooze, 120} =
+               perform_job(SyncOutlookCalendarWorker, args, meta: %{"snoozed" => 10})
+
+      assert {:error, reason} =
+               perform_job(SyncOutlookCalendarWorker, args, meta: %{"snoozed" => 11})
+
+      assert reason =~ "did not recover"
+    end
   end
 
   describe "perform/1 - all-day events" do
@@ -134,6 +164,51 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       assert cached.end_date == ~D[2026-04-11]
       assert cached.transparency == "transparent"
       assert cached.provider_calendar_id == "primary"
+    end
+  end
+
+  describe "perform/1 - the event's zone" do
+    # The fetch asks Graph for UTC timing, so `start.timeZone` reads UTC for
+    # every event; Graph returns the zone the event was created in only when
+    # it is selected, as the stub does.
+    test "caches the zone the event was created in, not the UTC its timing is read in" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, opts ->
+        selected = inspect({url, opts}) =~ "originalStartTimeZone"
+
+        graph_event =
+          Map.merge(
+            %{
+              "id" => "outlook-berlin-1",
+              "iCalUId" => "berlin-uid@outlook.com",
+              "subject" => "Weekly sync",
+              "isAllDay" => false,
+              "start" => %{"dateTime" => "2026-04-10T07:00:00.0000000", "timeZone" => "UTC"},
+              "end" => %{"dateTime" => "2026-04-10T08:00:00.0000000", "timeZone" => "UTC"},
+              "showAs" => "busy",
+              "attendees" => [],
+              "type" => "singleInstance"
+            },
+            if(selected, do: %{"originalStartTimeZone" => "W. Europe Standard Time"}, else: %{})
+          )
+
+        {:ok, %{status: 200, body: Jason.encode!(graph_event)}}
+      end)
+
+      assert :ok =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "outlook-berlin-1"
+               })
+
+      cached =
+        Repo.get_by(
+          Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema,
+          provider_event_id: "outlook-berlin-1"
+        )
+
+      assert cached.timezone == "Europe/Berlin"
     end
   end
 
@@ -304,6 +379,42 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       assert health(integration).consecutive_sync_failures == 0
     end
 
+    # An event the cache never received is not a completed sync: the job
+    # retries, and the streak counts it instead of being cleared.
+    test "a failed cache write fails the job and counts as a failed sync" do
+      integration = outlook_integration()
+
+      # Every new cache row is refused. The sandbox rolls the constraint back
+      # with the test, and this module is not async, so no other test sees it.
+      Repo.query!("""
+      ALTER TABLE provider_calendar_events
+        ADD CONSTRAINT refuse_new_rows_in_test CHECK (false) NOT VALID
+      """)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "id" => "event-health-3",
+               "subject" => "Standup",
+               "start" => %{"dateTime" => "2026-09-10T09:00:00.0000000", "timeZone" => "UTC"},
+               "end" => %{"dateTime" => "2026-09-10T09:15:00.0000000", "timeZone" => "UTC"}
+             })
+         }}
+      end)
+
+      assert {:error, :cache_write_failed} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-health-3"
+               })
+
+      assert health(integration).consecutive_sync_failures == 1
+      assert Repo.reload!(integration).last_external_sync_at == integration.last_external_sync_at
+    end
+
     # A 401 is discarded, and error tracking never records a discard,
     # so the streak is the only thing that reports an account Graph has stopped
     # accepting. Reporting it as a completed sync would have cleared one.
@@ -321,6 +432,32 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
                })
 
       assert health(integration).consecutive_sync_failures == 1
+    end
+  end
+
+  # One job per Graph notification: a waiting one absorbs a burst, since it
+  # reads the event when it runs, but one that has already read it must not
+  # swallow a later edit.
+  describe "uniqueness" do
+    defp notify(integration_id, resource_id) do
+      %{"calendar_integration_id" => integration_id, "graph_resource_id" => resource_id}
+      |> SyncOutlookCalendarWorker.new()
+      |> Oban.insert()
+    end
+
+    test "a notification while a job for the event still waits is folded into it" do
+      assert {:ok, %Job{conflict?: false}} = notify(1, "event-1")
+      assert {:ok, %Job{conflict?: true}} = notify(1, "event-1")
+    end
+
+    test "a notification after the event's job has run is a job of its own" do
+      assert {:ok, %Job{id: first_id, conflict?: false}} = notify(1, "event-1")
+
+      Repo.update_all(where(Job, id: ^first_id),
+        set: [state: "completed", completed_at: DateTime.utc_now()]
+      )
+
+      assert {:ok, %Job{conflict?: false}} = notify(1, "event-1")
     end
   end
 

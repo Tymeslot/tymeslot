@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
+  alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Utils.MapKeys
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -67,7 +68,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   # in sequence.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+    with :ok <-
+           ProviderConfigHelper.validate_required_fields(config, [:base_url, :username, :password]) do
       ProviderCommon.validate_url(config[:base_url])
     end
   end
@@ -77,29 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
     base_url = MapKeys.get(config, :base_url)
 
     # Auto-detect server type and use detected type for proper path construction
-    detected_provider =
-      if is_binary(base_url) do
-        case ServerDetector.detect_from_url(base_url) do
-          # Use detected server types for proper path handling
-          server_type
-          when server_type in [
-                 :radicale,
-                 :nextcloud,
-                 :owncloud,
-                 :baikal,
-                 :baikal_legacy,
-                 :sabredav,
-                 :zimbra
-               ] ->
-            server_type
-
-          # Fall back to generic caldav for unknown servers
-          _other ->
-            :caldav
-        end
-      else
-        :caldav
-      end
+    detected_provider = client_provider(base_url)
 
     common_config = %{
       base_url: if(is_binary(base_url), do: CaldavCommon.normalize_url(base_url), else: nil),
@@ -107,11 +87,45 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
       password: MapKeys.get(config, :password),
       calendar_paths: MapKeys.get(config, :calendar_paths) || [],
       writable_calendar_paths: MapKeys.get(config, :writable_calendar_paths),
-      verify_ssl: true
+      free_busy_paths: MapKeys.get(config, :free_busy_paths),
+      skip_breaker: MapKeys.get(config, :skip_breaker) || false
     }
 
     CaldavCommon.build_client(common_config, provider: detected_provider)
   end
+
+  @doc """
+  The provider a client for a server at `base_url` carries: the server type
+  detected from the URL (`/remote.php/dav` is Nextcloud, for one), or plain
+  `:caldav` for a server nothing identifies.
+
+  The client's calls run through a host breaker keyed by this provider, so
+  this is also how that breaker is found again; see
+  `CalendarCircuitBreaker.breaker_key/2`.
+  """
+  @spec client_provider(String.t() | nil) :: atom()
+  def client_provider(base_url) when is_binary(base_url) do
+    case ServerDetector.detect_from_url(base_url) do
+      # Use detected server types for proper path handling
+      server_type
+      when server_type in [
+             :radicale,
+             :nextcloud,
+             :owncloud,
+             :baikal,
+             :baikal_legacy,
+             :sabredav,
+             :zimbra
+           ] ->
+        server_type
+
+      # Fall back to generic caldav for unknown servers
+      _other ->
+        :caldav
+    end
+  end
+
+  def client_provider(_base_url), do: :caldav
 
   @doc """
   Tests connection to the CalDAV server.
@@ -122,8 +136,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, atom() | String.t()}
   def perform_connection_test(integration) do
-    client = build_client(integration)
-    CaldavCommon.test_connection(client)
+    integration
+    |> new()
+    |> CaldavCommon.test_connection()
   end
 
   @doc """
@@ -133,7 +148,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   (`Tymeslot.Integrations.Calendar.Discovery`), not this provider's.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  @spec discover_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  @spec discover_calendars(map()) ::
+          {:ok, [CalendarEntry.t()]}
+          | {:error, Tymeslot.Integrations.Calendar.CalDAV.Base.error_reason()}
   def discover_calendars(client) do
     CaldavCommon.discover_calendars(client)
   end
@@ -189,24 +206,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   def list_events_representation, do: :raw
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def convert_events(events), do: events
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context),
     do: EventProcessor.normalise_events(raw_events, context)
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def check_connectivity(client), do: CaldavCommon.check_connectivity(client)
-
-  # Private helper functions
-
-  defp build_client(integration) do
-    CaldavCommon.build_client(
-      %{
-        base_url: integration.base_url,
-        username: integration.username,
-        password: integration.password,
-        calendar_paths: integration.calendar_paths || [],
-        verify_ssl: true
-      },
-      provider: :caldav
-    )
-  end
 end

@@ -9,15 +9,17 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   Everything needed to get from one to the other lives here, so the context can
   compose a save without also owning the vocabulary of a particular form.
 
-  Money is the reason this is worth isolating. `parse_price_cents/2` is the
-  single conversion from a typed price to the integer minor units that reach
-  Stripe; a second copy of that arithmetic elsewhere is exactly the kind of
-  drift that produces a charge off by a factor of a hundred.
+  Money is the reason this is worth isolating. `build_attrs/3` turns a typed
+  price into the integer minor units that reach Stripe, through
+  `Tymeslot.MeetingPayments.Money.parse/2` and in the currency the host is
+  charged in; a second copy of that arithmetic elsewhere is exactly the kind
+  of drift that produces a charge off by a factor of a hundred.
   """
 
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes.ApprovalWindow
-  alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Validation.Constraints
 
   @typedoc "Why form input could not be mapped onto schema attributes."
@@ -34,12 +36,15 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   `custom_fields` and `locations` are only included when the params carry the
   key, so a form that does not render the questions editor (or the locations
   editor) cannot blank an existing list by omission.
+
+  `currency` is the one the price is typed in, the host's currency as
+  `payment_opts/1` resolves it.
   """
-  @spec build_attrs(map(), map()) :: {:ok, map()} | {:error, error()}
-  def build_attrs(params, ui_state) do
+  @spec build_attrs(map(), map(), String.t()) :: {:ok, map()} | {:error, error()}
+  def build_attrs(params, ui_state, currency) do
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
-         {:ok, payment} <- payment_attrs(params),
+         {:ok, payment} <- payment_attrs(params, currency),
          {:ok, max_participants} <- parse_max_participants(params["max_participants"]),
          {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
@@ -115,11 +120,11 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   # with nothing said to the host, who then had to re-enter every price after
   # reconnecting Stripe. Same shape, and the same reason, as
   # `maybe_put_custom_fields/2` below.
-  defp payment_attrs(params) do
+  defp payment_attrs(params, currency) do
     if Map.has_key?(params, "payment_required") do
       payment_required = params["payment_required"] == "true"
 
-      case parse_price_cents(payment_required, params["price"]) do
+      case parse_price_cents(payment_required, params["price"], currency) do
         {:ok, price_cents} ->
           {:ok, %{payment_required: payment_required, price_cents: price_cents}}
 
@@ -135,8 +140,8 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   Builds the payment-validation opts the schema changeset needs.
 
   The schema must not reach into the payments domain itself, so the host's
-  charge capability, default currency, and the per-currency minimum are
-  resolved here and threaded in as opts.
+  charge capability, whether they may set a price, their default currency,
+  and the per-currency minimum are resolved here and threaded in as opts.
   """
   @spec payment_opts(integer()) :: keyword()
   def payment_opts(user_id) do
@@ -144,6 +149,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
     [
       host_charges_enabled: MeetingPayments.charges_enabled_for_user?(user_id),
+      price_settable: MeetingPayments.price_settable?(user_id),
       currency: currency,
       currency_minimum_cents: MeetingPayments.currency_minimum_cents(currency)
     ]
@@ -228,37 +234,28 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
 
-  # Converts the major-unit price string from the form into integer cents.
+  # Converts the major-unit price string from the form into integer minor units.
   # When payment is not required the price is irrelevant and stored as nil.
   # Bad input yields `{:error, :invalid_price}` so the form surfaces it the
   # same way an invalid duration does.
-  defp parse_price_cents(false, _price), do: {:ok, nil}
-  defp parse_price_cents(true, nil), do: {:ok, nil}
-  defp parse_price_cents(true, ""), do: {:ok, nil}
+  defp parse_price_cents(false, _price, _currency), do: {:ok, nil}
+  defp parse_price_cents(true, nil, _currency), do: {:ok, nil}
+  defp parse_price_cents(true, "", _currency), do: {:ok, nil}
 
-  defp parse_price_cents(true, price) when is_binary(price) do
-    case Decimal.parse(String.trim(price)) do
-      {decimal, ""} ->
-        cents =
-          decimal
-          |> Decimal.mult(100)
-          |> Decimal.round(0)
-          |> Decimal.to_integer()
-
-        {:ok, cents}
-
-      _invalid ->
-        {:error, :invalid_price}
+  defp parse_price_cents(true, price, currency) when is_binary(price) do
+    case Money.parse(price, currency) do
+      {:ok, _cents} = parsed -> parsed
+      {:error, :invalid_amount} -> {:error, :invalid_price}
     end
   end
 
-  defp parse_price_cents(true, _price), do: {:error, :invalid_price}
+  defp parse_price_cents(true, _price, _currency), do: {:error, :invalid_price}
 
   defp normalize_reminder_config(nil), do: {:ok, nil}
   defp normalize_reminder_config(""), do: {:ok, nil}
 
   defp normalize_reminder_config(reminders) when is_list(reminders) do
-    normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder_string_keys/1)
+    normalized = Enum.map(reminders, &Reminders.normalize_reminder_string_keys/1)
 
     if Enum.any?(normalized, &match?({:error, _error_reason}, &1)) do
       {:error, :invalid_reminder_config}

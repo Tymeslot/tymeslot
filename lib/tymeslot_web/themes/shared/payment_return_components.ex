@@ -33,41 +33,41 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
     <%= case PaymentReturn.outcome(@loading, @payment, @meeting) do %>
       <% :failed -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Payment not completed")}
+          {dgettext("booking_payments", "Payment not completed")}
         </h1>
         <p class="payment-page-body">
           {dgettext(
-            "booking",
+            "booking_payments",
             "Your booking is not confirmed. You can return and try again at any time."
           )}
         </p>
         <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
-          {dgettext("booking", "Return to booking")}
+          {dgettext("booking_payments", "Return to booking")}
         </a>
       <% :cancelled -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking cancelled")}
+          {dgettext("booking_payments", "Booking cancelled")}
         </h1>
         <p class="payment-page-body">
           {dgettext(
-            "booking",
+            "booking_payments",
             "This booking has been cancelled, so it won't be going ahead."
           )}
         </p>
       <% :loading -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Confirming your payment…")}
+          {dgettext("booking_payments", "Confirming your payment…")}
         </h1>
         <p class="payment-page-body">
-          {dgettext("booking", "Please wait while we confirm your booking.")}
+          {dgettext("booking_payments", "Please wait while we confirm your booking.")}
         </p>
       <% :awaiting_approval -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Payment received")}
+          {dgettext("booking_payments", "Payment received")}
         </h1>
         <p class="payment-page-body">
           {dgettext(
-            "booking",
+            "booking_payments",
             "Thanks, your payment went through. Your booking is not confirmed yet though:"
           )}
         </p>
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
               date={PaymentReturn.approval_deadline_text(@meeting)}
               text={
                 dgettext(
-                  "booking",
+                  "booking_payments",
                   "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
                   deadline: date_marker()
                 )
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
               date={PaymentReturn.approval_deadline_text(@meeting)}
               text={
                 dgettext(
-                  "booking",
+                  "booking_payments",
                   "If there's no answer by %{deadline}, the request lapses.",
                   deadline: date_marker()
                 )
@@ -103,41 +103,41 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
         </p>
       <% :declined -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking not accepted")}
+          {dgettext("booking_payments", "Booking not accepted")}
         </h1>
         <p class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
             )}
           <% else %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "This booking wasn't accepted, so it won't be going ahead."
             )}
           <% end %>
         </p>
       <% :expired -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking request expired")}
+          {dgettext("booking_payments", "Booking request expired")}
         </h1>
         <p class="payment-page-body">
           <%= if Approval.refunds_on_release?(@meeting) do %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
             )}
           <% else %>
             {dgettext(
-              "booking",
+              "booking_payments",
               "Nobody responded to this request in time, so it has lapsed."
             )}
           <% end %>
         </p>
       <% :confirmed -> %>
         <h1 class="payment-page-heading">
-          {dgettext("booking", "Booking confirmed")}
+          {dgettext("booking_payments", "Booking confirmed")}
         </h1>
         <p class="payment-page-body">
           <.with_date
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
               )
             }
             text={
-              dgettext("booking", "Thank you, your booking is confirmed for %{date}.",
+              dgettext("booking_payments", "Thank you, your booking is confirmed for %{date}.",
                 date: date_marker()
               )
             }
@@ -165,16 +165,16 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   def cancelled_body(assigns) do
     ~H"""
     <h1 class="payment-page-heading">
-      {dgettext("booking", "Payment cancelled")}
+      {dgettext("booking_payments", "Payment cancelled")}
     </h1>
     <p class="payment-page-body">
       {dgettext(
-        "booking",
+        "booking_payments",
         "Your booking is not confirmed. You can return and try again at any time."
       )}
     </p>
     <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
-      {dgettext("booking", "Return to booking")}
+      {dgettext("booking_payments", "Return to booking")}
     </a>
     """
   end

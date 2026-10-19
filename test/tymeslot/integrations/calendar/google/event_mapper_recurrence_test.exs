@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperRecurrenceTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
 
   describe "format_event_data/1 — recurrence" do
@@ -48,6 +49,33 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperRecurrenceTest do
     end
   end
 
+  # Outlook refuses some ordinal rules it has no pattern for; Google stores
+  # the RRULE itself, so the same rules reach it unchanged.
+  describe "an ordinal monthly rule" do
+    for rule <- [
+          "FREQ=MONTHLY;BYDAY=2TU",
+          "FREQ=MONTHLY;BYDAY=-1FR",
+          "FREQ=MONTHLY;BYDAY=2TU,-1FR"
+        ] do
+      test "#{rule} is written as its RRULE, on create and on edit" do
+        event_data = %{
+          summary: "Review",
+          start_time: ~U[2026-04-14 10:00:00Z],
+          end_time: ~U[2026-04-14 11:00:00Z],
+          recurrence_rule: unquote(rule)
+        }
+
+        assert EventMapper.format_new_event_data(event_data)["recurrence"] == [
+                 "RRULE:" <> unquote(rule)
+               ]
+
+        assert EventMapper.format_event_data(event_data)["recurrence"] == [
+                 "RRULE:" <> unquote(rule)
+               ]
+      end
+    end
+  end
+
   describe "format_new_event_data/1 — recurrence" do
     test "follows a new series' rule with its excluded occurrences" do
       event_data = %{
@@ -63,6 +91,40 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperRecurrenceTest do
       assert result["recurrence"] == [
                "RRULE:FREQ=DAILY;COUNT=5",
                "EXDATE:20260421T100000Z,20260423T100000Z"
+             ]
+    end
+
+    # Google rejects a recurring event whose start names no zone ("Missing
+    # time zone definition for start time"), and expands the rule in that
+    # zone, so the series keeps its local time across DST.
+    test "writes a zoned series' timing as wall clocks in its zone" do
+      zoned =
+        ProviderPayload.put_series_zone(
+          %{
+            summary: "Standup",
+            start_time: ~U[2026-04-20 08:00:00Z],
+            end_time: ~U[2026-04-20 08:15:00Z],
+            recurrence_rule: "FREQ=DAILY;COUNT=5",
+            recurrence_exceptions: [~U[2026-04-23 08:00:00Z]]
+          },
+          "Europe/Berlin"
+        )
+
+      result = EventMapper.format_new_event_data(zoned)
+
+      assert result["start"] == %{
+               "dateTime" => "2026-04-20T10:00:00",
+               "timeZone" => "Europe/Berlin"
+             }
+
+      assert result["end"] == %{
+               "dateTime" => "2026-04-20T10:15:00",
+               "timeZone" => "Europe/Berlin"
+             }
+
+      assert result["recurrence"] == [
+               "RRULE:FREQ=DAILY;COUNT=5",
+               "EXDATE:20260423T080000Z"
              ]
     end
 

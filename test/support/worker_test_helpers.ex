@@ -204,7 +204,7 @@ defmodule Tymeslot.WorkerTestHelpers do
   """
   @spec expect_calendar_delete_success() :: :ok
   def expect_calendar_delete_success do
-    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _integration_id ->
+    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _integration_id, _opts ->
       :ok
     end)
   end

@@ -81,6 +81,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
 
   @doc """
   Applies the property changes `event_data` describes to `raw_ical`.
@@ -88,15 +89,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   Returns the patched document, folded per RFC 5545 §3.1. A document with no
   `VEVENT` comes back unchanged; callers that need a document in that case
   build one with `ICalBuilder.build_simple_event/3` instead.
+
+  A payload that writes a timed series in its zone
+  (`TimeZoneComponent.series_zone/1`), as when a rule is added to a single
+  event, writes `DTSTART`, `DTEND` and `EXDATE` as wall clocks in that zone,
+  as `ICalBuilder.build_simple_event/3` does, and adds the zone's
+  `VTIMEZONE` unless the document already has one for it.
   """
   @spec patch(String.t(), map(), Scheduling.mode()) :: String.t()
   def patch(raw_ical, event_data, mode \\ :contact)
       when is_binary(raw_ical) and is_map(event_data) do
-    patch_set = build_patch_set(event_data, mode)
+    zone = TimeZoneComponent.series_zone(event_data)
+    patch_set = build_patch_set(event_data, mode, zone)
 
     raw_ical
     |> ContentLines.split()
     |> patch_components(patch_set)
+    |> with_time_zone(event_data, zone)
     |> ContentLines.join()
   end
 
@@ -116,26 +125,36 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   @spec patch_vevent([String.t()], map(), Scheduling.mode()) :: [String.t()]
   def patch_vevent(body, event_data, mode \\ :contact)
       when is_list(body) and is_map(event_data),
-      do: apply_patch_set(body, build_patch_set(event_data, mode))
+      do: apply_patch_set(body, build_patch_set(event_data, mode, nil))
 
   # A patch set is the list of {properties it replaces, replacement lines} the
   # payload asks for, plus the reminders decision, computed once for the whole
   # document.
-  defp build_patch_set(event_data, mode) do
+  defp build_patch_set(event_data, mode, zone) do
     entries =
       Enum.reject(
         [
           {["DTSTAMP"], "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}"},
-          timing_entry(event_data, :start_time, ["DTSTART"], &Properties.build_dtstart/1),
+          timing_entry(event_data, :start_time, ["DTSTART"], &Properties.build_dtstart(&1, zone)),
           # RFC 5545 §3.6.1 allows DTEND or DURATION, never both, so a stored
           # DURATION has to go when DTEND arrives.
-          timing_entry(event_data, :end_time, ["DTEND", "DURATION"], &Properties.build_dtend/1),
+          timing_entry(
+            event_data,
+            :end_time,
+            ["DTEND", "DURATION"],
+            &Properties.build_dtend(&1, zone)
+          ),
           text_entry(event_data, :summary, "SUMMARY"),
           text_entry(event_data, :description, "DESCRIPTION"),
           text_entry(event_data, :location, "LOCATION"),
           entry(event_data, :colour, ["COLOR"], &Properties.build_colour_line/1),
           entry(event_data, :recurrence_rule, ["RRULE"], &Properties.build_rrule_line/1),
-          entry(event_data, :recurrence_exceptions, ["EXDATE"], &Properties.build_exdate/1),
+          entry(
+            event_data,
+            :recurrence_exceptions,
+            ["EXDATE"],
+            &Properties.build_exdate(&1, zone)
+          ),
           entry(event_data, :transparency, ["TRANSP"], &Properties.build_transp/1),
           entry(event_data, :status, ["STATUS"], &Properties.build_status/1),
           entry(event_data, :visibility, ["CLASS"], &Properties.build_class/1),
@@ -165,6 +184,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     case Map.fetch(event_data, key) do
       {:ok, value} -> {[property], "#{property}:#{Format.escape_text(value || "")}"}
       :error -> nil
+    end
+  end
+
+  # The zone's VTIMEZONE goes before the first VEVENT, where RFC 5545 readers
+  # expect a component a TZID refers to, unless the document already defines
+  # that TZID (another client's VTIMEZONE for it is kept as it is).
+  defp with_time_zone(lines, _event_data, nil), do: lines
+
+  defp with_time_zone(lines, event_data, zone) do
+    if "TZID:#{zone}" in lines do
+      lines
+    else
+      {head, tail} = Enum.split_while(lines, &(&1 != "BEGIN:VEVENT"))
+      head ++ (TimeZoneComponent.for_series(event_data, zone) || []) ++ tail
     end
   end
 

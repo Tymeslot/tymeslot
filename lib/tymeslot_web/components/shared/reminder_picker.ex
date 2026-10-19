@@ -15,7 +15,13 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   names are prefixed with `event_prefix` so a component that already answers
   to `add_reminder` for something else can namespace them; the names are
   otherwise `add_quick_reminder`, `toggle_custom_reminder`,
-  `update_reminder_input`, `add_reminder` and `remove_reminder`.
+  `update_reminder_input`, `add_reminder`, `remove_reminder` and
+  `commit_custom_reminder`.
+
+  The last comes from the `ReminderCustomRow` hook when focus leaves the open
+  custom row with a value still in it, so a reminder typed but never added is
+  not lost when the host moves on; owners answer it with
+  `ReminderPickerState.commit_pending/2`.
   """
 
   use Phoenix.Component
@@ -24,8 +30,8 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   use TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.MeetingTypes.Reminders, as: MeetingTypeReminders
   alias Tymeslot.MeetingTypes.ReminderValidation
-  alias Tymeslot.Utils.ReminderUtils
 
   @doc """
   The reminder picker.
@@ -131,6 +137,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             type="button"
             phx-click={@event_prefix <> "toggle_custom_reminder"}
             phx-target={@myself}
+            data-discards-custom-reminder
             data-testid="reminder-custom-toggle"
             disabled={@limit_reached?}
             title={limit_title(@limit_reached?, @max_reminders)}
@@ -152,7 +159,13 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
         </div>
 
         <%= if @show_custom_reminder && !@limit_reached? do %>
-          <div class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300">
+          <div
+            id={@event_prefix <> "reminder-custom-row"}
+            phx-hook="ReminderCustomRow"
+            phx-target={@myself}
+            data-commit-event={@event_prefix <> "commit_custom_reminder"}
+            class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300"
+          >
             <div class="flex-1 flex items-center gap-2">
               <input
                 type="number"
@@ -211,9 +224,6 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   A reminder's lead time in the reader's own language: "30 minutes",
   "1 Stunde", "5 хвилин".
 
-  `ReminderUtils.format_reminder_label/2` builds the same label from English
-  words, which is right for anything machine-facing but reached the screen
-  here — a German organiser was shown "30 minutes vorher", half translated.
   The unit word is a plural form rather than a lookup, so a language that
   inflects after a number ("1 minutu", "2 minuty", "5 minut") can say it
   properly, while the sentences around it ("%{label} before", "Added %{label}
@@ -221,9 +231,9 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   """
   @spec reminder_label(%{value: integer() | String.t(), unit: String.t()}) :: String.t()
   def reminder_label(%{value: value, unit: unit}) do
-    value = ReminderUtils.parse_reminder_value(value)
+    value = MeetingTypeReminders.parse_reminder_value(value)
 
-    case ReminderUtils.normalize_reminder_unit(unit) do
+    case MeetingTypeReminders.normalize_reminder_unit(unit) do
       "hours" -> dngettext("common", "%{count} hour", "%{count} hours", value)
       "days" -> dngettext("common", "%{count} day", "%{count} days", value)
       _minutes -> dngettext("common", "%{count} minute", "%{count} minutes", value)
@@ -246,14 +256,14 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
       is_nil(value) or value == "" ->
         {:error, dgettext("common", "Reminder value is required")}
 
-      match?({:error, _reason}, ReminderUtils.validate_reminder_value(value)) ->
+      match?({:error, _reason}, MeetingTypeReminders.validate_reminder_value(value)) ->
         {:error, dgettext("common", "Reminder value must be a positive number")}
 
       unit not in ["minutes", "hours", "days"] ->
         {:error, dgettext("common", "Select a valid reminder unit")}
 
       true ->
-        reminder = %{value: ReminderUtils.parse_reminder_value(value), unit: unit}
+        reminder = %{value: MeetingTypeReminders.parse_reminder_value(value), unit: unit}
 
         case ReminderValidation.check_policy(reminders ++ [reminder], reminders) do
           :ok -> {:ok, reminder}

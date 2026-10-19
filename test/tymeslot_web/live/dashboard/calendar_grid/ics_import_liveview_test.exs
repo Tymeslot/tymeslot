@@ -18,9 +18,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport, as: IcsImportHandler
 
   setup :set_mox_global
   setup :verify_on_exit!
+
+  # The import writes from a background task; allow for a busy test machine.
+  @task_timeout 5_000
 
   @two_events """
   BEGIN:VCALENDAR\r
@@ -121,14 +125,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
       start_import(lv)
 
-      assert_receive {:written, %{summary: "Dentist"} = dentist, context, task}
-      assert_receive {:written, %{summary: "Standup"} = standup, ^context, ^task}
+      assert_receive {:written, %{summary: "Dentist"} = dentist, context, task}, @task_timeout
+      assert_receive {:written, %{summary: "Standup"} = standup, ^context, ^task}, @task_timeout
       assert context == {integration.id, user.id}
       refute Map.has_key?(dentist, :attendees)
       assert standup.recurrence_rule == "FREQ=WEEKLY;COUNT=4"
 
       ref = Process.monitor(task)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
       html = settle(lv)
       assert html =~ "Imported 2 events."
@@ -183,10 +187,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
       start_import(lv)
 
-      assert_receive {:written, "/cal/work/", context, task}
+      assert_receive {:written, "/cal/work/", context, task}, @task_timeout
       assert context == {picked.id, user.id}
       ref = Process.monitor(task)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
     end
 
     test "refuses a calendar that is not the user's, and writes nothing", %{conn: conn} do
@@ -234,7 +238,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       expect(Tymeslot.CalendarMock, :create_event, 0, fn _data, _context -> :unreachable end)
 
       Enum.find(
-        Stream.repeatedly(fn -> RateLimiter.check_calendar_ics_import_rate_limit(user.id) end),
+        Stream.repeatedly(fn -> RateLimiter.check(:calendar_ics_import, user.id) end),
         &match?({:error, :rate_limited, _message}, &1)
       )
 
@@ -280,9 +284,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       upload(lv, @two_events)
       start_import(lv)
 
-      assert_receive {:task, task}
+      assert_receive {:task, task}, @task_timeout
       ref = Process.monitor(task)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
       html = settle(lv)
       assert html =~ "The import could not be finished."
@@ -307,9 +311,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       upload(lv, @two_events)
       start_import(lv)
 
-      assert_receive {:task, task}
+      assert_receive {:task, task}, @task_timeout
       ref = Process.monitor(task)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
       assert settle(lv) =~ "The import stopped because your calendar is not responding."
     end
@@ -329,7 +333,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       open_import(first)
       upload(first, @two_events)
       start_import(first)
-      assert_receive {:writing, task}
+      assert_receive {:writing, task}, @task_timeout
 
       # Another tab, or this one after leaving the calendar and coming back.
       {:ok, second, _html} = live(conn, ~p"/dashboard")
@@ -340,9 +344,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
       ref = Process.monitor(task)
       send(task, :continue)
-      assert_receive {:writing, ^task}
+      assert_receive {:writing, ^task}, @task_timeout
       send(task, :continue)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
     end
 
     test "makes the whole calendar a drop target for the import's upload", %{conn: conn} do
@@ -383,7 +387,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       open_import(lv)
       upload(lv, @two_events)
       start_import(lv)
-      assert_receive {:writing, task}
+      assert_receive {:writing, task}, @task_timeout
 
       lv |> element("#import-ics-modal button", "Close") |> render_click()
       upload(lv, @two_events, "second.ics")
@@ -393,9 +397,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
       ref = Process.monitor(task)
       send(task, :continue)
-      assert_receive {:writing, ^task}
+      assert_receive {:writing, ^task}, @task_timeout
       send(task, :continue)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
       assert settle(lv) =~ "Imported 2 events."
     end
@@ -430,13 +434,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       upload(lv, @two_events)
       start_import(lv)
 
-      assert_receive {:task, task}
+      assert_receive {:task, task}, @task_timeout
       ref = Process.monitor(task)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
       html = settle(lv)
       assert html =~ "Imported 1 event."
       assert html =~ "1 event could not be imported. (Dentist)"
+    end
+
+    test "says which events repeat in a way Outlook cannot store", %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn
+        %{summary: "Standup"}, _context ->
+          send(test_pid, {:task, self()})
+          {:error, :rule_not_supported_by_outlook}
+
+        data, _context ->
+          {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @two_events)
+      start_import(lv)
+
+      assert_receive {:task, task}, @task_timeout
+      ref = Process.monitor(task)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
+
+      text = lv |> settle() |> Floki.parse_document!() |> Floki.text()
+      assert text =~ "Imported 1 event."
+      assert text =~ "1 event repeats in a way Outlook can't store, so it was not imported."
+      refute text =~ "could not be imported"
     end
 
     test "says why Outlook refused a month-end series", %{conn: conn} do
@@ -456,14 +487,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       upload(lv, @two_events)
       start_import(lv)
 
-      assert_receive {:task, task}
+      assert_receive {:task, task}, @task_timeout
       ref = Process.monitor(task)
-      assert_receive {:DOWN, ^ref, :process, ^task, _reason}
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
       html = settle(lv)
 
       assert html =~
                "1 event could not be imported. (Dentist) 1 of them repeats on a day some months"
+    end
+  end
+
+  describe "the import's result flash" do
+    test "is an error naming the refusal when every event's rule was refused" do
+      assert IcsImportHandler.result_flash({:ok, summary(%{rules_refused: 1})}) ==
+               {:error, "1 event repeats in a way Outlook can't store, so it was not imported."}
+    end
+
+    test "is a warning reporting both the import and the refusal when some were written" do
+      assert IcsImportHandler.result_flash({:ok, summary(%{created: 1, rules_refused: 1})}) ==
+               {:warning,
+                "Imported 1 event. 1 event repeats in a way Outlook can't store, so it was not imported."}
+    end
+
+    test "counts several refused series in the plural" do
+      assert {:warning, message} =
+               IcsImportHandler.result_flash({:ok, summary(%{created: 3, rules_refused: 2})})
+
+      assert message =~
+               "2 events repeat in a way Outlook can't store, so they were not imported."
     end
   end
 
@@ -475,5 +527,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
     assert html =~ "Connect a calendar Tymeslot can write to before importing events."
     refute has_element?(lv, "#import-ics-panel")
+  end
+
+  # An import summary with nothing written, failed or refused but `counts`.
+  defp summary(counts) do
+    Map.merge(
+      %{
+        total: 0,
+        created: 0,
+        failed: 0,
+        failed_titles: [],
+        exclusions_dropped: 0,
+        rules_refused: 0,
+        month_end_refused: 0,
+        halted: nil
+      },
+      counts
+    )
   end
 end

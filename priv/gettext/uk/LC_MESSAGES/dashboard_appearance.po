@@ -160,16 +160,6 @@ msgstr "Завантаження недоступне"
 msgid "Video"
 msgstr "Відео"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
-#, elixir-autogen, elixir-format
-msgid "You have a custom image. Selecting a preset will remove it."
-msgstr "Ви використовуєте власне зображення. Вибір шаблону призведе до його видалення."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "You have a custom video. Selecting a preset will remove it."
-msgstr "Ви використовуєте власне відео. Вибір шаблону призведе до його видалення."
-
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
 msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
@@ -326,11 +316,6 @@ msgstr "Не вдалося завантажити"
 #, elixir-autogen, elixir-format
 msgid "Video processing is unavailable on this server because ffmpeg is not installed. Install ffmpeg or use a background image instead."
 msgstr "Обробка відео недоступна на цьому сервері, бо ffmpeg не встановлено. Установіть ffmpeg або скористайтеся фоновим зображенням."
-
-#: lib/tymeslot/theme_customizations/assets.ex
-#, elixir-autogen, elixir-format
-msgid "Your video was saved but could not be queued for processing. Please upload it again."
-msgstr "Ваше відео збережено, але не вдалося поставити його в чергу на обробку. Завантажте його ще раз."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/asset_uploads.ex
 #, elixir-autogen, elixir-format
@@ -644,6 +629,41 @@ msgstr "Недійсний файл субтитрів. Завантажте ф�
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max %{size} MB."
 msgstr "MP4 або WebM. Макс. %{size} МБ."
+
+#: lib/tymeslot/theme_customizations/assets.ex
+#, elixir-autogen, elixir-format
+msgid "The upload failed and nothing was changed. Please try again."
+msgstr "Не вдалося завантажити файл, нічого не змінено. Спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Kept until you replace or remove it."
+msgstr "Файл зберігається, доки ви його не заміните або не видалите."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Remove image"
+msgstr "Видалити зображення"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Remove video"
+msgstr "Видалити відео"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Your upload"
+msgstr "Ваш завантажений файл"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Your uploaded image"
+msgstr "Ваше завантажене зображення"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/uploaded_background.ex
+#, elixir-autogen, elixir-format
+msgid "Your uploaded video"
+msgstr "Ваше завантажене відео"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #, elixir-autogen, elixir-format

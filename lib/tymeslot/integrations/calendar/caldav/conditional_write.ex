@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   time limit instead of being killed there with its last write in flight.
   """
 
-  alias Tymeslot.Infrastructure.RetryLogic
+  alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, ConflictResolution, Http}
 
   require Logger
@@ -104,8 +104,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
     # duplicate-creation risk only applies to If-None-Match: * creates, which
     # go through put_ical/5, not this function. So we always apply retry here,
     # regardless of whether we have a specific ETag or fell back to If-Match: *.
-    retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
-    raw_result = RetryLogic.with_retry(put_fun, retry_opts)
+    retry_opts = Base.retry_opts(opts)
+    raw_result = Retry.with_backoff(put_fun, retry_opts)
 
     case raw_result do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Calendar.Operations do
+defmodule Tymeslot.Integrations.Calendar.Runtime.Operations do
   @moduledoc """
   Implements CalendarBehaviour for testing and configuration compatibility.
 
@@ -29,11 +29,6 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def update_event(uid, event_data, context) do
     EventOperations.update_event(uid, event_data, context)
-  end
-
-  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
-  def delete_event(uid, context) do
-    EventOperations.delete_event(uid, context, [])
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour

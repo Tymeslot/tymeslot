@@ -175,12 +175,21 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
     end
   end
 
+  describe "get_calendar_events/3" do
+    test "fails closed for an organiser whose profile cannot be loaded" do
+      user = insert(:user)
+
+      assert {:error, :profile_not_found} = Events.get_calendar_events(Date.utc_today(), user.id)
+    end
+  end
+
   describe "queueable_error?/1" do
     for {reason, expected} <- [
           unauthorized: false,
           not_found: false,
           meeting_not_found: false,
           rate_limited: false,
+          rule_not_supported_by_outlook: false,
           timeout: true,
           network_error: true,
           server_error: true
@@ -188,6 +197,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
       test "#{inspect(reason)} is #{if expected, do: "", else: "not "}queueable" do
         assert Events.queueable_error?(unquote(reason)) == unquote(expected)
       end
+    end
+
+    test "a rate limit that named its wait is not queueable" do
+      refute Events.queueable_error?({:rate_limited, 30})
     end
 
     test "a non-atom reason is queueable" do

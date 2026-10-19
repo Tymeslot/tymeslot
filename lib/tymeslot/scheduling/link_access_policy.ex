@@ -9,7 +9,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
 
   alias Tymeslot.Demo
   alias Tymeslot.Integrations.Calendar.BookingEligibility
-  alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Calendar.Management
 
   @type dashboard_reason :: :no_username | :no_calendar
   @type public_reason :: :no_calendar
@@ -93,7 +93,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
         {:error, :no_calendar}
 
       true ->
-        integrations = CalendarManagement.list_active_calendar_integrations(profile.user_id)
+        integrations = Management.list_active_calendar_integrations(profile.user_id)
         bookable = BookingEligibility.filter_bookable(integrations)
         if bookable != [], do: {:ok, :ready}, else: {:error, :no_calendar}
     end

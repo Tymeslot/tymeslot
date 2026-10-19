@@ -70,7 +70,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       meeting = insert(:meeting, organizer_user: user, organizer_email: user.email)
 
       # Retention rows: FKs flipped to :nilify_all so the rows survive the
-      # user delete and are anonymised by Tymeslot.MeetingPayments.DataRetention
+      # user delete and are anonymised by Tymeslot.FinancialRetention
       # before the user row is destroyed (EU/Swiss tax-record retention,
       # GDPR Art. 17(3)(b) carve-out).
       payment_transaction =
@@ -201,7 +201,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       # payment_transaction: FK on user_id flipped to :nilify_all in
       # 20260508164247_add_retention_columns_to_payment_transactions.exs
       # so the row survives the user delete and stands alone as a tax
-      # record. Tymeslot.MeetingPayments.DataRetention.anonymise_host/1
+      # record. Tymeslot.Payments.DataRetention.anonymise_host/2
       # nilifies user_id and stamps host_deleted_at; host_email is
       # snapshotted to retain counterparty identity. EU/Swiss tax law
       # requires up-to-ten-year retention (GDPR Art. 17(3)(b) carve-out).
@@ -293,7 +293,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
     end
 
     test "payment_transactions FK nilifies (not deletes) a row missed by the retention pass" do
-      # Safety net independent of delete_user/1's ordering. DataRetention
+      # Safety net independent of delete_user/1's ordering. FinancialRetention
       # nilifies user_id before the user row is removed, so the normal path
       # never relies on the FK's on_delete. But if a row is ever missed — a
       # new code path, a reordering — the FK must NILIFY, not DELETE, or a

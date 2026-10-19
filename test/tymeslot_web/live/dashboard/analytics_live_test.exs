@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
   @moduletag :analytics
   @moduletag :live
 
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
@@ -184,6 +185,62 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       refute has_element?(view, "button[phx-value-range='7d']")
       # …and the sidebar flags Analytics as a Pro feature.
       assert has_element?(view, "[data-testid='analytics-pro-badge']")
+    end
+  end
+
+  describe "when the plan check refuses despite an allowing assign" do
+    defmodule DenyAnalyticsChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :analytics_allowed), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    # The assign only decides what renders; the context refuses the data on
+    # its own, so a wrong or stale assign cannot hand the metrics out.
+    setup do
+      setup_config(:tymeslot, :feature_access_checker, DenyAnalyticsChecker)
+    end
+
+    test "shows the upgrade placeholder and no metrics", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      html = render(view)
+      refute html =~ "linkedin"
+      refute has_element?(view, "button[phx-click='refresh']")
+      assert has_element?(view, "[data-testid='analytics-pro-badge']")
+    end
+  end
+
+  describe "when the plan check fails rather than refuses" do
+    defmodule FailingAnalyticsChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :analytics_allowed), do: {:error, :timeout}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    # A failed check says nothing about the plan, so the organiser is asked
+    # to retry rather than offered an upgrade they may already have.
+    setup do
+      setup_config(:tymeslot, :feature_access_checker, FailingAnalyticsChecker)
+    end
+
+    test "says analytics are unavailable instead of offering an upgrade", %{
+      conn: conn,
+      user: user
+    } do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      html = render(view)
+      assert html =~ "Analytics are temporarily unavailable"
+      refute html =~ "linkedin"
+      refute has_element?(view, "[data-testid='analytics-pro-badge']")
+      assert has_element?(view, "button[phx-click='refresh']")
     end
   end
 

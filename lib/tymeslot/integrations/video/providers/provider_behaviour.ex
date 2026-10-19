@@ -7,7 +7,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
 
   alias Tymeslot.Integrations.Shared.ConnectionProbe
-  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.RoomData
 
   @doc """
@@ -89,13 +88,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @callback extract_room_id(meeting_url :: String.t()) :: String.t() | nil
 
   @doc """
-  Validates if a URL is a valid meeting URL for this provider.
-
-  Returns true if the URL is valid for this provider, false otherwise.
-  """
-  @callback valid_meeting_url?(meeting_url :: String.t()) :: boolean()
-
-  @doc """
   Tests the connection to the video service.
 
   Pure I/O: providers never rate-limit their own connection test. The caller
@@ -113,16 +105,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   enforces that mechanically.
   """
   @callback perform_connection_test(config :: map()) :: {:ok, String.t()} | {:error, any()}
-
-  @doc """
-  Returns the provider type identifier.
-  """
-  @callback provider_type() :: atom()
-
-  @doc """
-  Returns the display name for this provider.
-  """
-  @callback display_name() :: String.t()
 
   @doc """
   Returns the connection-test rate-limit bucket this provider draws its
@@ -143,43 +125,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @callback validate_config(config :: map()) :: :ok | {:error, String.t()}
 
   @doc """
-  Returns provider-specific capabilities.
-
-  This helps the system understand what features the provider supports
-  (e.g., recording, screen sharing, waiting rooms, etc.).
-
-  The keys are a closed vocabulary declared by
-  `Tymeslot.Integrations.Video.Providers.Capabilities`. Build the map with
-  `Capabilities.new!/1` from a module attribute so an unknown or missing key
-  fails at compile time: `ProviderRegistry.providers_with_capability/1` reads
-  the map with `Map.get/3`, so a misspelt key is indistinguishable from an
-  unsupported feature.
+  The checks a configuration being saved (connected or edited) must pass on
+  top of `validate_config/1`. `validate_config/1` also runs on stored configs,
+  before every room and every health probe, so a rule added after rows were
+  saved belongs here, where it cannot strand them.
   """
-  @callback capabilities() :: Capabilities.t()
-
-  @doc """
-  Handles provider-specific meeting lifecycle events.
-
-  ## Parameters
-    - event: The lifecycle event (:created, :started, :ended, :cancelled)
-    - room_data: Platform-specific room information
-    - additional_data: Any additional context data
-
-  Returns :ok or {:error, reason}.
-  """
-  @callback handle_meeting_event(
-              event :: atom(),
-              room_data :: RoomData.t(),
-              additional_data :: map()
-            ) :: :ok | {:error, any()}
-
-  @doc """
-  Generates meeting metadata for email templates and UI display.
-
-  Returns a map with standardized meeting information that can be used
-  across different providers in email templates, calendar invites, etc.
-  """
-  @callback generate_meeting_metadata(room_data :: RoomData.t()) :: map()
+  @callback validate_config_for_save(config :: map()) :: :ok | {:error, String.t()}
 
   @doc """
   Updates an existing meeting room on the provider's side after the
@@ -252,15 +203,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
             }
 
   @doc """
-  Substrings that identify a meeting URL as belonging to this provider.
-
-  Used by `ProviderAdapter.detect_provider_from_url/1` to dispatch URL
-  extraction to the right provider. Return `[]` (or omit) for providers
-  whose URLs are arbitrary user-supplied links (e.g. custom).
-  """
-  @callback url_patterns() :: [String.t()]
-
-  @doc """
   Pre-flight phase of the circuit-breaker split for `create_meeting_room/1`
   (see `ProviderAdapter.with_breaker/2`). Runs entirely outside the shared
   breaker.
@@ -315,13 +257,27 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback room_creation_budget_ms() :: pos_integer()
 
+  @doc """
+  Marks the integration behind `config` "Reconnect required" because the
+  provider refused its OAuth grant, with the provider's own message.
+
+  `ProviderAdapter` calls it when `precheck_create_meeting_room/1` reports a
+  refresh the provider rejected for good (a revoked or expired grant), so the
+  owner is told at once and room creation fails as unauthorised instead of
+  being retried as if the provider were down.
+
+  Optional: only providers holding an OAuth grant implement it.
+  """
+  @callback flag_revoked_token(config :: map()) :: :ok
+
   @optional_callbacks shared_join_url: 2,
                       time_bound_join_urls?: 1,
                       update_meeting_room: 2,
                       delete_meeting_room: 2,
-                      url_patterns: 0,
                       precheck_create_meeting_room: 1,
                       finish_create_meeting_room: 2,
                       ensure_valid_token: 1,
-                      room_creation_budget_ms: 0
+                      room_creation_budget_ms: 0,
+                      flag_revoked_token: 1,
+                      validate_config_for_save: 1
 end

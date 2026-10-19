@@ -16,10 +16,12 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     Sanitise,
     Styles,
     TemplateHelper,
-    Text,
-    TimezoneHelper
+    Text
   }
 
+  alias Tymeslot.Utils.DateTimeUtils
+
+  alias Tymeslot.Locales
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
@@ -32,7 +34,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
   @spec render(PollSchema.t(), PollParticipantSchema.t(), String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, %PollParticipantSchema{} = participant, voting_url)
       when is_binary(voting_url) do
-    locale = participant.locale || "en"
+    locale = Locales.acceptable(participant.locale) || Locales.booking_default_locale()
     host_name = host_display_name(poll)
     deadline = formatted_deadline(poll, participant, locale)
 
@@ -61,11 +63,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
       |> to({participant.name, participant.email})
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(host_name, host_email(poll))
-      |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title)
-        )
-      )
+      |> subject(dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title))
       |> html_body(html_body)
       |> text_body(build_text_body(poll, host_name, deadline, voting_url))
     end)
@@ -117,7 +115,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     timezone = participant.timezone || "UTC"
 
     deadline_at
-    |> TimezoneHelper.convert_to_timezone(timezone)
+    |> DateTimeUtils.convert_to_timezone(timezone)
     |> Formatting.format_datetime(locale)
   end
 

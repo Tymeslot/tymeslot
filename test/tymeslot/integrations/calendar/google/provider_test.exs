@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
   import Tymeslot.Factory
   import Mox
 
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Google.Provider
 
   setup :verify_on_exit!
@@ -189,6 +190,25 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
   end
 
   describe "convert_event/1" do
+    # The live availability read, like the cache, frees the time of an
+    # invitation the account itself declined.
+    test "an invitation the account itself declined does not block time" do
+      google_event = %{
+        "id" => "declined",
+        "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+        "status" => "confirmed",
+        "attendees" => [
+          %{"email" => "me@example.com", "self" => true, "responseStatus" => "declined"}
+        ]
+      }
+
+      result = Provider.convert_event(google_event)
+
+      assert result.status == "declined"
+      refute CalendarEvent.blocking?(result)
+    end
+
     test "converts Google Calendar event with all fields" do
       google_event = %{
         "id" => "event123",

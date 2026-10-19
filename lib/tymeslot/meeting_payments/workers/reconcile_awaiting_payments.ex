@@ -91,7 +91,10 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
       :ok ->
         :ok
 
-      {:error, reason} ->
+      {:ok, _result} ->
+        :ok
+
+      {:error, _kind, reason} ->
         Logger.error("ReconcileAwaitingPayments handler failed",
           booking_payment_id: payment.id,
           reason: LogFormat.reason(reason)
@@ -101,9 +104,13 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
     end
   end
 
+  # The session was retrieved from the row's own connected account, so the
+  # event carries that account exactly as Stripe's delivery would; the
+  # handlers refuse any event whose account does not own the row.
   defp synthetic_event(payment, session) do
     %{
       "id" => "reconcile:#{payment.stripe_checkout_session_id}",
+      "account" => payment.stripe_account_id,
       "data" => %{"object" => session}
     }
   end

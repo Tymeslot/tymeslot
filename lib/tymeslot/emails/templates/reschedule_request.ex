@@ -5,6 +5,8 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
 
   import Swoosh.Email
   alias Tymeslot.Bookings.BookingTitle
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   alias Tymeslot.Emails.Shared.{
@@ -13,10 +15,10 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     Formatting,
     MeetingComponents,
     MjmlEmail,
-    Sanitise,
     Styles,
     TemplateHelper,
     Text,
+    TextBodyHelper,
     TimezoneHelper
   }
 
@@ -26,8 +28,14 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
 
   @spec render(Tymeslot.Meetings.MeetingSchema.t()) ::
           Swoosh.Email.t()
-  def render(%Meeting{reschedule_url: url} = meeting) when is_binary(url) do
-    locale = meeting.attendee_locale || "en"
+  def render(%Meeting{} = meeting) do
+    meeting
+    |> MeetingLinks.with_current_links()
+    |> render_current()
+  end
+
+  defp render_current(%Meeting{reschedule_url: url} = meeting) when is_binary(url) do
+    locale = RecipientLocale.attendee_locale(meeting)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       # The stored title is in the organiser's language; the booker reads it in
@@ -46,8 +54,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
           duration: meeting.duration,
           location: meeting.location,
           location_type: BookingRequestLocation.type(meeting),
-          meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-          timezone: meeting.attendee_timezone || "UTC"
+          meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting")
         })
 
       mjml_content = """
@@ -92,11 +99,9 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(meeting.organizer_name, meeting.organizer_email)
       |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_booking_requests", "Reschedule Request: %{title} - %{date}",
-            title: meeting.title,
-            date: Formatting.format_date_short(attendee_time, locale)
-          )
+        dgettext("emails_booking_requests", "Reschedule Request: %{title} - %{date}",
+          title: meeting.title,
+          date: Formatting.format_date_short(attendee_time, locale)
         )
       )
       |> html_body(html_body)
@@ -113,11 +118,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     #{dgettext("emails_booking_requests", "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
 
     #{dgettext("emails_booking_requests", "CANCELLED APPOINTMENT DETAILS:")}
-    #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
-    #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
-    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
+    #{TextBodyHelper.format_meeting_details(details, locale)}
 
     #{dgettext("emails_booking_requests", "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
 

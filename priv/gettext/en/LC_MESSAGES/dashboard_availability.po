@@ -439,6 +439,7 @@ msgid "Schedule duplicated"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule name"
 msgstr ""
@@ -872,4 +873,49 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete schedule"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} cannot be more than %{max}"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be a whole number"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be at least %{min}"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking days"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr ""
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum advance hours"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break no longer fits these hours. Move or delete it first."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break on %{day} falls outside that day's hours. Move or delete it, then try again."
 msgstr ""

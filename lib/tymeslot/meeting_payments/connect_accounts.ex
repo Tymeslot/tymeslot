@@ -16,8 +16,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
+  alias Tymeslot.MeetingPayments.Currency
+  alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.StripeAdapter
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SendConnectAccountRestricted
   alias TymeslotWeb.Endpoint
@@ -37,7 +38,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   onboarding part-way and came back) gets a fresh onboarding link for that
   account; a new account is created only when the row has none. Returns
   `{:error, :account_creation_restricted}` when Stripe has put a temporary
-  hold on the platform creating connected accounts.
+  hold on the platform creating connected accounts, and
+  `{:error, :unsupported_currency}` when the new account's currency (its
+  country's) is not one meeting payments support.
   """
   @spec start_onboarding(user :: %{id: integer()}) ::
           {:ok, %{url: String.t(), account: account()}} | {:error, term()}
@@ -59,6 +62,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   defp onboard(%ConnectAccountSchema{} = placeholder, country) do
     with {:ok, stripe_account} <- create_stripe_account(placeholder, country),
+         :ok <- check_currency(stripe_account, country),
          {:ok, link} <- create_account_link(stripe_account.id),
          {:ok, account} <-
            ConnectAccountQueries.update(placeholder, %{
@@ -67,6 +71,24 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
              status: "active"
            }) do
       {:ok, %{url: link.url, account: account}}
+    end
+  end
+
+  # Stripe gives a new account its country's currency. The country is the
+  # operator's MEETING_PAYMENTS_DEFAULT_COUNTRY, so a currency outside the
+  # allowlist is a configuration error no host can fix; it is logged for the
+  # operator, and the placeholder is left as it was, so onboarding can be
+  # retried once the setting is corrected.
+  defp check_currency(%{default_currency: currency}, country) do
+    if is_binary(currency) and Currency.allowed?(currency) do
+      :ok
+    else
+      Logger.error("Stripe Connect account created in an unsupported currency",
+        country: country,
+        currency: currency
+      )
+
+      {:error, :unsupported_currency}
     end
   end
 
@@ -119,9 +141,12 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   will not be overwritten — the update silently skips that row, and
   `cancelled_count` reflects only the rows that were actually cancelled.
 
-  If the webhook arrives *after* step 3 sets the meeting to `expired`, the
-  `CheckoutSessionCompleted.ensure_awaiting_payment/1` guard will find the
-  meeting in `expired` status and return `:no_op`, leaving the payment untouched.
+  If the webhook arrives *after* step 3, it finds the meeting `expired` and
+  the payment `failed`, and the money has been taken all the same, so
+  `CheckoutSessionCompleted` does not ignore it: it confirms the booking
+  after all if the slot is still free (checked under the organiser's
+  schedule lock), and refunds the payment in full on the connected account
+  if the slot has been taken since, leaving the meeting expired.
 
   ## Stripe session expiry failures
 
@@ -135,7 +160,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   Deliberately: `payment_required` and `price_cents` survive a disconnect so a
   host who reconnects gets their prices back instead of re-entering every one.
   The form no longer clears them by omission
-  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/2`), the changeset no longer
+  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset no longer
   fails unrelated saves over the stored flag
   (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
   refuses a paid booking outright while charges are off, so nothing is taken
@@ -156,35 +181,73 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
     now = DateTime.utc_now(:second)
 
-    Repo.transaction(fn ->
-      cancelled_count =
-        Enum.reduce(pending, 0, fn payment, acc ->
-          case cancel_pending_booking(payment, now) do
-            :ok -> acc + 1
-            :skipped -> acc
-          end
-        end)
-
+    fn ->
+      {cancelled_count, expired} = cancel_pending_bookings(pending, now)
       ConnectAccountQueries.soft_delete_for_user(user.id, now)
 
-      %{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}
+      {%{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}, expired}
+    end
+    |> Repo.transaction()
+    |> announce_after_commit()
+  end
+
+  @doc """
+  Steps 1 to 3 of `disconnect/1` without the soft delete: expires the host's
+  open Stripe Checkout sessions and cancels their pending bookings, leaving
+  the Connect account in place. Used when a host's account is frozen pending
+  deletion, so no attendee can still pay for a booking the host will never
+  hold. A checkout that completes regardless is refunded by
+  `CheckoutSessionCompleted`.
+
+  Returns `{:ok, cancelled_count}`, or `{:error, reason}` if the transaction
+  fails.
+  """
+  @spec cancel_pending_checkouts(user :: %{id: integer()}) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def cancel_pending_checkouts(user) do
+    pending = BookingPaymentQueries.list_pending_for_host(user.id)
+    expire_stripe_sessions(pending, ConnectAccountQueries.live_for_user(user.id))
+    now = DateTime.utc_now(:second)
+
+    fn -> cancel_pending_bookings(pending, now) end
+    |> Repo.transaction()
+    |> announce_after_commit()
+  end
+
+  # Returns the number of bookings cancelled and the meetings whose hold was
+  # released, which are announced only once the transaction has committed.
+  defp cancel_pending_bookings(pending, now) do
+    Enum.reduce(pending, {0, []}, fn payment, {count, expired} ->
+      case cancel_pending_booking(payment, now) do
+        {:ok, nil} -> {count + 1, expired}
+        {:ok, meeting} -> {count + 1, [meeting | expired]}
+        :skipped -> {count, expired}
+      end
     end)
   end
+
+  defp announce_after_commit({:ok, {result, expired}}) do
+    Enum.each(expired, &HeldMeetings.announce_expired/1)
+    {:ok, result}
+  end
+
+  defp announce_after_commit({:error, _reason} = error), do: error
 
   # Cancel a pending booking_payment and, if it has a linked awaiting_payment
   # meeting, transition that meeting to expired so the slot is released.
   #
   # Uses a conditional UPDATE that only writes when status = 'pending', so a
   # concurrent checkout.session.completed webhook that has already flipped the
-  # row to 'paid' is not overwritten.
+  # row to 'paid' is not overwritten. The meeting is locked only after that
+  # claim, the same order the webhooks take their locks in.
   #
-  # Returns :ok when the row was cancelled, :skipped when the row was already
-  # in a terminal state (concurrent webhook beat us to it).
+  # Returns `{:ok, expired_meeting | nil}` when the row was cancelled, and
+  # :skipped when it was already in a terminal state (a concurrent webhook
+  # beat us to it).
   defp cancel_pending_booking(payment, now) do
     case BookingPaymentQueries.cancel_if_pending(payment.id, now) do
       {:ok, :cancelled} ->
-        maybe_expire_meeting(payment.meeting)
-        :ok
+        {:ok, expire_held_meeting(payment.meeting_id)}
 
       {:ok, :skipped} ->
         :skipped
@@ -195,45 +258,50 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     end
   end
 
-  defp maybe_expire_meeting(nil), do: :ok
+  # A meeting write that fails is logged and the cancellation stands: the
+  # payment's own `checkout.session.expired` event later expires a meeting
+  # still awaiting payment behind a cancelled payment
+  # (`Webhooks.FailAndExpire`).
+  defp expire_held_meeting(meeting_id) do
+    case HeldMeetings.expire(meeting_id) do
+      {:ok, :expired, meeting} ->
+        meeting
 
-  defp maybe_expire_meeting(%{status: "awaiting_payment"} = meeting) do
-    case MeetingQueries.update_meeting(meeting, %{status: "expired"}) do
-      {:ok, _updated} ->
-        :ok
+      {:ok, :unchanged} ->
+        nil
 
       {:error, reason} ->
-        Logger.warning("disconnect: failed to expire meeting",
-          meeting_id: meeting.id,
+        Logger.warning("Failed to expire the meeting of a cancelled checkout",
+          meeting_id: meeting_id,
           reason: LogFormat.reason(reason)
         )
+
+        nil
     end
   end
-
-  defp maybe_expire_meeting(_meeting), do: :ok
 
   defp expire_stripe_sessions(pending, account) do
     stripe_account_id = account && account.stripe_account_id
 
-    Enum.each(pending, fn payment ->
-      session_id = payment.stripe_checkout_session_id
+    Enum.each(pending, &expire_stripe_session(&1.stripe_checkout_session_id, stripe_account_id))
+  end
 
-      result =
-        StripeAdapter.expire_checkout_session(session_id,
-          connect_account: stripe_account_id
-        )
+  # Isolated per session: one that raises is logged like one that fails, so
+  # the rest are still expired and every booking is still cancelled locally.
+  defp expire_stripe_session(session_id, stripe_account_id) do
+    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
+      {:ok, _session} -> :ok
+      {:error, reason} -> log_expire_failure(session_id, reason)
+    end
+  rescue
+    exception -> log_expire_failure(session_id, exception)
+  end
 
-      case result do
-        {:ok, _session} ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("disconnect: failed to expire Stripe checkout session",
-            session_id: session_id,
-            reason: LogFormat.reason(reason)
-          )
-      end
-    end)
+  defp log_expire_failure(session_id, reason) do
+    Logger.warning("Failed to expire Stripe checkout session",
+      session_id: session_id,
+      reason: LogFormat.reason(reason)
+    )
   end
 
   @doc """
@@ -251,7 +319,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   has no envelope and stamps the current time, since it reflects Stripe's
   current truth as of the fetch.
   """
-  @spec apply_account_event(map(), DateTime.t()) :: :ok
+  @spec apply_account_event(map(), DateTime.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def apply_account_event(%{"id" => stripe_account_id} = account, %DateTime{} = event_at) do
     case ConnectAccountQueries.by_stripe_account_id(stripe_account_id) do
       nil ->
@@ -264,18 +332,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
           now = DateTime.utc_now(:second)
           new_disabled_reason = get_in(account, ["requirements", "disabled_reason"])
 
-          {:ok, updated} =
-            ConnectAccountQueries.update(local, %{
-              charges_enabled: account["charges_enabled"],
-              payouts_enabled: account["payouts_enabled"],
-              details_submitted: account["details_submitted"],
-              disabled_reason: new_disabled_reason,
-              last_synced_at: now,
-              last_account_event_at: event_at
-            })
-
-          maybe_notify_restriction(updated, local.disabled_reason)
-          :ok
+          with {:ok, updated} <-
+                 ConnectAccountQueries.update(local, %{
+                   charges_enabled: account["charges_enabled"],
+                   payouts_enabled: account["payouts_enabled"],
+                   details_submitted: account["details_submitted"],
+                   disabled_reason: new_disabled_reason,
+                   last_synced_at: now,
+                   last_account_event_at: event_at
+                 }) do
+            maybe_notify_restriction(updated, local.disabled_reason)
+          end
         end
     end
   end
@@ -316,7 +383,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   defp maybe_notify_restriction(_updated, _previous), do: :ok
 
-  # Stripe Express dashboard always lives at this canonical URL; we keep the
+  # The Stripe dashboard always lives at this canonical URL; we keep the
   # link generic rather than per-account because account_link sessions are
   # short-lived and would force us to call into Stripe synchronously.
   defp stripe_dashboard_url, do: "https://dashboard.stripe.com/"

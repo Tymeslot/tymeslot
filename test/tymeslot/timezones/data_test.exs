@@ -12,9 +12,14 @@ defmodule Tymeslot.Timezones.DataTest do
 
   @moduletag :utils
 
+  import Tymeslot.Test.ClockHelpers
+
+  alias Tymeslot.Timezones
   alias Tymeslot.Timezones.Data
 
   defp found(term), do: Enum.map(Data.search(term), &elem(&1, 1))
+
+  defp offsets(term), do: Map.new(Data.search(term), fn {_label, id, offset} -> {id, offset} end)
 
   describe "French overseas departments" do
     # Each is its own IANA zone, and each is somebody's working day: these are
@@ -39,6 +44,33 @@ defmodule Tymeslot.Timezones.DataTest do
       assert "America/Martinique" in found("972")
       assert "America/Cayenne" in found("guyane")
       assert "Indian/Mayotte" in found("976")
+    end
+  end
+
+  describe "search/1 with nothing typed yet" do
+    # The unfiltered list is what onboarding, profile settings and the booking
+    # page show first, and people pick a zone by its offset there.
+    test "labels each zone with the offset in force today, not when the release was built" do
+      freeze_clock(~U[2027-01-15 12:00:00Z])
+      assert offsets("")["Europe/Berlin"] == "UTC+1"
+      assert offsets("")["America/New_York"] == "UTC-5"
+
+      freeze_clock(~U[2027-07-15 12:00:00Z])
+      assert offsets("")["Europe/Berlin"] == "UTC+2"
+      assert offsets("")["America/New_York"] == "UTC-4"
+    end
+
+    test "agrees with a typed search for the same zone" do
+      freeze_clock(~U[2027-01-15 12:00:00Z])
+      assert offsets("")["Europe/Berlin"] == offsets("Berlin")["Europe/Berlin"]
+    end
+  end
+
+  describe "utc_offset/2" do
+    test "reads the offset in force at the given instant" do
+      assert Timezones.utc_offset("Australia/Sydney", ~U[2027-01-15 12:00:00Z]) == "UTC+11"
+      assert Timezones.utc_offset("Australia/Sydney", ~U[2027-07-15 12:00:00Z]) == "UTC+10"
+      assert Timezones.utc_offset("Asia/Kolkata", ~U[2027-07-15 12:00:00Z]) == "UTC+5:30"
     end
   end
 

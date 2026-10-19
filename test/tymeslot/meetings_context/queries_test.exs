@@ -40,7 +40,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
           duration: 3_600
         })
 
-      meetings = Meetings.list_upcoming_meetings_for_user(user.email)
+      meetings = Meetings.list_upcoming_meetings_for_organizer(user.id)
 
       assert length(meetings) == 1
       assert hd(meetings).id == upcoming.id
@@ -49,7 +49,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
     test "returns empty list when user has no upcoming meetings" do
       %{user: user} = create_user_with_profile()
 
-      meetings = Meetings.list_upcoming_meetings_for_user(user.email)
+      meetings = Meetings.list_upcoming_meetings_for_organizer(user.id)
 
       assert meetings == []
     end
@@ -65,10 +65,10 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
         insert_meeting_for_user(user, %{start_offset: 86_400 * i})
       end
 
-      {:ok, page1} = Listing.list_user_meetings_cursor_page(user.email, per_page: 3)
+      {:ok, page1} = Listing.list_organizer_meetings_cursor_page(user.id, per_page: 3)
 
       {:ok, page2} =
-        Listing.list_user_meetings_cursor_page(user.email,
+        Listing.list_organizer_meetings_cursor_page(user.id,
           per_page: 3,
           after: page1.next_cursor
         )
@@ -94,23 +94,23 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
         insert_meeting_for_user(user_b, %{start_offset: 86_400 * i})
       end
 
-      {:ok, page_a} = Listing.list_user_meetings_cursor_page(user_a.email, per_page: 3)
+      {:ok, page_a} = Listing.list_organizer_meetings_cursor_page(user_a.id, per_page: 3)
       assert page_a.next_cursor
 
       {:ok, page_b_with_a_cursor} =
-        Listing.list_user_meetings_cursor_page(user_b.email,
+        Listing.list_organizer_meetings_cursor_page(user_b.id,
           per_page: 3,
           after: page_a.next_cursor
         )
 
-      assert Enum.all?(page_b_with_a_cursor.items, &(&1.organizer_email == user_b.email))
+      assert Enum.all?(page_b_with_a_cursor.items, &(&1.organizer_user_id == user_b.id))
     end
 
     test "a tampered cursor returns {:error, :invalid_cursor}" do
       %{user: user} = create_user_with_profile()
       insert_meeting_for_user(user)
 
-      {:ok, page} = Listing.list_user_meetings_cursor_page(user.email, per_page: 1)
+      {:ok, page} = Listing.list_organizer_meetings_cursor_page(user.id, per_page: 1)
       assert page.next_cursor
 
       # Flip a bit inside the payload segment of the signed token. Last-byte
@@ -121,7 +121,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
       tampered = Enum.join([header, <<bxor(first, 0xFF), rest::binary>>, sig], ".")
 
       assert {:error, :invalid_cursor} =
-               Listing.list_user_meetings_cursor_page(user.email,
+               Listing.list_organizer_meetings_cursor_page(user.id,
                  per_page: 1,
                  after: tampered
                )

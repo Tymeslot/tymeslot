@@ -258,6 +258,7 @@ msgid "Not set"
 msgstr "Non défini"
 
 #: lib/tymeslot_web/components/shared/token_page.ex
+#: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Veuillez patienter un instant avant de réessayer."
@@ -601,15 +602,20 @@ msgstr "Il s'agit d'une session de groupe : elle ne peut donc pas être modifié
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
 
-#: lib/tymeslot_web/themes/core/meeting_management.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to cancel meeting. Please try again."
-msgstr "Échec de l’annulation de la réunion. Veuillez réessayer."
-
-#: lib/tymeslot_web/themes/core/meeting_management.ex
+#: lib/tymeslot_web/themes/core/mount_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting can no longer be changed."
 msgstr "Cette réunion ne peut plus être modifiée."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This booking was already cancelled."
+msgstr "Cette réservation a déjà été annulée."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be cancelled. Please try again."
+msgstr "La réunion n'a pas pu être annulée. Veuillez réessayer."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format

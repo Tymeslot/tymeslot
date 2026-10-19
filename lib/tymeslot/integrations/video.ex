@@ -5,7 +5,6 @@ defmodule Tymeslot.Integrations.Video do
   Exposes a cohesive API used by web components without any LiveView/socket coupling.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AccessToken
@@ -13,12 +12,10 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
-  alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.MeetingLinkTemplate
   alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.OAuthCallback
   alias Tymeslot.Integrations.Video.ProviderConfig
-  alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Update
@@ -56,6 +53,19 @@ defmodule Tymeslot.Integrations.Video do
     VideoIntegrationQueries.list_all_for_user(user_id)
   end
 
+  @doc """
+  The user's active video integrations, ordered by name, credentials left
+  encrypted: for listings that need the id, name and provider.
+  """
+  @spec list_active_integrations(pos_integer()) :: [VideoIntegrationSchema.t()]
+  def list_active_integrations(user_id) when is_integer(user_id),
+    do: VideoIntegrationQueries.list_active_for_user(user_id)
+
+  @doc "Whether the user has an active video integration."
+  @spec has_active_integration?(pos_integer()) :: boolean()
+  def has_active_integration?(user_id) when is_integer(user_id),
+    do: VideoIntegrationQueries.active_exists_for_user?(user_id)
+
   @doc "See `Tymeslot.Integrations.Video.MeetingLinkTemplate.invalid?/1`."
   @spec meeting_link_template_invalid?(map()) :: boolean()
   defdelegate meeting_link_template_invalid?(integration), to: MeetingLinkTemplate, as: :invalid?
@@ -73,7 +83,7 @@ defmodule Tymeslot.Integrations.Video do
           | {:error, :not_found}
           | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get_integration(user_id, id) when is_integer(user_id) and is_integer(id) do
-    VideoIntegrationQueries.get_for_user(id, user_id)
+    VideoIntegrationQueries.get_live_for_user(id, user_id)
   end
 
   @doc """
@@ -85,16 +95,21 @@ defmodule Tymeslot.Integrations.Video do
   when the integration needs reconnecting for a different reason, so the message
   recorded on `sync_error` describes what actually failed.
 
-  Returns an Oban return value: `{:discard, _}` on success (retrying won't
-  recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
-  which causes Oban to retry the job and take another shot at recording the flag.
+  Returns an Oban return value: `{:discard, _}` once flagged (retrying won't
+  recover the credentials) or when the integration's row is gone, and
+  `{:error, _}` when the flag could not be recorded with its email, so Oban
+  retries the job and takes another shot. Credentials under an encryption key
+  missing from the keyring are not flagged (see `ReauthHandling.flag/3`): the
+  job is discarded with `ReauthHandling.key_missing_discard_reason/0`.
   """
   @spec handle_reauth_required(VideoIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
   def handle_reauth_required(%VideoIntegrationSchema{} = integration, opts \\ []) do
     case flag_for_reauth(integration, opts) do
       :ok -> {:discard, ReauthHandling.discard_reason()}
-      {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
+      {:error, :not_found} -> {:discard, "Integration no longer exists"}
+      {:error, :notification_failed} -> {:error, "Failed to flag integration for reauth"}
+      {:error, :encryption_key_missing} -> {:discard, ReauthHandling.key_missing_discard_reason()}
     end
   end
 
@@ -108,8 +123,21 @@ defmodule Tymeslot.Integrations.Video do
   """
   @spec fetch_integration_for_user(integer(), integer()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
-  def fetch_integration_for_user(id, user_id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
+  def fetch_integration_for_user(id, user_id),
+    do: fetch_flagging_unreadable(VideoIntegrationQueries.get_for_user(id, user_id))
+
+  @doc """
+  As `fetch_integration_for_user/2`, but a disconnected (soft-deleted)
+  integration is not found. For what the owner does, as against background
+  cleanup.
+  """
+  @spec fetch_live_integration_for_user(integer(), integer()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def fetch_live_integration_for_user(id, user_id),
+    do: fetch_flagging_unreadable(VideoIntegrationQueries.get_live_for_user(id, user_id))
+
+  defp fetch_flagging_unreadable(lookup) do
+    case lookup do
       {:ok, integration} ->
         {:ok, integration}
 
@@ -122,49 +150,12 @@ defmodule Tymeslot.Integrations.Video do
     end
   end
 
-  # Shared helper: delegates to ReauthHandling.flag/2 with video-specific opts.
-  # `mark_needs_reauth` is wired to `flag_and_notify/2` rather than the bare
-  # DB write, so that every path ending in "the owner has to reconnect", this
-  # one included and not just the provider-level 401 handling in
-  # `OAuthTokenManager`, sends the reauth email on the false to true
-  # transition. Keeping this symmetrical with `CalendarManagement` is
-  # deliberate: the two used to disagree on which paths notified.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
+      :video,
       integration,
-      Keyword.merge(
-        [mark_needs_reauth: &flag_and_notify/2, log_prefix: "Video"],
-        opts
-      )
+      Keyword.get(opts, :cause, :credentials_undecryptable)
     )
-  end
-
-  @doc """
-  Marks a video integration `needs_reauth` and emails the owner on the
-  false → true transition. Shared by `flag_for_reauth/2` and by
-  `OAuthTokenManager`'s provider-level 401 handling, so the two paths cannot
-  drift on whether reconnecting is announced.
-
-  Re-flagging an integration already awaiting reconnection is not news: the
-  owner has already been told, and the scheduler's uniqueness window is a
-  backstop for that, not the place to decide it.
-  """
-  @spec flag_and_notify(VideoIntegrationSchema.t(), String.t()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def flag_and_notify(%{needs_reauth: true} = integration, message),
-    do: VideoIntegrationQueries.mark_needs_reauth(integration, message)
-
-  def flag_and_notify(integration, message) do
-    with {:ok, updated} = result <-
-           VideoIntegrationQueries.mark_needs_reauth(integration, message) do
-      IntegrationScheduler.schedule_integration_reauth_notification(
-        %{id: updated.user_id},
-        updated,
-        :video
-      )
-
-      result
-    end
   end
 
   # ---------------
@@ -177,69 +168,99 @@ defmodule Tymeslot.Integrations.Video do
         ) ::
           {:ok, any()} | {:error, any()}
   def create_integration(user_id, provider, attrs) when is_integer(user_id) and is_map(attrs) do
-    provider =
-      case ProviderConfig.parse(provider) do
-        {:ok, atom} -> atom
-        {:error, :unknown} -> :unknown
+    case ProviderConfig.parse(provider) do
+      {:ok, provider} ->
+        attrs
+        |> AttrsCasting.atomize_known_attrs()
+        |> Map.merge(%{user_id: user_id, provider: to_string(provider)})
+        |> then(&create_pipeline(provider, account_attrs(provider, &1)))
+        |> AccountKey.refuse_taken_key()
+
+      {:error, :unknown} ->
+        {:error, :unknown_provider}
+    end
+  end
+
+  # One order for every provider. Everything before the probe is decided
+  # in-process; the probe is an outbound request to an address the organiser
+  # typed, which the connection-test bucket meters, so a repeat or a
+  # submission the changeset would refuse never spends one. OAuth providers
+  # are connected through their callback (`complete_oauth/4`) rather than
+  # here, so they skip the checks that need a user-supplied config.
+  defp create_pipeline(provider, attrs) do
+    with :ok <- check_no_duplicate(provider, attrs),
+         :ok <- validate_new_config(provider, attrs),
+         :ok <- probe_on_create(provider, attrs) do
+      create(attrs)
+    end
+  end
+
+  # The account key a provider's integrations are deduplicated on: the
+  # address for the URL-keyed providers, server and login for Nextcloud Talk.
+  defp account_attrs(provider, attrs) do
+    case {provider, AccountKey.url_field(provider)} do
+      {:nextcloud_talk, _field} ->
+        NextcloudTalkProvider.account_attrs(attrs)
+
+      {_provider, nil} ->
+        attrs
+
+      {_provider, field} ->
+        Map.put(attrs, :provider_account_id, AccountKey.key_for(provider, attrs[field]))
+    end
+  end
+
+  # A provider keyed on an account cannot be connected to the same one twice;
+  # one keyed on nothing (kMeet's single host) once per user.
+  defp check_no_duplicate(provider, %{user_id: user_id} = attrs) do
+    cond do
+      attrs[:provider_account_id] not in [nil, ""] ->
+        AccountKey.check_free(user_id, attrs.provider, attrs.provider_account_id, nil)
+
+      ProviderConfig.oauth_provider?(provider) or provider == :none ->
+        :ok
+
+      true ->
+        case VideoIntegrationQueries.get_by_provider_for_user(user_id, attrs.provider) do
+          {:ok, _connected} -> {:error, :provider_already_connected}
+          {:error, :not_found} -> :ok
+        end
+    end
+  end
+
+  defp validate_new_config(provider, attrs) do
+    if ProviderConfig.oauth_provider?(provider) or provider == :none do
+      :ok
+    else
+      with {:ok, module} <- ProviderConfig.get_provider(provider),
+           :ok <- module.validate_config(attrs),
+           :ok <- validate_for_save(module, attrs) do
+        VideoIntegrationSchema.validate_new(attrs)
       end
-
-    attrs = AttrsCasting.atomize_known_attrs(attrs)
-
-    # Enforce provider in attrs consistently as string for DB layer
-    attrs = Map.put(Map.put(attrs, :user_id, user_id), :provider, to_string(provider))
-
-    provider
-    |> do_create_integration(attrs)
-    |> AccountKey.refuse_taken_key()
-  end
-
-  # `create_integration/3` has already atomised every key by the time these
-  # clauses run, so the attrs are read one way here.
-  defp do_create_integration(:mirotalk, attrs) do
-    base_url = attrs[:base_url]
-    attrs = Map.put(attrs, :provider_account_id, AccountKey.key_for(:mirotalk, base_url))
-
-    # Pre-test the connection prior to creation for better UX
-    config = %{
-      api_key: attrs[:api_key],
-      base_url: base_url
-    }
-
-    # Order matters, and the probe goes last. Everything above it is decided
-    # in-process, while the probe is an outbound request to an address the
-    # organiser typed, which is the thing the connection-test bucket exists to
-    # meter. Probing first meant a re-added server, or a submission the
-    # changeset was always going to reject, spent a token on a refusal that
-    # never left the machine, and the organiser was then told they had run too
-    # many connection tests after pressing "Add".
-    with :ok <- check_no_duplicate(attrs),
-         :ok <- VideoIntegrationSchema.validate_new(attrs),
-         {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]) do
-      VideoIntegrationQueries.create(attrs)
     end
   end
 
-  defp do_create_integration(:custom, attrs) do
-    attrs =
-      Map.put(
-        attrs,
-        :provider_account_id,
-        AccountKey.key_for(:custom, attrs[:custom_meeting_url])
-      )
+  defp validate_for_save(module, attrs) do
+    if function_exported?(module, :validate_config_for_save, 1),
+      do: module.validate_config_for_save(attrs),
+      else: :ok
+  end
 
-    with :ok <- check_no_duplicate(attrs) do
-      VideoIntegrationQueries.create(attrs)
+  defp probe_on_create(provider, attrs) do
+    if ProviderConfig.probes_on_create?(provider) do
+      with {:ok, module} <- ProviderConfig.get_provider(provider),
+           config = Map.take(attrs, Map.keys(module.config_schema())),
+           {:ok, _message} <- Connection.probe(provider, config, {:user, attrs.user_id}),
+           do: :ok
+    else
+      :ok
     end
   end
 
-  # kMeet has exactly one host, so there is no account to key on. Leaving
-  # `provider_account_id` nil files the row under
-  # `unique_active_video_null_account_per_user`, which is precisely the
-  # "one active kMeet per user" rule we want. Like every provider without an
-  # account id, the rule covers active rows only, so an inactive kMeet row does
-  # not block a new one. The index refusal is translated here, so callers learn
-  # the provider is already connected without knowing the index exists.
-  defp do_create_integration(:kmeet, attrs) do
+  # kMeet's single-host rule also lives in a unique index, which a concurrent
+  # connect can still meet; its refusal is answered as the duplicate check
+  # answers.
+  defp create(attrs) do
     case VideoIntegrationQueries.create(attrs) do
       {:error, %Ecto.Changeset{} = changeset} = error ->
         if provider_already_connected?(changeset),
@@ -250,60 +271,6 @@ defmodule Tymeslot.Integrations.Video do
         result
     end
   end
-
-  # The server URL is the dedup key (`AccountKey`), so one user can connect
-  # several Jitsi servers but not the same one twice. The config is validated before
-  # anything is saved: a half-filled credential pair or a short secret would
-  # otherwise only surface when a later booking fails to get its video link.
-  defp do_create_integration(:jitsi, attrs) do
-    attrs = Map.put(attrs, :provider_account_id, AccountKey.key_for(:jitsi, attrs[:base_url]))
-
-    with :ok <- JitsiProvider.validate_config(attrs),
-         :ok <- check_no_duplicate(attrs) do
-      VideoIntegrationQueries.create(attrs)
-    end
-  end
-
-  # Keyed on server and login together, as the CalDAV integrations are, so one
-  # person can connect two accounts on the same Nextcloud but not one account
-  # twice. The duplicate check comes first, so a repeat never spends a login
-  # attempt against the server; the connection probe then validates the config
-  # and proves the app password and a recent enough Talk before anything is
-  # saved.
-  defp do_create_integration(:nextcloud_talk, attrs) do
-    attrs = NextcloudTalkProvider.account_attrs(attrs)
-
-    with :ok <- check_no_duplicate(attrs),
-         {:ok, _message} <-
-           Connection.probe(
-             :nextcloud_talk,
-             Map.take(attrs, [:base_url, :client_id, :client_secret]),
-             {:user, attrs[:user_id]}
-           ) do
-      VideoIntegrationQueries.create(attrs)
-    end
-  end
-
-  # OAuth providers are created after OAuth callback normally; allow manual create only for none
-  defp do_create_integration(provider, attrs)
-       when provider in [:google_meet, :teams, :zoom, :none] do
-    VideoIntegrationQueries.create(attrs)
-  end
-
-  defp do_create_integration(_unknown, _attrs), do: {:error, :unknown_provider}
-
-  # Structural validation is never rate-limited; only the network probe is,
-  # charged to the user submitting the setup form. Both happen inside
-  # `Connection.probe/3` — the same choke point
-  # `Video.Connection.test_integration/2` uses — rather than reimplementing
-  # the validation, bucket lookup, and charge here.
-  defp probe_mirotalk_connection(config, user_id) do
-    Connection.probe(:mirotalk, config, {:user, user_id})
-  end
-
-  # Active and inactive integrations alike, so no two rows share an account.
-  defp check_no_duplicate(%{user_id: user_id, provider: provider} = attrs),
-    do: AccountKey.check_free(user_id, provider, attrs[:provider_account_id], nil)
 
   defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
     Enum.any?(Keyword.get_values(errors, :provider), fn {_message, opts} ->
@@ -374,9 +341,20 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Toggle active
   # ---------------
+  @doc """
+  Pauses an integration: sets it inactive, never the other way round. For
+  the system pausing an unhealthy integration; the owner's own switch is
+  `toggle_integration/2`.
+  """
+  @spec pause_integration(VideoIntegrationSchema.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def pause_integration(%VideoIntegrationSchema{} = integration) do
+    VideoIntegrationQueries.deactivate(integration)
+  end
+
   @spec toggle_integration(pos_integer(), pos_integer()) :: {:ok, any()} | {:error, any()}
   def toggle_integration(user_id, id) when is_integer(user_id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
+    case VideoIntegrationQueries.get_live_for_user(id, user_id) do
       {:ok, integration} ->
         case VideoIntegrationQueries.toggle_active(integration) do
           {:ok, %{is_active: true} = updated} = ok ->
@@ -394,12 +372,6 @@ defmodule Tymeslot.Integrations.Video do
         {:error, :requires_reencryption}
     end
   end
-
-  # ---------------
-  # Provider discovery helpers
-  # ---------------
-  @spec default_provider() :: atom()
-  def default_provider, do: Discovery.default_provider()
 
   # ---------------
   # Connection (by id, or probe_integration/2 for the background/health-check struct path)
@@ -465,13 +437,9 @@ defmodule Tymeslot.Integrations.Video do
   # URL helpers
   # ---------------
   @doc """
-  Reads the room id out of a meeting context, or guesses it from a bare URL.
-
-  The URL form is a best-effort guess at which provider issued the link, so a
-  caller that holds an integration must use `extract_room_id/2` instead. See
-  `Tymeslot.Integrations.Video.Urls.extract_room_id/1`.
+  Reads the room id out of a meeting context.
   """
-  @spec extract_room_id(String.t() | map()) :: String.t() | nil
+  @spec extract_room_id(map()) :: String.t() | nil
   defdelegate extract_room_id(input), to: Urls
 
   @doc """
@@ -486,12 +454,11 @@ defmodule Tymeslot.Integrations.Video do
 
   @doc """
   Completes a Google Meet, Teams or Zoom OAuth callback and connects the
-  integration, invalidating the user's cached dashboard integration status on
-  success. See `Tymeslot.Integrations.Video.OAuthCallback.complete/3`.
+  integration. See `Tymeslot.Integrations.Video.OAuthCallback.complete/4`.
   """
-  @spec complete_oauth(OAuth.provider(), String.t(), String.t()) ::
+  @spec complete_oauth(OAuth.provider(), String.t(), String.t(), pos_integer()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, term()}
-  defdelegate complete_oauth(provider, code, state), to: OAuthCallback, as: :complete
+  defdelegate complete_oauth(provider, code, state, user_id), to: OAuthCallback, as: :complete
 
   @doc """
   Creates or updates an OAuth video integration from callback token data.

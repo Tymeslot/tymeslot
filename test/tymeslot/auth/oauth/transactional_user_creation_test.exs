@@ -13,6 +13,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.{ProfileQueries, ProfileSchema}
   alias Tymeslot.Repo
   import Tymeslot.Factory
@@ -129,6 +130,21 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
       assert length(days) == 7,
              "Expected 7 days of weekly availability for OAuth user, got #{length(days)}"
+    end
+
+    test "seeds the default meeting types for a new OAuth user, as registration does" do
+      auth_params = %{
+        "email" => "seeded-oauth@example.com",
+        "google_user_id" => "google-uid-seed-test",
+        "provider" => "google",
+        "is_verified" => true
+      }
+
+      assert {:ok, %{user: user}} =
+               TransactionalUserCreation.find_or_create_oauth_user(:google, auth_params)
+
+      assert user.id |> MeetingTypes.get_all_meeting_types() |> Enum.map(& &1.name) |> Enum.sort() ==
+               ["15 Minutes", "30 Minutes"]
     end
 
     test "creates profile and default schedule for existing user without a profile" do

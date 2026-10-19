@@ -146,7 +146,7 @@ defmodule CredoChecks.TestGlobalStateRequiresSyncTest do
         use Tymeslot.DataCase, async: true
         import Tymeslot.Integrations.HealthCheckTestSetup
 
-        setup :start_health_check_server
+        setup :use_real_health_check
       end
       """
       |> to_source_file("test/tymeslot/integrations/health_check_import_test.exs")
@@ -279,7 +279,7 @@ defmodule CredoChecks.TestGlobalStateRequiresSyncTest do
         use Tymeslot.DataCase, async: false
         import Tymeslot.Integrations.HealthCheckTestSetup
 
-        setup :start_health_check_server
+        setup :use_real_health_check
       end
       """
       |> to_source_file("test/tymeslot/integrations/health_check_import_test.exs")

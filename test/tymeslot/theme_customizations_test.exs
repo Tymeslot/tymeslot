@@ -17,7 +17,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       %{profile: profile}
     end
 
-    test "create_theme_customization/3 creates a customization for a theme", %{profile: profile} do
+    test "upsert_theme_customization/3 creates a customization for a theme", %{profile: profile} do
       attrs = %{
         "color_scheme" => "purple",
         "background_type" => "gradient",
@@ -25,7 +25,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       }
 
       assert {:ok, customization} =
-               ThemeCustomizations.create_theme_customization(profile.id, "1", attrs)
+               ThemeCustomizations.upsert_theme_customization(profile.id, "1", attrs)
 
       assert customization.theme_id == "1"
       assert customization.settings["color_scheme"] == "purple"
@@ -33,11 +33,11 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       assert customization.settings["background_value"] == "gradient_1"
     end
 
-    test "create_theme_customization/3 starts a new row from the theme's defaults", %{
+    test "upsert_theme_customization/3 starts a new row from the theme's defaults", %{
       profile: profile
     } do
       assert {:ok, customization} =
-               ThemeCustomizations.create_theme_customization(profile.id, "2", %{
+               ThemeCustomizations.upsert_theme_customization(profile.id, "2", %{
                  "color_scheme" => "ocean"
                })
 
@@ -55,7 +55,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
         "background_value" => "#082f49"
       }
 
-      {:ok, _result} = ThemeCustomizations.create_theme_customization(profile.id, "2", attrs)
+      {:ok, _result} = ThemeCustomizations.upsert_theme_customization(profile.id, "2", attrs)
 
       customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "2")
       assert customization.theme_id == "2"
@@ -73,7 +73,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       }
 
       {:ok, _result} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", initial_attrs)
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", initial_attrs)
 
       # Update it
       update_attrs = %{
@@ -87,22 +87,6 @@ defmodule Tymeslot.ThemeCustomizationsTest do
 
       assert updated.settings["color_scheme"] == "sunset"
       assert updated.settings["background_value"] == "gradient_3"
-    end
-
-    test "delete_theme_customization/1 removes customization", %{profile: profile} do
-      attrs = %{
-        "color_scheme" => "forest",
-        "background_type" => "gradient",
-        "background_value" => "gradient_4"
-      }
-
-      {:ok, customization} =
-        ThemeCustomizations.create_theme_customization(profile.id, "2", attrs)
-
-      assert {:ok, _result} = ThemeCustomizations.delete_theme_customization(customization)
-
-      # Check customization is deleted
-      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "2") == nil
     end
 
     test "supports_background?/2 answers from the theme's spec" do

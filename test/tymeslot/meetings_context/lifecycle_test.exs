@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
@@ -81,7 +82,9 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user)
 
-      assert {:ok, cancelled} = Meetings.cancel_meeting(meeting.uid)
+      assert {:ok, cancelled} =
+               Meetings.cancel_meeting(Repo.get_by!(MeetingSchema, uid: meeting.uid))
+
       assert cancelled.status == "cancelled"
     end
 
@@ -89,18 +92,16 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: -86_400, duration: 3_600})
 
-      assert {:error, _reason} = Meetings.cancel_meeting(meeting.uid)
+      assert {:error, _reason} =
+               Meetings.cancel_meeting(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
 
     test "already cancelled meeting returns error" do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{status: "cancelled"})
 
-      assert {:error, "Meeting is already cancelled"} = Meetings.cancel_meeting(meeting.uid)
-    end
-
-    test "non-existent meeting returns not found error" do
-      assert {:error, :meeting_not_found} = Meetings.cancel_meeting("non-existent-uid")
+      assert {:error, :already_cancelled} =
+               Meetings.cancel_meeting(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
   end
 
@@ -119,10 +120,8 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
         organizer_user_id: user.id
       }
 
-      form_data = %{"name" => meeting.attendee_name, "email" => meeting.attendee_email}
-
       assert {:ok, rescheduled} =
-               Meetings.reschedule_meeting(meeting.uid, new_params, form_data, user.id)
+               Meetings.reschedule_meeting(meeting.uid, new_params, user.id)
 
       assert DateTime.to_date(rescheduled.start_time) == new_date
       assert rescheduled.status in ["rescheduled", "confirmed"]
@@ -146,10 +145,8 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
         organizer_user_id: user.id
       }
 
-      form_data = %{"name" => meeting.attendee_name, "email" => meeting.attendee_email}
-
       assert {:error, _reason} =
-               Meetings.reschedule_meeting(meeting.uid, new_params, form_data, user.id)
+               Meetings.reschedule_meeting(meeting.uid, new_params, user.id)
     end
   end
 end

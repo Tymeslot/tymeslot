@@ -14,6 +14,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
 
   alias Tymeslot.CalendarGrid.WriteHandOver
   alias Tymeslot.CalendarGrid.WriteQueue
+  alias Tymeslot.CalendarGrid.WriteQueue.SeriesActivity
   alias Tymeslot.CalendarGrid.WriteResults
 
   # Outside any series, so no series is held.
@@ -129,7 +130,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     test "keeps its writes until every driver has released it, then makes them onto the event as they left it" do
       [one, two] = [spawn(fn -> :ok end), spawn(fn -> :ok end)]
 
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{one, [@key]}, {two, [@key]}])
+      queue =
+        WriteQueue.wait_elsewhere(WriteQueue.new(), [{one, %{@key => nil}}, {two, %{@key => nil}}])
 
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
       {queue, []} = WriteQueue.update(queue, @event, %{summary: "Renamed"}, [])
@@ -155,7 +157,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     # A guardian releases the events a lender killed outright still owed,
     # and may do so after the lender's own release.
     test "makes its writes once, however often the event is released" do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{@key => nil}}])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
       assert {queue, [{:show, _shown}, {:start, write, _event}]} =
@@ -168,7 +170,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
 
     test "drops and counts its writes once the other driver changed the whole series" do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{@key => nil}}])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
       assert {queue, [{:dropped, :series_write, 1}, :reload]} =
@@ -181,7 +183,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {queue, [{:start, _write, _event}]} =
         WriteQueue.update(WriteQueue.new(), @event, %{summary: "Mine"}, [])
 
-      queue = WriteQueue.wait_elsewhere(queue, [{self(), [@key]}])
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), %{@key => nil}}])
 
       assert {_queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
       refute WriteResults.awaits?(queue, {:event_writes_released, {self(), @key, :unknown}})
@@ -194,8 +196,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
 
       queue =
         WriteQueue.new()
-        |> WriteQueue.wait_elsewhere([{first, [@key]}])
-        |> WriteQueue.wait_elsewhere([{lent_back, [@key]}])
+        |> WriteQueue.wait_elsewhere([{first, %{@key => nil}}])
+        |> WriteQueue.wait_elsewhere([{lent_back, %{@key => nil}}])
 
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
 
@@ -212,7 +214,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
         )
 
       {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
-      queue = WriteQueue.wait_elsewhere(queue, [{self(), [@other_key]}])
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), %{@other_key => nil}}])
 
       # The series was not changed, so the held write starts.
       assert {_queue, [{:show, _reverted}, {:start, held, @other_occurrence}]} =
@@ -287,7 +289,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
 
     test "is handed over, when the queue will never be driven, onto the event its kept writes were made against" do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [@key]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{@key => nil}}])
       {queue, []} = WriteQueue.update(queue, @event, %{location: "Room 9"}, [])
       {queue, []} = WriteQueue.change_video(queue, %{@event | location: "Room 9"}, 3)
 
@@ -311,21 +313,21 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
 
     test "keeps every write to its events until released, then makes them", %{series: series} do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{series => nil}}])
       {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
 
-      assert WriteQueue.series_busy?(queue, @other_occurrence)
-      assert WriteQueue.series_saving?(queue, @other_occurrence)
+      assert SeriesActivity.busy?(queue, @other_occurrence)
+      assert SeriesActivity.saving?(queue, @other_occurrence)
 
       assert {queue, [{:start, kept, @other_occurrence}]} =
                WriteQueue.resume(queue, {self(), series, :unknown})
 
       assert kept.changes == %{location: "Room 9"}
-      refute WriteQueue.series_busy?(queue, @other_occurrence)
+      refute SeriesActivity.busy?(queue, @other_occurrence)
     end
 
     test "drops and counts the writes kept for it once the series changed", %{series: series} do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{series => nil}}])
       {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
 
       assert {queue, [{:dropped, :series_write, 1}, :reload]} =
@@ -354,7 +356,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     test "lends on the events it keeps writes for, left changed once the series changed", %{
       series: series
     } do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{series => nil}}])
       {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
 
       assert Enum.sort(WriteQueue.pending_keys(queue)) == Enum.sort([series, @other_key])
@@ -367,10 +369,207 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     test "has the writes kept for it counted as lost when the queue will never be driven", %{
       series: series
     } do
-      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), [series]}])
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{series => nil}}])
       {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
 
       assert WriteHandOver.plans(queue) == {[], 1}
+    end
+  end
+
+  describe "an occurrence another driver is writing" do
+    setup do
+      {:ok, series: WriteQueue.series_key(@occurrence)}
+    end
+
+    test "is lent with the series it belongs to", %{series: series} do
+      {queue, _start} =
+        WriteQueue.update(WriteQueue.new(), @other_occurrence, %{location: "Room 9"}, [])
+
+      assert WriteQueue.lendable(queue) == %{@other_key => series}
+    end
+
+    # Tab A writes occurrence P on a slow provider; grid C mounts, keeps an
+    # edit of P, and must not then write the whole series from occurrence O.
+    test "counts its series as busy, so a write to the whole of it is refused", %{
+      series: series
+    } do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{@other_key => series}}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert SeriesActivity.busy?(queue, @occurrence)
+      assert SeriesActivity.saving?(queue, @occurrence)
+
+      # Lent on to a grid mounted after this one with its series.
+      assert WriteQueue.lendable(queue) == %{@other_key => series}
+
+      {queue, [{:show, _shown}, {:start, kept, _event}]} =
+        WriteQueue.resume(queue, {self(), @other_key, {:ok, @other_occurrence}})
+
+      {queue, []} = WriteQueue.settle(queue, kept.ref, {:ok, @other_occurrence})
+
+      refute SeriesActivity.busy?(queue, @occurrence)
+    end
+
+    test "does not count the series busy for a write made from that occurrence itself", %{
+      series: series
+    } do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{@other_key => series}}])
+
+      refute SeriesActivity.busy?(queue, @other_occurrence)
+      assert SeriesActivity.saving?(queue, @other_occurrence)
+    end
+
+    test "holds back no write to another occurrence of the series", %{series: series} do
+      queue = WriteQueue.wait_elsewhere(WriteQueue.new(), [{self(), %{@other_key => series}}])
+
+      assert {_queue, [{:start, write, @occurrence}]} =
+               WriteQueue.update(queue, @occurrence, %{location: "Room 9"}, [])
+
+      assert write.changes == %{location: "Room 9"}
+    end
+
+    # A series write already running here when the grid mounted (adopted
+    # from its previous LiveView) still succeeds after the edit of P was kept.
+    test "has its kept writes dropped and what it is left as ignored once the series changed here",
+         %{series: series} do
+      {queue, [{:start, series_write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), %{@other_key => series}}])
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.settle(queue, series_write.ref, {:ok, @occurrence})
+
+      # Made after the reload, on the occurrence as the series change left it.
+      reloaded = %{@other_occurrence | summary: "All"}
+      {queue, []} = WriteQueue.update(queue, reloaded, %{location: "Room 10"}, [])
+
+      # The other driver passes on P as it was before the series change.
+      stale = %{@other_occurrence | summary: "Theirs"}
+
+      assert {queue, [{:start, write, ^reloaded}]} =
+               WriteQueue.resume(queue, {self(), @other_key, {:ok, stale}})
+
+      assert write.changes == %{location: "Room 10"}
+      assert WriteQueue.pending_keys(queue) == [@other_key]
+    end
+
+    test "is left stale for a grid it lends on to, once the series changed here", %{
+      series: series
+    } do
+      {queue, [{:start, series_write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      queue = WriteQueue.wait_elsewhere(queue, [{self(), %{@other_key => series}}])
+      {queue, _effects} = WriteQueue.settle(queue, series_write.ref, {:ok, @occurrence})
+
+      released = {:event_writes_released, {self(), @other_key, {:ok, @other_occurrence}}}
+      assert WriteResults.left_by(queue, @other_key, [released]) == :outdated
+    end
+
+    test "has its kept writes dropped once the series moved here", %{series: series} do
+      queue =
+        WriteQueue.new()
+        |> WriteQueue.series_moving(@occurrence)
+        |> WriteQueue.wait_elsewhere([{self(), %{@other_key => series}}])
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_move, 1}, :reload]} =
+               WriteQueue.series_moved(queue, @occurrence)
+
+      assert {_queue, []} =
+               WriteQueue.resume(queue, {self(), @other_key, {:ok, @other_occurrence}})
+    end
+
+    # Tab A writes the whole series while it waits for occurrence P from tab
+    # B, which is writing it. Grid C mounts, waits for both, and keeps an edit
+    # of P made on the copy from before the series change. B's release of P
+    # cannot know of the change, so A's release of the series has to say it.
+    test "has its kept writes dropped when a third driver releases the series as changed", %{
+      series: series
+    } do
+      tab_b = spawn(fn -> :ok end)
+
+      {tab_a, [{:start, _series_write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @occurrence, %{summary: "All"},
+          recurrence_scope: :all
+        )
+
+      tab_a = WriteQueue.wait_elsewhere(tab_a, [{tab_b, %{@other_key => series}}])
+
+      queue =
+        WriteQueue.wait_elsewhere(WriteQueue.new(), [
+          {self(), WriteQueue.lendable(tab_a)},
+          {tab_b, %{@other_key => series}}
+        ])
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.resume(queue, {self(), {:series, series}, :series_changed})
+
+      assert {queue, [:reload]} =
+               WriteQueue.resume(queue, {self(), WriteQueue.key(@occurrence), :series_changed})
+
+      # B passes on P as it was before the series change, and A, once B has
+      # released it there, passes on what it knows.
+      assert {queue, []} =
+               WriteQueue.resume(queue, {tab_b, @other_key, {:ok, @other_occurrence}})
+
+      assert {queue, []} = WriteQueue.resume(queue, {self(), @other_key, :outdated})
+      refute WriteQueue.pending?(queue)
+    end
+
+    test "stays changed when a later driver passes on the event from before the change", %{
+      series: series
+    } do
+      tab_b = spawn(fn -> :ok end)
+
+      queue =
+        WriteQueue.wait_elsewhere(WriteQueue.new(), [
+          {self(), %{@other_key => series}},
+          {tab_b, %{@other_key => series}}
+        ])
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.resume(queue, {self(), @other_key, :series_changed})
+
+      assert {_queue, [:reload]} =
+               WriteQueue.resume(queue, {tab_b, @other_key, {:ok, @other_occurrence}})
+    end
+
+    # Two drivers lend occurrence O, a third lends occurrence P of the same
+    # series, and the edit of P kept here predates the change one of O's
+    # lenders passes on. O still waits for its other lender, so nothing else
+    # would reload the grid off the stale P.
+    test "reloads at once when it drops a kept write while the released event still waits", %{
+      series: series
+    } do
+      [tab_b, tab_c] = for _n <- 1..2, do: spawn(fn -> :ok end)
+      own_key = WriteQueue.key(@occurrence)
+
+      queue =
+        WriteQueue.wait_elsewhere(WriteQueue.new(), [
+          {self(), %{own_key => series}},
+          {tab_b, %{own_key => series}},
+          {tab_c, %{@other_key => series}}
+        ])
+
+      {queue, []} = WriteQueue.update(queue, @other_occurrence, %{location: "Room 9"}, [])
+
+      assert {queue, [{:dropped, :series_write, 1}, :reload]} =
+               WriteQueue.resume(queue, {self(), own_key, :series_changed})
+
+      assert {_queue, []} =
+               WriteQueue.resume(queue, {tab_c, @other_key, {:ok, @other_occurrence}})
     end
   end
 

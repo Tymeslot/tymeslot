@@ -64,7 +64,7 @@ msgstr "Choisir un horaire"
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a final time so everyone can put it in the diary."
-msgstr "Choisissez l'horaire définitif pour que chacun puisse le noter."
+msgstr "Choisissez l’horaire définitif pour que chacun puisse le noter."
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex
 #, elixir-autogen, elixir-format

@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.HealthCheck
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
@@ -21,7 +20,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionLabels
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
   alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Dashboard.CalendarSettings.CardNotice
+  alias TymeslotWeb.Dashboard.CalendarSettings.FeedControls
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
+  alias TymeslotWeb.Helpers.TimeAgo
 
   @doc """
   Renders the configuration view for a specific calendar provider.
@@ -151,6 +153,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :is_refreshing, :boolean, required: true
   attr :myself, :any, required: true
   attr :health_states, :map, default: %{}
+  attr :stuck_changes, :map, default: %{}
 
   @spec connected_calendars_section(map()) :: Phoenix.LiveView.Rendered.t()
   def connected_calendars_section(assigns) do
@@ -199,6 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               integration={integration}
               myself={@myself}
               health_state={Map.get(@health_states, integration.id)}
+              stuck={Map.get(@stuck_changes, integration.id)}
             />
           <% end %>
         </div>
@@ -225,6 +229,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               integration={integration}
               myself={@myself}
               health_state={Map.get(@health_states, integration.id)}
+              stuck={Map.get(@stuck_changes, integration.id)}
             />
           <% end %>
         </div>
@@ -244,6 +249,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :integration, :map, required: true
   attr :myself, :any, required: true
   attr :health_state, :map, default: nil
+
+  attr :stuck, :map,
+    default: nil,
+    doc: "Its changes the server kept refusing (`Calendar.stuck_changes/1`), if any"
 
   @spec calendar_connection_row(map()) :: Phoenix.LiveView.Rendered.t()
   def calendar_connection_row(assigns) do
@@ -265,6 +274,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       |> assign(:summary, calendar_summary(integration))
       |> assign(:last_synced, last_synced(integration))
       |> assign(:subscription?, subscription?)
+      |> assign(:feed, subscription? && List.first(calendar_list))
       |> assign(:read_only?, read_only?)
       |> assign(
         :display_name,
@@ -277,7 +287,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={@display_name}
       type_tag={if @read_only?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
-      notice={ConnectionLabels.reconnect_reason(@integration)}
+      notice={CardNotice.notice(@integration, @health_state, @stuck)}
       status={@status}
       active={@integration.is_active}
       toggle_event="toggle_integration"
@@ -298,7 +308,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="upgrade_google_scope"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class={tile_class(:warning)}
+          class={Helpers.tile_class(:warning)}
           title={dgettext("dashboard_calendar_settings", "Upgrade Google Calendar permissions")}
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext(
@@ -316,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           phx-click="manage_calendars"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class={tile_class(:neutral)}
+          class={Helpers.tile_class(:neutral)}
           title={
             dgettext(
               "dashboard_calendar_settings",
@@ -330,30 +340,52 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             "Manage calendars"
           )}</span>
         </button>
-        <%!-- A subscription has no settings modal, so its one setting is a
-             toggle here: whether every event in the feed blocks time, also
-             those it marks free (holiday feeds mark all of them free). --%>
         <button
-          :if={@subscription?}
-          type="button"
-          phx-click="toggle_all_events_busy"
+          :if={retry_offered?(@integration, @stuck)}
+          phx-click="retry_stuck_changes"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class={tile_class(:neutral)}
-          aria-pressed={to_string(@integration.all_events_busy)}
-          data-testid="all-events-busy-toggle"
+          class={Helpers.tile_class(:warning)}
           title={
             dgettext(
               "dashboard_calendar_settings",
-              "Block the time of every event in this feed, also those it marks as free"
+              "Send the changes this calendar's server refused to it again"
             )
           }
         >
-          <.icon
-            name={if @integration.all_events_busy, do: "hero-check-circle", else: "hero-no-symbol"}
-            class="w-4 h-4"
-          /><span>{dgettext("dashboard_calendar_settings", "Every event busy")}</span>
+          <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext(
+            "dashboard_calendar_settings",
+            "Retry changes"
+          )}
         </button>
+        <button
+          :if={Map.get(@integration, :removed_calendars, []) != []}
+          phx-click="dismiss_removed_calendars"
+          phx-value-id={@integration.id}
+          phx-value-shown={
+            @integration |> Map.get(:removed_calendars, []) |> Enum.map(& &1.id) |> Jason.encode!()
+          }
+          phx-target={@myself}
+          class={Helpers.tile_class(:neutral)}
+          title={
+            dgettext(
+              "dashboard_calendar_settings",
+              "Dismiss the notice about calendars no longer on the server"
+            )
+          }
+        >
+          <.icon name="hero-x-mark" class="w-4 h-4" /> {dgettext(
+            "dashboard_calendar_settings",
+            "Dismiss"
+          )}
+        </button>
+        <FeedControls.feed_controls
+          :if={@subscription?}
+          integration={@integration}
+          feed={@feed}
+          display_name={@display_name}
+          myself={@myself}
+        />
         <%!-- Reconnecting a subscription means pasting a new feed URL, not
         re-entering credentials, so the CalDAV reconnect modal does not apply.
         A revoked feed is replaced by removing this row and subscribing again. --%>
@@ -430,10 +462,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   # The promoted (:attention) style is the amber warning tile; the subtle
   # (:normal) one is the neutral tile.
-  defp reconnect_button_class(:attention), do: tile_class(:warning)
+  defp reconnect_button_class(:attention), do: Helpers.tile_class(:warning)
 
   defp reconnect_button_class(:normal),
-    do: [tile_class(:neutral), "max-sm:h-9 max-sm:w-9 max-sm:px-0 max-sm:py-0"]
+    do: [Helpers.tile_class(:neutral), "max-sm:h-9 max-sm:w-9 max-sm:px-0 max-sm:py-0"]
 
   # On a phone the routine Reconnect shrinks to its icon so Manage calendars,
   # Reconnect and Delete share one row; a promoted Reconnect is the action the
@@ -441,13 +473,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp reconnect_label_class(:attention), do: nil
   defp reconnect_label_class(:normal), do: "max-sm:sr-only"
 
-  # Card actions that carry a text label as well as an icon, so they cannot be
-  # `icon_button/1`, take its tile look (the `.icon-button` colour rules set no
-  # size or padding) and the small action button's size, so they sit level
-  # with the icon buttons in the card's footer and keep their label at every
-  # width.
-  defp tile_class(variant),
-    do: ["icon-button", "icon-button--#{variant}", "gap-1.5 px-3 py-1.5 text-token-sm font-bold"]
+  # Retrying resets the changes for the next sync to send, so it is offered
+  # only while syncs run: not while the calendar waits to be reconnected or
+  # is paused.
+  defp retry_offered?(%{needs_reauth: true}, _stuck), do: false
+  defp retry_offered?(%{is_active: false}, _stuck), do: false
+  defp retry_offered?(_integration, stuck), do: stuck != nil
 
   @doc """
   Builds a one-line human summary for a calendar integration: account
@@ -546,12 +577,39 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   # The card's last-activity line; nothing for a connection never synced.
   # `last_external_sync_at` is what every sync worker stamps and what the
-  # staleness banner reads.
-  defp last_synced(%{last_external_sync_at: %DateTime{} = synced_at}),
-    do:
-      dgettext("dashboard_calendar_settings", "Last synced %{time}",
-        time: TokenUtils.relative_time(synced_at)
-      )
+  # staleness banner reads. Whole sentences rather than "Last synced
+  # %{time}" around a relative phrase, so each language words the time as
+  # its own sentence needs.
+  defp last_synced(%{last_external_sync_at: %DateTime{} = synced_at}) do
+    case TimeAgo.since(synced_at) do
+      :just_now ->
+        dgettext("dashboard_calendar_settings", "Last synced just now")
+
+      {:minutes, count} ->
+        dngettext(
+          "dashboard_calendar_settings",
+          "Last synced %{count} minute ago",
+          "Last synced %{count} minutes ago",
+          count
+        )
+
+      {:hours, count} ->
+        dngettext(
+          "dashboard_calendar_settings",
+          "Last synced %{count} hour ago",
+          "Last synced %{count} hours ago",
+          count
+        )
+
+      {:days, count} ->
+        dngettext(
+          "dashboard_calendar_settings",
+          "Last synced %{count} day ago",
+          "Last synced %{count} days ago",
+          count
+        )
+    end
+  end
 
   defp last_synced(_integration), do: nil
 end

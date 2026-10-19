@@ -195,6 +195,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CreationTest do
       assert integration.provider_account_email == "alice@mail.corp.internal"
     end
 
+    test "keeps the mailbox and login exactly as typed", %{user: user} do
+      stub_probe()
+
+      # Strict sanitisation strips `0x<hex>` runs and everything from `--`
+      # onwards, which once turned this mailbox into crypto@corp.com: a
+      # different, valid mailbox whose availability the bookings then read.
+      assert {:ok, integration} =
+               ExchangeCreation.create_with_validation(
+                 user.id,
+                 params(%{
+                   "mailbox" => "crypto0xabc@corp.com",
+                   "username" => "CORP\\ops--admin"
+                 })
+               )
+
+      assert integration.provider_account_email == "crypto0xabc@corp.com"
+      # The login itself is stored encrypted; the account key built from it is
+      # what dedup matches on.
+      assert integration.provider_account_id ==
+               "https://mail.example.com/EWS/Exchange.asmx||CORP\\ops--admin"
+    end
+
     test "enqueues the first sync so the mailbox is not silently free until the sweep", %{
       user: user
     } do

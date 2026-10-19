@@ -21,6 +21,8 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   alias Tymeslot.Integrations.Video.Providers.SsrfOptions
   alias Tymeslot.Integrations.Video.TemplateConfig
   alias Tymeslot.Security.SsrfBlockedError
+  alias Tymeslot.Security.SsrfGuard
+  alias Tymeslot.Security.UrlValidation
 
   # The host is user-supplied, so every hop is classified in its own right.
   # `ssrf_protect: true` hands the private-address decision to `SsrfGuard`,
@@ -103,7 +105,50 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
         {:ok, room_id}
 
       {:error, :empty_meeting_id} ->
-        {:error, dgettext("dashboard_video", "A meeting ID is required to create a video room")}
+        {:error,
+         dgettext("integrations_video", "A meeting ID is required to create a video room")}
+    end
+  end
+
+  @doc """
+  Checks the address of a self-hosted video server (MiroTalk, Jitsi,
+  Nextcloud Talk): an http or https URL with a host, of an allowed length,
+  with the shape `validate_base_url/1` asks for, and by default not on a local
+  or private address unless the operator allows them.
+
+  ## Options
+
+    * `:https` — `:for_public` refuses plain http to a public host (one on
+      localhost, a private network or, once private video addresses are
+      allowed, an internal name stays allowed); `:never`, the default,
+      accepts either.
+    * `:private` — `:switch`, the default, refuses a local or private
+      address unless the operator allows them; `:unchecked` leaves the
+      switch to a caller whose saves the schema already holds to it.
+
+  Any other option (`:https_error_message`, `:invalid_message`, ...) goes to
+  `Tymeslot.Security.UrlValidation.validate_http_url/2`.
+  """
+  @spec validate_server_url(String.t() | nil, keyword()) :: :ok | {:error, String.t()}
+  def validate_server_url(url, opts \\ [])
+
+  def validate_server_url(url, _opts) when url in [nil, ""],
+    do: {:error, dgettext("integrations_video", "Base URL is required")}
+
+  def validate_server_url(url, opts) do
+    {https, opts} = Keyword.pop(opts, :https, :never)
+    {private, opts} = Keyword.pop(opts, :private, :switch)
+    private_allowed? = SsrfGuard.allow_private_for_video?()
+
+    url_opts =
+      [
+        block_private_ips: private == :switch and not private_allowed?,
+        enforce_https_for_public: https == :for_public,
+        internal_names_local: private_allowed?
+      ] ++ opts
+
+    with :ok <- UrlValidation.validate_http_url(String.trim(url), url_opts) do
+      validate_base_url(url)
     end
   end
 
@@ -130,14 +175,14 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
       String.match?(trimmed, ~r/\s/u) ->
         {:error,
          dgettext(
-           "dashboard_video",
+           "integrations_video",
            "The server URL cannot contain spaces. Enter only the address of the server."
          )}
 
       URI.parse(trimmed).userinfo != nil ->
         {:error,
          dgettext(
-           "dashboard_video",
+           "integrations_video",
            "The server URL cannot contain a login name or password. Enter only the address of the server."
          )}
 
@@ -147,7 +192,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
       true ->
         {:error,
          dgettext(
-           "dashboard_video",
+           "integrations_video",
            "The server URL cannot contain a query string (?) or a fragment (#). Enter only the address of the server."
          )}
     end
@@ -165,13 +210,6 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   def http_url?(_url), do: false
 
   @doc """
-  Whether the value is an http or https URL naming a room: one with a
-  non-empty path segment for `slug_from_url/1` to return.
-  """
-  @spec room_url?(any()) :: boolean()
-  def room_url?(url), do: http_url?(url) and slug_from_url(url) != nil
-
-  @doc """
   Refuses a URL longer than the database column holding it allows.
   """
   @spec validate_length(String.t()) :: :ok | {:error, String.t()}
@@ -184,7 +222,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
     else
       {:error,
        dgettext(
-         "dashboard_video",
+         "integrations_video",
          "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})",
          max_length: max_length,
          url_length: url_length
@@ -260,7 +298,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
       # Shares the msgid the non-2xx branches use: the caller wraps a
       # success in "✓ Custom provider configured - …", so the status
       # line does not have to carry the verdict itself.
-      {:ok, dgettext("dashboard_video", "URL responded with HTTP %{status}", status: status)}
+      {:ok, dgettext("integrations_video", "URL responded with HTTP %{status}", status: status)}
     end
   end
 
@@ -281,7 +319,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
     else
       {:error,
        dgettext(
-         "dashboard_video",
+         "integrations_video",
          "Invalid URL scheme. Only http and https are supported"
        )}
     end
@@ -299,7 +337,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   defp check_reachable(_url, hops_left, _deadline) when hops_left < 0 do
-    {:error, dgettext("dashboard_video", "URL redirects too many times")}
+    {:error, dgettext("integrations_video", "URL redirects too many times")}
   end
 
   defp check_reachable(url, hops_left, deadline) do
@@ -369,15 +407,15 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   defp classify_probe(%{status: status}, _url, _hops_left, _deadline) do
-    {:error, dgettext("dashboard_video", "URL responded with HTTP %{status}", status: status)}
+    {:error, dgettext("integrations_video", "URL responded with HTTP %{status}", status: status)}
   end
 
   defp blocked_url_message,
-    do: dgettext("dashboard_video", "URL resolves to a private or loopback address")
+    do: dgettext("integrations_video", "URL resolves to a private or loopback address")
 
   defp url_timeout_message,
-    do: dgettext("dashboard_video", "Connection timeout while reaching the URL")
+    do: dgettext("integrations_video", "Connection timeout while reaching the URL")
 
   defp unreachable_url_message(reason),
-    do: dgettext("dashboard_video", "Failed to reach URL: %{reason}", reason: reason)
+    do: dgettext("integrations_video", "Failed to reach URL: %{reason}", reason: reason)
 end

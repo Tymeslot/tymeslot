@@ -159,7 +159,9 @@ defmodule Tymeslot.Availability.SchedulesTest do
     test "keeps overnight hours and their breaks", %{profile: profile} do
       {:ok, source} = Schedules.create_default(profile.id)
 
-      {:ok, night} = AvailabilityActions.update_day_hours(source.id, 1, "22:00", "04:00+1")
+      {:ok, night} =
+        AvailabilityActions.update_day_hours(profile.id, source.id, 1, "22:00", "04:00+1")
+
       {:ok, _break} = Breaks.add_break(night.id, ~T[23:30:00], ~T[00:30:00], "Tea")
 
       assert {:ok, copy} = Schedules.duplicate(source)
@@ -343,6 +345,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
           ~D[2026-09-30],
           "Europe/Berlin",
           30,
+          nil,
           nil
         )
 

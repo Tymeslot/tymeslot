@@ -11,6 +11,8 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
   @max_cta_label_length 40
   @max_bullet_length 100
 
+  @expired_grace_days 30
+
   setup do
     {:ok, entries: Catalog.list()}
   end
@@ -125,5 +127,50 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
                "expires_at for #{entry.key} must be after published_at; the entry would never be shown."
       end
     end
+
+    # Expired entries are never shown but keep costing a translation in every
+    # locale, so they are deleted once they have been expired for a while.
+    # The clock is the newest entry's publication, not today: the test fails
+    # when someone adds an announcement while an older one has been expired
+    # for longer than the grace, never on a calendar date alone.
+    test "no entry was expired for more than #{@expired_grace_days} days when the newest was published",
+         %{entries: entries} do
+      long_expired = long_expired(entries)
+
+      assert long_expired == [],
+             "expired more than #{@expired_grace_days} days before the newest announcement, " <>
+               "delete from the catalogue: " <> Enum.join(long_expired, ", ")
+    end
+
+    test "the expiry check flags an entry long expired before the newest one" do
+      newest = ~U[2026-06-01 00:00:00Z]
+
+      entries = [
+        %{key: "newest", published_at: newest, expires_at: nil},
+        %{
+          key: "stale",
+          published_at: ~U[2026-01-01 00:00:00Z],
+          expires_at: ~U[2026-04-01 00:00:00Z]
+        },
+        %{
+          key: "recent",
+          published_at: ~U[2026-04-01 00:00:00Z],
+          expires_at: ~U[2026-05-15 00:00:00Z]
+        }
+      ]
+
+      assert long_expired(entries) == ["stale"]
+    end
+  end
+
+  defp long_expired([]), do: []
+
+  defp long_expired(entries) do
+    newest = entries |> Enum.map(& &1.published_at) |> Enum.max(DateTime)
+    cutoff = DateTime.add(newest, -@expired_grace_days, :day)
+
+    for %{expires_at: %DateTime{} = expires_at, key: key} <- entries,
+        DateTime.before?(expires_at, cutoff),
+        do: key
   end
 end

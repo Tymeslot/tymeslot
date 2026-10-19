@@ -1,14 +1,19 @@
 defmodule Tymeslot.Integrations.Calendar.InvalidEventReport do
   @moduledoc """
-  Gathers the calendar events a sync run had to skip as malformed, and raises
-  one `:invalid_calendar_event` operator alert per integration for the run.
+  Gathers the calendar events a sync run had to skip as malformed, and those
+  it kept only by filling in a default (an iCalendar DURATION it could not
+  read, replaced by the default length), and raises one
+  `:invalid_calendar_event` operator alert per integration for the run.
 
   The provider normalisers used to alert once per bad event, from inside the
   normalise loop. A feed carrying N malformed events therefore made N
   synchronous alert inserts (each with its own uniqueness query) in the middle
   of a sync, only for all but the first to be deduplicated away. The
   normalisers now `record/4` each skip instead, and the sync entry point
-  wraps its run in `collect/1`, which sends the batch once the run ends.
+  wraps its run in `collect/1`, which sends the batch once the run ends. An
+  event kept with a default is recorded with `record_default/4` and counted
+  apart from the skips: it reached the calendar, but not as its source wrote
+  it, which is the same signal to the operator that the feed needs a look.
 
   ## Why the process dictionary
 
@@ -28,10 +33,11 @@ defmodule Tymeslot.Integrations.Calendar.InvalidEventReport do
 
   ## What the alert carries
 
-  `count` is every skip of the run; `sample_events` names the first
-  five as `id (reason)`, rendered to one string so the PII sweep of free-form
-  strings covers it. The alert's `reason` is the most common reason in the
-  run, ties broken by the alphabetically first so the dedup key stays stable
+  `count` is every skip of the run and `defaulted` every event kept with a
+  default; `sample_events` names the first five of either as `id (reason)`,
+  rendered to one string so the PII sweep of free-form strings covers it.
+  The summary names both counts, leaving out a zero. The alert's `reason` is
+  the most common reason in the run, ties broken by the alphabetically first so the dedup key stays stable
   across runs; `reasons` lists all distinct reasons. The dedup key is
   provider, integration and that most common reason, so a feed that keeps
   producing the same bad events alerts once per window, while a new failure
@@ -76,38 +82,59 @@ defmodule Tymeslot.Integrations.Calendar.InvalidEventReport do
   has (a Graph id, a UID); `nil` is recorded as `"unknown"`.
   """
   @spec record(atom(), %{calendar_integration_id: term()}, term(), term()) :: :ok
-  def record(provider, %{calendar_integration_id: integration_id}, event_id, reason) do
+  def record(provider, context, event_id, reason),
+    do: put(:count, provider, context, event_id, reason)
+
+  @doc """
+  Records one event kept only by filling in a default, against the open
+  collection, if there is one. Takes what `record/4` takes; counted apart
+  from the skips.
+  """
+  @spec record_default(atom(), %{calendar_integration_id: term()}, term(), term()) :: :ok
+  def record_default(provider, context, event_id, reason),
+    do: put(:defaulted, provider, context, event_id, reason)
+
+  defp put(kind, provider, %{calendar_integration_id: integration_id}, event_id, reason) do
     case Process.get(@key) do
       nil ->
         :ok
 
       batches ->
-        skip = {to_string(event_id || "unknown"), reason_message(reason)}
-        batches = Map.update(batches, {provider, integration_id}, new_batch(skip), &add(&1, skip))
+        entry = {to_string(event_id || "unknown"), reason_message(reason)}
+
+        batches =
+          Map.update(
+            batches,
+            {provider, integration_id},
+            add(%{count: 0, defaulted: 0, samples: [], reasons: %{}}, kind, entry),
+            &add(&1, kind, entry)
+          )
+
         Process.put(@key, batches)
         :ok
     end
   end
 
-  defp new_batch({_id, reason} = skip),
-    do: %{count: 1, samples: [skip], reasons: %{reason => 1}}
+  defp add(batch, kind, {_id, reason} = entry) do
+    seen = batch.count + batch.defaulted
 
-  defp add(batch, {_id, reason} = skip) do
     %{
-      count: batch.count + 1,
-      samples: if(batch.count < @max_samples, do: [skip | batch.samples], else: batch.samples),
+      count: batch.count + if(kind == :count, do: 1, else: 0),
+      defaulted: batch.defaulted + if(kind == :defaulted, do: 1, else: 0),
+      samples: if(seen < @max_samples, do: [entry | batch.samples], else: batch.samples),
       reasons: Map.update(batch.reasons, reason, 1, &(&1 + 1))
     }
   end
 
   defp report({{provider, integration_id}, batch}) do
     AdminAlerts.report(:invalid_calendar_event,
-      summary: "#{batch.count} invalid #{provider} calendar event(s) skipped",
+      summary: summary(provider, batch),
       reason: most_common_reason(batch.reasons),
       context: %{
         provider: provider,
         calendar_integration_id: integration_id,
         count: batch.count,
+        defaulted: batch.defaulted,
         reasons: batch.reasons |> Map.keys() |> Enum.sort() |> Enum.join("; "),
         sample_events:
           batch.samples
@@ -116,6 +143,17 @@ defmodule Tymeslot.Integrations.Calendar.InvalidEventReport do
       }
     )
   end
+
+  defp summary(provider, %{count: count, defaulted: 0}),
+    do: "#{count} invalid #{provider} calendar event(s) skipped"
+
+  defp summary(provider, %{count: 0, defaulted: defaulted}),
+    do: "#{defaulted} #{provider} calendar event(s) kept with a default duration"
+
+  defp summary(provider, %{count: count, defaulted: defaulted}),
+    do:
+      "#{count} invalid #{provider} calendar event(s) skipped, " <>
+        "#{defaulted} kept with a default duration"
 
   defp most_common_reason(reasons) do
     {reason, _count} = Enum.min_by(reasons, fn {reason, count} -> {-count, reason} end)

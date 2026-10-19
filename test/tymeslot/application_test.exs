@@ -11,9 +11,8 @@ defmodule Tymeslot.ApplicationTest do
     DashboardCache
   }
 
-  alias Tymeslot.Integrations.Calendar.RequestCoalescer
+  alias Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
-  alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimit
 
   describe "core application services" do
@@ -45,18 +44,7 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "security services are started" do
-      identifier = "application-test-#{System.unique_integer([:positive])}@example.com"
-      on_exit(fn -> AccountLockout.clear_failed_attempts(identifier) end)
-
-      # AccountLockout is a plain module backed by ETS; the table is owned by
-      # AccountLockout.TableOwner in the supervision tree, so a recorded attempt
-      # round-tripping proves the owner started.
-      assert AccountLockout.get_failed_attempt_count(identifier) == 0
-      assert AccountLockout.check_and_record_attempt(identifier, false) == :ok
-      assert AccountLockout.get_failed_attempt_count(identifier) == 1
-
-      # RateLimit (Hammer ETS) is not a named process; a first hit against a
-      # fresh bucket proves its table is up.
+      # A first hit against a fresh bucket proves the limiter's table is up.
       bucket = "application-test:#{System.unique_integer([:positive])}"
       assert RateLimit.hit(bucket, 60_000, 5) == {:allow, 1}
     end
@@ -111,6 +99,63 @@ defmodule Tymeslot.ApplicationTest do
         assert position.(dependency) < guardians,
                "#{inspect(dependency)} would stop before the write guardians"
       end
+    end
+  end
+
+  describe "start order" do
+    # Oban's queues start fetching during its own init, so every process a
+    # job calls has to be up before it, and still up while it drains on
+    # shutdown. The tree's order is the behaviour.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "Oban starts after the services its jobs call" do
+      start_order =
+        Tymeslot.Supervisor
+        |> Supervisor.which_children()
+        |> Enum.map(fn {id, _pid, _type, _modules} -> id end)
+        |> Enum.reverse()
+
+      position = fn id ->
+        Enum.find_index(start_order, &(&1 == id)) || flunk("#{inspect(id)} is not a child")
+      end
+
+      oban = position.(Oban)
+
+      for dependency <- [
+            CircuitBreakerSupervisor,
+            RateLimit,
+            AvailabilityCache,
+            DashboardCache,
+            IdempotencyCache,
+            RequestCoalescer,
+            Tymeslot.Repo
+          ] do
+        assert position.(dependency) < oban,
+               "#{inspect(dependency)} starts after Oban"
+      end
+    end
+  end
+
+  describe "admin settings" do
+    # The overrides an admin set (registration disabled, reCAPTCHA required)
+    # must be in force before anything serves a request or runs a job. The
+    # loader leaves no process behind, but the supervisor keeps its spec.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "are applied after the Repo and before Oban and the Endpoint" do
+      start_order =
+        Tymeslot.Supervisor
+        |> Supervisor.which_children()
+        |> Enum.map(fn {id, _pid, _type, _modules} -> id end)
+        |> Enum.reverse()
+
+      position = fn id ->
+        Enum.find_index(start_order, &(&1 == id)) || flunk("#{inspect(id)} is not a child")
+      end
+
+      loader = position.(Tymeslot.AppSettings.Loader)
+
+      assert position.(Tymeslot.Repo) < loader
+      assert loader < position.(Oban)
+      assert loader < position.(TymeslotWeb.Endpoint)
     end
   end
 

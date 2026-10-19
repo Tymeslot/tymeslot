@@ -67,15 +67,16 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
+  alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Meetings.AttendeeNotifications
 
   @type event :: %{
@@ -333,7 +334,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     end)
 
     after_delete("invalidate cached availability", context, fn ->
-      AvailabilityCache.invalidate_for_user(user_id)
+      Availability.changed(user_id)
     end)
   end
 
@@ -376,7 +377,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   def delete_series_rows(integration_id, {:master, master_id}) do
     ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, [master_id])
     ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [master_id])
-    :ok
+    SeriesRules.forget_orphans(integration_id)
   end
 
   def delete_series_rows(integration_id, {:resource, href}) do

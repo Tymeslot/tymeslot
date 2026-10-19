@@ -13,7 +13,9 @@ defmodule Tymeslot.Emails.EmailScheduler.LinkArg do
   before this shape existed are delivered rather than lost mid-deploy.
   """
 
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.EmailWorker
 
   @doc """
   Puts `url` into `args` encrypted, under `"<key>_encrypted"`.
@@ -40,6 +42,20 @@ defmodule Tymeslot.Emails.EmailScheduler.LinkArg do
       {:ok, encoded} -> decrypt(encoded)
       :error -> legacy(Map.get(args, key))
     end
+  end
+
+  @doc """
+  The ciphertexts of the links held by email jobs not yet done. They are not
+  re-encrypted by a key rotation, so the key report counts them: a key retired
+  while they remain leaves those emails unable to open their link.
+  """
+  @spec pending_ciphertexts() :: [binary()]
+  def pending_ciphertexts do
+    for args <- ObanJobQueries.incomplete_job_args(EmailWorker),
+        {key, encoded} when is_binary(encoded) <- args,
+        String.ends_with?(key, "_encrypted"),
+        {:ok, ciphertext} <- [Base.decode64(encoded)],
+        do: ciphertext
   end
 
   defp decrypt(encoded) when is_binary(encoded) do

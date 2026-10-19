@@ -22,13 +22,14 @@ defmodule Tymeslot.Availability.TimeOff do
   """
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability
   alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Availability.TimeOffPeriodSchema
-  alias Tymeslot.Clock
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.TimeRange
 
@@ -178,7 +179,7 @@ defmodule Tymeslot.Availability.TimeOff do
   that is incomplete, or that the changeset has already rejected, names no
   interval to ask about and counts nothing.
 
-  The interval is the one `busy_intervals/4` publishes, DST resolution
+  The interval is the one `busy_intervals/3` publishes, DST resolution
   included, rather than a comparison of the period's dates against stored UTC
   start times: the dates are wall-clock in the owner's timezone, so comparing
   them directly is a day out for hosts away from UTC, in whichever direction
@@ -199,9 +200,8 @@ defmodule Tymeslot.Availability.TimeOff do
 
   def conflicting_meetings(%TimeOffPeriodSchema{}), do: []
 
-  defp meetings_within(period, %{user_id: user_id, timezone: timezone})
-       when is_integer(user_id) do
-    {from, to} = interval(period, timezone || "Etc/UTC")
+  defp meetings_within(period, %{user_id: user_id} = owner) when is_integer(user_id) do
+    {from, to} = interval(period, Profiles.timezone(owner))
 
     # A period whose end lands at or before its start covers no time at all,
     # and a half-open window read backwards would match on the meetings that
@@ -219,11 +219,12 @@ defmodule Tymeslot.Availability.TimeOff do
   The current date in `timezone`, the earliest day a period may be placed on.
 
   Read in the owner's timezone because that is the one the period's dates are
-  in: late on the 17th in Berlin is already the 18th in Tokyo. A missing or
-  unknown timezone falls back to UTC.
+  in: late on the 17th in Berlin is already the 18th in Tokyo. A missing
+  timezone is the host default (`Tymeslot.Profiles.timezone/1`), the zone the
+  booking page applies the period in; an unknown one falls back to UTC.
   """
   @spec today(String.t() | nil) :: Date.t()
-  def today(nil), do: Clock.utc_today()
+  def today(nil), do: today(Profiles.get_default_timezone())
   def today(timezone), do: timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
   @doc """
@@ -251,9 +252,9 @@ defmodule Tymeslot.Availability.TimeOff do
   end
 
   @doc """
-  The stretches `profile_id`'s periods block between `window_start` and
-  `window_end`, as UTC `{start, end}` pairs, reading the periods in the owner's
-  `timezone`.
+  The stretches `profile`'s periods block between `window_start` and
+  `window_end`, as UTC `{start, end}` pairs, reading the periods on the
+  owner's clock (`Tymeslot.Profiles.timezone/1`).
 
   Each period is one continuous interval, so it becomes one pair: from the
   first day at its start time to the last day at its end time, or to midnight
@@ -261,10 +262,10 @@ defmodule Tymeslot.Availability.TimeOff do
   DST change resolves the way the slot engine resolves breaks, so the feed and
   the booking page agree on where time off begins and ends.
   """
-  @spec busy_intervals(integer(), String.t() | nil, DateTime.t(), DateTime.t()) ::
+  @spec busy_intervals(ProfileSchema.t(), DateTime.t(), DateTime.t()) ::
           [{DateTime.t(), DateTime.t()}]
-  def busy_intervals(profile_id, timezone, window_start, window_end) do
-    timezone = timezone || "Etc/UTC"
+  def busy_intervals(%ProfileSchema{id: profile_id} = profile, window_start, window_end) do
+    timezone = Profiles.timezone(profile)
 
     # No timezone is a whole day away from UTC, so a day either side of the
     # window's UTC dates covers every period that can reach into it.
@@ -284,7 +285,7 @@ defmodule Tymeslot.Availability.TimeOff do
   The `ranges` that `user_id`'s time off reaches into, in the order given.
 
   Each range is a UTC `{start, end}` pair, and it clashes when any part of it
-  overlaps a stretch `busy_intervals/4` publishes for the owner, so a range
+  overlaps a stretch `busy_intervals/3` publishes for the owner, so a range
   here and a slot on the booking page are measured against the same time off.
   Ranges are half-open: one that ends as a period begins does not clash.
 
@@ -306,7 +307,7 @@ defmodule Tymeslot.Availability.TimeOff do
   defp clashing_for_profile(profile, ranges) do
     window_start = ranges |> Enum.map(&elem(&1, 0)) |> Enum.min(DateTime)
     window_end = ranges |> Enum.map(&elem(&1, 1)) |> Enum.max(DateTime)
-    busy = busy_intervals(profile.id, profile.timezone, window_start, window_end)
+    busy = busy_intervals(profile, window_start, window_end)
 
     Enum.filter(ranges, fn {from, to} ->
       Enum.any?(busy, fn {busy_from, busy_to} ->
@@ -338,20 +339,11 @@ defmodule Tymeslot.Availability.TimeOff do
     {utc_wall_clock(period.starts_on, period.start_time || ~T[00:00:00], timezone), to}
   end
 
-  # Resolves as `DateTimeUtils.resolve_local/3` does for windows and breaks:
+  # Resolves as windows and breaks do (`DateTimeUtils.create_datetime_safe/3`):
   # the first occurrence of a repeated time, the first valid instant after a
-  # skipped one. An unknown timezone
-  # falls back to UTC, as `today/1` does.
+  # skipped one, and UTC for an unknown timezone, as `today/1` does.
   defp utc_wall_clock(date, time, timezone) do
-    local =
-      case DateTime.new(date, time, timezone) do
-        {:ok, datetime} -> datetime
-        {:ambiguous, first, _second} -> first
-        {:gap, _before, just_after} -> just_after
-        {:error, _unknown_zone} -> DateTime.new!(date, time, "Etc/UTC")
-      end
-
-    DateTime.shift_zone!(local, "Etc/UTC")
+    date |> DateTimeUtils.create_datetime_safe(time, timezone) |> DateTime.shift_zone!("Etc/UTC")
   end
 
   # The slot engine reads these rows and the availability cache is keyed by
@@ -360,7 +352,7 @@ defmodule Tymeslot.Availability.TimeOff do
   # or a profile that could not be read, is a no-op: invalidation must never
   # turn a successful edit into an error.
   defp invalidate_cache({:ok, _period} = outcome, %{user_id: user_id}) do
-    AvailabilityCache.invalidate_for_user(user_id)
+    Availability.changed(user_id)
     outcome
   end
 

@@ -22,9 +22,9 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
-  alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.OutlookGraphStubs
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
