@@ -77,6 +77,54 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceLayersTest do
       refute preferences(user).bookable_layer
     end
 
+    test "B sets the state the hook names, so a repeated press does not flip it back", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas = element(lv, "#calendar-canvas")
+
+      render_hook(canvas, "calendar:bookable_toggle", %{"on" => false})
+      render_hook(canvas, "calendar:bookable_toggle", %{"on" => false})
+
+      assert has_element?(lv, "#calendar-rail-bookable[aria-checked='false']")
+      refute preferences(user).bookable_layer
+
+      render_hook(canvas, "calendar:bookable_toggle", %{"on" => true})
+
+      assert has_element?(lv, "#calendar-rail-bookable[aria-checked='true']")
+      assert preferences(user).bookable_layer
+    end
+
+    test "the switch names the state it turns to", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-rail-bookable[phx-value-on='false']")
+      lv |> element("#calendar-rail-bookable") |> render_click()
+      assert has_element?(lv, "#calendar-rail-bookable[phx-value-on='true']")
+    end
+
+    test "a refused B pushes the layer as it stands, so the grid goes back", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      render_async(lv)
+      assert_push_event(lv, "calendar:bookable", %{on: true})
+
+      Enum.find(
+        Stream.repeatedly(fn -> RateLimiter.check(:calendar_visibility, user.id) end),
+        &match?({:error, :rate_limited, _message}, &1)
+      )
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:bookable_toggle", %{"on" => false})
+
+      assert_push_event(lv, "calendar:bookable", %{on: true})
+      assert preferences(user).bookable_layer
+    end
+
     test "choosing a meeting type shows it and remembers", %{
       conn: conn,
       user: user,

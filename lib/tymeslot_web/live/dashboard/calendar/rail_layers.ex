@@ -54,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailLayers do
             size={:small}
             on_change="calendar:bookable_toggle"
             target={@target}
+            phx-value-on={to_string(!@bookable.on)}
             aria-labelledby="calendar-rail-bookable-label"
             aria-keyshortcuts="b"
           />

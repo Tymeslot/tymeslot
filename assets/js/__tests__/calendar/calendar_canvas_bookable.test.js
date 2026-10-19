@@ -108,7 +108,17 @@ test("B hides the bands at once, and shows them again", () => {
   expect(bands(el)).toHaveLength(0);
   press(document.body, "b");
   expect(bands(el)).toHaveLength(1);
-  expect(pushes(hook, "calendar:bookable_toggle")).toEqual([{}, {}]);
+  expect(pushes(hook, "calendar:bookable_toggle")).toEqual([{ on: false }, { on: true }]);
+});
+
+test("a refused switch pushed back as the layer held redraws the bands", () => {
+  const { el, handlers } = mountHook();
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+
+  press(document.body, "b");
+  expect(bands(el)).toHaveLength(0);
+  handlers["calendar:bookable"](layer({ windows: thursday }));
+  expect(bands(el)).toHaveLength(1);
 });
 
 test("a layer pushed while a +N list is open waits for the list to close", () => {

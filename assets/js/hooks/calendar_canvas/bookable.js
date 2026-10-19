@@ -11,8 +11,9 @@
  *
  * B anywhere on the page but a text field, a dialog or an open quick
  * create turns the layer on or off, as the rail's switch does: the grid
- * follows at once and the hook pushes `calendar:bookable_toggle` for the
- * server to save it. The note's Show goes to the next bookable time's
+ * follows at once and the hook pushes `calendar:bookable_toggle` with the
+ * state it now shows (`on`) for the server to save; a refusal pushes the
+ * layer back as it was. The note's Show goes to the next bookable time's
  * period, in the same view, and scrolls to an hour before it.
  *
  * A day's label opens the explainer beside it (calendar/bookable_explainer.js):
@@ -74,13 +75,20 @@ export const BookableMixin = {
     this.render();
   },
 
+  // The push names the state wanted, not a flip, so two quick presses
+  // cannot cross on the way. A refused change comes back as the layer the
+  // server holds, which redraws the grid as it was. Before the first layer
+  // arrives the hook cannot know the state, so it asks for a flip.
   toggleBookable() {
     this.closeExplainer();
-    if (this.bookable) {
-      this.bookable = { ...this.bookable, on: !this.bookable.on };
-      this.render();
+    if (!this.bookable) {
+      this.pushEventTo(this.el, "calendar:bookable_toggle", {});
+      return;
     }
-    this.pushEventTo(this.el, "calendar:bookable_toggle", {});
+    const on = !this.bookable.on;
+    this.bookable = { ...this.bookable, on };
+    this.render();
+    this.pushEventTo(this.el, "calendar:bookable_toggle", { on });
   },
 
   showBookable(at) {

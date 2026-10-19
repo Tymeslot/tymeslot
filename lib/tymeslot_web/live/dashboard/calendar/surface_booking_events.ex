@@ -27,8 +27,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
     do: {:noreply, BookingActions.handle(name, params, socket)}
 
   # The rail's Layers section and B (see `LayerChoices`).
-  def handle("calendar:bookable_toggle", _params, socket),
-    do: {:noreply, LayerChoices.toggle(socket)}
+  # The hook sends `on` as a boolean, the switch as `phx-value-on`. A hook
+  # that has no layer yet (its first load is still running) sends neither,
+  # and the saved state flips.
+  def handle("calendar:bookable_toggle", params, socket),
+    do: {:noreply, LayerChoices.toggle(socket, switched_to(params["on"]))}
 
   def handle("calendar:bookable_type", %{"id" => id}, socket),
     do: {:noreply, LayerChoices.choose_type(socket, id)}
@@ -71,4 +74,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
 
   def async({:unblock, _n}, result, socket),
     do: {:noreply, BlockTime.unblocked(socket, result)}
+
+  defp switched_to(on) when is_boolean(on), do: on
+  defp switched_to("true"), do: true
+  defp switched_to("false"), do: false
+  defp switched_to(nil), do: :flip
+  defp switched_to(other), do: other
 end

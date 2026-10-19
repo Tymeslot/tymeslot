@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.LayerChoices do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import Phoenix.LiveView, only: [push_event: 3]
+
   alias Tymeslot.CalendarGrid.LayerPreferences
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
@@ -30,21 +32,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.LayerChoices do
       meeting_types: meeting_types
     }
 
-  @doc "Flips the layer, unless there is no meeting type for it to show."
-  @spec toggle(socket()) :: socket()
-  def toggle(%{assigns: %{bookable_types: []}} = socket), do: socket
+  @doc """
+  Switches the layer to `on`, the value the switch or B asked for (not a
+  flip, so a press the server has not answered yet cannot turn into its
+  opposite). A refusal (no meeting type, the rate limit, a failed save, a
+  value that is neither a boolean nor `:flip`) pushes the layer as it stands, so a grid
+  that already followed the press goes back.
+  """
+  @spec toggle(socket(), boolean() | :flip | term()) :: socket()
+  def toggle(%{assigns: %{bookable_types: []}} = socket, _on), do: resync(socket)
 
-  def toggle(socket) do
+  def toggle(socket, :flip), do: toggle(socket, !socket.assigns.preferences.bookable_layer)
+
+  def toggle(socket, on) when is_boolean(on) do
     user_id = socket.assigns.current_user.id
-    on = !socket.assigns.preferences.bookable_layer
 
     with :ok <- RateLimiter.check(:calendar_visibility, user_id),
          {:ok, _preferences} <- LayerPreferences.set_layer(user_id, on) do
       socket |> SurfaceData.put_preference(:bookable_layer, on) |> BookableLayer.load()
     else
-      refusal -> refuse(socket, refusal)
+      refusal -> socket |> refuse(refusal) |> resync()
     end
   end
+
+  def toggle(socket, _on), do: resync(socket)
 
   @doc "Shows meeting type `id`; one that is not the organiser's own changes nothing."
   @spec choose_type(socket(), term()) :: socket()
@@ -61,6 +72,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.LayerChoices do
       refusal -> refuse(socket, refusal)
     end
   end
+
+  # The layer as last pushed; before the first push the hook has nothing
+  # it could have changed.
+  defp resync(%{assigns: %{bookable: nil}} = socket), do: socket
+  defp resync(socket), do: push_event(socket, "calendar:bookable", socket.assigns.bookable)
 
   defp refuse(socket, {:error, :rate_limited, message}),
     do: Flash.put_flash(socket, :error, message)
