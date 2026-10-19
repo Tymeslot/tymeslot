@@ -8,15 +8,9 @@ defmodule Tymeslot.Demo.NoOp do
   @behaviour Tymeslot.Demo.Behaviour
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
-
-  @impl Tymeslot.Demo.Behaviour
-  def get_profile_by_id(profile_id) when is_integer(profile_id) do
-    Profiles.get_profile_by_id(profile_id)
-  end
 
   @impl Tymeslot.Demo.Behaviour
   def get_user_by_id(user_id) when is_integer(user_id) do
@@ -44,41 +38,14 @@ defmodule Tymeslot.Demo.NoOp do
   def booking_window_days(_profile), do: 90
 
   @impl Tymeslot.Demo.Behaviour
-  def get_profile_by_username(username) when is_binary(username) do
-    Profiles.get_profile_by_username(username)
-  end
-
-  @impl Tymeslot.Demo.Behaviour
   def resolve_organizer_context(username) when is_binary(username) do
     Profiles.resolve_organizer_context(username)
-  end
-
-  @impl Tymeslot.Demo.Behaviour
-  def resolve_organizer_context_optimized(username) when is_binary(username) do
-    Profiles.resolve_organizer_context_optimized(username)
   end
 
   @impl Tymeslot.Demo.Behaviour
   def get_theme_customization(profile_id, theme_id)
       when is_integer(profile_id) and is_binary(theme_id) do
     ThemeCustomizations.get_by_profile_and_theme(profile_id, theme_id)
-  end
-
-  @impl Tymeslot.Demo.Behaviour
-  def list_active_meeting_types(user_id) when is_integer(user_id) do
-    MeetingTypes.get_active_meeting_types(user_id)
-  end
-
-  @impl Tymeslot.Demo.Behaviour
-  def get_active_video_integration(_user_id) do
-    # Since we removed the "default" flag, we return nil here.
-    # Consumers should instead look at the specific meeting type's video integration.
-    nil
-  end
-
-  @impl Tymeslot.Demo.Behaviour
-  def list_calendar_integrations(user_id) when is_integer(user_id) do
-    Calendar.list_integrations(user_id)
   end
 
   @impl Tymeslot.Demo.Behaviour
@@ -129,20 +96,6 @@ defmodule Tymeslot.Demo.NoOp do
         _context,
         _duration_minutes
       ) do
-    {:ok, %{}}
-  end
-
-  @impl Tymeslot.Demo.Behaviour
-  def get_month_availability(
-        _user_id,
-        _year,
-        _month,
-        _user_timezone,
-        _organizer_profile,
-        _context,
-        _duration_minutes
-      ) do
-    # NoOp implementation returns empty map; caller should fall back to real logic
     {:ok, %{}}
   end
 

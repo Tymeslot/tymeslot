@@ -3,7 +3,9 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   Sends the attendee email confirming a booking-payment refund.
 
   Enqueued synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/3`
-  whenever a refund (full or partial) succeeds. The Stripe `charge.refunded`
+  whenever a refund (full or partial) succeeds, and by
+  `Tymeslot.MeetingPayments.Workers.RefundLatePayment` for a refund Stripe
+  accepted whose own transaction rolled back. The Stripe `charge.refunded`
   webhook reconciles `refunded_amount_cents` and `status` but does not
   re-enqueue the email — host-initiated refunds are the only path that
   notifies the attendee, matching §7 of the meeting-payments design.
@@ -31,6 +33,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   require Logger
 
   alias Tymeslot.Bookings.BookingTitle
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
@@ -84,7 +87,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   defp send_email(payment, job) do
     case build_context(payment) do
       {:ok, context} ->
-        DeliveryClaims.once(job, "refund_email", fn -> deliver(context, payment) end)
+        DeliveryClaims.once(job, "refund_email", fn -> deliver(context, payment, job) end)
 
       {:error, :missing_attendee_email} ->
         Logger.warning("Refund email skipped — booking_payment has no attendee_email",
@@ -95,10 +98,10 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     end
   end
 
-  defp deliver(context, payment) do
+  defp deliver(context, payment, job) do
     context
     |> BookingPaymentRefunded.render()
-    |> TransactionalEmailDelivery.deliver("Refund email delivery failed",
+    |> TransactionalEmailDelivery.deliver(job, "Refund email delivery failed",
       booking_payment_id: payment.id
     )
   end
@@ -119,7 +122,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
       refunded_amount_cents: payment.refunded_amount_cents,
       currency: payment.currency,
       is_full_refund?: payment.refunded_amount_cents >= payment.amount_cents,
-      locale: locale_for(meeting)
+      locale: RecipientLocale.attendee_locale(meeting)
     }
 
     {:ok, context}
@@ -136,11 +139,8 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   # The refund notice goes to the booker, so the title is in their language.
   defp meeting_title(%{title: title} = meeting, _payment) when is_binary(title) and title != "",
-    do: BookingTitle.localise(meeting, locale_for(meeting))
+    do: BookingTitle.localise(meeting, RecipientLocale.attendee_locale(meeting))
 
   defp meeting_title(_meeting, %{meeting_type_name: name}) when is_binary(name), do: name
   defp meeting_title(_meeting, _payment), do: nil
-
-  defp locale_for(%{attendee_locale: locale}) when is_binary(locale) and locale != "", do: locale
-  defp locale_for(_meeting), do: "en"
 end

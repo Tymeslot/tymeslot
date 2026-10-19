@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   alias Tymeslot.Slack.InputValidation, as: SlackInputValidation
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   @spec handle_save_webhook(map(), Phoenix.LiveView.Socket.t()) ::
@@ -21,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
     user_id = socket.assigns.current_user.id
 
     AutomationHelpers.with_rate_limit(
-      RateLimiter.check_webhook_write_rate_limit(user_id),
+      RateLimiter.check(:webhook_write, user_id),
       socket,
       fn ->
         case SlackInputValidation.validate_form(params, mode: :webhook_url) do
@@ -56,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
                  |> AutomationHelpers.maybe_load_slack()}
 
               {:error, %Ecto.Changeset{} = changeset} ->
-                errors = AutomationHelpers.format_changeset_errors(changeset)
+                errors = FormErrors.first_per_field(changeset)
                 Flash.error(dgettext("dashboard_automation_chat", "Failed to save channel"))
                 {:noreply, assign(socket, :slack_form_errors, errors)}
 
@@ -82,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
       integration ->
         mode = socket.assigns.slack_form_mode
 
-        case SlackInputValidation.validate_form(params, mode: mode) do
+        case SlackInputValidation.validate_form(params, mode: mode, stored_name: integration.name) do
           {:ok, sanitized} ->
             case Slack.update_integration(integration, sanitized) do
               {:ok, _updated} ->
@@ -94,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
                  |> AutomationHelpers.maybe_load_slack()}
 
               {:error, %Ecto.Changeset{} = changeset} ->
-                errors = AutomationHelpers.format_changeset_errors(changeset)
+                errors = FormErrors.first_per_field(changeset)
                 Flash.error(dgettext("dashboard_automation_chat", "Failed to update integration"))
                 {:noreply, assign(socket, :slack_form_errors, errors)}
 
@@ -159,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
          |> AutomationHelpers.maybe_load_slack()}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        errors = AutomationHelpers.format_changeset_errors(changeset)
+        errors = FormErrors.first_per_field(changeset)
         Flash.error(dgettext("dashboard_automation_chat", "Failed to create integration"))
         {:noreply, assign(socket, :slack_form_errors, errors)}
 

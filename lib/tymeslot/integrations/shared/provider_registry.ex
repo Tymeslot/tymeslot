@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Common.ProviderRegistry do
+defmodule Tymeslot.Integrations.Shared.ProviderRegistry do
   @moduledoc """
   Generic provider registry implementation.
 
@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
   ## Example
 
       defmodule MyApp.CalendarRegistry do
-        use Tymeslot.Integrations.Common.ProviderRegistry,
+        use Tymeslot.Integrations.Shared.ProviderRegistry,
           provider_type_name: "provider",
           default_provider: :caldav,
           metadata_fields: [],
@@ -87,18 +87,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
       end
 
       @doc """
-      Validates configuration for a specific provider type.
-
-      Delegates validation to the provider module's `validate_config/1` function.
-      """
-      def validate_provider_config(provider_type, config) do
-        case get_provider(provider_type) do
-          {:ok, module} -> module.validate_config(config)
-          {:error, _reason} = error -> error
-        end
-      end
-
-      @doc """
       Returns metadata for all providers.
 
       Standard metadata includes: type, module, display_name, config_schema.
@@ -129,20 +117,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
         @default_provider
       end
 
-      @doc """
-      Checks if a provider type is supported.
-      """
-      def provider_supported?(provider_type) do
-        Map.has_key?(@providers, provider_type)
-      end
-
-      @doc """
-      Returns the total number of registered providers.
-      """
-      def provider_count do
-        map_size(@providers)
-      end
-
       # Private helper to safely get metadata from provider modules
       defp get_provider_metadata(module, field) do
         case field do
@@ -151,9 +125,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
 
           :config_schema ->
             module.config_schema()
-
-          :capabilities ->
-            if function_exported?(module, :capabilities, 0), do: module.capabilities(), else: []
 
           _other ->
             if function_exported?(module, field, 0) do
@@ -177,11 +148,8 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
       defoverridable list_providers: 0,
                      get_provider: 1,
                      get_provider!: 1,
-                     validate_provider_config: 2,
                      list_providers_with_metadata: 0,
-                     default_provider: 0,
-                     provider_supported?: 1,
-                     provider_count: 0
+                     default_provider: 0
     end
   end
 end

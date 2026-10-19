@@ -50,6 +50,13 @@ defmodule Tymeslot.MeetingPaymentsTest do
 
       assert MeetingPayments.platform_configured?()
     end
+
+    test "a blank :tymeslot, :stripe_secret_key falls through to :stripity_stripe, :api_key" do
+      with_config(:tymeslot, :stripe_secret_key, "")
+      with_config(:stripity_stripe, :api_key, "sk_test_51Hxxxxxxxxxxxxxxxxxxxxxx")
+
+      assert MeetingPayments.platform_configured?()
+    end
   end
 
   describe "host_currency/1" do
@@ -97,6 +104,35 @@ defmodule Tymeslot.MeetingPaymentsTest do
     end
   end
 
+  describe "account_currency/1" do
+    test "returns the live account's currency, even one outside the allowlist" do
+      user = insert(:user)
+      insert(:connect_account, user: user, default_currency: "ron")
+
+      assert MeetingPayments.account_currency(user.id) == "ron"
+      assert MeetingPayments.host_currency(user.id) == "eur"
+    end
+
+    test "falls back to eur without an account currency or a user" do
+      user = insert(:user)
+      insert(:connect_account, user: user, default_currency: nil)
+
+      assert MeetingPayments.account_currency(user.id) == "eur"
+      assert MeetingPayments.account_currency(nil) == "eur"
+    end
+  end
+
+  describe "charges_enabled_for_user?/1" do
+    test "accepts a supported or a legacy two-decimal currency, and nothing else" do
+      for {currency, expected} <- [{"eur", true}, {"ron", true}, {"jpy", false}, {nil, false}] do
+        user = insert(:user)
+        insert(:connect_account, user: user, default_currency: currency, charges_enabled: true)
+
+        assert MeetingPayments.charges_enabled_for_user?(user.id) == expected, inspect(currency)
+      end
+    end
+  end
+
   describe "connect_display_state/1" do
     test "maps a missing account to :not_connected" do
       assert MeetingPayments.connect_display_state(nil) == :not_connected
@@ -130,10 +166,37 @@ defmodule Tymeslot.MeetingPaymentsTest do
         details_submitted: true,
         disabled_reason: nil,
         charges_enabled: true,
-        payouts_enabled: true
+        payouts_enabled: true,
+        default_currency: "eur"
       }
 
       assert MeetingPayments.connect_display_state(account) == :ready
+    end
+
+    test "keeps a ready account in a legacy two-decimal currency :ready, since it is charged" do
+      account = %{
+        deleted_at: nil,
+        details_submitted: true,
+        disabled_reason: nil,
+        charges_enabled: true,
+        payouts_enabled: true,
+        default_currency: "ron"
+      }
+
+      assert MeetingPayments.connect_display_state(account) == :ready
+    end
+
+    test "maps a ready account in a currency checkout cannot charge to :unsupported_currency" do
+      account = %{
+        deleted_at: nil,
+        details_submitted: true,
+        disabled_reason: nil,
+        charges_enabled: true,
+        payouts_enabled: true,
+        default_currency: "jpy"
+      }
+
+      assert MeetingPayments.connect_display_state(account) == :unsupported_currency
     end
 
     test "maps a submitted-but-not-yet-enabled account to :pending_review" do

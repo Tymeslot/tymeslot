@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.VisibilityTest do
         flash: %{},
         current_user: user,
         profile: profile,
+        user_timezone: profile.timezone,
         preferences: preferences,
         integrations: [integration],
         events: [],
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.VisibilityTest do
 
       # Exhaust the 10-per-600s bucket for this user.
       for _i <- 1..10 do
-        RateLimiter.check_calendar_refresh_rate_limit(user.id)
+        RateLimiter.check(:calendar_refresh, user.id)
       end
 
       on_exit(fn -> RateLimiter.clear_bucket("calendar_refresh:#{user.id}") end)

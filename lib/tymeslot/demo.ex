@@ -21,6 +21,10 @@ defmodule Tymeslot.Demo do
   @spec get_profile_by_user_id(integer()) :: map() | nil
   def get_profile_by_user_id(user_id), do: provider().get_profile_by_user_id(user_id)
 
+  @doc """
+  Whether `username` is reserved for the demo provider's pages, so no organiser
+  may choose it. Reservation only: see `c:Tymeslot.Demo.Behaviour.demo_username?/1`.
+  """
   @spec demo_username?(String.t()) :: boolean()
   def demo_username?(username), do: provider().demo_username?(username)
 

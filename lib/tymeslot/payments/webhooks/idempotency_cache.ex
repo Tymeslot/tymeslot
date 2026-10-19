@@ -31,7 +31,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
   alias Tymeslot.Infrastructure.CacheStore
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Webhooks.WebhookQueries
+  alias Tymeslot.Payments.Webhooks.StripeEventQueries
 
   use CacheStore,
     table_name: :webhook_idempotency_cache,
@@ -39,33 +39,6 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
       get_in(Application.compile_env(:tymeslot, :webhook_idempotency, []), [:processed_ttl_ms]) ||
         :timer.hours(24),
     cleanup_interval: :timer.hours(1)
-
-  @doc """
-  Check if an event has already been processed.
-
-  Checks two tiers:
-  1. ETS cache (fast, 24 hours)
-  2. Database (slower, 90 days)
-
-  Returns {:ok, :not_processed} if the event hasn't been seen,
-  or {:ok, :already_processed} if it has already been processed.
-  """
-  @spec check_idempotency(String.t()) :: {:ok, :not_processed | :already_processed}
-  def check_idempotency(event_id) do
-    case CacheStore.lookup(:webhook_idempotency_cache, event_id) do
-      {:ok, _timestamp} ->
-        {:ok, :already_processed}
-
-      :miss ->
-        # Check database as fallback. Fails open on a database error, same
-        # choice as `confirm_reservation/1` below, to keep this function's
-        # contract (never returns an `:error` tuple) honest.
-        case check_database(event_id) do
-          {:ok, result} -> {:ok, result}
-          {:error, _reason} -> {:ok, :not_processed}
-        end
-    end
-  end
 
   @doc """
   Atomically reserves an event for processing.
@@ -153,19 +126,6 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
   end
 
   @doc """
-  Clear all cached events and database records.
-  """
-  @spec clear_all() :: :ok
-  def clear_all do
-    # Clear ETS cache first
-    :ets.delete_all_objects(:webhook_idempotency_cache)
-
-    # Clear database
-    WebhookQueries.delete_all_webhook_events()
-    :ok
-  end
-
-  @doc """
   Releases a reserved event so it can be retried.
   """
   @spec release(String.t()) :: :ok
@@ -198,7 +158,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
   # Database operations
 
   defp check_database(event_id) do
-    case WebhookQueries.get_webhook_event_by_stripe_id(event_id) do
+    case StripeEventQueries.get_by_stripe_id(event_id) do
       nil -> {:ok, :not_processed}
       _existing -> {:ok, :already_processed}
     end
@@ -208,6 +168,10 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
       {:error, error}
   end
 
+  # The event has already been handled when this runs, so a failed write
+  # is not the delivery's failure: the in-memory mark still stops a
+  # redelivery for `processed_ttl`, but past that, or on another node, the
+  # event would be handled again. It is reported so that gap is seen.
   defp store_in_database(event_id, event_type, payload) do
     attrs = %{
       stripe_event_id: event_id,
@@ -216,7 +180,27 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
       processed_at: DateTime.utc_now(:second)
     }
 
-    WebhookQueries.upsert_webhook_event(attrs)
+    case StripeEventQueries.record(attrs) do
+      {:ok, _event} -> :ok
+      {:error, changeset} -> report_unrecorded(event_id, event_type, changeset.errors, nil)
+    end
+  rescue
+    error -> report_unrecorded(event_id, event_type, error, __STACKTRACE__)
+  end
+
+  defp report_unrecorded(event_id, event_type, reason, stacktrace) do
+    Logger.error("IdempotencyCache: processed Stripe event was not recorded",
+      event_id: event_id,
+      event_type: event_type,
+      error: LogFormat.reason(reason)
+    )
+
+    ErrorTracking.report_error(:stripe_event_not_recorded, stacktrace, %{
+      event_id: event_id,
+      event_type: event_type,
+      error: LogFormat.reason(reason)
+    })
+
     :ok
   end
 end

@@ -73,7 +73,8 @@ print_header() {
 # SECRET_KEY_BASE and DATA_ENCRYPTION_KEY are generated on first boot and
 # kept in /app/data, so leave them alone unless you are restoring an
 # existing installation. Changing DATA_ENCRYPTION_KEY on an install that
-# already holds encrypted credentials makes them undecryptable.
+# already holds encrypted credentials makes them undecryptable; rotate with
+# DATA_ENCRYPTION_KEYS instead (README-Cloudron.md, "Rotating the key").
 #
 # Upgrades never touch this file. The packaged reference copy at
 # /app/.env.example is refreshed with each release.

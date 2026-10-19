@@ -33,8 +33,8 @@ defmodule Tymeslot.Agenda do
   @doc """
   Assembles the Today/Tomorrow agenda for `user` in `timezone`.
 
-  `user` needs `:id` (to resolve calendar integrations) and `:email` (to resolve
-  bookings). A nil/blank/unknown timezone falls back to UTC.
+  `user` needs `:id`, which resolves both the calendar integrations and the
+  bookings they organise. A nil/blank/unknown timezone falls back to UTC.
   """
   @spec day_agenda(map(), String.t() | nil) :: Day.t()
   def day_agenda(user, timezone) do
@@ -130,7 +130,7 @@ defmodule Tymeslot.Agenda do
     # The `/2` query filters to live confirmed bookings, excluding slots
     # voided by a pending reschedule request; `/1` would include pending
     # and cancelled ones, which have no place on the agenda.
-    meetings = Meetings.list_upcoming_meetings_for_user(user.email, @meeting_limit)
+    meetings = Meetings.list_upcoming_meetings_for_organizer(user.id, @meeting_limit)
 
     # Bookings synced to the calendar reappear as provider events; dedup on the
     # shared identifier so the (richer) Tymeslot copy is the one we keep.

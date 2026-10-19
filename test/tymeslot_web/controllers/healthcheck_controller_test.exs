@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.HealthcheckControllerTest do
-  # async: false: the rate-limit test clears the shared Hammer table, and the
+  # async: false: the rate-limit test clears the shared rate-limit table, and the
   # degraded and unhealthy tests replace `Oban` and `HealthQueries` globally
   # with :meck.
   use TymeslotWeb.ConnCase, async: false

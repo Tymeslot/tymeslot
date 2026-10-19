@@ -16,13 +16,13 @@ defmodule Tymeslot.Emails.Templates.PollVoteReceipt do
     Formatting,
     MjmlEmail,
     PollHost,
-    Sanitise,
     TemplateHelper,
-    Text,
-    TimezoneHelper
+    Text
   }
 
+  alias Tymeslot.Locales
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
+  alias Tymeslot.Utils.DateTimeUtils
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -35,7 +35,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteReceipt do
   @spec render(PollSchema.t(), PollParticipantSchema.t(), String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, %PollParticipantSchema{} = participant, voting_url)
       when is_binary(voting_url) do
-    locale = participant.locale || "en"
+    locale = Locales.acceptable(participant.locale) || Locales.booking_default_locale()
     host_name = PollHost.display_name(poll)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -60,11 +60,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteReceipt do
       |> to({participant.name, participant.email})
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
-      |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_polls", "Your responses to \"%{title}\"", title: poll.title)
-        )
-      )
+      |> subject(dgettext("emails_polls", "Your responses to \"%{title}\"", title: poll.title))
       |> html_body(html_body)
       |> text_body(build_text_body(poll, responses, voting_url))
     end)
@@ -124,7 +120,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteReceipt do
     Enum.map(poll.time_slots, fn slot ->
       time =
         slot.start_time
-        |> TimezoneHelper.convert_to_timezone(timezone)
+        |> DateTimeUtils.convert_to_timezone(timezone)
         |> Formatting.format_datetime(locale)
 
       "#{time}: #{response_label(Map.get(responses, slot.id))}"

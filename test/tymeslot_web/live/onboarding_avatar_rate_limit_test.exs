@@ -39,7 +39,7 @@ defmodule TymeslotWeb.OnboardingAvatarRateLimitTest do
 
       # Exhaust the avatar upload bucket (limit: 20 per hour).
       for _i <- 1..20 do
-        RateLimiter.check_avatar_upload_rate_limit(user.id)
+        RateLimiter.check(:avatar_upload, user.id)
       end
 
       avatar = %{

@@ -137,39 +137,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "validate_provider_config/2" do
-    # `validate_config/1` is structural only — it never performs network I/O,
-    # so a structurally complete config passes without touching the network.
-    test "delegates validation to provider module for caldav" do
-      config = %{
-        base_url: "https://caldav.example.com",
-        username: "user",
-        password: "pass"
-      }
-
-      result = ProviderRegistry.validate_provider_config(:caldav, config)
-      assert result == :ok
-    end
-
-    test "validates missing required fields" do
-      config = %{base_url: "https://example.com"}
-
-      result = ProviderRegistry.validate_provider_config(:caldav, config)
-      assert {:error, _message} = result
-    end
-
-    test "returns error for unknown provider type" do
-      config = %{}
-
-      assert {:error, _reason} = ProviderRegistry.validate_provider_config(:unknown, config)
-    end
-  end
-
   describe "list_providers_with_metadata/0" do
     test "returns metadata for all providers" do
       providers = ProviderRegistry.list_providers_with_metadata()
 
-      assert length(providers) == ProviderRegistry.provider_count()
+      assert length(providers) == length(ProviderRegistry.list_providers())
 
       # Check metadata structure
       assert provider = Enum.find(providers, fn p -> p.type == :caldav end)
@@ -227,22 +199,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "provider_supported?/1" do
-    test "returns true for supported providers" do
-      assert ProviderRegistry.provider_supported?(:caldav)
-      assert ProviderRegistry.provider_supported?(:google)
-      assert ProviderRegistry.provider_supported?(:nextcloud)
-      # Outlook may not be enabled in all environments
-    end
-
-    test "returns false for unsupported providers" do
-      refute ProviderRegistry.provider_supported?(:unknown)
-      refute ProviderRegistry.provider_supported?(:invalid)
-    end
-  end
-
-  describe "provider_count/0" do
-    test "returns total number of registered providers" do
+  describe "registered providers" do
+    test "registers exactly these providers" do
       # Nothing else in this file pins the registry's full contents — the
       # list_providers/0 tests only assert membership — so a provider silently
       # dropped from the registry would otherwise go unnoticed here.
@@ -261,8 +219,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
                :radicale,
                :zimbra
              ]
-
-      assert ProviderRegistry.provider_count() == 13
     end
   end
 

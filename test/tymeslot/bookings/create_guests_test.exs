@@ -15,6 +15,14 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
   alias ErrorTracker.Error
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.TestMocks
+
+  # The booking reads the host's calendars before committing; these hosts have
+  # nothing in them.
+  setup do
+    TestMocks.stub_no_calendar_events()
+    :ok
+  end
 
   import Tymeslot.AvailabilityTestHelpers
 
@@ -59,7 +67,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     %{meeting_params: meeting_params, form_data: form_data} =
       booking_setup(allow_guests: true)
 
-    assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
+    assert {:ok, meeting} = Create.execute(meeting_params, form_data)
 
     emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email) |> Enum.sort()
 
@@ -71,7 +79,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     %{meeting_params: meeting_params, form_data: form_data} =
       booking_setup(allow_guests: true)
 
-    {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
+    {:ok, meeting} = Create.execute(meeting_params, form_data)
     [guest | _rest] = Guests.list_for_meeting(meeting.id)
 
     assert guest.status == "pending"
@@ -82,7 +90,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     %{meeting_params: meeting_params, form_data: form_data} =
       booking_setup(allow_guests: false)
 
-    assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
+    assert {:ok, meeting} = Create.execute(meeting_params, form_data)
     assert Guests.list_for_meeting(meeting.id) == []
   end
 
@@ -116,7 +124,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
 
       capture_log(fn ->
         assert {:error, :booking_failed} =
-                 Create.execute(meeting_params, form_data, skip_calendar_check: true)
+                 Create.execute(meeting_params, form_data)
       end)
 
       assert [%Error{kind: "Elixir.Tymeslot.Infrastructure.ErrorTracking.HandledError"} = error] =

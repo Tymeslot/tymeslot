@@ -22,11 +22,12 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.RecipientLocale
+
   alias Tymeslot.Emails.Shared.{
     Formatting,
     MeetingComponents,
     MjmlEmail,
-    Sanitise,
     TemplateHelper,
     TextBodyHelper
   }
@@ -45,7 +46,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   """
   @spec render(String.t(), map()) :: Swoosh.Email.t()
   def render(attendee_email, invitation_details) do
-    locale = Map.get(invitation_details, :attendee_locale, "en")
+    locale = RecipientLocale.attendee_locale(invitation_details)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       meeting_details =
@@ -101,9 +102,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
         invitation_details.organizer_name,
         invitation_details.organizer_email
       )
-      |> subject(Sanitise.sanitize_for_header(copy.subject))
+      |> subject(copy.subject)
       |> html_body(html_body)
-      |> text_body(build_text_body(invitation_details, copy, locale))
+      |> text_body(build_text_body(invitation_details, meeting_details, copy, locale))
       |> attachment(build_ics_attachment(ics_details, invitation_details, locale))
     end)
   end
@@ -175,19 +176,8 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
     end
   end
 
-  defp build_text_body(invitation_details, copy, locale) do
-    text_details =
-      invitation_details
-      |> Map.take([:all_day, :last_date])
-      |> Map.merge(%{
-        date: invitation_details.date,
-        start_time: invitation_details.start_time,
-        duration: invitation_details.duration,
-        location: invitation_details.location,
-        meeting_type: invitation_details.event_title
-      })
-
-    meeting_details = TextBodyHelper.format_meeting_details(text_details, locale)
+  defp build_text_body(invitation_details, meeting_details, copy, locale) do
+    meeting_details = TextBodyHelper.format_meeting_details(meeting_details, locale)
 
     """
     #{copy.title}

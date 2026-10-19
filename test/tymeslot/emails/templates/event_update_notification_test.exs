@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
   import Tymeslot.EmailTestHelpers
 
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Emails.Templates.EventUpdateNotification
   alias Tymeslot.Utils.Colour
@@ -154,6 +155,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
       email = EventUpdateNotification.render("a@example.com", details)
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end

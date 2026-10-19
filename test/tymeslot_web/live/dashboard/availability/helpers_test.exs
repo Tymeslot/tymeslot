@@ -26,18 +26,18 @@ defmodule TymeslotWeb.Dashboard.Availability.HelpersTest do
       assert info.country_code == :ukr
     end
 
-    test "falls back when the profile has no timezone set" do
+    test "shows the host default zone the availability engine applies when the profile has no timezone set" do
       info = Helpers.get_timezone_info(%ProfileSchema{timezone: nil})
 
-      assert info.timezone == "Etc/UTC"
-      assert info.timezone_display == "UTC"
+      assert info.timezone == "Europe/Tallinn"
+      assert info.timezone_display == "Tallinn, Estonia"
     end
 
-    test "falls back when there is no profile at all" do
+    test "shows the host default zone when there is no profile at all" do
       info = Helpers.get_timezone_info(nil)
 
-      assert info.timezone == "Etc/UTC"
-      assert info.timezone_display == "UTC"
+      assert info.timezone == "Europe/Tallinn"
+      assert info.timezone_display == "Tallinn, Estonia"
     end
   end
 end

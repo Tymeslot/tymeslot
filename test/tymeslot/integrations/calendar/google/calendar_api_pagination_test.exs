@@ -44,7 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
         assert String.starts_with?(
                  url,
-                 "https://www.googleapis.com/calendar/v3/calendars/work@example.com/events"
+                 "https://www.googleapis.com/calendar/v3/calendars/work%40example.com/events"
                )
 
         assert String.contains?(url, "timeMin=")
@@ -271,7 +271,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
       expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
         assert String.starts_with?(
                  url,
-                 "https://www.googleapis.com/calendar/v3/calendars/work@example.com/events"
+                 "https://www.googleapis.com/calendar/v3/calendars/work%40example.com/events"
                )
 
         assert url =~ "timeMin="

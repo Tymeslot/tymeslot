@@ -20,6 +20,14 @@ defmodule Tymeslot.Bookings.CreateErrorTrackingTest do
 
   alias ErrorTracker.Error
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.TestMocks
+
+  # The booking reads the host's calendars before committing; these hosts have
+  # nothing in them.
+  setup do
+    TestMocks.stub_no_calendar_events()
+    :ok
+  end
 
   @telemetry_handler "create-error-tracking-test-occurrences"
 
@@ -68,7 +76,7 @@ defmodule Tymeslot.Bookings.CreateErrorTrackingTest do
     capture_log(fn ->
       send(
         self(),
-        {:result, Create.execute(meeting_params, form_data, skip_calendar_check: true)}
+        {:result, Create.execute(meeting_params, form_data)}
       )
     end)
 

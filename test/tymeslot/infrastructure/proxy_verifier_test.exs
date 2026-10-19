@@ -3,6 +3,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
   @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.ProxyVerifier
+  alias Tymeslot.Test.LogCapture
 
   setup do
     # Save original proxy config
@@ -77,6 +78,33 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
 
       assert result.proxy_configured == true
       assert Enum.any?(result.errors, &String.contains?(&1, "cannot verify proxy"))
+    end
+
+    # The credential is acknowledged, not logged, and the endpoint stays a URL.
+    test "logs an authenticated proxy as a URL without its credentials" do
+      LogCapture.attach(logger_level: :info)
+
+      Application.put_env(:tymeslot, :http_proxy, %{
+        http_proxy: nil,
+        https_proxy: %{
+          host: "proxy.corp.example",
+          port: 3128,
+          scheme: :http,
+          auth: {"svc-user", "s3cret-pass"}
+        },
+        no_proxy: ["httpbin.org"]
+      })
+
+      ProxyVerifier.verify()
+
+      proxy =
+        "Proxy configured"
+        |> LogCapture.await_log()
+        |> LogCapture.user_metadata()
+        |> Map.fetch!(:proxy)
+
+      assert proxy =~ "HTTPS=http://[auth]@proxy.corp.example:3128"
+      refute proxy =~ "s3cret-pass"
     end
 
     test "accepts custom test URL" do

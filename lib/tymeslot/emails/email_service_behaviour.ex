@@ -42,21 +42,19 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_reschedule_email_to_attendee(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
-  @callback send_reschedule_emails(appointment_details()) ::
-              {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
+  @callback send_end_change_to_attendee(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_guest_end_change(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_end_change_to_organizer(map(), String.t(), map()) ::
+              {:ok, any()} | {:error, any()}
   @callback send_appointment_reminder_to_organizer(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
   @callback send_guest_reminder(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
   @callback send_appointment_reminder_to_attendee(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
-  @callback send_appointment_reminders(appointment_details()) ::
-              {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   @callback send_appointment_reminders(appointment_details(), String.t()) ::
-              {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
-  @callback send_appointment_cancellation(String.t(), appointment_details()) ::
-              {:ok, any()} | {:error, any()}
-  @callback send_cancellation_emails(appointment_details()) ::
               {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   @callback send_cancellation_email_to_attendee(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
@@ -68,6 +66,8 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
   @callback send_password_reset(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
   @callback send_no_password_to_reset(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
   @callback send_signup_attempt_notice(user_map(), String.t(), String.t()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_account_deletion_notice(user_map(), DateTime.t(), String.t() | nil) ::
               {:ok, any()} | {:error, any()}
   @callback send_social_signup_confirmation(user_map(), String.t(), String.t()) ::
               {:ok, any()} | {:error, any()}
@@ -98,6 +98,8 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
             ) ::
               {:ok, any()} | {:error, any()}
   @callback send_video_room_creation_error_notification(user_map(), map()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_calendars_removed_notification(user_map(), map(), [String.t()]) ::
               {:ok, any()} | {:error, any()}
   @callback send_external_booking_change(map(), String.t(), :deleted | :modified) ::
               {:ok, any()} | {:error, any()}

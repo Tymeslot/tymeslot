@@ -119,6 +119,7 @@ msgid "Day"
 msgstr "Dia"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Atalhos de teclado"
@@ -136,6 +137,7 @@ msgid "My Calendars"
 msgstr "Meus calendários"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Next period"
 msgstr "Próximo período"
@@ -166,6 +168,7 @@ msgid "Now"
 msgstr "Agora"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Previous period"
 msgstr "Período anterior"
@@ -355,3 +358,68 @@ msgstr "%{count}/%{capacity} vagas ocupadas"
 #, elixir-autogen, elixir-format
 msgid "Participants"
 msgstr "Participantes"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Doesn't block"
+msgstr "Não bloqueia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr "Ações"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Agenda view"
+msgstr "Visualização de agenda"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close dialogs"
+msgstr "Fechar as janelas"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Create event"
+msgstr "Criar evento"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Day view"
+msgstr "Visualização de dia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Focus search"
+msgstr "Focar a busca"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Jump to today"
+msgstr "Ir para hoje"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Month view"
+msgstr "Visualização de mês"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Navigation"
+msgstr "Navegação"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle this help"
+msgstr "Abrir ou fechar esta ajuda"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Views"
+msgstr "Visualizações"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Week view"
+msgstr "Visualização de semana"

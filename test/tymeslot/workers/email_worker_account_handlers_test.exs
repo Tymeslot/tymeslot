@@ -6,7 +6,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
   import Mox
   import Tymeslot.Factory
   alias Tymeslot.EmailServiceMock
-  alias Tymeslot.Workers.EmailWorkerHandlers
+  alias Tymeslot.Notifications.EmailHandlers
 
   setup :verify_on_exit!
 
@@ -20,7 +20,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_email_change_verification", %{
+               EmailHandlers.execute_email_action("send_email_change_verification", %{
                  "user_id" => user.id,
                  "new_email" => new_email,
                  "verification_url" => "https://example.com/verify/token123"
@@ -29,7 +29,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
 
     test "discards job when user is not found" do
       assert {:discard, "User not found"} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_verification", %{
+               EmailHandlers.execute_email_action("send_email_change_verification", %{
                  "user_id" => 999_999,
                  "new_email" => "new@example.com",
                  "verification_url" => "https://example.com/verify/token"
@@ -44,7 +44,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_verification", %{
+               EmailHandlers.execute_email_action("send_email_change_verification", %{
                  "user_id" => user.id,
                  "new_email" => "new@example.com",
                  "verification_url" => "https://example.com/verify/token"
@@ -62,7 +62,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_email_change_notification", %{
+               EmailHandlers.execute_email_action("send_email_change_notification", %{
                  "user_id" => user.id,
                  "new_email" => new_email
                })
@@ -70,7 +70,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
 
     test "discards job when user is not found" do
       assert {:discard, "User not found"} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_notification", %{
+               EmailHandlers.execute_email_action("send_email_change_notification", %{
                  "user_id" => 999_999,
                  "new_email" => "new@example.com"
                })
@@ -84,7 +84,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_notification", %{
+               EmailHandlers.execute_email_action("send_email_change_notification", %{
                  "user_id" => user.id,
                  "new_email" => "new@example.com"
                })
@@ -102,7 +102,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+               EmailHandlers.execute_email_action("send_email_change_confirmations", %{
                  "user_id" => user.id,
                  "old_email" => "old@example.com",
                  "new_email" => "new@example.com"
@@ -111,7 +111,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
 
     test "discards job when user is not found" do
       assert {:discard, "User not found"} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+               EmailHandlers.execute_email_action("send_email_change_confirmations", %{
                  "user_id" => 999_999,
                  "old_email" => "old@example.com",
                  "new_email" => "new@example.com"
@@ -126,7 +126,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+               EmailHandlers.execute_email_action("send_email_change_confirmations", %{
                  "user_id" => user.id,
                  "old_email" => "old@example.com",
                  "new_email" => "new@example.com"
@@ -141,7 +141,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+               EmailHandlers.execute_email_action("send_email_change_confirmations", %{
                  "user_id" => user.id,
                  "old_email" => "old@example.com",
                  "new_email" => "new@example.com"
@@ -162,7 +162,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_paused_notification",
                  %{
                    "user_id" => user.id,
@@ -185,7 +185,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_paused_notification",
                  %{
                    "user_id" => user.id,
@@ -200,7 +200,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       integration = insert(:calendar_integration)
 
       assert {:discard, "User or integration not found"} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_paused_notification",
                  %{
                    "user_id" => 999_999,
@@ -215,7 +215,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       user = insert(:user)
 
       assert {:discard, "User or integration not found"} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_paused_notification",
                  %{
                    "user_id" => user.id,
@@ -238,7 +238,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert {:error, "Failed to send notification"} =
-               EmailWorkerHandlers.execute_email_action(
+               EmailHandlers.execute_email_action(
                  "send_integration_paused_notification",
                  %{
                    "user_id" => user.id,
@@ -266,7 +266,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+               EmailHandlers.execute_email_action("send_admin_alert", %{
                  "recipient" => "admin@example.com",
                  "category" => "Webhook",
                  "severity" => "warning",
@@ -285,7 +285,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert {:error, "Failed to deliver admin alert"} =
-               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+               EmailHandlers.execute_email_action("send_admin_alert", %{
                  "recipient" => "admin@example.com",
                  "category" => "Webhook",
                  "severity" => "warning",
@@ -305,7 +305,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+               EmailHandlers.execute_email_action("send_admin_alert", %{
                  "recipient" => "admin@example.com",
                  "category" => "General",
                  "severity" => "nonsense",
@@ -325,7 +325,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+               EmailHandlers.execute_email_action("send_admin_alert", %{
                  "recipient" => "admin@example.com",
                  "category" => "General",
                  "severity" => "info",
@@ -345,7 +345,7 @@ defmodule Tymeslot.Workers.EmailWorkerAccountHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+               EmailHandlers.execute_email_action("send_admin_alert", %{
                  "recipient" => "admin@example.com",
                  "category" => "Payments",
                  "severity" => "error",

@@ -56,9 +56,9 @@ defmodule Tymeslot.Scheduling.ThemeFlowAttendeePrefillTest do
     end
   end
 
-  describe "build_booking_form_data/3" do
+  describe "build_booking_form_data/2" do
     test "overlays the prefill on a blank form" do
-      assert ThemeFlow.build_booking_form_data(nil, 1, %{"email" => "ada@example.com"}) ==
+      assert ThemeFlow.build_booking_form_data(nil, %{"email" => "ada@example.com"}) ==
                %{"name" => "", "email" => "ada@example.com", "message" => ""}
     end
 
@@ -73,8 +73,10 @@ defmodule Tymeslot.Scheduling.ThemeFlowAttendeePrefillTest do
           attendee_email: "original@example.com"
         )
 
+      {:ok, context} = ThemeFlow.reschedule_context(meeting.uid, user.id)
+
       form =
-        ThemeFlow.build_booking_form_data(meeting.uid, user.id, %{
+        ThemeFlow.build_booking_form_data(context, %{
           "name" => "Someone Else",
           "email" => "else@example.com"
         })

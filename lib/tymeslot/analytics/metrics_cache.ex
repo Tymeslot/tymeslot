@@ -13,12 +13,12 @@ defmodule Tymeslot.Analytics.MetricsCache do
   general dashboard cache's table.
 
   Backed by ETS through `Tymeslot.Infrastructure.CacheStore`. The ETS backend is
-  an implementation detail behind `fetch/3` — swapping it for a distributed cache
+  an implementation detail behind `fetch/4` — swapping it for a distributed cache
   later is a change to this module alone, not its callers.
 
   ## Tenant isolation
 
-  Cache keys are built by `key/2` and **always** include the organizer's
+  Cache keys are built by `key/3` and **always** include the organizer's
   `user_id`. Never call `get_or_compute/3` with a hand-rolled key that omits it,
   or one organizer could be served another's metrics.
   """
@@ -28,27 +28,34 @@ defmodule Tymeslot.Analytics.MetricsCache do
     cleanup_interval: :timer.minutes(5)
 
   @doc """
-  Computes `fun` once per `{user_id, range}` window and caches the result for the
-  default TTL. The window key keeps each organizer's data isolated.
+  Computes `fun` once per `{user_id, range_days, time_zone}` window and caches
+  the result for the default TTL. The user id keeps each organizer's data
+  isolated; the time zone is part of the key because the visits-by-day series
+  is bucketed in it, so a zone change must not be served the old buckets.
   """
-  @spec fetch(integer(), String.t(), (-> result)) :: result when result: var
-  def fetch(user_id, range, fun) when is_integer(user_id) and is_binary(range) do
-    get_or_compute(key(user_id, range), fun)
+  @spec fetch(integer(), pos_integer(), String.t(), (-> result)) :: result when result: var
+  def fetch(user_id, range_days, time_zone, fun)
+      when is_integer(user_id) and is_integer(range_days) and is_binary(time_zone) do
+    get_or_compute(key(user_id, range_days, time_zone), fun)
   end
 
   @doc """
-  Drops the cached metrics for one organizer/window so the next `fetch/3`
+  Drops the cached metrics for one organizer/window so the next `fetch/4`
   recomputes from the database. Backs the dashboard's manual "Refresh" action,
   which must reflect just-recorded visits without waiting out the TTL.
   """
-  @spec invalidate(integer(), String.t()) :: true
-  def invalidate(user_id, range) when is_integer(user_id) and is_binary(range) do
-    invalidate(key(user_id, range))
+  @spec invalidate(integer(), pos_integer(), String.t()) :: true
+  def invalidate(user_id, range_days, time_zone)
+      when is_integer(user_id) and is_integer(range_days) and is_binary(time_zone) do
+    invalidate(key(user_id, range_days, time_zone))
   end
 
   @doc """
-  Cache key for an organizer's metrics over a named range (e.g. `"30d"`).
+  Cache key for an organizer's metrics over a range of days, bucketed in a
+  time zone.
   """
-  @spec key(integer(), String.t()) :: {:analytics_metrics, integer(), String.t()}
-  def key(user_id, range), do: {:analytics_metrics, user_id, range}
+  @spec key(integer(), pos_integer(), String.t()) ::
+          {:analytics_metrics, integer(), pos_integer(), String.t()}
+  def key(user_id, range_days, time_zone),
+    do: {:analytics_metrics, user_id, range_days, time_zone}
 end

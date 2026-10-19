@@ -3,6 +3,7 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
   @moduletag :payments
 
   alias Ecto.Changeset
+  alias Tymeslot.Payments
   alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.PaymentTestHelpers
@@ -166,6 +167,37 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
 
       reloaded = Repo.get!(PaymentTransactionSchema, transaction.id)
       assert reloaded.host_deleted_at == earlier
+    end
+  end
+
+  describe "stripe_customer_ids_for_user/1" do
+    test "returns each distinct customer id of the user, skipping nil and other users", %{
+      user: user
+    } do
+      other = TestFixtures.create_user_fixture()
+
+      for {owner, customer} <- [
+            {user, "cus_a"},
+            {user, "cus_a"},
+            {user, "cus_b"},
+            {user, nil},
+            {other, "cus_other"}
+          ] do
+        PaymentTestHelpers.create_test_transaction(%{
+          user_id: owner.id,
+          status: "completed",
+          stripe_customer_id: customer
+        })
+      end
+
+      assert user.id |> PaymentQueries.stripe_customer_ids_for_user() |> Enum.sort() ==
+               ["cus_a", "cus_b"]
+
+      assert Payments.stripe_customer_ids_for_user(other.id) == ["cus_other"]
+    end
+
+    test "is empty for a user without transactions", %{user: user} do
+      assert PaymentQueries.stripe_customer_ids_for_user(user.id) == []
     end
   end
 end

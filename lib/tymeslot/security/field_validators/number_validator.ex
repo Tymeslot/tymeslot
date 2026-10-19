@@ -14,6 +14,8 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
   bounds are treated as absent rather than crashing.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   # A signed 308-digit integer plus a decimal fraction comfortably fits; 320
   # leaves headroom for sign, decimal point and a short fractional part while
   # staying well below the ~309-significant-digit float overflow threshold.
@@ -27,17 +29,17 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
 
   def validate(value, opts) when is_binary(value) do
     if String.length(value) > @max_length do
-      {:error, "Number is too long"}
+      {:error, dgettext("errors_input", "Number is too long")}
     else
       case parse(value) do
         {:ok, n} -> check_bounds(n, opts)
-        :error -> {:error, "Number is not valid"}
+        :error -> {:error, dgettext("errors_input", "Number is not valid")}
       end
     end
   end
 
   def validate(value, opts) when is_number(value), do: check_bounds(value, opts)
-  def validate(_value, _opts), do: {:error, "Number must be numeric"}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "Number must be numeric")}
 
   # `Float.parse/1` and `Integer.parse/1` raise `ArgumentError` on
   # pathological input — IEEE-754 overflow for ≥ 309-digit strings, and
@@ -79,9 +81,14 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
     max = numeric_bound(Keyword.get(opts, :max))
 
     cond do
-      is_number(min) and n < min -> {:error, "Number must be at least #{min}"}
-      is_number(max) and n > max -> {:error, "Number must be at most #{max}"}
-      true -> :ok
+      is_number(min) and n < min ->
+        {:error, dgettext("errors_input", "Number must be at least %{min}", min: min)}
+
+      is_number(max) and n > max ->
+        {:error, dgettext("errors_input", "Number must be at most %{max}", max: max)}
+
+      true ->
+        :ok
     end
   end
 
@@ -97,6 +104,8 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
   defp numeric_bound(_bound), do: nil
 
   defp blank(opts) do
-    if Keyword.get(opts, :required, true), do: {:error, "Number is required"}, else: :ok
+    if Keyword.get(opts, :required, true),
+      do: {:error, dgettext("errors_input", "Number is required")},
+      else: :ok
   end
 end

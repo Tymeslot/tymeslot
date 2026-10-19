@@ -91,6 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           sync_attempts: integer(),
           sync_last_attempt_at: DateTime.t() | nil,
           sync_last_error: String.t() | nil,
+          sync_deferred_since: DateTime.t() | nil,
           created_by_tymeslot: boolean(),
           ical_sequence: integer(),
           last_notified_state: map(),
@@ -169,6 +170,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     field :sync_attempts, :integer, default: 0
     field :sync_last_attempt_at, :utc_datetime_usec
     field :sync_last_error, :string
+    # When a replay of the queued change first went unanswered, for as long
+    # as every replay since has; `nil` otherwise. See `OfflineQueue`.
+    field :sync_deferred_since, :utc_datetime_usec
 
     # Notification tracking
     field :ical_sequence, :integer, default: 0
@@ -219,6 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     :sync_attempts,
     :sync_last_attempt_at,
     :sync_last_error,
+    :sync_deferred_since,
     :created_by_tymeslot,
     :ical_sequence,
     :last_notified_state,
@@ -232,8 +237,35 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     cache_event
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> validate_timing()
     |> foreign_key_constraint(:calendar_integration_id)
     |> unique_constraint([:calendar_integration_id, :uid])
+  end
+
+  @doc """
+  Whether a row's timing is complete for its kind: both instants for a timed
+  event, both dates for an all-day one. The columns are all nullable, and the
+  grid cannot place a timed event without an end or an all-day one without
+  its last day. Takes the row, or a map of its fields with atom keys.
+  """
+  @spec timing_complete?(map()) :: boolean()
+  def timing_complete?(%{all_day: true} = row),
+    do: match?(%Date{}, row[:start_date]) and match?(%Date{}, row[:end_date])
+
+  def timing_complete?(%{all_day: false} = row),
+    do: match?(%DateTime{}, row[:start_at]) and match?(%DateTime{}, row[:end_at])
+
+  def timing_complete?(_row), do: false
+
+  @doc "Adds an error unless the timing the changeset leaves is `timing_complete?/1`."
+  @spec validate_timing(Ecto.Changeset.t()) :: Ecto.Changeset.t()
+  def validate_timing(changeset) do
+    timing =
+      Map.new(~w(all_day start_at end_at start_date end_date)a, &{&1, get_field(changeset, &1)})
+
+    if timing_complete?(timing),
+      do: changeset,
+      else: add_error(changeset, :all_day, "is missing the start or end its kind needs")
   end
 
   @doc """
@@ -297,8 +329,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
   accepts from the CalDAV path.
 
   `recurrence_rule` is deliberately dropped: occurrences were expanded before
-  they were cached, so leaving it on would have `EventsRead.expand_event/3`
-  expand every stored occurrence a second time.
+  they were cached, so leaving it on would have the read path
+  (`ICalNormaliser.expand_occurrences/3`) expand every stored occurrence a
+  second time.
   """
   @spec to_read_path_map(t()) :: map()
   def to_read_path_map(%__MODULE__{} = record) do

@@ -304,4 +304,19 @@ defmodule Tymeslot.Integrations.Calendar.DefaultsTest do
       assert Defaults.resolve_default_calendar_id(integration) == "primary"
     end
   end
+
+  describe "booking_calendar_id/1" do
+    test "is the stored booking calendar" do
+      assert Defaults.booking_calendar_id(integration(default_booking_calendar_id: "work@x")) ==
+               "work@x"
+    end
+
+    test "is the account's default calendar when none, or a blank one, is stored" do
+      assert Defaults.booking_calendar_id(integration(default_booking_calendar_id: nil)) ==
+               "primary"
+
+      assert Defaults.booking_calendar_id(integration(default_booking_calendar_id: "")) ==
+               "primary"
+    end
+  end
 end

@@ -5,6 +5,7 @@ defmodule Tymeslot.Timezones.Formatting do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Timezones.Data
 
@@ -16,11 +17,14 @@ defmodule Tymeslot.Timezones.Formatting do
 
   def format(_other), do: "Unknown timezone"
 
-  @spec utc_offset(String.t()) :: String.t()
-  def utc_offset(timezone_id) do
-    now = DateTime.utc_now()
-
-    case DateTime.shift_zone(now, timezone_id) do
+  @doc """
+  The zone's UTC offset in force at `at` (now, by default), as `"UTC+2"`.
+  A zone's offset changes across the year, so a label for a given day reads
+  it on that day.
+  """
+  @spec utc_offset(String.t(), DateTime.t()) :: String.t()
+  def utc_offset(timezone_id, at \\ Clock.utc_now()) do
+    case DateTime.shift_zone(at, timezone_id) do
       {:ok, shifted} ->
         offset_seconds = shifted.utc_offset + shifted.std_offset
         format_utc_offset(offset_seconds)

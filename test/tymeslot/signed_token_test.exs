@@ -1,14 +1,13 @@
 defmodule Tymeslot.SignedTokenTest do
   @moduledoc """
-  Coverage for `Tymeslot.SignedToken.verify/4`.
+  Coverage for `Tymeslot.SignedToken`.
 
-  The module is a thin wrapper over `Phoenix.Token.verify/4`, but it
-  centralises two behaviours the rest of the app depends on:
+  Each purpose keeps the salt its tokens in the wild were signed with, and
+  the module centralises the behaviours the rest of the app depends on:
 
     * forged / bit-flipped tokens are rejected, never silently accepted,
-    * the configured `max_age` is honoured at the second — a token at
-      exactly `now - max_age + 1` is still valid, a token at
-      `now - max_age - 1` is rejected as `:expired`.
+    * each purpose's lifetime is honoured: a token inside it is valid, one
+      past it is rejected as `:expired`.
 
   A regression here would let embed tokens, password-reset style tokens,
   and any other `Phoenix.Token`-backed value live forever or be forgeable,
@@ -23,9 +22,48 @@ defmodule Tymeslot.SignedTokenTest do
   alias Tymeslot.SignedToken
   alias TymeslotWeb.Endpoint
 
-  @salt "signed-token-test-salt"
+  # The salts tokens in the wild were signed with. A literal per purpose:
+  # nothing here is read from the table it checks.
+  @salts %{
+    embed_session: "embed_session",
+    meeting_approval: "meeting approval",
+    oauth_signup_confirmation: "oauth typed-email sign-up confirmation",
+    booking_preview: "booking owner preview",
+    cursor_page: "cursor-page:v1",
+    slack_oauth_state: "slack_oauth_state"
+  }
 
-  describe "verify/4 — forged and tampered tokens" do
+  @lifetimes %{
+    embed_session: 21_600,
+    meeting_approval: 2_419_200,
+    oauth_signup_confirmation: 86_400,
+    booking_preview: 3600,
+    cursor_page: :infinity,
+    slack_oauth_state: 600
+  }
+
+  describe "purposes" do
+    for {purpose, salt} <- @salts do
+      test "#{purpose} still accepts a token signed with its old salt" do
+        token = Token.sign(Endpoint, unquote(salt), "issued before the table")
+
+        assert SignedToken.verify(unquote(purpose), token) == {:ok, "issued before the table"}
+      end
+    end
+
+    test "each purpose keeps its lifetime" do
+      for {purpose, max_age} <- @lifetimes, do: assert(SignedToken.max_age(purpose) == max_age)
+    end
+
+    test "a token signed for one purpose does not verify as another" do
+      token = SignedToken.sign(:booking_preview, 42)
+
+      assert SignedToken.verify(:booking_preview, token) == {:ok, 42}
+      assert SignedToken.verify(:meeting_approval, token) == {:error, :invalid}
+    end
+  end
+
+  describe "verify/3: forged and tampered tokens" do
     test "a bit-flipped signed payload is rejected as :invalid, not passed to the validator" do
       parent = self()
 
@@ -34,62 +72,54 @@ defmodule Tymeslot.SignedTokenTest do
         {:ok, value}
       end
 
-      token = Token.sign(Endpoint, @salt, {"payload", 42})
+      token = SignedToken.sign(:booking_preview, {"payload", 42})
       tampered = flip_first_char(token)
       refute tampered == token
 
-      assert {:error, :invalid} = SignedToken.verify(tampered, @salt, 60, validator)
-      # The validator must NOT run for a tampered token — the signature
-      # check is the gatekeeper.
+      assert {:error, :invalid} =
+               SignedToken.verify(:booking_preview, tampered, validate: validator)
+
+      # The validator must NOT run for a tampered token: the signature check
+      # is the gatekeeper.
       refute_received {:validator_called, _}
     end
+  end
 
-    test "a token signed with the wrong salt is rejected as :invalid" do
-      validator = fn value -> {:ok, value} end
+  describe "verify/3: lifetime" do
+    test "a token older than its purpose's lifetime is rejected with :expired" do
+      two_hours_ago = System.system_time(:second) - 7200
+      token = Token.sign(Endpoint, "booking owner preview", "stale", signed_at: two_hours_ago)
 
-      token = Token.sign(Endpoint, "wrong-salt", "some payload")
-      assert {:error, :invalid} = SignedToken.verify(token, @salt, 60, validator)
+      assert SignedToken.verify(:booking_preview, token) == {:error, :expired}
+    end
+
+    test "a token just inside its lifetime still verifies" do
+      half_an_hour_ago = System.system_time(:second) - 1800
+      token = Token.sign(Endpoint, "booking owner preview", "fresh", signed_at: half_an_hour_ago)
+
+      assert SignedToken.verify(:booking_preview, token) == {:ok, "fresh"}
+    end
+
+    test ":max_age overrides the purpose's lifetime" do
+      two_minutes_ago = System.system_time(:second) - 120
+      token = Token.sign(Endpoint, "embed_session", "short", signed_at: two_minutes_ago)
+
+      assert SignedToken.verify(:embed_session, token, max_age: 60) == {:error, :expired}
+      assert SignedToken.verify(:embed_session, token) == {:ok, "short"}
     end
   end
 
-  describe "verify/4 — max_age boundary" do
-    test "token signed 'now' verifies inside max_age" do
-      token = Token.sign(Endpoint, @salt, "fresh")
-
-      assert {:ok, "fresh"} =
-               SignedToken.verify(token, @salt, 60, fn v -> {:ok, v} end)
-    end
-
-    test "token older than max_age is rejected with :expired" do
-      # Phoenix.Token.sign accepts signed_at in **seconds** since the epoch;
-      # backdate by two minutes and verify with a 60-second max_age.
-      past_seconds = System.system_time(:second) - 120
-      token = Token.sign(Endpoint, @salt, "stale", signed_at: past_seconds)
-
-      assert {:error, :expired} =
-               SignedToken.verify(token, @salt, 60, fn v -> {:ok, v} end)
-    end
-
-    test "token signed just under max_age still verifies" do
-      # signed_at 30s ago, max_age 60s → still valid.
-      past_seconds = System.system_time(:second) - 30
-      token = Token.sign(Endpoint, @salt, "still-fresh", signed_at: past_seconds)
-
-      assert {:ok, "still-fresh"} =
-               SignedToken.verify(token, @salt, 60, fn v -> {:ok, v} end)
-    end
-  end
-
-  describe "verify/4 — validator rejection" do
-    test "a successfully signed token whose payload fails validation surfaces the validator's error" do
-      token = Token.sign(Endpoint, @salt, %{unexpected: :shape})
+  describe "verify/3: validator rejection" do
+    test "a validly signed token whose payload fails validation surfaces the validator's error" do
+      token = SignedToken.sign(:booking_preview, %{unexpected: :shape})
 
       validator = fn
         %{expected: _v} -> {:ok, :ok}
         _other -> {:error, :invalid_payload}
       end
 
-      assert {:error, :invalid_payload} = SignedToken.verify(token, @salt, 60, validator)
+      assert SignedToken.verify(:booking_preview, token, validate: validator) ==
+               {:error, :invalid_payload}
     end
   end
 

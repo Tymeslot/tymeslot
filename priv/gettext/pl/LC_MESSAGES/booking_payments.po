@@ -1,0 +1,112 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booking cancelled"
+msgstr "Rezerwacja odwołana"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booking confirmed"
+msgstr "Rezerwacja potwierdzona"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booking not accepted"
+msgstr "Rezerwacja nieprzyjęta"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Booking request expired"
+msgstr "Prośba o rezerwację wygasła"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Confirming your payment…"
+msgstr "Potwierdzamy płatność…"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
+msgstr "Czas na odpowiedź mija: %{deadline}. Jeśli do tego czasu nikt nie odpowie, prośba wygaśnie, a pieniądze wrócą do ciebie automatycznie."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "If there's no answer by %{deadline}, the request lapses."
+msgstr "Czas na odpowiedź mija: %{deadline}. Jeśli do tego czasu nikt nie odpowie, prośba wygaśnie."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody responded to this request in time, so it has lapsed."
+msgstr "Nikt nie odpowiedział na tę prośbę na czas, więc wygasła."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
+msgstr "Nikt nie odpowiedział na tę prośbę na czas, więc wygasła. Zwrot płatności jest w toku."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Payment cancelled"
+msgstr "Płatność anulowana"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Payment not completed"
+msgstr "Płatność niedokończona"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Payment received"
+msgstr "Płatność otrzymana"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Please wait while we confirm your booking."
+msgstr "Poczekaj chwilę, potwierdzamy rezerwację."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Return to booking"
+msgstr "Wróć do rezerwacji"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Thank you, your booking is confirmed for %{date}."
+msgstr "Dziękujemy, rezerwacja została potwierdzona: %{date}."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
+msgstr "Dziękujemy, płatność się powiodła. Rezerwacja nie jest jednak jeszcze potwierdzona:"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has been cancelled, so it won't be going ahead."
+msgstr "Ta rezerwacja została odwołana, więc spotkanie się nie odbędzie."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This booking wasn't accepted, so it won't be going ahead."
+msgstr "Ta rezerwacja nie została przyjęta, więc spotkanie się nie odbędzie."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
+msgstr "Ta rezerwacja nie została przyjęta, więc spotkanie się nie odbędzie. Zwrot płatności jest w toku."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. You can return and try again at any time."
+msgstr "Rezerwacja nie została potwierdzona. Możesz wrócić i spróbować ponownie w dowolnej chwili."

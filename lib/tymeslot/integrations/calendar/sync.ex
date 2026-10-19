@@ -13,21 +13,35 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   Cache writes happen in the sync workers themselves. This module only runs
   when a linked Tymeslot meeting is found.
+
+  It also holds the two rules every provider's sync shares: the window a
+  sync reads (`window/1`), and the refusal to let an empty read wipe a
+  populated cache (`refuse_empty_over_populated/4`).
   """
 
   require Logger
 
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Availability
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
+  alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.Calendar.TimingChange
   alias Tymeslot.Meetings
+  alias Tymeslot.Profiles
+
+  # How far back and forward a sync reads, for every provider alike, so the
+  # dashboard calendar shows one range whichever calendar an event is on.
+  @window_past_days 365
+  @window_future_days 365
 
   @typep integration_id :: integer()
   @typep signal :: :deleted | :modified
@@ -41,6 +55,44 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           optional(:provider_event_id) => String.t() | nil,
           optional(:uid) => String.t() | nil
         }
+
+  @doc """
+  The window a sync reads, around `now`: `window_past_days/0` back and as
+  many days forward.
+  """
+  @spec window(DateTime.t()) :: {DateTime.t(), DateTime.t()}
+  def window(now \\ Clock.utc_now()),
+    do:
+      {DateTime.add(now, -@window_past_days, :day), DateTime.add(now, @window_future_days, :day)}
+
+  @doc "How many days back a sync reads; older rows are no longer refreshed."
+  @spec window_past_days() :: pos_integer()
+  def window_past_days, do: @window_past_days
+
+  @doc """
+  Refuses to replace a populated cache with an empty read.
+
+  A sync that reads a whole window replaces the rows it holds for it. An
+  empty answer from a server that answered with events before is far more
+  likely a bad read (a feed served empty mid-deploy, a mailbox briefly
+  unreadable) than a calendar emptied for real, and wiping on that signal
+  alone is damage the next sync cannot see to undo. So an empty `events`
+  is refused while the integration still holds rows overlapping
+  `{range_start, range_end}`: of `role`, or of any role when `role` is nil.
+  The cache is left as it is and the cycle fails, to be retried.
+  """
+  @spec refuse_empty_over_populated(
+          CalendarIntegrationSchema.t(),
+          String.t() | nil,
+          [CalendarEvent.t()],
+          {DateTime.t(), DateTime.t()}
+        ) :: :ok | {:error, :empty_feed_with_populated_cache}
+  def refuse_empty_over_populated(integration, role, events, {range_start, range_end}) do
+    if events == [] and
+         CalendarEventQueries.any_in_range?(integration.id, role, range_start, range_end),
+       do: {:error, :empty_feed_with_populated_cache},
+       else: :ok
+  end
 
   @doc """
   Persists a batch of normalised calendar events to the local cache and
@@ -158,10 +210,53 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   @spec full_refresh_for_role(CalendarIntegrationSchema.t(), String.t(), [CalendarEvent.t()]) ::
           {:ok, non_neg_integer()} | {:error, term()}
   def full_refresh_for_role(%CalendarIntegrationSchema{} = integration, role, calendar_events)
-      when is_binary(role) and is_list(calendar_events) do
-    calendar_events = flag_tymeslot_owned(integration, calendar_events)
+      when is_binary(role) and is_list(calendar_events),
+      do: full_refresh(integration, {:role, role}, role, calendar_events)
 
-    CalendarEventQueries.full_refresh_for_role(integration.id, role, calendar_events)
+  @doc """
+  `full_refresh_for_role/3` for the rows of one calendar alone: a read that
+  answers for that calendar and no other, such as the busy periods of a
+  CalDAV calendar shared as busy times only, replaces only its rows.
+  """
+  @spec full_refresh_for_calendar(
+          CalendarIntegrationSchema.t(),
+          String.t(),
+          String.t(),
+          [CalendarEvent.t()]
+        ) :: {:ok, non_neg_integer()} | {:error, term()}
+  def full_refresh_for_calendar(integration, provider_calendar_id, role, calendar_events)
+      when is_binary(provider_calendar_id) and is_binary(role) and is_list(calendar_events),
+      do:
+        full_refresh(
+          integration,
+          {:calendar, provider_calendar_id, role},
+          role,
+          calendar_events
+        )
+
+  @doc """
+  Drops the `role` rows of every calendar of the integration but
+  `provider_calendar_ids`: the rows a per-calendar read
+  (`full_refresh_for_calendar/4`) cached for a calendar it no longer reads.
+  """
+  @spec drop_role_except(CalendarIntegrationSchema.t(), String.t(), [String.t()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def drop_role_except(integration, role, provider_calendar_ids)
+      when is_binary(role) and is_list(provider_calendar_ids),
+      do:
+        full_refresh(integration, {:role_except_calendars, role, provider_calendar_ids}, role, [])
+
+  defp full_refresh(integration, scope, role, calendar_events) do
+    attrs =
+      integration
+      |> flag_tymeslot_owned(calendar_events)
+      |> Enum.map(
+        &(&1
+          |> ProviderCalendarEventSchema.from_calendar_event()
+          |> Map.put(:role, role))
+      )
+
+    IntegrationCacheQueries.replace_cached_rows(integration.id, scope, attrs)
   rescue
     e ->
       ErrorTracking.report_error(e, __STACKTRACE__, %{
@@ -190,6 +285,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   The cost is one meeting lookup per batch; `flag_tymeslot_owned/2` reads
   only, so it is safe inside the caller's transaction.
+
+  A Google or Outlook occurrence is given its series' stored rule here too,
+  read under the same lock (`SeriesRules.stamp/2`), since this write replaces
+  a row's rule with whatever the event carries.
   """
   @spec upsert_cache(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
           {:ok, non_neg_integer()} | {:error, term()}
@@ -197,15 +296,16 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def upsert_cache(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
-    attrs_list =
-      integration
-      |> flag_tymeslot_owned(calendar_events)
-      |> Enum.map(&ProviderCalendarEventSchema.from_calendar_event/1)
+    IntegrationCacheQueries.under_lock(integration.id, fn ->
+      attrs_list =
+        integration
+        |> flag_tymeslot_owned(SeriesRules.stamp(integration.id, calendar_events))
+        |> Enum.map(&ProviderCalendarEventSchema.from_calendar_event/1)
 
-    with {:ok, count} <- ProviderCalendarEventQueries.upsert_batch(attrs_list) do
+      {:ok, count} = ProviderCalendarEventQueries.upsert_batch(attrs_list)
       drop_replaced_masters(integration.id, calendar_events)
-      {:ok, count}
-    end
+      count
+    end)
   rescue
     e ->
       ErrorTracking.report_error(e, __STACKTRACE__, %{
@@ -258,7 +358,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   """
   @spec invalidate_cache_for_user(CalendarIntegrationSchema.t()) :: :ok
   def invalidate_cache_for_user(%CalendarIntegrationSchema{} = integration) do
-    AvailabilityCache.invalidate_for_user(integration.user_id)
+    Availability.changed(integration.user_id)
     :ok
   rescue
     e ->
@@ -302,9 +402,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     meetings_by_identifier =
       Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
+    # Read once for the batch, and only when an all-day event needs it.
+    host_zone =
+      if Enum.any?(calendar_events, & &1.all_day),
+        do: Profiles.get_user_timezone(integration.user_id)
+
     Enum.each(
       calendar_events,
-      &maybe_reconcile_time_change(integration, &1, meetings_by_identifier)
+      &maybe_reconcile_time_change(integration, &1, meetings_by_identifier, host_zone)
     )
 
     :ok
@@ -313,21 +418,41 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   defp maybe_reconcile_time_change(
          integration,
          %CalendarEvent{} = cal_event,
-         meetings_by_identifier
+         meetings_by_identifier,
+         host_zone
        ) do
     case linked_meeting(cal_event, meetings_by_identifier) do
       nil ->
         :ok
 
+      # A booking the host turned into a recurring series comes back as the
+      # series and its moved or cancelled occurrences, all carrying the
+      # booking's UID. Only the series row describes the booking itself; an
+      # occurrence elsewhere in the series would flag it, and the series row
+      # clear it again, on every sync.
+      _meeting when is_binary(cal_event.recurrence_id) or is_binary(cal_event.recurring_event_id) ->
+        :ok
+
       meeting ->
-        if time_changed?(meeting.start_time, cal_event) do
-          reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified)
-        else
-          # Agreement is a signal too. This pass cannot know whether an earlier
-          # one flagged the meeting, and nothing else retires the flag, so a
-          # divergence that has since resolved would otherwise leave the host
-          # with a badge and a notification that was never withdrawn.
-          Meetings.resolve_external_calendar_change(meeting)
+        case TimingChange.classify(meeting, cal_event, host_zone) do
+          :moved ->
+            reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified)
+
+          {:end_moved, end_time} ->
+            Meetings.apply_external_end_change(meeting, end_time)
+
+          :none ->
+            # Agreement is a signal too. This pass cannot know whether an earlier
+            # one flagged the meeting, and nothing else retires the flag, so a
+            # divergence that has since resolved would otherwise leave the host
+            # with a badge and a notification that was never withdrawn.
+            Meetings.resolve_external_calendar_change(meeting)
+
+            # In step, or a difference already accepted: what the calendar
+            # shows now is what a later end change is measured against. Not
+            # recorded when the end moved, since a followed end records itself
+            # and one that was refused must be seen as moved again next pass.
+            Meetings.record_seen_calendar_end(meeting, TimingChange.seen_end(cal_event))
         end
     end
   end
@@ -338,23 +463,6 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     record
     |> Meetings.calendar_event_identifiers()
     |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
-  end
-
-  # All-day event: compare start_date and end_date only.
-  defp time_changed?(meeting_start_time, %CalendarEvent{all_day: true} = cal_event) do
-    meeting_start_date = DateTime.to_date(meeting_start_time)
-    cal_event.start_date != meeting_start_date
-  end
-
-  # Timed event with no start_at — should not occur for valid timed events, treat as unchanged.
-  defp time_changed?(_meeting_start_time, %CalendarEvent{all_day: false, start_at: nil}),
-    do: false
-
-  defp time_changed?(meeting_start_time, %CalendarEvent{all_day: false, start_at: event_start}) do
-    DateTime.compare(
-      DateTime.truncate(meeting_start_time, :second),
-      DateTime.truncate(event_start, :second)
-    ) != :eq
   end
 
   @doc """
@@ -399,7 +507,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       when is_list(refs) do
     refs = Enum.uniq_by(refs, &{Map.get(&1, :provider_event_id), Map.get(&1, :uid)})
 
-    if Keyword.get(opts, :delete_cache, true), do: delete_cached_events(integration.id, refs)
+    if Keyword.get(opts, :delete_cache, true) do
+      delete_cached_events(integration.id, refs)
+      SeriesRules.forget_orphans(integration.id)
+    end
 
     reconcile_deleted_meetings(integration, refs)
   end

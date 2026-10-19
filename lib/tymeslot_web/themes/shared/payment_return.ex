@@ -172,12 +172,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   defp meeting_type_slug(_meeting), do: nil
 
   @doc """
-  Stable PubSub topic for payment status broadcasts on a given meeting.
-  """
-  @spec topic(String.t()) :: String.t()
-  def topic(meeting_id), do: "meeting_payment:#{meeting_id}"
-
-  @doc """
   Resolves the URL's theme slug and assigns `:theme_id` and `:theme_module`.
 
   The scheduling root layout reads `:theme_id` to choose the theme's
@@ -235,7 +229,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       )
 
     if LiveView.connected?(socket) do
-      PubSub.subscribe(Tymeslot.PubSub, topic(meeting_id))
+      PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting_id))
 
       case authorize(meeting_id, theme_slug, params["session_id"]) do
         {:ok, %{meeting: meeting, payment: payment, profile: profile}} ->

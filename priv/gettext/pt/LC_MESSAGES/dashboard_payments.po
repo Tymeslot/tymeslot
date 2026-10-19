@@ -108,6 +108,7 @@ msgstr "Moeda atualizada."
 msgid "Currency updated. Paid event-type prices have been reset."
 msgstr "Moeda atualizada. Os preços dos tipos de reunião pagos foram zerados."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
@@ -386,11 +387,6 @@ msgstr "Trocar a moeda torna gratuitos todos os tipos de reunião pagos, porque 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled"
-msgstr "Cancelado em"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
-#, elixir-autogen, elixir-format
 msgid "Outstanding"
 msgstr "Em aberto"
 
@@ -439,3 +435,53 @@ msgstr[1] "Você ainda deve %{count} reembolsos, no total de %{total}. Desconect
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
 msgstr "Sua conta do Stripe não está conectada, então estes reembolsos precisam ser feitos pelo painel do Stripe. O dinheiro continua devido."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled %{date}"
+msgstr "Cancelado em %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Expirado"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired, paid %{date}"
+msgstr "Expirado, pago em %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired bookings were paid for but never confirmed, for example because the payment arrived after the slot was taken. Their refund is issued automatically; if one is still listed later, refund it here or in Stripe."
+msgstr "Agendamentos expirados foram pagos, mas nunca confirmados, por exemplo porque o pagamento chegou depois que o horário já tinha sido ocupado. O reembolso deles é feito automaticamente; se algum ainda aparecer aqui mais tarde, faça o reembolso aqui ou no Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Declined %{date}"
+msgstr "Recusado em %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "You declined these bookings, but their automatic refund didn't go through. Refund them here or in Stripe."
+msgstr "Você recusou estes agendamentos, mas o reembolso automático não foi concluído. Faça o reembolso aqui ou no Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency, %{currency}, is not supported for meeting payments. Choose one of the currencies below to take payments again."
+msgstr "A moeda da sua conta do Stripe, %{currency}, não é compatível com pagamentos em reuniões. Escolha uma das moedas abaixo para voltar a aceitar pagamentos."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Currency not supported"
+msgstr "Moeda não compatível"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Payments cannot be taken in your account's currency, %{currency}. Choose a supported currency below to take payments again."
+msgstr "Não é possível aceitar pagamentos na moeda da sua conta, %{currency}. Escolha uma moeda compatível abaixo para voltar a aceitar pagamentos."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
+msgstr "Não é mais possível definir preços na moeda da sua conta do Stripe, %{currency}. Os agendamentos continuam sendo cobrados pelos preços atuais; para alterá-los, escolha uma das moedas abaixo."

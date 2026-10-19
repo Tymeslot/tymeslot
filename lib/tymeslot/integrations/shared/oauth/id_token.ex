@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Common.OAuth.IdToken do
+defmodule Tymeslot.Integrations.Shared.OAuth.IdToken do
   @moduledoc """
   Decodes id_token JWTs from OAuth providers to extract account identity claims.
 

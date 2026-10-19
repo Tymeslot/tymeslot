@@ -5,6 +5,8 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
 
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
 
+  require Logger
+
   # Most assertions exercise filter/2 directly: capture_log goes through the
   # default formatter, which only prints metadata keys whitelisted in its
   # `metadata:` list — so non-whitelisted keys (api_key, password, ...) are
@@ -488,26 +490,16 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
   end
 
   describe "through the installed logger filter" do
-    alias Tymeslot.Bookings.Policy
     alias Tymeslot.Test.LogCapture
 
-    # A real call site: blocking the reschedule of a meeting that has started
-    # logs its uid. The primary filter installed at boot must blank it before
-    # any handler sees it.
+    # Booking logs identify a meeting by its id now, but the uid stays a
+    # guarded key, so a call that still logs one is blanked by the primary
+    # filter installed at boot before any handler sees it.
     test "a logged meeting uid reaches handlers redacted" do
-      now = DateTime.utc_now()
-
-      meeting = %{
-        uid: "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c",
-        status: "confirmed",
-        start_time: DateTime.add(now, -600),
-        end_time: DateTime.add(now, 600)
-      }
-
       LogCapture.with_capture([logger_level: :info], fn ->
-        assert {:error, _reason} = Policy.can_reschedule_meeting?(meeting)
+        Logger.info("Meeting looked up", meeting_uid: "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c")
 
-        %{meta: meta} = LogCapture.await_log("Blocked reschedule")
+        %{meta: meta} = LogCapture.await_log("Meeting looked up")
         assert meta.meeting_uid == "[REDACTED]"
       end)
     end

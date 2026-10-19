@@ -1,0 +1,214 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} disputed by the cardholder"
+msgstr "%{amount} оскаржено власником картки"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "A cardholder has disputed one of your booking payments."
+msgstr "Власник картки оскаржив один із платежів за ваші бронювання."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "A dispute was opened"
+msgstr "Відкрито спір"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "ACCOUNT STATUS:"
+msgstr "СТАТУС ОБЛІКОВОГО ЗАПИСУ:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Account restricted"
+msgstr "Обліковий запис обмежено"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Account status"
+msgstr "Статус облікового запису"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Action required"
+msgstr "Потрібна дія"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee email:"
+msgstr "Електронна пошта учасника:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee:"
+msgstr "Учасник:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Charges enabled:"
+msgstr "Платежі ввімкнено:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "DISPUTE DETAILS:"
+msgstr "ДЕТАЛІ СПОРУ:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Dispute details"
+msgstr "Деталі спору"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Disputed amount:"
+msgstr "Сума спору:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "If the dispute is closed in your favour, the booking will reconcile automatically. If lost, the booking is marked refunded."
+msgstr "Якщо спір буде закрито на вашу користь, бронювання буде узгоджено автоматично. Якщо спір буде програно, бронювання позначиться як повернуте."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting:"
+msgstr "Зустріч:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Once Stripe is satisfied, your account state updates automatically. Nothing more is needed on Tymeslot's side."
+msgstr "Щойно Stripe буде задоволений, стан вашого облікового запису оновиться автоматично. З боку Tymeslot більше нічого не потрібно."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Open Stripe dashboard"
+msgstr "Відкрити панель керування Stripe"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Open the Stripe dashboard to see exactly what Stripe needs from you and complete any outstanding requirements."
+msgstr "Відкрийте панель керування Stripe, щоб побачити, що саме потрібно Stripe від вас, і виконати всі невиконані вимоги."
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Open the Stripe dashboard to see what Stripe needs from you:"
+msgstr "Відкрийте панель керування Stripe, щоб побачити, що потрібно Stripe від вас:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Payouts enabled:"
+msgstr "Виплати ввімкнено:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "RESTORE YOUR ACCOUNT:"
+msgstr "ВІДНОВІТЬ ВАШ ОБЛІКОВИЙ ЗАПИС:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Restore your account"
+msgstr "Відновіть ваш обліковий запис"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Restriction:"
+msgstr "Обмеження:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "STRIPE ACCOUNT RESTRICTED"
+msgstr "ОБЛІКОВИЙ ЗАПИС STRIPE ОБМЕЖЕНО"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "STRIPE DISPUTE OPENED"
+msgstr "СПІР STRIPE ВІДКРИТО"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stated reason:"
+msgstr "Заявлена причина:"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account restricted"
+msgstr "Обліковий запис Stripe обмежено"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account restricted: action required"
+msgstr "Обліковий запис Stripe обмежено: потрібні дії"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe charge:"
+msgstr "Платіж Stripe:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe dispute opened"
+msgstr "Спір Stripe відкрито"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe dispute opened: %{amount}"
+msgstr "Спір Stripe відкрито: %{amount}"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe has flagged your connected account as restricted. New paid bookings will continue to work only while charges remain enabled, so please act on this promptly."
+msgstr "Stripe позначив ваш підключений обліковий запис як обмежений. Нові платні бронювання працюватимуть, лише доки платежі залишаються ввімкненими, тож, будь ласка, дійте без зволікань."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe has opened a dispute on a %{amount} payment for one of your bookings."
+msgstr "Stripe відкрив спір щодо платежу на %{amount} за одне з ваших бронювань."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe needs evidence from you within their stated deadline to challenge the dispute. Open the dispute in the Stripe dashboard to upload evidence or accept the dispute."
+msgstr "Щоб оскаржити спір, Stripe потребує від вас доказів у зазначений термін. Відкрийте спір у панелі керування Stripe, щоб завантажити докази або визнати спір."
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "WHAT HAPPENS NEXT:"
+msgstr "ЩО БУДЕ ДАЛІ:"
+
+#: lib/tymeslot/emails/templates/charge_dispute_opened.ex
+#, elixir-autogen, elixir-format
+msgid "What happens next?"
+msgstr "Що буде далі?"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is restricted"
+msgstr "Ваш обліковий запис Stripe обмежено"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account needs attention to keep taking payments."
+msgstr "Вашому обліковому запису Stripe потрібна увага, щоб ви й надалі могли приймати платежі."
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "no"
+msgstr "ні"
+
+#: lib/tymeslot/emails/templates/connect_account_restricted.ex
+#, elixir-autogen, elixir-format
+msgid "yes"
+msgstr "так"

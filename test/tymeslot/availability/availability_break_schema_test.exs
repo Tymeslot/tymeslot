@@ -23,6 +23,13 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
       assert "must be after start time" in errors_on(changeset).end_time
     end
 
+    # The changeset never reads the hours itself: `Breaks` passes them in.
+    test "without hours only the order of start and end is checked" do
+      attrs = %{weekly_availability_id: 1, start_time: ~T[05:00:00], end_time: ~T[06:00:00]}
+
+      assert AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs).valid?
+    end
+
     test "break must be within weekly availability work hours" do
       weekly_availability =
         insert(:weekly_availability, start_time: ~T[09:00:00], end_time: ~T[17:00:00])
@@ -34,7 +41,11 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
         end_time: ~T[09:30:00]
       }
 
-      changeset = AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs)
+      changeset =
+        AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+          work_hours: hours(weekly_availability)
+        )
+
       refute changeset.valid?
       assert "must be within work hours" in errors_on(changeset).start_time
 
@@ -45,7 +56,11 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
         end_time: ~T[17:30:00]
       }
 
-      changeset = AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs)
+      changeset =
+        AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+          work_hours: hours(weekly_availability)
+        )
+
       refute changeset.valid?
       assert "must be within work hours" in errors_on(changeset).end_time
 
@@ -56,7 +71,11 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
         end_time: ~T[13:00:00]
       }
 
-      changeset = AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs)
+      changeset =
+        AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+          work_hours: hours(weekly_availability)
+        )
+
       assert changeset.valid?
     end
 
@@ -70,7 +89,12 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
         end_time: ~T[18:00:00]
       }
 
-      errors = errors_on(AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs))
+      errors =
+        errors_on(
+          AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+            work_hours: hours(weekly_availability)
+          )
+        )
 
       assert errors.start_time == ["must be within work hours"]
       assert errors.end_time == ["must be within work hours"]
@@ -96,17 +120,28 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
 
     test "accepts a break after midnight", %{day: day} do
       attrs = %{weekly_availability_id: day.id, start_time: ~T[01:00:00], end_time: ~T[01:30:00]}
-      assert AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs).valid?
+
+      assert AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+               work_hours: hours(day)
+             ).valid?
     end
 
     test "accepts a break across midnight", %{day: day} do
       attrs = %{weekly_availability_id: day.id, start_time: ~T[23:30:00], end_time: ~T[00:30:00]}
-      assert AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs).valid?
+
+      assert AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+               work_hours: hours(day)
+             ).valid?
     end
 
     test "refuses a break outside the hours", %{day: day} do
       attrs = %{weekly_availability_id: day.id, start_time: ~T[05:00:00], end_time: ~T[06:00:00]}
-      refute AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs).valid?
+
+      refute AvailabilityBreakSchema.changeset(%AvailabilityBreakSchema{}, attrs,
+               work_hours: hours(day)
+             ).valid?
     end
   end
+
+  defp hours(day), do: Map.take(day, [:start_time, :end_time, :ends_next_day])
 end

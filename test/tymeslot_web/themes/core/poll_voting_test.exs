@@ -131,8 +131,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = socket(%{poll: poll, participant: nil, client_ip: client_ip})
 
       # Exhaust the register bucket for this IP before the event fires.
-      bucket = "poll_register:" <> client_ip
-      for _i <- 1..6, do: RateLimiter.check_rate_limit(bucket, 5, 60_000)
+      for _i <- 1..6, do: RateLimiter.check(:poll_register, client_ip)
 
       assert {:noreply, updated} =
                PollVoting.handle_poll_event(

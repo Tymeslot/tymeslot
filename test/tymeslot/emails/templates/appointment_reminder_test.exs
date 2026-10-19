@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.AppointmentReminder
   import Tymeslot.EmailTestHelpers
@@ -95,16 +96,17 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.html_body =~ details.cancel_url
     end
 
-    test "generates valid email with video meeting URL" do
+    test "falls back to the room URL when no host link was minted" do
       details =
         build_appointment_details(%{
-          meeting_url: "https://meet.example.com/reminder-test"
+          meeting_url: "https://meet.example.com/reminder-test",
+          organizer_video_url: nil
         })
 
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
       assert email.html_body =~ "https://meet.example.com/reminder-test"
-      assert String.length(email.html_body) > 1000
+      assert email.text_body =~ "https://meet.example.com/reminder-test"
     end
 
     test "text body contains key reminder information" do
@@ -132,6 +134,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end
@@ -210,16 +213,17 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.html_body =~ details.cancel_url
     end
 
-    test "generates valid email with video meeting URL" do
+    test "falls back to the room URL when no participant link was minted" do
       details =
         build_appointment_details(%{
-          meeting_url: "https://meet.example.com/attendee-reminder"
+          meeting_url: "https://meet.example.com/attendee-reminder",
+          attendee_video_url: nil
         })
 
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
       assert email.html_body =~ "https://meet.example.com/attendee-reminder"
-      assert String.length(email.html_body) > 1000
+      assert email.text_body =~ "https://meet.example.com/attendee-reminder"
     end
 
     test "text body contains key reminder information" do
@@ -253,10 +257,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
     test "includes timezone-aware time display" do
       # start_time is 14:00 UTC; the attendee sits in America/Los_Angeles
-      # (UTC-8 in January), so their local start is 06:00 — represented here
-      # by a distinct DateTime so the two are told apart in the output.
+      # (UTC-8 in January), so their local start is 06:00.
       utc_start = ~U[2026-01-15 14:00:00Z]
-      attendee_local_start = %{utc_start | hour: 6}
+      attendee_local_start = DateTime.shift_zone!(utc_start, "America/Los_Angeles")
 
       details =
         build_appointment_details(%{
@@ -277,6 +280,52 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
              "Expected raw UTC time #{formatted_utc} to be absent from HTML body"
 
       assert email.html_body =~ "America/Los_Angeles"
+    end
+  end
+
+  # A reminder is the email people click from minutes before the call, so
+  # each role must get the link minted for it: a server enforcing tokens
+  # refuses the bare room URL, and the host needs the host link for
+  # moderator rights.
+  describe "per-role join links" do
+    defp per_role_details do
+      build_appointment_details(%{
+        meeting_url: "https://meet.example.com/room",
+        organizer_video_url: "https://meet.example.com/room?jwt=HOST-TOKEN",
+        attendee_video_url: "https://meet.example.com/room?jwt=BOOKER-TOKEN"
+      })
+    end
+
+    test "the attendee gets their participant link, not the host's" do
+      email = AppointmentReminder.render(:attendee, "attendee@example.com", per_role_details())
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "jwt=BOOKER-TOKEN"
+        refute body =~ "jwt=HOST-TOKEN"
+      end
+    end
+
+    test "the organiser gets the host link, not the booker's" do
+      email = AppointmentReminder.render(:organizer, "organizer@example.com", per_role_details())
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "jwt=HOST-TOKEN"
+        refute body =~ "jwt=BOOKER-TOKEN"
+      end
+    end
+
+    test "the organiser's prep line treats a host link alone as a video meeting" do
+      details =
+        build_appointment_details(%{
+          meeting_url: nil,
+          organizer_video_url: "https://meet.example.com/room?jwt=HOST-TOKEN",
+          attendee_video_url: nil
+        })
+
+      email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
+
+      assert email.text_body =~ "Camera & mic ready"
+      assert email.text_body =~ "jwt=HOST-TOKEN"
     end
   end
 
@@ -301,6 +350,38 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
         assert body =~ "jwt=GUEST-TOKEN"
         refute body =~ details.attendee_video_url
       end
+    end
+  end
+
+  # The shared payload is built in the attendee's language; the organiser's
+  # copy must not carry the attendee's "30 Minuten" into an English subject.
+  describe "reminder label per recipient language" do
+    defp mixed_language_details do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        build_appointment_details(%{
+          attendee_locale: "de",
+          organizer_locale: "en",
+          time_until: "30 Minuten",
+          reminder_raw: %{value: 30, unit: "minutes"}
+        })
+      end)
+    end
+
+    test "the organiser's reminder states the time in the organiser's language" do
+      email =
+        AppointmentReminder.render(:organizer, "organizer@example.com", mixed_language_details())
+
+      assert email.subject =~ "in 30 minutes"
+      refute email.subject =~ "Minuten"
+      refute email.html_body =~ "Minuten"
+      refute email.text_body =~ "Minuten"
+    end
+
+    test "the attendee's reminder keeps the attendee's language" do
+      email =
+        AppointmentReminder.render(:attendee, "attendee@example.com", mixed_language_details())
+
+      assert email.subject =~ "30 Minuten"
     end
   end
 

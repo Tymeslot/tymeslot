@@ -5,14 +5,14 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
   @moduletag :calendar
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Workers.CalendarCachePruneWorker
 
   describe "perform/1" do
     test "keeps what the next sync will re-fetch and prunes what it can no longer reach" do
       integration = insert(:calendar_integration, is_active: true)
       now = DateTime.utc_now()
-      window_days = ProviderConfig.sync_window_past_days()
+      window_days = Sync.window_past_days()
 
       # Well inside the window every provider still reads. Pruning this row
       # would delete it only for the next sync to write straight back, which

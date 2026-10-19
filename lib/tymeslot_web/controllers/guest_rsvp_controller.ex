@@ -26,7 +26,7 @@ defmodule TymeslotWeb.GuestRsvpController do
   @spec confirm(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def confirm(conn, %{"token" => token, "response" => response})
       when is_map_key(@responses, response) do
-    with :ok <- RateLimiter.check_guest_rsvp_rate_limit(ClientIP.get(conn)),
+    with :ok <- RateLimiter.check(:guest_rsvp, ClientIP.get(conn)),
          {:ok, guest} <- Meetings.get_guest_invitation(token),
          :ok <- check_seat(guest, response) do
       conn
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.GuestRsvpController do
   @spec submit(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def submit(conn, %{"token" => token, "response" => response})
       when is_map_key(@responses, response) do
-    with :ok <- RateLimiter.check_guest_rsvp_rate_limit(ClientIP.get(conn)),
+    with :ok <- RateLimiter.check(:guest_rsvp, ClientIP.get(conn)),
          {:ok, guest} <- Meetings.record_guest_rsvp(token, Map.fetch!(@responses, response)) do
       conn
       |> put_layout(html: false)

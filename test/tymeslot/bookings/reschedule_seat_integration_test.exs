@@ -110,9 +110,11 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     }
   end
 
-  defp stub_calendar_events(events) do
+  defp stub_calendar_events(events), do: stub_calendar_result({:ok, events})
+
+  defp stub_calendar_result(result) do
     stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
-      {:ok, events}
+      result
     end)
   end
 
@@ -330,7 +332,9 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
         Date.utc_today(),
         Date.add(Date.utc_today(), 41),
         "Etc/UTC",
-        30
+        30,
+        nil,
+        nil
       )
 
     AvailabilityCache.put(cache_key, {:ok, %{"seeded" => true}})
@@ -512,6 +516,20 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
       stub_calendar_events([busy_event("someone-elses-event", new_slot_start())])
 
       assert {:error, :slot_taken} = move(mover, new_slot_params())
+
+      assert [%{id: id}] = ParticipantQueries.list_live_for_meeting(old_meeting.id)
+      assert id == mover.id
+      assert Repo.aggregate(MeetingSchema, :count) == 1
+    end
+
+    # The organiser's calendars could not all be read, so the new time can be
+    # neither confirmed nor refused: the mover is told that, not that the
+    # time is taken, and keeps their seat.
+    test "a time that cannot be checked against the organiser's calendar is refused as such",
+         %{old_meeting: old_meeting, mover: mover} do
+      stub_calendar_result({:error, :some_calendars_unavailable})
+
+      assert {:error, :availability_unverifiable} = move(mover, new_slot_params())
 
       assert [%{id: id}] = ParticipantQueries.list_live_for_meeting(old_meeting.id)
       assert id == mover.id

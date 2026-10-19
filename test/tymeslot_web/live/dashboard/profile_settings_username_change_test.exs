@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
       # The confirmation step must not become a way around the limit: the
       # modal is a warning, not an authorisation.
       for _attempt <- 1..6 do
-        RateLimiter.check_username_change_rate_limit("user:#{user.id}")
+        RateLimiter.check(:username_change, "user:#{user.id}")
       end
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
     end
 
     test "refused attempts do not use up the change allowance",
-         %{conn: conn, user: user, profile: profile} do
+         %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
       for username <- ~w(admin taken-name admin taken-name admin taken-name) do
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
       # The whole allowance of six changes is still there.
       Enum.reduce(1..6, profile, fn attempt, current ->
         assert {:ok, updated} =
-                 Profiles.update_username(current, "sarah-#{attempt}", user.id)
+                 Profiles.change_username(current, "sarah-#{attempt}")
 
         updated
       end)
@@ -201,6 +201,19 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
 
       refute html =~ "Change your URL to"
       assert current_username(profile) == "sarah"
+    end
+
+    # The strict sanitiser drops everything from `--` onwards and strips
+    # `0x<hex>` runs, so these once saved as "team" and "studio-": another
+    # organiser's page, or a URL nobody asked for.
+    for username <- ~w(team--alpha studio-0xab1) do
+      test "saves #{username} exactly as typed", %{conn: conn, profile: profile} do
+        {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+        submit_username(view, unquote(username))
+
+        assert current_username(profile) == unquote(username)
+      end
     end
 
     test "re-submitting the same username does not warn about breaking links",

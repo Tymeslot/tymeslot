@@ -11,55 +11,50 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   - charge.dispute.closed: Dispute resolved (won or lost)
   """
 
-  use Tymeslot.Payments.Behaviours.WebhookHandler
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Mailer
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.{Config, PaymentQueries, PubSub}
-  alias Tymeslot.Security.SecurityLogger
+  alias Tymeslot.Workers.SendConfiguredEmail
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def can_handle?(event_type)
-      when event_type in [
-             "charge.dispute.created",
-             "charge.dispute.updated",
-             "charge.dispute.closed"
-           ] do
-    true
-  end
-
-  def can_handle?(_event_type), do: false
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def process(%{"type" => "charge.dispute.created"} = event, dispute) do
-    handle_created(event, dispute)
-  end
-
-  def process(%{"type" => "charge.dispute.updated"} = event, dispute) do
-    handle_updated(event, dispute)
-  end
-
-  def process(%{"type" => "charge.dispute.closed"} = event, dispute) do
-    handle_closed(event, dispute)
-  end
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def validate(dispute) when is_map(dispute) do
-    required_fields = ["id", "charge", "amount", "status"]
-
-    if Enum.all?(required_fields, &Map.has_key?(dispute, &1)) do
-      :ok
-    else
-      {:error, :missing_fields, "Missing required fields in dispute object"}
+  @impl WebhookHandler
+  def handle(
+        %{
+          "type" => type,
+          "data" => %{
+            "object" =>
+              %{"id" => _id, "charge" => _charge, "amount" => _amount, "status" => _status} =
+                dispute
+          }
+        } = event
+      ) do
+    case type do
+      "charge.dispute.created" -> handle_created(event, dispute)
+      "charge.dispute.updated" -> handle_updated(event, dispute)
+      "charge.dispute.closed" -> handle_closed(event, dispute)
     end
   end
 
-  def validate(_event), do: {:error, :invalid_structure, "Invalid dispute object"}
+  def handle(_event), do: {:error, :permanent, :missing_fields}
 
   # Private functions
+
+  # A subscription dispute is the payment-event handler's to record; if the
+  # hand-off fails, Stripe redelivers the event.
+  defp hand_off_dispute(event_type, data, outcome) do
+    case PubSub.hand_off_payment_event(event_type, data) do
+      :ok ->
+        Logger.info("Subscription dispute handed off", event: event_type)
+        {:ok, outcome}
+
+      {:error, reason} ->
+        {:error, :retry_later, {:hand_off_failed, reason}}
+    end
+  end
 
   defp handle_created(event, dispute) do
     dispute_id = dispute["id"]
@@ -81,18 +76,16 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         customer_id = get_charge_customer_id(charge)
 
         if subscription_charge?(charge) do
-          PubSub.broadcast_payment_event(:dispute_created, %{
-            event_id: event["id"],
-            stripe_customer_id: customer_id,
-            dispute: dispute
-          })
-
-          Logger.info("DISPUTE FORWARDED - Subscription dispute broadcast to subscribers",
-            dispute_id: dispute_id,
-            charge_id: charge_id
+          hand_off_dispute(
+            :dispute_created,
+            %{
+              event_id: event["id"],
+              event_created: event["created"],
+              stripe_customer_id: customer_id,
+              dispute: dispute
+            },
+            :subscription_dispute_forwarded
           )
-
-          {:ok, :subscription_dispute_forwarded}
         else
           case find_user_by_customer(customer_id) do
             nil ->
@@ -117,7 +110,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
               alert_admin_dispute_created(dispute_id, user_id, amount, reason)
 
               # Send email to admin
-              send_dispute_created_alert(dispute)
+              send_dispute_created_alert(alert_data(dispute, user_id))
 
               {:ok, :dispute_created}
           end
@@ -138,14 +131,16 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     case fetch_charge(charge_id) do
       {:ok, charge} ->
         if subscription_charge?(charge) do
-          # Broadcast event for SaaS to update dispute status
-          PubSub.broadcast_payment_event(:dispute_updated, %{
-            event_id: event["id"],
-            stripe_dispute_id: dispute_id,
-            status: status
-          })
-
-          {:ok, :dispute_updated}
+          hand_off_dispute(
+            :dispute_updated,
+            %{
+              event_id: event["id"],
+              event_created: event["created"],
+              stripe_dispute_id: dispute_id,
+              status: status
+            },
+            :dispute_updated
+          )
         else
           {:ok, :dispute_updated}
         end
@@ -168,30 +163,36 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     case fetch_charge(charge_id) do
       {:ok, charge} ->
         if subscription_charge?(charge) do
-          # Broadcast event for SaaS to update dispute status and handle outcome
-          PubSub.broadcast_payment_event(:dispute_closed, %{
-            event_id: event["id"],
-            stripe_dispute_id: dispute_id,
-            status: status,
-            dispute: dispute
-          })
-
-          {:ok, :dispute_closed}
+          hand_off_dispute(
+            :dispute_closed,
+            %{
+              event_id: event["id"],
+              event_created: event["created"],
+              stripe_dispute_id: dispute_id,
+              status: status,
+              dispute: dispute
+            },
+            :dispute_closed
+          )
         else
+          # A one-time charge resolves to its user as on creation: by the
+          # charge's customer, through their local transaction.
+          user_id = find_user_by_customer(get_charge_customer_id(charge))
+
           # We still alert admin in Core for visibility
           if status == "lost" do
             alert_admin_dispute_lost(
               dispute_id,
-              nil,
+              user_id,
               dispute["amount"],
               dispute["reason"]
             )
 
-            send_dispute_lost_alert(dispute)
+            send_dispute_lost_alert(alert_data(dispute, user_id))
           end
 
           if status == "won" do
-            send_dispute_won_notification(dispute)
+            send_dispute_won_notification(alert_data(dispute, user_id))
           end
 
           {:ok, :dispute_closed}
@@ -272,6 +273,29 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     )
   end
 
+  # The alert job stores its arguments as JSON, so it carries only what the
+  # alert shows, never the dispute itself (its evidence holds the customer's
+  # name and addresses).
+  defp alert_data(dispute, user_id) do
+    %{
+      "stripe_dispute_id" => dispute["id"],
+      "user_id" => user_id,
+      "amount" => dispute["amount"],
+      "currency" => dispute["currency"],
+      "reason" => dispute["reason"],
+      "evidence_due_by" => evidence_due_by(dispute)
+    }
+  end
+
+  defp evidence_due_by(%{"evidence_details" => %{"due_by" => due_by}}) when is_integer(due_by) do
+    case DateTime.from_unix(due_by) do
+      {:ok, datetime} -> datetime |> DateTime.to_date() |> Date.to_iso8601()
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp evidence_due_by(_dispute), do: nil
+
   defp send_dispute_created_alert(dispute_data) do
     deliver_dispute_email(:dispute_created_alert, dispute_data)
   end
@@ -303,24 +327,20 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         :ok
 
       true ->
-        do_deliver_dispute_email(template, template_fun, email, data)
+        do_deliver_dispute_email(template_fun, email, data)
     end
   end
 
-  defp do_deliver_dispute_email(template, template_fun, email, data) do
-    email_struct = apply(template, template_fun, [email, data])
-
-    case Mailer.deliver(email_struct) do
-      {:ok, _result} ->
-        Logger.info("Dispute email sent",
-          template: template_fun,
-          email_masked: SecurityLogger.mask_email(email)
-        )
-
+  # From a job, so a mail outage delays the alert rather than losing it.
+  defp do_deliver_dispute_email(template_fun, email, data) do
+    case SendConfiguredEmail.enqueue(:dispute_alert_template, template_fun, {:address, email}, [
+           data
+         ]) do
+      :ok ->
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to send dispute email",
+        Logger.error("Failed to enqueue dispute email",
           template: template_fun,
           reason: LogFormat.reason(reason)
         )

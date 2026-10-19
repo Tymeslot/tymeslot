@@ -351,6 +351,34 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       assert reloaded.attendee_video_url == nil
     end
 
+    # The cancellation deleted the booking's calendar event, and refreshing it
+    # would recreate it on the organiser's calendar.
+    test "leaves a cancelled booking's calendar event alone" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          status: "cancelled",
+          video_integration_id: integration.id,
+          video_provider: "zoom",
+          video_room_id: "4343",
+          video_room_enabled: true
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == nil
+      refute_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+    end
+
     test "keeps the room id after an update so reschedules stay syncable" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)

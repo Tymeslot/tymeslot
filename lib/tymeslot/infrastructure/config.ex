@@ -54,22 +54,6 @@ defmodule Tymeslot.Infrastructure.Config do
     get_module(:outlook_calendar_api_module, Tymeslot.Integrations.Calendar.Outlook.CalendarAPI)
   end
 
-  # Configuration Modules
-
-  @doc """
-  Gets the app configuration module configured for the application.
-  """
-  @spec app_config_module() :: module()
-  def app_config_module do
-    module = get_module(:app_config_module, Tymeslot.Infrastructure.AppConfig)
-
-    if Code.ensure_loaded?(module) do
-      module
-    else
-      Tymeslot.Infrastructure.AppConfig
-    end
-  end
-
   # Configuration Values
 
   @doc """
@@ -104,7 +88,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec registration_enabled?() :: boolean()
   def registration_enabled? do
-    app_config_module().registration_enabled?()
+    Application.get_env(:tymeslot, :registration_enabled, true)
   end
 
   @doc """
@@ -113,7 +97,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec password_auth_enabled?() :: boolean()
   def password_auth_enabled? do
-    app_config_module().password_auth_enabled?()
+    Application.get_env(:tymeslot, :password_auth_enabled, true)
   end
 
   @doc """
@@ -121,7 +105,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec enforce_legal_agreements?() :: boolean()
   def enforce_legal_agreements? do
-    app_config_module().enforce_legal_agreements?()
+    Application.get_env(:tymeslot, :enforce_legal_agreements, false)
   end
 
   @doc """
@@ -129,7 +113,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec logo_links_to_marketing?() :: boolean()
   def logo_links_to_marketing? do
-    app_config_module().logo_links_to_marketing?()
+    Application.get_env(:tymeslot, :logo_links_to_marketing, false)
   end
 
   @doc """
@@ -137,7 +121,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec site_home_path() :: String.t()
   def site_home_path do
-    app_config_module().site_home_path()
+    Application.get_env(:tymeslot, :site_home_path, "/dashboard")
   end
 
   # Private Helpers

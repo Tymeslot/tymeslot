@@ -36,6 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
 
   alias Tymeslot.Integrations.Calendar.Outlook.CreatableEvent
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesMove
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit
 
@@ -55,7 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
     with {:ok, timing, {zone, label}} <- SeriesPatch.master_timing(master),
          {:ok, recurrence} <- find_recurrence(master),
          {:ok, slot} <- SeriesSplit.slot_wall(slot, timing, zone),
-         :ok <- SeriesSplit.ensure_occurrences_before(timing, slot),
+         :ok <- ensure_occurrences_before(recurrence, timing, slot, zone),
          {:ok, range} <- tail_range(recurrence, timing, slot, zone),
          tail = tail(master, timing, slot, label, %{recurrence | "range" => range}),
          {:ok, patch} <- SeriesPatch.build(tail, edit) do
@@ -72,6 +73,56 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
 
   defp find_recurrence(_master), do: {:error, :not_recurring}
 
+  @doc """
+  How many occurrences an Outlook series repeating by `rule` from
+  `start_date` has before `slot_date`, when its pattern is an absolute
+  monthly or yearly one, counted as Graph counts it: one date in every
+  period, a day the month lacks on its last day (see `count_before/4`
+  below). `:not_absolute` for any other rule, which RFC 5545 counts as
+  Graph does.
+
+  A series on the 31st read from Outlook carries a rule with no
+  `BYMONTHDAY` (`RecurrenceConverter.outlook_to_rrule/1`), which RFC 5545
+  would step on the 31st alone, skipping every shorter month that Graph
+  gives an occurrence on its last day.
+  """
+  @spec absolute_count_before(String.t(), Date.t(), Date.t()) ::
+          {:ok, non_neg_integer()} | :not_absolute
+  def absolute_count_before(rule, %Date{} = start_date, %Date{} = slot_date) do
+    with {:ok, parsed} <- RRule.parse(rule),
+         {:ok, pattern} <- absolute_pattern(parsed, start_date),
+         {:ok, nth_date} <- absolute_dates(pattern) do
+      {:ok, count_dates_before(nth_date, start_date, slot_date)}
+    else
+      _other -> :not_absolute
+    end
+  end
+
+  defp absolute_pattern(%RRule{by_day: nil, by_set_pos: nil, other: []} = rule, start) do
+    case {rule.freq, rule.by_month, rule.by_month_day} do
+      {:monthly, nil, day} ->
+        {:ok, absolute("absoluteMonthly", rule, %{"dayOfMonth" => day_of(day, start)})}
+
+      {:yearly, month, day} when month == nil or length(month) == 1 ->
+        month = if month, do: hd(month), else: start.month
+
+        {:ok,
+         absolute("absoluteYearly", rule, %{"dayOfMonth" => day_of(day, start), "month" => month})}
+
+      _other ->
+        :not_absolute
+    end
+  end
+
+  defp absolute_pattern(_rule, _start), do: :not_absolute
+
+  defp absolute(type, rule, fields),
+    do: Map.merge(%{"type" => type, "interval" => rule.interval}, fields)
+
+  defp day_of(nil, start), do: start.day
+  defp day_of([day], _start) when day > 0, do: day
+  defp day_of(_days, _start), do: nil
+
   # --- The ranges ---
 
   defp tail_range(%{"range" => range} = recurrence, timing, slot, zone) do
@@ -87,10 +138,114 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
     end
   end
 
-  defp count_before(%{"pattern" => pattern, "range" => range}, timing, slot, zone) do
+  # Graph counts only the dates its pattern makes, so a master whose start is
+  # off the pattern (a Monday-and-Wednesday series created on a Tuesday
+  # through the API, or a monthly one on the 10th that starts on the 5th) does
+  # not have that start as an occurrence: its first occurrence is the
+  # pattern's first date, and `numberOfOccurrences` does not include the
+  # start.
+  #
+  # An absolute monthly or yearly pattern is counted as Graph counts it: one
+  # date per period, on the pattern's day (and month), from the start's
+  # period on. An RRULE cannot stand in for it, because the converter keeps
+  # no BYMONTHDAY or BYMONTH, so it would step on the start's own day, and RFC
+  # 5545 skips the months without that day (a start on the 31st skips every
+  # 30-day month and February) where Graph has a pattern date in each.
+  #
+  # Any other pattern follows its RRULE, which RFC 5545 always starts with
+  # the start, so a start off the pattern comes off again here.
+  defp count_before(%{"pattern" => pattern} = recurrence, {start, _finish} = timing, slot, zone) do
+    case absolute_dates(pattern) do
+      {:ok, nth_date} ->
+        {:ok, count_dates_before(nth_date, date_of(start), date_of(slot))}
+
+      :not_absolute ->
+        count_by_rule(recurrence, timing, slot, zone)
+    end
+  end
+
+  defp count_by_rule(
+         %{"pattern" => pattern, "range" => range},
+         {start, _finish} = timing,
+         slot,
+         zone
+       ) do
+    with {:ok, rule} <- rule(pattern, range),
+         {:ok, count} <- SeriesSplit.count_before(rule, timing, slot, zone) do
+      {:ok, if(on_pattern?(pattern, start), do: count, else: count - 1)}
+    end
+  end
+
+  # The pattern date of the nth period counted from the start's, for an
+  # absolute monthly or yearly pattern. A day of the month a month does not
+  # have falls on its last day.
+  defp absolute_dates(%{"type" => "absoluteMonthly", "dayOfMonth" => day} = pattern)
+       when is_integer(day) do
+    step = interval(pattern)
+
+    {:ok,
+     fn start, n ->
+       month_index = start.year * 12 + start.month - 1 + n * step
+       clamped_date(div(month_index, 12), rem(month_index, 12) + 1, day)
+     end}
+  end
+
+  defp absolute_dates(
+         %{"type" => "absoluteYearly", "dayOfMonth" => day, "month" => month} = pattern
+       )
+       when is_integer(day) and is_integer(month) do
+    step = interval(pattern)
+    {:ok, fn start, n -> clamped_date(start.year + n * step, month, day) end}
+  end
+
+  defp absolute_dates(_pattern), do: :not_absolute
+
+  defp interval(%{"interval" => interval}) when is_integer(interval) and interval > 0,
+    do: interval
+
+  defp interval(_pattern), do: 1
+
+  defp clamped_date(year, month, day) do
+    first = Date.new!(year, month, 1)
+    %{first | day: min(day, Date.days_in_month(first))}
+  end
+
+  # The pattern dates on or after the start and before the slot's date.
+  defp count_dates_before(nth_date, start_date, slot_date) do
+    0
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(&nth_date.(start_date, &1))
+    |> Stream.take_while(&(Date.compare(&1, slot_date) == :lt))
+    |> Enum.count(&(Date.compare(&1, start_date) != :lt))
+  end
+
+  # Whether the master's start is a date the pattern itself makes: a weekly
+  # pattern's days. A daily pattern makes every day; absolute monthly and
+  # yearly patterns are counted without a rule (`absolute_dates/1`).
+  defp on_pattern?(%{"type" => "weekly", "daysOfWeek" => days}, start)
+       when is_list(days) and days != [] do
+    weekday = start |> date_of() |> Calendar.strftime("%A") |> String.downcase()
+    weekday in Enum.map(days, &String.downcase/1)
+  end
+
+  defp on_pattern?(_pattern, _start), do: true
+
+  defp rule(pattern, range) do
     case SeriesPatch.pattern_rule(pattern, range) do
-      {:ok, rule} -> SeriesSplit.count_before(rule, timing, slot, zone)
+      {:ok, rule} -> {:ok, rule}
       {:error, _pinned} -> {:error, :unsupported_rule}
+    end
+  end
+
+  # A slot with no pattern date before it is the series' first occurrence,
+  # even when the master's start, off the pattern, comes earlier. A pattern
+  # the count cannot follow is judged by the master's start alone.
+  defp ensure_occurrences_before(recurrence, timing, slot, zone) do
+    with :ok <- SeriesSplit.ensure_occurrences_before(timing, slot) do
+      case count_before(recurrence, timing, slot, zone) do
+        {:ok, 0} -> :first_occurrence
+        _some_or_uncountable -> :ok
+      end
     end
   end
 

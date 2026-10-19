@@ -183,11 +183,6 @@ msgstr "Odpovězte na tento e-mail"
 msgid "Having trouble with the button? Copy and paste this link into your browser:"
 msgstr "Nefunguje tlačítko? Zkopírujte tento odkaz do prohlížeče:"
 
-#: lib/tymeslot/emails/shared/meeting/video_section.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting will start at the scheduled time"
-msgstr "Schůzka začne v naplánovaný čas"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "hour"
@@ -281,11 +276,6 @@ msgstr "Jméno"
 msgid "Phone"
 msgstr "Telefon"
 
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Reset your password"
-msgstr "Obnovení hesla"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Saturday"
@@ -310,11 +300,6 @@ msgstr "Časové pásmo"
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "úterý"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Verify your new email address"
-msgstr "Ověřte svou novou e-mailovou adresu"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
 #, elixir-autogen, elixir-format
@@ -362,36 +347,6 @@ msgstr "Další údaje"
 msgid "Join the video call"
 msgstr "Připojit se k videohovoru"
 
-#: lib/tymeslot/emails/email_service/calendar_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Owner"
-msgstr "Vlastník kalendáře"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Email Address Changed - Tymeslot Account"
-msgstr "Změna e-mailové adresy – účet Tymeslot"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Email Address Changed Successfully"
-msgstr "E-mailová adresa byla úspěšně změněna"
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Verify your email address"
-msgstr "Ověřte svou e-mailovou adresu"
-
-#: lib/tymeslot/emails/email_service/calendar_emails.ex
-#, elixir-autogen, elixir-format
-msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr "⚠️ Chyba synchronizace kalendáře – je potřeba ruční zásah"
-
-#: lib/tymeslot/emails/email_service/account_emails.ex
-#, elixir-autogen, elixir-format
-msgid "⚠️ Email Change Request - Security Alert"
-msgstr "⚠️ Žádost o změnu e-mailu – bezpečnostní upozornění"
-
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "You'll receive %{count} reminder before the appointment."
@@ -400,7 +355,7 @@ msgstr[0] "Před schůzkou vám přijde %{count} připomínka."
 msgstr[1] "Před schůzkou vám přijdou %{count} připomínky."
 msgstr[2] "Před schůzkou vám přijde %{count} připomínek."
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "day"
@@ -409,7 +364,7 @@ msgstr[0] "den"
 msgstr[1] "dny"
 msgstr[2] "dní"
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "hour"
@@ -418,7 +373,7 @@ msgstr[0] "hodinu"
 msgstr[1] "hodiny"
 msgstr[2] "hodin"
 
-#: lib/tymeslot/emails/appointment_builder.ex
+#: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgctxt "time until"
 msgid "minute"
@@ -485,25 +440,10 @@ msgstr "Účastník: %{attendee}"
 msgid "Message from attendee:"
 msgstr "Zpráva od účastníka:"
 
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a Tymeslot account"
-msgstr "Účet Tymeslot už máte"
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot account has no password"
-msgstr "Váš účet Tymeslot nemá heslo"
-
 #: lib/tymeslot/emails/shared/sign_in_provider.ex
 #, elixir-autogen, elixir-format
 msgid "single sign-on"
 msgstr "jednotné přihlášení"
-
-#: lib/tymeslot/emails/email_service/auth_emails.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm your email to finish signing up"
-msgstr "Potvrďte e-mail a dokončete registraci"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -600,6 +540,11 @@ msgstr[2] "Skupinové setkání: máte jedno z %{count} míst."
 #, elixir-autogen, elixir-format
 msgid "ends %{time} on %{date}"
 msgstr "konec: %{date}, %{time}"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Duration:"
+msgstr "Délka:"
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format

@@ -14,10 +14,11 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
-  alias Tymeslot.Workers.EmailWorkerHandlers
   import Tymeslot.AvailabilityTestHelpers
+  import Tymeslot.Test.ClockHelpers
   import Tymeslot.MeetingTestHelpers
 
   setup :verify_on_exit!
@@ -54,7 +55,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       # Verify the meeting was updated
       assert updated_meeting.id == meeting.id
@@ -66,7 +67,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       # Reload from database to verify persistence
       {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
@@ -79,7 +80,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.status == "confirmed"
     end
@@ -102,7 +103,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       }
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.status == "confirmed"
       assert updated_meeting.reschedule_requested_at == nil
@@ -110,6 +111,49 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
       assert reloaded.status == "confirmed"
       assert reloaded.reschedule_requested_at == nil
+    end
+
+    test "a second request after the attendee rebooked is a new email, and only it is sent" do
+      %{user: user} = create_always_bookable_profile()
+      meeting = insert_meeting_for_user(user, %{status: "confirmed"})
+      first_at = DateTime.utc_now(:second)
+
+      freeze_clock(first_at)
+      assert :ok = RescheduleRequest.send_reschedule_request(meeting)
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      freeze_clock(DateTime.add(first_at, 60))
+
+      assert {:ok, rebooked} =
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
+
+      freeze_clock(DateTime.add(first_at, 120))
+      assert :ok = RescheduleRequest.send_reschedule_request(rebooked)
+
+      jobs =
+        all_enqueued(
+          worker: EmailWorker,
+          args: %{"action" => "send_reschedule_request", "meeting_id" => meeting.id}
+        )
+
+      [first_job, second_job] = Enum.sort_by(jobs, & &1.args["requested_at"])
+
+      assert first_job.args["requested_at"] == DateTime.to_iso8601(first_at)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_request, 1, fn _meeting ->
+        {:ok, "sent"}
+      end)
+
+      assert {:discard, "Reschedule request no longer pending"} =
+               perform_job(EmailWorker, first_job.args)
+
+      assert :ok = perform_job(EmailWorker, second_job.args)
     end
 
     test "pending meeting: reschedule request then rebook does not silently confirm it" do
@@ -126,7 +170,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       }
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.status == "pending"
       assert updated_meeting.reschedule_requested_at == nil
@@ -146,7 +190,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       }
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.status == "awaiting_payment"
       assert updated_meeting.reschedule_requested_at == nil
@@ -159,7 +203,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes")
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       expected_at = DateTime.add(updated_meeting.start_time, -30 * 60, :second)
 
@@ -174,6 +218,28 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), expected_at) == :eq
     end
 
+    # A reminder too early for the new time is skipped, so its job at the old
+    # time must not survive to fire anyway.
+    test "drops a reminder the new time is too close for" do
+      %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
+
+      :ok =
+        EmailScheduler.schedule_reminder_emails(
+          meeting.id,
+          4,
+          "days",
+          DateTime.add(DateTime.utc_now(), 3, :hour)
+        )
+
+      assert {:ok, _updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
+
+      assert all_enqueued(
+               worker: EmailWorker,
+               args: %{"action" => "send_reminder_emails", "reminder_unit" => "days"}
+             ) == []
+    end
+
     test "resets reminder sent-tracking so the re-pinned reminder is not silently suppressed" do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
@@ -185,7 +251,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         })
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.reminders_sent == []
       assert updated_meeting.reminder_email_sent == false
@@ -212,7 +278,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         {:ok, "sent"}
       end)
 
-      assert :ok = EmailWorkerHandlers.execute_email_action(job.args["action"], job.args)
+      assert :ok = EmailHandlers.execute_email_action(job.args["action"], job.args)
 
       {:ok, after_send} = MeetingQueries.get_meeting(meeting.id)
 
@@ -237,7 +303,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       # The domain layer surfaces the semantic :meeting_not_found atom — the
       # web layer, not the domain layer, renders it to display text.
       assert {:error, :meeting_not_found} =
-               Reschedule.execute("non-existent-uid", new_params, %{}, 0)
+               Reschedule.execute("non-existent-uid", new_params, 0)
     end
   end
 
@@ -275,7 +341,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       # so the booker is bounced back to the schedule step instead of seeing
       # an opaque error.
       assert {:error, :slot_taken} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
     end
   end
 
@@ -301,7 +367,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       # The domain layer surfaces the semantic :meeting_not_found atom — the
       # web layer, not the domain layer, renders it to display text.
       assert {:error, :meeting_not_found} =
-               Reschedule.execute(victim_meeting.uid, new_params, %{}, attacker_user.id)
+               Reschedule.execute(victim_meeting.uid, new_params, attacker_user.id)
     end
 
     test "allows rescheduling when organizer_user_id matches meeting owner" do
@@ -316,7 +382,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(owner_meeting.uid, new_params, %{}, owner_user.id)
+               Reschedule.execute(owner_meeting.uid, new_params, owner_user.id)
 
       assert updated.id == owner_meeting.id
     end
@@ -329,8 +395,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       # Update meeting to cancelled status
       {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
 
-      assert {:error, "Cannot reschedule a cancelled meeting"} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+      assert {:error, {:not_reschedulable, :cancelled}} =
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
     end
 
     test "returns error when meeting has expired" do
@@ -341,8 +407,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       # a booking that reserves nothing.
       {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "expired"})
 
-      assert {:error, "Cannot reschedule an expired meeting"} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+      assert {:error, {:not_reschedulable, :expired}} =
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
     end
 
     test "returns error when meeting is completed" do
@@ -362,8 +428,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Cannot reschedule a completed meeting"} =
-               Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:error, {:not_reschedulable, :completed}} =
+               Reschedule.execute(meeting.uid, new_params, user.id)
     end
 
     test "returns error when meeting has already started" do
@@ -382,8 +448,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Cannot reschedule a meeting that has already started"} =
-               Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:error, {:not_reschedulable, :started}} =
+               Reschedule.execute(meeting.uid, new_params, user.id)
     end
 
     test "returns error when meeting has already occurred" do
@@ -402,8 +468,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Cannot reschedule a meeting that has already occurred"} =
-               Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:error, {:not_reschedulable, :past}} =
+               Reschedule.execute(meeting.uid, new_params, user.id)
     end
   end
 
@@ -418,8 +484,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Invalid date or time format"} =
-               Reschedule.execute(meeting.uid, invalid_params, %{}, meeting.organizer_user_id)
+      assert {:error, :invalid_datetime} =
+               Reschedule.execute(meeting.uid, invalid_params, meeting.organizer_user_id)
     end
 
     test "returns error with invalid time format" do
@@ -432,8 +498,8 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Invalid date or time format"} =
-               Reschedule.execute(meeting.uid, invalid_params, %{}, meeting.organizer_user_id)
+      assert {:error, :invalid_datetime} =
+               Reschedule.execute(meeting.uid, invalid_params, meeting.organizer_user_id)
     end
 
     test "returns error when rescheduling to a past date" do
@@ -448,7 +514,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       # Should fail with some form of time validation error
       assert {:error, _reason} =
-               Reschedule.execute(meeting.uid, past_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, past_params, meeting.organizer_user_id)
     end
   end
 
@@ -470,7 +536,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:ok, updated_meeting} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, updated_meeting} = Reschedule.execute(meeting.uid, new_params, user.id)
       assert updated_meeting.id == meeting.id
     end
 
@@ -486,7 +552,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       }
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.id == meeting.id
     end
@@ -502,7 +568,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       }
 
       assert {:ok, updated_meeting} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated_meeting.id == meeting.id
     end

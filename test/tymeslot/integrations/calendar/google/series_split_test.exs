@@ -197,6 +197,36 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplitTest do
     end
   end
 
+  describe "a series whose start is off its rule" do
+    # Monday and Wednesday from Tuesday 2 June, ten times: the Tuesday is
+    # the first occurrence and counts towards COUNT (RFC 5545 3.3.10), so the
+    # occurrences are 2, 3, 8, 10, 15 June and so on.
+    @off_rule %{
+      "id" => "series2",
+      "summary" => "Planning",
+      "start" => %{"dateTime" => "2026-06-02T09:00:00+02:00", "timeZone" => "Europe/Berlin"},
+      "end" => %{"dateTime" => "2026-06-02T10:00:00+02:00", "timeZone" => "Europe/Berlin"},
+      "recurrence" => ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=10"]
+    }
+
+    test "counts the start among the occurrences before the slot" do
+      # Monday 15 June: 2, 3, 8 and 10 June come before it.
+      assert {:ok, %{tail: tail, head: head}} =
+               SeriesSplit.build(@off_rule, edit(%{}, ~U[2026-06-15 07:00:00Z]))
+
+      assert tail["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6"]
+      assert head["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20260615T065959Z"]
+    end
+
+    test "at the rule's first date leaves the start alone in the head" do
+      assert {:ok, %{tail: tail, head: head}} =
+               SeriesSplit.build(@off_rule, edit(%{}, ~U[2026-06-03 07:00:00Z]))
+
+      assert tail["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=9"]
+      assert head["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20260603T065959Z"]
+    end
+  end
+
   describe "what is not split" do
     test "the first occurrence is an edit of every occurrence" do
       assert SeriesSplit.build(@master, edit(%{}, ~U[2026-06-01 07:00:00Z])) ==

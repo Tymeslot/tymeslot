@@ -215,6 +215,72 @@ defmodule Tymeslot.Security.InputProcessorTest do
     end
   end
 
+  describe "email addresses are validated, never rewritten" do
+    # An email is an identity: an account is created, looked up and mailed
+    # under it. Strict sanitisation strips `0x<hex>` runs and everything from
+    # `--` onwards, which would silently turn one person's address into
+    # another's. Each of these is a valid address and must come back verbatim.
+    @rewritable_addresses [
+      "crypto0xabc@example.com",
+      "jean--paul@example.com",
+      "user@mail.0xdomain.com"
+    ]
+
+    test "validate_field/3 returns each address exactly as typed" do
+      for address <- @rewritable_addresses do
+        assert InputProcessor.validate_field(address, :email) == {:ok, address}
+      end
+    end
+
+    test "validate_form/3 returns each address exactly as typed" do
+      for address <- @rewritable_addresses do
+        assert {:ok, %{"email" => ^address}} =
+                 InputProcessor.validate_form(%{"email" => address}, [{"email", :email}])
+      end
+    end
+
+    test "an address the email rules reject is still an error" do
+      assert {:error, _reason} = InputProcessor.validate_field("crypto0xabc", :email)
+
+      assert {:error, %{email: _reason}} =
+               InputProcessor.validate_form(%{"email" => "not an email"}, [{"email", :email}])
+    end
+
+    test "other fields in the same form are still sanitised strictly" do
+      assert {:ok, %{"email" => "jean--paul@example.com", "name" => "Jean"}} =
+               InputProcessor.validate_form(
+                 %{"email" => "jean--paul@example.com", "name" => "<b>Jean</b>"},
+                 [{"email", :email}, {"name", :name}],
+                 universal_opts: [log_events: false]
+               )
+    end
+  end
+
+  describe "usernames are validated, never rewritten" do
+    # A username addresses a public booking page. Strict sanitisation would
+    # turn "team--alpha" into "team", which can be another organiser's page.
+    @rewritable_usernames ["team--alpha", "studio-0xab1"]
+
+    test "validate_field/3 returns each username exactly as typed" do
+      for username <- @rewritable_usernames do
+        assert InputProcessor.validate_field(username, :username) == {:ok, username}
+      end
+    end
+
+    test "validate_form/3 returns each username exactly as typed" do
+      for username <- @rewritable_usernames do
+        assert {:ok, %{"username" => ^username}} =
+                 InputProcessor.validate_form(%{"username" => username}, [
+                   {"username", :username}
+                 ])
+      end
+    end
+
+    test "a username the username rules reject is still an error" do
+      assert {:error, _reason} = InputProcessor.validate_field("team--<b>", :username)
+    end
+  end
+
   # Every log event the code under test emitted, rendered so a failure names the
   # offending line. A :logger handler is global, so events are narrowed to those
   # logged by this process; validation logs synchronously in its caller, and the

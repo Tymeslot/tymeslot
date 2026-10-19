@@ -9,6 +9,7 @@ defmodule Tymeslot.Test.ICalSeriesFixtures do
 
   import ExUnit.Assertions
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
@@ -121,15 +122,18 @@ defmodule Tymeslot.Test.ICalSeriesFixtures do
   def stamp(%Date{} = date), do: Calendar.strftime(date, "%Y%m%d")
 
   @doc """
-  The Monday of the week holding the next 15 July, and the Monday 26 weeks
-  earlier: summer and winter in Berlin, both inside the sync's window
-  whatever the date the suite runs on.
+  The Monday of the week holding the 15 July nearest today (from 150 days
+  back to 215 ahead), and the Monday 26 weeks earlier: summer and winter in
+  Berlin. The sync's window reaches a year either side of today, so both,
+  and the few weeks after summer the tests reach into, stay a month or more
+  inside it whatever the date the suite runs on. Taking the next 15 July
+  instead put summer up to a year ahead, at the window's far edge.
   """
   @spec winter_and_summer_mondays() :: {Date.t(), Date.t()}
   def winter_and_summer_mondays do
-    today = Date.utc_today()
+    today = Clock.utc_today()
     july = Date.new!(today.year, 7, 15)
-    july = if Date.compare(july, today) == :lt, do: Date.new!(today.year + 1, 7, 15), else: july
+    july = if Date.diff(july, today) < -150, do: Date.new!(today.year + 1, 7, 15), else: july
     summer = Date.beginning_of_week(july)
     {Date.add(summer, -26 * 7), summer}
   end

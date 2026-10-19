@@ -10,8 +10,11 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.Onboarding.OnboardingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Webhooks
+  alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
 
   setup %{conn: conn} do
@@ -319,6 +322,40 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
     end
   end
 
+  describe "Editing a webhook whose stored name predates the length limit" do
+    test "saves a change to its events alone", %{conn: conn, user: user} do
+      stored = String.duplicate("w", 150)
+
+      webhook =
+        insert(:webhook,
+          user: user,
+          name: stored,
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        )
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view |> element("button[title='Edit Webhook']") |> render_click()
+
+      view
+      |> form("#webhook-form", %{
+        "webhook" => %{
+          "name" => stored,
+          "url" => "https://example.com/webhook",
+          "events" => ["meeting.created", "meeting.cancelled"]
+        }
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Webhook updated successfully"
+
+      saved = Repo.get!(WebhookSchema, webhook.id)
+      assert saved.name == stored
+      assert "meeting.cancelled" in saved.events
+    end
+  end
+
   describe "Delivery logs modal" do
     setup %{user: user} do
       {:ok, webhook} =
@@ -344,6 +381,24 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       assert html =~ "Total"
       assert html =~ "Success"
       assert html =~ "Failed"
+    end
+
+    test "answers a webhook deleted from another tab with a message, not a crash", %{
+      conn: conn,
+      user: user,
+      webhook: webhook
+    } do
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      # Another tab deletes it after this one rendered the list.
+      {:ok, _deleted} = Webhooks.delete_webhook(user.id, webhook.id)
+
+      view
+      |> element("button[title='View Delivery Logs']")
+      |> render_click()
+
+      assert render(view) =~ "Webhook not found"
+      assert Process.alive?(view.pid)
     end
   end
 
@@ -374,10 +429,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
         Tymeslot.Features.DefaultAccessChecker
       )
 
-      # `trigger_webhooks_for_event/3` returns a bare :ok whether it scheduled
-      # anything or bailed out on the access check, so the enqueued job is the
-      # only thing that tells the branches apart.
-      assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+      assert :ok = ChannelFanout.dispatch(:meeting_created, meeting)
 
       assert_enqueued(worker: WebhookWorker, args: delivery_args(webhook, meeting))
     end
@@ -401,8 +453,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
         TymeslotWeb.Dashboard.Automation.TestAccessChecker
       )
 
-      # Should still return :ok but not trigger webhook
-      assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+      assert {:error, :insufficient_plan} = ChannelFanout.dispatch(:meeting_created, meeting)
 
       assert all_enqueued(worker: WebhookWorker) == []
     end
@@ -426,8 +477,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
         TymeslotWeb.Dashboard.Automation.TestAccessCheckerAllows
       )
 
-      # Should trigger webhook
-      assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+      assert :ok = ChannelFanout.dispatch(:meeting_created, meeting)
 
       assert_enqueued(worker: WebhookWorker, args: delivery_args(webhook, meeting))
     end
@@ -451,8 +501,8 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
         TymeslotWeb.Dashboard.Automation.TestAccessCheckerFails
       )
 
-      # Should return :ok without raising
-      assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+      assert {:error, :feature_access_checker_failed} =
+               ChannelFanout.dispatch(:meeting_created, meeting)
 
       assert all_enqueued(worker: WebhookWorker) == []
     end

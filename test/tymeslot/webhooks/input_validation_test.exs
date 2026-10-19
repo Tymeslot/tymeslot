@@ -91,6 +91,27 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       assert Map.has_key?(errors, :events)
     end
 
+    # The form shows these messages as they come back: in the host's
+    # language, and with the translation's own casing.
+    test "refuses in the current locale" do
+      params = %{"name" => "", "url" => "https://example.com/hook", "events" => ["invalid.event"]}
+
+      assert {:error, errors} =
+               Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+                 InputValidation.validate_webhook_form(params)
+               end)
+
+      assert errors.name == "Der Name darf nicht leer sein"
+      assert errors.events == "Enthält ungültige Ereignisse: invalid.event"
+    end
+
+    test "words the events refusal as an English sentence" do
+      params = %{"name" => "Hook", "url" => "https://example.com/hook", "events" => ["no.such"]}
+
+      assert {:error, %{events: "Contains invalid events: no.such"}} =
+               InputValidation.validate_webhook_form(params)
+    end
+
     test "preserves angle-bracket and quote characters in name verbatim" do
       # Webhook names are free-form text. XSS is prevented at render time by
       # Phoenix template auto-escaping; SQL injection is prevented by Ecto

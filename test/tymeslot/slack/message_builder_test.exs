@@ -4,6 +4,7 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
   @moduletag :slack
   @moduletag :unit
 
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Slack.MessageBuilder
 
   @meeting %{
@@ -13,6 +14,7 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     start_time: ~U[2026-03-10 14:00:00Z],
     end_time: ~U[2026-03-10 14:30:00Z],
     event_type: %{name: "30-minute intro call"},
+    id: "6f1d2c3b-0a4e-4b8f-9c7d-1e2f3a4b5c6d",
     uid: "abc123",
     cancellation_reason: nil
   }
@@ -20,6 +22,29 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
   # The organiser's timezone, deliberately different from the attendee's: these
   # messages land in the organiser's channel, so every time below is theirs.
   @timezone "UTC"
+
+  describe "build_blocks/3 for every subscribable event" do
+    test "each one has a dedicated header rather than the generic fallback" do
+      meeting = Map.merge(@meeting, %{approval_deadline_at: nil, decline_reason: nil})
+
+      assert EventTypes.all() != []
+
+      generic =
+        Enum.filter(EventTypes.all(), fn event ->
+          [%{"text" => %{"text" => header}} | _rest] =
+            MessageBuilder.build_blocks(event, meeting, @timezone)
+
+          header == "Meeting update"
+        end)
+
+      assert generic == []
+    end
+
+    test "an unknown event name still builds the generic blocks" do
+      assert [%{"text" => %{"text" => "Meeting update"}} | _rest] =
+               MessageBuilder.build_blocks("meeting.renamed", @meeting, @timezone)
+    end
+  end
 
   describe "build_blocks/3 — meeting.created" do
     test "includes a header block, summary, details, and an action button" do
@@ -189,6 +214,17 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
       meeting = %{@meeting | attendee_name: nil}
       blocks = MessageBuilder.build_blocks("meeting.created", meeting, @timezone)
       assert Jason.encode!(blocks) =~ "john@example.com"
+    end
+  end
+
+  # The uid is the booker's capability (the cancel and reschedule links are
+  # built from it), so the host's link names the booking by its id.
+  describe "build_blocks/3: the link to the booking" do
+    test "names the booking by its id, never its uid" do
+      out = Jason.encode!(MessageBuilder.build_blocks("meeting.created", @meeting, @timezone))
+
+      assert out =~ "/dashboard/meetings?meeting=#{@meeting.id}"
+      refute out =~ @meeting.uid
     end
   end
 

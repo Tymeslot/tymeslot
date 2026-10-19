@@ -1,9 +1,9 @@
-defmodule Tymeslot.Integrations.Common.OAuth.AccountMatchTest do
+defmodule Tymeslot.Integrations.Shared.OAuth.AccountMatchTest do
   use Tymeslot.DataCase, async: true
   @moduletag :unit
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
+  alias Tymeslot.Integrations.Shared.OAuth.AccountMatch
 
   describe "verify_account_match/3" do
     test "allows update when both account IDs are nil" do

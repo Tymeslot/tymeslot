@@ -159,11 +159,6 @@ msgstr "Caricamento non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr "Caricamento non riuscito: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Caricamento in corso..."
 
@@ -182,7 +177,7 @@ msgstr "iltuonome"
 msgid "Unknown timezone"
 msgstr "Fuso orario sconosciuto"
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Troppi tentativi di modifica del nome utente. Riprova più tardi."
@@ -273,3 +268,8 @@ msgstr "Questo nome utente è riservato"
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
 msgstr "Elimina avatar"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Nome utente"

@@ -139,6 +139,19 @@ defmodule Tymeslot.AuthTestHelpers do
   end
 
   @doc """
+  Request options from an address no other test uses. The signup and login
+  rate limits are kept per address in global state, so async tests sharing
+  `%Plug.Conn{}`'s 127.0.0.1 count against one bucket and run each other
+  out of attempts.
+  """
+  @spec isolated_request_opts() :: keyword()
+  def isolated_request_opts do
+    n = System.unique_integer([:positive])
+    ip = {10, rem(div(n, 65_536), 256), rem(div(n, 256), 256), rem(n, 256)}
+    ClientIP.request_opts(%Conn{remote_ip: ip})
+  end
+
+  @doc """
   Triggers account lockout for a user.
   """
   @spec trigger_account_lockout(term()) :: term()
@@ -154,6 +167,6 @@ defmodule Tymeslot.AuthTestHelpers do
   """
   @spec generate_email_verification_token(term()) :: binary()
   def generate_email_verification_token(_user) do
-    Token.generate_token()
+    Token.generate()
   end
 end

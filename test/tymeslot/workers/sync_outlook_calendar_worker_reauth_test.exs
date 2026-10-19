@@ -59,6 +59,34 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerReauthTest do
     # A 401 here is not about this one event: the refresh has already been
     # tried, so every other event notification for this integration is about
     # to be refused the same way, and the sweep would keep re-queueing them.
+    test "stores the untranslated reason whatever locale the job runs under" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          is_active: true,
+          access_token_encrypted: Encryption.encrypt("test-access-token"),
+          refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 401, body: ~s({"error":"unauthorized"})}}
+      end)
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert {:discard, _reason} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "AAMkADExampleResourceId00002"
+               })
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).sync_error ==
+               "Microsoft rejected the stored credentials. Please reconnect the integration."
+
+      CalendarCircuitBreaker.reset(:outlook)
+    end
+
     test "flags for reconnection rather than discarding silently" do
       integration =
         insert(:calendar_integration,
@@ -119,7 +147,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerReauthTest do
   end
 
   describe "sweep filter" do
-    test "stream_all_active skips integrations with needs_reauth: true" do
+    test "list_active_page skips integrations with needs_reauth: true" do
       healthy =
         insert(:calendar_integration,
           provider: "outlook",
@@ -138,9 +166,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerReauthTest do
         )
 
       ids =
-        CalendarIntegrationQueries.stream_all_active(100, [], fn row, acc ->
-          [row.id | acc]
-        end)
+        Enum.map(CalendarIntegrationQueries.list_active_page(0, 100), & &1.id)
 
       assert healthy.id in ids
       refute flagged.id in ids

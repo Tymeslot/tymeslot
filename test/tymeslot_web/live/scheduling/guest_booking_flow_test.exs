@@ -368,7 +368,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
             name: "Group Session",
             is_active: true,
             allow_guests: true,
-            max_participants: 3
+            max_participants: 3,
+            last_spots_threshold: 3
           )
 
         %{meeting_type: meeting_type}
@@ -425,6 +426,54 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
         refute has_element?(second, "[data-testid='guest-toggle']")
         refute has_element?(second, "[data-testid='guest-field']")
+      end
+    end
+
+    describe "#{theme.name}: guest field — group meeting type with the count hidden" do
+      @describetag theme_id: theme.id
+
+      setup %{user: user} do
+        # No last-spots threshold: the slot never shows its exact count.
+        meeting_type =
+          insert(:meeting_type,
+            user: user,
+            duration_minutes: 30,
+            name: "Group Session",
+            is_active: true,
+            allow_guests: true,
+            max_participants: 3
+          )
+
+        %{meeting_type: meeting_type}
+      end
+
+      # The cap is seats_left - 1, so "0/2" would tell the visitor exactly
+      # three spots remain on a slot that shows no count.
+      @tag :capture_log
+      test "the header shows guests added without the cap, which is still enforced", %{
+        conn: conn,
+        profile: profile
+      } do
+        view = navigate_to_booking_form(conn, profile, nil)
+
+        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+        _drain = :sys.get_state(view.pid)
+        assert view |> element("[data-testid='guest-count']") |> render() =~ ~r/>\s*0\s*</
+
+        send(view.pid, {:step_event, :booking, :add_guest, "one@example.com"})
+        send(view.pid, {:step_event, :booking, :add_guest, "two@example.com"})
+        _drain = :sys.get_state(view.pid)
+
+        # At the cap the add input stays, since hiding it would give the count away too.
+        assert view |> element("[data-testid='guest-count']") |> render() =~ ~r/>\s*2\s*</
+        assert has_element?(view, "[data-testid='guest-input']")
+
+        send(view.pid, {:step_event, :booking, :add_guest, "three@example.com"})
+        _drain = :sys.get_state(view.pid)
+
+        html = render(view)
+        assert html =~ "You can add up to 2 guests"
+        refute html =~ "three@example.com"
       end
     end
   end

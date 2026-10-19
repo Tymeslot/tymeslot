@@ -3,6 +3,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   Context for managing weekly availability schedules.
   """
 
+  alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Repo
@@ -59,7 +60,8 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   Copies settings from one day to multiple other days.
   """
   @spec copy_day_settings(integer(), integer(), list(integer())) ::
-          {:ok, term()} | {:error, String.t()}
+          {:ok, term()}
+          | {:error, String.t() | {:break_outside_hours, map(), map()} | Ecto.Changeset.t()}
   def copy_day_settings(schedule_id, from_day, to_days) when is_list(to_days) do
     case get_day_availability(schedule_id, from_day) do
       nil ->
@@ -85,18 +87,18 @@ defmodule Tymeslot.Availability.WeeklySchedule do
       ends_next_day: source.ends_next_day
     }
 
-    case upsert_day_availability(schedule_id, to_day, attrs) do
-      {:ok, target_availability} ->
-        # Copy breaks
-        copy_breaks(source.breaks, target_availability.id)
+    with {:ok, target_availability} <- upsert_day_availability(schedule_id, to_day, attrs),
+         :ok <- Breaks.replace_breaks(target_availability, source.breaks) do
+      :ok
+    else
+      # The copy carries the source day's hours, so a break that does not fit
+      # them is the source day's to fix: name that day.
+      {:error, {:break_outside_hours, _target, break}} ->
+        Repo.rollback({:break_outside_hours, source, break})
 
-      {:error, _changeset} = error ->
-        Repo.rollback(error)
+      {:error, reason} ->
+        Repo.rollback(reason)
     end
-  end
-
-  defp copy_breaks(breaks, target_weekly_availability_id) do
-    WeeklyAvailabilityQueries.replace_breaks(target_weekly_availability_id, breaks)
   end
 
   @doc """

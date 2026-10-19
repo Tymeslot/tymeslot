@@ -1,7 +1,10 @@
 import Config
 
 # Configure environment
-config :tymeslot, environment: :test, test_mode: true
+config :tymeslot, environment: :test, video_room_backoff_base_ms: 0
+
+# Lets a test freeze the clock a mounted LiveView reads (see Tymeslot.Clock).
+config :tymeslot, :clock_follows_callers, true
 
 # Reduce bcrypt cost for tests — default log_rounds (12) adds ~200-400ms per
 # password hash, which compounds across hundreds of factory user inserts.
@@ -10,8 +13,7 @@ config :bcrypt_elixir, log_rounds: 4
 # Core tests must not enforce legal agreements.
 config :tymeslot, enforce_legal_agreements: false
 
-# Force Core to use Tymeslot.PubSub in tests
-config :tymeslot, :force_app_pubsub_in_test, true
+# Core uses Tymeslot.PubSub in tests
 config :tymeslot, :pubsub_name, Tymeslot.PubSub
 
 # Force core router for tests
@@ -187,7 +189,6 @@ config :phoenix_live_view,
 
 # Mock configuration
 config :tymeslot, :calendar_module, Tymeslot.CalendarMock
-config :tymeslot, :calendar_client_module, Tymeslot.RadicaleClientMock
 config :tymeslot, :email_service_module, Tymeslot.EmailServiceMock
 config :tymeslot, :google_calendar_api_module, GoogleCalendarAPIMock
 config :tymeslot, :outlook_calendar_api_module, OutlookCalendarAPIMock
@@ -283,27 +284,16 @@ config :tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock
 config :tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock
 config :tymeslot, :stripe_adapter, Tymeslot.MeetingPayments.StripeAdapterMock
 config :tymeslot, :show_branding, true
-config :tymeslot, :allow_payment_event_jobs_in_test, false
 
 # Pricing configuration for tests
 config :tymeslot, :pricing,
   pro_monthly_cents: 500,
   pro_annual_cents: 5000
 
-# Skip webhook signature verification in tests
-config :tymeslot, :skip_webhook_verification, true
-
 # Health check timeouts for faster testing
 config :tymeslot, Tymeslot.Integrations.HealthCheck,
   yield_timeout: 100,
   stream_timeout: 200
-
-# Payment retries sleep between attempts, and the suite was sleeping the
-# production 1s base delay: ten tests across RetryHelperTest and StripeTest
-# waiting out real backoff for about 18 seconds of every run. Only the delay is
-# shortened; max_attempts and backoff_multiplier keep their production values,
-# so the attempt-count and backoff-shape assertions still test what they say.
-config :tymeslot, :payment_retry, base_delay_ms: 1
 
 # Wallaby E2E browser test configuration
 # otp_app + ecto_repos let Wallaby.Feature auto-checkout the sandbox and pass

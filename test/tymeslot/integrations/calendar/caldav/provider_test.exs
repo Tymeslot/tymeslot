@@ -68,7 +68,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
 
       assert client.username == "testuser"
       assert client.password == "testpass"
-      assert client.verify_ssl == true
       # Generic CalDAV URL should remain :caldav
       assert client.provider == :caldav
     end
@@ -305,7 +304,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       }
 
       assert Provider.perform_connection_test(integration) ==
-               {:error, "Private or local network addresses are not allowed"}
+               {:error, :private_address}
     end
 
     test "is pure I/O — takes only the integration, no caller options" do
@@ -395,6 +394,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
                {:ok, "CalDAV connection successful"}
 
       assert_received {:propfind, "https://caldav.example.com/calendars/user/"}
+    end
+
+    test "probes a server its URL identifies the way that server's own client would" do
+      # A generic CalDAV integration on a Radicale URL: every other client for
+      # it takes the detected server type, so the connection test has to look
+      # where that client would rather than where a nameless server keeps its
+      # calendars.
+      integration = %{
+        base_url: "https://radicale.example.com",
+        username: "user",
+        password: "pass",
+        calendar_paths: []
+      }
+
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, _headers, _opts ->
+        send(test_pid, {:propfind, url})
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
+
+      assert Provider.perform_connection_test(integration) ==
+               {:ok, "Radicale connection successful"}
+
+      assert_received {:propfind, "https://radicale.example.com/user/"}
     end
   end
 

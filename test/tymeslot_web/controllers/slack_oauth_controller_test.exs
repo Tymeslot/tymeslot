@@ -54,7 +54,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
 
     test "redirects unauthenticated requests to the login page", %{conn: conn} do
       conn = get(conn, ~p"/api/slack/oauth/start")
-      assert redirected_to(conn) == "/auth/login"
+      assert redirected_to(conn) == "/auth/login?redirect_to=%2Fapi%2Fslack%2Foauth%2Fstart"
     end
 
     test "flashes a friendly message instead of 500ing when OAuth is unavailable",
@@ -143,6 +143,29 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
     end
   end
 
+  describe "GET /api/slack/oauth/callback — OAuth switched off mid-flow" do
+    test "flashes a message instead of 500ing, and exchanges nothing", %{conn: conn} do
+      user = insert(:user)
+      state = sign_state(user.id)
+
+      # The operator removed the Slack app credentials after the user left
+      # for Slack's authorize page.
+      with_config(:tymeslot, :slack_client_id, nil)
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/api/slack/oauth/callback?code=abc123&state=#{state}")
+
+      assert redirected_to(conn, 302) == "/dashboard/automation"
+
+      assert Flash.get(conn.assigns.flash, :error) =~ "Slack app install is not available"
+
+      assert Repo.all(SlackIntegrationSchema) == []
+    end
+  end
+
   describe "GET /api/slack/oauth/callback — error param" do
     test "shows a cancellation flash and redirects to dashboard", %{conn: conn} do
       user = insert(:user)
@@ -188,7 +211,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
       conn = %{conn | remote_ip: {203, 0, 113, 77}}
 
       for _attempt <- 1..20 do
-        assert :ok = RateLimiter.check_oauth_callback_rate_limit("203.0.113.77")
+        assert :ok = RateLimiter.check(:oauth_callback, "203.0.113.77")
       end
 
       # No HTTP expectation is set: an exchange with Slack would fail Mox.

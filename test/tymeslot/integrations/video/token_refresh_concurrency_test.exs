@@ -94,7 +94,9 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       end
 
       # Wait for all to finish
-      results = Task.await_many(tasks, 5000)
+      # Ten tasks share one sandbox connection and take the refresh lock in
+      # turn, polling for it, so on a loaded machine they need more than 5 s.
+      results = Task.await_many(tasks, 30_000)
 
       # All should have succeeded
       for result <- results do
@@ -185,7 +187,9 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       end
 
       # Wait for all to finish
-      results = Task.await_many(tasks, 5000)
+      # Ten tasks share one sandbox connection and take the refresh lock in
+      # turn, polling for it, so on a loaded machine they need more than 5 s.
+      results = Task.await_many(tasks, 30_000)
 
       # All should have succeeded
       for result <- results do

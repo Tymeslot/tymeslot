@@ -66,6 +66,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingRemindersTest do
     |> render_submit()
   end
 
+  # Opens the custom row and types into it, without pressing Add.
+  defp type_custom(lv, value, unit) do
+    lv |> element(~s{[data-testid="reminder-custom-toggle"]}) |> render_click()
+
+    lv
+    |> form("#create-meeting-reminders-form", %{"reminder" => %{"value" => value, "unit" => unit}})
+    |> render_change()
+  end
+
   describe "reminders" do
     test "the picker is offered in meeting mode only", %{conn: conn, user: user} do
       insert(:calendar_integration, user: user, is_active: true)
@@ -168,6 +177,47 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingRemindersTest do
       hook(lv, "save_event", %{})
 
       assert created_meeting().reminders == []
+    end
+
+    # Create feels like it submits the whole modal, so a value typed into the
+    # custom row and never added used to be dropped without a word.
+    test "a custom value typed but not added goes in on create", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+      type_custom(lv, "2", "hours")
+
+      hook(lv, "save_event", %{})
+
+      assert created_meeting().reminders == [%{"value" => 2, "unit" => "hours"}]
+    end
+
+    test "an invalid value typed but not added stops the create and says why", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+      type_custom(lv, "0", "minutes")
+
+      html = hook(lv, "save_event", %{})
+
+      assert html =~ "Reminder value must be a positive number"
+      assert is_nil(Repo.one(MeetingSchema))
+    end
+
+    test "focus leaving the custom row adds what it holds", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      type_custom(lv, "2", "hours")
+
+      html =
+        lv
+        |> element("#meeting_reminder-custom-row")
+        |> render_hook("meeting_commit_custom_reminder", %{
+          "reminder" => %{"value" => "2", "unit" => "hours"}
+        })
+
+      assert html =~ "2 hours before"
+      refute has_element?(lv, "#meeting_reminder-custom-row")
     end
 
     test "a reminder can be taken off again", %{conn: conn} do

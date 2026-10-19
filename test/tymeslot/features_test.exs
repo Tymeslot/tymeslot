@@ -17,6 +17,7 @@ defmodule Tymeslot.FeaturesTest do
 
   import ExUnit.CaptureLog
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.Features.AccessErrors, only: [is_access_error: 1]
 
   alias ErrorTracker.Error
   alias Tymeslot.Features
@@ -240,4 +241,24 @@ defmodule Tymeslot.FeaturesTest do
       refute Features.meeting_payments_allowed?(42)
     end
   end
+
+  describe "is_access_error/1" do
+    test "matches the refusals check_access/2 returns and no other error" do
+      returned =
+        for checker <- [InsufficientPlanChecker, GenericErrorChecker, StripeRequiredChecker] do
+          with_config(:tymeslot, :feature_access_checker, checker)
+          {:error, reason} = Features.check_access(42, :automations)
+          reason
+        end
+
+      refusals =
+        returned ++ [:insufficient_plan, :feature_disabled, :pro_required, :stripe_required]
+
+      assert Enum.reject(refusals, &access_error?/1) == []
+      refute Enum.any?([:not_found, :rate_limited, "insufficient_plan", nil], &access_error?/1)
+    end
+  end
+
+  defp access_error?(reason) when is_access_error(reason), do: true
+  defp access_error?(_reason), do: false
 end

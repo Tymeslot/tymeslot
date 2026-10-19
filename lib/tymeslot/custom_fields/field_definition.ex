@@ -10,6 +10,7 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
 
   Changing the type clears type-specific config that no longer applies.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -125,7 +126,16 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     options = get_field(cs, :options) || []
 
     if length(options) < min do
-      add_error(cs, :options, "must have at least #{min} options")
+      add_error(
+        cs,
+        :options,
+        dngettext(
+          "errors",
+          "must have at least %{count} option",
+          "must have at least %{count} options",
+          min
+        )
+      )
     else
       cs
     end
@@ -140,7 +150,7 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
       |> Enum.reject(&is_nil/1)
 
     if keys != Enum.uniq(keys) do
-      add_error(cs, :options, "must not contain duplicate keys")
+      add_error(cs, :options, dgettext_noop("errors", "must not contain duplicate keys"))
     else
       cs
     end
@@ -159,7 +169,7 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
          {:ok, hi} <- parse_bound(type, max) do
       if bound_le?(type, lo, hi),
         do: cs,
-        else: add_error(cs, :max, "must be greater than or equal to min")
+        else: add_error(cs, :max, dgettext_noop("errors", "must be greater than or equal to min"))
     else
       # An unparseable bound skips the min<=max check; the changeset is
       # returned unchanged because the values are not comparable.

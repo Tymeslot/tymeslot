@@ -11,9 +11,10 @@ defmodule Tymeslot.Emails.Shared.PollStandings do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Formatting, Text, TimezoneHelper}
+  alias Tymeslot.Emails.Shared.{Formatting, Text}
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Utils.DateTimeUtils
 
   @doc "The standings as MJML: a heading, one line per time and the voter count."
   @spec mjml(PollSchema.t(), String.t()) :: String.t()
@@ -47,7 +48,7 @@ defmodule Tymeslot.Emails.Shared.PollStandings do
 
       time =
         slot.start_time
-        |> TimezoneHelper.convert_to_timezone(timezone)
+        |> DateTimeUtils.convert_to_timezone(timezone)
         |> Formatting.format_datetime(locale)
 
       line =

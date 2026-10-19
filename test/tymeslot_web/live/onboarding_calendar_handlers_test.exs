@@ -348,11 +348,17 @@ end
 
 defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest.GoogleHelperHintStub do
   @moduledoc false
-  # Echoes the forwarded options into the URL query so the handler test can
-  # assert whether `login_hint` was passed through.
+  # Echoes the forwarded options (bar the PKCE flow the context adds) into the
+  # URL query so the handler test can assert whether `login_hint` was passed
+  # through.
   @spec authorization_url(integer(), String.t(), keyword()) :: String.t()
   def authorization_url(_user_id, _redirect_uri, opts) do
-    query = URI.encode_query(Map.new(opts, fn {k, v} -> {to_string(k), to_string(v)} end))
+    query =
+      opts
+      |> Keyword.delete(:pkce)
+      |> Map.new(fn {k, v} -> {to_string(k), to_string(v)} end)
+      |> URI.encode_query()
+
     "https://accounts.google.com/o/oauth2/v2/auth?" <> query
   end
 end
