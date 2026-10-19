@@ -68,6 +68,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceStripsTest do
     assert has_element?(lv, "[data-testid='up-next-strip']", "Strategy sync")
   end
 
+  # The strip appearing must not touch the surface's markup: the grid keeps
+  # its scroll offset and any drag in progress.
+  test "the agenda tick adds the strip without changing the surface's markup", %{conn: conn} do
+    %{conn: conn, user: user} = owner(conn)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-next") |> render_click()
+    before = lv |> element("#calendar-surface") |> render()
+
+    upcoming_booking(user)
+    send(lv.pid, :agenda_tick)
+
+    assert has_element?(lv, "[data-testid='up-next-strip']", "Strategy sync")
+    assert lv |> element("#calendar-surface") |> render() == before
+  end
+
   test "nothing upcoming, no strip", %{conn: conn} do
     %{conn: conn} = owner(conn)
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

@@ -12,8 +12,8 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   the calendar's, so `DashboardLive` keeps one clause for the whole calendar.
 
   A result that can add, move or remove an event also rebuilds the agenda
-  (`AgendaRefresh.refresh/1`): the overview and the old grid's Up-next strip
-  run their own query, so without it they kept showing a deleted event for
+  (`AgendaRefresh.refresh/1`): the overview and the Up next strip above either
+  calendar run their own query, so without it they kept showing a deleted event for
   up to a minute. The rebuild is a no-op where no agenda is shown.
   """
 

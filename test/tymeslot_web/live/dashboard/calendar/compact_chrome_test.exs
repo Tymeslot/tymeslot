@@ -31,8 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CompactChromeTest do
   end
 
   test "the new calendar has a compact top bar", %{conn: conn} do
-    %{conn: conn, user: user} = owner(conn)
-    upcoming_booking(user)
+    %{conn: conn} = owner(conn)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 

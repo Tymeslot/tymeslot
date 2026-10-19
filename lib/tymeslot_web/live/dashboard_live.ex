@@ -245,28 +245,33 @@ defmodule TymeslotWeb.DashboardLive do
       <%!-- Content --%>
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
-          <div
-            :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
-            class="shrink-0 px-3 pt-2 md:px-4"
-          >
-            <OnboardingChecklist.onboarding_checklist
-              variant={:compact}
-              integration_status={@integration_status}
-              current_user={@current_user}
-              profile={@profile}
-            />
-          </div>
-          <%!-- The new calendar leaves Up next to its agenda tab on phones. --%>
-          <div
-            :if={@agenda && @agenda.next}
-            id="calendar-up-next"
-            class={["shrink-0", @calendar_redesign == true && "max-sm:hidden"]}
-          >
-            <CalendarUpNextStrip.up_next_strip
-              entry={@agenda.next}
-              timezone={@agenda.timezone}
-              time_format={@time_format}
-            />
+          <%!-- Always rendered, so a strip appearing never changes the siblings
+               of the grid's wrapper (morphdom would rebuild it and detach the
+               surface). The new calendar leaves Up next to its agenda tab on
+               phones. --%>
+          <div id="calendar-strips" class="shrink-0">
+            <div
+              :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+              class="px-3 pt-2 md:px-4"
+            >
+              <OnboardingChecklist.onboarding_checklist
+                variant={:compact}
+                integration_status={@integration_status}
+                current_user={@current_user}
+                profile={@profile}
+              />
+            </div>
+            <div
+              :if={@agenda && @agenda.next}
+              id="calendar-up-next"
+              class={@calendar_redesign == true && "max-sm:hidden"}
+            >
+              <CalendarUpNextStrip.up_next_strip
+                entry={@agenda.next}
+                timezone={@agenda.timezone}
+                time_format={@time_format}
+              />
+            </div>
           </div>
         <% end %>
         <div class={
