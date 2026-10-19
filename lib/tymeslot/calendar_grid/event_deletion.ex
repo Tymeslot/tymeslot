@@ -138,34 +138,44 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   Whether deleting `event` would tell anyone, asked before the calendar
   offers a delete without a confirmation: `{:notifies, :booking}` when it is
   the calendar copy of a live Tymeslot booking, whose meeting the delete
-  cancels (the copy of a cancelled, declined, expired or voided meeting
-  deletes like a plain event);
-  `{:notifies, {:attendees, count}}` when `user_id` organises it and it has
-  attendees with an address; `:silent` otherwise.
+  cancels; `{:notifies, {:attendees, count}}` when `user_id` organises it
+  and it has attendees with an address; `:silent` otherwise. The copy of a
+  meeting that is no longer live (cancelled, declined, expired or voided) is
+  always `:silent`: it deletes like a plain event, and its guests were told
+  when the booking ended, so the delete never offers to email them again.
   """
   @spec notice(pos_integer(), map()) ::
           :silent | {:notifies, :booking | {:attendees, pos_integer()}}
   def notice(user_id, event) do
-    if live_booking_copy?(event) do
-      {:notifies, :booking}
-    else
-      case AttendeeNotifications.event_deleted(event, addressed_attendees(event), user_id) do
-        {:needs_confirmation, count} -> {:notifies, {:attendees, count}}
-        {:ok, _nobody} -> :silent
-      end
+    case booking_link(event) do
+      :live ->
+        {:notifies, :booking}
+
+      :ended ->
+        :silent
+
+      :none ->
+        case AttendeeNotifications.event_deleted(event, addressed_attendees(event), user_id) do
+          {:needs_confirmation, count} -> {:notifies, {:attendees, count}}
+          {:ok, _nobody} -> :silent
+        end
     end
   end
 
-  # The copy of a meeting that still expects its calendar event; deleting one
-  # cancels the meeting, deleting any other leaves the meeting alone.
-  defp live_booking_copy?(event) do
+  # Whether the event is the copy of a meeting that still expects its
+  # calendar event (`:live`, deleting it cancels the meeting), of one that
+  # has ended (`:ended`), or of none.
+  defp booking_link(event) do
     case Meetings.find_meeting_by_calendar_event(
            event.calendar_integration_id,
            Map.get(event, :provider_event_id),
            event.uid
          ) do
-      {:ok, meeting} -> MeetingState.expects_calendar_event?(meeting)
-      {:error, :not_found} -> false
+      {:ok, meeting} ->
+        if MeetingState.expects_calendar_event?(meeting), do: :live, else: :ended
+
+      {:error, :not_found} ->
+        :none
     end
   end
 

@@ -116,6 +116,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
     refute has_element?(lv, "#calendar-undo")
   end
 
+  test "the copy of a cancelled booking deletes at once, without offering to email the guest", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    copy =
+      event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+        attendees: [%{"email" => "ada@example.com"}]
+      )
+
+    insert(:meeting,
+      organizer_user: user,
+      organizer_user_id: user.id,
+      calendar_integration_id: integration.id,
+      calendar_uid: copy.uid,
+      status: "cancelled"
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    canvas(lv, "calendar:delete", %{"id" => "event-#{copy.id}"})
+
+    refute has_element?(lv, "#calendar-delete-confirm")
+    assert has_element?(lv, "#calendar-undo")
+    assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"notify_attendees" => false})
+  end
+
   test "deleting without telling the guest can still be undone", %{
     conn: conn,
     integration: integration

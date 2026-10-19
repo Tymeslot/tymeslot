@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
   import Mox
 
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -156,6 +157,34 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
       assert {cancelled.status, cancelled.calendar_sync_status} ==
                {"cancelled", "externally_deleted"}
+    end
+  end
+
+  describe "notice/2" do
+    test "the copy of an ended meeting never offers to email its guests again", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_event(caldav, %{attendees: [%{"email" => "guest@example.com"}]})
+
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        calendar_integration_id: caldav.id,
+        provider_event_id: event.provider_event_id,
+        status: "cancelled"
+      )
+
+      assert EventDeletion.notice(user.id, event) == :silent
+    end
+
+    test "a plain event with the same guests would still tell them", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_event(caldav, %{attendees: [%{"email" => "guest@example.com"}]})
+
+      assert EventDeletion.notice(user.id, event) == {:notifies, {:attendees, 1}}
     end
   end
 
