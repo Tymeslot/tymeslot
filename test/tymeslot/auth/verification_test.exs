@@ -21,7 +21,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "verify_email_and_maybe_login/2" do
     defp user_with_token(signup_ip) do
       user = insert(:unverified_user, signup_ip: signup_ip)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
       {user, token}
     end
@@ -89,7 +89,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "verify_user/1 with token" do
     test "verification tokens are single-use" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
 
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
@@ -102,7 +102,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
     test "verifying a user emits anonymous [:tymeslot, :auth, :email_verified] telemetry" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       ref = :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :auth, :email_verified]])
@@ -114,7 +114,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
     test "expired token (>24 hours) returns {:error, :token_expired}" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
 
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
@@ -135,7 +135,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
     test "verifying stamps the token as used and clears it, so reuse fails at lookup" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
 
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
@@ -224,7 +224,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
 
       # Simulate signup: the first token is stored and its email is already queued.
-      original_token = Token.generate_token()
+      original_token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, original_token)
 
       assert {:ok, :scheduled} =
@@ -258,7 +258,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
 
       # An older, still-stored token with no queued email (its delivery never happened).
-      stale_token = Token.generate_token()
+      stale_token = Token.generate()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, stale_token)
 
       assert :ok =
@@ -276,7 +276,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "token tamper resistance" do
     test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       # Flip the last character of the base64url token.
@@ -295,7 +295,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "verify_user/1 never logs the raw token" do
     test "an expired token's audit entry identifies the user, never the token" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)

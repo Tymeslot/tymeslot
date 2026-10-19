@@ -11,17 +11,14 @@
 alias Tymeslot.Mocks.StripeBehaviours.{
   StripeChargeBehaviour,
   StripeCustomerBehaviour,
+  StripeInvoiceBehaviour,
+  StripeInvoicePaymentBehaviour,
   StripeSessionBehaviour,
-  StripeSubscriptionBehaviour,
-  StripeWebhookBehaviour
+  StripeSubscriptionBehaviour
 }
 
 # --- Calendar ---
 Mox.defmock(Tymeslot.CalendarMock, for: Tymeslot.Integrations.Calendar.CalendarBehaviour)
-
-Mox.defmock(Tymeslot.RadicaleClientMock,
-  for: Tymeslot.Integrations.Calendar.CalDAV.ClientBehaviour
-)
 
 Mox.defmock(GoogleCalendarAPIMock,
   for: Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
@@ -75,4 +72,5 @@ Mox.defmock(StripeCustomerMock, for: StripeCustomerBehaviour)
 Mox.defmock(StripeSessionMock, for: StripeSessionBehaviour)
 Mox.defmock(StripeSubscriptionMock, for: StripeSubscriptionBehaviour)
 Mox.defmock(StripeChargeMock, for: StripeChargeBehaviour)
-Mox.defmock(StripeWebhookMock, for: StripeWebhookBehaviour)
+Mox.defmock(StripeInvoiceMock, for: StripeInvoiceBehaviour)
+Mox.defmock(StripeInvoicePaymentMock, for: StripeInvoicePaymentBehaviour)

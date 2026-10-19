@@ -230,6 +230,49 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
     end
   end
 
+  describe "a relative monthly series edited for all events" do
+    # The first Monday of every month; 2 November is the first Monday.
+    @relative %{
+      "type" => "relativeMonthly",
+      "interval" => 1,
+      "daysOfWeek" => ["monday"],
+      "index" => "first",
+      "firstDayOfWeek" => "sunday"
+    }
+
+    setup do
+      {:ok, master: put_in(@master, ["recurrence", "pattern"], @relative)}
+    end
+
+    # Graph merges the patch, so a body without `recurrence` keeps the
+    # pattern as it is.
+    test "a new title leaves the pattern as Outlook holds it", %{master: master} do
+      assert SeriesPatch.build(master, edit(%{summary: "Monthly sync"})) ==
+               {:ok, %{"subject" => "Monthly sync"}}
+    end
+
+    test "a new time on the same day leaves the pattern as Outlook holds it", %{master: master} do
+      edit = edit(%{start_time: ~U[2026-11-02 09:00:00Z], end_time: ~U[2026-11-02 10:00:00Z]})
+
+      assert {:ok, body} = SeriesPatch.build(master, edit)
+      refute Map.has_key?(body, "recurrence")
+      assert body["start"] == %{"dateTime" => "2026-06-01T10:00:00", "timeZone" => @zone}
+    end
+
+    test "a counted weekday chosen as its new rule is written as one", %{master: master} do
+      assert {:ok, %{"recurrence" => %{"pattern" => pattern}}} =
+               SeriesPatch.build(master, edit(%{recurrence_rule: "FREQ=MONTHLY;BYDAY=-1MO"}))
+
+      assert %{"type" => "relativeMonthly", "daysOfWeek" => ["monday"], "index" => "last"} =
+               pattern
+    end
+
+    test "a new rule Outlook has no pattern for is refused", %{master: master} do
+      assert SeriesPatch.build(master, edit(%{recurrence_rule: "FREQ=MONTHLY;BYDAY=1MO,3MO"})) ==
+               {:error, :rule_not_supported_by_outlook}
+    end
+  end
+
   describe "a new rule" do
     test "without an end keeps the master's range" do
       assert SeriesPatch.build(@master, edit(%{recurrence_rule: "FREQ=DAILY"})) ==
@@ -251,6 +294,55 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
                "numberOfOccurrences" => 5,
                "startDate" => "2026-06-01"
              }
+    end
+
+    # The editor ended 7 December in Los Angeles, 08:00 on the 8th in Berlin.
+    # Read in the master's zone the series would run a day longer.
+    test "reads a stated end date in the zone the edit names" do
+      edit =
+        %{recurrence_rule: "FREQ=DAILY;UNTIL=20261208T075959Z"}
+        |> edit()
+        |> Map.put(:until_timezone, "America/Los_Angeles")
+
+      assert {:ok, %{"recurrence" => %{"range" => range}}} = SeriesPatch.build(@master, edit)
+      assert range["endDate"] == "2026-12-07"
+    end
+
+    # Rules cached before the week start was read from Graph state none; the
+    # master's Sunday start decides which Sundays a fortnightly series keeps.
+    test "that states no week start keeps the series' own" do
+      rule = "FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO"
+
+      assert {:ok, %{"recurrence" => %{"pattern" => pattern}}} =
+               SeriesPatch.build(@master, edit(%{recurrence_rule: rule}))
+
+      assert pattern["firstDayOfWeek"] == "sunday"
+    end
+
+    # Graph answers firstDayOfWeek on a daily pattern too, as its default.
+    test "that states no week start, for a series that was not weekly, starts on Monday" do
+      master =
+        put_in(@master, ["recurrence", "pattern"], %{
+          "type" => "daily",
+          "interval" => 1,
+          "firstDayOfWeek" => "sunday"
+        })
+
+      rule = "FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO"
+
+      assert {:ok, %{"recurrence" => %{"pattern" => pattern}}} =
+               SeriesPatch.build(master, edit(%{recurrence_rule: rule}))
+
+      assert pattern["firstDayOfWeek"] == "monday"
+    end
+
+    test "that states a week start writes it over the series' own" do
+      rule = "FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO;WKST=MO"
+
+      assert {:ok, %{"recurrence" => %{"pattern" => pattern}}} =
+               SeriesPatch.build(@master, edit(%{recurrence_rule: rule}))
+
+      assert pattern["firstDayOfWeek"] == "monday"
     end
   end
 

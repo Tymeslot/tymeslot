@@ -16,5 +16,10 @@
   # `:test` build `mix test.affected` runs in (see `preferred_envs` in mix.exs)
   # and not in the `:dev` build Dialyzer analyses; the module loads it from
   # source there. Same reasoning as its `@compile {:no_warn_undefined, TagTaxonomy}`.
-  {"lib/tymeslot/test_affected/workspace.ex", :unknown_function}
+  {"dev_support/tooling/test_affected/workspace.ex", :unknown_function},
+
+  # `:xmerl` is left out of the PLT (`plt_ignore_apps` in mix.exs), so its SAX
+  # parser is invisible to Dialyzer. It ships with OTP and is a runtime
+  # dependency of sweet_xml, so the call resolves in every build.
+  {"lib/tymeslot/integrations/calendar/utils/safe_xml.ex", :unknown_function}
 ]

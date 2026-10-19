@@ -21,7 +21,6 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(:location_type) => atom() | nil,
           optional(:audience) => :host | :guest,
           optional(:meeting_type) => String.t() | nil,
-          optional(:timezone) => String.t() | nil,
           optional(:time_format) => String.t() | nil,
           optional(atom()) => term()
         }
@@ -38,8 +37,8 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       weekday = Formatting.format_weekday(details.date, locale)
       date_line = Formatting.format_date(details.date, locale)
-      time_line = format_meeting_time(details, locale)
-      duration = format_meeting_duration(details, locale)
+      time_line = Formatting.format_meeting_time(details, locale) || dgettext("emails", "TBD")
+      duration = Formatting.format_meeting_duration(details, locale)
       location = Formatting.format_location(details)
       location_note = Formatting.location_note(details)
       meeting_type = Map.get(details, :meeting_type)
@@ -62,52 +61,6 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
       """)
     end)
   end
-
-  @spec format_meeting_time(meeting_details(), String.t()) :: String.t()
-  defp format_meeting_time(details, locale) do
-    # Set only by organiser-addressed emails; nil everywhere else means the
-    # recipient's locale decides.
-    time_format = Map.get(details, :time_format)
-
-    case details do
-      %{all_day: true, date: %Date{} = first, last_date: %Date{} = last} ->
-        Formatting.format_all_day(first, last, locale)
-
-      %{start_time: %DateTime{} = start_time, timezone: timezone} when is_binary(timezone) ->
-        formatted = Formatting.format_time(start_time, locale, time_format)
-        base = if timezone != "UTC", do: "#{formatted} (#{timezone})", else: formatted
-        with_next_day_end(base, start_time, details, locale, time_format)
-
-      %{start_time: %DateTime{} = start_time} ->
-        start_time
-        |> Formatting.format_time(locale, time_format)
-        |> with_next_day_end(start_time, details, locale, time_format)
-
-      _other ->
-        dgettext("emails", "TBD")
-    end
-  end
-
-  defp with_next_day_end(line, start_time, details, locale, time_format) do
-    case Formatting.format_next_day_end(
-           start_time,
-           Map.get(details, :duration),
-           locale,
-           time_format
-         ) do
-      nil -> line
-      note -> "#{line}, #{note}"
-    end
-  end
-
-  defp format_meeting_duration(
-         %{all_day: true, date: %Date{} = first, last_date: %Date{} = last},
-         locale
-       ),
-       do: Formatting.format_day_count(first, last, locale)
-
-  defp format_meeting_duration(details, locale),
-    do: Formatting.format_duration(details.duration, locale)
 
   defp hero_eyebrow(weekday) do
     safe_weekday = Sanitise.sanitize_for_email(weekday)

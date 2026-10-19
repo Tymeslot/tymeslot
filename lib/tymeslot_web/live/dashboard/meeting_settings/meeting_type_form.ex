@@ -78,6 +78,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        payments_feature_enabled: false,
        payments_charges_enabled: false,
        payment_currency: "usd",
+       payment_currency_support: :supported,
+       payment_account_currency: "usd",
+       payment_stored_price: "",
        payment_currency_minimum_cents: 50,
        payment_required: false,
        payment_price: "",
@@ -366,14 +369,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("change_payment_price", %{"meeting_type" => %{"price_input" => price}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:payment_price, price)
-     |> assign(
-       :form_errors,
-       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
-     )
-     |> Autosave.maybe_run()}
+    # Guard, as for the toggle: the price input is not rendered for a host
+    # who cannot set prices, so only a stale or forged event lands here.
+    if socket.assigns.payments_charges_enabled do
+      {:noreply,
+       socket
+       |> assign(:payment_price, price)
+       |> assign(
+         :form_errors,
+         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
+       )
+       |> Autosave.maybe_run()}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -506,6 +515,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @impl Phoenix.LiveComponent
   def handle_event("add_reminder", _params, socket) do
     socket |> picker_state() |> ReminderPickerState.add_custom() |> apply_picker(socket)
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("commit_custom_reminder", params, socket) do
+    socket |> picker_state() |> ReminderPickerState.commit_pending(params) |> apply_picker(socket)
   end
 
   @impl Phoenix.LiveComponent

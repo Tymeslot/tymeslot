@@ -406,7 +406,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       # this is the one item that has none, so a blank one would name nothing
       # at all.
       assert AlertTypes.format_message(:invalid_calendar_event, payload) =~
-               "First skipped: unknown ("
+               "First affected: unknown ("
     end
   end
 

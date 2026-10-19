@@ -99,8 +99,17 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     test "offers withdrawal only when there is a cancel link" do
       assert BookingRequestReceived.render(meeting()).html_body =~ "withdraw your request"
 
-      refute BookingRequestReceived.render(meeting(%{cancel_url: nil})).html_body =~
+      # The link is built from the booking's uid, so only a meeting without
+      # one has nothing to withdraw through.
+      refute BookingRequestReceived.render(meeting(%{uid: nil, cancel_url: nil})).html_body =~
                "withdraw your request"
+    end
+
+    test "links the withdrawal to the booking's current cancel page, not the stored copy" do
+      html = BookingRequestReceived.render(meeting()).html_body
+
+      assert html =~ "/meeting/booking-capability-uid/cancel"
+      refute html =~ "https://example.com/sam/meeting/abc-123/cancel"
     end
   end
 
@@ -449,13 +458,14 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       assert email.html_body =~ @escaped
     end
 
-    test "BookingRequestReceived validates the withdraw link's href and keeps markup out of the msgid" do
-      html =
-        BookingRequestReceived.render(meeting(%{cancel_url: "javascript:alert(1)"})).html_body
+    test "BookingRequestReceived leaves out a withdraw link whose href is not safe" do
+      email =
+        BookingRequestReceived.render(meeting(%{uid: nil, cancel_url: "javascript:alert(1)"}))
 
-      assert html =~ "withdraw your request"
-      refute html =~ "javascript:alert(1)"
-      assert html =~ ~s(href="#")
+      refute email.html_body =~ "withdraw your request"
+      refute email.html_body =~ "javascript:alert(1)"
+      refute email.html_body =~ ~s(href="#")
+      refute email.text_body =~ "javascript:alert(1)"
     end
   end
 

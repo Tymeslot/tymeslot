@@ -2,7 +2,7 @@ defmodule Tymeslot.Emails.Shared.StageTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
-  alias Tymeslot.Emails.Shared.Stage
+  alias Tymeslot.Emails.Shared.{Layouts, MjmlEmail, Stage}
   alias Tymeslot.Emails.Shared.Styles
 
   describe "stage_band/4" do
@@ -43,6 +43,31 @@ defmodule Tymeslot.Emails.Shared.StageTest do
 
       assert html =~ "A &amp; B"
       refute html =~ "A &amp;amp; B"
+    end
+  end
+
+  describe "fetch_required!/2" do
+    test "reads a stage option from a keyword list or a map" do
+      assert Stage.fetch_required!([intent: :confirmed], :intent) == :confirmed
+      assert Stage.fetch_required!(%{eyebrow: "Confirmed"}, :eyebrow) == "Confirmed"
+    end
+
+    test "raises naming the missing option" do
+      assert_raise ArgumentError, ~r/`:eyebrow`/, fn ->
+        Stage.fetch_required!([intent: :confirmed], :eyebrow)
+      end
+
+      assert_raise ArgumentError, ~r/`:intent`/, fn -> Stage.fetch_required!(%{}, :intent) end
+    end
+  end
+
+  test "every layout refuses an email that declares no intent" do
+    assert_raise ArgumentError, ~r/`:intent`/, fn ->
+      Layouts.system_layout("", title: "T", eyebrow: "E")
+    end
+
+    assert_raise ArgumentError, ~r/`:intent`/, fn ->
+      MjmlEmail.base_mjml_template("", %{eyebrow: "E", name: "N"})
     end
   end
 end

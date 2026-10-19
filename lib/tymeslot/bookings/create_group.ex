@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   meeting type holds more than one seat.
   """
 
+  alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
@@ -76,12 +77,13 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
   Every job the seat owes is enqueued inside that transaction, as
   `Tymeslot.Bookings.Create` does for a one-to-one booking: the calendar
-  job, the seat's confirmation emails and integration fan-out and, for the
-  seat that creates the slot, its reminders and video room. A job that
-  cannot be enqueued rolls the seat back, so a seat never commits without
-  the emails and jobs it owes, and no job outlives a seat that rolled back.
-  The broadcast, cache invalidation and telemetry are not durable, and run
-  once the seat has committed.
+  job, the seat's confirmation emails and, for the seat that creates the
+  slot, its reminders and video room. A job that cannot be enqueued rolls
+  the seat back, so a seat never commits without the emails and jobs it
+  owes, and no job outlives a seat that rolled back. The integration fan-out
+  (webhooks, Telegram, Slack), the broadcast, the cache invalidation and the
+  telemetry run once the seat has committed: none is durable, and a
+  database error in a best-effort dispatcher must not cost the seat.
 
   Options are the same ones `Tymeslot.Bookings.Create.execute/3` accepts;
   only `:with_video_room` matters here (see `SeatEffects.schedule_new_slot_effects/2`).
@@ -98,7 +100,8 @@ defmodule Tymeslot.Bookings.CreateGroup do
     |> map_result(booking_data)
   end
 
-  defp map_result({:ok, %{meeting: meeting}}, _booking_data) do
+  defp map_result({:ok, %{meeting: meeting, on_booked_result: pending}}, _booking_data) do
+    :ok = Activation.after_commit(pending)
     Telemetry.booking_created()
     SeatEffects.broadcast_and_invalidate(meeting)
 
@@ -116,7 +119,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # wrong advice.
   defp map_result({:error, %Ecto.Changeset{} = changeset}, booking_data) do
     cond do
-      GroupScheduling.lost_first_booker_race?(changeset) -> {:error, :slot_taken}
+      MeetingSchema.unique_slot_violation?(changeset) -> {:error, :slot_taken}
       duplicate_seat?(changeset) -> {:error, :already_booked}
       true -> {:error, Errors.classify_creation_error(changeset, booking_data)}
     end
@@ -133,7 +136,8 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
   # Runs inside the seat transaction (see `create/3`); any error rolls the
   # seat back. Runs again from scratch on `book_seat/3`'s retry, whose
-  # rolled-back attempt took its jobs with it.
+  # rolled-back attempt took its jobs with it. Returns the seat's integration
+  # fan-out, which `map_result/2` runs once the seat has committed.
   #
   # The first seat on a slot with an API-created video provider owns the room:
   # it schedules creation and lets `VideoRoomWorker` release the confirmation
@@ -146,8 +150,13 @@ defmodule Tymeslot.Bookings.CreateGroup do
     %{meeting: meeting, participant: participant, created_meeting?: created?} = booking
 
     with {:ok, _job} <- SeatEffects.schedule_calendar_job(meeting, created?),
-         {:ok, defer_emails?} <- schedule_new_slot_jobs(created?, meeting, opts) do
-      Events.seat_booked(meeting, participant, defer_emails?: defer_emails?)
+         {:ok, defer_emails?} <- schedule_new_slot_jobs(created?, meeting, opts),
+         {{:ok, _scheduled}, pending} <-
+           Events.seat_booked_deferred(meeting, participant, defer_emails?: defer_emails?) do
+      {:ok, pending}
+    else
+      {{:error, reason}, _pending} -> {:error, reason}
+      {:error, reason} -> {:error, reason}
     end
   end
 

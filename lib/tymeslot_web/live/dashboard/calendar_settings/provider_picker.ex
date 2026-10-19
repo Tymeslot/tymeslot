@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Shared.Providers.Families
 
   # One heading per family, in the vocabulary's own order. `nil` means the
   # group renders without a heading. The msgids are marked for extraction
@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker do
 
   @doc """
   Groups `available` descriptors for the picker modal, in the family order
-  `Tymeslot.Integrations.Providers.Families.all/0` declares: OAuth providers
+  `Tymeslot.Integrations.Shared.Providers.Families.all/0` declares: OAuth providers
   (Google, Outlook) first, then CalDAV presets, then feed subscriptions — no
   nested reveal. Empty groups are dropped.
 

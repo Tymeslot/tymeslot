@@ -181,19 +181,9 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   # step; for anyone who left it blank we lazily assign the system default
   # (same one onboarding completion would assign) so the page resolves.
   defp ensure_preview_username(socket) do
-    profile = socket.assigns.profile
-
-    case profile.username do
-      username when is_binary(username) and username != "" ->
-        {:ok, socket, username}
-
-      _blank ->
-        default = Profiles.generate_default_username(profile.user_id)
-
-        case Profiles.assign_default_username(profile, default) do
-          {:ok, updated} -> {:ok, Component.assign(socket, :profile, updated), updated.username}
-          {:error, _reason} -> {:error, socket}
-        end
+    case Profiles.ensure_default_username(socket.assigns.profile) do
+      {:ok, profile} -> {:ok, Component.assign(socket, :profile, profile), profile.username}
+      {:error, _reason} -> {:error, socket}
     end
   end
 end

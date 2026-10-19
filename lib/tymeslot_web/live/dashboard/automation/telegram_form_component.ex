@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   @moduledoc """
   Form component for creating and editing Telegram integrations.
-  Renders own-bot mode form or shared-bot wizard based on feature flag.
+  Renders the own-bot form or the shared-bot wizard: on create by the
+  installation's bot mode, on edit by the integration's own.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -22,7 +23,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
      |> assign(:form_values, %{})
      |> assign(:saving, false)
      |> assign(:available_events, Telegram.available_events())
-     |> assign(:shared_bot_mode, Telegram.shared_bot_mode?())
      |> assign(:wizard_step, 1)
      |> assign(:deep_link, nil)
      |> assign(:link_expired, false)}
@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
       |> assign(assigns)
       |> assign(:mode, mode)
       |> assign(:integration, integration)
+      |> assign(:shared_bot_mode, Telegram.form_bot_mode(mode, integration) == "shared")
       |> assign(:form_values, form_values)
       |> assign(:form_errors, assigns[:form_errors] || %{})
 
@@ -126,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                   )
                 }
                 placeholder={dgettext("dashboard_automation_chat", "My Telegram Notifications")}
-                maxlength={Constraints.webhook_name_length_opts()[:max]}
+                maxlength={Constraints.integration_name_length_opts()[:max]}
                 required
                 errors={FormValidationHelpers.field_errors(@form_errors, :name)}
                 icon="hero-tag"
@@ -349,11 +350,17 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     if assigns.shared_bot_mode do
       base
     else
-      base &&
-        AutomationHelpers.field_present?(values, "bot_token") &&
+      base && bot_token_given?(assigns.mode, values) &&
         AutomationHelpers.field_present?(values, "chat_id")
     end
   end
+
+  # On edit a blank token keeps the stored one, so only a new integration
+  # needs it typed.
+  defp bot_token_given?(:create, values),
+    do: AutomationHelpers.field_present?(values, "bot_token")
+
+  defp bot_token_given?(:edit, _values), do: true
 
   defp form_title(:create, true, 1), do: dgettext("dashboard_automation_chat", "Connect Telegram")
 

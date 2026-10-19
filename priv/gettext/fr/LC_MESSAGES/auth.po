@@ -1,11 +1,11 @@
-## "msgid"s in this file come from POT (.pot) files.
-###
-### Do not add, change, or remove "msgid"s manually here as
-### they're tied to the ones in the corresponding POT file
-### (with the same domain).
-###
-### Use "mix gettext.extract --merge" or "mix gettext.merge"
-### to merge POT files into PO files.
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
 msgid ""
 msgstr ""
 "Language: fr\n"
@@ -209,6 +209,7 @@ msgstr "Échec de l’authentification OAuth : fournisseur manquant."
 msgid "Or continue with"
 msgstr "Ou continuer avec"
 
+#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
@@ -506,6 +507,7 @@ msgstr "L’adresse e-mail est requise pour terminer l’inscription. Veuillez i
 msgid "Enter your email to receive a password reset link for your Tymeslot account."
 msgstr "Saisissez votre e-mail pour recevoir un lien de réinitialisation du mot de passe de votre compte Tymeslot."
 
+#: lib/tymeslot/auth/registration.ex
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to create user account. Please try again."
@@ -660,11 +662,6 @@ msgstr "Le mot de passe actuel est incorrect"
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
-msgid "Email address is already in use"
-msgstr "Cette adresse e-mail est déjà utilisée"
-
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
 msgid "Email changed successfully. Please sign in with your new email."
 msgstr "Adresse e-mail modifiée. Veuillez vous connecter avec votre nouvelle adresse."
 
@@ -678,25 +675,10 @@ msgstr "Jeton de réinitialisation du mot de passe invalide ou expiré."
 msgid "Invalid or expired verification link"
 msgstr "Lien de vérification invalide ou expiré"
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "New email must be different from current email"
-msgstr "La nouvelle adresse e-mail doit être différente de l’actuelle"
-
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Le nouveau mot de passe doit être différent de l’actuel"
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long."
-msgstr "Le mot de passe doit contenir au moins 8 caractères."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Please enter a valid email address."
-msgstr "Veuillez saisir une adresse e-mail valide."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -738,7 +720,7 @@ msgstr "Ces informations sont déjà utilisées. Veuillez en essayer d’autres.
 msgid "Too many %{operation} attempts. Please try again later."
 msgstr "Trop de tentatives (%{operation}). Veuillez réessayer plus tard."
 
-#: lib/tymeslot/security/account_lockout.ex
+#: lib/tymeslot/security/rate_limiter/auth.ex
 #, elixir-autogen, elixir-format
 msgid "Too many failed attempts. Please wait before trying again"
 msgstr "Trop de tentatives échouées. Veuillez patienter avant de réessayer"
@@ -848,7 +830,7 @@ msgstr "Cliquez sur le bouton ci-dessous pour terminer la vérification de votre
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Verify email address"
-msgstr "Vérifier l'adresse e-mail"
+msgstr "Vérifier l’adresse e-mail"
 
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
@@ -863,7 +845,7 @@ msgstr "Cliquez sur le bouton ci-dessous pour associer votre compte à cette adr
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
-msgstr "Confirmer le changement d'adresse e-mail"
+msgstr "Confirmer le changement d’adresse e-mail"
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
@@ -878,7 +860,7 @@ msgstr "Connectez-vous pour recevoir un nouveau lien de vérification."
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
-msgstr "Veuillez vérifier votre adresse e-mail avant de vous connecter. Nous n'avons pas pu envoyer de nouveau lien de vérification ; veuillez réessayer plus tard."
+msgstr "Veuillez vérifier votre adresse e-mail avant de vous connecter. Nous n’avons pas pu envoyer de nouveau lien de vérification ; veuillez réessayer plus tard."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -888,7 +870,7 @@ msgstr "Veuillez vérifier votre adresse e-mail avant de vous connecter. Nous vo
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
-msgstr "Votre session d'inscription a expiré. Veuillez vous reconnecter."
+msgstr "Votre session d’inscription a expiré. Veuillez vous reconnecter."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -934,6 +916,52 @@ msgstr "Le mot de passe est trop long"
 #, elixir-autogen, elixir-format
 msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
 msgstr "Un compte existe déjà avec cette adresse e-mail. Veuillez vous connecter avec votre mot de passe ou avec le service utilisé lors de votre inscription. Si vous avez oublié votre mot de passe, vous pouvez le réinitialiser depuis la page de connexion."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Restore my account"
+msgstr "Restaurer mon compte"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr "Se déconnecter"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored and will not be deleted."
+msgstr "Bon retour parmi nous. Votre compte a été restauré et ne sera pas supprimé."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your account could not be restored. Please try again."
+msgstr "Votre compte n’a pas pu être restauré. Veuillez réessayer."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is being deleted"
+msgstr "Votre compte est en cours de suppression"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is being deleted and can no longer be restored."
+msgstr "Votre compte est en cours de suppression et ne peut plus être restauré."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
+msgstr "Votre compte est en cours de suppression (prévue le %{date}). Si vous souhaitez le conserver, restaurez-le ici."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "The verification email could not be sent. Please try again."
+msgstr "L’e-mail de vérification n’a pas pu être envoyé. Veuillez réessayer."
+
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Email address"
+msgstr "Adresse e-mail"
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format

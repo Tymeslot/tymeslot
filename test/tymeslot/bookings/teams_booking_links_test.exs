@@ -153,7 +153,6 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
                  duration: "30min",
                  user_timezone: "Europe/London"
                },
-               %{},
                user.id
              )
 
@@ -182,7 +181,7 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
     meeting = book_with_teams_room(user, meeting_type)
     report_graph_requests()
 
-    assert {:ok, _cancelled} = Cancel.execute(meeting.uid)
+    assert {:ok, _cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
 
     assert_enqueued(
       worker: VideoSyncWorker,

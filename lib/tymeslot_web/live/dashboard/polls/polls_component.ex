@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.SlotHealth
   alias TymeslotWeb.Dashboard.Polls.{CancelPollModal, PollForm, PollList, PollResults}
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   @task_supervisor Tymeslot.TaskSupervisor
@@ -250,7 +251,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
         {:noreply, socket |> assign(:editing_details?, false) |> poll_no_longer_open()}
 
       {:error, %Changeset{} = changeset} ->
-        {:noreply, assign(socket, :detail_errors, changeset_errors(changeset))}
+        {:noreply, assign(socket, :detail_errors, FormErrors.to_map(changeset))}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_common", "Couldn't save this poll. Please try again."))
@@ -393,14 +394,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   defp winning_slot_id(time_slots, start_time) do
     Enum.find_value(time_slots, fn slot ->
       DateTime.compare(slot.start_time, start_time) == :eq && slot.id
-    end)
-  end
-
-  defp changeset_errors(changeset) do
-    Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _whole, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), "") |> to_string()
-      end)
     end)
   end
 

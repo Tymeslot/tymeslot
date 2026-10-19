@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorBrandingTest do
   alias Tymeslot.Emails.Templates.CalendarInvitation
   alias Tymeslot.Integrations.Calendar.IcsGenerator
   alias Tymeslot.Meetings
-  alias Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails
+  alias Tymeslot.Notifications.Email.CalendarEventDetails
 
   @url "https://tymeslot.example.com/?utm_source=ics"
   @footer "Scheduled with Tymeslot: #{@url}"
@@ -66,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorBrandingTest do
 
   test "a free-tier organiser's event ends its description with the footer" do
     assert ics(%{organizer_user_id: 42}) =~
-             "Agenda\\n\\nScheduled with Tymeslot: #{@url}\nLOCATION"
+             "Agenda\\n\\nScheduled with Tymeslot: #{@url}\r\nLOCATION"
   end
 
   test "a paying organiser's event carries no footer" do

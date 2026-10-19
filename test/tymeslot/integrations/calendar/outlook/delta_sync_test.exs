@@ -238,7 +238,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
 
       # Force refresh to return a 3-tuple api_error.
       expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
-        {:error, :unauthorized, "Token refresh failed"}
+        {:error, :api_error, "Token refresh failed"}
       end)
 
       # Without the 3-tuple fix, this raised CaseClauseError and the caller
@@ -260,11 +260,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
       assert log =~ "Outlook token refresh failed"
     end
 
+    # A revoked refresh token is Graph refusing the credentials, which only
+    # the owner can fix: told apart so the caller flags it, not retried.
+    test "reports a refused refresh as unauthorised" do
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "invalid_grant"}
+      end)
+
+      integration = outlook_integration(graph_delta_link: nil, token_expires_at: nil)
+
+      assert {:error, :unauthorized} = DeltaSync.fetch_and_apply(integration)
+    end
+
     test "redacts a token carried in the refresh error before logging it" do
       LogCapture.attach()
 
       expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
-        {:error, :unauthorized, %{"error" => "invalid_grant", "refresh_token" => "rt-leak"}}
+        {:error, :api_error, %{"error" => "server_error", "refresh_token" => "rt-leak"}}
       end)
 
       integration = outlook_integration(graph_delta_link: nil, token_expires_at: nil)
@@ -273,7 +285,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
 
       %{meta: meta} = LogCapture.await_log("Outlook token refresh failed")
 
-      assert meta.error =~ "invalid_grant"
+      assert meta.error =~ "server_error"
       refute meta.error =~ "rt-leak"
     end
   end

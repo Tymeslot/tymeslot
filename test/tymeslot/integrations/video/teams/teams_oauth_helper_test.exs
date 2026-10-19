@@ -2,7 +2,8 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Common.OAuth.State
+  alias ExUnit.CaptureLog
+  alias Tymeslot.Integrations.Shared.OAuth.State
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   import Mox
 
@@ -28,9 +29,9 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
     end
   end
 
-  describe "exchange_code_for_tokens/3" do
-    test "exchanges code and validates state" do
-      %{user_id: user_id, state: state, resp_body: resp_body} = oauth_test_data()
+  describe "exchange_code_for_tokens/2" do
+    test "exchanges the code and reads the Microsoft account" do
+      %{resp_body: resp_body} = oauth_test_data()
 
       profile_body =
         Jason.encode!(%{
@@ -50,17 +51,104 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       end)
 
       assert {:ok, tokens} =
-               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri", state)
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri")
 
       assert tokens.access_token == "at-123"
-      assert tokens.user_id == user_id
       assert tokens.teams_user_id == "microsoft-user-123"
       assert tokens.tenant_id == "common"
     end
 
-    test "extracts tenant_id from id_token claims" do
-      %{state: state} = oauth_test_data()
+    # A profile request Graph keeps failing is retried, and the error names
+    # the last status rather than only that the attempts ran out.
+    test "retries a failing profile request and reports its last status" do
+      %{resp_body: resp_body} = oauth_test_data()
 
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, 3, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 502, body: "bad gateway"}}
+      end)
+
+      assert {:error, "Failed to fetch user profile: HTTP 502"} =
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri",
+                 profile_retry: [initial_delay: 0]
+               )
+    end
+
+    # Graph names how long to wait; waiting less only earns another 429.
+    test "retries a rate-limited profile request after the wait Graph names" do
+      %{resp_body: resp_body} = oauth_test_data()
+      profile_body = Jason.encode!(%{"id" => "teams-user-429", "mail" => "alice@example.com"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, headers: %{"retry-after" => ["1"]}, body: ""}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: profile_body}}
+      end)
+
+      # The usual backoff here is no wait; the named second, capped at 60 ms.
+      {elapsed_us, result} =
+        :timer.tc(fn ->
+          CaptureLog.with_log(fn ->
+            TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri",
+              profile_retry: [initial_delay: 0, max_delay: 60, jitter: 0.0]
+            )
+          end)
+        end)
+
+      assert {{:ok, tokens}, _log} = result
+      assert tokens.provider_account_id == "teams-user-429"
+      assert div(elapsed_us, 1_000) >= 60
+    end
+
+    # The owner is waiting on the callback page.
+    test "fails at once when Graph asks for a longer wait than a page can hold" do
+      %{resp_body: resp_body} = oauth_test_data()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, headers: %{"retry-after" => ["30"]}, body: ""}}
+      end)
+
+      {elapsed_us, {result, _log}} =
+        :timer.tc(fn ->
+          CaptureLog.with_log(fn ->
+            TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri")
+          end)
+        end)
+
+      assert result == {:error, :provider_rate_limited}
+      assert div(elapsed_us, 1_000) < 1_000
+    end
+
+    # Graph refused the token: asking again cannot change that.
+    test "does not retry a profile request Graph refuses" do
+      %{resp_body: resp_body} = oauth_test_data()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok, %{status: 200, body: resp_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, 1, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: "no"}}
+      end)
+
+      assert {:error, "Failed to fetch user profile: HTTP 401"} =
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri")
+    end
+
+    test "extracts tenant_id from id_token claims" do
       # Mock id_token with tid claim
       header = Base.url_encode64(Jason.encode!(%{alg: "RS256"}), padding: false)
       payload = Base.url_encode64(Jason.encode!(%{tid: "real-tenant-id"}), padding: false)
@@ -90,13 +178,13 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       end)
 
       assert {:ok, tokens} =
-               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri", state)
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri")
 
       assert tokens.tenant_id == "real-tenant-id"
     end
 
     test "fails if profile is missing id" do
-      %{state: state, resp_body: resp_body} = oauth_test_data()
+      %{resp_body: resp_body} = oauth_test_data()
 
       profile_body = Jason.encode!(%{"displayName" => "Microsoft User"})
 
@@ -111,11 +199,11 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       end)
 
       assert {:error, "Microsoft profile missing unique ID"} =
-               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri", state)
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri")
     end
 
     test "retries profile fetch on transient error" do
-      %{state: state, resp_body: resp_body} = oauth_test_data()
+      %{resp_body: resp_body} = oauth_test_data()
 
       profile_body =
         Jason.encode!(%{
@@ -137,7 +225,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       end)
 
       assert {:ok, tokens} =
-               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri", state)
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://uri")
 
       assert tokens.teams_user_id == "microsoft-user-123"
     end
@@ -194,15 +282,42 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       assert {:ok, :needs_refresh} = TeamsOAuthHelper.validate_token(%{token_expires_at: soon})
     end
 
-    test "returns error when expiration info is missing" do
-      assert {:error, _reason} = TeamsOAuthHelper.validate_token(%{})
+    # A token whose lifetime was never stored is renewed, not refused.
+    test "asks for a refresh when the expiry is unknown" do
+      assert {:ok, :needs_refresh} = TeamsOAuthHelper.validate_token(%{})
+      assert {:ok, :needs_refresh} = TeamsOAuthHelper.validate_token(%{token_expires_at: nil})
+    end
+  end
+
+  describe "PKCE" do
+    @pkce [pkce: %{nonce: "flow-nonce", code_challenge: "flow-challenge"}]
+
+    test "the authorisation URL carries the flow's challenge, and its state the nonce" do
+      query =
+        TeamsOAuthHelper.authorization_url(123, "http://cb", @pkce)
+        |> URI.parse()
+        |> Map.fetch!(:query)
+        |> URI.decode_query()
+
+      assert query["code_challenge"] == "flow-challenge"
+      assert query["code_challenge_method"] == "S256"
+      assert {:ok, %{nonce: "flow-nonce"}} = State.validate(query["state"], "teams-state")
+    end
+
+    test "the code exchange presents the flow's verifier" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
+        assert URI.decode_query(body)["code_verifier"] == "flow-verifier"
+        {:ok, %{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      assert {:error, _reason} =
+               TeamsOAuthHelper.exchange_code_for_tokens("code", "http://cb",
+                 code_verifier: "flow-verifier"
+               )
     end
   end
 
   defp oauth_test_data do
-    user_id = 123
-    state = State.generate(user_id, "teams-state")
-
     resp_body =
       Jason.encode!(%{
         "access_token" => "at-123",
@@ -211,6 +326,6 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
         "scope" => "Calendars.ReadWrite"
       })
 
-    %{user_id: user_id, state: state, resp_body: resp_body}
+    %{resp_body: resp_body}
   end
 end

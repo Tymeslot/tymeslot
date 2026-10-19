@@ -44,8 +44,9 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   whole event, an older edit landing last would undo the newer one.
 
   So `adopt/2` asks every other guardian of the organiser which events it
-  has writes for, and which series it is writing or moving the whole of,
-  and the new grid's queue waits for those (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
+  has writes for, each with the series it belongs to, and which series it
+  is writing or moving the whole of, and the new grid's queue waits for
+  those (`WriteQueue.wait_elsewhere/2`). Nothing is taken from the other
   guardian, which may belong to a tab still open: it, or its LiveView while
   that lives, goes on driving its own queue to the end. It only lends the
   event: once its queue has no write left for it, it releases the event to
@@ -205,11 +206,11 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
           {lender, lent}
 
         {:error, {_reason, _lender}} ->
-          {lender, []}
+          {lender, %{}}
 
         :timeout ->
           Logger.warning("Calendar grid write guardian did not say what it lends in time")
-          {lender, []}
+          {lender, %{}}
       end
     end
   end
@@ -309,7 +310,8 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
 
   # See "A grid mounted in another LiveView" in the moduledoc.
   def handle_call({:lend, borrower}, _from, state) do
-    keys = WriteQueue.pending_keys(state.queue)
+    lends = WriteQueue.lendable(state.queue)
+    keys = Map.keys(lends)
 
     lent =
       Enum.reduce(keys, state.lent, &Map.update(&2, &1, [borrower], fn bs -> [borrower | bs] end))
@@ -319,7 +321,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
     guardian = keys != [] && whereis(borrower)
     if guardian, do: send(guardian, {:event_writes_lent, self(), keys})
 
-    {:reply, keys, %{state | lent: lent}, timeout(state)}
+    {:reply, lends, %{state | lent: lent}, timeout(state)}
   end
 
   @impl GenServer

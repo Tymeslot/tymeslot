@@ -171,7 +171,7 @@ msgstr "Період бронювання"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer between meetings"
-msgstr "Перерва між зустрічами"
+msgstr "Буферний час між зустрічами"
 
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
@@ -322,7 +322,7 @@ msgstr "Налагодження: Початкове налаштування б
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex
 #, elixir-autogen, elixir-format
 msgid "Define buffer times, booking windows, and minimum notice to stay in control."
-msgstr "Налаштуйте час перерв, періоди бронювання та мінімальний час попередження, щоб усе контролювати."
+msgstr "Налаштуйте буферний час, періоди бронювання та мінімальний час попередження, щоб усе контролювати."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -374,11 +374,6 @@ msgstr "На скільки днів уперед клієнти можуть з
 msgid "I'll connect a calendar later"
 msgstr "Я підключу календар пізніше"
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone"
-msgstr "Некоректний часовий пояс"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you up and running in just a few steps."
@@ -417,7 +412,7 @@ msgstr "Nextcloud, Radicale або будь-який сервер CalDAV"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer"
-msgstr "Без перерви"
+msgstr "Без буферного часу"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -604,11 +599,6 @@ msgstr "Це ім'я користувача вже зайняте"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Це ім'я користувача зарезервоване"
-
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone must be a string"
-msgstr "Часовий пояс має бути рядком"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -815,42 +805,42 @@ msgstr "%{before_minutes} хв до, %{after_minutes} хв після"
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{before_minutes} min before, no buffer after"
-msgstr "%{before_minutes} хв до, без перерви після"
+msgstr "%{before_minutes} хв до, без буферного часу після"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "A breather around each meeting"
-msgstr "Перерва навколо кожної зустрічі"
+msgstr "Перепочинок навколо кожної зустрічі"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer after"
-msgstr "Перерва після зустрічі"
+msgstr "Буферний час після зустрічі"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer after must be between %{min} and %{max} minutes."
-msgstr "Перерва після зустрічі має бути від %{min} до %{max} хвилин."
+msgstr "Буферний час після зустрічі має бути від %{min} до %{max} хвилин."
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer before"
-msgstr "Перерва до зустрічі"
+msgstr "Буферний час перед зустріччю"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer before must be between %{min} and %{max} minutes."
-msgstr "Перерва до зустрічі має бути від %{min} до %{max} хвилин."
+msgstr "Буферний час перед зустріччю має бути від %{min} до %{max} хвилин."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "Custom buffer after, in minutes"
-msgstr "Власна перерва після зустрічі, у хвилинах"
+msgstr "Власний буферний час після зустрічі, у хвилинах"
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "Custom buffer before, in minutes"
-msgstr "Власна перерва до зустрічі, у хвилинах"
+msgstr "Власний буферний час перед зустріччю, у хвилинах"
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
@@ -860,17 +850,17 @@ msgstr "Якщо у вас зустріч з %{start_time} до %{end_time}, н�
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer around meetings"
-msgstr "Без перерв навколо зустрічей"
+msgstr "Без буферного часу навколо зустрічей"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer before, %{after_minutes} min after"
-msgstr "Без перерви до, %{after_minutes} хв після"
+msgstr "Без буферного часу до, %{after_minutes} хв після"
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With no buffers, a new booking can sit right next to an existing meeting."
-msgstr "Без перерв нове бронювання може йти одразу поруч із наявною зустріччю."
+msgstr "Без буферного часу нове бронювання може йти одразу поруч із наявною зустріччю."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format

@@ -369,11 +369,6 @@ msgstr ""
 msgid "I'll connect a calendar later"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone"
-msgstr ""
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you up and running in just a few steps."
@@ -598,11 +593,6 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
-msgstr ""
-
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone must be a string"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex

@@ -11,18 +11,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
   setup :verify_on_exit!
 
-  describe "provider_type/0" do
-    test "returns :mirotalk" do
-      assert MiroTalkProvider.provider_type() == :mirotalk
-    end
-  end
-
-  describe "display_name/0" do
-    test "returns correct display name" do
-      assert MiroTalkProvider.display_name() == "MiroTalk P2P"
-    end
-  end
-
   describe "config_schema/0" do
     test "returns schema with required fields" do
       schema = MiroTalkProvider.config_schema()
@@ -31,20 +19,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert schema[:api_key][:required] == true
       assert schema[:base_url][:type] == :string
       assert schema[:base_url][:required] == true
-    end
-  end
-
-  describe "capabilities/0" do
-    test "returns correct capabilities" do
-      capabilities = MiroTalkProvider.capabilities()
-
-      assert capabilities[:recording] == false
-      assert capabilities[:screen_sharing] == true
-      assert capabilities[:waiting_room] == false
-      assert capabilities[:max_participants] == 100
-      assert capabilities[:dial_in] == false
-      assert capabilities[:chat] == true
-      assert capabilities[:breakout_rooms] == false
     end
   end
 
@@ -206,37 +180,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
     test "handles empty string" do
       assert MiroTalkProvider.extract_room_id("") == nil
-    end
-  end
-
-  describe "valid_meeting_url?/1" do
-    test "accepts valid HTTP URL" do
-      assert MiroTalkProvider.valid_meeting_url?("http://mirotalk.example.com/room123")
-    end
-
-    test "accepts valid HTTPS URL" do
-      assert MiroTalkProvider.valid_meeting_url?("https://mirotalk.example.com/room123")
-    end
-
-    test "rejects URL without scheme" do
-      refute MiroTalkProvider.valid_meeting_url?("mirotalk.example.com/room123")
-    end
-
-    test "rejects URL with invalid scheme" do
-      refute MiroTalkProvider.valid_meeting_url?("ftp://mirotalk.example.com/room123")
-    end
-
-    test "rejects empty string" do
-      refute MiroTalkProvider.valid_meeting_url?("")
-    end
-
-    test "rejects URL with empty host" do
-      refute MiroTalkProvider.valid_meeting_url?("https:///room123")
-    end
-
-    test "rejects malformed URLs" do
-      refute MiroTalkProvider.valid_meeting_url?("https://")
-      refute MiroTalkProvider.valid_meeting_url?("http://:8080")
     end
   end
 
@@ -489,32 +432,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert String.contains?(join_url, "/join?")
       assert String.contains?(join_url, "room=room123")
       assert String.contains?(join_url, "token=")
-    end
-  end
-
-  describe "handle_meeting_event/3" do
-    test "returns :ok for any event" do
-      room_data = %{room_id: "room123", meeting_url: "https://mirotalk.example.com/room123"}
-
-      assert MiroTalkProvider.handle_meeting_event(:started, room_data, %{}) == :ok
-      assert MiroTalkProvider.handle_meeting_event(:ended, room_data, %{}) == :ok
-      assert MiroTalkProvider.handle_meeting_event(:cancelled, room_data, %{}) == :ok
-      assert MiroTalkProvider.handle_meeting_event(:unknown_event, room_data, %{}) == :ok
-    end
-  end
-
-  describe "generate_meeting_metadata/1" do
-    test "returns metadata with provider and meeting details" do
-      room_data = %{
-        room_id: "room123",
-        meeting_url: "https://mirotalk.example.com/join/room123"
-      }
-
-      metadata = MiroTalkProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:provider] == "mirotalk"
-      assert metadata[:meeting_id] == "room123"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room123"
     end
   end
 end

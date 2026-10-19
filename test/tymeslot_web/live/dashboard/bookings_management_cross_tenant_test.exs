@@ -2,9 +2,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
   @moduledoc """
   Cancelling and rescheduling somebody else's meeting.
 
-  `Meetings.get_meeting_for_user/2` loads the row first and checks ownership
-  afterwards, so the guarantee lives in the caller, not in the query. Nothing
-  about the markup constrains the id: the buttons are rendered from the host's
+  The modals resolve the meeting with `Meetings.get_meeting_for_organizer/2`,
+  scoped by the signed-in user's id. Nothing about the markup constrains the
+  id: the buttons are rendered from the host's
   own list, but the event carries a client-supplied meeting id, and a crafted
   socket frame can carry any id at all. These tests push exactly that frame.
 
@@ -22,12 +22,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
 
   @moduletag :live
   @moduletag :meetings
-  @moduletag :payments
   @moduletag :cross_tenant
 
+  alias Ecto.Changeset
   alias Plug.Test
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -35,8 +33,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
   setup :verify_on_exit!
 
   setup %{conn: conn} do
-    stub(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _client ->
-      {{:ok, nil}, {:ok, nil}}
+    stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
+      {:ok, nil}
+    end)
+
+    stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+      {:ok, nil}
     end)
 
     stub(Tymeslot.EmailServiceMock, :send_reschedule_request, fn _client -> {:ok, nil} end)
@@ -71,15 +73,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
   end
 
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
-
-  defp paid_payment_on(meeting, host) do
-    insert(:paid_booking_payment,
-      meeting_id: meeting.id,
-      host_user_id: host.id,
-      host_email: host.email,
-      stripe_account_id: "acct_HOST"
-    )
-  end
 
   # The handlers live in a LiveComponent, so the forged event has to be pushed
   # at the component rather than at the page, which is what a crafted client
@@ -200,17 +193,28 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
   end
 
   describe "the attendee's own booking" do
-    # `get_meeting_for_user/2` matches the organizer address *or* the attendee
-    # address, so a signed-in user who was booked as the attendee of somebody
-    # else's meeting can cancel it from their dashboard. That is deliberate —
-    # it is their meeting too — but it is the one case where "belongs to another
-    # host" and "may not be touched" come apart, so it is pinned rather than
-    # left to be rediscovered as a suspected hole.
-    #
-    # What the attendee may not do is refund themselves. The payment sits in
-    # the host's Stripe account, so the refund options are the host's alone:
-    # an attendee cancels, and nothing is paid back unless the host decides so.
-    test "an attendee may cancel the meeting they are booked on", %{
+    # The dashboard is the organiser's: a signed-in user who was booked as
+    # the attendee of somebody else's meeting neither sees it in their list
+    # nor can act on it as if they organised it.
+    test "is not listed on the attendee's dashboard", %{
+      conn: conn,
+      host: host,
+      stranger: stranger
+    } do
+      _booked_on =
+        meeting_for(stranger, %{attendee_email: host.email, attendee_name: "Listed Attendee"})
+
+      _mine = meeting_for(host, %{attendee_name: "Own Invitee"})
+
+      view = open_meetings(conn)
+
+      assert render(view) =~ "Own Invitee",
+             "the host's own booking must be listed, or the refusal proves nothing"
+
+      refute render(view) =~ "Listed Attendee"
+    end
+
+    test "an attendee may not open the cancel modal", %{
       conn: conn,
       host: host,
       stranger: stranger
@@ -220,62 +224,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
       view = open_meetings(conn)
       push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
 
-      assert cancel_modal_open?(view)
+      refute cancel_modal_open?(view)
+      assert reload(booked_on).status == "confirmed"
     end
 
-    test "an attendee cancelling a paid booking is offered no refund", %{
-      conn: conn,
-      host: host,
-      stranger: stranger
-    } do
-      booked_on = meeting_for(stranger, %{attendee_email: host.email})
-      paid_payment_on(booked_on, stranger)
-
-      view = open_meetings(conn)
-      push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
-
-      assert cancel_modal_open?(view),
-             "the modal must open, or the missing refund options prove nothing"
-
-      refute has_element?(view, "#cancel-meeting-form input[name='cancel_refund_choice']")
-    end
-
-    # Stripe is stubbed to succeed in both cases below, so a refund that is not
-    # issued was refused by the rule and not by a missing mock. The cancellation
-    # itself still goes through: only the money is the host's decision.
-    for {label, params} <- [
-          {"an explicit full refund", %{"cancel_refund_choice" => "full"}},
-          {"no refund choice at all", %{}}
-        ] do
-      test "an attendee cancelling with #{label} refunds nothing", %{
-        conn: conn,
-        host: host,
-        stranger: stranger
-      } do
-        stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
-          {:ok, %{id: "re_should_not_happen"}}
-        end)
-
-        booked_on = meeting_for(stranger, %{attendee_email: host.email})
-        payment = paid_payment_on(booked_on, stranger)
-
-        view = open_meetings(conn)
-        push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
-        assert cancel_modal_open?(view)
-
-        view
-        |> with_target("#bookings-management")
-        |> render_submit("confirm_cancel_meeting", unquote(Macro.escape(params)))
-
-        assert reload(booked_on).status == "cancelled"
-
-        reloaded = BookingPaymentQueries.get(payment.id)
-        assert reloaded.refunded_amount_cents == 0
-        assert reloaded.status == "paid"
-      end
-    end
-
-    test "but a third party who is neither organizer nor attendee may not", %{conn: conn} do
+    test "nor may a third party who is neither organizer nor attendee", %{conn: conn} do
       outsider = onboarded_user()
       theirs = meeting_for(outsider, %{attendee_email: "someone-else@example.com"})
 
@@ -284,6 +237,57 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
 
       refute cancel_modal_open?(view)
       assert reload(theirs).status == "confirmed"
+    end
+  end
+
+  describe "an address that changes hands" do
+    # A meeting's organizer_email is a snapshot of the host's address at
+    # booking time. The host changes their address; somebody else then
+    # verifies the old one. The bookings stay with the host.
+    setup %{host: host} do
+      old_email = host.email
+
+      mine = meeting_for(host, %{attendee_name: "Kept Invitee"})
+
+      host =
+        host
+        |> Changeset.change(email: "renamed-#{System.unique_integer([:positive])}@example.com")
+        |> Repo.update!()
+
+      claimant =
+        insert(:user, email: old_email, onboarding_completed_at: DateTime.utc_now(:second))
+
+      insert(:profile, user: claimant)
+
+      {:ok, host: host, claimant: claimant, mine: mine}
+    end
+
+    test "the host still sees and can open their bookings", %{conn: conn, mine: mine} do
+      view = open_meetings(conn)
+
+      assert render(view) =~ "Kept Invitee"
+
+      push_to_component(view, "show_cancel_modal", %{"id" => mine.id})
+      assert cancel_modal_open?(view)
+    end
+
+    test "whoever verifies the old address sees none of them and cannot cancel them", %{
+      claimant: claimant,
+      mine: mine
+    } do
+      conn =
+        build_conn()
+        |> Test.init_test_session(%{})
+        |> fetch_session()
+        |> log_in_user(claimant)
+
+      view = open_meetings(conn)
+
+      refute render(view) =~ "Kept Invitee"
+
+      push_to_component(view, "show_cancel_modal", %{"id" => mine.id})
+      refute cancel_modal_open?(view)
+      assert reload(mine).status == "confirmed"
     end
   end
 

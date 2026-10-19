@@ -124,12 +124,15 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
                  CheckoutSessionCompleted.handle(%{
                    "id" => "evt_RETURN",
                    "type" => "checkout.session.completed",
+                   "account" => "acct_RETURN",
                    "created" => System.os_time(:second),
                    "data" => %{
                      "object" => %{
                        "id" => @session_id,
                        "client_reference_id" => meeting_id,
-                       "payment_status" => "paid"
+                       "payment_status" => "paid",
+                       "amount_total" => 5000,
+                       "currency" => "usd"
                      }
                    }
                  })

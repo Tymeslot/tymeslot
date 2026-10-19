@@ -36,7 +36,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
         Auth.google_signup_login_hint(user)
       )
 
-    case Calendar.initiate_google_oauth(user.id, opts) do
+    case Calendar.initiate_oauth(:google, user.id, opts) do
       {:ok, url} ->
         {:noreply, LiveView.redirect(socket, external: url)}
 
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   def handle_connect_outlook(socket) do
     user_id = socket.assigns.current_user.id
 
-    case Calendar.initiate_outlook_oauth(user_id, return_to: ~p"/onboarding/connect_calendar") do
+    case Calendar.initiate_oauth(:outlook, user_id, return_to: ~p"/onboarding/connect_calendar") do
       {:ok, url} ->
         {:noreply, LiveView.redirect(socket, external: url)}
 

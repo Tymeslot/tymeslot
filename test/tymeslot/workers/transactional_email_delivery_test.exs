@@ -44,13 +44,15 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     )
   end
 
+  defp job(meta \\ %{}), do: %Oban.Job{attempt: 1, meta: meta}
+
   defp open_the_breaker do
     setup_config(:tymeslot, :test_delivery_error, :econnrefused)
     breaker = CircuitBreakerSupervisor.email_breaker_name()
     threshold = CircuitBreaker.status(breaker).config.failure_threshold
 
     for _attempt <- 1..threshold do
-      TransactionalEmailDelivery.deliver(valid_email(), "failed")
+      TransactionalEmailDelivery.deliver(valid_email(), job(), "failed")
     end
 
     assert CircuitBreaker.status(breaker).status == :open
@@ -59,7 +61,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
   test "snoozes past the breaker's recovery window rather than retrying inside it" do
     open_the_breaker()
 
-    assert {:snooze, seconds} = TransactionalEmailDelivery.deliver(valid_email(), "failed")
+    assert {:snooze, seconds} = TransactionalEmailDelivery.deliver(valid_email(), job(), "failed")
 
     assert seconds >= CircuitBreakerSupervisor.email_breaker_recovery_seconds()
   end
@@ -86,11 +88,26 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     end
   end
 
+  # A delivering worker's job counts its own snoozes: the Stripe-triggered
+  # workers used to pass none, so every run looked like the first and a
+  # mailer that never recovered snoozed them for ever, with no alert.
+  test "fails a job that has snoozed past the bound instead of snoozing again" do
+    open_the_breaker()
+
+    assert {:snooze, _seconds} =
+             TransactionalEmailDelivery.deliver(valid_email(), job(%{"snoozed" => 10}), "failed")
+
+    assert {:error, reason} =
+             TransactionalEmailDelivery.deliver(valid_email(), job(%{"snoozed" => 11}), "failed")
+
+    assert reason =~ "circuit breaker"
+  end
+
   test "discards an address the provider has permanently rejected" do
     setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
 
     assert {:discard, "Recipient permanently undeliverable"} =
-             TransactionalEmailDelivery.deliver(valid_email(), "failed")
+             TransactionalEmailDelivery.deliver(valid_email(), job(), "failed")
   end
 
   # A discard emits Oban's `job:stop`, not `job:exception`, so error tracking
@@ -102,7 +119,9 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
 
     assert {:discard, "Recipient permanently undeliverable"} =
-             TransactionalEmailDelivery.deliver(valid_email(), "failed", booking_payment_id: 42)
+             TransactionalEmailDelivery.deliver(valid_email(), job(), "failed",
+               booking_payment_id: 42
+             )
 
     assert_receive {:send_alert, :recipient_email_rejected, payload}
     assert payload.booking_payment_id == 42
@@ -112,13 +131,14 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
   test "retries an ordinary transport failure" do
     setup_config(:tymeslot, :test_delivery_error, :econnrefused)
 
-    assert {:error, :econnrefused} = TransactionalEmailDelivery.deliver(valid_email(), "failed")
+    assert {:error, :econnrefused} =
+             TransactionalEmailDelivery.deliver(valid_email(), job(), "failed")
   end
 
   test "returns :ok when the provider accepts the message" do
     setup_config(:tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Test)
 
-    assert :ok = TransactionalEmailDelivery.deliver(valid_email(), "failed")
+    assert :ok = TransactionalEmailDelivery.deliver(valid_email(), job(), "failed")
   end
 
   # `handle_failure/3` is also what `EmailWorker` calls for these three
@@ -127,12 +147,13 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
   # job happens to carry an execution count.
   describe "handle_failure/3 for :rate_limited" do
     test "snoozes rather than retrying with an ordinary backoff" do
-      assert {:snooze, seconds} = TransactionalEmailDelivery.handle_failure(:rate_limited, "", [])
+      assert {:snooze, seconds} =
+               TransactionalEmailDelivery.handle_failure(:rate_limited, "", executions: 1)
 
       assert seconds > 0
     end
 
-    test "scales the snooze with :executions when the caller supplies one" do
+    test "scales the snooze with :executions" do
       assert {:snooze, 60} =
                TransactionalEmailDelivery.handle_failure(:rate_limited, "", executions: 1)
 

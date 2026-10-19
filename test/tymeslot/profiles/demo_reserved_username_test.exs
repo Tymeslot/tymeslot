@@ -1,7 +1,7 @@
 defmodule Tymeslot.Profiles.DemoReservedUsernameTest do
   @moduledoc """
-  A username the demo provider serves can never be chosen: the provider would
-  answer for it, replacing the organiser's booking page with demo content.
+  A username the demo provider reserves can never be newly chosen, while a
+  profile that held it before it was reserved keeps it.
   """
 
   # Swaps the node-wide demo provider, so it must not run beside other tests.
@@ -20,10 +20,10 @@ defmodule Tymeslot.Profiles.DemoReservedUsernameTest do
   @demo_username ReservingDemoProvider.reserved_username()
 
   defp username_changeset(profile, username) do
-    ProfileSchema.changeset(profile, %{username: username, timezone: "Europe/London"})
+    ProfileSchema.username_changeset(profile, %{username: username})
   end
 
-  describe "with a demo provider that serves the username" do
+  describe "with a demo provider that reserves the username" do
     setup do
       with_config(:tymeslot, demo_provider: ReservingDemoProvider)
       :ok
@@ -47,7 +47,31 @@ defmodule Tymeslot.Profiles.DemoReservedUsernameTest do
       assert Profiles.username_status(profile, @demo_username) == :reserved
     end
 
-    test "a username it does not serve stays free" do
+    test "a refused attempt to change to it spends no change attempt" do
+      profile = insert(:profile, username: "sarah")
+
+      # More refusals than the change allowance holds: had any of them
+      # counted, the valid change below would be rate limited.
+      for _attempt <- 1..6 do
+        assert {:error, "This username is reserved"} =
+                 Profiles.change_username(profile, @demo_username)
+      end
+
+      assert {:ok, %{username: "sarah-new"}} = Profiles.change_username(profile, "sarah-new")
+    end
+
+    test "a capitalised variant is refused by the username format" do
+      profile = insert(:profile, username: "sarah")
+      capitalised = String.capitalize(@demo_username)
+
+      assert {:error, "Username must start with a letter or number" <> _rest} =
+               Profiles.change_username(profile, capitalised)
+
+      assert {:invalid, _message} = Profiles.username_status(profile, capitalised)
+      assert Repo.reload!(profile).username == "sarah"
+    end
+
+    test "a username it does not reserve stays free" do
       profile = insert(:profile, username: "sarah")
 
       assert username_changeset(profile, "demo-x-2").valid?
@@ -59,7 +83,7 @@ defmodule Tymeslot.Profiles.DemoReservedUsernameTest do
       profile = insert(:profile, username: @demo_username)
 
       assert username_changeset(profile, @demo_username).valid?
-      assert ProfileSchema.changeset(profile, %{full_name: "Sarah Rodriguez"}).valid?
+      assert ProfileSchema.basic_changeset(profile, %{full_name: "Sarah Rodriguez"}).valid?
       assert Profiles.username_status(profile, @demo_username) == :unchanged
     end
   end

@@ -23,6 +23,7 @@ defmodule Tymeslot.Migrations.EnqueueUploadMetadataSweepTest do
   alias Tymeslot.Repo
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.Test.MigrationRunner
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.Workers.UploadMetadataSweepWorker
 
   @version 20_261_002_073_024
@@ -50,9 +51,7 @@ defmodule Tymeslot.Migrations.EnqueueUploadMetadataSweepTest do
 
   @tag :tmp_dir
   test "the queued job strips files uploaded before the upgrade", %{tmp_dir: upload_dir} do
-    previous = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_dir)
-    on_exit(fn -> Application.put_env(:tymeslot, :upload_directory, previous) end)
+    UploadRoot.point_at(upload_dir)
 
     avatar = Path.join(upload_dir, "avatars/7/7_avatar_1.jpg")
     File.mkdir_p!(Path.dirname(avatar))

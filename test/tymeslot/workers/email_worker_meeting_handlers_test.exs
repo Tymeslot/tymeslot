@@ -8,14 +8,14 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
   alias Ecto.UUID
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Workers.EmailWorkerHandlers
+  alias Tymeslot.Notifications.EmailHandlers
 
   setup :verify_on_exit!
 
   describe "execute_email_action/2" do
     test "discards unknown actions" do
       assert {:discard, "Unknown action: unknown"} =
-               EmailWorkerHandlers.execute_email_action("unknown", %{})
+               EmailHandlers.execute_email_action("unknown", %{})
     end
 
     test "handles send_confirmation_emails" do
@@ -30,7 +30,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -47,19 +47,94 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id
                })
     end
 
     test "handles send_reschedule_request" do
-      meeting = insert(:meeting)
+      requested_at = DateTime.utc_now(:second)
+      meeting = insert(:meeting, reschedule_requested_at: requested_at)
       expect(EmailServiceMock, :send_reschedule_request, fn _meeting -> {:ok, "sent"} end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reschedule_request", %{
+               EmailHandlers.execute_email_action("send_reschedule_request", %{
+                 "meeting_id" => meeting.id,
+                 "requested_at" => DateTime.to_iso8601(requested_at)
+               })
+    end
+
+    test "drops a reschedule request the attendee has already answered by rebooking" do
+      meeting = insert(:meeting, reschedule_requested_at: nil)
+      expect(EmailServiceMock, :send_reschedule_request, 0, fn _meeting -> {:ok, "sent"} end)
+
+      assert {:discard, "Reschedule request no longer pending"} =
+               EmailHandlers.execute_email_action("send_reschedule_request", %{
+                 "meeting_id" => meeting.id,
+                 "requested_at" => DateTime.to_iso8601(DateTime.utc_now(:second))
+               })
+    end
+
+    test "drops a reschedule request a later request has replaced" do
+      now = DateTime.utc_now(:second)
+      meeting = insert(:meeting, reschedule_requested_at: now)
+      expect(EmailServiceMock, :send_reschedule_request, 0, fn _meeting -> {:ok, "sent"} end)
+
+      assert {:discard, "Reschedule request no longer pending"} =
+               EmailHandlers.execute_email_action("send_reschedule_request", %{
+                 "meeting_id" => meeting.id,
+                 "requested_at" => DateTime.to_iso8601(DateTime.add(now, -3600))
+               })
+    end
+
+    test "a reschedule request job queued without its request time sends while one is pending" do
+      meeting = insert(:meeting, reschedule_requested_at: DateTime.utc_now(:second))
+      expect(EmailServiceMock, :send_reschedule_request, fn _meeting -> {:ok, "sent"} end)
+
+      assert :ok =
+               EmailHandlers.execute_email_action("send_reschedule_request", %{
                  "meeting_id" => meeting.id
                })
+    end
+
+    for status <- ["expired", "completed"] do
+      test "drops a reschedule request for a meeting already #{status}" do
+        meeting =
+          insert(:meeting,
+            status: unquote(status),
+            reschedule_requested_at: DateTime.utc_now(:second)
+          )
+
+        expect(EmailServiceMock, :send_reschedule_request, 0, fn _meeting -> {:ok, "sent"} end)
+
+        assert {:discard, "Meeting expired or completed" = reason} =
+                 EmailHandlers.execute_email_action("send_reschedule_request", %{
+                   "meeting_id" => meeting.id
+                 })
+
+        assert EmailHandlers.expected_discard?(reason)
+      end
+
+      # A job queued before the move's status was carried has nothing else
+      # that would catch a booking that has since lapsed.
+      test "drops the notices of a move for a meeting since #{status}" do
+        meeting = insert(:meeting, status: unquote(status))
+
+        expect(EmailServiceMock, :send_reschedule_email_to_organizer, 0, fn _email, _content ->
+          {:ok, "sent"}
+        end)
+
+        expect(EmailServiceMock, :send_reschedule_email_to_attendee, 0, fn _email, _content ->
+          {:ok, "sent"}
+        end)
+
+        assert {:discard, "Meeting expired or completed" = reason} =
+                 EmailHandlers.execute_email_action("send_reschedule_emails", %{
+                   "meeting_id" => meeting.id
+                 })
+
+        assert EmailHandlers.expected_discard?(reason)
+      end
     end
 
     test "handles send_email_verification" do
@@ -67,7 +142,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       expect(EmailServiceMock, :send_email_verification, fn _user, _url -> {:ok, "sent"} end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_email_verification", %{
+               EmailHandlers.execute_email_action("send_email_verification", %{
                  "user_id" => user.id,
                  "verification_url" => "http://test.com"
                })
@@ -79,7 +154,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       fake_id = UUID.generate()
 
       assert {:discard, "Meeting not found"} =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => fake_id
                })
     end
@@ -88,7 +163,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       meeting = insert(:meeting, organizer_email_sent: true, attendee_email_sent: true)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -105,7 +180,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
 
@@ -131,7 +206,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, :circuit_open} =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -149,7 +224,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, ^rejection} =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -175,7 +250,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       # rejection leaked through here the whole job — attendee send included
       # — would be discarded instead of retried.
       assert {:error, "Failed to send all emails"} =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -192,7 +267,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, "Failed to send all emails"} =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
 
@@ -217,7 +292,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, "Failed to send all emails"} =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
 
@@ -233,7 +308,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
 
@@ -248,7 +323,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       meeting = insert(:meeting, status: "cancelled")
 
       assert {:discard, "Meeting cancelled"} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -257,7 +332,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       meeting = insert(:meeting, status: "reschedule_requested")
 
       assert {:discard, "Meeting reschedule_requested"} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id
                })
     end
@@ -269,7 +344,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
         )
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -291,7 +366,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 1,
                  "reminder_unit" => "hours"
@@ -321,7 +396,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -351,7 +426,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -381,7 +456,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -396,7 +471,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -424,7 +499,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, _reason} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -450,7 +525,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert {:error, :circuit_open} =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -473,7 +548,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"

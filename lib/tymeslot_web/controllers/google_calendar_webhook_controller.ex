@@ -30,7 +30,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
     # traffic: Google delivers every tenant's notifications from a small pool
     # of its own addresses, so the generic webhook bucket would throttle the
     # whole instance at once.
-    with :ok <- RateLimiter.check_calendar_push_rate_limit(ClientIP.get(conn)) do
+    with :ok <- RateLimiter.check(:calendar_push, ClientIP.get(conn)) do
       CalendarWebhooks.handle_google_notification(
         extract_header(conn, "x-goog-channel-id"),
         extract_header(conn, "x-goog-channel-token")

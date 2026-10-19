@@ -6,16 +6,16 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   declares in `asset_fields/1` and takes uploads into
   (`Specs.upload_group/2`), else it is refused. The file is stored for the
   field's kind (`Storage.store_asset/4`) and the owning group's
-  `upload_changes/3` is saved, kept to that group's own settings: a
-  background upload becomes the custom background and drops the background's
-  other upload, whose file the save then deletes, while an upload into
-  another group leaves the background alone. For a video, the field's
-  processing state is marked `pending` (`video_processing_status`, one entry
-  per asset field) and the field's transcoding job queued, marking the field
-  `failed` if the job cannot be queued. A save that fails deletes the file it stored
-  (`FileLifecycle.discard_upload/2`). Errors come back as translated,
-  user-facing messages, except an image refused by
-  `Tymeslot.Media.ImageMetadata.strip/3` for its size
+  `upload_changes/3` is saved, kept to that group's own settings. For a
+  video, the field's processing state is marked `pending`
+  (`video_processing_status`, one entry per asset field) and the field's
+  transcoding job queued in the same transaction as the save
+  (`ThemeCustomizations.save_customization/4`), so a video is saved only
+  with its job: if the job cannot be queued, nothing changes and the
+  video it would have replaced stays as it was. A save that fails or is
+  rolled back deletes the file it stored (`FileLifecycle.discard_upload/2`).
+  Errors come back as translated, user-facing messages, except an image
+  refused by `Tymeslot.Media.ImageMetadata.strip/3` for its size
   (`{:image_too_large, oversize}`) or because the node is busy with other
   uploads (`:busy`): those keep the reason, whose message depends on the
   figures it carries and is worded by the web layer.
@@ -25,6 +25,10 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
+  require Logger
+
+  alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Media.ImageMetadata
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.FileLifecycle
@@ -57,17 +61,20 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
   defp attach(kind, profile_id, theme_id, {group, field}, upload)
        when kind in [:image, :captions] do
     with {:ok, path} <- store(kind, profile_id, theme_id, upload) do
-      save(profile_id, theme_id, path, Specs.upload_changes(group, field, path))
+      save(profile_id, theme_id, path, Specs.upload_changes(group, field, path), &{:ok, &1})
     end
   end
 
   defp attach(:video, profile_id, theme_id, {group, field}, upload) do
     with :ok <- ensure_transcoder(),
-         {:ok, path} <- store(:video, profile_id, theme_id, upload),
-         {:ok, saved} <-
-           save(profile_id, theme_id, path, Specs.upload_changes(group, field, path)),
-         {:ok, customization} <- mark(saved, field, "pending") do
-      queue_transcoding(customization, field, path)
+         {:ok, path} <- store(:video, profile_id, theme_id, upload) do
+      save(
+        profile_id,
+        theme_id,
+        path,
+        Specs.upload_changes(group, field, path),
+        &queue_transcoding(&1, field, path)
+      )
     end
   end
 
@@ -108,17 +115,53 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
     end
   end
 
-  # The file was stored for this save alone, so a refused save leaves it
-  # referenced by nothing: delete it rather than orphan it.
-  defp save(profile_id, theme_id, path, attrs) do
-    case ThemeCustomizations.upsert_theme_customization(profile_id, theme_id, attrs) do
+  # The file was stored for this save alone, so a refused or rolled-back
+  # save leaves it referenced by nothing: delete it rather than orphan it.
+  # Only the transaction's own failures arrive here as errors
+  # (`ThemeCustomizations.save_customization/4`); a database error raised
+  # inside it (inserting the transcoding job is the likeliest place) is
+  # reported as nothing changed, and anything else is re-raised once the
+  # file is gone.
+  defp save(profile_id, theme_id, path, attrs, then_fun) do
+    case ThemeCustomizations.save_customization(profile_id, theme_id, attrs, then_fun) do
       {:ok, customization} ->
         {:ok, customization}
 
-      {:error, _changeset} ->
-        FileLifecycle.discard_upload(path, %{profile_id: profile_id, theme_id: theme_id})
+      {:error, %Changeset{}} ->
+        discard(path, profile_id, theme_id)
         {:error, save_failed()}
+
+      {:error, {:raised, error, stacktrace}} ->
+        discard(path, profile_id, theme_id)
+        raised(error, stacktrace, profile_id, theme_id)
+
+      {:error, _not_queued_or_not_found} ->
+        discard(path, profile_id, theme_id)
+        {:error, nothing_changed()}
     end
+  end
+
+  defp raised(%error_type{} = error, _stacktrace, profile_id, theme_id)
+       when error_type in [Postgrex.Error, DBConnection.ConnectionError] do
+    Logger.error("Theme upload rolled back by a database error",
+      profile_id: profile_id,
+      theme_id: theme_id,
+      reason: LogFormat.reason(error)
+    )
+
+    {:error, nothing_changed()}
+  end
+
+  defp raised(error, stacktrace, _profile_id, _theme_id), do: reraise(error, stacktrace)
+
+  defp discard(path, profile_id, theme_id),
+    do: FileLifecycle.discard_upload(path, %{profile_id: profile_id, theme_id: theme_id})
+
+  defp nothing_changed do
+    dgettext(
+      "dashboard_appearance",
+      "The upload failed and nothing was changed. Please try again."
+    )
   end
 
   # ffmpeg is detected at transcode time in the worker; without this check the
@@ -135,34 +178,20 @@ defmodule Tymeslot.ThemeCustomizations.Assets do
     end
   end
 
-  # Each video's state lives under its own field, so two videos of one theme
-  # are processed and reported apart; the write merges into the stored map.
-  defp mark(customization, field, status) do
-    case ThemeCustomizationQueries.update_video_processing_status(
-           customization.id,
-           Atom.to_string(field),
-           status
-         ) do
-      {:ok, updated} -> {:ok, updated}
-      {:error, :not_found} -> {:error, save_failed()}
-    end
-  end
-
-  defp queue_transcoding(customization, field, video_path) do
-    case VideoTranscoder.enqueue(customization.id, field, video_path) do
-      {:ok, _job} ->
-        {:ok, customization}
-
-      {:error, _reason} ->
-        # Only the state changes: the saved video stays, so the user can see
-        # what failed and upload again.
-        _marked = mark(customization, field, "failed")
-
-        {:error,
-         dgettext(
-           "dashboard_appearance",
-           "Your video was saved but could not be queued for processing. Please upload it again."
-         )}
+  # Runs inside the save's transaction. Each video's state lives under its
+  # own field, so two videos of one theme are processed and reported apart;
+  # the write merges into the stored map. A failure rolls the save back.
+  defp queue_transcoding(saved, field, video_path) do
+    with {:ok, marked} <-
+           ThemeCustomizationQueries.update_video_processing_status(
+             saved.id,
+             Atom.to_string(field),
+             "pending"
+           ),
+         {:ok, _job} <- VideoTranscoder.enqueue(saved.id, field, video_path) do
+      {:ok, marked}
+    else
+      {:error, _reason} -> {:error, :not_queued}
     end
   end
 

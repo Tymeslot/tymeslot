@@ -18,7 +18,7 @@ defmodule Tymeslot.Infrastructure.Logging.LogFormat do
   adds no compile-time dependency to its callers.
   """
 
-  alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Infrastructure.Logging.EmailMasker
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Infrastructure.Logging.Redactor
 
@@ -36,7 +36,7 @@ defmodule Tymeslot.Infrastructure.Logging.LogFormat do
     term
     |> MetadataRedactor.redact()
     |> inspect(@inspect_opts)
-    |> PIIScrubber.mask_emails()
+    |> EmailMasker.mask_emails()
     |> Redactor.redact_and_truncate(@max_bytes)
   end
 

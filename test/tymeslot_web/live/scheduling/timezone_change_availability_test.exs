@@ -19,8 +19,10 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   alias Tymeslot.BookingTestHelpers
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -39,6 +41,10 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     RateLimiter.clear_all()
     AvailabilityCache.clear_all()
     TestMocks.setup_all_mocks()
+    # The assertions below expect the page to land on the test's Monday and
+    # Tuesday, so no earlier window may still be open. From a Wednesday the
+    # next Monday is the first window in both zones.
+    freeze_clock_midweek()
     :ok
   end
 
@@ -119,10 +125,13 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     profile
   end
 
-  # A Monday at least two days out in both zones, so neither today's cut-off
-  # nor the zones disagreeing about today can touch it.
+  # The Monday after the frozen Wednesday: at least two days out in both zones,
+  # so neither today's cut-off nor the zones disagreeing about today can touch
+  # it, and the first overnight window in either.
   defp next_monday do
-    from = @booker_zone |> DateTime.now!() |> DateTime.to_date() |> Date.add(2)
+    from =
+      Clock.utc_now() |> DateTime.shift_zone!(@booker_zone) |> DateTime.to_date() |> Date.add(2)
+
     Date.add(from, rem(8 - Date.day_of_week(from), 7))
   end
 

@@ -369,11 +369,6 @@ msgstr "Jusqu’à quand vos clients peuvent réserver avec vous."
 msgid "I'll connect a calendar later"
 msgstr "Je connecterai un calendrier plus tard"
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone"
-msgstr "Fuseau horaire invalide"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you up and running in just a few steps."
@@ -599,11 +594,6 @@ msgstr "Ce nom d’utilisateur est déjà pris"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Ce nom d’utilisateur est réservé"
-
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone must be a string"
-msgstr "Le fuseau horaire doit être une chaîne de caractères"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format

@@ -8,7 +8,8 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   3. Provides metrics and logging for job health monitoring, and raises an
      `:oban_jobs_force_discarded` admin alert for the jobs it discards
 
-  This worker runs every 30 minutes to ensure job queue health.
+  This worker runs every 30 minutes, from the Oban crontab, to ensure job
+  queue health. It does not schedule itself.
 
   Discarding a stuck job is the last rung of the ladder in
   `Tymeslot.Infrastructure.ObanRescue`, not the first: `Oban.Lifeline` returns
@@ -29,8 +30,11 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     queue: :maintenance,
     priority: 3,
     max_attempts: 3,
-    # Prevent overlapping runs (30 minutes)
-    unique: [period: 1800]
+    # One run per crontab slot (every 30 minutes). Uniqueness counts from
+    # the previous job's insertion, so a period equal to the interval would
+    # swallow the next slot's job whenever the cron plugin inserts it a
+    # moment early; a little under the interval cannot.
+    unique: [period: 1740]
 
   require Logger
 
@@ -53,18 +57,26 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
       delivery_claims_pruned: claims_pruned
     )
 
-    # Schedule next run
-    schedule_next_run()
-
     {:ok, %{stuck_cleaned: stuck_count, claims_pruned: claims_pruned}}
   end
 
-  @spec schedule_next_run() :: {:ok, Oban.Job.t()} | {:error, term()}
-  defp schedule_next_run do
-    %{}
-    # 30 minutes
-    |> new(schedule_in: 1800)
-    |> Oban.insert()
+  @doc false
+  # Discards each of `stuck_jobs`, as found by the scan, and returns those it
+  # discarded. Public so a test can hand it a job that finished after the scan.
+  @spec discard_stuck_jobs([Oban.Job.t()]) :: [Oban.Job.t()]
+  def discard_stuck_jobs(stuck_jobs) do
+    Enum.filter(stuck_jobs, fn job ->
+      case transition_stuck_job_to_discarded(job) do
+        {:ok, _result} ->
+          true
+
+        # It finished between the scan and the discard: the race the
+        # guarded discard exists for, and nothing to clean.
+        {:error, :no_longer_executing} ->
+          Logger.info("Stuck job finished before it was cleaned", job_id: job.id)
+          false
+      end
+    end)
   end
 
   # Private functions
@@ -72,24 +84,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   defp cleanup_stuck_jobs do
     threshold = DateTime.add(DateTime.utc_now(), -@stuck_job_threshold_hours, :hour)
 
-    # Find stuck executing jobs
-    stuck_jobs = Jobs.get_stuck_executing_jobs(threshold)
-
-    discarded =
-      Enum.filter(stuck_jobs, fn job ->
-        case transition_stuck_job_to_discarded(job) do
-          {:ok, _result} ->
-            true
-
-          {:error, reason} ->
-            Logger.error("Failed to clean stuck job",
-              job_id: job.id,
-              reason: reason
-            )
-
-            false
-        end
-      end)
+    discarded = threshold |> Jobs.get_stuck_executing_jobs() |> discard_stuck_jobs()
 
     cleaned_count = length(discarded)
 

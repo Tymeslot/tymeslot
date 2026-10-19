@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.VTimezone do
   recurrence rule collapse to their fixed `TZOFFSETTO`.
   """
 
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Timezones
 
   @enforce_keys [:standard]
@@ -34,8 +35,6 @@ defmodule Tymeslot.Integrations.Calendar.VTimezone do
          }
 
   @type t :: %__MODULE__{standard: sub(), daylight: sub() | nil}
-
-  @weekdays %{"MO" => 1, "TU" => 2, "WE" => 3, "TH" => 4, "FR" => 5, "SA" => 6, "SU" => 7}
 
   @doc """
   Extracts every `VTIMEZONE` component from raw iCalendar `content` into a map
@@ -165,41 +164,11 @@ defmodule Tymeslot.Integrations.Calendar.VTimezone do
 
   defp parse_transition(sub) do
     with [_match, rrule] <- Regex.run(~r/^RRULE:(.+?)\r?$/m, sub),
-         params = parse_rrule(rrule),
-         {:ok, month} <- fetch_int(params, "BYMONTH"),
-         {ordinal, weekday} when is_integer(weekday) <- parse_byday(params["BYDAY"]) do
+         {:ok, %RRule{by_month: [month | _more], by_day: [{ordinal, weekday}]}}
+         when is_integer(ordinal) <- RRule.parse(rrule) do
       %{month: month, ordinal: ordinal, weekday: weekday, time: dtstart_time(sub)}
     else
       _no_rule -> nil
-    end
-  end
-
-  defp parse_rrule(rrule) do
-    rrule
-    |> String.split(";")
-    |> Map.new(fn part ->
-      case String.split(part, "=", parts: 2) do
-        [key, value] -> {key, value}
-        [key] -> {key, ""}
-      end
-    end)
-  end
-
-  defp fetch_int(params, key) do
-    with value when is_binary(value) <- Map.get(params, key),
-         {int, _rest} <- Integer.parse(value) do
-      {:ok, int}
-    else
-      _invalid -> :error
-    end
-  end
-
-  defp parse_byday(nil), do: :error
-
-  defp parse_byday(byday) do
-    case Regex.run(~r/^(-?\d+)(MO|TU|WE|TH|FR|SA|SU)$/, byday) do
-      [_match, ordinal, weekday] -> {String.to_integer(ordinal), @weekdays[weekday]}
-      _none -> :error
     end
   end
 

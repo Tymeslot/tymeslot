@@ -28,10 +28,17 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   @awaiting_approval "awaiting_approval"
   @awaiting_payment "awaiting_payment"
+  @cancelled "cancelled"
+  @confirmed "confirmed"
+  @expired "expired"
 
   # Statuses a booking is released in without taking place: cancelled, or a
   # request that expired unanswered. Releasing one deletes its video room.
   @released_statuses ["cancelled", "expired"]
+
+  # Statuses a meeting never leaves: it is over, one way or another, so
+  # nothing may cancel, move or confirm it again.
+  @terminal_statuses ["cancelled", "completed", "expired"]
 
   @doc """
   Whether the meeting still represents a live booking a user should be able
@@ -103,6 +110,20 @@ defmodule Tymeslot.Meetings.MeetingState do
     |> exclude_voided_slots()
   end
 
+  @doc """
+  Query-side counterpart of `expects_calendar_event?/1`: composes onto `query`
+  a filter matching only meetings that should have a provider event on the
+  organiser's calendar right now. A write that follows the calendar puts it
+  in its `WHERE`, so a meeting cancelled or voided after the provider event
+  was read is left as it is.
+  """
+  @spec where_expects_calendar_event(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_expects_calendar_event(query) do
+    query
+    |> where([m], m.status in ^(@active_statuses -- ["reschedule_requested"]))
+    |> exclude_voided_slots()
+  end
+
   # Query-side counterpart of `awaiting_new_time?/1`: excludes meetings whose
   # slot is currently voided by a pending reschedule request.
   defp exclude_voided_slots(query) do
@@ -165,10 +186,54 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec released_status?(String.t() | nil) :: boolean()
   def released_status?(status), do: status in @released_statuses
 
+  @doc """
+  Query-side counterpart of `released_status?/1`, for a query in which the
+  meeting is not the first binding: keeps only rows whose meeting, bound as
+  `binding` (`join: m in assoc(b, :meeting), as: :meeting`), was released.
+  """
+  @spec where_released(Ecto.Queryable.t(), atom()) :: Ecto.Query.t()
+  def where_released(query, binding) when is_atom(binding) do
+    where(query, [{^binding, m}], m.status in ^@released_statuses)
+  end
+
   @doc "Query-side counterpart of `released_status?/1`: keeps only meetings not released."
   @spec where_not_released(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_not_released(query) do
     where(query, [m], m.status not in ^@released_statuses)
+  end
+
+  @doc "Whether the meeting was cancelled."
+  @spec cancelled?(Meeting.t() | map()) :: boolean()
+  def cancelled?(%{status: status}), do: status == @cancelled
+
+  @doc "Whether the meeting is a confirmed booking."
+  @spec confirmed?(Meeting.t() | map()) :: boolean()
+  def confirmed?(%{status: status}), do: status == @confirmed
+
+  @doc """
+  Whether the meeting expired: a request that lapsed unanswered, or a paid
+  booking whose payment completed after its slot was taken.
+  """
+  @spec expired?(Meeting.t() | map()) :: boolean()
+  def expired?(%{status: status}), do: status == @expired
+
+  @doc """
+  Whether the meeting is over, one way or another (cancelled, completed or
+  expired), so nothing may cancel, move or confirm it again. Struct-side
+  counterpart of `where_not_terminal/1`.
+  """
+  @spec terminal?(Meeting.t()) :: boolean()
+  def terminal?(%{status: status}), do: status in @terminal_statuses
+
+  @doc """
+  Composes onto `query` a filter keeping only meetings still in a status they
+  can move on from, that is, not cancelled, completed or expired. A guarded
+  transition writes through it so that, of two callers acting on the same
+  meeting, only the first finds a row to change.
+  """
+  @spec where_not_terminal(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_not_terminal(query) do
+    where(query, [m], m.status not in ^@terminal_statuses)
   end
 
   @doc """
@@ -184,6 +249,12 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec where_awaiting_approval(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_awaiting_approval(query) do
     where(query, [m], m.status == @awaiting_approval)
+  end
+
+  @doc "Query-side negation of `awaiting_approval?/1`."
+  @spec where_not_awaiting_approval(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_not_awaiting_approval(query) do
+    where(query, [m], m.status != @awaiting_approval)
   end
 
   @doc """

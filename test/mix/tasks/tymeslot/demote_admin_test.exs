@@ -44,7 +44,7 @@ defmodule Mix.Tasks.Tymeslot.DemoteAdminTest do
     test "refuses to demote the only remaining admin without --force" do
       admin = insert(:user, is_admin: true)
 
-      assert_raise Mix.Error, ~r/only remaining admin/, fn ->
+      assert_raise Mix.Error, ~r/No other admin can sign in/, fn ->
         capture_io(fn ->
           DemoteAdmin.run([admin.email])
         end)

@@ -336,6 +336,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
         "selected" => true,
         "read_only" => false,
         "primary" => true,
+        "blocks_availability" => false,
+        "free_busy_only" => true,
         "color" => "#123456",
         "description" => "Team calendar",
         "access_role" => "owner",

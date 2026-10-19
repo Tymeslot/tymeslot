@@ -36,12 +36,6 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
 
-  # Public write actions are rate-limited per client IP over a one-minute window,
-  # sized to a handful of legitimate submissions like the booking limiter.
-  @register_limit 5
-  @vote_limit 10
-  @rate_window_ms 60_000
-
   @type socket :: Phoenix.LiveView.Socket.t()
 
   @doc """
@@ -85,7 +79,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         poll_id: socket.assigns.poll.id
       })
 
-      with_rate_limit(socket, "poll_register:", @register_limit, fn socket ->
+      with_rate_limit(socket, :poll_register, fn socket ->
         {:noreply,
          put_flash(
            socket,
@@ -99,7 +93,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   end
 
   def handle_poll_event("cast_votes", %{"votes" => votes_map}, socket) when is_map(votes_map) do
-    with_rate_limit(socket, "poll_vote:", @vote_limit, fn socket ->
+    with_rate_limit(socket, :poll_vote, fn socket ->
       cast_votes_for(socket, votes_map)
     end)
   end
@@ -107,7 +101,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   def handle_poll_event(_event, _params, socket), do: {:noreply, socket}
 
   defp register_participant(socket, params) do
-    with_rate_limit(socket, "poll_register:", @register_limit, fn socket ->
+    with_rate_limit(socket, :poll_register, fn socket ->
       case verify_recaptcha(socket, params) do
         :ok -> do_register(socket, params)
         {:error, message} -> {:noreply, put_flash(socket, :error, message)}
@@ -126,7 +120,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
     token = Map.get(params, "g-recaptcha-response", "")
 
-    case RecaptchaHelpers.maybe_verify_booking_token(token, metadata) do
+    case RecaptchaHelpers.verify(:booking, token, metadata) do
       :ok -> :ok
       {:error, reason} -> {:error, recaptcha_error_message(reason)}
     end
@@ -174,14 +168,12 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   # --- Rate limiting ---
 
-  defp with_rate_limit(socket, prefix, limit, fun) do
-    bucket = prefix <> client_ip(socket)
-
-    case RateLimiter.check_rate_limit(bucket, limit, @rate_window_ms) do
+  defp with_rate_limit(socket, limit, fun) do
+    case RateLimiter.check(limit, client_ip(socket)) do
       :ok ->
         fun.(socket)
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         {:noreply,
          put_flash(
            socket,

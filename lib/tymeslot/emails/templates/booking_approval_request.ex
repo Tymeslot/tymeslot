@@ -22,6 +22,8 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.HostClock
+
   alias Tymeslot.Emails.Shared.{
     Buttons,
     Formatting,
@@ -35,9 +37,10 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     TimezoneHelper
   }
 
+  alias Tymeslot.Utils.DateTimeUtils
+
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
-  alias Tymeslot.Profiles
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -51,11 +54,11 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       when variant in [:request, :nudge] do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       kind = if rescheduled?(meeting), do: :reschedule, else: :booking
-      host_tz = host_timezone(meeting)
-      host_time = TimezoneHelper.convert_to_timezone(meeting.start_time, host_tz)
+      clock = HostClock.for_meeting(meeting, locale)
+      host_time = DateTimeUtils.convert_to_timezone(meeting.start_time, clock.timezone)
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
-      details = meeting_details(meeting, host_time, host_tz)
-      deadline_text = deadline_sentence(meeting, host_tz, locale)
+      details = meeting_details(meeting, host_time, clock)
+      deadline_text = deadline_sentence(meeting, clock, locale)
 
       mjml_content = """
       #{MeetingComponents.attendee_info_section(@intent, %{name: meeting.attendee_name, email: meeting.attendee_email})}
@@ -64,10 +67,10 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
       #{Text.section_title(requested_time_title(kind))}
       #{MeetingComponents.meeting_details_table(details, locale)}
-      #{previous_time_html(opts, host_tz, locale)}
+      #{previous_time_html(opts, clock, locale)}
 
       <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="6px 0 0 0">
-        #{Sanitise.sanitize_for_email(attendee_time_sentence(meeting, attendee_time, locale))}
+        #{Sanitise.sanitize_for_email(attendee_time_sentence(meeting, attendee_time, clock, locale))}
       </mj-text>
 
       #{MeetingComponents.custom_answers_section(meeting)}
@@ -98,9 +101,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       MjmlEmail.base_email()
       |> addressed_to_host(meeting)
       |> subject(
-        Sanitise.sanitize_for_header(
-          subject_line(variant, kind, meeting, Formatting.format_date_short(host_time, locale))
-        )
+        subject_line(variant, kind, meeting, Formatting.format_date_short(host_time, locale))
       )
       |> html_body(html_body)
       |> text_body(
@@ -108,7 +109,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
           {variant, kind},
           meeting,
           {details, attendee_time, deadline_text},
-          {urls, opts, host_tz},
+          {urls, opts, clock},
           locale
         )
       )
@@ -161,14 +162,14 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     )
   end
 
-  defp previous_time_text(opts, host_tz, locale) do
+  defp previous_time_text(opts, clock, locale) do
     case Keyword.get(opts, :previous_start_time) do
       %DateTime{} = previous ->
         dgettext("emails_booking_requests", "Previously scheduled for %{time}.",
           time:
             previous
-            |> TimezoneHelper.convert_to_timezone(host_tz)
-            |> Formatting.format_datetime(locale)
+            |> DateTimeUtils.convert_to_timezone(clock.timezone)
+            |> Formatting.format_datetime(locale, clock.time_format)
         )
 
       _unknown ->
@@ -176,8 +177,8 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     end
   end
 
-  defp previous_time_html(opts, host_tz, locale) do
-    case previous_time_text(opts, host_tz, locale) do
+  defp previous_time_html(opts, clock, locale) do
+    case previous_time_text(opts, clock, locale) do
       nil ->
         ""
 
@@ -230,18 +231,10 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     )
   end
 
-  # The host reads the time in their own zone, resolved from their profile
-  # (falling back to the platform default for an unregistered organiser) —
-  # the same resolution `CalendarEmails.resolve_owner_timezone/1` uses for
-  # every other host-addressed email. The invitee's own zone is rendered
-  # separately in `attendee_time_sentence/3`, so both are visible without
-  # arithmetic.
-  defp host_timezone(%Meeting{organizer_user_id: nil}), do: Profiles.get_default_timezone()
-
-  defp host_timezone(%Meeting{organizer_user_id: user_id}),
-    do: Profiles.get_user_timezone(user_id)
-
-  defp meeting_details(meeting, host_time, host_tz) do
+  # The host reads the time in their own zone and on their own clock
+  # (`HostClock`). The invitee's own zone is rendered separately in
+  # `attendee_time_sentence/4`, so both are visible without arithmetic.
+  defp meeting_details(meeting, host_time, clock) do
     %{
       date: host_time,
       start_time: host_time,
@@ -249,13 +242,14 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
-      timezone: host_tz,
+      timezone: clock.timezone,
+      time_format: clock.time_format,
       audience: :host
     }
   end
 
-  defp attendee_time_sentence(meeting, attendee_time, locale) do
-    formatted = Formatting.format_datetime(attendee_time, locale)
+  defp attendee_time_sentence(meeting, attendee_time, clock, locale) do
+    formatted = Formatting.format_datetime(attendee_time, locale, clock.time_format)
     zone = meeting.attendee_timezone || "UTC"
     time_with_zone = if zone != "UTC", do: "#{formatted} (#{zone})", else: formatted
 
@@ -265,17 +259,17 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     )
   end
 
-  defp deadline_sentence(%Meeting{approval_deadline_at: nil} = meeting, _host_tz, _locale) do
+  defp deadline_sentence(%Meeting{approval_deadline_at: nil} = meeting, _clock, _locale) do
     dgettext("emails_booking_requests", "The slot stays held for %{name} until you answer.",
       name: meeting.attendee_name
     )
   end
 
-  defp deadline_sentence(%Meeting{} = meeting, host_tz, locale) do
+  defp deadline_sentence(%Meeting{} = meeting, clock, locale) do
     deadline =
       meeting.approval_deadline_at
-      |> TimezoneHelper.convert_to_timezone(host_tz)
-      |> Formatting.format_datetime(locale)
+      |> DateTimeUtils.convert_to_timezone(clock.timezone)
+      |> Formatting.format_datetime(locale, clock.time_format)
 
     dgettext(
       "emails_booking_requests",
@@ -289,10 +283,10 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
          {variant, kind},
          meeting,
          {details, attendee_time, deadline_text},
-         {urls, opts, host_tz},
+         {urls, opts, clock},
          locale
        ) do
-    previous = previous_time_text(opts, host_tz, locale)
+    previous = previous_time_text(opts, clock, locale)
 
     """
     #{title(variant, kind)}
@@ -304,13 +298,13 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
     #{dgettext("emails_booking_requests", "REQUESTED TIME:")}
     #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails_booking_requests", "Time:")} #{Formatting.format_time(details.start_time, locale)}
+    #{dgettext("emails_booking_requests", "Time:")} #{Formatting.format_time(details.start_time, locale, details.time_format)}
     #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
     #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}#{TextBodyHelper.location_note_line(details)}
     #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
     #{previous || ""}
 
-    #{attendee_time_sentence(meeting, attendee_time, locale)}
+    #{attendee_time_sentence(meeting, attendee_time, clock, locale)}
     #{TextBodyHelper.format_custom_answers(meeting, locale)}
     #{deadline_text}
 

@@ -37,64 +37,8 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
               n <- integer(5..1440),
               rem(n, 5) != 0
             ) do
-        assert {:error, %{duration: "Duration must be divisible by 5 minutes"}} =
+        assert {:error, %{duration: "Duration must be a multiple of 5 minutes"}} =
                  InputValidation.validate_field(:duration, to_string(n), %{})
-      end
-    end
-  end
-
-  for fun <- [:validate_buffer_before_minutes, :validate_buffer_after_minutes] do
-    describe "#{fun}/2" do
-      property "valid buffer values (0..120) always pass" do
-        check all(n <- integer(0..120)) do
-          assert {:ok, ^n} = InputValidation.unquote(fun)(to_string(n))
-        end
-      end
-
-      property "values above 120 always fail" do
-        check all(n <- integer(121..1000)) do
-          assert {:error, _msg} = InputValidation.unquote(fun)(to_string(n))
-        end
-      end
-
-      property "negative values always fail" do
-        check all(n <- integer(-1000..-1)) do
-          assert {:error, _msg} = InputValidation.unquote(fun)(to_string(n))
-        end
-      end
-    end
-  end
-
-  describe "validate_advance_booking_days/1" do
-    property "valid days (1..365) always pass" do
-      check all(n <- integer(1..365)) do
-        assert {:ok, ^n} = InputValidation.validate_advance_booking_days(to_string(n))
-      end
-    end
-
-    property "0 or negative always fails" do
-      check all(n <- integer(-100..0)) do
-        assert {:error, _msg} = InputValidation.validate_advance_booking_days(to_string(n))
-      end
-    end
-
-    property "above 365 always fails" do
-      check all(n <- integer(366..1000)) do
-        assert {:error, _msg} = InputValidation.validate_advance_booking_days(to_string(n))
-      end
-    end
-  end
-
-  describe "validate_min_advance_hours/1" do
-    property "valid hours (0..168) always pass" do
-      check all(n <- integer(0..168)) do
-        assert {:ok, ^n} = InputValidation.validate_min_advance_hours(to_string(n))
-      end
-    end
-
-    property "above 168 always fails" do
-      check all(n <- integer(169..1000)) do
-        assert {:error, _msg} = InputValidation.validate_min_advance_hours(to_string(n))
       end
     end
   end

@@ -8,7 +8,6 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
   import Tymeslot.Factory
 
-  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
@@ -70,6 +69,18 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
       assert participant.meeting_id == meeting.id
       assert participant.email == "one@example.com"
       assert [_only] = ParticipantQueries.list_live_for_meeting(meeting.id)
+    end
+
+    test "refuses a slot without an organiser instead of raising", ctx do
+      attrs = %{
+        meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+        | organizer_user_id: nil
+      }
+
+      assert {:error, :organizer_required} =
+               GroupScheduling.book_seat(attrs, seat_request("one@example.com"))
+
+      assert Repo.all(MeetingSchema) == []
     end
 
     test "rejects a first booking whose guests alone exceed capacity", ctx do
@@ -213,36 +224,6 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
       assert joined.id == meeting.id
       assert length(Repo.all(MeetingSchema)) == 1
-    end
-  end
-
-  # The retry itself cannot be staged from a single process any more: the
-  # unique index and the conflict check now agree on which rows hold a slot,
-  # so only a genuinely concurrent first booker reaches the index. What is
-  # pinned here is the recognition the retry turns on.
-  describe "lost_first_booker_race?/1" do
-    test "recognises the slot's unique index" do
-      changeset =
-        %MeetingSchema{}
-        |> Changeset.change()
-        |> Changeset.add_error(:organizer_user_id, "has already been taken",
-          constraint: :unique,
-          constraint_name: "unique_confirmed_meeting_per_organizer_at_time"
-        )
-
-      assert GroupScheduling.lost_first_booker_race?(changeset)
-    end
-
-    test "ignores any other unique constraint" do
-      changeset =
-        %MeetingSchema{}
-        |> Changeset.change()
-        |> Changeset.add_error(:uid, "has already been taken",
-          constraint: :unique,
-          constraint_name: "meetings_uid_index"
-        )
-
-      refute GroupScheduling.lost_first_booker_race?(changeset)
     end
   end
 

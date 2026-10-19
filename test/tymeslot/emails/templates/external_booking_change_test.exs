@@ -3,6 +3,9 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
 
   @moduletag :emails
 
+  alias Ecto.UUID
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailService
   alias Tymeslot.Emails.Templates.ExternalBookingChange
   alias Tymeslot.Meetings.MeetingSchema
@@ -35,6 +38,26 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       email = ExternalBookingChange.render(meeting, "john@example.com", :deleted, "Europe/Berlin")
 
       assert email.subject =~ "Aktion erforderlich"
+    end
+
+    # The stored `view_url` named a public page that never existed. The
+    # host's link is built now, to their dashboard view of the booking, and
+    # by its id: the uid is the booker's capability.
+    test "links the host to the booking in their dashboard, not the stored link" do
+      id = UUID.generate()
+      uid = UUID.generate()
+      meeting = build_meeting(%{id: id, uid: uid})
+      link = MeetingLinks.host_view_url(id)
+
+      email = ExternalBookingChange.render(meeting, "john@example.com", :deleted, "UTC")
+
+      assert link =~ "/dashboard/meetings?meeting=#{id}"
+      assert email.text_body =~ link
+      assert email.html_body =~ "/dashboard/meetings?meeting=#{id}"
+      refute email.text_body =~ uid
+      refute email.html_body =~ uid
+      refute email.text_body =~ "tymeslot.example.com/meetings/abc"
+      refute email.html_body =~ "tymeslot.example.com/meetings/abc"
     end
 
     test "builds email for deleted discrepancy" do
@@ -158,6 +181,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
           "Europe/London"
         )
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end
@@ -176,5 +200,46 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
                  :deleted
                )
     end
+  end
+
+  describe "ExternalBookingChange.render_end_followed/4 says who was told" do
+    # A retry or a rejected address can leave some participants untold, so
+    # the line counts those reached rather than claiming "all".
+    test "the participants reached, by count" do
+      meeting = build_meeting(%{capacity: 4, end_time: ~U[2026-04-01 11:00:00Z]})
+
+      body = end_followed(meeting, %{attendees: ["Ann", "Bo"], guests: 0})
+
+      assert body =~ "We emailed 2 participants the new end time"
+      refute body =~ "all 2"
+    end
+
+    test "a guest reached when no attendee was is named as the guest, not as theirs" do
+      meeting = build_meeting(%{end_time: ~U[2026-04-01 11:00:00Z]})
+
+      body = end_followed(meeting, %{attendees: [], guests: 1})
+
+      assert body =~ "We emailed the guest the new end time"
+      refute body =~ "Their"
+    end
+
+    # Ukrainian uses its singular form for 21, 31 and so on, so that form
+    # carries the number too.
+    test "21 guests are counted in Ukrainian" do
+      host = insert(:user, locale: "uk")
+
+      meeting =
+        build_meeting(%{organizer_user_id: host.id, end_time: ~U[2026-04-01 11:00:00Z]})
+
+      body = end_followed(meeting, %{attendees: ["Ann"], guests: 21})
+
+      assert body =~ "21 гостю також надіслано лист."
+    end
+  end
+
+  defp end_followed(meeting, told) do
+    notice = Map.put(told, :previous_end_time, ~U[2026-04-01 10:30:00Z])
+
+    ExternalBookingChange.render_end_followed(meeting, "john@example.com", notice, "Etc/UTC").text_body
   end
 end

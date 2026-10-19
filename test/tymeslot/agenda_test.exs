@@ -91,6 +91,7 @@ defmodule Tymeslot.AgendaTest do
     defp group_booking(user, start, participants) do
       meeting =
         insert(:group_meeting,
+          organizer_user_id: user.id,
           organizer_email: user.email,
           title: "Workshop",
           capacity: 4,
@@ -515,6 +516,7 @@ defmodule Tymeslot.AgendaTest do
     insert(
       :meeting,
       [
+        organizer_user_id: user.id,
         organizer_email: user.email,
         start_time: start,
         end_time: DateTime.add(start, 3600, :second),

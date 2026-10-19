@@ -44,7 +44,6 @@ config :tymeslot,
 
   # Navigation: Where the logo/home link points to
   site_home_path: "/dashboard",
-  repo: Tymeslot.Repo,
   contact_url: nil,
   about_url: nil,
   features_url: nil,
@@ -67,6 +66,10 @@ config :tymeslot,
   trial_ending_reminder_template: nil,
   refund_processed_template: nil,
   dispute_alert_template: nil,
+  # Further templates `Tymeslot.Workers.SendConfiguredEmail` may send, as
+  # `%{config_key => [template_function, ...]}`; the payment templates above
+  # are always allowed.
+  extra_configured_email_templates: %{},
 
   # Theme protection plugs - empty by default (external layers can add restrictions)
   extra_theme_protection_plugs: [],
@@ -108,6 +111,86 @@ config :tymeslot,
   # succeed before a user is deleted. See delete_user/1.
   account_deletion_hook: nil,
 
+  # Days between a self-service deletion request and the deletion itself.
+  # With 0 the account is deleted as soon as the deletion job runs.
+  account_deletion_grace_days: 0,
+
+  # Whether the deletion dialog asks why the user is leaving. The answer is
+  # passed to the account-deletion hook; Core stores nothing.
+  collect_deletion_feedback: false,
+
+  # The Oban crontab, one definition for every environment that runs the cron
+  # service (dev and production; test does not). The environment's Oban
+  # config only switches the service on with `cron: []`, and
+  # Tymeslot.Infrastructure.ObanCron.extend/1 fills this in at startup.
+  oban_crontab: [
+    # Run every 30 minutes for Oban maintenance
+    {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
+    # Run hourly, ten minutes past: refresh calendar OAuth tokens expiring
+    # within two hours, ahead of the first API call to need them
+    {"10 * * * *", Tymeslot.Integrations.Calendar.TokenRefreshJob},
+    # Run every hour for queue health monitoring
+    {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
+    # Run hourly, five minutes past, so the hour it evaluates is complete:
+    # aggregate calendar integration health alerting
+    {"5 * * * *", Tymeslot.Workers.IntegrationHealthAlertWorker},
+    # Run daily at 02:45 UTC for video room recovery scan
+    {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
+    # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
+    # meetings whose video room was never cleaned up
+    {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+    # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
+    {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
+    # Run daily at 03:15 UTC
+    {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
+    # Run daily at 02:00 UTC to renew expiring webhook channels
+    {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
+    # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
+    {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
+    # Every 5 min (the shortest health-check backoff): enqueue due health checks
+    {"*/5 * * * *", Tymeslot.Workers.IntegrationHealthSweepWorker},
+    # Run daily at 04:00 UTC for cross-domain data retention pruning
+    {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
+    # Run every 6 hours to detect silent/dead webhook channels
+    {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
+    # Run daily at 03:30 UTC to prune old/inactive calendar event cache
+    {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+    # Run daily at 05:30 UTC to flag Zoom grants missing a scope Tymeslot needs
+    {"30 5 * * *", Tymeslot.Workers.ZoomScopeAuditWorker},
+    # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
+    {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
+    # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
+    {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
+    # Run daily at 04:30 UTC to cross-check booking analytics against bookings
+    {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
+    # Run every 15 min to release approval requests whose deadline passed
+    # and whose per-meeting expiry job never fired
+    {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
+    # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
+    {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
+    # Run daily at 07:00 UTC to email the digest of info-severity admin alerts
+    {"0 7 * * *", Tymeslot.Workers.AdminAlertDigestWorker},
+    # Run daily at 04:20 UTC to queue any account deletion that is overdue
+    # because its own job was lost or gave up
+    {"20 4 * * *", Tymeslot.Workers.AccountDeletionSweepWorker}
+  ],
+
+  # Additional Oban crontab entries - none by default. An external layer adds
+  # its periodic workers here; they are appended to the crontab at startup
+  # (see Tymeslot.Infrastructure.ObanCron.extend/1).
+  oban_additional_crontab: [],
+
+  # Payment-event handler - nil by default. An external layer can provide a
+  # module implementing Tymeslot.Payments.Behaviours.PaymentEventHandler to
+  # receive subscription, dispute, refund and trial events durably: an error
+  # from it makes Stripe redeliver the webhook.
+  payment_event_handler: nil,
+
+  # Registration hook - nil by default. An external layer can provide a module
+  # implementing Tymeslot.Auth.Behaviours.UserRegisteredHook, run from a
+  # retried Oban job for every completed registration.
+  user_registered_hook: nil,
+
   # Admin alerts — disabled by default. Self-hosters can enable via the
   # ADMIN_ALERTS_ENABLED env var (set true) plus a valid ADMIN_ALERT_EMAIL.
   # A downstream overlay may override admin_alerts_enabled in its own config.
@@ -147,9 +230,10 @@ config :tymeslot, :feature_assigns,
 # When an action is listed here, the corresponding assign must be true for the
 # section to render; otherwise a placeholder is shown. SaaS can extend this map
 # without modifying Core by setting :dashboard_feature_gates in its own config.
-config :tymeslot, :dashboard_feature_gates, %{
-  automation: :automations_allowed
-}
+# Automation is deliberately not gated here: the section reads
+# `automations_allowed` itself, so that existing integrations stay visible
+# (paused) while the plan doesn't include automations.
+config :tymeslot, :dashboard_feature_gates, %{}
 
 # Feature Access Checker - Default to allowing all features
 # SaaS can provide a custom implementation that checks subscription status
@@ -204,7 +288,10 @@ config :tymeslot, :integration_health_alerting,
   # alerting: a few a day is ordinary OAuth churn, a burst in one hour is not
   reauth_flags_threshold: 10,
   # Integrations paused by one daily auto-pause run before alerting
-  auto_pause_threshold: 1
+  auto_pause_threshold: 1,
+  # Consecutive windows under the threshold before a signal counts as
+  # recovered; a shorter dip belongs to the incident. At least 1
+  recover_after: 2
 
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
@@ -472,13 +559,6 @@ config :tymeslot, :calendar_providers, %{
   debug: [enabled: false]
 }
 
-# Integration locking configuration
-config :tymeslot, :integration_locks,
-  default_timeout: 90_000,
-  google: 60_000,
-  outlook: 60_000,
-  teams: 120_000
-
 # Pin the Stripe API version instead of inheriting stripity_stripe's built-in
 # default, which travels with the library: upgrading the dependency would move
 # the wire contract without any change here. This matches the version the
@@ -506,15 +586,6 @@ config :tymeslot, :payment_rate_limits,
 config :tymeslot, :payment_amount_limits,
   min_cents: 50,
   max_cents: 1_000_000_00
-
-# Payment retry configuration
-config :tymeslot, :payment_retry,
-  # Maximum number of retry attempts for transient failures
-  max_attempts: 3,
-  # Base delay between retries in milliseconds
-  base_delay_ms: 1000,
-  # Multiplier for exponential backoff (1 = linear backoff)
-  backoff_multiplier: 1
 
 # Refund handling configuration. The revocation threshold is read by Core's
 # refund webhook handler (Tymeslot.Payments.Webhooks.RefundHandler), so it stays

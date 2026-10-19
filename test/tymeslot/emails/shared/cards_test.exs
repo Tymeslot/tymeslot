@@ -1,8 +1,11 @@
 defmodule Tymeslot.Emails.Shared.CardsTest do
-  use Tymeslot.DataCase, async: true
+  # Not async: asserts the absence of a log event, and the capture handler is
+  # global.
+  use Tymeslot.DataCase, async: false
   @moduletag :emails
 
   alias Tymeslot.Emails.Shared.Cards
+  alias Tymeslot.Test.LogCapture
 
   describe "contact_details_card/2" do
     test "sanitizes row values by default" do
@@ -68,20 +71,48 @@ defmodule Tymeslot.Emails.Shared.CardsTest do
   end
 
   describe "message_content_card/2" do
-    test "sanitizes message content" do
+    test "escapes markup in the message" do
       html = Cards.message_content_card("Message", "<script>alert('xss')</script>Hello")
 
       refute html =~ "<script>"
-      refute html =~ "&lt;script&gt;"
-      assert html =~ "alert('xss')Hello"
+      assert html =~ "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;Hello"
+    end
+
+    test "escapes links and unclosed tag fragments instead of rendering them" do
+      html =
+        Cards.message_content_card(
+          "Message",
+          ~s(See <a href="https://x.example">here</a> and <b style=color:red)
+        )
+
+      refute html =~ "<a href"
+      refute html =~ "<b style"
+      assert html =~ "&lt;a href=&quot;https://x.example&quot;&gt;here&lt;/a&gt;"
+      assert html =~ "&lt;b style=color:red"
+    end
+
+    test "keeps the text after a double dash" do
+      html = Cards.message_content_card("Message", "Hello -- the rest of the message")
+
+      assert html =~ "Hello -- the rest of the message"
     end
 
     test "preserves line breaks" do
       html = Cards.message_content_card("Message", "Line 1\nLine 2")
 
-      assert html =~ "<br>"
-      assert html =~ "Line 1"
-      assert html =~ "Line 2"
+      assert html =~ "Line 1<br>Line 2"
+    end
+
+    test "logs no security event when rendering a message" do
+      LogCapture.attach()
+
+      html = Cards.message_content_card("Message", "Path ../docs -- see 0x1F")
+
+      assert html =~ "Path ../docs -- see 0x1F"
+
+      assert Enum.filter(LogCapture.drain(), fn %{msg: msg} ->
+               LogCapture.message_text(msg) =~ "Suspicious input"
+             end) == []
     end
 
     test "sanitizes title" do

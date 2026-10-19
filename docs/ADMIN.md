@@ -32,6 +32,11 @@ There is one canonical interface, exposed two ways:
 Symmetric commands exist for `demote_admin`. The user must already exist; the
 commands do not create accounts.
 
+Use `rpc`, which runs the command on the running server, never `eval`. Under
+`eval` these commands (`promote_admin`, `demote_admin`, `delete_account`,
+`list_admins`) refuse with "needs the running node", because running them
+would start a second copy of the application beside the live one.
+
 The remainder of this document shows the exact shell incantation per
 deployment target.
 

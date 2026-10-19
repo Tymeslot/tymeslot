@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.QueuedWrite
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
@@ -139,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   """
   @spec series_saving?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
   def series_saving?(socket, event),
-    do: WriteQueue.series_saving?(socket.assigns.event_writes, event)
+    do: CalendarGrid.series_saving?(socket.assigns.event_writes, event)
 
   @doc """
   Whether a write to another event of the series `event` belongs to is
@@ -150,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   """
   @spec series_busy?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
   def series_busy?(socket, event),
-    do: WriteQueue.series_busy?(socket.assigns.event_writes, event)
+    do: CalendarGrid.series_busy?(socket.assigns.event_writes, event)
 
   @doc """
   The queue the grid starts from when it mounts, so that a new edit of an

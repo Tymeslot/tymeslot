@@ -5,6 +5,7 @@ defmodule Tymeslot.Availability.TimeSlots do
   actually offers is decided by `Tymeslot.Availability.SlotGrid`.
   """
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Duration
 
   @doc """
   The grid of start instants for one window.
@@ -68,21 +69,16 @@ defmodule Tymeslot.Availability.TimeSlots do
   end
 
   @doc """
-  Parses a duration string into minutes.
+  Parses a duration string into minutes, falling back to 30 for anything
+  that is not a positive length (`Duration.parse_minutes/1`).
   """
-  @spec parse_duration(String.t()) :: integer()
+  @spec parse_duration(String.t() | integer()) :: integer()
   def parse_duration(duration) when is_integer(duration), do: duration
 
   def parse_duration(duration) when is_binary(duration) do
-    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, duration) do
-      [_first, minutes_str] ->
-        case Integer.parse(minutes_str) do
-          {minutes, ""} when minutes > 0 -> minutes
-          _other -> 30
-        end
-
-      _other ->
-        30
+    case Duration.parse_minutes(duration) do
+      {:ok, minutes} when minutes > 0 -> minutes
+      _not_a_length -> 30
     end
   end
 

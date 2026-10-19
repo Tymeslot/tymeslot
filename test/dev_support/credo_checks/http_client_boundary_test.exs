@@ -134,8 +134,8 @@ defmodule CredoChecks.HttpClientBoundaryTest do
       |> refute_issues()
     end
 
-    test "accepts a mix task calling Req.get/1" do
-      """
+    test "accepts a mix task calling Req.get/1, in lib/mix/tasks or the dev tooling" do
+      source = """
       defmodule Mix.Tasks.Tymeslot.SyncTlds do
         use Mix.Task
 
@@ -144,9 +144,16 @@ defmodule CredoChecks.HttpClientBoundaryTest do
         end
       end
       """
-      |> to_source_file("lib/mix/tasks/tymeslot.sync_tlds.ex")
-      |> run_check(HttpClientBoundary)
-      |> refute_issues()
+
+      for path <- [
+            "dev_support/tooling/mix/tasks/tymeslot.sync_tlds.ex",
+            "lib/mix/tasks/tymeslot.og_images.ex"
+          ] do
+        source
+        |> to_source_file(path)
+        |> run_check(HttpClientBoundary)
+        |> refute_issues()
+      end
     end
 
     test "accepts a normal Config.http_client_module().request(...) call site" do

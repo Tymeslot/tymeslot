@@ -3,6 +3,8 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
   @moduletag :infrastructure
 
+  import Tymeslot.AdminAlertsCaptureHelpers
+
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Test.LogCapture
 
@@ -115,6 +117,31 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
     end
   end
 
+  describe "time_operation/4" do
+    test "emits under the prefix it is given", %{handler_id: handler_id} do
+      parent = self()
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :video, :delete_room],
+        fn event, _measurements, metadata, _config ->
+          send(parent, {:telemetry, event, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      assert :ok =
+               Metrics.time_operation(:delete_room, %{provider: :zoom}, fn -> :ok end,
+                 prefix: [:tymeslot, :video]
+               )
+
+      assert_received {:telemetry, [:tymeslot, :video, :delete_room],
+                       %{provider: :zoom, status: :success}}
+    end
+  end
+
   describe "time_operation/3 error metadata" do
     setup %{handler_id: handler_id} do
       parent = self()
@@ -178,6 +205,8 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
   end
 
   describe "track_circuit_breaker_state/3" do
+    setup :capture_admin_alerts
+
     test "emits state change event", %{handler_id: handler_id} do
       ref = make_ref()
       parent = self()
@@ -197,6 +226,11 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
       assert_receive {:telemetry, ^ref,
                       %{breaker: :my_breaker, old_state: :closed, new_state: :open}}
+
+      # The application's own handler raises an operator alert for the opened
+      # breaker from a task; it is waited for here so it cannot log into a
+      # later test.
+      assert_receive {:send_alert, :circuit_breaker_open, %{breaker: "my_breaker"}}
     end
   end
 
@@ -247,6 +281,11 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
         end
       end)
 
+      # The handlers are the application's own, attached at boot: leave them
+      # attached however this test ends, or every later test runs without
+      # them (no breaker-open alert, for one).
+      on_exit(fn -> Metrics.setup_handlers() end)
+
       assert :ok = Metrics.setup_handlers()
 
       # :telemetry.execute/3 succeeds even with zero handlers attached, so the
@@ -254,15 +293,6 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       Enum.each(expected_events, fn event ->
         assert [%{id: handler_id}] = :telemetry.list_handlers(event)
         assert handler_id == "#{inspect(event)}-handler"
-      end)
-
-      # Clean up
-      Enum.each(expected_events, fn event ->
-        try do
-          :telemetry.detach("#{inspect(event)}-handler")
-        rescue
-          _error -> :ok
-        end
       end)
     end
   end

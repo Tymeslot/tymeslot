@@ -3,7 +3,6 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
   @moduletag :emails
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.CalendarSyncError
   alias Tymeslot.Profiles
@@ -11,7 +10,28 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
   import Tymeslot.Factory
   import Tymeslot.TestFixtures
 
-  describe "CalendarSyncError.render_both/2 HTML body" do
+  describe "CalendarSyncError.render/2 envelope" do
+    test "goes to the organiser, under the sync error subject" do
+      meeting = insert(:meeting, organizer_name: "Sam Host", organizer_email: "sam@example.com")
+
+      email = CalendarSyncError.render(meeting, :network_error)
+
+      assert email.to == [{"Sam Host", "sam@example.com"}]
+      assert email.subject == "⚠️ Calendar Sync Error - Manual Action Required"
+    end
+
+    test "falls back to the instance's sender address and a generic name" do
+      meeting = build(:meeting, organizer_name: nil, organizer_email: nil)
+
+      email = CalendarSyncError.render(meeting, :network_error)
+
+      assert email.to == [
+               {"Calendar Owner", Application.get_env(:tymeslot, :email)[:from_email]}
+             ]
+    end
+  end
+
+  describe "CalendarSyncError.render/2 HTML body" do
     test "generates valid HTML output" do
       meeting = insert(:meeting)
       error_reason = :network_error
@@ -64,7 +84,8 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       owner_local = DateTime.shift_zone!(meeting.start_time, "America/New_York")
 
-      assert html =~ Formatting.format_time(owner_local, "en")
+      # On the host's clock: one who never chose takes English's 12-hour one.
+      assert html =~ Formatting.format_time(owner_local, "en", "12h")
       refute html =~ Formatting.format_time(meeting.start_time, "en")
     end
 
@@ -113,7 +134,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     end
   end
 
-  describe "CalendarSyncError.render_both/2 text body" do
+  describe "CalendarSyncError.render/2 text body" do
     test "returns plain text with meeting and error details" do
       meeting = insert(:meeting, location: "Conference Room A", duration: 60)
 
@@ -132,11 +153,10 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       {:ok, user} = UserQueries.update_user_locale(user, "de")
       meeting = insert(:meeting, organizer_user_id: user.id, duration: 60)
 
-      text =
-        RecipientLocale.with_user_id_locale(user.id, fn ->
-          text_body(meeting, :network_error)
-        end)
+      email = CalendarSyncError.render(meeting, :network_error)
+      text = email.text_body
 
+      assert email.subject == "⚠️ Kalender-Synchronisierungsfehler – Manuelle Aktion erforderlich"
       assert text =~ "Kalender-Synchronisierungsfehler"
       assert text =~ "TERMIN-DETAILS:"
       assert text =~ "1 Stunde"
@@ -157,7 +177,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     end
   end
 
-  describe "render_both/2 HTML body security" do
+  describe "render/2 HTML body security" do
     test "HTML body handles XML-hostile error reason without crashing" do
       meeting = insert(:meeting)
       html = html_body(meeting, "<CalDAV:error> tag not closed & invalid")
@@ -177,7 +197,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     end
   end
 
-  describe "render_both/2 text body security" do
+  describe "render/2 text body security" do
     # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
     # characters. The security properties that matter are: the function never crashes
     # on adversarial input and the expected structural content is always present.
@@ -201,8 +221,8 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
   end
 
   defp html_body(meeting, error_reason),
-    do: meeting |> CalendarSyncError.render_both(error_reason) |> elem(0)
+    do: CalendarSyncError.render(meeting, error_reason).html_body
 
   defp text_body(meeting, error_reason),
-    do: meeting |> CalendarSyncError.render_both(error_reason) |> elem(1)
+    do: CalendarSyncError.render(meeting, error_reason).text_body
 end

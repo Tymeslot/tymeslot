@@ -29,74 +29,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
     :ok
   end
 
-  describe "detect_provider_from_url/1 (private but tested via valid_meeting_url? and extract_room_id)" do
-    test "detects mirotalk" do
-      assert ProviderAdapter.valid_meeting_url?("https://mirotalk.com/room")
-    end
-
-    test "detects a self-hosted mirotalk instance by the join path its URLs carry" do
-      assert ProviderAdapter.valid_meeting_url?("https://talk.example.com/join/abc-def-123")
-
-      assert ProviderAdapter.extract_room_id("https://talk.example.com/join/abc-def-123") ==
-               "abc-def-123"
-    end
-
-    test "leaves links on a host merely containing \"talk.\" to their own provider" do
-      # Nextcloud Talk and anything else on such a host used to be claimed by
-      # MiroTalk, which then parsed a room id out of a URL it knows nothing
-      # about.
-      refute ProviderAdapter.valid_meeting_url?("https://talk.example.org/call/abc123")
-      refute ProviderAdapter.valid_meeting_url?("https://cloud.mytalk.de/s/abc123")
-
-      assert ProviderAdapter.extract_room_id("https://talk.example.org/call/abc123") == nil
-      assert ProviderAdapter.extract_room_id("https://cloud.mytalk.de/s/abc123") == nil
-    end
-
-    test "detects google_meet" do
-      assert ProviderAdapter.valid_meeting_url?("https://meet.google.com/abc-defg-hij")
-    end
-
-    test "detects teams" do
-      assert ProviderAdapter.valid_meeting_url?("https://teams.microsoft.com/l/meetup-join/abc")
-    end
-
-    test "detects zoom" do
-      assert ProviderAdapter.valid_meeting_url?("https://zoom.us/j/12345678901")
-    end
-
-    test "returns false for unknown provider" do
-      refute ProviderAdapter.valid_meeting_url?("https://unknown.com/room")
-    end
-  end
-
-  describe "extract_room_id/1" do
-    test "extracts from google meet" do
-      assert ProviderAdapter.extract_room_id("https://meet.google.com/abc-defg-hij") ==
-               "abc-defg-hij"
-    end
-
-    test "extracts from mirotalk" do
-      assert ProviderAdapter.extract_room_id("https://mirotalk.com/join/room123") == "room123"
-    end
-
-    test "returns nil for unknown provider" do
-      assert ProviderAdapter.extract_room_id("https://unknown.com/room") == nil
-    end
-  end
-
   describe "extract_room_id/2" do
-    # A custom video link is whatever the organiser pasted, and "/join/" is a
-    # path common enough (Whereby, Jitsi, Daily) for MiroTalk's URL patterns to
-    # claim links belonging to other services. MiroTalk is listed first in
-    # `ProviderConfig`, so the URL-only function hands back its last path
-    # segment; the id the custom provider actually minted for that link is the
-    # digest it derives from the whole URL.
+    # A custom video link is whatever the organiser pasted, so "/join/" paths
+    # (Whereby, Jitsi, Daily) are common; the id the custom provider mints for
+    # such a link is the digest it derives from the whole URL, not the last
+    # path segment.
     @colliding_url "https://whereby.com/join/team-standup"
     @custom_room_id "176c39fdfe37cdea"
 
-    test "parses by the named provider's rules, not by the first provider to claim the URL" do
-      assert ProviderAdapter.extract_room_id(@colliding_url) == "team-standup"
+    test "parses by the named provider's rules" do
       assert ProviderAdapter.extract_room_id(@colliding_url, :custom) == @custom_room_id
+      assert ProviderAdapter.extract_room_id(@colliding_url, :mirotalk) == "team-standup"
     end
 
     test "accepts the string form a persisted integration carries" do
@@ -182,6 +125,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
       assert :ok = ProviderAdapter.delete_meeting_room(:zoom, "987654321", config)
     end
 
+    # Each provider words "not found" its own way; a delete only needs the
+    # room gone, so callers never handle it.
+    test "counts a room the provider no longer has as deleted" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert :ok =
+               ProviderAdapter.delete_meeting_room(:nextcloud_talk, "abc123xy", %{
+                 base_url: "https://cloud.example.com",
+                 client_id: "organiser",
+                 client_secret: "Abcde-Fghij-Klmno-Pqrst-Uvwxy",
+                 needs_reauth: false
+               })
+    end
+
     test "returns :ok via no-op fallback for providers without the callback (MiroTalk)" do
       assert :ok = ProviderAdapter.delete_meeting_room(:mirotalk, "room123", %{})
     end
@@ -234,21 +193,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
 
       assert {:ok, url} = ProviderAdapter.shared_join_url(context, DateTime.utc_now())
       assert url =~ "jwt="
-    end
-  end
-
-  describe "generate_meeting_metadata/1" do
-    test "merges base metadata with provider info" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{room_id: "r1", meeting_url: "u1"}
-      }
-
-      metadata = ProviderAdapter.generate_meeting_metadata(meeting_context)
-      assert metadata.provider_type == :mirotalk
-      assert metadata.provider_name == "MiroTalk P2P"
-      assert metadata.meeting_id == "r1"
     end
   end
 end

@@ -13,8 +13,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Money
 
-  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2, currency_symbol: 1]
+  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
 
   attr :payment, :map, required: true
   attr :submitting, :boolean, required: true
@@ -103,13 +104,18 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
             name="amount"
             label={dgettext("dashboard_payments", "Partial amount")}
             min="0.01"
-            max={MeetingPayments.refundable_remaining_cents(@payment) / 100}
+            max={
+              Money.to_major_string(
+                MeetingPayments.refundable_remaining_cents(@payment),
+                @payment.currency
+              )
+            }
             step="0.01"
             placeholder="0.00"
           >
             <:leading_icon>
               <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">
-                {currency_symbol(@payment.currency)}
+                {Money.symbol(@payment.currency)}
               </span>
             </:leading_icon>
           </.input>

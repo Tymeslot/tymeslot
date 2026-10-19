@@ -12,7 +12,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   ## Missing paths
 
   A 404 on a calendar path is ambiguous, so the two cases are separated
-  deliberately. The *booking* calendar (the first configured path) disappearing
+  deliberately. The *booking* calendar (the one `CalendarPathResolver` resolves
+  bookings to) disappearing
   needs the account owner to pick a different one, so it surfaces as
   `:booking_calendar_missing`. Any other path disappearing is routine — the
   owner deleted a calendar they had merely subscribed to — and is handled by
@@ -26,13 +27,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.State
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
-
-  # How far back and forward to fetch events on a full sync.
-  # Centralised in ProviderConfig so all providers use the same window.
-  @sync_window_past_days ProviderConfig.sync_window_past_days()
-  @sync_window_future_days ProviderConfig.sync_window_future_days()
+  alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
+  alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Utils.UriUtils
 
   @typedoc """
   Outcome of a fetch. `:booking_calendar_missing` and `:unauthorized` are
@@ -95,8 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   @spec fetch_path(struct(), map(), String.t(), keyword()) :: result() | :not_found
   def fetch_path(integration, client, calendar_path, opts) do
     range_now = DateTime.utc_now()
-    start_time = DateTime.add(range_now, -@sync_window_past_days, :day)
-    end_time = DateTime.add(range_now, @sync_window_future_days, :day)
+    {start_time, end_time} = Sync.window(range_now)
 
     case CalDAVEvents.fetch_events(client, calendar_path, start_time, end_time) do
       {:ok, events} ->
@@ -161,8 +158,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
 
   defp handle_missing_paths(_integration, _client, [], status), do: status
 
-  defp handle_missing_paths(integration, client, missing, status) do
-    if List.first(client.calendar_paths) in missing do
+  # The booking calendar is the one the integration resolves bookings to,
+  # not the first path: a selected read-only share can come first. It is
+  # never deselected, since the page would then offer times whose bookings
+  # fail to write; the owner is asked to pick another instead.
+  defp handle_missing_paths(integration, _client, missing, status) do
+    booking_path = CalendarPathResolver.resolve(integration)
+
+    if Enum.any?(missing, &UriUtils.uri_safe_match?(&1, booking_path)) do
       {:error, :booking_calendar_missing}
     else
       remove_missing_paths(integration, missing)
@@ -176,14 +179,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
       missing_count: length(missing)
     )
 
-    case CalendarIntegrationQueries.remove_calendar_paths(integration, missing) do
+    case Selection.remove_missing_paths(integration, missing) do
       {:ok, _updated} ->
         :ok
 
-      {:error, changeset} ->
+      {:error, :not_found} ->
+        Logger.info("Integration gone before missing CalDAV calendar paths could be removed",
+          calendar_integration_id: integration.id
+        )
+
+        :ok
+
+      # Nothing was removed, so the next sync finds them missing again and
+      # tries once more.
+      {:error, reason} ->
         Logger.error("Failed to remove missing CalDAV calendar paths",
           calendar_integration_id: integration.id,
-          error: LogFormat.reason(changeset.errors)
+          error: LogFormat.reason(reason)
         )
 
         :ok

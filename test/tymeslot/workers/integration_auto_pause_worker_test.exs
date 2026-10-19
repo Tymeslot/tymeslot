@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorkerTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationAutoPauseWorker
 
@@ -125,6 +126,43 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorkerTest do
 
       {:ok, still_active} = CalendarIntegrationQueries.get(integration.id)
       assert still_active.is_active == true
+    end
+  end
+
+  # The paused calendar takes no bookings, so it cannot stay the primary
+  # while the user has another one that can.
+  describe "perform/1 — pausing the primary calendar" do
+    test "hands the primary to the user's other bookable calendar", %{user: user} do
+      primary = insert(:calendar_integration, user: user, is_active: true)
+      other = insert(:calendar_integration, user: user, is_active: true)
+      {:ok, _profile} = ProfileQueries.set_primary_calendar_integration(user.id, primary.id)
+
+      insert_unhealthy_health_row(user, :calendar, primary.id,
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -15 * 24 * 3600, :second),
+        consecutive_hard_failures: 5
+      )
+
+      assert :ok = IntegrationAutoPauseWorker.perform(%Oban.Job{})
+
+      assert {:ok, %{is_active: false}} = CalendarIntegrationQueries.get(primary.id)
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == other.id
+    end
+
+    test "clears the primary when no other calendar can take bookings", %{user: user} do
+      primary = insert(:calendar_integration, user: user, is_active: true)
+      _paused = insert(:calendar_integration, user: user, is_active: false)
+      {:ok, _profile} = ProfileQueries.set_primary_calendar_integration(user.id, primary.id)
+
+      insert_unhealthy_health_row(user, :calendar, primary.id,
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -15 * 24 * 3600, :second),
+        consecutive_hard_failures: 5
+      )
+
+      assert :ok = IntegrationAutoPauseWorker.perform(%Oban.Job{})
+
+      assert {:ok, %{primary_calendar_integration_id: nil}} =
+               ProfileQueries.get_by_user_id(user.id)
     end
   end
 

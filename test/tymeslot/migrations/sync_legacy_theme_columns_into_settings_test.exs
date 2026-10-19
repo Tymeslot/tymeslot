@@ -173,9 +173,13 @@ defmodule Tymeslot.Migrations.SyncLegacyThemeColumnsIntoSettingsTest do
     customization = insert(:theme_customization, theme_id: "1", color_scheme: "ocean")
 
     {:ok, updated} =
-      ThemeCustomizations.update_theme_customization(customization, %{
-        "color_scheme" => "forest"
-      })
+      ThemeCustomizations.upsert_theme_customization(
+        customization.profile_id,
+        customization.theme_id,
+        %{
+          "color_scheme" => "forest"
+        }
+      )
 
     assert updated.settings["color_scheme"] == "forest"
     assert settings_by_id(customization.id) == updated.settings

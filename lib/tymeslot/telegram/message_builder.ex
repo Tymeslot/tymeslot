@@ -9,9 +9,20 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   """
 
   alias Phoenix.HTML
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Notifications.EventTypes
+
+  # Matched by name rather than wire literal; any other name (a job queued
+  # before an event was renamed) falls through to the generic clause.
+  @created EventTypes.to_event_type(:meeting_created)
+  @cancelled EventTypes.to_event_type(:meeting_cancelled)
+  @rescheduled EventTypes.to_event_type(:meeting_rescheduled)
+  @requested EventTypes.to_event_type(:meeting_requested)
+  @declined EventTypes.to_event_type(:meeting_declined)
+  @request_expired EventTypes.to_event_type(:meeting_request_expired)
 
   @spec build_message(String.t(), %{atom() => term()}, String.t()) :: String.t()
-  def build_message("meeting.created", meeting, timezone) do
+  def build_message(@created, meeting, timezone) do
     String.trim("""
     #{emoji(:calendar)} <b>New Meeting</b>
 
@@ -23,7 +34,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message("meeting.cancelled", meeting, timezone) do
+  def build_message(@cancelled, meeting, timezone) do
     String.trim("""
     #{emoji(:cancel)} <b>Meeting Cancelled</b>
 
@@ -34,7 +45,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message("meeting.rescheduled", meeting, timezone) do
+  def build_message(@rescheduled, meeting, timezone) do
     String.trim("""
     #{emoji(:reschedule)} <b>Meeting Rescheduled</b>
 
@@ -42,6 +53,40 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     #{emoji(:clock)} #{format_time(meeting, timezone)}
     #{emoji(:email)} #{esc(meeting.attendee_email)}
     #{video_line(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@requested, meeting, timezone) do
+    String.trim("""
+    #{emoji(:calendar)} <b>New Booking Request</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> asked for <i>#{esc(meeting_title(meeting))}</i>
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
+    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    #{deadline_line(meeting, timezone)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@declined, meeting, timezone) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Booking Request Declined</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> — <i>#{esc(meeting_title(meeting))}</i>
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
+    #{decline_line(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@request_expired, meeting, timezone) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Booking Request Expired</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> — <i>#{esc(meeting_title(meeting))}</i>
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
+    Nobody responded before the deadline, so the slot was released.
     #{link_line(meeting)}\
     """)
   end
@@ -141,16 +186,36 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     end
   end
 
-  defp link_line(meeting) do
-    uid = Map.get(meeting, :uid)
+  defp deadline_line(meeting, timezone) do
+    case Map.get(meeting, :approval_deadline_at) do
+      %DateTime{} = deadline ->
+        local =
+          case DateTime.shift_zone(deadline, timezone) do
+            {:ok, dt} -> dt
+            _error -> deadline
+          end
 
-    if uid do
-      endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)
-      host = System.get_env("PHX_HOST") || get_in(endpoint_config, [:url, :host]) || "localhost"
-      scheme = get_in(endpoint_config, [:url, :scheme]) || "https"
-      "\n\n<a href=\"#{scheme}://#{host}/dashboard/meetings\">View in dashboard</a>"
-    else
-      ""
+        "\n#{emoji(:note)} Respond by #{Calendar.strftime(local, "%a %d %b %Y, %H:%M")}"
+
+      _none ->
+        ""
+    end
+  end
+
+  defp decline_line(meeting) do
+    case Map.get(meeting, :decline_reason) do
+      reason when is_binary(reason) and reason != "" -> "\n#{emoji(:note)} Reason: #{esc(reason)}"
+      _none -> ""
+    end
+  end
+
+  defp link_line(meeting) do
+    case Map.get(meeting, :id) do
+      id when is_binary(id) ->
+        "\n\n<a href=\"#{esc(MeetingLinks.host_view_url(id))}\">View in dashboard</a>"
+
+      _none ->
+        ""
     end
   end
 

@@ -106,16 +106,16 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   end
 
   test "the registration broadcast still fires so downstream listeners record the signup" do
-    # SaaS' LegalAcceptanceListener records the accepted terms off this event;
-    # skipping it because an email could not be sent loses that record.
+    # Subscribers count sign-ups off this event; skipping it because an
+    # email could not be sent would lose the sign-up for them.
     :ok = Auth.subscribe_to_user_registrations()
     exhaust_verification_allowance()
 
-    assert {:ok, _user, _message} =
+    assert {:ok, user, _message} =
              Registration.register_user(signup_params("broadcast@example.com"), conn())
 
-    assert_receive {:user_registered, %{user: user}}
-    assert user.email == "broadcast@example.com"
+    user_id = user.id
+    assert_receive {:user_registered, %{user_id: ^user_id}}
   end
 
   test "a signup within the allowance is unaffected" do

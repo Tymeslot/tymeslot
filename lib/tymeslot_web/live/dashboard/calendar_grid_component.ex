@@ -60,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shortcuts
@@ -84,8 +85,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     "toggle_event_all_day" => :handle_toggle_event_all_day,
     "update_event_all_day_range" => :handle_update_event_all_day_range,
     "add_event_reminder" => :handle_add_event_reminder,
-    "remove_event_reminder" => :handle_remove_event_reminder,
-    "update_event_recurrence" => :handle_update_event_recurrence
+    "remove_event_reminder" => :handle_remove_event_reminder
+  }
+
+  # The repeat editor in the event details, delegated to `RecurrenceEdit`.
+  @recurrence_edit_events %{
+    "update_event_recurrence" => :handle_update_event_recurrence,
+    "save_event_recurrence" => :handle_save_event_recurrence,
+    "discard_event_recurrence" => :handle_discard_event_recurrence
   }
 
   # The `.ics` import modal's events, each delegated to `IcsImport`.
@@ -228,6 +235,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when is_map_key(@inline_edit_events, event),
     do: apply(InlineEdit, Map.fetch!(@inline_edit_events, event), [params, socket])
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when is_map_key(@recurrence_edit_events, event),
+    do: apply(RecurrenceEdit, Map.fetch!(@recurrence_edit_events, event), [params, socket])
 
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when is_map_key(@ics_import_events, event),
@@ -418,12 +429,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   def handle_event("update_create_recurrence", params, socket),
     do: EventCrud.handle_update_create_recurrence(params, socket)
 
-  # Meeting mode's reminder picker. One clause for its five events: they all
+  # Meeting mode's reminder picker. One clause for its six events: they all
   # act on the same picker state, which the handler keeps inside the form.
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket)
       when event in ~w(meeting_add_quick_reminder meeting_add_reminder meeting_remove_reminder
-                       meeting_toggle_custom_reminder meeting_update_reminder_input),
+                       meeting_toggle_custom_reminder meeting_update_reminder_input
+                       meeting_commit_custom_reminder),
       do: EventCrud.handle_meeting_reminder_event(event, params, socket)
 
   @impl Phoenix.LiveComponent

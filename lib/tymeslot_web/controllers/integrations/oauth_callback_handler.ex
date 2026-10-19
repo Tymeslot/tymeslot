@@ -3,9 +3,10 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   The one callback path for every calendar and video OAuth provider.
 
   A provider sends the browser back with either a `code` and `state`, an
-  `error`, or something malformed. The success path checks the state belongs to
-  the signed-in user, rate limits by IP, and hands the code to the owning
-  context (`Calendar.complete_oauth/3` or `Video.complete_oauth/3`), which
+  `error`, or something malformed. An account pending deletion is sent to the
+  restore page before anything else. The success path checks the state belongs
+  to the signed-in user, rate limits by IP, and hands the code to the owning
+  context (`Calendar.complete_oauth/4` or `Video.complete_oauth/4`), which
   connects the integration and refreshes the dashboard's cached status. The
   error path turns the provider's error into a flash.
 
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
 
   alias Phoenix.Controller
   alias Plug.Conn
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
@@ -76,14 +78,34 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
 
   # Reasons the user can act on get their own message; anything else is a
   # generic failure worth an error-level log.
-  @actionable_reasons [:calendar_scope_missing, :missing_teams_fields, :missing_zoom_account_id]
+  @actionable_reasons [
+    :calendar_scope_missing,
+    :missing_teams_fields,
+    :missing_zoom_account_id,
+    :provider_rate_limited
+  ]
 
   @doc """
   Handles a provider's OAuth callback request and returns the redirected conn.
   """
   @spec handle(Conn.t(), map(), provider_key()) :: Conn.t()
   def handle(conn, params, provider_key) do
-    handle_params(conn, params, Map.fetch!(@providers, provider_key))
+    config = Map.fetch!(@providers, provider_key)
+
+    if pending_deletion?(conn) do
+      conn |> Controller.redirect(to: ~p"/auth/restore") |> Conn.halt()
+    else
+      handle_params(conn, params, config)
+    end
+  end
+
+  # An account waiting to be deleted connects nothing: the code is dropped
+  # unused, and the user is sent to the one page such an account can use.
+  defp pending_deletion?(conn) do
+    case conn.assigns[:current_user] do
+      %{} = user -> Auth.deletion_pending?(user)
+      _none -> false
+    end
   end
 
   defp handle_params(conn, %{"code" => code, "state" => state}, config) do
@@ -127,7 +149,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   defp rate_limited_connect(conn, code, state, return_to, config) do
     failure_path = return_to || integrations_path(config)
 
-    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
+    case RateLimiter.check(:oauth_callback, ClientIP.get(conn)) do
       :ok ->
         connect(conn, code, state, {return_to, failure_path}, config)
 
@@ -144,7 +166,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   end
 
   defp connect(conn, code, state, {return_to, failure_path}, config) do
-    case complete(config, code, state) do
+    case complete(config, code, state, conn.assigns.current_user.id) do
       {:ok, _integration} ->
         flash_and_redirect(
           conn,
@@ -161,14 +183,21 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
     end
   end
 
-  defp complete(%{domain: :calendar, provider: provider}, code, state),
-    do: Calendar.complete_oauth(provider, code, state)
+  defp complete(%{domain: :calendar, provider: provider}, code, state, user_id),
+    do: Calendar.complete_oauth(provider, code, state, user_id)
 
-  defp complete(%{domain: :video, provider: provider}, code, state),
-    do: Video.complete_oauth(provider, code, state)
+  defp complete(%{domain: :video, provider: provider}, code, state, user_id),
+    do: Video.complete_oauth(provider, code, state, user_id)
 
   defp log_failure(reason, config) when reason in @actionable_reasons do
     Logger.warning("OAuth callback rejected", provider: config.name, reason: reason)
+  end
+
+  # A callback whose flow is already spent or expired: a replayed or reloaded
+  # callback, or a connect started before a deploy that introduced the flows.
+  # Expected now and then, and the user is asked to try again.
+  defp log_failure(:flow_not_found, config) do
+    Logger.warning("OAuth callback for a spent or expired flow", provider: config.name)
   end
 
   defp log_failure(reason, config) do
@@ -187,6 +216,14 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
     dgettext(
       "dashboard_integrations",
       "Missing required Microsoft Teams information. Please try again."
+    )
+  end
+
+  defp failure_message(:provider_rate_limited, config) do
+    dgettext(
+      "dashboard_integrations",
+      "%{service} is busy right now. Please try again in a minute.",
+      service: config.name
     )
   end
 

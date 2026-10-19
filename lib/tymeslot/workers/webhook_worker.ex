@@ -4,8 +4,11 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   Handles:
   - HTTP POST delivery with timeout protection
-  - HMAC signature generation
-  - Exponential backoff retry logic
+  - Signed requests: an `X-Tymeslot-Signature` HMAC-SHA256 over the
+    timestamp and the exact body posted (`Tymeslot.Webhooks.sign/3`),
+    alongside the plain `X-Tymeslot-Token`
+  - Retries spread over hours (`backoff/1`), so a receiver that is down for
+    a deploy still gets the event
   - Circuit breaker (auto-disable after consecutive failures)
   - Delivery logging and metrics
   - At-most-once posting per job, and a stable delivery id on the wire
@@ -17,6 +20,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
   post it again. A post that failed is still retried as before, and a retry
   after a timeout can reach a receiver that did get the first request.
 
+  Only the post itself is claimed. The delivery log and the webhook's status
+  are written after the claim settles, so a log write that fails after a
+  successful post cannot release the claim and post the event again.
+
   Every request therefore carries an `X-Tymeslot-Delivery-Id` header: the
   Oban job id, identical on every attempt of the same delivery and different
   for every other one. A receiver that records it can discard a second copy.
@@ -24,21 +31,20 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   use Oban.Worker,
     queue: :webhooks,
-    max_attempts: 5,
+    max_attempts: 8,
     priority: 2
 
   require Logger
 
-  alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.DeliveryClaims
+  alias Tymeslot.Workers.MeetingNotificationJob
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
@@ -123,10 +129,11 @@ defmodule Tymeslot.Workers.WebhookWorker do
   @gone "Webhook or meeting not found"
   @disabled "Webhook is disabled"
   @insufficient_plan "Insufficient plan"
+  @feature_disabled "Automations are switched off"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason) when is_binary(reason) do
-    reason in [@gone, @disabled, @insufficient_plan] or
+    reason in [@gone, @disabled, @insufficient_plan, @feature_disabled] or
       String.starts_with?(reason, @http_status_prefix <> "4")
   end
 
@@ -146,11 +153,9 @@ defmodule Tymeslot.Workers.WebhookWorker do
       ) do
     Logger.metadata(job_id: job.id, attempt: attempt)
 
-    feature = :automations_allowed
-
     with {:ok, webhook} <- WebhookQueries.get_webhook(webhook_id),
          :ok = ErrorTracking.put_context(user_id: webhook.user_id),
-         :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
+         :ok <- feature_gate(webhook.user_id, webhook_id, event_type),
          {:ok, meeting} <- fetch_meeting(meeting_id, args["participant_id"], args["snapshot"]),
          :ok <- deliver_once(webhook, event_type, meeting, job) do
       :ok
@@ -283,7 +288,9 @@ defmodule Tymeslot.Workers.WebhookWorker do
   `participant_id` names the seat of a group meeting the event is about (see
   `Tymeslot.Meetings.SeatView`); the delivery then describes that seat's
   booking. Each seat is its own delivery, so it is part of the uniqueness
-  key; a solo meeting passes `nil` and keeps the key it always had.
+  key; a solo meeting passes `nil`, which is stored and keyed as well, so a
+  seat's delivery and the meeting's own are never taken for duplicates (see
+  `Tymeslot.Workers.MeetingNotificationJob.schedule/5`).
   """
   @spec schedule_delivery(integer(), String.t(), binary(), map() | nil, binary() | nil) ::
           :ok | {:error, term()}
@@ -294,69 +301,40 @@ defmodule Tymeslot.Workers.WebhookWorker do
         snapshot \\ nil,
         participant_id \\ nil
       ) do
-    result =
-      %{
-        "webhook_id" => webhook_id,
-        "event_type" => event_type,
-        "meeting_id" => meeting_id
-      }
-      |> maybe_put_snapshot(snapshot)
-      |> maybe_put_participant(participant_id)
-      |> new(
-        queue: :webhooks,
-        priority: 2,
-        unique: [
-          # 5 minute uniqueness window
-          period: 300,
-          fields: [:args],
-          keys: unique_keys(participant_id)
-        ]
+    args =
+      maybe_put_snapshot(
+        %{
+          "webhook_id" => webhook_id,
+          "event_type" => event_type,
+          "meeting_id" => meeting_id
+        },
+        snapshot
       )
-      |> Oban.insert()
 
-    case result do
-      {:ok, _job} ->
-        Logger.debug("Webhook delivery job scheduled",
-          webhook_id: webhook_id,
-          event_type: event_type
-        )
-
-        :ok
-
-      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
-        Logger.debug("Webhook delivery job already exists",
-          webhook_id: webhook_id,
-          event_type: event_type
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule webhook delivery",
-          webhook_id: webhook_id,
-          event_type: event_type,
-          reason: reason
-        )
-
-        {:error, reason}
-    end
+    # The snapshot is part of the key: it is what the delivery replays, so a
+    # waiting job only absorbs a duplicate that would post the same payload.
+    MeetingNotificationJob.schedule(
+      __MODULE__,
+      args,
+      participant_id,
+      [:webhook_id, :event_type, :meeting_id, :snapshot],
+      queue: :webhooks
+    )
   end
+
+  # Seconds to wait after each failed attempt: 30s, 2m, 10m, 30m, 1h, 3h,
+  # then 6h. With `max_attempts: 8` the last retry lands about eleven hours
+  # after the first, so a receiver down for a deploy or a short outage still
+  # receives the event, while any 4xx but a 408, 425 or 429 is discarded at
+  # once.
+  @backoff_seconds {30, 120, 600, 1_800, 3_600, 10_800, 21_600}
 
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
-    # Exponential backoff: 1s, 2s, 4s, 8s, 16s
-    min(round(:math.pow(2, attempt - 1)), 16)
+    elem(@backoff_seconds, min(attempt, tuple_size(@backoff_seconds)) - 1)
   end
 
   # Private functions
-
-  defp unique_keys(nil), do: [:webhook_id, :event_type, :meeting_id]
-  defp unique_keys(_participant_id), do: [:webhook_id, :event_type, :meeting_id, :participant_id]
-
-  defp maybe_put_participant(args, nil), do: args
-
-  defp maybe_put_participant(args, participant_id),
-    do: Map.put(args, "participant_id", participant_id)
 
   defp maybe_put_snapshot(args, nil), do: args
 
@@ -442,12 +420,25 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp decode_snapshot_field(_field, value), do: value
 
+  # The claim covers the post alone. Recording the outcome happens once the
+  # claim has settled: a delivered post keeps its claim whatever the log write
+  # then does, so a rescued or retried run never posts it a second time. A
+  # bare `:ok` is an earlier run's claim, whose outcome that run recorded.
   defp deliver_once(webhook, event_type, meeting, job) do
     case DeliveryClaims.once(job, "webhook", fn ->
            deliver_webhook(webhook, event_type, meeting, job)
          end) do
-      {:ok, _delivery} -> :ok
-      other -> other
+      :ok ->
+        :ok
+
+      {:ok, {:posted, payload, result}} ->
+        log_and_update_status(webhook, event_type, meeting, payload, job.attempt, result)
+
+      {:not_delivered, payload, result} ->
+        log_and_update_status(webhook, event_type, meeting, payload, job.attempt, result)
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -459,27 +450,33 @@ defmodule Tymeslot.Workers.WebhookWorker do
     end
   end
 
-  @spec check_feature_access(integer(), integer(), String.t(), atom()) ::
-          :ok | {:error, :insufficient_plan | :feature_access_checker_failed}
-  defp check_feature_access(user_id, webhook_id, event_type, feature) do
-    case Features.check_access(user_id, feature) do
+  # A plan that no longer covers automations discards the job and leaves the
+  # webhook as it is, so it resumes by itself once the plan does again.
+  defp feature_gate(user_id, webhook_id, event_type) do
+    case MeetingNotificationJob.feature_gate(user_id) do
       :ok ->
         :ok
 
-      {:error, :insufficient_plan} = error ->
+      {:revoked, _reason} ->
         Logger.info("Feature access denied for webhook delivery",
           webhook_id: webhook_id,
-          event_type: event_type,
-          feature: feature
+          event_type: event_type
         )
 
-        error
+        {:error, :insufficient_plan}
+
+      {:discard, :feature_disabled} ->
+        Logger.info("Automations are switched off, discarding webhook delivery",
+          webhook_id: webhook_id,
+          event_type: event_type
+        )
+
+        {:discard, @feature_disabled}
 
       {:error, :feature_access_checker_failed} = error ->
         Logger.warning("Feature access check failed for webhook delivery",
           webhook_id: webhook_id,
-          event_type: event_type,
-          feature: feature
+          event_type: event_type
         )
 
         error
@@ -489,16 +486,19 @@ defmodule Tymeslot.Workers.WebhookWorker do
   defp do_deliver_webhook(webhook, event_type, meeting, %Oban.Job{} = job) do
     webhook = WebhookSchema.decrypt_token(webhook)
     payload = PayloadBuilder.build_payload(event_type, meeting, to_string(webhook.id))
+    body = Jason.encode!(payload)
 
+    # Signed over `body` itself, the bytes posted, so the receiver can verify
+    # the signature against the raw request body it reads.
     headers =
-      payload
+      body
       |> Webhooks.build_headers(webhook.webhook_token)
       |> put_delivery_id(job)
 
-    encoded_payload = Jason.encode!(payload)
-    result = HttpDelivery.post(webhook.url, encoded_payload, headers)
-
-    log_and_update_status(webhook, event_type, meeting, payload, job.attempt, result)
+    case HttpDelivery.post(webhook.url, body, headers) do
+      {:ok, status, _body} = result when status in 200..299 -> {:ok, {:posted, payload, result}}
+      result -> {:not_delivered, payload, result}
+    end
   end
 
   # The job id is the delivery id because it is the one identifier that stays
@@ -531,54 +531,67 @@ defmodule Tymeslot.Workers.WebhookWorker do
           Map.put(delivery_attrs, :error_message, truncate_response(error_message))
       end
 
-    case WebhookQueries.create_delivery(delivery_attrs) do
-      {:ok, delivery} ->
-        # Update webhook status (success/failure)
-        # We only record success/failure on the first attempt or if it's a success
-        # to avoid double-counting failures if Oban retries.
-        case result do
-          {:ok, status, _body} when status >= 200 and status < 300 ->
-            WebhookQueries.record_success(webhook)
-            {:ok, delivery}
+    case {WebhookQueries.create_delivery(delivery_attrs), result} do
+      # The receiver has the event, so the job is done even if the log row
+      # could not be written; retrying would only post it again.
+      {{:error, reason}, {:ok, status, _body}} when status in 200..299 ->
+        Logger.warning("Failed to create webhook delivery log after a successful delivery",
+          error: LogFormat.reason(reason)
+        )
 
-          {:ok, status, _body} ->
-            http_failure(webhook, status, attempt)
+        WebhookQueries.record_success(webhook)
+        :ok
 
-          {:error, reason} ->
-            if attempt == 1, do: Webhooks.record_delivery_failure(webhook, to_string(reason))
-            {:error, reason}
-        end
-
-      {:error, reason} ->
+      {{:error, reason}, _result} ->
         Logger.warning("Failed to create webhook delivery log", error: LogFormat.reason(reason))
         {:error, :delivery_log_failed}
+
+      {{:ok, _delivery}, {:ok, status, _body}} when status in 200..299 ->
+        WebhookQueries.record_success(webhook)
+        :ok
+
+      # Both failure clauses record the failure on the first attempt only,
+      # however the delivery then ends (retried, discarded at once, or
+      # discarded on a later attempt), so Oban's retries never count one
+      # delivery several times.
+      {{:ok, _delivery}, {:ok, status, _body}} ->
+        http_failure(webhook, status, attempt)
+
+      {{:ok, _delivery}, {:error, reason}} ->
+        if attempt == 1, do: Webhooks.record_delivery_failure(webhook, to_string(reason))
+        {:error, reason}
     end
   end
 
   # A non-2xx response is only worth another attempt if a later one could
-  # plausibly differ. A 404 or 401 from a subscriber's endpoint is settled: the
-  # remaining attempts post the same body to the same URL, fail identically,
-  # and then Oban raises `PerformError`, which pages an operator about a
-  # subscriber's own misconfiguration. `ErrorAnalysis.classify_error/1` is the
-  # existing shared answer to that question (5xx, 408, 425 and 429 transient;
-  # 401, 403 and 404 hard), already relied on by the integration health checks,
-  # so the retry policy stays in one place instead of drifting per worker.
+  # plausibly differ: a 5xx, a 408 (the receiver timed out), a 425 (it will
+  # not process a request that might be replayed yet) or a 429 (it is rate
+  # limiting us). Every other status is the subscriber's endpoint
+  # answering for good. A 400, 404 or 422 comes back identically on every
+  # remaining attempt, eleven hours of them, and then Oban raises
+  # `PerformError`, which pages an operator about a subscriber's own
+  # misconfiguration. Redirects never reach here: `HttpDelivery` follows them
+  # or fails the delivery itself. Network and transport errors take the
+  # `{:error, reason}` path in `log_and_update_status/6` and are retried.
+  #
+  # Both paths record one failure per delivery, so a permanent 400 advances
+  # the circuit breaker exactly as far as a 503 does.
+  @retryable_statuses [408, 425, 429]
+
   defp http_failure(webhook, status, attempt) do
     reason = "#{@http_status_prefix}#{status}"
 
-    case ErrorAnalysis.classify_error({:http_error, status, reason}) do
-      :transient ->
-        # Recorded on the first attempt only, so one failing delivery advances
-        # the circuit breaker by one rather than once per retry.
-        if attempt == 1, do: Webhooks.record_delivery_failure(webhook, reason)
-        {:error, {:http_error, status}}
+    # Recorded on the first attempt only, so one failing delivery advances the
+    # circuit breaker by one, whether it is retried, discarded at once, or
+    # discarded on a later attempt after a retryable first failure.
+    if attempt == 1, do: Webhooks.record_delivery_failure(webhook, reason)
 
-      :hard ->
-        # No retries follow, so this is the only chance to record the failure.
-        Webhooks.record_delivery_failure(webhook, reason)
-        {:discard, reason}
-    end
+    if retryable_status?(status),
+      do: {:error, {:http_error, status}},
+      else: {:discard, reason}
   end
+
+  defp retryable_status?(status), do: status >= 500 or status in @retryable_statuses
 
   # Truncate response to prevent database bloat and ensure UTF-8 compatibility
   @spec truncate_response(String.t() | term() | nil) :: String.t() | nil

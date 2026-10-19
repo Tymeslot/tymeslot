@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.Providers.Families
+  alias Tymeslot.Integrations.Shared.Providers.Families
 
   describe "caldav_based_provider_strings/0" do
     test "returns the caldav-based provider list as strings" do
@@ -115,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
       assert result == %{
                url: "https://dav.mailbox.org",
                tooltip:
-                 "mailbox.org always uses this CalDAV server — the address cannot be changed"
+                 "mailbox.org always uses this CalDAV server, so the address cannot be changed"
              }
     end
 
