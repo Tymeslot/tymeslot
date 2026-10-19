@@ -42,7 +42,7 @@ msgstr[1] ""
 msgid "%{days}d ago"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{day} at %{time}"
 msgstr ""
@@ -62,7 +62,7 @@ msgstr ""
 msgid "%{minutes}m ago"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{when_text} · %{location}"
 msgstr ""
@@ -193,7 +193,7 @@ msgstr ""
 msgid "Refresh now"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder: %{title}"
 msgstr ""
@@ -445,8 +445,7 @@ msgstr ""
 msgid "Also here: %{titles}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Back to the old calendar"
 msgstr ""
@@ -478,14 +477,12 @@ msgstr ""
 msgid "Close"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Comfortable"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Compact"
 msgstr ""
@@ -501,8 +498,7 @@ msgstr ""
 msgid "Couldn't switch calendars. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Density"
 msgstr ""
@@ -523,8 +519,7 @@ msgstr ""
 msgid "Events at this time"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Fold early hours"
 msgstr ""

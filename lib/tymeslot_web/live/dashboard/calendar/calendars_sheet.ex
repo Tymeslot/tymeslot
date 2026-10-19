@@ -7,10 +7,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
 
   While calendars are hidden its first row says how many and shows them
   all, since the phone header has no room for the toolbar's filter chip.
-  The display options (`DisplayOptions`, the toolbar's own) sit at its foot,
-  since a phone has no toolbar. Every
-  control sends the event the rail's or the toolbar's does, so the grid
-  behind changes at once and the sheet stays open.
+  The display options (`DisplayOptions`, the toolbar's own) sit at its
+  foot, since a phone has no toolbar. Every control sends the event the
+  rail's or the toolbar's does, so the grid behind changes at once and the
+  sheet stays open.
   """
 
   use TymeslotWeb, :html
