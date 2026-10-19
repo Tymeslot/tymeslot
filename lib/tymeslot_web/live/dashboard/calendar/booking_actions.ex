@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Approval
@@ -173,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   defp with_idle_request(socket, id, fun) do
     answering = socket.assigns.answering_request
 
-    case Ecto.UUID.cast(id) do
+    case UUID.cast(id) do
       {:ok, ^answering} -> socket
       {:ok, id} -> fun.(socket, id)
       :error -> socket
