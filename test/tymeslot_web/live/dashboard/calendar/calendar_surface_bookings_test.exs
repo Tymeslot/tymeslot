@@ -341,6 +341,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
       refute has_element?(lv, "#calendar-preview-accept")
     end
 
+    test "a request the sweep expired does not claim its slot is still taken", %{
+      conn: conn,
+      user: user
+    } do
+      meeting =
+        request(user, ~U[2026-10-16 10:00:00Z],
+          status: "expired",
+          approval_deadline_at: ~U[2026-10-14 07:00:00Z],
+          approval_resolved_at: ~U[2026-10-14 07:00:00Z],
+          cancelled_at: ~U[2026-10-14 07:00:00Z]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, meeting)
+
+      assert has_element?(lv, "#calendar-preview", "Anna Kowalski")
+      refute has_element?(lv, "#calendar-preview", "Guests can't book this time")
+    end
+
     test "a request held past its deadline says the same before the sweep reaches it", %{
       conn: conn,
       user: user

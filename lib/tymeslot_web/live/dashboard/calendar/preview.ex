@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           <span class="break-words">{@preview.location}</span>
         </.row>
         <.row :if={@preview.guests != []} icon="hero-user-group">{guest_text(@preview.guests)}</.row>
-        <.row icon="hero-shield-check">
+        <.row :if={@preview.availability} icon="hero-shield-check">
           <div :if={@preview.free_busy == :editable} class="flex flex-wrap items-center gap-2">
             <div
               class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5"
@@ -371,6 +371,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       {false, "calendar-preview-busy", dgettext("dashboard_calendar", "Busy")},
       {true, "calendar-preview-free", dgettext("dashboard_calendar", "Free")}
     ]
+
+  # A request the sweep expired no longer holds its slot, so it says nothing
+  # about whether guests can book that time.
+  defp availability(%{kind: :booking, expired: true, request: false}, _integration, _entry),
+    do: nil
 
   defp availability(%{kind: :booking}, _integration, _entry), do: busy()
 
