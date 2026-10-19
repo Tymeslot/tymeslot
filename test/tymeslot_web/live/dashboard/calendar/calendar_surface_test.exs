@@ -343,8 +343,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
 
     assert has_element?(
              lv,
-             "#calendar-keys-hint",
-             "Press T to go to today, J for the next period and K for the previous period."
+             "#calendar-shortcuts-hint",
+             "Press T for today, J and K for the next and previous period"
            )
   end
 

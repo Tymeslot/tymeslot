@@ -340,3 +340,33 @@ describe("calendar:focus", () => {
     sheet.remove();
   });
 });
+
+describe("?: shortcut help", () => {
+  const press = (key, extra = {}, target = document.body) =>
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra }));
+
+  afterEach(() => unmountAll());
+
+  test("? asks the surface for the help (Shift is how it is typed)", () => {
+    const { hook } = mountHook();
+    press("?", { shiftKey: true });
+    expect(pushes(hook, "calendar:toggle_menu")).toEqual([{ menu: "shortcuts" }]);
+  });
+
+  test("? does nothing while the help, or any calendar modal, is open", () => {
+    const { hook } = mountHook();
+    const help = document.createElement("div");
+    help.id = "calendar-shortcuts";
+    document.body.appendChild(help);
+    press("?", { shiftKey: true });
+    expect(pushes(hook, "calendar:toggle_menu")).toEqual([]);
+  });
+
+  test("? typed in a field stays the field's", () => {
+    const { hook } = mountHook();
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    press("?", { shiftKey: true }, input);
+    expect(pushes(hook, "calendar:toggle_menu")).toEqual([]);
+  });
+});

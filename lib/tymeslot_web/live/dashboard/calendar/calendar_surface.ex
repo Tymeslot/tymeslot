@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.RailSets
+  alias TymeslotWeb.Dashboard.Calendar.ShortcutHelp
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.SurfaceMenus
@@ -289,17 +290,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     >
       <ImportModal.drop_zone uploads={@uploads} target={@myself} />
       <h1 class="sr-only">{dgettext("dashboard_calendar", "Calendar")}</h1>
-      <p id="calendar-keys-hint" class="sr-only">
-        {dgettext(
-          "dashboard_calendar",
-          "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
-        )}
-        {dgettext("dashboard_calendar_booking", "Press B to show or hide your bookable times.")}
-        {dgettext(
-          "dashboard_calendar_power",
-          "Press T to go to today, J for the next period and K for the previous period."
-        )}
-      </p>
+      <ShortcutHelp.keys_hint />
       <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>
       <div id="calendar-live" class="sr-only" aria-live="polite" phx-update="ignore"></div>
       <Toolbar.toolbar
@@ -411,6 +402,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         ics_import={@ics_import}
         uploads={@uploads}
         accounts={@accounts}
+        open_menu={@open_menu}
         target={@myself}
       />
       <SurfaceModals.modals

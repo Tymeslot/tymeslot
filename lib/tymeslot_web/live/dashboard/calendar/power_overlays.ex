@@ -11,12 +11,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerOverlays do
 
   alias Tymeslot.CalendarGrid.CalendarDirectory
   alias TymeslotWeb.Dashboard.Calendar.ImportModal
+  alias TymeslotWeb.Dashboard.Calendar.ShortcutHelp
 
   attr :reminders_enabled, :boolean, required: true
   attr :reminder_feed, :list, required: true
   attr :ics_import, :map, default: nil
   attr :uploads, :map, required: true
   attr :accounts, :list, required: true
+  attr :open_menu, :atom, default: nil
   attr :target, :any, required: true
 
   @spec overlays(map()) :: Phoenix.LiveView.Rendered.t()
@@ -39,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerOverlays do
       choices={CalendarDirectory.choices(@accounts)}
       target={@target}
     />
+    <ShortcutHelp.help :if={@open_menu == :shortcuts} target={@target} />
     """
   end
 end

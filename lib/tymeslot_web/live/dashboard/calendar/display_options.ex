@@ -107,6 +107,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         >
           {dgettext("dashboard_calendar_power", "Import an .ics file")}
         </.action_button>
+        <.action_button
+          id={"#{@id_prefix}-shortcuts-button"}
+          variant={:ghost}
+          size={:sm}
+          icon="hero-command-line"
+          class="max-sm:min-h-11 pointer-coarse:min-h-11"
+          phx-click={JS.push("calendar:toggle_menu", value: %{menu: "shortcuts"}, target: @target)}
+        >
+          {dgettext("dashboard_calendar", "Keyboard shortcuts")}
+        </.action_button>
         <%!-- No phx-target: DashboardLive swaps the component. --%>
         <.action_button
           id={"#{@id_prefix}-back-to-old"}

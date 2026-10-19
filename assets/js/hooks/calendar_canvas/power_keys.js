@@ -4,7 +4,7 @@
  * screen (or the one asked for and not yet confirmed), through `gotoPeriod`
  * (views.js), so the grid draws at once from the cache and the server
  * follows. F toggles focus mode from 1024px wide. 0 to 9 apply calendar sets
- * (0 leaves the active one). Later tasks add ? to `POWER_KEYS`.
+ * (0 leaves the active one). ? opens the keyboard shortcuts.
  *
  * One document listener, so the keys work with focus anywhere on the page
  * but a text field, a dialog or a modal (`plainKeyAllowed`,
@@ -40,6 +40,8 @@ export const POWER_KEYS = {
     if (!window.matchMedia?.(WIDE)?.matches) return;
     hook.pushEvent("calendar:toggle_focus", {});
   },
+  // The help is a core modal on the surface; while it is open MODALS silences every key, this one included.
+  "?": (hook) => hook.pushEventTo(hook.el, "calendar:toggle_menu", { menu: "shortcuts" }),
   ...Object.fromEntries(Array.from({ length: 10 }, (_, n) => [String(n), setKey(n)])),
 };
 

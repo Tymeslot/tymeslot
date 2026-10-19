@@ -5,6 +5,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
   (`calendar:mini_shift`). `CalendarSurface` routes every event in its
   `@menu_events` here.
 
+  The shortcut help (`ShortcutHelp`) is the `:shortcuts` menu, so any other menu
+  replaces it.
+
   The mini month follows the period, not the last month paged to: opening
   the toolbar's date picker or the phone's date sheet starts it on the
   period's month again.
@@ -18,7 +21,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
     "date" => :date,
     "display" => :display,
     "calendars" => :calendars,
-    "date_sheet" => :date_sheet
+    "date_sheet" => :date_sheet,
+    "shortcuts" => :shortcuts
   }
 
   # The menus that show the mini month.
