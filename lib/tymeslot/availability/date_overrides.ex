@@ -101,39 +101,13 @@ defmodule Tymeslot.Availability.DateOverrides do
     :ok
   end
 
-  defp write(schedule_id, date, attrs, retry? \\ true) do
-    attrs =
-      @blank
-      |> Map.merge(Map.take(attrs, [:date, :override_type | Map.keys(@blank)]))
-      |> Map.put(:schedule_id, schedule_id)
-
-    case AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule_id, date) do
-      nil ->
-        attrs
-        |> AvailabilityOverrideQueries.create_override()
-        |> retry_on_conflict(schedule_id, date, attrs, retry?)
-
-      existing ->
-        AvailabilityOverrideQueries.update_override(existing, attrs)
-    end
-  end
-
-  # Two writes for one date can both find nothing and both insert; the loser
-  # reads the winner's row once more and updates it.
-  defp retry_on_conflict(
-         {:error, %Ecto.Changeset{} = changeset} = error,
-         schedule_id,
-         date,
-         attrs,
-         true
-       ) do
-    if unique_conflict?(changeset), do: write(schedule_id, date, attrs, false), else: error
-  end
-
-  defp retry_on_conflict(result, _schedule_id, _date, _attrs, _retry?), do: result
-
-  defp unique_conflict?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, opts}} -> opts[:constraint] == :unique end)
+  # One upsert, so two writes for one date that both found nothing cannot
+  # collide on the unique index (which would abort a caller's transaction).
+  defp write(schedule_id, date, attrs) do
+    @blank
+    |> Map.merge(Map.take(attrs, [:override_type | Map.keys(@blank)]))
+    |> Map.merge(%{schedule_id: schedule_id, date: date})
+    |> AvailabilityOverrideQueries.upsert_override()
   end
 
   defp owned_schedule(profile_id, schedule_id)

@@ -66,6 +66,26 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   end
 
   @doc """
+  Writes the schedule's override on `attrs.date` in one statement: inserts
+  it, or, when the date already has one (even one another transaction has
+  just inserted), replaces its type, hours and reason. Concurrent writes for
+  one date therefore never fail on the unique index; the last to commit
+  stands.
+  """
+  @spec upsert_override(map()) ::
+          {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
+  def upsert_override(attrs) when is_map(attrs) do
+    %AvailabilityOverrideSchema{}
+    |> AvailabilityOverrideSchema.changeset(attrs)
+    |> Repo.insert(
+      on_conflict:
+        {:replace, [:override_type, :start_time, :end_time, :ends_next_day, :reason, :updated_at]},
+      conflict_target: [:schedule_id, :date],
+      returning: true
+    )
+  end
+
+  @doc """
   Updates an availability override.
   """
   @spec update_override(AvailabilityOverrideSchema.t(), map()) ::

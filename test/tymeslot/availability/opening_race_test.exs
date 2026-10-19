@@ -1,7 +1,7 @@
 defmodule Tymeslot.Availability.OpeningRaceTest do
   @moduledoc """
-  An undo of "Open for booking" racing a change to the same weekday on the
-  Availability page, on real connections, staged by
+  "Open for booking" racing other writes to the same day, on real
+  connections, staged by
   `Tymeslot.Test.RaceConductor` (see its moduledoc for why the module is
   synchronous and why `on_exit` deletes what it committed).
 
@@ -9,6 +9,10 @@ defmodule Tymeslot.Availability.OpeningRaceTest do
   opening wrote, then writes the old ones back. Unless the check reads the
   row under a lock taken in the same transaction as the write, the change
   can commit between the two, and the undo overwrites it.
+
+  Two openings of one date that has no override yet both find nothing to
+  lock, so both insert it: the second insert must become an update of the
+  first's row rather than a unique violation that aborts its transaction.
   """
 
   use Tymeslot.DataCase, async: false
@@ -22,6 +26,7 @@ defmodule Tymeslot.Availability.OpeningRaceTest do
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.AvailabilityActions
+  alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.Opening
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Repo
@@ -43,7 +48,9 @@ defmodule Tymeslot.Availability.OpeningRaceTest do
           end_time: ~T[19:00:00]
         )
 
-        %{user: user, profile: profile, schedule: schedule}
+        meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+
+        %{user: user, profile: profile, schedule: schedule, meeting_type: meeting_type}
       end)
 
     on_exit(fn ->
@@ -104,6 +111,49 @@ defmodule Tymeslot.Availability.OpeningRaceTest do
 
     assert %{start_time: ~T[08:00:00], end_time: ~T[20:00:00]} =
              unboxed(fn -> WeeklySchedule.get_day_availability(host.schedule.id, 1) end)
+  end
+
+  test "two openings of one date with no override yet both complete", host do
+    # A Saturday, which has no weekday row to lock and serialise on.
+    saturday =
+      Date.utc_today() |> Date.add(14) |> Date.beginning_of_week(:monday) |> Date.add(5)
+
+    open = fn hold, from, to ->
+      # Parks right after finding no override, before writing one.
+      RaceConductor.arm(hold, RaceConductor.lock_of("availability_overrides"), must_park: true)
+
+      Opening.open_once(
+        host.user.id,
+        host.meeting_type.id,
+        DateTime.new!(saturday, from, "Etc/UTC"),
+        DateTime.new!(saturday, to, "Etc/UTC")
+      )
+    end
+
+    results =
+      race([
+        fn hold -> open.(hold, ~T[10:00:00], ~T[11:00:00]) end,
+        fn hold -> open.(hold, ~T[14:00:00], ~T[15:00:00]) end
+      ])
+
+    assert [{:ok, %{kind: :once} = first}, {:ok, %{kind: :once} = second}] = results
+
+    # One date, one override: the opening that committed last.
+    overrides =
+      unboxed(fn ->
+        Repo.all(
+          from(o in AvailabilityOverrideSchema,
+            where: o.schedule_id == ^host.schedule.id and o.date == ^saturday
+          )
+        )
+      end)
+
+    assert [%{override_type: "custom_hours"} = override] = overrides
+
+    assert {override.start_time, override.end_time} in [
+             {first.start_time, first.end_time},
+             {second.start_time, second.end_time}
+           ]
   end
 
   defp read_of(table),
