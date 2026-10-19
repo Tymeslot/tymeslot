@@ -69,19 +69,20 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   series member is never queued (see `Tymeslot.CalendarGrid.SeriesEdit`).
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.SeriesEdit
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -109,7 +110,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
     * `:recurrence_scope` - which occurrences of a recurring series the edit
       applies to, a `t:Tymeslot.CalendarGrid.RecurrenceScope.t/0`; defaults to
-      `:this_only`, and is ignored for an event outside a series. Anything
+      `:this_only`, and is ignored for an event outside a series, but for
+      a change of `recurrence_rule` in `:following`: the event was a member
+      of a series when that scope was chosen, and the change is refused
+      with `:ends_before` (see `SeriesEdit.following_rule/3`). Anything
       else raises `ArgumentError`: a scope arriving from a form is parsed with
       `RecurrenceScope.parse/1` first. See `Tymeslot.CalendarGrid.SeriesEdit`.
     * `:conference_data` - a change to a Google event's own conference, sent
@@ -121,6 +125,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       instant (RFC 5545 §3.3.10), so refitting one has to end the organiser's
       chosen day in their own zone; without it the day ends in UTC and the
       series gains or loses its last occurrence.
+    * `:until_timezone` - the zone a new rule's `UNTIL` ended its day in, in
+      which the Google and Outlook series writers read the end date back
+      (see `Tymeslot.CalendarGrid.SeriesEdit`).
 
   Returns `{:ok, updated_event}`, or `{:error, %{reason: reason, retry:
   :queued | :not_queued}}` where `:queued` means the edit is saved locally
@@ -142,10 +149,21 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     stored = stored_row(event)
 
     case Occurrence.series_family(stored || event) do
-      :single -> write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
+      :single -> update_single(user_id, event, stored, scope, changes, opts)
       family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
     end
   end
+
+  # A change of repeat rule for this and the following events was chosen
+  # for a member of a series, with a `COUNT` given for the whole series. A
+  # sync since may have made the cached event a one-off, and writing the
+  # rule to it would start a new series of the whole count from here, so it
+  # is refused as a series with nothing left of it from this event on.
+  defp update_single(_user_id, _event, _stored, :following, %{recurrence_rule: _rule}, _opts),
+    do: {:error, %{reason: :ends_before, retry: :not_queued}}
+
+  defp update_single(user_id, event, stored, _scope, changes, opts),
+    do: write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
 
   @doc """
   How `event` may be edited from the grid: `{:ok, :single}` for an event
@@ -170,7 +188,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   Answers `{:ok, updated_event}` once it is queued, or `{:error,
   :not_queued}` for an event whose integration has no offline queue, a
-  member of a series (never queued), or a change that cannot be applied.
+  member of a series or an event the change makes one (never queued), or a
+  change that cannot be applied.
   """
   @spec queue_for_retry(pos_integer(), map(), changes(), keyword()) ::
           {:ok, map()} | {:error, :not_queued}
@@ -243,6 +262,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
          {:ok, payload} <-
            payload
            |> maybe_put_conference(Keyword.get(opts, :conference_data))
+           |> ProviderPayload.put_series_zone(Keyword.get(opts, :timezone))
            |> put_stored_document(stored)
            |> scope_attendees(event, changes)
            |> address.() do
@@ -351,6 +371,23 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
         document
       )
 
+  @doc """
+  The event as it would read toggled between all-day and timed, its dates or
+  times derived in `timezone`: the zone the caller passes `update_event/4` as
+  `:timezone`, so the dates and a recurring event's refitted `UNTIL` are read
+  on the same calendar. See `Tymeslot.CalendarGrid.AllDay.toggle/2`.
+
+  The grid renders this copy while the write is queued, and writes its timing
+  fields (`timing_changes/1`).
+  """
+  @spec toggle_all_day(map(), String.t()) :: map()
+  defdelegate toggle_all_day(event, timezone), to: AllDay, as: :toggle
+
+  @doc "The timing fields of `event`, as `update_event/4` takes them."
+  @spec timing_changes(map()) :: changes()
+  def timing_changes(event),
+    do: Map.take(event, [:all_day, :start_at, :end_at, :start_date, :end_date])
+
   defp ensure_known_fields!(changes) do
     case Map.keys(changes) -- @editable_fields do
       [] ->
@@ -381,7 +418,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp retarget_rule(updated, _was_all_day, timezone) do
     case RRule.retarget(updated.recurrence_rule,
            all_day: updated.all_day,
-           start_date: AllDay.start_date(updated),
+           start_date: AllDay.start_date(updated, timezone),
            timezone: timezone
          ) do
       {:ok, rule} -> {:ok, %{updated | recurrence_rule: rule}}
@@ -394,10 +431,15 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp queue_retry(:never_queue, _user_id, _event, _payload, _reason), do: :not_queued
 
+  # An edit that leaves the event part of a series, a one-off given a rule
+  # among them, is not queued: the offline queue never replays a series
+  # member's change (it would rewrite every occurrence), so it would sit
+  # there unsent while the grid called it saved.
   defp queue_retry(:queue_recoverable, user_id, event, payload, reason) do
     target = %{uid: event.uid, calendar_integration_id: event.calendar_integration_id}
 
-    with true <- CalendarEvents.queueable_error?(reason),
+    with false <- Series.member?(event),
+         true <- CalendarEvents.queueable_error?(reason),
          :ok <- CalendarEvents.queue_for_offline_retry(target, :update, payload) do
       # The queue tag writes the edit's own fields, so this is no longer
       # repairing what the tag blanked. It stays for the other half of the
@@ -429,6 +471,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
         )
     end
 
-    AvailabilityCache.invalidate_for_user(user_id)
+    Availability.changed(user_id)
   end
 end

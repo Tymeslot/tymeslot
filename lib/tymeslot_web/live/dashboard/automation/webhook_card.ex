@@ -20,25 +20,27 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
   attr :on_test, :any, required: true
   attr :on_view_deliveries, :any, required: true
 
+  attr :paused, :boolean,
+    default: false,
+    doc: "The owner's plan doesn't include automations: shown as paused, controls inert"
+
   @spec webhook_card(map()) :: Phoenix.LiveView.Rendered.t()
   def webhook_card(assigns) do
     ~H"""
     <IntegrationCard.integration_card
       id={"#{@webhook.id}"}
       title={@webhook.name}
-      status={status(@webhook)}
+      status={status(@webhook, @paused)}
       summary={@webhook.url}
       summary_mono
       active={@webhook.is_active}
       toggle_event={@on_toggle}
       toggle_id={"webhook-toggle-#{@webhook.id}"}
+      toggle_disabled={@paused}
       target={@target}
       tags={@webhook.events}
-      notice={
-        @webhook.disabled_reason &&
-          dgettext("dashboard_automation", "Disabled: %{reason}", reason: @webhook.disabled_reason)
-      }
-      notice_tone={:danger}
+      notice={notice(@webhook, @paused)}
+      notice_tone={(@paused && :neutral) || :danger}
     >
       <:icon><IconComponents.icon name={:webhook} class="w-6 h-6" /></:icon>
       <:last_activity :if={@webhook.last_triggered_at}>
@@ -59,8 +61,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           icon="hero-bolt"
           loading={@testing}
           loading_text={dgettext("dashboard_automation", "Testing")}
-          disabled={!@webhook.is_active}
-          phx-click={@on_test}
+          disabled={@paused or !@webhook.is_active}
+          phx-click={!@paused && @on_test}
           title={
             cond do
               !@webhook.is_active -> dgettext("dashboard_automation", "Enable webhook to test")
@@ -85,7 +87,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
         <.icon_button
           icon="hero-pencil-square"
           label={dgettext("dashboard_automation", "Edit Webhook")}
-          phx-click={@on_edit}
+          disabled={@paused}
+          phx-click={!@paused && @on_edit}
         />
         <.icon_button
           icon="hero-trash"
@@ -99,14 +102,30 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
     """
   end
 
-  # An auto-disabled webhook (a `disabled_reason` is recorded) is a fault to
-  # fix; one the owner switched off is simply off.
-  defp status(%{is_active: true}), do: {:success, dgettext("dashboard_automation", "Active")}
+  # A plan without automations pauses every webhook, whatever its own state.
+  # Otherwise an auto-disabled webhook (a `disabled_reason` is recorded) is a
+  # fault to fix; one the owner switched off is simply off.
+  defp status(_webhook, true), do: {:neutral, dgettext("dashboard_automation", "Paused")}
 
-  defp status(%{disabled_reason: reason}) when is_binary(reason),
+  defp status(%{is_active: true}, false),
+    do: {:success, dgettext("dashboard_automation", "Active")}
+
+  defp status(%{disabled_reason: reason}, false) when is_binary(reason),
     do: {:danger, dgettext("dashboard_automation", "Disabled")}
 
-  defp status(_webhook), do: {:neutral, dgettext("dashboard_automation", "Disabled")}
+  defp status(_webhook, false), do: {:neutral, dgettext("dashboard_automation", "Disabled")}
+
+  defp notice(_webhook, true),
+    do:
+      dgettext(
+        "dashboard_automation",
+        "Paused: your plan doesn't include automations. Upgrading resumes it."
+      )
+
+  defp notice(%{disabled_reason: reason}, false) when is_binary(reason),
+    do: dgettext("dashboard_automation", "Disabled: %{reason}", reason: reason)
+
+  defp notice(_webhook, false), do: nil
 
   defp status_color(last_status) do
     case DeliveryStatus.state(last_status) do

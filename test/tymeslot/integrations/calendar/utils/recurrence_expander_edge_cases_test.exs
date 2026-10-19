@@ -3,7 +3,11 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
 
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Integrations.Calendar.ICalParser
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Test.LogCapture
 
   describe "expand/4 with EXDATE exclusions" do
     test "excludes specific dates" do
@@ -309,6 +313,303 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
       # September (CEST): 09:30 == 07:30 UTC. November (CET): 09:30 == 08:30 UTC.
       assert utc_by_date[~D[2026-09-15]] == ~U[2026-09-15 07:30:00Z]
       assert utc_by_date[~D[2026-11-15]] == ~U[2026-11-15 08:30:00Z]
+    end
+  end
+
+  describe "expand/4 for a series whose time falls in a spring-forward gap" do
+    # Europe/Berlin skips 02:00 to 03:00 on 2026-03-29, so a daily 02:30
+    # series has no 02:30 that day. Every occurrence must take its wall clock
+    # from the first start, never from the occurrence before it: otherwise
+    # the gap day's 03:00 carries forward, and the same occurrence starts at
+    # another time depending on whether the range reached back past the gap.
+    # The start is what an occurrence's uid is built from, so a moving start
+    # also churns the stored occurrence and breaks RECURRENCE-ID matching.
+
+    setup do
+      first = DateTime.new!(~D[2026-03-20], ~T[02:30:00], "Europe/Berlin")
+
+      event = %{
+        uid: "gap-daily",
+        summary: "Early sync",
+        start_time: first,
+        end_time: DateTime.add(first, 30, :minute),
+        recurrence_rule: "FREQ=DAILY"
+      }
+
+      %{event: event}
+    end
+
+    defp start_on(occurrences, date),
+      do:
+        Enum.find_value(occurrences, &(DateTime.to_date(&1.start_time) == date && &1.start_time))
+
+    test "an occurrence after the gap starts the same whatever the range", %{event: event} do
+      across_gap =
+        RecurrenceExpander.expand(event, ~U[2026-03-25 00:00:00Z], ~U[2026-04-10 00:00:00Z])
+
+      after_gap =
+        RecurrenceExpander.expand(event, ~U[2026-04-07 00:00:00Z], ~U[2026-04-10 00:00:00Z])
+
+      expected = DateTime.new!(~D[2026-04-08], ~T[02:30:00], "Europe/Berlin")
+      assert start_on(across_gap, ~D[2026-04-08]) == expected
+      assert start_on(after_gap, ~D[2026-04-08]) == expected
+    end
+
+    test "the gap day itself resolves to the same instant in every range", %{event: event} do
+      starts =
+        for range_start <- [
+              ~U[2026-03-20 00:00:00Z],
+              ~U[2026-03-28 12:00:00Z],
+              ~U[2026-03-29 00:00:00Z]
+            ] do
+          event
+          |> RecurrenceExpander.expand(range_start, ~U[2026-03-31 00:00:00Z])
+          |> start_on(~D[2026-03-29])
+        end
+
+      # 02:30 does not exist that day; it resolves forward to 03:00 CEST.
+      gap_start = DateTime.new!(~D[2026-03-29], ~T[03:00:00], "Europe/Berlin")
+      assert starts == [gap_start, gap_start, gap_start]
+    end
+
+    test "a monthly and a yearly series keep their time after a gap month", %{event: event} do
+      first = DateTime.new!(~D[2025-03-29], ~T[02:30:00], "Europe/Berlin")
+
+      for rule <- ["FREQ=MONTHLY", "FREQ=YEARLY"] do
+        series = %{
+          event
+          | start_time: first,
+            end_time: DateTime.add(first, 30, :minute),
+            recurrence_rule: rule
+        }
+
+        occurrences =
+          RecurrenceExpander.expand(series, ~U[2025-01-01 00:00:00Z], ~U[2027-12-31 00:00:00Z])
+
+        assert DateTime.to_time(start_on(occurrences, ~D[2026-03-29])) == ~T[03:00:00]
+        assert DateTime.to_time(start_on(occurrences, ~D[2027-03-29])) == ~T[02:30:00]
+      end
+    end
+  end
+
+  describe "expand/4 for a series whose time falls in an autumn overlap" do
+    # Europe/Berlin turns 03:00 CEST back to 02:00 CET on 2026-10-25, so
+    # 02:30 happens twice that day. The overlap day takes the first (CEST)
+    # 02:30, and the day after is 02:30 CET, whichever range is expanded.
+    setup do
+      first = DateTime.new!(~D[2026-10-20], ~T[02:30:00], "Europe/Berlin")
+
+      event = %{
+        uid: "overlap-daily",
+        summary: "Early sync",
+        start_time: first,
+        end_time: DateTime.add(first, 30, :minute),
+        recurrence_rule: "FREQ=DAILY"
+      }
+
+      %{event: event}
+    end
+
+    test "the overlap day and the day after start the same in every range", %{event: event} do
+      starts =
+        for range_start <- [
+              ~U[2026-10-20 00:00:00Z],
+              ~U[2026-10-24 12:00:00Z],
+              ~U[2026-10-25 00:00:00Z]
+            ] do
+          occurrences = RecurrenceExpander.expand(event, range_start, ~U[2026-10-28 00:00:00Z])
+          {start_on(occurrences, ~D[2026-10-25]), start_on(occurrences, ~D[2026-10-26])}
+        end
+
+      # 00:30Z is 02:30 CEST, the first of the two; 01:30Z is 02:30 CET.
+      expected = {~U[2026-10-25 00:30:00Z], ~U[2026-10-26 01:30:00Z]}
+
+      utc = fn {a, b} ->
+        {DateTime.shift_zone!(a, "Etc/UTC"), DateTime.shift_zone!(b, "Etc/UTC")}
+      end
+
+      assert Enum.map(starts, utc) == [expected, expected, expected]
+      assert {%{zone_abbr: "CEST"}, %{zone_abbr: "CET"}} = hd(starts)
+    end
+
+    test "the day after starts at 02:30 CET from a range after the change", %{event: event} do
+      occurrences =
+        RecurrenceExpander.expand(event, ~U[2026-10-25 02:00:00Z], ~U[2026-10-28 00:00:00Z])
+
+      assert start_on(occurrences, ~D[2026-10-26]) ==
+               DateTime.new!(~D[2026-10-26], ~T[02:30:00], "Europe/Berlin")
+    end
+  end
+
+  describe "expand/4 for a series that started long before the range" do
+    # The safety cap bounds the occurrences a range gets, not the steps taken
+    # from the series' first start: a standing meeting that has run for years
+    # must still block this week's slots.
+
+    @week_start ~U[2026-10-05 00:00:00Z]
+    @week_end ~U[2026-10-11 23:59:59Z]
+
+    defp berlin(date, time), do: DateTime.new!(date, time, "Europe/Berlin")
+
+    defp old_series(rule, first_day) do
+      %{
+        uid: "old-series",
+        summary: "Standing meeting",
+        start_time: berlin(first_day, ~T[09:00:00]),
+        end_time: berlin(first_day, ~T[09:30:00]),
+        recurrence_rule: rule
+      }
+    end
+
+    defp dates(occurrences), do: Enum.map(occurrences, &DateTime.to_date(&1.start_time))
+
+    test "a daily series from three years ago occurs every day this week, at its own time" do
+      occurrences =
+        "FREQ=DAILY"
+        |> old_series(~D[2023-10-02])
+        |> RecurrenceExpander.expand(@week_start, @week_end)
+
+      assert dates(occurrences) == Enum.to_list(Date.range(~D[2026-10-05], ~D[2026-10-11]))
+      # Three years of DST changes later, the wall clock still reads 09:00.
+      assert Enum.reject(occurrences, &(DateTime.to_time(&1.start_time) == ~T[09:00:00])) == []
+    end
+
+    test "a weekday series from three years ago occurs Monday to Friday this week" do
+      occurrences =
+        "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+        |> old_series(~D[2023-10-02])
+        |> RecurrenceExpander.expand(@week_start, @week_end)
+
+      assert dates(occurrences) == Enum.to_list(Date.range(~D[2026-10-05], ~D[2026-10-09]))
+    end
+
+    test "a fortnightly series from three years ago keeps to its own weeks" do
+      # 2023-10-02 to 2026-09-28 is 156 weeks, so of the three weeks from
+      # 21 September the series is on only in the week of 28 September. The
+      # range is chosen so that a skip by an odd number of weeks would land
+      # in the off weeks.
+      occurrences =
+        "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH"
+        |> old_series(~D[2023-10-03])
+        |> RecurrenceExpander.expand(~U[2026-09-21 00:00:00Z], @week_end)
+
+      assert dates(occurrences) == [~D[2026-09-29], ~D[2026-10-01]]
+    end
+
+    test "a series whose COUNT ran out years ago has no occurrences this week" do
+      occurrences =
+        "FREQ=DAILY;COUNT=10"
+        |> old_series(~D[2023-10-02])
+        |> RecurrenceExpander.expand(@week_start, @week_end)
+
+      assert occurrences == []
+    end
+
+    test "the cap bounds the occurrences inside the range, counted from its start" do
+      occurrences =
+        "FREQ=DAILY"
+        |> old_series(~D[2023-10-02])
+        |> RecurrenceExpander.expand(~U[2026-01-01 00:00:00Z], ~U[2030-12-31 23:59:59Z])
+
+      assert length(occurrences) == 500
+      assert hd(dates(occurrences)) == ~D[2026-01-01]
+    end
+
+    test "a rule that never moves forward is unreadable, so its event shows once" do
+      # INTERVAL=0 (or below) would step on the same period for ever. RFC 5545
+      # requires a positive INTERVAL, so the rule is refused like any other
+      # invalid rule and the event is returned as it is.
+      for rule <- ["FREQ=DAILY;INTERVAL=0", "FREQ=WEEKLY;INTERVAL=-1;BYDAY=MO,WE"] do
+        event = old_series(rule, ~D[2023-10-02])
+
+        assert RRule.parse(rule) == :error
+        assert RecurrenceExpander.expand(event, @week_start, @week_end) == [event]
+        assert RecurrenceExpander.count_before(rule, event.start_time, @week_start) == 1
+      end
+    end
+
+    test "a feed full of rules that never move forward shows each event once" do
+      # Each such rule once spent the whole step budget (about a quarter of a
+      # second) before giving up, so a hostile feed stalled availability.
+      # Read as unreadable, each is now shown once, as it is, without stepping.
+      events =
+        for n <- 1..200,
+            do: old_series("FREQ=DAILY;INTERVAL=0;COUNT=#{n + 1_000_000}", ~D[1900-01-01])
+
+      expanded = Enum.flat_map(events, &RecurrenceExpander.expand(&1, @week_start, @week_end))
+
+      assert expanded == events
+    end
+
+    test "a series that runs out of step budget before the range says so" do
+      # COUNT stops the series being moved forward to the range, so its
+      # periods are stepped one by one from 1700; the budget runs out in the
+      # 1970s, and the series' later occurrences are then missing.
+      LogCapture.attach(level: :warning)
+
+      occurrences =
+        "FREQ=DAILY;COUNT=987654321"
+        |> old_series(~D[1700-01-01])
+        |> RecurrenceExpander.expand(@week_start, @week_end)
+
+      assert occurrences == []
+
+      %{level: :warning, meta: meta} =
+        LogCapture.await_log("Recurrence expansion stopped after 100000 periods")
+
+      assert %{freq: :daily, count: 987_654_321} = meta
+    end
+
+    test "the live busy-time check sees this week's occurrence of a years-old series" do
+      raw = %{
+        uid: "old-standup",
+        summary: "Standup",
+        timezone: "Europe/Berlin",
+        dtstart: DateTime.shift_zone!(berlin(~D[2023-10-02], ~T[09:00:00]), "Etc/UTC"),
+        dtend: DateTime.shift_zone!(berlin(~D[2023-10-02], ~T[09:30:00]), "Etc/UTC"),
+        rrule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+      }
+
+      starts =
+        [raw]
+        |> ICalNormaliser.expand_occurrences(@week_start, @week_end)
+        |> Enum.map(& &1.start_time)
+
+      # 09:00 CEST is 07:00 UTC.
+      assert ~U[2026-10-07 07:00:00Z] in starts
+      assert length(starts) == 5
+    end
+  end
+
+  describe "a CalDAV series whose UNTIL is a floating wall clock" do
+    # An Auckland (UTC+12) daily series at 07:30 whose UNTIL is midnight at
+    # the start of 15 April, written without a zone: read in the series' zone
+    # its last occurrence is 14 April. Read in UTC the bound would be noon on
+    # 15 April in Auckland, and 15 April's 07:30 would be offered as busy too.
+    test "ends on the series' own last day, through the parser and the normaliser" do
+      {:ok, raw_events} =
+        ICalParser.parse("""
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        PRODID:-//Test//EN
+        BEGIN:VEVENT
+        UID:auckland-daily
+        DTSTART;TZID=Pacific/Auckland:20260410T073000
+        DTEND;TZID=Pacific/Auckland:20260410T080000
+        RRULE:FREQ=DAILY;UNTIL=20260415T000000
+        SUMMARY:Daily check-in
+        END:VEVENT
+        END:VCALENDAR
+        """)
+
+      last =
+        raw_events
+        |> ICalNormaliser.expand_occurrences(~U[2026-04-01 00:00:00Z], ~U[2026-04-30 00:00:00Z])
+        |> Enum.map(& &1.start_time)
+        |> Enum.max(DateTime)
+
+      assert DateTime.to_naive(DateTime.shift_zone!(last, "Pacific/Auckland")) ==
+               ~N[2026-04-14 07:30:00]
     end
   end
 end

@@ -40,9 +40,10 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   setup do
     user = insert(:user)
 
-    # Google, so that the repeating fixture below takes the ordinary write: an
-    # occurrence of a CalDAV series is written as an override of its own
-    # (`Tymeslot.CalendarGrid.SeriesEdit`, pinned in `EventEditRecurringTest`).
+    # Google, so that the repeating fixture below, a series master's own row,
+    # takes the ordinary write: an occurrence of a CalDAV series is written as
+    # an override of its own (`Tymeslot.CalendarGrid.SeriesEdit`, pinned in
+    # `EventEditRecurringTest`).
     # The tests that need CalDAV's offline queue bring their own integration.
     integration = insert(:calendar_integration, user: user, provider: "google")
 
@@ -69,7 +70,6 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       colour: "tomato",
       transparency: "transparent",
       visibility: "private",
-      recurring_event_id: "series-1",
       etag: "\"etag-1\"",
       raw_ical: @raw_ical,
       video_link: "https://video.example.com/room",
@@ -489,7 +489,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       user: user,
       integration: integration
     } do
-      event = insert_event(integration, %{})
+      event = insert_event(integration, %{recurring_event_id: "series-1"})
       expect_provider_update()
 
       assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})

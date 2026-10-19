@@ -16,6 +16,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
 
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Utils.ChangesetErrors
 
   @doc """
   The message shown for a failed sign-in, sign-up or password-flow policy
@@ -82,57 +83,26 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   defp server_error, do: dgettext("auth", "A server error occurred. Please try again")
 
   @doc """
-  Formats validation errors from changesets or error maps.
-
-  ## Parameters
-  - errors: Ecto.Changeset or map of field errors
-
-  ## Returns
-  - A formatted string of all validation errors
+  Joins a map of field errors, each already a message in the reader's
+  language, into one line. Field names are not added: a message names its
+  subject itself, in its own language.
   """
-  @spec format_validation_errors(Changeset.t() | map()) :: String.t()
-  def format_validation_errors(%Changeset{} = changeset) do
-    changeset
-    |> Changeset.traverse_errors(&translate_changeset_error/1)
-    |> format_error_map()
-  end
-
+  @spec format_validation_errors(%{atom() => String.t() | [String.t()]}) :: String.t()
   def format_validation_errors(errors) when is_map(errors) do
-    format_error_map(errors)
-  end
-
-  # Mirrors `CoreComponents.Forms.translate_error/1`: the message is a runtime
-  # variable, so the msgids live in `TymeslotWeb.Gettext.EctoErrorMsgids` for
-  # the extractor to find.
-  defp translate_changeset_error({msg, opts}) do
-    if count = opts[:count] do
-      Gettext.dngettext(TymeslotWeb.Gettext, "errors", msg, msg, count, opts)
-    else
-      Gettext.dgettext(TymeslotWeb.Gettext, "errors", msg, opts)
-    end
+    errors
+    |> Enum.flat_map(fn {_field, messages} -> List.wrap(messages) end)
+    |> Enum.join(". ")
   end
 
   @doc """
-  Formats changeset errors into a user-friendly string.
-
-  ## Parameters
-  - changeset: An Ecto.Changeset with errors
-
-  ## Returns
-  - A formatted string of all errors
+  A changeset's first error as one line, in the current locale, prefixed
+  "Label: " when `labels` names its field (for a flash, away from the
+  field). `nil` when the changeset has no errors. See
+  `Tymeslot.Utils.ChangesetErrors.first/3`.
   """
-  @spec format_changeset_errors(Changeset.t()) :: String.t()
-  def format_changeset_errors(changeset) do
-    format_validation_errors(changeset)
-  end
-
-  # Formats a single field error: the field name, humanised, followed by its
-  # error messages.
-  @spec format_field_error(atom(), list(String.t())) :: String.t()
-  defp format_field_error(field, errors) when is_list(errors) do
-    field_name = field |> to_string() |> String.replace("_", " ") |> String.capitalize()
-    "#{field_name} #{Enum.join(errors, ", ")}"
-  end
+  @spec first_error(Changeset.t(), %{atom() => String.t()}) :: String.t() | nil
+  def first_error(%Changeset{} = changeset, labels \\ %{}),
+    do: ChangesetErrors.first(changeset, &ChangesetErrors.translate/1, labels)
 
   # Returns a generic authentication error message to prevent user enumeration.
   @spec generic_auth_error() :: String.t()
@@ -144,27 +114,28 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   end
 
   @doc """
-  Formats a registration failure, given the formatted changeset errors, as a
+  Formats a registration refused by the user changeset as a
   user-friendly message.
 
   A taken address never reaches this: registration answers it as a success,
   so nothing here may say an address is registered.
   """
-  @spec format_user_friendly_error(String.t(), String.t()) :: String.t()
-  def format_user_friendly_error("registration" = operation, reason) when is_binary(reason) do
-    cond do
-      String.contains?(reason, "has already been taken") ->
-        dgettext("auth", "This information is already in use. Please try with different details.")
-
-      String.contains?(reason, "password") and String.contains?(reason, "too short") ->
-        dgettext("auth", "Password must be at least 8 characters long.")
-
-      String.contains?(reason, "email") and String.contains?(reason, "invalid") ->
-        dgettext("auth", "Please enter a valid email address.")
-
-      true ->
-        operation_failed(operation, reason)
+  @spec format_user_friendly_error(String.t(), Changeset.t()) :: String.t()
+  def format_user_friendly_error("registration" = operation, %Changeset{} = changeset) do
+    if unique_refusal?(changeset) do
+      dgettext("auth", "This information is already in use. Please try with different details.")
+    else
+      operation_failed(operation, first_error(changeset, registration_labels()))
     end
+  end
+
+  # Read from the refusal's own metadata, never from its wording, which is in
+  # the reader's language.
+  defp unique_refusal?(%Changeset{errors: errors}),
+    do: Enum.any?(errors, fn {_field, {_message, opts}} -> opts[:constraint] == :unique end)
+
+  defp registration_labels do
+    %{email: dgettext("auth", "Email address"), password: dgettext("auth", "Password")}
   end
 
   defp operation_failed(operation, reason) do
@@ -190,10 +161,4 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   # the auth flows pass are translated too. Anything else falls through as-is.
   defp rate_limit_operation("authentication"), do: dgettext("auth", "authentication")
   defp rate_limit_operation(operation), do: operation
-
-  defp format_error_map(errors) when is_map(errors) do
-    Enum.map_join(errors, ". ", fn {field, messages} ->
-      format_field_error(field, List.wrap(messages))
-    end)
-  end
 end

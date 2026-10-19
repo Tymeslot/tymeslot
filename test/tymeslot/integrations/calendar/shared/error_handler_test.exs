@@ -79,4 +79,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
                )
     end
   end
+
+  describe "sanitize_error_message/2 for a private address" do
+    # Calendar creation shows discovery's refusal through this function.
+    test "names the address in the reader's language" do
+      assert Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+               ErrorHandler.sanitize_error_message(:private_address, :caldav)
+             end) == "Private oder lokale Netzwerkadressen sind nicht zulässig"
+    end
+  end
 end

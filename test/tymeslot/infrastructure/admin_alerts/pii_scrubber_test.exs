@@ -87,12 +87,25 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.PIIScrubberTest do
                %{context: %{owner_email_masked: "a***@example.com", note: "x"}}
     end
 
-    test "leaves doubly-nested maps alone" do
+    # An address nested in a context map reaches the admin's inbox like any
+    # other: it is masked at every depth, by key and by sweep.
+    test "masks addresses in doubly-nested maps" do
       input = %{
-        outer: %{inner: %{owner_email: "alice@example.com"}}
+        outer: %{inner: %{owner_email: "alice@example.com", note: "cc bob@other.org"}}
       }
 
-      assert PIIScrubber.scrub(input) == input
+      assert %{outer: %{inner: inner}} = PIIScrubber.scrub(input)
+      assert inner == %{owner_email_masked: "a***@example.com", note: "cc b***@other.org"}
+    end
+
+    # The key rule is the log redactor's: any `*_email` or `*_recipient` key,
+    # not a fixed list.
+    test "masks an email key outside the alerts' usual names" do
+      assert PIIScrubber.scrub(%{context: %{"attendee_email" => "carol@example.com"}}) ==
+               %{context: %{"attendee_email_masked" => "c***@example.com"}}
+
+      assert PIIScrubber.scrub(%{admin_recipient: "dave@example.com"}) ==
+               %{"admin_recipient_masked" => "d***@example.com"}
     end
 
     test "is idempotent — scrubbing twice produces the same result" do

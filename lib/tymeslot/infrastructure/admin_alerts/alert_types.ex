@@ -23,7 +23,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     dispute_lost: %{category: "Dispute", severity: :error},
     calendar_sync_error: %{category: "Calendar", severity: :error},
     invalid_calendar_event: %{category: "Calendar", severity: :warning},
-    pubsub_broadcast_failed: %{category: "System", severity: :error},
     integration_health_failure: %{category: "System", severity: :error},
     integration_health_recovery: %{category: "System", severity: :info},
     oban_queue_stuck: %{category: "Queue", severity: :error},
@@ -35,12 +34,22 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     new_error: %{category: "Errors", severity: :error},
     error_regression: %{category: "Errors", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
+    reconciliation_incomplete: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
     payment_event_orphaned: %{category: "Payment", severity: :error},
     dunning_stalled: %{category: "Payment", severity: :error},
+    late_payment_refund_failed: %{category: "Payment", severity: :error},
+    account_deletion_billing_sync_failed: %{category: "Payment", severity: :error},
+    account_deletion_stalled: %{category: "Account", severity: :error},
+    account_deletion_held_last_admin: %{category: "Account", severity: :warning},
     analytics_tracking_anomaly: %{category: "Analytics", severity: :warning},
-    recipient_email_rejected: %{category: "Email", severity: :warning}
+    recipient_email_rejected: %{category: "Email", severity: :warning},
+    configured_email_exhausted: %{category: "Email", severity: :error},
+    user_registered_hook_failed: %{category: "System", severity: :error},
+    group_meeting_release_failed: %{category: "Booking", severity: :error},
+    upload_delete_failed: %{category: "System", severity: :warning},
+    account_files_delete_failed: %{category: "Account", severity: :error}
   }
 
   @doc "Returns the full registry map for enumeration and lookup."
@@ -205,6 +214,32 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "database_pool_pressure:#{Map.get(metadata, :repo)}:#{hour_bucket(metadata, :detected_at)}"
   end
 
+  # The message carries the hook's refusal, whose text can differ between the
+  # daily runs of one stuck deletion. Key on the account instead, so each
+  # stuck account alerts once per window and a second one raises its own.
+  def dedup_key(:account_deletion_stalled, metadata) do
+    "account_deletion_stalled:#{Map.get(metadata, :user_id, "unknown")}"
+  end
+
+  # A hold repeats daily for as long as the account is the last admin; one
+  # alert per account per window, kept apart from a failed deletion's.
+  def dedup_key(:account_deletion_held_last_admin, metadata) do
+    "account_deletion_held_last_admin:#{Map.get(metadata, :user_id, "unknown")}"
+  end
+
+  # Each payment left unrefunded is money an attendee is owed, so one alert
+  # per payment, whatever the reason text says.
+  def dedup_key(:late_payment_refund_failed, metadata) do
+    "late_payment_refund_failed:#{Map.get(metadata, :booking_payment_id, "unknown")}"
+  end
+
+  # A volume that refuses deletes fails every one of them for the same reason,
+  # so key on the reason rather than the path: one alert per cause, naming the
+  # first file it hit.
+  def dedup_key(:upload_delete_failed, metadata) do
+    "upload_delete_failed:#{Map.get(metadata, :reason_code, "unknown")}"
+  end
+
   def dedup_key(:stripe_webhook_secret_missing, metadata) do
     "stripe_webhook_secret_missing:#{Map.get(metadata, :env_var)}"
   end
@@ -271,11 +306,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   def format_message(:calendar_sync_error, metadata) do
     email = Map.get(metadata, :owner_email_masked, "unknown")
     "Calendar sync error for #{email}: #{reason_text(metadata)}"
-  end
-
-  def format_message(:pubsub_broadcast_failed, metadata) do
-    event = Map.get(metadata, :event, "unknown")
-    "PubSub broadcast failed for #{event}"
   end
 
   # Aggregate signals (`HealthCheck.Alerting`) describe many integrations, so
@@ -355,6 +385,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "Payment reconciliation found #{count} discrepancies"
   end
 
+  def format_message(:reconciliation_incomplete, metadata) do
+    count = Map.get(metadata, :unresolved_count, "unknown")
+
+    "Payment reconciliation could not look up #{count} subscriptions at Stripe, " <>
+      "so it did not check for subscriptions missing there"
+  end
+
   def format_message(:subscription_not_in_database, metadata) do
     stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
     "Active Stripe subscription #{stripe_id} has no matching database record"
@@ -377,6 +414,30 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       "auto-cancel guard, so it is never cancelled and still grants Pro; manual review required"
   end
 
+  def format_message(:account_deletion_billing_sync_failed, metadata) do
+    user_id = Map.get(metadata, :user_id, "unknown")
+    detail = Map.get(metadata, :reason_message, "unknown")
+
+    "Subscription renewal for user #{user_id} could not be synced with an account deletion " <>
+      "after every retry (#{detail}); check the subscription at Stripe by hand"
+  end
+
+  def format_message(:account_deletion_held_last_admin, metadata) do
+    user_id = Map.get(metadata, :user_id, "unknown")
+
+    "Account deletion for user #{user_id} is on hold: the account is the last admin who can " <>
+      "sign in. Make another account an admin and the deletion goes ahead on its next daily " <>
+      "check; the owner can still restore the account meanwhile"
+  end
+
+  def format_message(:account_deletion_stalled, metadata) do
+    user_id = Map.get(metadata, :user_id, "unknown")
+    detail = Map.get(metadata, :reason_message, "unknown")
+
+    "Account deletion for user #{user_id} failed after every retry (#{detail}); the daily " <>
+      "sweep tries again, but the account stays past its deletion date until the cause is fixed"
+  end
+
   # Discarded after the snooze cap because the subscription, customer or
   # dispute it refers to never appeared. The ids are what the operator needs
   # to find the event in Stripe and reconcile it by hand.
@@ -390,14 +451,31 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       "#{summary} (#{reason_text(metadata)})"
   end
 
+  # The booking stays on the host's outstanding-refunds list; the id is what
+  # the operator needs to find the charge in Stripe. The job is unique per
+  # payment over every state, so a fresh one cannot be inserted: retrying
+  # means retrying this one.
+  def format_message(:late_payment_refund_failed, metadata) do
+    id = Map.get(metadata, :booking_payment_id, "unknown")
+    job_id = Map.get(metadata, :oban_job_id, "unknown")
+
+    "Refund of booking payment #{id}, paid after its slot was taken, failed on every " <>
+      "attempt (#{reason_text(metadata)}); the attendee is still owed the money. " <>
+      "To settle it, refund the booking from the host's payments settings (or the " <>
+      "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
+  end
+
   # One alert per integration and sync run (`Calendar.InvalidEventReport`).
   def format_message(:invalid_calendar_event, %{count: count} = metadata) do
     provider = Map.get(metadata, :provider, "unknown")
     integration_id = Map.get(metadata, :calendar_integration_id, "unknown")
     samples = Map.get(metadata, :sample_events, "unknown")
 
-    "#{count} invalid #{provider} calendar event(s) skipped for integration #{integration_id} " <>
-      "(most common reason: #{reason_text(metadata)}). First skipped: #{samples}"
+    summary =
+      Map.get(metadata, :summary, "#{count} invalid #{provider} calendar event(s) skipped")
+
+    "#{summary} for integration #{integration_id} " <>
+      "(most common reason: #{reason_text(metadata)}). First affected: #{samples}"
   end
 
   def format_message(:invalid_calendar_event, metadata) do
@@ -417,6 +495,61 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       nil -> "#{summary}: #{reason}"
       identifier -> "#{summary} (#{identifier}): #{reason}"
     end
+  end
+
+  # A configured email (a payment notice, say) is lost once Oban stops
+  # retrying; the job id is what the operator needs to find and resend it.
+  # Keyed by the job, so each lost email raises its own alert.
+  def format_message(:configured_email_exhausted, metadata) do
+    template = Map.get(metadata, :template, "unknown")
+    job_id = Map.get(metadata, :job_id, "unknown")
+
+    "Email from template #{template} was not sent after its final attempt (job #{job_id}); " <>
+      "it will not be retried (#{reason_text(metadata)})"
+  end
+
+  # The hook's record of the sign-up (terms acceptance, say) is lost once
+  # Oban stops retrying; the user id is what the operator needs to restore it.
+  def format_message(:user_registered_hook_failed, metadata) do
+    user_id = Map.get(metadata, :user_id, "unknown")
+
+    "Registration hook failed on its final attempt for user #{user_id}; " <>
+      "its record is missing (#{reason_text(metadata)})"
+  end
+
+  # The last seat of a group meeting was released but the meeting could not
+  # be cancelled, so it may still block the host's time as confirmed.
+  def format_message(:group_meeting_release_failed, metadata) do
+    meeting_id = Map.get(metadata, :meeting_id, "unknown")
+
+    "Group meeting #{meeting_id} lost its last participant but could not be cancelled, " <>
+      "so it may still show as confirmed (#{reason_text(metadata)})"
+  end
+
+  # A path outside the upload directory was refused, not attempted: the row
+  # that named it is what needs a look, and the file must not be deleted.
+  def format_message(:upload_delete_failed, %{reason_code: :path_traversal_attempt} = metadata) do
+    path = Map.get(metadata, :file_path, "unknown")
+
+    "Deleting uploaded file #{path} was refused: the path is outside the upload directory; " <>
+      "check the record that points at it"
+  end
+
+  # A replaced or removed upload is still on disk, unreferenced.
+  def format_message(:upload_delete_failed, metadata) do
+    path = Map.get(metadata, :file_path, "unknown")
+
+    "Uploaded file #{path} could not be deleted and is still on disk; " <>
+      "remove it by hand (#{reason_text(metadata)})"
+  end
+
+  # Every retry is spent: personal files outlive the account they belonged to.
+  def format_message(:account_files_delete_failed, metadata) do
+    profile_id = Map.get(metadata, :profile_id, "unknown")
+    paths = Map.get(metadata, :paths, "unknown")
+
+    "Uploaded files of deleted profile #{profile_id} could not be removed after every retry; " <>
+      "delete #{paths} by hand (#{reason_text(metadata)})"
   end
 
   def format_message(type, _metadata) do

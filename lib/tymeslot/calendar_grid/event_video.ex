@@ -69,9 +69,9 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
-  alias Tymeslot.Integrations.Calendar.Operations, as: CalendarOperations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations, as: CalendarOperations
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
@@ -118,7 +118,12 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
           {:ok, String.t() | nil | :unchanged}
           | {:error,
-             :missing_meeting_url | :meet_link_pending | :not_found | :linked_to_booking | term()}
+             :missing_meeting_url
+             | :meet_link_pending
+             | :not_found
+             | :video_integration_inactive
+             | :linked_to_booking
+             | term()}
   def change_event_video(_user_id, %{video_integration_id: id, video_link: link}, id)
       when is_integer(id) and is_binary(link),
       do: {:ok, :unchanged}
@@ -191,12 +196,22 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
   defp apply_video_change(user_id, event, video_integration_id)
        when is_integer(video_integration_id) do
-    with {:ok, _integration} <- Video.fetch_integration_for_user(video_integration_id, user_id) do
+    with :ok <- usable_integration(video_integration_id, user_id) do
       case link_placement(user_id, event, video_integration_id) do
         :inline_meet -> change_to_inline_meet(user_id, event, video_integration_id)
         :attached_teams -> change_to_attached_teams(user_id, event, video_integration_id)
         :room -> change_to_room(user_id, event, video_integration_id)
       end
+    end
+  end
+
+  # The owner's choice from a form that may be stale: an integration since
+  # disconnected (its rooms being drained) or switched off gets no new room.
+  defp usable_integration(video_integration_id, user_id) do
+    case Video.fetch_live_integration_for_user(video_integration_id, user_id) do
+      {:ok, %{is_active: true}} -> :ok
+      {:ok, _switched_off} -> {:error, :video_integration_inactive}
+      {:error, :not_found} = error -> error
     end
   end
 

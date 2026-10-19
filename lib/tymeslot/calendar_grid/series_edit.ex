@@ -134,17 +134,18 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   as they were and requests no sync.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.SeriesCarry
-  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.CalendarGrid.SeriesStart
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
-  alias Tymeslot.Workers.SyncCalDavCalendarWorker
-  alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.SyncSchedule
+  alias Tymeslot.Timezones
 
   require Logger
 
@@ -155,6 +156,13 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
 
   # The cache fields an edit moves an occurrence or resizes it by.
   @timing_fields [:start_at, :end_at, :start_date, :end_date]
+
+  # What an occurrence's cached row carries of its series, which a write to
+  # that one occurrence (a row naming its master) must not send: Google and Outlook address an
+  # instance by its own id, and a rule sent with it would ask the provider
+  # to make the instance a series of its own. The zone goes with the rule,
+  # as `ProviderPayload.put_series_zone/2` adds it only for one.
+  @series_only_fields [:recurrence_rule, :recurrence_exceptions, :series_timezone, :timezone]
 
   @typedoc """
   Something an edit of this and every following occurrence does not carry,
@@ -214,7 +222,8 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   def update_event(user_id, event, stored, family, scope, changes, opts)
       when (family == :caldav and scope in [:this_only, :following, :all]) or
              (family == :provider_ids and scope in [:following, :all]) do
-    with :ok <- ensure_series_edit(stored, scope, changes) do
+    with :ok <- ensure_series_edit(stored, scope, changes),
+         {:ok, changes} <- count_what_is_left(scope, stored, changes, opts) do
       EventEdit.write_edit(
         user_id,
         event,
@@ -222,18 +231,113 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
         changes,
         opts,
         :never_queue,
-        &address(&1, family, stored, scope, changes),
+        &address(&1, family, stored, scope, {changes, Keyword.get(opts, :until_timezone)}),
         &after_write(scope, user_id, stored, changes, &1)
       )
     end
   end
 
   def update_event(user_id, event, stored, _family, :this_only, changes, opts),
-    do: EventEdit.write_edit(user_id, event, stored, changes, opts, :never_queue)
+    do:
+      EventEdit.write_edit(
+        user_id,
+        event,
+        stored,
+        changes,
+        opts,
+        :never_queue,
+        &{:ok, instance_payload(&1, stored)}
+      )
 
   def update_event(_user_id, _event, _stored, _family, scope, _changes, _opts)
       when scope in [:following, :all],
       do: refuse(:unsupported_scope)
+
+  @doc """
+  The rule an edit of `event` and every following occurrence writes to the
+  series it starts there, given `rule`, the new repeat rule with its
+  `COUNT`, if any, as the organiser gave it for the whole series.
+
+  The occurrences before the split stay where they are, so a `COUNT` is what
+  is left of the series: as many as the series' rule makes from its first
+  start up to the occurrence (`SeriesStart.count_before/4`) are taken off
+  it. The series is read as it is cached now, as `update_event/7` reads it
+  when the edit is written. `zone` is the zone the series repeats in, on
+  whose wall clock the occurrences are counted. A rule without a `COUNT`
+  is answered as it is.
+
+  `{:error, :ends_before}` when nothing is left of the count, and
+  `{:error, :start_unknown}` when the series' first start, or where the
+  series put the occurrence, has not been read from the calendar, or the
+  cached row no longer carries the series' rule.
+  """
+  @spec following_rule(map(), String.t(), String.t() | nil) ::
+          {:ok, String.t()} | {:error, :ends_before | :start_unknown}
+  def following_rule(event, rule, zone),
+    do: following_rule_of_cached(Occurrence.cached_row(event), rule, zone)
+
+  # `following_rule/3` for a `stored` row that is already the cached one.
+  defp following_rule_of_cached(stored, rule, zone) do
+    case RRule.parse(rule) do
+      {:ok, %RRule{count: count} = parsed} when is_integer(count) ->
+        with {:ok, before} <- occurrences_before(stored, zone) do
+          if count > before,
+            do: {:ok, RRule.format(%{parsed | count: count - before})},
+            else: {:error, :ends_before}
+        end
+
+      _no_count ->
+        {:ok, rule}
+    end
+  end
+
+  defp occurrences_before(stored, zone) do
+    with series_rule when is_binary(series_rule) <- Map.get(stored, :recurrence_rule),
+         %{} = first <- SeriesStart.of_cached(stored),
+         %{} = slot <- SeriesStart.slot_of_cached(stored) do
+      {:ok,
+       SeriesStart.count_before(
+         Map.get(stored, :provider),
+         series_rule,
+         in_zone(first, zone),
+         in_zone(slot, zone)
+       )}
+    else
+      _not_read -> {:error, :start_unknown}
+    end
+  end
+
+  defp in_zone(%DateTime{} = at, zone) do
+    if Timezones.valid?(zone), do: DateTime.shift_zone!(at, zone), else: at
+  end
+
+  defp in_zone(%Date{} = date, _zone), do: date
+
+  # A new rule written from the split counts what is left of the series as
+  # it is when the edit is written (`following_rule/3`, from `stored`, the
+  # row already read for the write), not as it was when
+  # the organiser chose the rule: a sync since may have moved its start or
+  # changed its rule. The rule's end day was chosen in `:until_timezone`,
+  # the zone the series repeats in.
+  defp count_what_is_left(:following, stored, %{recurrence_rule: rule} = changes, opts)
+       when is_binary(rule) do
+    zone = Keyword.get(opts, :until_timezone) || Map.get(stored, :timezone)
+
+    case following_rule_of_cached(stored, rule, zone) do
+      {:ok, rule} -> {:ok, %{changes | recurrence_rule: rule}}
+      {:error, reason} -> refuse(reason)
+    end
+  end
+
+  defp count_what_is_left(_scope, _stored, changes, _opts), do: {:ok, changes}
+
+  # A row naming its master is one instance of it; a master's own row (a
+  # series Tymeslot created) is the series, and keeps its rule.
+  defp instance_payload(payload, %{recurring_event_id: master_id})
+       when is_binary(master_id) and master_id != "",
+       do: Map.drop(payload, @series_only_fields)
+
+  defp instance_payload(payload, _stored), do: payload
 
   defp ensure_series_edit(%{} = stored, scope, changes) do
     cond do
@@ -270,12 +374,12 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # master, and the cached document and ETag are what the writer rewrites.
   # For Google and Outlook, its master, named by the occurrence, with where
   # the occurrence shows now, which is what a move of it is measured from.
-  defp address(payload, family, stored, scope, changes) do
+  defp address(payload, family, stored, scope, {changes, until_timezone}) do
     fields = changed_fields(scope, stored, changes)
 
     case family do
       :caldav -> address_fields(payload, stored, scope, fields)
-      :provider_ids -> address_master(payload, stored, scope, fields)
+      :provider_ids -> address_master(payload, stored, scope, fields, until_timezone)
     end
   end
 
@@ -327,11 +431,17 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # A row naming no master is the master itself, or an event the sync could
   # not place in its series; neither says which series to edit. A split also
   # needs the occurrence's original start, where the series is cut.
-  defp address_master(payload, %{recurring_event_id: master_id} = stored, scope, fields)
+  #
+  # A new rule's UNTIL is an instant ending the day the organiser chose in
+  # `until_timezone`, so that is the zone its end date is read back in. The
+  # master's own zone can disagree with the cached row's, which is where the
+  # editor took the zone from, and would move the end by a day.
+  defp address_master(payload, %{recurring_event_id: master_id} = stored, scope, fields, until_tz)
        when is_binary(master_id) and master_id != "" do
     occurrence = %{
       scope: scope,
       master_id: master_id,
+      until_timezone: until_tz,
       start: if(stored.all_day, do: stored.start_date, else: stored.start_at),
       end: if(stored.all_day, do: stored.end_date, else: stored.end_at),
       changes: Map.take(payload, fields)
@@ -341,7 +451,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
          do: {:ok, Map.put(payload, :occurrence, occurrence)}
   end
 
-  defp address_master(_payload, _stored, _scope, _fields),
+  defp address_master(_payload, _stored, _scope, _fields, _until_timezone),
     do: {:error, :unaddressable_occurrence}
 
   defp put_slot(occurrence, :all, _stored), do: {:ok, occurrence}
@@ -393,7 +503,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
          do: EventDeletion.delete_series_rows(integration_id, address)
 
     SeriesCarry.carry(carried)
-    AvailabilityCache.invalidate_for_user(user_id)
+    Availability.changed(user_id)
     request_sync(stored.provider, integration_id)
   end
 
@@ -406,7 +516,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   """
   @spec request_sync(String.t() | atom(), pos_integer()) :: :ok
   def request_sync(provider, integration_id) do
-    case enqueue_sync(to_string(provider), integration_id) do
+    case SyncSchedule.request_sync(%{provider: to_string(provider), id: integration_id}) do
       {:ok, _job} ->
         :ok
 
@@ -417,15 +527,6 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
         )
     end
   end
-
-  defp enqueue_sync("google", integration_id),
-    do: SyncGoogleCalendarWorker.enqueue(integration_id)
-
-  defp enqueue_sync("outlook", integration_id),
-    do: RefreshOutlookCalendarWorker.enqueue(integration_id)
-
-  defp enqueue_sync(_caldav, integration_id),
-    do: SyncCalDavCalendarWorker.enqueue_full_fetch(integration_id)
 
   defp refuse(reason), do: {:error, %{reason: reason, retry: :not_queued}}
 end

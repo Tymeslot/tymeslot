@@ -109,7 +109,6 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
                  duration: "60min",
                  user_timezone: "Europe/London"
                },
-               %{},
                meeting.organizer_user_id
              )
 
@@ -171,5 +170,99 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
     tokyo_date = weekday
     assert "11:00 PM" in offered(host.profile, tokyo_date, 60, timezone: "Asia/Tokyo")
     assert {:ok, _meeting} = book(host, tokyo_date, "11:00 PM", 60, "Asia/Tokyo")
+  end
+
+  # Meeting types run up to a whole day, so a long meeting late in the host's
+  # evening runs on past their midnight.
+  test "a long meeting that runs past the host's midnight is offered and books across it" do
+    weekday = next_bookable_weekday()
+
+    host =
+      create_bookable_profile(
+        timezone: "Europe/London",
+        days: [Date.day_of_week(weekday)],
+        hours: %{
+          is_available: true,
+          start_time: ~T[18:00:00],
+          end_time: ~T[04:00:00],
+          ends_next_day: true
+        }
+      )
+
+    # Five-hour slots on the host's grid from 18:00; the second one runs
+    # 23:00 to 04:00.
+    assert offered(host.profile, weekday, 300) == ["6:00 PM", "11:00 PM"]
+
+    assert {:ok, meeting} = book(host, weekday, "11:00 PM", 300, "Europe/London")
+
+    assert DateTime.shift_zone!(meeting.start_time, "Europe/London") ==
+             DateTime.new!(weekday, ~T[23:00:00], "Europe/London")
+
+    assert DateTime.shift_zone!(meeting.end_time, "Europe/London") ==
+             DateTime.new!(Date.add(weekday, 1), ~T[04:00:00], "Europe/London")
+  end
+
+  # Kolkata's 09:00 opening is 23:30 the evening before in New York, so the
+  # first slot of the host's day runs across the booker's midnight.
+  test "a slot that runs across the booker's midnight is offered on the date it starts and books" do
+    freeze_clock(~U[2026-11-02 12:00:00Z])
+    monday = ~D[2026-11-16]
+    sunday = Date.add(monday, -1)
+
+    host =
+      create_bookable_profile(
+        timezone: "Asia/Kolkata",
+        days: [1],
+        hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
+      )
+
+    # 09:00 and 10:00 in Kolkata; the second runs 23:30 to 00:30 in New York.
+    assert offered(host.profile, sunday, 60, timezone: "America/New_York") ==
+             ["10:30 PM", "11:30 PM"]
+
+    assert {:ok, meeting} = book(host, sunday, "11:30 PM", 60, "America/New_York")
+    assert meeting.start_time == ~U[2026-11-16 04:30:00Z]
+    assert meeting.end_time == ~U[2026-11-16 05:30:00Z]
+  end
+
+  describe "a Berlin host seen from New York on the night New York's clocks go back" do
+    # Sunday 1 November 2026: New York repeats 01:00 to 02:00 (05:00Z EDT,
+    # then 06:00Z EST); Berlin is already on CET (UTC+1). A booker only sends
+    # a date and a label, and "1:00 AM" names the first pass, so the second
+    # pass is never offered: the label could not book the instant shown.
+    setup do
+      freeze_clock(~U[2026-10-20 12:00:00Z])
+      %{sunday: ~D[2026-11-01]}
+    end
+
+    test "the host's opening on the second pass is not offered and its label is refused", ctx do
+      host = berlin_host(~T[07:00:00], ~T[10:00:00])
+
+      # 07:00 CET is 1:00 AM EST, the repeated hour's second pass.
+      assert offered(host.profile, ctx.sunday, 60, timezone: "America/New_York") ==
+               ["2:00 AM", "3:00 AM"]
+
+      # A stale page still holding "1:00 AM" is refused, not booked an hour
+      # before the host opens.
+      assert {:error, :slot_taken} = book(host, ctx.sunday, "1:00 AM", 60, "America/New_York")
+    end
+
+    test "with both passes open, 1:00 AM is offered once and books the first", ctx do
+      host = berlin_host(~T[06:00:00], ~T[10:00:00])
+
+      assert offered(host.profile, ctx.sunday, 60, timezone: "America/New_York") ==
+               ["1:00 AM", "2:00 AM", "3:00 AM"]
+
+      assert {:ok, meeting} = book(host, ctx.sunday, "1:00 AM", 60, "America/New_York")
+      assert meeting.start_time == ~U[2026-11-01 05:00:00Z]
+    end
+  end
+
+  defp berlin_host(opens, closes) do
+    create_bookable_profile(
+      timezone: "Europe/Berlin",
+      days: [7],
+      hours: %{is_available: true, start_time: opens, end_time: closes}
+    )
   end
 end

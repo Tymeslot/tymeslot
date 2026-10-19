@@ -6,11 +6,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
   @moduletag :meetings
   @moduletag :notifications
 
+  import Ecto.Query, only: [from: 2]
+
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
-  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
@@ -93,6 +94,66 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
                )
     end
 
+    # The worker is the debounce. A second edit announced after the first
+    # announcement's email went out (more than the debounce apart, within
+    # minutes) is a change of its own and must reach the attendees.
+    test "a second change announced after the first email went out is sent too", %{
+      event: event
+    } do
+      {:ok, event} = event |> Changeset.change(summary: "first change") |> Repo.update()
+      assert :ok = perform_job(Worker, update_args(event))
+
+      {1, _rows} =
+        Repo.update_all(
+          from(j in Oban.Job, where: j.worker == "Tymeslot.Workers.EmailWorker"),
+          set: [state: "completed", completed_at: DateTime.utc_now()]
+        )
+
+      {:ok, event} = event |> Changeset.change(summary: "second change") |> Repo.update()
+      assert :ok = perform_job(Worker, update_args(event))
+
+      jobs =
+        Repo.all(
+          from(j in Oban.Job,
+            where: j.worker == "Tymeslot.Workers.EmailWorker",
+            order_by: j.id
+          )
+        )
+
+      assert Enum.map(jobs, & &1.args["before_title"]) == ["original", "first change"]
+      assert Enum.map(jobs, & &1.state) == ["completed", "available"]
+    end
+
+    # The baseline is the record of what attendees were told. An enqueue that
+    # fails must leave it where it was, so the retry still sees the change.
+    test "a failed enqueue leaves the baseline, and the retry announces the change", %{
+      event: event,
+      baseline_state: baseline_state
+    } do
+      {:ok, event} = event |> Changeset.change(summary: "changed") |> Repo.update()
+
+      # Rolled back with the test's sandbox transaction.
+      Repo.query!("""
+      ALTER TABLE oban_jobs ADD CONSTRAINT test_refuse_event_update
+      CHECK (args->>'action' <> 'send_event_update_notification')
+      """)
+
+      assert_raise Ecto.ConstraintError, fn -> perform_job(Worker, update_args(event)) end
+
+      assert Repo.get!(ProviderCalendarEventSchema, event.id).last_notified_state ==
+               baseline_state
+
+      Repo.query!("ALTER TABLE oban_jobs DROP CONSTRAINT test_refuse_event_update")
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [%Oban.Job{args: %{"before_title" => "original"}}] =
+               all_enqueued(worker: EmailWorker)
+
+      assert Repo.get!(ProviderCalendarEventSchema, event.id).last_notified_state["title"] ==
+               "changed"
+    end
+
     test "no-ops when diff is empty (user reverted edits)", %{event: event} do
       args = %{
         "event_id" => event.id,
@@ -132,95 +193,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
       reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
       assert reloaded.ical_sequence == 0
       assert reloaded.last_notified_state == event.last_notified_state
-    end
-  end
-
-  describe "perform/1 for meeting updates" do
-    test "re-diffs at execution and persists new baseline when title changed" do
-      starts_at = ~U[2026-03-01 09:00:00Z]
-      ends_at = ~U[2026-03-01 10:00:00Z]
-
-      baseline_state =
-        LastNotifiedState.serialise(
-          %{
-            title: "original title",
-            starts_at: starts_at,
-            ends_at: ends_at,
-            location: "",
-            description: "",
-            video_link: nil
-          },
-          [%{email: "attendee@example.com"}]
-        )
-
-      # current_event_map prefers :summary over :title, so set both to the
-      # updated value to ensure the diff sees a changed title.
-      meeting =
-        insert(:meeting,
-          title: "updated title",
-          summary: "updated title",
-          start_time: starts_at,
-          end_time: ends_at,
-          location: nil,
-          description: nil,
-          attendee_email: "attendee@example.com",
-          ical_sequence: 0,
-          last_notified_state: baseline_state
-        )
-
-      args = %{
-        "event_id" => meeting.id,
-        "kind" => "meeting",
-        "action" => "update"
-      }
-
-      assert :ok = perform_job(Worker, args)
-
-      reloaded = Repo.get!(MeetingSchema, meeting.id)
-      assert reloaded.ical_sequence == 1
-      assert reloaded.last_notified_state["title"] == "updated title"
-    end
-
-    test "no-ops when diff is empty" do
-      starts_at = ~U[2026-03-01 09:00:00Z]
-      ends_at = ~U[2026-03-01 10:00:00Z]
-
-      baseline_state =
-        LastNotifiedState.serialise(
-          %{
-            title: "same title",
-            starts_at: starts_at,
-            ends_at: ends_at,
-            location: "",
-            description: "",
-            video_link: nil
-          },
-          [%{email: "attendee@example.com"}]
-        )
-
-      meeting =
-        insert(:meeting,
-          title: "same title",
-          summary: "same title",
-          start_time: starts_at,
-          end_time: ends_at,
-          location: nil,
-          description: nil,
-          attendee_email: "attendee@example.com",
-          ical_sequence: 0,
-          last_notified_state: baseline_state
-        )
-
-      args = %{
-        "event_id" => meeting.id,
-        "kind" => "meeting",
-        "action" => "update"
-      }
-
-      assert :ok = perform_job(Worker, args)
-
-      reloaded = Repo.get!(MeetingSchema, meeting.id)
-      assert reloaded.ical_sequence == 0
     end
   end
 

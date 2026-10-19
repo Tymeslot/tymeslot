@@ -58,4 +58,58 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayoutTest do
       assert length(visible) == 3
     end
   end
+
+  # Santiago moves its clocks from 00:00 to 01:00 on 6 September 2026, so
+  # that day has no midnight and begins at 01:00 (-03).
+  describe "day_boundary_utc/2" do
+    test "starts a day whose midnight the clocks skip where it begins" do
+      assert OverlapLayout.day_boundary_utc(~D[2026-09-06], "America/Santiago") ==
+               {~U[2026-09-06 04:00:00Z], ~U[2026-09-07 03:00:00Z]}
+    end
+
+    test "ends the day before at that same instant" do
+      assert {_start, ~U[2026-09-06 04:00:00Z]} =
+               OverlapLayout.day_boundary_utc(~D[2026-09-05], "America/Santiago")
+    end
+
+    # Havana moves its clocks back from 01:00 to 00:00 on 1 November 2026, so
+    # that day has two midnights; it begins at the first (-04) and runs 25 hours.
+    test "starts a day with two midnights at the first" do
+      assert OverlapLayout.day_boundary_utc(~D[2026-11-01], "America/Havana") ==
+               {~U[2026-11-01 04:00:00Z], ~U[2026-11-02 05:00:00Z]}
+
+      assert {_start, ~U[2026-11-01 04:00:00Z]} =
+               OverlapLayout.day_boundary_utc(~D[2026-10-31], "America/Havana")
+    end
+  end
+
+  # 6 March 2027 in New York (-05:00) runs from 05:00Z to 05:00Z the next day.
+  describe "event_spans_day?/3" do
+    @tz "America/New_York"
+    @day ~D[2027-03-06]
+    @midnight ~U[2027-03-06 05:00:00Z]
+
+    defp timed(start_at, end_at), do: %{start_at: start_at, end_at: end_at}
+
+    test "puts an event with no length at the day's midnight in that day only" do
+      moment = timed(@midnight, @midnight)
+
+      assert OverlapLayout.event_spans_day?(moment, @day, @tz)
+      refute OverlapLayout.event_spans_day?(moment, Date.add(@day, -1), @tz)
+    end
+
+    test "leaves out of the day an event ending exactly as it starts" do
+      before = timed(DateTime.add(@midnight, -1, :hour), @midnight)
+
+      refute OverlapLayout.event_spans_day?(before, @day, @tz)
+      assert OverlapLayout.event_spans_day?(before, Date.add(@day, -1), @tz)
+    end
+
+    test "puts an event running across midnight in both days" do
+      across = timed(DateTime.add(@midnight, -1, :hour), DateTime.add(@midnight, 1, :hour))
+
+      assert OverlapLayout.event_spans_day?(across, @day, @tz)
+      assert OverlapLayout.event_spans_day?(across, Date.add(@day, -1), @tz)
+    end
+  end
 end

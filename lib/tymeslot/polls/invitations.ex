@@ -16,7 +16,7 @@ defmodule Tymeslot.Polls.Invitations do
   link but has not voted with it yet is confirmed and invited.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantQueries, PollParticipantSchema, PollSchema}
@@ -112,7 +112,7 @@ defmodule Tymeslot.Polls.Invitations do
   @doc "Emails each of `participants` their invitation."
   @spec send_invitations([PollParticipantSchema.t()]) :: :ok
   def send_invitations(participants) do
-    Enum.each(participants, &PollScheduler.schedule_invitation/1)
+    Enum.each(participants, &EmailScheduler.schedule_poll_invitation/1)
   end
 
   # --- Parsing ---

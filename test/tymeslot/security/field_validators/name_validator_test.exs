@@ -74,4 +74,11 @@ defmodule Tymeslot.Security.FieldValidators.NameValidatorTest do
       assert {:error, "Name must be a text value"} = NameValidator.validate(%{key: "value"})
     end
   end
+
+  # A name reaches email headers; a line break inside it is refused at input.
+  test "refuses a line break or other control character inside a name" do
+    for name <- ["Ada\r\nBcc: x@example.com", "Ada\nLovelace", "Ada\u0000Lovelace"] do
+      assert {:error, "Name contains invalid characters"} = NameValidator.validate(name), name
+    end
+  end
 end

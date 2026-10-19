@@ -22,9 +22,9 @@ defmodule Tymeslot.Bookings.SeatEffects do
   that then rolls back.
   """
 
+  alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Notifications.Orchestrator
@@ -45,7 +45,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
   ]
 
   @doc """
-  Turns a full `Tymeslot.Bookings.Policy.build_meeting_attributes/1` map into
+  Turns a full `Tymeslot.Bookings.MeetingAttributes.build/1` map into
   a group meeting's shared-slot attrs: strips the fields that belong on the
   booker's `meeting_participants` row instead, and names the slot `title`
   rather than the booker-addressed title the builder produces (a group slot
@@ -79,7 +79,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
   """
   @spec broadcast_and_invalidate(map()) :: :ok
   def broadcast_and_invalidate(meeting) do
-    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    Availability.changed(meeting.organizer_user_id)
     SeatBroadcast.broadcast_seat_change(meeting.meeting_type_id)
     :ok
   end

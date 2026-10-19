@@ -24,8 +24,8 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Shared.ReauthHandling
 
   @behaviour ExpectedJobOutcome
@@ -68,7 +68,7 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
         {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
+        Management.handle_reauth_required(integration)
     end
   end
 

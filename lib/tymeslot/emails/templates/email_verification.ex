@@ -4,13 +4,32 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Greeting, TemplateHelper, Text}
+  alias Swoosh.Email
+  alias Tymeslot.Emails.RecipientLocale
+
+  alias Tymeslot.Emails.Shared.{Buttons, Greeting, MjmlEmail, TemplateHelper, Text}
 
   # A first-contact email welcoming a new user in.
   @intent :confirmed
 
-  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
+  @doc """
+  The email, addressed and rendered in the recipient's locale.
+  """
+  @spec render(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t()
+        ) :: Email.t()
   def render(user, verification_url) do
+    RecipientLocale.with_user_locale(user, fn ->
+      MjmlEmail.base_email()
+      |> Email.to({user.name || user.email, user.email})
+      |> Email.subject(dgettext("emails_account", "Verify your email address"))
+      |> Email.html_body(html_body(user, verification_url))
+      |> Email.text_body(text_body(user, verification_url))
+    end)
+  end
+
+  defp html_body(user, verification_url) do
     mjml_content = """
     #{Text.centered_html(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
@@ -36,8 +55,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
     )
   end
 
-  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
-  def render_text(user, verification_url) do
+  defp text_body(user, verification_url) do
     """
     #{dgettext("emails_account", "Welcome to Tymeslot!")}
 

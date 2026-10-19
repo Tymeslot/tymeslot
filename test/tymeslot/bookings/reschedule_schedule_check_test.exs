@@ -56,7 +56,7 @@ defmodule Tymeslot.Bookings.RescheduleScheduleCheckTest do
       }
 
       assert {:error, :slot_taken} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       # The meeting must stay exactly where it was — the schedule check must
       # refuse before any time is written.
@@ -83,7 +83,7 @@ defmodule Tymeslot.Bookings.RescheduleScheduleCheckTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert DateTime.to_date(updated.start_time) == target_date
       assert updated.start_time.hour == 10
@@ -131,7 +131,7 @@ defmodule Tymeslot.Bookings.RescheduleScheduleCheckTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated.start_time.hour == 9
       assert updated.start_time.minute == 45
@@ -171,7 +171,7 @@ defmodule Tymeslot.Bookings.RescheduleScheduleCheckTest do
       }
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
       assert updated.duration == 60
       assert DateTime.diff(updated.end_time, updated.start_time, :minute) == 60

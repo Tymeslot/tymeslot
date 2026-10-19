@@ -400,7 +400,7 @@ msgstr "Новий розклад"
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "No buffer"
-msgstr "Без перерви"
+msgstr "Без буферного часу"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
 #, elixir-autogen, elixir-format
@@ -439,6 +439,7 @@ msgid "Schedule duplicated"
 msgstr "Розклад продубльовано"
 
 #: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule name"
 msgstr "Назва розкладу"
@@ -806,27 +807,27 @@ msgstr "Розклади"
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer Time"
-msgstr "Перерви"
+msgstr "Буферний час"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer after meetings set to custom value"
-msgstr "Для перерви після зустрічей встановлено власне значення"
+msgstr "Для буферного часу після зустрічей встановлено власне значення"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer after meetings updated to %{minutes} minutes"
-msgstr "Перерву після зустрічей оновлено: %{minutes} хв"
+msgstr "Буферний час після зустрічей оновлено: %{minutes} хв"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer before meetings set to custom value"
-msgstr "Для перерви перед зустрічами встановлено власне значення"
+msgstr "Для буферного часу перед зустрічами встановлено власне значення"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer before meetings updated to %{minutes} minutes"
-msgstr "Перерву перед зустрічами оновлено: %{minutes} хв"
+msgstr "Буферний час перед зустрічами оновлено: %{minutes} хв"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
@@ -877,3 +878,48 @@ msgstr "Видалити перерву"
 #, elixir-autogen, elixir-format
 msgid "Delete schedule"
 msgstr "Видалити розклад"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} cannot be more than %{max}"
+msgstr "%{setting}: значення не може перевищувати %{max}"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be a whole number"
+msgstr "%{setting}: значення має бути цілим числом"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be at least %{min}"
+msgstr "%{setting}: значення має бути щонайменше %{min}"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking days"
+msgstr "Вікно завчасного бронювання (у днях)"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr "Буферний час після зустрічей"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr "Буферний час перед зустрічами"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum advance hours"
+msgstr "Мінімальний час до бронювання (у годинах)"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break no longer fits these hours. Move or delete it first."
+msgstr "Перерва %{break} більше не вкладається в ці години. Спочатку перемістіть або видаліть її."
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "The %{break} break on %{day} falls outside that day's hours. Move or delete it, then try again."
+msgstr "Перерва %{break} (%{day}) виходить за межі годин цього дня. Перемістіть або видаліть її, а потім спробуйте ще раз."

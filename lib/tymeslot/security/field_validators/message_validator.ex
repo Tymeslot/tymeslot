@@ -6,6 +6,8 @@ defmodule Tymeslot.Security.FieldValidators.MessageValidator do
   with appropriate length limits and optional HTML content support.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @message_min_length 10
   @message_max_length 2000
 
@@ -33,7 +35,7 @@ defmodule Tymeslot.Security.FieldValidators.MessageValidator do
 
   def validate(nil, opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, "Message is required"}
+      {:error, dgettext("errors_input", "Message is required")}
     else
       :ok
     end
@@ -41,7 +43,7 @@ defmodule Tymeslot.Security.FieldValidators.MessageValidator do
 
   def validate("", opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, "Message is required"}
+      {:error, dgettext("errors_input", "Message is required")}
     else
       :ok
     end
@@ -55,16 +57,22 @@ defmodule Tymeslot.Security.FieldValidators.MessageValidator do
 
     cond do
       Keyword.get(opts, :required, true) and trimmed_message == "" ->
-        {:error, "Message cannot be blank"}
+        {:error, dgettext("errors_input", "Message cannot be blank")}
 
       String.length(trimmed_message) < min_length and trimmed_message != "" ->
-        {:error, "Message is too short (minimum #{min_length} characters)"}
+        {:error,
+         dgettext("errors_input", "Message is too short (minimum %{min_length} characters)",
+           min_length: min_length
+         )}
 
       String.length(trimmed_message) > max_length ->
-        {:error, "Message is too long (maximum #{max_length} characters)"}
+        {:error,
+         dgettext("errors_input", "Message is too long (maximum %{max_length} characters)",
+           max_length: max_length
+         )}
 
       only_whitespace_and_punctuation?(trimmed_message) ->
-        {:error, "Message must contain meaningful content"}
+        {:error, dgettext("errors_input", "Message must contain meaningful content")}
 
       true ->
         :ok
@@ -72,7 +80,7 @@ defmodule Tymeslot.Security.FieldValidators.MessageValidator do
   end
 
   def validate(_message, _opts) do
-    {:error, "Message must be a text value"}
+    {:error, dgettext("errors_input", "Message must be a text value")}
   end
 
   # Private helper functions

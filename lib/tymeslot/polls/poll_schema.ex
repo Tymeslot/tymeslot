@@ -9,11 +9,10 @@ defmodule Tymeslot.Polls.PollSchema do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.ReminderValidation
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Polls.{PollParticipantSchema, PollTimeSlotSchema}
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
-  alias Tymeslot.Utils.ReminderUtils
-  alias Tymeslot.Utils.UnguessableToken
   alias Tymeslot.Validation.Constraints
 
   @max_slots 40
@@ -35,13 +34,12 @@ defmodule Tymeslot.Polls.PollSchema do
     field(:duration_minutes, :integer)
     # The poll's public voting link, which the host copies from the
     # dashboard again whenever they like, so it is encrypted rather than only
-    # hashed; it is looked up by `token_hash`. The plain `token` column
-    # predates this and is no longer read or written.
+    # hashed; it is looked up by `token_hash`.
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
     field(:status, Ecto.Enum, values: [:open, :confirmed, :cancelled], default: :open)
     # Whether the host is emailed about new votes, bundled per quarter hour
-    # (`Tymeslot.Emails.EmailScheduler.PollScheduler.schedule_vote_digest/1`),
+    # (`Tymeslot.Emails.EmailScheduler.schedule_poll_vote_digest/1`),
     # and when they last were, so the next update names only who voted since.
     field(:notify_on_vote, :boolean, default: false)
     # When participants who have not voted are reminded, as lead times before
@@ -162,7 +160,7 @@ defmodule Tymeslot.Polls.PollSchema do
   def reminders(%__MODULE__{reminder_config: nil}), do: [%{value: 1, unit: "days"}]
 
   def reminders(%__MODULE__{reminder_config: config}),
-    do: ReminderUtils.normalize_reminders(config)
+    do: Reminders.normalize_reminders(config)
 
   # Only a deadline being set is judged: an untouched one that has passed must
   # not stop the host fixing a typo in the title.
@@ -225,7 +223,7 @@ defmodule Tymeslot.Polls.PollSchema do
 
   defp put_new_token(changeset) do
     case get_field(changeset, :token) do
-      nil -> put_change(changeset, :token, UnguessableToken.generate())
+      nil -> put_change(changeset, :token, Token.generate(24))
       _token -> changeset
     end
   end

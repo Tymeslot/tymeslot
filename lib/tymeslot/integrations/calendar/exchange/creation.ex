@@ -33,8 +33,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Workers.SyncExchangeCalendarWorker
 
   require Logger
@@ -59,14 +59,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
       when is_integer(user_id) and is_map(params) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    # Deliberately no `Creation.ensure_primary_on_first/3`, for the reason the
-    # subscription path omits it too: it promotes the user's first integration
-    # unconditionally, through `CalendarPrimary` directly rather than through
-    # `PrimarySelection.maybe_set_as_primary/1`, so its guards never run. An
-    # Exchange mailbox can now receive a booking, but only into a folder the
-    # account may write to, and `FindFolder` never says which those are (see
-    # the moduledoc). Promoting one unasked would pick that folder for the
-    # user, so the choice stays theirs to make explicitly.
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_exchange_form(params, metadata: metadata),
          :ok <- Creation.check_write_budget(user_id),
@@ -77,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
          # the machine and must not cost a token.
          :ok <- CalendarIntegrationSchema.validate_new(attrs),
          {:ok, attrs} <- probe(attrs, user_id),
-         {:ok, integration} <- CalendarManagement.create_calendar_integration(attrs) do
+         {:ok, integration} <- Management.create_calendar_integration(attrs) do
       enqueue_initial_sync(integration)
       {:ok, integration}
     else
@@ -200,9 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   # gap; a failure to enqueue is non-fatal, since the fallback sweep will still
   # pick the integration up.
   defp enqueue_initial_sync(integration) do
-    case %{"calendar_integration_id" => integration.id}
-         |> SyncExchangeCalendarWorker.new()
-         |> Oban.insert() do
+    case SyncExchangeCalendarWorker.enqueue(integration.id) do
       {:ok, _job} ->
         :ok
 

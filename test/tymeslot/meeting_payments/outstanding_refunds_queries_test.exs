@@ -86,6 +86,46 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
       assert found.id == theirs.id
     end
 
+    # A payment that completed after its slot was taken leaves the booking
+    # expired and the money owed until its automatic refund goes through.
+    # It has no cancellation date, so it takes its place by its payment's.
+    test "lists expired bookings among cancellations, oldest first by when each became owed" do
+      now = DateTime.utc_now(:second)
+      days_ago = &DateTime.add(now, -&1, :day)
+
+      expired_20 =
+        payment_for(1, insert(:meeting, status: "expired"), %{paid_at: days_ago.(20)})
+
+      cancelled_10 = payment_for(1, cancelled_meeting(cancelled_at: days_ago.(10)))
+
+      expired_5 =
+        payment_for(1, insert(:meeting, status: "expired"), %{paid_at: days_ago.(5)})
+
+      cancelled_1 = payment_for(1, cancelled_meeting(cancelled_at: days_ago.(1)))
+
+      ids =
+        1
+        |> MeetingPayments.list_outstanding_refunds_for_host()
+        |> Enum.map(& &1.id)
+
+      assert ids == [expired_20.id, cancelled_10.id, expired_5.id, cancelled_1.id]
+      assert MeetingPayments.outstanding_refunds_summary_for_host(1).count == 4
+    end
+
+    # Rows owed since the same moment come back in one fixed order, so the
+    # bounded window is the same rows on every read.
+    test "breaks a tie on the date by id" do
+      at = DateTime.add(DateTime.utc_now(:second), -1, :day)
+      payments = for _row <- 1..3, do: payment_for(1, cancelled_meeting(cancelled_at: at))
+
+      ids =
+        1
+        |> MeetingPayments.list_outstanding_refunds_for_host()
+        |> Enum.map(& &1.id)
+
+      assert ids == payments |> Enum.map(& &1.id) |> Enum.sort()
+    end
+
     # Oldest first: the longer somebody has been out of pocket, the more
     # urgent the row.
     test "orders by cancellation date, oldest first" do

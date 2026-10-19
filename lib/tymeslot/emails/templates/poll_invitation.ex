@@ -18,11 +18,12 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
     Sanitise,
     Styles,
     TemplateHelper,
-    Text,
-    TimezoneHelper
+    Text
   }
 
+  alias Tymeslot.Locales
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
+  alias Tymeslot.Utils.DateTimeUtils
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -35,7 +36,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
   @spec render(PollSchema.t(), PollParticipantSchema.t(), String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, %PollParticipantSchema{} = participant, voting_url)
       when is_binary(voting_url) do
-    locale = participant.locale || "en"
+    locale = Locales.acceptable(participant.locale) || Locales.booking_default_locale()
     host_name = PollHost.display_name(poll)
     timezone = participant.timezone || poll.timezone || "UTC"
 
@@ -65,7 +66,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
       |> to(PollParticipantSchema.email_recipient(participant))
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
-      |> subject(Sanitise.sanitize_for_header(headline(poll, host_name)))
+      |> subject(headline(poll, host_name))
       |> html_body(html_body)
       |> text_body(build_text_body(poll, host_name, times, deadline, voting_url))
     end)
@@ -166,7 +167,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
   defp candidate_times(poll, timezone, locale) do
     Enum.map(poll.time_slots, fn slot ->
       slot.start_time
-      |> TimezoneHelper.convert_to_timezone(timezone)
+      |> DateTimeUtils.convert_to_timezone(timezone)
       |> Formatting.format_datetime(locale)
     end)
   end
@@ -175,7 +176,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
 
   defp formatted_deadline(%PollSchema{deadline_at: deadline_at}, timezone, locale) do
     deadline_at
-    |> TimezoneHelper.convert_to_timezone(timezone)
+    |> DateTimeUtils.convert_to_timezone(timezone)
     |> Formatting.format_datetime(locale)
   end
 end

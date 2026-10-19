@@ -554,8 +554,7 @@ defmodule Tymeslot.ThemeCustomizations.SpecsTest do
                %{
                  "background_type" => "image",
                  "background_value" => "custom",
-                 "background_image_path" => "themes/1/1/images/a.png",
-                 "background_video_path" => nil
+                 "background_image_path" => "themes/1/1/images/a.png"
                }
     end
   end

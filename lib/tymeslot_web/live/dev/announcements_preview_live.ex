@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
   user with all announcements unseen.
 
   The modal is rendered with `preview?: true`, which short-circuits
-  `Announcements.mark_seen!/2` — reloading the page restarts the carousel.
+  `Announcements.mark_seen/2` — reloading the page restarts the carousel.
   """
 
   use TymeslotWeb, :live_view

@@ -46,6 +46,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors
+  alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
+  alias Tymeslot.Integrations.Calendar.CalDAV.FreeBusy
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.State
@@ -53,7 +55,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
+  alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
+  alias Tymeslot.Integrations.Calendar.Sync, as: CalendarSync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
   @typedoc """
@@ -79,12 +84,116 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   def run(integration, force_full_fetch?) do
     client = CaldavCommon.client_for_integration(integration)
 
+    # Changes queued earlier go out whatever this run finds to pull.
     OfflineQueue.flush(integration, client)
 
-    if force_full_fetch? do
-      broadcast_on_success(integration, forced_full_fetch(integration, client))
-    else
-      run_tiered(integration, client)
+    free_busy = ProviderCommon.caldav_free_busy_paths(integration)
+
+    integration
+    |> sync_events(client, free_busy, force_full_fetch?)
+    |> first_failure(refresh_free_busy(integration, client, free_busy))
+  end
+
+  defp sync_events(integration, client, free_busy, force_full_fetch?) do
+    case syncable(client, free_busy) do
+      :free_busy_only ->
+        :ok
+
+      client ->
+        if force_full_fetch? do
+          broadcast_on_success(integration, forced_full_fetch(integration, client))
+        else
+          run_tiered(integration, client)
+        end
+    end
+  end
+
+  defp first_failure(:ok, free_busy_result), do: free_busy_result
+  defp first_failure(events_failure, _free_busy_result), do: events_failure
+
+  # A calendar shared as busy times only has no events to mirror: its busy
+  # periods, read through the free-busy-query REPORT, are cached `busy_only`
+  # under its path so the published feed and the availability audit see what
+  # the booking page does. A well-formed answer with no periods empties them.
+  # A refused or unreadable answer (a 403 here means the share narrowed or was
+  # revoked, not that the credentials are bad) leaves the last periods in
+  # place, the side that keeps time blocked, and is reported as this
+  # calendar's own failure rather than one reconnecting could fix. A 401 is
+  # the account's credentials, as on any other read, and a cache write that
+  # fails is this sync's own failure; both travel back as they are.
+  #
+  # A calendar that stopped being free/busy only (the share was widened, or
+  # it was deselected or removed) is no longer read this way, so the busy
+  # periods cached for it are dropped in the same run. The ordinary sync
+  # writes no `busy_only` rows for a CalDAV calendar, so nothing else is.
+  defp refresh_free_busy(integration, client, paths) do
+    with :ok <- clear_widened(integration, paths) do
+      read_free_busy(integration, client, paths)
+    end
+  end
+
+  defp clear_widened(integration, free_busy) do
+    case CalendarSync.drop_role_except(integration, EventRole.busy_only(), free_busy) do
+      {:ok, _count} ->
+        :ok
+
+      {:error, reason} = error ->
+        log_sync_error(integration, "free/busy cache write", reason)
+        error
+    end
+  end
+
+  defp read_free_busy(_integration, _client, []), do: :ok
+
+  defp read_free_busy(integration, client, paths) do
+    {range_start, range_end} = CalendarSync.window()
+    synced_at = DateTime.utc_now()
+
+    Enum.reduce_while(paths, :ok, fn path, outcome ->
+      case CalDAVEvents.fetch_free_busy(client, path, range_start, range_end) do
+        {:ok, periods} ->
+          periods
+          |> FreeBusy.to_cached_events(integration.id, path, synced_at)
+          |> then(&store_free_busy(integration, path, &1))
+          |> continue_free_busy(outcome)
+
+        {:error, :unauthorized} = error ->
+          log_sync_error(integration, "free/busy refresh", :unauthorized)
+          {:halt, error}
+
+        {:error, reason} ->
+          log_sync_error(integration, "free/busy refresh", reason)
+          {:cont, first_failure(outcome, {:error, {:free_busy_unreadable, reason}})}
+      end
+    end)
+  end
+
+  defp continue_free_busy(:ok, outcome), do: {:cont, outcome}
+  defp continue_free_busy({:error, _reason} = error, _outcome), do: {:halt, error}
+
+  defp store_free_busy(integration, path, events) do
+    case CalendarSync.full_refresh_for_calendar(
+           integration,
+           path,
+           EventRole.busy_only(),
+           events
+         ) do
+      {:ok, _count} ->
+        :ok
+
+      {:error, reason} = error ->
+        log_sync_error(integration, "free/busy cache write", reason)
+        error
+    end
+  end
+
+  # The paths whose events the sync mirrors: every one but those shared as
+  # busy times only. An integration with nothing else has no events to sync,
+  # which is not the "no calendar selected" failure an empty list means.
+  defp syncable(client, free_busy) do
+    case client.calendar_paths -- free_busy do
+      [] when free_busy != [] -> :free_busy_only
+      paths -> %{client | calendar_paths: paths}
     end
   end
 

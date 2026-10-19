@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     tomorrow_noon = DateTime.new!(Date.add(Date.utc_today(), 1), ~T[12:00:00], "Etc/UTC")
 
     insert(:meeting,
+      organizer_user_id: user.id,
       organizer_email: user.email,
       start_time: tomorrow_noon,
       end_time: DateTime.add(tomorrow_noon, 3600, :second),
@@ -52,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     later = DateTime.new!(tomorrow, ~T[14:00:00], "Etc/UTC")
 
     insert(:meeting,
+      organizer_user_id: user.id,
       organizer_email: user.email,
       start_time: first,
       end_time: DateTime.add(first, 3600, :second),
@@ -60,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     )
 
     insert(:meeting,
+      organizer_user_id: user.id,
       organizer_email: user.email,
       start_time: later,
       end_time: DateTime.add(later, 3600, :second),
@@ -89,6 +92,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
 
     insert(:meeting,
+      organizer_user_id: user.id,
       organizer_email: user.email,
       start_time: start,
       end_time: DateTime.add(start, 45 * 60, :second),
@@ -132,6 +136,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
 
     insert(:meeting,
+      organizer_user_id: user.id,
       organizer_email: user.email,
       start_time: start,
       end_time: DateTime.add(start, 3600, :second),
@@ -161,6 +166,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
 
     insert(:meeting,
+      organizer_user_id: user.id,
       organizer_email: user.email,
       start_time: start,
       end_time: DateTime.add(start, 3600, :second),
@@ -258,6 +264,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       early = DateTime.new!(tomorrow, ~T[09:00:00], "Etc/UTC")
 
       insert(:meeting,
+        organizer_user_id: user.id,
         organizer_email: user.email,
         start_time: early,
         end_time: DateTime.add(early, 3600, :second),

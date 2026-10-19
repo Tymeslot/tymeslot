@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Endpoint do
 
   alias Plug.Static
   alias Tymeslot.Infrastructure.StaticCompressors
+  alias Tymeslot.Media.Uploads
   alias TymeslotWeb.Helpers.ClientIP
 
   # The session will be stored in the cookie and signed,
@@ -31,6 +32,8 @@ defmodule TymeslotWeb.Endpoint do
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [
       connect_info: [
+        # The page a mount asked for, so a sign-in it is sent to can end there.
+        :uri,
         :peer_data,
         :x_headers,
         :user_agent,
@@ -153,7 +156,7 @@ defmodule TymeslotWeb.Endpoint do
         opts =
           Static.init(
             at: "/uploads",
-            from: Application.get_env(:tymeslot, :upload_directory, "uploads"),
+            from: Uploads.root(),
             gzip: false
           )
 
@@ -223,7 +226,10 @@ defmodule TymeslotWeb.Endpoint do
     {[:_, "meeting", :_, "cancel"], false},
     {[:_, "meeting", :_, "cancel-confirmed"], false},
     {[:_, "meeting", :_, "reschedule"], false},
-    {[:_, "meeting", :_, "calendar.ics"], false}
+    {[:_, "meeting", :_, "calendar.ics"], false},
+    # The same pages linked without a username (`MeetingLinkController`).
+    {["meeting", :_, "cancel"], false},
+    {["meeting", :_, "reschedule"], false}
   ]
 
   @request_log_levels @core_request_log_levels ++

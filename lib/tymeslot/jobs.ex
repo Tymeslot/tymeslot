@@ -26,6 +26,31 @@ defmodule Tymeslot.Jobs do
   defdelegate get_current_args(job), to: ObanJobQueries
 
   @doc """
+  Counts `worker`'s jobs whose args contain `args`, inserted at or after
+  `since`, with the oldest one's insertion time. See
+  `Tymeslot.Jobs.ObanJobQueries.count_inserted_since/3`.
+  """
+  defdelegate count_inserted_since(worker, args, since), to: ObanJobQueries
+
+  @doc """
+  Whether a job of `worker` whose args contain `args` is waiting out an
+  error's backoff. See `Tymeslot.Jobs.ObanJobQueries.backing_off?/2`.
+  """
+  defdelegate backing_off?(worker, args), to: ObanJobQueries
+
+  @doc """
+  Whether another of `worker`'s jobs for `meeting_id` started executing before
+  `job` and is executing still. See
+  `Tymeslot.Jobs.ObanJobQueries.earlier_job_executing?/3`.
+  """
+  defdelegate earlier_job_executing?(worker, meeting_id, job), to: ObanJobQueries
+
+  @doc """
+  The reminder jobs still to run for each of `meeting_ids`.
+  """
+  defdelegate pending_reminder_jobs(worker_module, meeting_ids), to: ObanJobQueries
+
+  @doc """
   Counts maintenance worker jobs in active states.
 
   A worker calls this with its own module before enqueuing, so a scheduled run
@@ -49,7 +74,9 @@ defmodule Tymeslot.Jobs do
   defdelegate workers_by_id(ids), to: ObanJobQueries
 
   @doc """
-  Moves a job to `discarded`, recording `error_info` against it.
+  Moves a job that is still `executing` to `discarded`, recording
+  `error_info` against it; `{:error, :no_longer_executing}` if it has since
+  finished or moved on.
   """
   defdelegate update_job_to_discarded(job, error_info), to: ObanJobQueries
 
@@ -79,6 +106,15 @@ defmodule Tymeslot.Jobs do
   Deletes every pending job a worker holds for one meeting, on any queue.
   """
   defdelegate delete_meeting_jobs(worker_module, meeting_id), to: ObanJobQueries
+
+  @doc """
+  Deletes every pending job naming the user id or one of the meeting ids. See
+  `Tymeslot.Jobs.ObanJobQueries.delete_pending_account_jobs/2`.
+  """
+  defdelegate delete_pending_account_jobs(user_id, meeting_ids), to: ObanJobQueries
+
+  @doc "Deletes a worker's pending jobs for one user id."
+  defdelegate delete_user_jobs(worker_module, user_id), to: ObanJobQueries
 
   @doc """
   Queues holding jobs older than `recent_cutoff`, with their depth.

@@ -37,8 +37,18 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   end
 
   defp mount_dashboard_data(user, socket) do
-    {profile, integration_status} = load_profile_and_integration_status(user, socket)
+    case load_profile_and_integration_status(user, socket) do
+      {{:ok, profile}, integration_status} ->
+        assign_dashboard_data(socket, user, profile, integration_status)
 
+      # The account was deleted between sign-in and this mount: there is no
+      # dashboard to show, and no session worth keeping.
+      {{:error, :user_not_found}, _integration_status} ->
+        {:halt, redirect(socket, to: ~p"/auth/login")}
+    end
+  end
+
+  defp assign_dashboard_data(socket, user, profile, integration_status) do
     # Read extension/feature config once at mount so components receive stable assigns
     # rather than calling Application.get_env on every render.
     socket =
@@ -84,7 +94,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   # paint too, so it must be the real value there, not the all-false
   # default — otherwise a fully set-up host sees a false "setup incomplete"
   # flash before the socket connects. `DashboardContext.get_integration_status/1`
-  # is cache-backed (5 minutes), so fetching it synchronously here is cheap.
+  # is three indexed EXISTS queries, so fetching it synchronously here is cheap.
   defp load_profile_and_integration_status(user, socket) do
     if connected?(socket) do
       fetch_profile_and_integration_status(user)
@@ -133,10 +143,13 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
 
   # Signup and onboarding both create the profile, so a finished host without
   # one is an anomaly; creating it here as onboarding does keeps the dashboard
-  # on a stored row instead of one that cannot be saved.
+  # on a stored row instead of one that cannot be saved. A user deleted
+  # meanwhile is the one refusal handed back; anything else still raises.
   defp load_profile!(user) do
-    {:ok, profile} = Profiles.get_or_create_profile(user.id)
-    profile
+    case Profiles.get_or_create_profile(user.id) do
+      {:ok, profile} -> {:ok, profile}
+      {:error, :user_not_found} = gone -> gone
+    end
   end
 
   defp payments_allowed?(user_id), do: Features.meeting_payments_allowed?(user_id)

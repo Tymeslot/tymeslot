@@ -15,7 +15,7 @@ defmodule Tymeslot.Meetings.BookingLimits do
 
   Period boundaries resolve in the host's timezone (the limit protects the
   host), with weeks starting on the host's own week start day
-  (`Tymeslot.Integrations.CalendarManagement.get_week_start/1`). All functions here are pure; rows
+  (`Tymeslot.Integrations.Calendar.Management.get_week_start/1`). All functions here are pure; rows
   come from `Tymeslot.Meetings.MeetingQueries.list_live_booking_starts/4`,
   and `Tymeslot.Meetings.BookingLimits.Checker` wires the two together.
   """

@@ -8,6 +8,7 @@ defmodule Tymeslot.Emails.Delivery do
 
   require Logger
 
+  alias Tymeslot.Emails.Shared.Sanitise
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -36,28 +37,69 @@ defmodule Tymeslot.Emails.Delivery do
   # `Tymeslot.Mailer.SMTPAdapter`'s 15-second session deadline, which is what
   # reports a relay that hung before any message data was sent as retryable.
   @default_send_deadline_ms 20_000
+  @ambiguous_policy {__MODULE__, :ambiguous_timeouts}
+  @ambiguous_seen {__MODULE__, :ambiguous_timeout_seen}
 
   @doc """
   Delivers an email using the configured mailer, wrapped in a circuit breaker.
 
   Retries are delegated to Oban (a single retry authority) rather than retried
   here — re-sending the same message on a flaky transport is what produces
-  duplicate emails. A client-side timeout is treated as delivered for the same
-  reason (see `timeout_error?/1`).
+  duplicate emails. A timeout that may have come after the message was
+  handed over is treated as delivered for the same reason (see
+  `timeout_error?/1`). Display names and the subject are stripped of control
+  characters before the adapter sees them.
 
   Returns `{:error, {:recipient_rejected, reason}}` when the provider rejects
   the address permanently; callers should give up rather than retry.
+
+  `breaker:` names the circuit breaker to deliver through, the application's
+  email breaker by default; tests pass their own so that no other delivery
+  can change the counts they assert on.
   """
-  @spec deliver(Swoosh.Email.t()) :: {:ok, any()} | {:error, any()}
-  def deliver(email) do
+  @spec deliver(Swoosh.Email.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  def deliver(email, opts \\ []) do
+    email = sanitise_headers(email)
+
     with :ok <- check_text_body(email) do
       Logger.debug("Delivering email via Mailer", recipient_domains: recipient_domains(email))
 
       CircuitBreaker.call(
-        CircuitBreakerSupervisor.email_breaker_name(),
+        Keyword.get_lazy(opts, :breaker, &CircuitBreakerSupervisor.email_breaker_name/0),
         fn -> email |> deliver_within_deadline() |> handle_delivery_result(email) end,
         classify: &classify_outcome/1
       )
+    end
+  end
+
+  @doc """
+  Runs `fun` with `policy` for ambiguous timeouts in every `deliver/2` it
+  makes, and returns `{result, ambiguous?}`: `fun`'s result, and whether a
+  delivery in it hit an ambiguous timeout.
+
+  `:retry_once` reports such a timeout as `{:error, {:ambiguous, reason}}`
+  so the caller retries it, which only a caller that records the retry can
+  bound; `:assume_delivered` reports it as `{:ok, :assumed_delivered}`, the
+  default outside this function.
+
+  `on_ambiguous:` is called once, at the first ambiguous timeout under
+  `:retry_once`, before that delivery returns: the caller records the retry
+  there, so the record stands even if something later in `fun` crashes.
+  """
+  @spec with_ambiguous_timeouts(:retry_once | :assume_delivered, (-> result), keyword()) ::
+          {result, boolean()}
+        when result: term()
+  def with_ambiguous_timeouts(policy, fun, opts \\ [])
+      when policy in [:retry_once, :assume_delivered] do
+    Process.put(@ambiguous_policy, {policy, Keyword.get(opts, :on_ambiguous)})
+    Process.delete(@ambiguous_seen)
+
+    try do
+      result = fun.()
+      {result, Process.get(@ambiguous_seen, false)}
+    after
+      Process.delete(@ambiguous_policy)
+      Process.delete(@ambiguous_seen)
     end
   end
 
@@ -71,11 +113,12 @@ defmodule Tymeslot.Emails.Delivery do
   # instead of guessing again from the raw reason.
   defp classify_outcome({:error, {:recipient_rejected, _reason}}), do: :ignore
   defp classify_outcome({:error, _reason}), do: :failure
-  # A client-side timeout is reported to the caller as `:assumed_delivered`
-  # (see `handle_delivery_error/3` below) so a retry doesn't duplicate a mail
-  # that likely already went out, but it is still evidence the provider is
-  # unhealthy — a hung connection is the common shape of an SMTP/API outage,
-  # so it must count as a breaker failure or the breaker never opens for it.
+  # An ambiguous timeout is reported to the caller as `:assumed_delivered` or,
+  # under `with_ambiguous_timeouts(:retry_once, _)`, as `{:error, {:ambiguous, _}}`
+  # (see `handle_delivery_error/3` below), but either way it is evidence the
+  # provider is unhealthy — a hung connection is the common shape of an
+  # SMTP/API outage, so it must count as a breaker failure or the breaker
+  # never opens for it.
   defp classify_outcome({:ok, :assumed_delivered}), do: :failure
   defp classify_outcome(_other), do: :success
 
@@ -108,6 +151,13 @@ defmodule Tymeslot.Emails.Delivery do
     Application.get_env(:tymeslot, :email_send_deadline_ms, @default_send_deadline_ms)
   end
 
+  # AhaSend answers 202 Accepted with a body its adapter cannot always parse,
+  # which reaches here as an error: the provider has taken the message.
+  defp handle_delivery_result({:error, {202, _body}}, email) do
+    Logger.info("Email accepted by the provider", recipient_domains: recipient_domains(email))
+    {:ok, :accepted}
+  end
+
   defp handle_delivery_result({:ok, _receipt} = result, email) do
     Logger.info("Email delivered successfully", recipient_domains: recipient_domains(email))
 
@@ -132,27 +182,49 @@ defmodule Tymeslot.Emails.Delivery do
     {:error, {:recipient_rejected, reason}}
   end
 
-  # A client-side timeout is ambiguous: the SMTP server has very likely already
-  # accepted and sent the message, and only the client gave up waiting. Treating
-  # it as a failure means a retry (here or via Oban) re-sends a message that was
-  # already delivered — the root cause of duplicate emails. So we assume delivery
-  # on timeout; a genuinely lost mail can be re-requested by the user.
+  # A timeout after the message may have been handed over is ambiguous: the
+  # provider has quite possibly accepted it, and only the client gave up
+  # waiting. Retrying every such timeout duplicates mail; assuming every one
+  # delivered loses mail behind a provider that never took it. A caller that
+  # can bound the retry (an email job, which records that it already retried
+  # once) asks for one retry through `with_ambiguous_timeouts/2`; everyone
+  # else assumes delivery, as before.
   defp handle_delivery_error(:timeout, email, reason) do
-    Logger.warning("Email delivery timed out; assuming delivered to avoid duplicate sends",
-      recipient_domains: recipient_domains(email),
-      reason: LogFormat.reason(reason)
-    )
+    case Process.get(@ambiguous_policy) do
+      {:retry_once, on_ambiguous} ->
+        note_ambiguous(on_ambiguous)
 
-    {:ok, :assumed_delivered}
+        Logger.warning("Email delivery timed out and may have been sent; retrying it once",
+          recipient_domains: recipient_domains(email),
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, {:ambiguous, reason}}
+
+      _assume_delivered ->
+        Logger.warning("Email delivery timed out; assuming delivered to avoid duplicate sends",
+          recipient_domains: recipient_domains(email),
+          reason: LogFormat.reason(reason)
+        )
+
+        {:ok, :assumed_delivered}
+    end
   end
 
   defp handle_delivery_error(:transient, email, reason) do
     Logger.error("Failed to deliver email",
       recipient_domains: recipient_domains(email),
-      reason: reason
+      reason: LogFormat.reason(reason)
     )
 
     {:error, reason}
+  end
+
+  defp note_ambiguous(on_ambiguous) do
+    unless Process.get(@ambiguous_seen, false) do
+      Process.put(@ambiguous_seen, true)
+      if is_function(on_ambiguous, 0), do: on_ambiguous.()
+    end
   end
 
   defp classify(reason) do
@@ -162,6 +234,31 @@ defmodule Tymeslot.Emails.Delivery do
       true -> :transient
     end
   end
+
+  @doc """
+  The email circuit breaker's configuration, for a worker that delivers email
+  through a breaker of its own and should trip on the same terms.
+  """
+  @spec email_breaker_config() :: map()
+  defdelegate email_breaker_config, to: CircuitBreakerSupervisor
+
+  @doc """
+  How long the email circuit breaker stays open before it probes the
+  provider again, so a worker that must outwait an open circuit can snooze
+  for that long instead of repeating the number.
+  """
+  @spec email_breaker_recovery_seconds() :: pos_integer()
+  defdelegate email_breaker_recovery_seconds, to: CircuitBreakerSupervisor
+
+  @doc """
+  True while the email circuit breaker would refuse a delivery made now (see
+  `Tymeslot.Infrastructure.CircuitBreaker.refusing?/1`). Reads the state
+  without changing it, so a caller can skip work that only makes sense if
+  the email can go out.
+  """
+  @spec email_breaker_refusing?() :: boolean()
+  def email_breaker_refusing?,
+    do: CircuitBreaker.refusing?(CircuitBreakerSupervisor.email_breaker_name())
 
   @doc """
   Returns true when a delivery error reason is a permanent recipient rejection.
@@ -187,31 +284,70 @@ defmodule Tymeslot.Emails.Delivery do
   def permanent_rejection?(_reason), do: false
 
   @doc """
-  Returns true when a delivery error reason is a client-side timeout that may
-  have happened after the message was handed over.
+  Returns true when a delivery error reason is a timeout that may have come
+  after the message was handed over, so the email may have gone out.
 
-  Only such a timeout is ambiguous. gen_smtp reports failures while opening
-  the session (connecting, greeting, TLS, authentication) as
-  `{:retries_exceeded, _}` or `{:no_more_hosts, _}`, before any message data
-  is sent, so a timeout there means the email certainly did not leave and
-  must stay retryable. Treating it as delivered is how an unreachable relay
-  silently swallowed every email.
+  Each adapter's shape is matched explicitly:
 
-  Other reason shapes are matched by inspecting the term, so new adapter
-  error shapes don't silently slip through as retriable failures.
+    * our own send deadline (`{:send_deadline_exceeded, _}`) and a bare
+      `:timeout`: the adapter was mid-send, ambiguous;
+    * gen_smtp timing out after the session opened
+      (`{:send, {:network_failure, _host, {:error, :timeout}}}`): ambiguous.
+      A connection it lost there (`{:error, :closed}`) is not: gen_smtp
+      reports it alike for MAIL FROM, RCPT TO and DATA, so it cannot say
+      whether anything was sent, and a duplicate is preferred to a loss;
+    * gen_smtp failing while opening the session (`{:retries_exceeded, _}`,
+      `{:no_more_hosts, _}`): before any message data, so certainly not sent,
+      and retryable. Treating it as delivered is how an unreachable relay
+      once silently swallowed every email;
+    * an API adapter's transport timeout (`%Finch.TransportError{}`, or
+      `%Mint.TransportError{}` from an older client), and a gateway's 504:
+      ambiguous. Finch wraps a connect timeout and a receive timeout in the
+      same struct, with nothing saying which phase failed, so a connect
+      timeout cannot be told apart and is treated as ambiguous too: under
+      the bounded retry it gets one more attempt;
+    * anything else, including other HTTP statuses and transport errors:
+      not a timeout, so retryable.
+
+  A reason that only mentions a timeout somewhere in its text is not one.
   """
   @spec timeout_error?(term()) :: boolean()
-  def timeout_error?({phase, _failure}) when phase in [:retries_exceeded, :no_more_hosts],
-    do: false
-
+  def timeout_error?(:timeout), do: true
   def timeout_error?({:send_deadline_exceeded, _deadline_ms}), do: true
 
-  def timeout_error?(reason) do
-    reason
-    |> inspect()
-    |> String.downcase()
-    |> String.contains?("timeout")
+  def timeout_error?({:send, {:network_failure, _host, {:error, :timeout}}}), do: true
+
+  def timeout_error?(%Finch.TransportError{reason: :timeout}), do: true
+  def timeout_error?(%Mint.TransportError{reason: :timeout}), do: true
+  def timeout_error?({504, _body}), do: true
+  def timeout_error?(_reason), do: false
+
+  @doc """
+  `email` as `deliver/2` hands it to the adapter: every display name and the
+  subject stripped of control characters, everything else (addresses,
+  bodies, private data) as it was.
+
+  Header values reach the adapter's header encoding as they are, so a CR or
+  LF in a display name or subject (an attendee's name, a meeting title) is
+  replaced here, once, rather than by each template remembering to.
+  """
+  @spec sanitise_headers(Swoosh.Email.t()) :: Swoosh.Email.t()
+  def sanitise_headers(%Swoosh.Email{} = email) do
+    %{
+      email
+      | subject: Sanitise.sanitize_for_header(email.subject),
+        from: clean_address(email.from),
+        reply_to: clean_address(email.reply_to),
+        to: Enum.map(email.to, &clean_address/1),
+        cc: Enum.map(email.cc, &clean_address/1),
+        bcc: Enum.map(email.bcc, &clean_address/1)
+    }
   end
+
+  defp clean_address({name, address}) when is_binary(name),
+    do: {Sanitise.sanitize_for_header(name), address}
+
+  defp clean_address(address), do: address
 
   defp check_text_body(%Swoosh.Email{text_body: body, subject: subject}) when body in [nil, ""] do
     Logger.error("Refusing to deliver email without a plain-text body")

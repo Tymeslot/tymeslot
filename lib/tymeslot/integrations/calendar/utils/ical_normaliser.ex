@@ -21,46 +21,53 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Utils.MapKeys
 
-  # How far either side of now recurring events are expanded. Matches the
-  # sync window every provider fetches, so a stored occurrence never falls
-  # outside the range the calendar grid and availability checks read back.
-  @expansion_past_days 365
-  @expansion_future_days 365
+  @duration_defaulted "unreadable DURATION, kept with the default length"
 
   @doc """
   Expands and normalises `raw_events` into `CalendarEvent` structs.
 
   Events that fail validation are skipped, logged, and recorded with
   `InvalidEventReport`, so one malformed entry never costs a whole sync and the
-  sync run raises one operator alert for all of them.
+  sync run raises one operator alert for all of them. An event whose DURATION
+  could not be read is kept with the parser's default length, and logged and
+  recorded the same way.
   """
   @spec normalise_events([map()], map(), atom()) :: {:ok, [CalendarEvent.t()]}
   def normalise_events(raw_events, context, provider) do
-    now = DateTime.utc_now()
-    range_start = DateTime.add(now, -@expansion_past_days, :day)
-    range_end = DateTime.add(now, @expansion_future_days, :day)
-    series_zones = index_series_zones(raw_events)
-    overrides = index_overrides(raw_events, series_zones)
+    # Recurring events are expanded over the sync window every provider
+    # reads, so a stored occurrence never falls outside the range the
+    # calendar grid and availability checks read back.
+    {range_start, range_end} = Sync.window()
 
-    events =
+    {events, defaulted} =
       raw_events
-      |> Enum.flat_map(&expand_event(&1, range_start, range_end, overrides, series_zones))
-      |> Enum.reduce([], fn raw, acc ->
+      |> expand_all(range_start, range_end)
+      |> Enum.reduce({[], %{}}, fn raw, {acc, defaulted} ->
         case build_calendar_event(raw, context, provider) do
           {:ok, event} ->
-            [event | acc]
+            {[event | acc], note_default(defaulted, raw)}
 
           {:error, reason} ->
             record_skip(raw, context, provider, reason)
-            acc
+            {acc, defaulted}
         end
       end)
-      |> Enum.reverse()
 
-    {:ok, events}
+    defaulted |> Map.values() |> Enum.each(&record_default(&1, context, provider))
+
+    {:ok, Enum.reverse(events)}
   end
+
+  # A VEVENT kept with a default duration is reported once, however many
+  # occurrences it expands to, and only when it was kept: one skipped for
+  # another reason is reported as skipped alone.
+  defp note_default(defaulted, %{duration_defaulted: true} = raw),
+    do: Map.put_new(defaulted, {raw[:uid], raw[:recurrence_id]}, raw)
+
+  defp note_default(defaulted, _raw), do: defaulted
 
   defp record_skip(raw, context, provider, reason) do
     Logger.warning("Skipping invalid calendar event",
@@ -73,9 +80,62 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     InvalidEventReport.record(provider, context, raw[:uid], reason)
   end
 
+  defp record_default(raw, context, provider) do
+    Logger.warning("Calendar event kept with a default duration",
+      provider: provider,
+      reason: @duration_defaulted,
+      event_uid: raw[:uid],
+      calendar_integration_id: context.calendar_integration_id
+    )
+
+    InvalidEventReport.record_default(provider, context, raw[:uid], @duration_defaulted)
+  end
+
+  @doc """
+  Expands `raw_events`, a batch as `ICalParser` emits it, into the events that
+  occupy time within `[range_start, range_end]`, without building
+  `CalendarEvent` structs: the shape the live busy-time check reads.
+
+  A series is expanded exactly as `normalise_events/3` expands it, in its own
+  zone and with the occurrences its overrides replace left out, so the live
+  check and the cache agree on when a recurring event takes place. Each
+  occurrence keeps the master's fields with `start_time` and `end_time` set to
+  its own times (in UTC when timed); overrides and one-off events pass through
+  as they are.
+  """
+  @spec expand_occurrences([map()], DateTime.t(), DateTime.t()) :: [map()]
+  def expand_occurrences(raw_events, range_start, range_end) do
+    raw_events
+    |> expand_all(range_start, range_end)
+    |> Enum.map(&with_occurrence_times/1)
+  end
+
+  @expansion_keys [:_occ_start, :_occ_end, :_recurring, :_uid_suffix]
+
+  defp with_occurrence_times(%{_recurring: true} = raw) do
+    raw
+    |> Map.merge(%{start_time: in_utc(raw._occ_start), end_time: in_utc(raw._occ_end)})
+    |> Map.drop(@expansion_keys)
+  end
+
+  defp with_occurrence_times(raw), do: Map.drop(raw, @expansion_keys)
+
+  defp in_utc(%DateTime{} = datetime), do: DateTime.shift_zone!(datetime, "Etc/UTC")
+  defp in_utc(value), do: value
+
   # ---------------------------------------------------------------------------
   # Recurrence expansion
   # ---------------------------------------------------------------------------
+
+  # The one expansion of parser output, shared by `normalise_events/3` and
+  # `expand_occurrences/3`: overrides are indexed against the whole batch
+  # before any master is expanded.
+  defp expand_all(raw_events, range_start, range_end) do
+    series_zones = index_series_zones(raw_events)
+    overrides = index_overrides(raw_events, series_zones)
+
+    Enum.flat_map(raw_events, &expand_event(&1, range_start, range_end, overrides, series_zones))
+  end
 
   # A recurring event's CalDAV resource holds the master VEVENT plus one VEVENT
   # per occurrence that has been edited on its own, each carrying a
@@ -233,7 +293,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
             :_occ_start,
             :_occ_end,
             :_recurring,
-            :_uid_suffix
+            :_uid_suffix,
+            :duration_defaulted
           ]),
         raw_ical: raw[:raw_ical],
         created_by_tymeslot: tymeslot_origin?(raw)
@@ -348,6 +409,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   end
 
   defp end_datetime(other, _timezone), do: other
+
+  # A moment at midnight (DTSTART with no end) is not a whole day.
+  defp radicale_all_day?(same, same), do: false
 
   defp radicale_all_day?(
          %DateTime{hour: 0, minute: 0, second: 0, time_zone: "Etc/UTC"},

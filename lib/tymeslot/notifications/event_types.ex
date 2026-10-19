@@ -21,6 +21,11 @@ defmodule Tymeslot.Notifications.EventTypes do
 
   Meeting types without approval never emit the three request events, so
   existing consumers see no change.
+
+  The module depends on nothing, so channels can match on its names at
+  compile time without tying their recompilation to anything else. The
+  dashboard labels for these events live in
+  `Tymeslot.Notifications.EventOptions`.
   """
 
   # A keyword list, not a map: dashboards (`Webhooks.available_events/0` and

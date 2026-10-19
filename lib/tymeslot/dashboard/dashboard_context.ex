@@ -7,78 +7,58 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   require Logger
 
   alias Tymeslot.Agenda
-  alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Tasks
-  alias Tymeslot.Integrations.Calendar.BookingEligibility
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Venues
 
   @typep integration_status :: %{
            has_calendar: boolean(),
            has_video: boolean(),
-           has_meeting_types: boolean(),
-           calendar_count: non_neg_integer(),
-           video_count: non_neg_integer(),
-           meeting_types_count: non_neg_integer()
+           has_meeting_types: boolean()
          }
 
   @doc """
   Returns the default (empty) integration status map.
-  Used as a fallback when queries time out or fail.
+  Used as a fallback when the status read times out or fails.
   """
   @spec default_integration_status() :: integration_status()
-  def default_integration_status do
-    %{
-      has_calendar: false,
-      has_video: false,
-      has_meeting_types: false,
-      calendar_count: 0,
-      video_count: 0,
-      meeting_types_count: 0
-    }
-  end
+  def default_integration_status,
+    do: %{has_calendar: false, has_video: false, has_meeting_types: false}
 
   @doc """
-  Gets just the integration status for a user (lighter query for sidebar notifications).
+  Whether the user has set up each part the dashboard nudges them towards: a
+  calendar a booking can be written to, a video integration, an active
+  meeting type.
+
+  Read fresh every time rather than cached, so a change made anywhere (another
+  tab, a background job, a reconnect) shows on the next mount or refresh
+  without any writer having to announce it. Each part is one indexed EXISTS
+  query.
   """
   @spec get_integration_status(integer()) :: integration_status()
   def get_integration_status(user_id) when is_integer(user_id) do
-    # Use cache for integration status
-    case DashboardCache.get_or_compute(
-           DashboardCache.integration_status_key(user_id),
-           fn -> fetch_integration_status(user_id) end,
-           # Cache for 5 minutes since integrations don't change often
-           :timer.minutes(5)
-         ) do
-      {:error, error_reason} ->
-        # If cache computation fails, return empty default to maintain contract
-        Logger.warning("Failed to get integration status from cache",
-          user_id: user_id,
-          reason: LogFormat.reason(error_reason)
-        )
+    %{
+      has_calendar: Calendar.has_bookable_integration?(user_id),
+      has_video: Video.has_active_integration?(user_id),
+      has_meeting_types: MeetingTypes.has_active_meeting_types?(user_id)
+    }
+  rescue
+    # The status only decides which set-up reminders the sidebar shows, so a
+    # database that cannot answer leaves the dashboard up with the defaults
+    # rather than failing its mount.
+    exception ->
+      Logger.warning("Integration status read failed; showing defaults",
+        user_id: user_id,
+        error: Exception.message(exception)
+      )
 
-        default_integration_status()
-
-      status ->
-        status
-    end
+      default_integration_status()
   end
 
   @spec get_integration_status(nil | any()) :: integration_status()
   def get_integration_status(_user_id), do: default_integration_status()
-
-  @doc """
-  Invalidates the cached integration status for a user.
-  """
-  @spec invalidate_integration_status(integer()) :: :ok
-  def invalidate_integration_status(user_id) do
-    DashboardCache.invalidate(DashboardCache.integration_status_key(user_id))
-    :ok
-  end
 
   @doc """
   Gather meeting settings data for a user (meeting types and video integrations).
@@ -92,8 +72,8 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   def get_meeting_settings_data(user_id) when is_integer(user_id) do
     %{
       meeting_types: MeetingTypes.get_all_meeting_types(user_id),
-      video_integrations: VideoIntegrationQueries.list_active_for_user_public(user_id),
-      calendar_integrations: CalendarManagement.list_calendar_integrations(user_id),
+      video_integrations: Video.list_active_integrations(user_id),
+      calendar_integrations: Management.list_calendar_integrations(user_id),
       venues: Venues.list_venues(user_id)
     }
   end
@@ -131,53 +111,4 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   end
 
   def get_dashboard_data_for_action(_user, _timezone, _action), do: %{}
-
-  # Runs calendar, video, and meeting type queries concurrently with timeout
-  # protection. If any query times out, it falls back to an empty list for
-  # that category rather than crashing the caller.
-  @spec fetch_integration_status(integer()) :: map()
-  defp fetch_integration_status(user_id) do
-    calendar_task =
-      Tasks.async(Tymeslot.TaskSupervisor, fn ->
-        CalendarManagement.list_active_calendar_integrations(user_id)
-      end)
-
-    video_task =
-      Tasks.async(Tymeslot.TaskSupervisor, fn ->
-        VideoIntegrationQueries.list_active_for_user(user_id)
-      end)
-
-    meeting_types_task =
-      Tasks.async(Tymeslot.TaskSupervisor, fn ->
-        MeetingTypeQueries.list_active_meeting_types(user_id)
-      end)
-
-    results =
-      Task.yield_many([calendar_task, video_task, meeting_types_task], :timer.seconds(5))
-
-    [calendar_integrations, video_integrations, meeting_types] =
-      Enum.map(results, fn
-        {_task, {:ok, value}} ->
-          value
-
-        {task, nil} ->
-          Task.shutdown(task, :brutal_kill)
-          []
-
-        _exit_or_error ->
-          []
-      end)
-
-    bookable_calendar_integrations =
-      BookingEligibility.filter_bookable(calendar_integrations)
-
-    %{
-      has_calendar: bookable_calendar_integrations != [],
-      has_video: video_integrations != [],
-      has_meeting_types: meeting_types != [],
-      calendar_count: length(calendar_integrations),
-      video_count: length(video_integrations),
-      meeting_types_count: length(meeting_types)
-    }
-  end
 end

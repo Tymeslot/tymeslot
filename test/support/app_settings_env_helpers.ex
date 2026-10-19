@@ -73,6 +73,35 @@ defmodule Tymeslot.AppSettingsEnvHelpers do
   end
 
   @doc """
+  Enables the generic OIDC provider and gives it client credentials, so it
+  counts as a usable sign-in path. `restore_app_settings_env/1` restores
+  `:social_auth`; `:oauth_provider` is not an AppSettings key, so this
+  restores it itself.
+  """
+  @spec enable_credentialed_oauth() :: :ok
+  def enable_credentialed_oauth do
+    original = Application.get_env(:tymeslot, :oauth_provider)
+
+    on_exit(fn ->
+      case original do
+        nil -> Application.delete_env(:tymeslot, :oauth_provider)
+        value -> Application.put_env(:tymeslot, :oauth_provider, value)
+      end
+    end)
+
+    Application.put_env(:tymeslot, :oauth_provider,
+      client_id: "oidc-client-id",
+      client_secret: "oidc-client-secret"
+    )
+
+    Application.put_env(:tymeslot, :social_auth,
+      google_enabled: false,
+      github_enabled: false,
+      oauth_enabled: true
+    )
+  end
+
+  @doc """
   Marks `key` as fixed by the environment variable `var`, as `config/runtime.exs`
   does when an operator sets it. Only records the pin: set the config value
   the variable would have produced yourself. `restore_app_settings_env/1`

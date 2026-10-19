@@ -6,9 +6,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   admin alert dedup/serialisation rules can be tested in isolation.
   """
 
-  require Logger
-
-  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Workers.EmailWorker
 
   # Dedup window for identical admin alerts (24 hours, in seconds).
@@ -103,67 +101,29 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
           message :: String.t(),
           metadata :: map(),
           opts :: [dedup_key: String.t()]
-        ) :: :ok | {:error, String.t()}
+        ) :: :ok | {:error, term()}
   def schedule(recipient, category, severity, message, metadata, opts \\ []) do
     args = build_args(recipient, category, severity, message, metadata, opts)
 
-    result =
-      args
-      |> EmailWorker.new(
-        queue: :emails,
-        priority: 3,
-        max_attempts: @max_attempts,
-        unique: [
-          period: @dedup_period_seconds,
-          fields: [:args, :queue],
-          keys: [:action, :recipient, :alert_hash],
-          states: @dedup_states
-        ]
-      )
-      |> Oban.insert()
-
-    handle_insert_result(result, category, args["alert_hash"])
-  end
-
-  # A uniqueness conflict comes back as `{:ok, job}` carrying `conflict?: true`,
-  # not as an insert error — Oban returns the job already holding the slot.
-  # Matching it here keeps the logs honest: without this clause every
-  # deduplicated alert still logged "scheduled", so a worker failing on a loop
-  # looked like it was emailing an operator each cycle when it was not.
-  defp handle_insert_result({:ok, %Oban.Job{conflict?: true}}, category, alert_hash) do
-    Logger.debug("Admin alert email already pending, deduplicated",
-      category: category,
-      alert_hash: alert_hash
+    args
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 3,
+      max_attempts: @max_attempts,
+      unique: [
+        period: @dedup_period_seconds,
+        fields: [:args, :queue],
+        keys: [:action, :recipient, :alert_hash],
+        states: @dedup_states
+      ]
     )
-
-    :ok
-  end
-
-  defp handle_insert_result({:ok, _job}, category, _hash) do
-    Logger.info("Admin alert email scheduled", category: category)
-    :ok
-  end
-
-  defp handle_insert_result(
-         {:error, %Ecto.Changeset{errors: [unique: _details]}},
-         category,
-         alert_hash
-       ) do
-    Logger.debug("Admin alert email already pending, deduplicated",
-      category: category,
-      alert_hash: alert_hash
+    # A worker failing on a loop re-raises the same alert every cycle; its
+    # duplicates are logged at debug, so the log does not read as an operator
+    # being emailed each time.
+    |> Helpers.insert([category: category, alert_hash: args["alert_hash"]],
+      quiet_duplicates: true
     )
-
-    :ok
-  end
-
-  defp handle_insert_result({:error, reason}, category, _hash) do
-    Logger.error("Failed to schedule admin alert email",
-      category: category,
-      error: LogFormat.reason(reason)
-    )
-
-    {:error, "Failed to schedule job"}
+    |> Helpers.ok()
   end
 
   @doc """
@@ -175,23 +135,11 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   """
   @spec schedule_digest(recipient :: String.t(), digest :: map()) :: :ok | {:error, term()}
   def schedule_digest(recipient, digest) do
-    result =
-      digest
-      |> Map.merge(%{"action" => @digest_action, "recipient" => recipient})
-      |> EmailWorker.new(queue: :emails, priority: 3, max_attempts: @max_attempts)
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule admin alert digest email",
-          error: LogFormat.reason(reason)
-        )
-
-        {:error, reason}
-    end
+    digest
+    |> Map.merge(%{"action" => @digest_action, "recipient" => recipient})
+    |> EmailWorker.new(queue: :emails, priority: 3, max_attempts: @max_attempts)
+    |> Helpers.insert()
+    |> Helpers.ok()
   end
 
   @doc """

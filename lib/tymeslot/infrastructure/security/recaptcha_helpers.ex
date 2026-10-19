@@ -121,79 +121,37 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   def any_active?, do: booking_active?() or signup_active?()
 
   @doc """
-  Verify signup token if signup protection is enabled and configured.
+  Verifies the reCAPTCHA token a public form (`:booking` or `:signup`)
+  submitted, if that form's protection is switched on.
+
+  Each form has its own switch, score threshold and expected action. A form
+  whose protection is switched on without keys is let through, with a warning
+  logged at most once a minute.
+
+  Accepts a nil or empty token, which fails verification when protection is
+  active. `metadata` may carry `:ip` and `:user_agent` for the log lines.
 
   Returns:
-  - `:ok` when checks are disabled, when verification passes, or when Google
-    could not be reached (see `verify_failing_open/4`)
-  - `{:error, :recaptcha_failed}` when enabled+configured but verification fails
+  - `:ok` when the form's checks are off, when verification passes, or when
+    Google could not be reached (see `verify_failing_open/4`)
+  - `{:error, :recaptcha_failed}` when the checks are on and verification fails
   - `{:error, :recaptcha_script_blocked}` when the client reported the reCAPTCHA
     script could not load (JS disabled, CSP blocked, extension blocked) and
     Google, asked anyway, rejected the marker
   """
-  @spec maybe_verify_signup_token(String.t(), map()) ::
+  @spec verify(:booking | :signup, String.t() | nil, map()) ::
           :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
-  def maybe_verify_signup_token(token, metadata) do
-    # Check if signup reCAPTCHA is enabled and active
-    enabled = signup_enabled?()
-    active = signup_active?()
-
+  def verify(form, token, metadata) when form in [:booking, :signup] do
     cond do
-      not enabled ->
-        # Checks disabled; allow signup
+      not form_enabled?(form) ->
         :ok
 
-      not active ->
-        # Enabled but keys missing; log and allow signup
-        log_signup_disabled_due_to_missing_keys(metadata)
+      not form_active?(form) ->
+        log_disabled_due_to_missing_keys(form, metadata)
         :ok
 
       true ->
-        # Enabled and active; verify the token
-        verify_form_token(:signup, token, metadata)
-    end
-  end
-
-  @doc """
-  Verify booking token if booking protection is enabled and configured.
-
-  Accepts nil or empty tokens and handles them appropriately based on whether
-  reCAPTCHA is enabled.
-
-  ## Parameters
-
-    * `token` - reCAPTCHA token from client (may be nil, empty, or a valid token)
-    * `metadata` - Map containing `:ip` and `:user_agent` for logging (optional)
-
-  ## Returns
-
-  - `:ok` when checks are disabled, when verification passes, or when Google
-    could not be reached (see `verify_failing_open/4`)
-  - `{:error, :recaptcha_failed}` when enabled+configured but verification fails
-  - `{:error, :recaptcha_script_blocked}` when the client reported the reCAPTCHA
-    script could not load (JS disabled, CSP blocked, extension blocked) and
-    Google, asked anyway, rejected the marker
-  """
-  @spec maybe_verify_booking_token(String.t() | nil, map()) ::
-          :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
-  def maybe_verify_booking_token(token, metadata) do
-    # Check if booking reCAPTCHA is enabled and active
-    enabled = booking_enabled?()
-    active = booking_active?()
-
-    cond do
-      not enabled ->
-        # Checks disabled; allow booking
-        :ok
-
-      not active ->
-        # Enabled but keys missing; log and allow booking
-        log_booking_disabled_due_to_missing_keys(metadata)
-        :ok
-
-      true ->
-        # Enabled and active; verify the token
-        verify_form_token(:booking, token, metadata)
+        verify_form_token(form, token, metadata)
     end
   end
 
@@ -249,14 +207,20 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
       failed: {"Booking reCAPTCHA failed", "booking_recaptcha_failed"},
       script_blocked:
         {"Booking attempted with reCAPTCHA script blocked", "booking_recaptcha_script_blocked"},
-      unavailable: "booking_recaptcha_unavailable"
+      unavailable: "booking_recaptcha_unavailable",
+      missing_keys:
+        {"Booking reCAPTCHA is enabled but missing keys; booking protection is disabled",
+         "booking_recaptcha_disabled_missing_keys"}
     },
     signup: %{
       passed: {"Signup reCAPTCHA passed", "signup_recaptcha_passed"},
       failed: {"Signup reCAPTCHA failed", "signup_recaptcha_failed"},
       script_blocked:
         {"Signup attempted with reCAPTCHA script blocked", "signup_recaptcha_script_blocked"},
-      unavailable: "signup_recaptcha_unavailable"
+      unavailable: "signup_recaptcha_unavailable",
+      missing_keys:
+        {"Signup reCAPTCHA is enabled but missing keys; signup protection is disabled",
+         "signup_recaptcha_disabled_missing_keys"}
     }
   }
 
@@ -319,6 +283,12 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
     end
   end
 
+  defp form_enabled?(:booking), do: booking_enabled?()
+  defp form_enabled?(:signup), do: signup_enabled?()
+
+  defp form_active?(:booking), do: booking_active?()
+  defp form_active?(:signup), do: signup_active?()
+
   defp form_min_score(:booking), do: booking_min_score()
   defp form_min_score(:signup), do: signup_min_score()
 
@@ -328,62 +298,36 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   defp key_present?(value) when is_binary(value), do: String.trim(value) != ""
   defp key_present?(_value), do: false
 
-  # Avoid log spam by emitting at most once per minute per node.
-  defp log_signup_disabled_due_to_missing_keys(metadata) do
-    now_ms = System.system_time(:millisecond)
-    key = {__MODULE__, :signup_disabled_missing_keys_last_logged_at}
-    last_ms = :persistent_term.get(key, 0)
-
-    if now_ms - last_ms >= 60_000 do
-      :persistent_term.put(key, now_ms)
-
-      Logger.warning(
-        "Signup reCAPTCHA is enabled but missing keys; signup protection is disabled",
-        event: "signup_recaptcha_disabled_missing_keys",
-        ip: metadata[:ip],
-        user_agent: metadata[:user_agent]
-      )
-    end
-  end
-
-  # Avoid log spam by emitting at most once per minute per node.
-  # Uses atomics for thread-safe throttling without race conditions.
-  defp log_booking_disabled_due_to_missing_keys(metadata) do
+  # Avoid log spam by emitting at most once per minute per node and form. The
+  # timestamp is swapped atomically, so concurrent submissions log it once.
+  defp log_disabled_due_to_missing_keys(form, metadata) do
     now_sec = System.system_time(:second)
-    key = {__MODULE__, :booking_disabled_missing_keys_throttle}
-
-    # Create atomic counter on first use, or retrieve existing
-    counter =
-      case :persistent_term.get(key, nil) do
-        nil ->
-          ref = :atomics.new(1, [])
-          :atomics.put(ref, 1, 0)
-          :persistent_term.put(key, ref)
-          ref
-
-        existing ->
-          existing
-      end
-
+    counter = throttle_counter({__MODULE__, :missing_keys_logged_at, form})
     last_sec = :atomics.get(counter, 1)
 
-    # Only log if 60 seconds have passed since last log
-    if now_sec - last_sec >= 60 do
-      # Atomically update timestamp only if it hasn't changed (prevents race)
-      case :atomics.compare_exchange(counter, 1, last_sec, now_sec) do
-        :ok ->
-          # We won the race; emit the log
-          Logger.warning(
-            "Booking reCAPTCHA is enabled but missing keys; booking protection is disabled",
-            event: "booking_recaptcha_disabled_missing_keys",
-            ip: metadata[:ip] || "unknown",
-            user_agent: metadata[:user_agent] || "unknown"
-          )
+    if now_sec - last_sec >= 60 and
+         :atomics.compare_exchange(counter, 1, last_sec, now_sec) == :ok do
+      {message, event} = Map.fetch!(@form_logs, form).missing_keys
 
-        _race_condition ->
-          # Another process won the race and already logged; skip
-          :ok
-      end
+      Logger.warning(message,
+        event: event,
+        ip: metadata[:ip] || "unknown",
+        user_agent: metadata[:user_agent] || "unknown"
+      )
+    end
+
+    :ok
+  end
+
+  defp throttle_counter(key) do
+    case :persistent_term.get(key, nil) do
+      nil ->
+        counter = :atomics.new(1, [])
+        :persistent_term.put(key, counter)
+        counter
+
+      counter ->
+        counter
     end
   end
 end

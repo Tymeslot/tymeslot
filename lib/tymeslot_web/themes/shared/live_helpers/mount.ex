@@ -86,9 +86,20 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     # (which always runs immediately after mount, on both the static and
     # connected passes) calls the same entry handler, so doing it here too on
     # the static pass would throw the result away and query twice for nothing.
+    # The booking or seat being moved is loaded for that entry, and the
+    # `handle_params` straight after keeps the load (`reload_reschedule/2`).
+    # The entry is pinned to its type as `handle_params` pins it: resolved
+    # from the slug instead, a slug naming no type turned a reschedule away,
+    # and a seat move with it, dropping the token; one naming another type
+    # seeded the location and the carried answers from the wrong type until
+    # `handle_params` pinned it.
     socket =
       if connected?(socket) do
-        Runtime.transition_to(socket, initial_state, params)
+        socket
+        |> load_reschedule(params["reschedule_seat_token"])
+        |> assign(:reschedule_loaded_at_mount, true)
+        |> pin_reschedule_meeting_type()
+        |> Runtime.transition_to(initial_state, params)
       else
         socket
       end
@@ -188,15 +199,38 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     |> StepEntry.maybe_assign_from_params(:selected_time, params["time"])
     # Checked against the day's times once they arrive (`InfoHandlers`).
     |> assign(:carried_time, if(is_binary(params["time"]), do: params["time"]))
-    |> StepEntry.maybe_assign_from_params(
-      :reschedule_meeting_uid,
-      params["reschedule_meeting_uid"]
-    )
-    |> SeatMoveLink.assign_from_url(seat_token)
+    |> assign_reschedule_uid(params)
+    |> reload_reschedule(seat_token)
     |> assign_rescheduling(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
     |> SeatMoveLink.leave_if_spent(seat_token)
+    |> ReschedulePin.leave_if_refused()
+  end
+
+  # The booking (`ReschedulePin`) and the seat (`SeatMoveLink`) the URL names,
+  # loaded once each time the page applies it. The connected mount loads them
+  # for its own first entry, and the `handle_params` straight after applies
+  # the same URL, so it keeps that load; every later one loads afresh, so a
+  # booking cancelled or a seat given up since is caught as on arrival.
+  defp load_reschedule(socket, seat_token) do
+    socket
+    |> ReschedulePin.load_context()
+    |> SeatMoveLink.assign_from_url(seat_token)
+  end
+
+  defp reload_reschedule(%{assigns: %{reschedule_loaded_at_mount: true}} = socket, _seat_token),
+    do: assign(socket, :reschedule_loaded_at_mount, false)
+
+  defp reload_reschedule(socket, seat_token), do: load_reschedule(socket, seat_token)
+
+  # The URL decides whether the page is a reschedule (`assign_rescheduling/2`),
+  # so the booking it names follows it: a URL without one (browser history
+  # back across "Schedule another meeting") leaves the reschedule behind
+  # rather than keeping an earlier URL's booking for a fresh booking.
+  defp assign_reschedule_uid(socket, params) do
+    uid = params["reschedule_meeting_uid"]
+    assign(socket, :reschedule_meeting_uid, if(is_binary(uid), do: uid))
   end
 
   # A whole-meeting reschedule names the meeting; a group participant moving
@@ -213,7 +247,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   defp pin_reschedule_meeting_type(socket) do
     case ReschedulePin.meeting_type(socket) do
       nil ->
-        ReschedulePin.clear(socket)
+        ReschedulePin.unpin(socket, socket.assigns[:live_action] == :overview)
 
       meeting_type ->
         socket |> StepEntry.assign_meeting_type(meeting_type) |> ReschedulePin.pin(meeting_type)

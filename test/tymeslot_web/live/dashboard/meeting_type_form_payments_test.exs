@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
       assert has_element?(
                view,
                "#meeting-type-form-tabs-panel-booking",
-               "must be at least USD 0.50"
+               "must be at least $0.50"
              )
 
       assert has_element?(view, "[aria-live='polite']", "Couldn't save changes")

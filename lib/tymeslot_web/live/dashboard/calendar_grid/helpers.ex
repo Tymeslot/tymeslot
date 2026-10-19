@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     tz = assigns.user_timezone
 
     Enum.filter(visible_events(assigns), fn e ->
-      not e.all_day and event_spans_day?(e, date, tz)
+      not e.all_day and OverlapLayout.event_spans_day?(e, date, tz)
     end)
   end
 
@@ -90,14 +90,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
         Date.compare(event.start_date, date) != :gt and
         Date.compare(event.end_date, date) == :gt
     end)
-  end
-
-  # Private helpers
-
-  defp event_spans_day?(event, date, tz) do
-    {day_start, day_end} = OverlapLayout.day_boundary_utc(date, tz)
-
-    DateTime.compare(event.start_at, day_end) == :lt and
-      DateTime.compare(event.end_at, day_start) == :gt
   end
 end

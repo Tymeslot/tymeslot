@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Timezones
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollInvite, PollReminders, PollsComponent}
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   @reminder_events PollReminders.events()
@@ -497,13 +498,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp errors_for(:meeting_type_not_found),
     do: %{meeting_type_id: [dgettext("dashboard_common", "That meeting type is unavailable")]}
 
-  defp errors_for(%Changeset{} = changeset) do
-    Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Enum.reduce(opts, message, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
-  end
+  defp errors_for(%Changeset{} = changeset), do: FormErrors.to_map(changeset)
 
   defp too_many_message,
     do: dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())

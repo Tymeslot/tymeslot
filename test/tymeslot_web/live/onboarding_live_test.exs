@@ -19,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
   alias Phoenix.Flash
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
 
   setup :verify_on_exit!
 
@@ -216,6 +217,50 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.username == "oddzone2024"
       assert profile.timezone == "Europe/Tallinn"
+    end
+
+    # A refusal that says what went wrong is shown as is, not replaced by the
+    # generic "check your input" message.
+    test "an exhausted username change allowance is named on the profile step", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Busy Host"})
+      key = "user:" <> Integer.to_string(user.id)
+      for _n <- 1..6, do: RateLimiter.check(:username_change, key)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      view
+      |> form("form#profile-form", %{"full_name" => "Busy Host", "username" => "busyhost2024"})
+      |> render_change()
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      html = render(view)
+      assert html =~ "Too many username change attempts. Please try again later."
+      refute html =~ "Please check your input"
+    end
+
+    # The strict sanitiser drops everything from `--` onwards and strips
+    # `0x<hex>` runs, so these once saved as "team" and "studio-".
+    for username <- ~w(team--alpha studio-0xab1) do
+      test "the profile step saves #{username} exactly as typed", %{conn: conn} do
+        {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Team Alpha"})
+
+        view |> element("button[phx-click='next_step']") |> render_click()
+
+        view
+        |> form("form#profile-form", %{
+          "full_name" => "Team Alpha",
+          "username" => unquote(username)
+        })
+        |> render_change()
+
+        view |> element("button[phx-click='next_step']") |> render_click()
+
+        assert has_element?(view, ".onboarding-provider-cards")
+
+        profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
+        assert profile.username == unquote(username)
+      end
     end
 
     test "onboarding with custom scheduling preference values", %{conn: conn} do

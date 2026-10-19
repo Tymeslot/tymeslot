@@ -35,20 +35,35 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   rejects. `CredoChecks.MigrationConstraintSafety` is the static backstop that
   covers the gap in the meantime.
 
-  This test is intentionally slow and non-async — it manipulates the real
-  database schema outside the sandbox.
+  ## Its own database
+
+  The test rebuilds a schema outside the sandbox, so it never does that to the
+  partition database the rest of the suite runs against. For its duration
+  `Tymeslot.Repo` is restarted against a scratch database beside it, which is
+  created empty in `setup` and dropped in `on_exit`. The named repo is
+  repointed rather than a second, dynamic one started, because migrations
+  from dependencies (ErrorTracker's) query the named pool directly.
+
+  Restoring the suite's state is therefore a repo restart, not a migration
+  pass, and it happens in `on_exit`, which ExUnit runs even after a timeout
+  has killed the test process. A run cut off part-way leaves only the scratch
+  database behind, which the next run drops before it starts; nothing it seeds
+  or commits can reach another test. The test is intentionally slow and
+  non-async.
   """
 
   use ExUnit.Case, async: false
 
   @moduletag :migrations
   @moduletag :database
+  # One full migration pass over a seeded database: minutes, not seconds, on a
+  # loaded machine. A timeout here costs only this test (see the moduledoc).
+  @moduletag timeout: 300_000
 
+  alias Ecto.Adapters.Postgres
   alias Ecto.Adapters.SQL
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Migrator
-  alias Tymeslot.Test.AdminBootstrapHelpers
-  alias Tymeslot.Test.SuiteConfig
 
   @seed_path Path.expand("../../support/migration_dirty_seed.sql", __DIR__)
 
@@ -65,32 +80,54 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   # the authority; the assertion below keeps the two from drifting apart.
   @seed_version_marker ~r/^-- SEED SCHEMA VERSION:\s*(\d+)\s*$/m
 
-  # PostgreSQL refuses to drop a database that still has a session attached,
-  # and the running application holds a dozen: `Tymeslot.Repo`'s pool, plus the
-  # separate connection Oban's Postgres notifier keeps open. The pool is
-  # stopped and restarted around each individual drop (see `reset_database!/0`)
-  # because the migrator needs it in between, but Oban cannot come back that
-  # early: it refuses to boot against a database whose `oban_jobs` table does
-  # not exist yet. So it stays down for the whole test and returns once the
-  # final migration run has rebuilt the schema.
+  # Oban comes down first and returns last: its notifier holds a connection of
+  # its own, and while the repo points at the scratch database its plugins
+  # would run against a schema that has no `oban_jobs` table yet.
   setup do
+    suite_config = Application.fetch_env!(:tymeslot, Tymeslot.Repo)
+
+    # Named after the partition database, so concurrent partitions and
+    # worktrees each get their own. Plain pool, not the sandbox: migrations
+    # commit, and so does the seed.
+    scratch_config =
+      Keyword.merge(suite_config,
+        database: "#{suite_config[:database]}_dirty_seed",
+        pool: DBConnection.ConnectionPool,
+        pool_size: 2,
+        # Drops it even if a session is still attached.
+        force_drop: true
+      )
+
+    # Registered before anything it undoes, and the suite is restored before
+    # the scratch database is dropped: dropping is the one step that may fail,
+    # and failing must not leave Oban down or the sandbox out of manual mode.
+    # Each step runs whether or not the one before it raised, so a repo that
+    # fails to come back still gets Oban restarted and the scratch database
+    # dropped; the first error is the one reported.
+    on_exit(fn ->
+      try do
+        restart_repo!(suite_config)
+      after
+        try do
+          restart_oban()
+
+          # `test_helper.exs` puts the sandbox in manual mode once, at boot.
+          # Restarting the repo resets the pool to its default mode, so put it
+          # back before the next test module tries to check a connection out.
+          Sandbox.mode(Tymeslot.Repo, :manual)
+        after
+          # Left behind, the next run drops it before it starts.
+          _dropped = Postgres.storage_down(scratch_config)
+        end
+      end
+    end)
+
     :ok = Supervisor.terminate_child(Tymeslot.Supervisor, Oban)
 
-    on_exit(fn ->
-      # Rebuilding the schema ran a full migration pass over the live pool, so
-      # its connections carry prepared-statement plans built against a
-      # half-migrated database. PostgreSQL rejects such a plan the moment later
-      # DDL changes the result type ("cached plan must not change result
-      # type"), which is a failure the *next* migration test would inherit.
-      # Recycling the pool one last time hands it on with an empty cache.
-      restart_repo!()
-      {:ok, _oban} = Supervisor.restart_child(Tymeslot.Supervisor, Oban)
-
-      # `test_helper.exs` puts the sandbox in manual mode once, at boot.
-      # Restarting the repo resets the pool to its default mode, so put it back
-      # before the next test module tries to check a connection out.
-      Sandbox.mode(Tymeslot.Repo, :manual)
-    end)
+    # A run killed part-way leaves its scratch database behind; start clean.
+    drop_scratch!(scratch_config)
+    :ok = Postgres.storage_up(scratch_config)
+    restart_repo!(scratch_config)
 
     :ok
   end
@@ -99,35 +136,21 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
     test "every migration after the pinned seed schema succeeds with adversarial data" do
       versions_under_test = assert_pin_is_usable!()
 
-      try do
-        # Reset the database and migrate to exactly the version the seed file
-        # is written against.
-        reset_database!()
-        Migrator.run(Tymeslot.Repo, migrations_path(), :up, to: @seed_schema_version)
+      # Migrate the empty scratch database to exactly the version the seed
+      # file is written against.
+      Migrator.run(Tymeslot.Repo, migrations_path(), :up, to: @seed_schema_version)
 
-        load_seed!()
-        assert_seeded_calendar_events!()
-        seeded = seeded_availability!()
+      load_seed!()
+      assert_seeded_calendar_events!()
+      seeded = seeded_availability!()
 
-        # Run everything after the pin — this is the actual test.
-        assert run_remaining_migrations!() == versions_under_test
+      # Run everything after the pin — this is the actual test.
+      assert run_remaining_migrations!() == versions_under_test
 
-        assert_availability_rekeyed!(seeded)
-        assert_buffers_split!()
-        assert_theme_settings_backfilled!()
-      after
-        # Always restore clean state for other tests
-        reset_database!()
-        Migrator.run(Tymeslot.Repo, migrations_path(), :up, all: true)
-        # The rebuild commits the jobs migrations enqueue, as at boot.
-        SuiteConfig.discard_committed_jobs!()
-
-        # The rebuilt database has no users, so its admin bootstrap is open
-        # again. Close it as `test_helper.exs` did at boot, or every later
-        # sign-up claims the settings row and the concurrency test finds the
-        # install unbootstrapped.
-        AdminBootstrapHelpers.close!()
-      end
+      assert_availability_rekeyed!(seeded)
+      assert_buffers_split!()
+      assert_seats_not_yet_notified!()
+      assert_theme_settings_backfilled!()
     end
   end
 
@@ -297,14 +320,14 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   # its default schedule: 15 copied, 0 copied, NULL COALESCEd to 15 by the
   # schedule migration, and 500 clamped to 120. The last row is the only thing
   # that proves the clamp ran, because without it the range constraints would
-  # never meet a value they reject. The old column survives untouched, 500
-  # included, because the previous release still reads it.
+  # never meet a value they reject. The old column, which the split kept for
+  # the release before it, is gone once the later contract migration runs.
   defp assert_buffers_split! do
     %{rows: rows} =
       SQL.query!(
         Tymeslot.Repo,
         """
-        SELECT u.email, s.buffer_minutes, s.buffer_before_minutes, s.buffer_after_minutes
+        SELECT u.email, s.buffer_before_minutes, s.buffer_after_minutes
         FROM availability_schedules AS s
         JOIN profiles AS p ON p.id = s.profile_id
         JOIN users AS u ON u.id = p.user_id
@@ -315,11 +338,29 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
       )
 
     assert rows == [
-             ["seed-user-1@example.com", 15, 15, 15],
-             ["seed-user-2@example.com", 0, 0, 0],
-             ["seed-user-3@example.com", 15, 15, 15],
-             ["seed-user-4@example.com", 500, 120, 120]
+             ["seed-user-1@example.com", 15, 15],
+             ["seed-user-2@example.com", 0, 0],
+             ["seed-user-3@example.com", 15, 15],
+             ["seed-user-4@example.com", 120, 120]
            ]
+
+    assert scalar!("""
+           SELECT COUNT(*) FROM information_schema.columns
+           WHERE table_name = 'availability_schedules' AND column_name = 'buffer_minutes'
+           """) == 0
+  end
+
+  # Nobody on an existing booking has been told of an end change, so every
+  # seat comes through with no notified end. Participants postdate the pin
+  # and so are absent from the seed; the column is NULL for them by the same
+  # nullable, default-free add.
+  defp assert_seats_not_yet_notified! do
+    assert scalar!("SELECT COUNT(*) FROM meetings") > 0
+    assert scalar!("SELECT COUNT(*) FROM meeting_guests") == 2
+
+    for table <- ~w(meetings meeting_participants meeting_guests) do
+      assert scalar!("SELECT COUNT(*) FROM #{table} WHERE notified_end_time IS NOT NULL") == 0
+    end
   end
 
   # Every seeded theme customisation reached `settings`, each option column
@@ -449,24 +490,28 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
     |> Enum.sort()
   end
 
-  # Restarting the pool is not just what frees the database for the drop; it is
-  # also what keeps the drop safe for the rest of the suite, because the new
-  # pool connects to the freshly created database rather than carrying dead
-  # sockets forward.
-  defp reset_database! do
+  # The repo reads its configuration when it starts, so a restart is what
+  # repoints it. Restarting also hands the suite a pool with an empty
+  # prepared-statement cache, rather than plans built against another schema.
+  defp restart_repo!(config) do
     :ok = Supervisor.terminate_child(Tymeslot.Supervisor, Tymeslot.Repo)
+    Application.put_env(:tymeslot, Tymeslot.Repo, config)
+    {:ok, _repo} = Supervisor.restart_child(Tymeslot.Supervisor, Tymeslot.Repo)
+  end
 
-    try do
-      Mix.Task.rerun("ecto.drop", ["-r", "Tymeslot.Repo", "--quiet"])
-      Mix.Task.rerun("ecto.create", ["-r", "Tymeslot.Repo", "--quiet"])
-    after
-      {:ok, _repo} = Supervisor.restart_child(Tymeslot.Supervisor, Tymeslot.Repo)
+  # Already running when the test was killed before it stopped Oban.
+  defp restart_oban do
+    case Supervisor.restart_child(Tymeslot.Supervisor, Oban) do
+      {:ok, _oban} -> :ok
+      {:error, :running} -> :ok
     end
   end
 
-  defp restart_repo! do
-    :ok = Supervisor.terminate_child(Tymeslot.Supervisor, Tymeslot.Repo)
-    {:ok, _repo} = Supervisor.restart_child(Tymeslot.Supervisor, Tymeslot.Repo)
+  defp drop_scratch!(config) do
+    case Postgres.storage_down(config) do
+      :ok -> :ok
+      {:error, :already_down} -> :ok
+    end
   end
 
   defp migrations_path do

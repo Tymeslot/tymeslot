@@ -103,6 +103,24 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubPaymentsTest do
       assert html =~ "bg-red-500"
     end
 
+    test "shows the unsupported-currency banner for an account checkout cannot charge",
+         %{conn: conn, user: user} do
+      # Inserted directly: the changeset would refuse the currency now.
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_hub_jpy",
+        default_currency: "jpy",
+        details_submitted: true,
+        charges_enabled: true,
+        payouts_enabled: true
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=payments")
+
+      assert html =~ "Your Stripe account&#39;s currency is not supported."
+      assert html =~ "bg-amber-500"
+    end
+
     test "shows the pending-review banner with the warning severity dot",
          %{conn: conn, user: user} do
       insert(:connect_account,

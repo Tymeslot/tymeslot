@@ -7,8 +7,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     * `Tymeslot.Utils.DateTimeUtils.ICal` — iCal/CalDAV formatters and parsers.
     * `Tymeslot.Utils.DateTimeUtils.Duration` — ISO 8601 duration parsing and
       URL duration slugs.
-    * `Tymeslot.Utils.DateTimeUtils.Display` — UI-facing date/time formatting
-      and time-period grouping for booking slots.
+    * `Tymeslot.Utils.DateTimeUtils.TimeFormat` — the 12- or 24-hour clock.
   """
 
   require Logger
@@ -68,23 +67,6 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   def parse_hhmm(hhmm) when is_binary(hhmm) do
     Time.from_iso8601(hhmm <> ":00")
   end
-
-  @doc """
-  Coerces a `Date`, `DateTime`, or `nil` into a `DateTime`.
-
-  - `%DateTime{}` values pass through unchanged.
-  - `%Date{}` values become midnight UTC on that date.
-  - `nil` returns `nil`.
-
-  Useful for normalising calendar events where all-day events use `Date`
-  structs while timed events use `DateTime`.
-  """
-  @spec to_datetime(DateTime.t()) :: DateTime.t()
-  @spec to_datetime(Date.t()) :: DateTime.t()
-  @spec to_datetime(nil) :: nil
-  def to_datetime(%DateTime{} = dt), do: dt
-  def to_datetime(%Date{} = date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
-  def to_datetime(nil), do: nil
 
   @doc """
   Converts a DateTime to a different timezone safely.

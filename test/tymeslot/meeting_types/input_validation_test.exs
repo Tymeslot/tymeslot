@@ -21,6 +21,23 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert sanitized["icon"] == "hero-bolt"
     end
 
+    # The placeholders carry the limits, in the host's language.
+    test "refuses durations in the current locale, with their limits" do
+      in_de = fn duration ->
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+          InputValidation.validate_field(:duration, duration, %{})
+        end)
+      end
+
+      assert {:error, %{duration: "Die Dauer muss mindestens 5 Minuten betragen"}} = in_de.("1")
+
+      assert {:error, %{duration: "Die Dauer darf 24 Stunden (1440 Minuten) nicht überschreiten"}} =
+               in_de.("1445")
+
+      assert {:error, %{duration: "Die Dauer muss ein Vielfaches von 5 Minuten sein"}} =
+               in_de.("17")
+    end
+
     test "returns error for missing name" do
       params = %{"duration" => "30", "icon" => "hero-bolt", "meeting_mode" => "personal"}
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
@@ -56,6 +73,24 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
       assert Map.has_key?(errors, :name)
       assert Map.has_key?(errors, :duration)
+    end
+  end
+
+  describe "validate_meeting_type_form/2 - target calendar" do
+    test "keeps a provider calendar id containing a double hyphen and a hex run" do
+      # The id is matched against the integration's calendar list afterwards,
+      # so a rewritten id refuses a calendar the organiser picked from it.
+      calendar_id = "/dav/calendars/alice/work--0xabc/"
+
+      params = %{
+        "name" => "Coffee Chat",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "target_calendar_id" => calendar_id
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["target_calendar_id"] == calendar_id
     end
   end
 
@@ -265,91 +300,6 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
 
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
       assert Map.has_key?(errors, :reminder_config)
-    end
-  end
-
-  for fun <- [:validate_buffer_before_minutes, :validate_buffer_after_minutes] do
-    describe "#{fun}/2" do
-      test "accepts both ends of 0..120 and a value between" do
-        assert {:ok, 0} = InputValidation.unquote(fun)("0")
-        assert {:ok, 60} = InputValidation.unquote(fun)("60")
-        assert {:ok, 120} = InputValidation.unquote(fun)("120")
-      end
-
-      test "rejects a negative value" do
-        assert {:error, message} = InputValidation.unquote(fun)("-1")
-        assert message =~ "must be at least 0"
-      end
-
-      test "rejects a value above 120" do
-        assert {:error, message} = InputValidation.unquote(fun)("121")
-        assert message =~ "cannot exceed 120"
-      end
-
-      test "rejects non-numeric input" do
-        assert {:error, message} = InputValidation.unquote(fun)("lots")
-        assert message =~ "must be a valid number"
-      end
-    end
-  end
-
-  test "names which buffer a rejection is about" do
-    assert {:error, "Buffer before cannot exceed 120"} =
-             InputValidation.validate_buffer_before_minutes("121")
-
-    assert {:error, "Buffer after cannot exceed 120"} =
-             InputValidation.validate_buffer_after_minutes("121")
-  end
-
-  describe "validate_advance_booking_days/2" do
-    test "accepts valid advance days (1)" do
-      assert {:ok, 1} = InputValidation.validate_advance_booking_days("1")
-    end
-
-    test "accepts valid advance days (90)" do
-      assert {:ok, 90} = InputValidation.validate_advance_booking_days("90")
-    end
-
-    test "accepts maximum advance days (365)" do
-      assert {:ok, 365} = InputValidation.validate_advance_booking_days("365")
-    end
-
-    test "rejects zero advance days" do
-      assert {:error, _msg} = InputValidation.validate_advance_booking_days("0")
-    end
-
-    test "rejects advance days exceeding 365" do
-      assert {:error, _msg} = InputValidation.validate_advance_booking_days("366")
-    end
-
-    test "rejects non-numeric input" do
-      assert {:error, _msg} = InputValidation.validate_advance_booking_days("many")
-    end
-  end
-
-  describe "validate_min_advance_hours/2" do
-    test "accepts zero hours (no advance notice required)" do
-      assert {:ok, 0} = InputValidation.validate_min_advance_hours("0")
-    end
-
-    test "accepts valid advance hours (24)" do
-      assert {:ok, 24} = InputValidation.validate_min_advance_hours("24")
-    end
-
-    test "accepts maximum advance hours (168 = 1 week)" do
-      assert {:ok, 168} = InputValidation.validate_min_advance_hours("168")
-    end
-
-    test "rejects negative hours" do
-      assert {:error, _msg} = InputValidation.validate_min_advance_hours("-1")
-    end
-
-    test "rejects hours exceeding 168" do
-      assert {:error, _msg} = InputValidation.validate_min_advance_hours("169")
-    end
-
-    test "rejects non-numeric input" do
-      assert {:error, _msg} = InputValidation.validate_min_advance_hours("tomorrow")
     end
   end
 

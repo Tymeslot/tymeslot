@@ -130,6 +130,21 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   def classify(_other), do: :success
 
   @doc """
+  Whether an error `reason` says the provider cannot serve the call right
+  now (a transport failure, a timeout, 408, 429 or 5xx), so the same call may
+  succeed if retried: exactly the reasons a breaker counts as a failure.
+
+  The default retry rule of `Tymeslot.Infrastructure.Retry`, so a retry loop
+  and the breaker around it agree on what is transient. A refusal from an open
+  breaker is not: retrying it only asks the breaker again. A rate limit that
+  names its wait (`{:rate_limited, seconds}`, as the Zoom and Teams profile
+  requests report one) is transient too.
+  """
+  @spec transient?(term()) :: boolean()
+  def transient?({:rate_limited, _retry_after}), do: true
+  def transient?(reason), do: classify_error(reason) == :failure
+
+  @doc """
   A short description of why a call counted as a `:failure`, safe to put in
   an admin alert or a log line.
 

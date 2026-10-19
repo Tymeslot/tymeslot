@@ -5,262 +5,216 @@ defmodule Tymeslot.Integrations.Calendar.TokensTest do
   import Tymeslot.Factory
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
 
-  describe "ensure_valid_token/2" do
-    test "returns integration unchanged when token is not expired" do
-      user = insert(:user)
+  defp in_seconds(seconds), do: DateTime.add(DateTime.utc_now(), seconds, :second)
 
-      integration = %{
-        provider: "google",
-        access_token: "valid_token",
-        refresh_token: "refresh_token",
-        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
-      }
-
-      assert {:ok, result} = Tokens.ensure_valid_token(integration, user.id)
-      assert result.access_token == "valid_token"
-      assert result == integration
-    end
-
-    test "returns integration with nil expires_at as valid (CalDAV case)" do
-      user = insert(:user)
-
-      integration = %{
-        provider: "caldav",
-        access_token: "token",
-        token_expires_at: nil
-      }
-
-      assert {:ok, result} = Tokens.ensure_valid_token(integration, user.id)
-      assert result == integration
-    end
-
-    test "returns integration unchanged when token expires far in the future" do
-      user = insert(:user)
-
-      # Token expires in 1 week
-      integration = %{
-        provider: "google",
-        access_token: "valid_token",
-        refresh_token: "refresh_token",
-        token_expires_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600, :second)
-      }
-
-      assert {:ok, result} = Tokens.ensure_valid_token(integration, user.id)
-      assert result.access_token == "valid_token"
-    end
-
-    test "attempts refresh when token is expired for Google provider" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
+  defp integration(attrs) do
+    insert(
+      :calendar_integration,
+      Keyword.merge(
+        [
+          user: insert(:user),
           provider: "google",
-          access_token: "old_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
-        )
+          access_token_encrypted: Encryption.encrypt("old-access"),
+          refresh_token_encrypted: Encryption.encrypt("old-refresh")
+        ],
+        attrs
+      )
+    )
+  end
 
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok, {"new_access", "new_refresh", DateTime.add(DateTime.utc_now(), 3600)}}
-      end)
+  defp refreshed(access \\ "new-access"), do: {:ok, {access, "new-refresh", in_seconds(3600)}}
 
-      assert {:ok, updated} = Tokens.ensure_valid_token(integration, user.id)
-      assert updated.access_token == "new_access"
+  describe "with_access_token/4" do
+    test "uses the stored token without refreshing while it is valid" do
+      integration = integration(token_expires_at: in_seconds(3600))
+
+      assert {:ok, "old-access"} =
+               Tokens.with_access_token(
+                 integration,
+                 fn _integration -> flunk("refreshed") end,
+                 &{:ok, &1}
+               )
     end
 
-    test "does not crash when refreshing a plain map integration" do
-      # Plain map without schema struct
-      integration = %{
-        provider: "google",
-        access_token: "old_token",
-        refresh_token: "refresh_token",
-        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
-      }
+    test "refreshes a token inside the buffer, persists it, and calls back with the new one" do
+      integration = integration(token_expires_at: in_seconds(120))
 
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok, {"new_access", "new_refresh", DateTime.add(DateTime.utc_now(), 3600)}}
-      end)
+      assert {:ok, "new-access"} =
+               Tokens.with_access_token(
+                 integration,
+                 fn _integration -> refreshed() end,
+                 &{:ok, &1}
+               )
 
-      # Should attempt refresh and return success but NOT crash
-      assert {:ok, updated} = Tokens.ensure_valid_token(integration, 1)
-      assert updated.access_token == "new_access"
-    end
-
-    test "attempts refresh when token is expired for Outlook provider" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "outlook",
-          access_token: "old_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
+      stored =
+        CalendarIntegrationSchema.decrypt_oauth_tokens(
+          Repo.get!(CalendarIntegrationSchema, integration.id)
         )
 
-      expect(OutlookCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok,
-         {"new_outlook_access", "new_outlook_refresh", DateTime.add(DateTime.utc_now(), 3600)}}
-      end)
-
-      assert {:ok, updated} = Tokens.ensure_valid_token(integration, user.id)
-      assert updated.access_token == "new_outlook_access"
+      assert {stored.access_token, stored.refresh_token} == {"new-access", "new-refresh"}
     end
 
-    test "handles :authentication_error for Outlook provider" do
-      user = insert(:user)
+    test "refreshes a token whose expiry was never recorded" do
+      integration = integration(token_expires_at: nil)
 
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "outlook",
-          access_token: "old_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
-        )
+      assert {:ok, "new-access"} =
+               Tokens.with_access_token(
+                 integration,
+                 fn _integration -> refreshed() end,
+                 &{:ok, &1}
+               )
+    end
 
-      expect(OutlookCalendarAPIMock, :refresh_token, fn _int ->
-        {:error, :authentication_error, "Outlook Client ID not configured"}
-      end)
+    test "returns a provider's refresh failure as it is, without calling back" do
+      integration = integration(token_expires_at: in_seconds(-60))
+      failure = {:error, :unauthorized, "Token refresh failed: invalid_grant"}
 
-      # In Tokens.refresh_oauth_token, it maps {:error, type, msg} to {:error, {type, msg}}
-      assert {:error, {:authentication_error, "Outlook Client ID not configured"}} =
-               Tokens.ensure_valid_token(integration, user.id)
+      assert ^failure =
+               Tokens.with_access_token(integration, fn _integration -> failure end, fn _token ->
+                 flunk("called back without a token")
+               end)
+    end
+
+    # The row would still hold the old token, so every later caller would
+    # refresh again; with Google's one-use refresh tokens that risks revocation.
+    test "surfaces a refresh that could not be written" do
+      integration = integration(token_expires_at: in_seconds(-60))
+      unwritable = {:ok, {"new-access", "new-refresh", "not a timestamp"}}
+
+      assert {:error, :token_persist_failed} =
+               Tokens.with_access_token(
+                 integration,
+                 fn _integration -> unwritable end,
+                 &{:ok, &1}
+               )
+    end
+
+    test "answers not found for an integration deleted before the refresh" do
+      integration = integration(token_expires_at: in_seconds(-60))
+      Repo.delete!(integration)
+
+      assert {:error, :integration_not_found} =
+               Tokens.with_access_token(
+                 integration,
+                 fn _integration -> flunk("refreshed") end,
+                 &{:ok, &1}
+               )
     end
   end
 
-  describe "refresh_oauth_token/1" do
-    test "returns error for unsupported provider" do
-      integration = %{provider: "caldav"}
+  describe "refresh_oauth_token/2" do
+    test "refreshes a Google integration through its API module" do
+      integration = integration(token_expires_at: in_seconds(-60))
 
-      assert {:error, :unsupported_provider} = Tokens.refresh_oauth_token(integration)
+      expect(GoogleCalendarAPIMock, :refresh_token, fn %{id: id} when id == integration.id ->
+        refreshed()
+      end)
+
+      assert {:ok, %{access_token: "new-access", refresh_token: "new-refresh"}} =
+               Tokens.refresh_oauth_token(integration)
     end
 
-    test "returns error for unknown provider" do
-      integration = %{provider: "unknown_provider"}
+    test "refreshes an Outlook integration through its API module" do
+      integration = integration(provider: "outlook", token_expires_at: in_seconds(-60))
 
-      assert {:error, :unsupported_provider} = Tokens.refresh_oauth_token(integration)
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration -> refreshed("outlook") end)
+
+      assert {:ok, %{access_token: "outlook"}} = Tokens.refresh_oauth_token(integration)
     end
 
-    test "attempts to refresh Google token with schema struct" do
-      user = insert(:user)
+    test "leaves a token valid beyond the buffer alone" do
+      integration = integration(token_expires_at: in_seconds(3600))
 
+      assert {:ok, %{access_token: "old-access"}} = Tokens.refresh_oauth_token(integration)
+    end
+
+    test "refreshes ahead of expiry within a wider buffer" do
+      integration = integration(token_expires_at: in_seconds(3600))
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration -> refreshed() end)
+
+      assert {:ok, %{access_token: "new-access"}} =
+               Tokens.refresh_oauth_token(integration, buffer_seconds: 7200)
+    end
+
+    # The caller (the refresh job) read the row before an API call refreshed
+    # it. A Google token lives an hour, inside the job's two-hour buffer, so
+    # the buffer alone would refresh it again.
+    test "does not refresh again a token someone refreshed since the caller read it" do
+      seen = integration(token_expires_at: in_seconds(600))
+
+      seen
+      |> Changeset.change(token_expires_at: DateTime.truncate(in_seconds(3600), :second))
+      |> Repo.update!()
+
+      assert {:ok, %{token_expires_at: expires_at}} =
+               Tokens.refresh_oauth_token(seen, buffer_seconds: 7200)
+
+      assert DateTime.compare(expires_at, seen.token_expires_at) == :gt
+    end
+
+    test "clears a stale sync error on success" do
       integration =
-        CalendarIntegrationSchema.decrypt_oauth_tokens(
-          insert(:calendar_integration,
-            user: user,
-            provider: "google",
-            access_token: "old_token",
-            refresh_token: "test_refresh_token",
-            token_expires_at: DateTime.utc_now()
-          )
+        integration(sync_error: "Token refresh failed", token_expires_at: in_seconds(-60))
+
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration -> refreshed() end)
+
+      assert {:ok, %{sync_error: nil}} = Tokens.refresh_oauth_token(integration)
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).sync_error == nil
+    end
+
+    test "keeps the reason an integration flagged for reconnection carries" do
+      integration =
+        integration(
+          sync_error: "Booking calendar deleted",
+          needs_reauth: true,
+          token_expires_at: in_seconds(-60)
         )
 
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok, {"refreshed_access", "test_refresh_token", DateTime.add(DateTime.utc_now(), 3600)}}
-      end)
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration -> refreshed() end)
 
-      assert {:ok, updated} = Tokens.refresh_oauth_token(integration)
-      assert updated.access_token == "refreshed_access"
-      assert updated.refresh_token == "test_refresh_token"
+      assert {:ok, _integration} = Tokens.refresh_oauth_token(integration)
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).sync_error ==
+               "Booking calendar deleted"
     end
 
-    test "handles Google refresh token rotation" do
-      user = insert(:user)
+    test "reports a provider's typed failure as a pair" do
+      integration = integration(provider: "outlook", token_expires_at: in_seconds(-60))
 
-      integration =
-        CalendarIntegrationSchema.decrypt_oauth_tokens(
-          insert(:calendar_integration,
-            user: user,
-            provider: "google",
-            access_token: "old_token",
-            refresh_token: "old_refresh_token",
-            token_expires_at: DateTime.utc_now()
-          )
-        )
-
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok, {"new_access", "new_rotated_refresh", DateTime.add(DateTime.utc_now(), 3600)}}
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :authentication_error, "Microsoft Client ID not configured"}
       end)
 
-      assert {:ok, updated} = Tokens.refresh_oauth_token(integration)
-      assert updated.access_token == "new_access"
-      assert updated.refresh_token == "new_rotated_refresh"
+      assert {:error, {:authentication_error, "Microsoft Client ID not configured"}} =
+               Tokens.refresh_oauth_token(integration)
     end
 
-    test "attempts to refresh Outlook token with schema struct" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "outlook",
-          access_token: "old_token",
-          refresh_token: "test_refresh_token",
-          token_expires_at: DateTime.utc_now()
-        )
-
-      expect(OutlookCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok,
-         {"outlook_refreshed", "outlook_refreshed_refresh",
-          DateTime.add(DateTime.utc_now(), 3600)}}
-      end)
-
-      assert {:ok, updated} = Tokens.refresh_oauth_token(integration)
-      assert updated.access_token == "outlook_refreshed"
+    test "refuses a provider without OAuth" do
+      assert {:error, :unsupported_provider} =
+               Tokens.refresh_oauth_token(integration(provider: "caldav"))
     end
 
-    test "clears sync_error upon successful refresh" do
-      user = insert(:user)
+    test "flags an integration whose stored credentials stopped decrypting" do
+      integration = integration(token_expires_at: in_seconds(-60))
 
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          sync_error: "Old Error",
-          token_expires_at: DateTime.utc_now()
-        )
+      # The caller holds a copy it read while the row still decrypted; the row
+      # stops decrypting before the re-read under the refresh lock.
+      held = CalendarIntegrationSchema.decrypt_credentials(integration)
 
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _int ->
-        {:ok, {"new_access", "refresh", DateTime.add(DateTime.utc_now(), 3600)}}
-      end)
+      integration
+      |> Changeset.change(refresh_token_encrypted: :crypto.strong_rand_bytes(40))
+      |> Repo.update!()
 
-      assert {:ok, updated} = Tokens.refresh_oauth_token(integration)
-      assert is_nil(updated.sync_error)
-
-      # Also verify in DB
-      fresh = Repo.get!(CalendarIntegrationSchema, integration.id)
-      assert is_nil(fresh.sync_error)
-    end
-
-    test "handles malformed integration_id safely" do
-      # Should not raise, just fallback to perform_refresh without lock
-      integration = %{provider: "google", id: "not-an-integer", refresh_token: "ref"}
-
-      expect(GoogleCalendarAPIMock, :refresh_token, 1, fn _int ->
-        {:ok, {"new", "ref", DateTime.utc_now()}}
-      end)
-
-      assert {:ok, _updated} = Tokens.refresh_oauth_token(integration)
-    end
-  end
-
-  describe "token refresh behavior with different providers" do
-    test "handles Nextcloud provider correctly (no OAuth refresh)" do
-      integration = %{
-        provider: "nextcloud",
-        username: "user",
-        password: "pass"
-      }
-
-      assert {:error, :unsupported_provider} = Tokens.refresh_oauth_token(integration)
+      assert {:error, :requires_reencryption} = Tokens.refresh_oauth_token(held)
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).needs_reauth
     end
   end
 end

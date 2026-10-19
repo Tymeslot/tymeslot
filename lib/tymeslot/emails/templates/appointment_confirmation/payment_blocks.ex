@@ -25,6 +25,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   should call it.
   """
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles, Text}
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
@@ -74,7 +75,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
           amount: Formatting.format_currency(amount, currency),
           paid_at: format_paid_at(bp, appointment_details),
           reference: Map.get(bp, :stripe_charge_id),
-          receipt_url: receipt_url_for(bp)
+          receipt_url: web_url(receipt_url_for(bp))
         }
 
       _other ->
@@ -203,7 +204,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
           dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
             amount: strong(payment.platform_fee)
           ),
-          dgettext("emails_booking", "You received: %{amount} (less Stripe processing fees)",
+          dgettext("emails_booking", "You received: %{amount} (before Stripe processing fees)",
             amount: strong(payment.net_received)
           )
         ],
@@ -256,7 +257,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
       dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
         amount: payment.platform_fee
       ),
-      dgettext("emails_booking", "You received: %{amount} (less Stripe processing fees)",
+      dgettext("emails_booking", "You received: %{amount} (before Stripe processing fees)",
         amount: payment.net_received
       ),
       "",
@@ -270,11 +271,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   # msgid, so the HTML and plain-text summaries share one translation each.
   defp strong(amount), do: "<strong>#{Sanitise.sanitize_for_email(amount)}</strong>"
 
+  # A receipt link that is not a web address is dropped from both parts.
+  defp web_url(url), do: if(Sanitise.safe_web_url?(url), do: url)
+
   defp receipt_button(%{receipt_url: nil}), do: nil
 
   defp receipt_button(%{receipt_url: receipt_url}) do
     button_label = dgettext("emails_booking", "View receipt")
-    safe_url = Sanitise.sanitize_for_email(receipt_url)
+    safe_url = Sanitise.sanitize_web_url(receipt_url)
     accent_deep = Styles.intent_accent_deep(:confirmed)
 
     """
@@ -293,7 +297,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   end
 
   defp format_paid_at(%{paid_at: %DateTime{} = paid_at}, appointment_details) do
-    locale = Map.get(appointment_details, :attendee_locale, "en")
+    locale = RecipientLocale.attendee_locale(appointment_details)
     Formatting.format_datetime(paid_at, locale)
   end
 

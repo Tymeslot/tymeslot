@@ -10,7 +10,6 @@ defmodule Tymeslot.Telegram.TelegramQueries do
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Notifications.IntegrationQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -84,7 +83,7 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   def list_active_integrations_for_event(user_id, event_type) do
     TelegramIntegrationSchema
     |> IntegrationQueries.list_active_for_event(user_id, event_type)
-    |> Enum.filter(&(not is_nil(&1.chat_id)))
+    |> Enum.filter(&TelegramIntegrationSchema.should_be_active?/1)
   end
 
   @doc """
@@ -126,8 +125,22 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   @spec create_integration(map()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_integration(attrs) do
-    %TelegramIntegrationSchema{}
-    |> TelegramIntegrationSchema.changeset(attrs)
+    attrs
+    |> TelegramIntegrationSchema.create_changeset()
+    |> IntegrationQueries.insert()
+    |> maybe_derive_status()
+  end
+
+  @doc """
+  Creates a shared-bot setup stub holding `link_token`, the one-time token of
+  the deep link that will link its chat.
+  """
+  @spec create_link_stub(map(), String.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def create_link_stub(attrs, link_token) do
+    attrs
+    |> TelegramIntegrationSchema.create_changeset()
+    |> TelegramIntegrationSchema.link_changeset(%{link_token: link_token})
     |> IntegrationQueries.insert()
     |> maybe_derive_status()
   end
@@ -136,7 +149,20 @@ defmodule Tymeslot.Telegram.TelegramQueries do
           {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_integration(%TelegramIntegrationSchema{} = integration, attrs) do
     integration
-    |> TelegramIntegrationSchema.changeset(attrs)
+    |> TelegramIntegrationSchema.user_changeset(attrs)
+    |> IntegrationQueries.update()
+    |> maybe_derive_status()
+  end
+
+  @doc """
+  Applies a state transition (enable/disable, failure bookkeeping) without
+  re-validating the organiser's settings.
+  """
+  @spec update_state(TelegramIntegrationSchema.t(), map()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_state(%TelegramIntegrationSchema{} = integration, attrs) do
+    integration
+    |> TelegramIntegrationSchema.state_transition_changeset(attrs)
     |> IntegrationQueries.update()
     |> maybe_derive_status()
   end
@@ -149,7 +175,7 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   @spec update_link_state(TelegramIntegrationSchema.t(), map()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def update_link_state(%TelegramIntegrationSchema{} = integration, attrs) do
-    changeset = TelegramIntegrationSchema.changeset(integration, attrs)
+    changeset = TelegramIntegrationSchema.link_changeset(integration, attrs)
 
     case Repo.update(changeset, stale_error_field: :id) do
       {:error, %Ecto.Changeset{errors: [{:id, {_message, [stale: true]}} | _rest]}} ->
@@ -202,46 +228,33 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   # ============================================================================
 
   @spec list_deliveries(integer(), keyword()) :: [TelegramDeliverySchema.t()]
-  def list_deliveries(integration_id, opts) do
-    limit = Keyword.get(opts, :limit, 50)
+  def list_deliveries(integration_id, opts),
+    do:
+      IntegrationQueries.list_deliveries(
+        TelegramDeliverySchema,
+        :integration_id,
+        integration_id,
+        opts
+      )
 
-    TelegramDeliverySchema
-    |> where([d], d.integration_id == ^integration_id)
-    |> order_by([d], desc: d.inserted_at)
-    |> limit(^limit)
-    |> Repo.all()
-  end
-
-  @spec create_delivery(map()) ::
-          {:ok, TelegramDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_delivery(attrs) do
-    %TelegramDeliverySchema{}
-    |> TelegramDeliverySchema.changeset(attrs)
-    |> Repo.insert()
-  end
+  @spec create_delivery(map()) :: {:ok, TelegramDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
+  def create_delivery(attrs),
+    do: IntegrationQueries.create_delivery(TelegramDeliverySchema, attrs)
 
   @spec get_delivery_stats(integer(), keyword()) :: map()
-  def get_delivery_stats(integration_id, opts) do
-    days_ago = Keyword.get(opts, :days, 7)
-    IntegrationQueries.delivery_stats(TelegramDeliverySchema, integration_id, days_ago)
+  def get_delivery_stats(integration_id, opts \\ []) do
+    IntegrationQueries.delivery_stats(
+      TelegramDeliverySchema,
+      :integration_id,
+      integration_id,
+      Keyword.get(opts, :days, 7)
+    )
   end
 
-  @doc """
-  Deletes Telegram delivery log rows older than `days`. One row is written per
-  attempt, so this table grows unbounded without pruning. Deletes in bounded
-  batches (see `BatchDeleteQueries`) so a large backlog can't blow past the
-  database timeout in a single transaction. A zero, negative, or non-integer
-  retention is treated as a no-op so a misconfigured value can never wipe the
-  whole table.
-  """
+  @doc "Deletes Telegram delivery log rows older than `days`; see `IntegrationQueries.cleanup_old_deliveries/2`."
   @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
-  def cleanup_old_deliveries(days) when is_integer(days) and days > 0 do
-    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
-
-    BatchDeleteQueries.delete_older_than(TelegramDeliverySchema, :inserted_at, cutoff)
-  end
-
-  def cleanup_old_deliveries(_days), do: {0, nil}
+  def cleanup_old_deliveries(days),
+    do: IntegrationQueries.cleanup_old_deliveries(TelegramDeliverySchema, days)
 
   defp excluding_expired_stubs, do: dynamic(not (^expired_stub(stub_cutoff())))
 

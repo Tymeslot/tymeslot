@@ -35,6 +35,45 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEntryTypeTest do
     end
   end
 
+  describe "blocks_availability" do
+    test "reads a missing key as blocking, so a legacy entry keeps blocking" do
+      assert {:ok, %CalendarEntry{blocks_availability: true}} =
+               CalendarEntry.cast(%{"id" => "a", "selected" => true})
+    end
+
+    test "keeps an explicit false from either key shape" do
+      assert {:ok, %CalendarEntry{blocks_availability: false}} =
+               CalendarEntry.cast(%{"id" => "a", "blocks_availability" => false})
+
+      assert {:ok, %CalendarEntry{blocks_availability: false}} =
+               CalendarEntry.cast(%{id: "a", blocks_availability: false})
+    end
+
+    test "is a named field, not left in the raw passthrough" do
+      {:ok, entry} = CalendarEntry.cast(%{"id" => "a", "blocks_availability" => false})
+
+      assert entry.raw == %{}
+      assert {:ok, %{"blocks_availability" => false}} = CalendarEntry.dump(entry)
+    end
+
+    test "a show-only choice survives a round trip through the database" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          calendar_list: [
+            %{"id" => "work", "selected" => true, "blocks_availability" => false},
+            %{"id" => "home", "selected" => true}
+          ]
+        )
+
+      %CalendarIntegrationSchema{calendar_list: [work, home]} =
+        Repo.get!(CalendarIntegrationSchema, integration.id)
+
+      assert work.blocks_availability == false
+      assert home.blocks_availability == true
+    end
+  end
+
   describe "load/1" do
     test "casts a plain map the same way cast/1 does" do
       assert {:ok, %CalendarEntry{id: "a"}} = CalendarEntry.load(%{"id" => "a"})

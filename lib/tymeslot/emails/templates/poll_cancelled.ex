@@ -9,7 +9,8 @@ defmodule Tymeslot.Emails.Templates.PollCancelled do
 
   import Swoosh.Email
 
-  alias Tymeslot.Emails.Shared.{MjmlEmail, PollHost, Sanitise, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{MjmlEmail, PollHost, TemplateHelper, Text}
+  alias Tymeslot.Locales
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -18,7 +19,7 @@ defmodule Tymeslot.Emails.Templates.PollCancelled do
 
   @spec render(PollSchema.t(), PollParticipantSchema.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, %PollParticipantSchema{} = participant) do
-    locale = participant.locale || "en"
+    locale = Locales.acceptable(participant.locale) || Locales.booking_default_locale()
     host_name = PollHost.display_name(poll)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -40,11 +41,7 @@ defmodule Tymeslot.Emails.Templates.PollCancelled do
       |> to(PollParticipantSchema.email_recipient(participant))
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
-      |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_polls", "Poll cancelled: \"%{title}\"", title: poll.title)
-        )
-      )
+      |> subject(dgettext("emails_polls", "Poll cancelled: \"%{title}\"", title: poll.title))
       |> html_body(html_body)
       |> text_body("#{headline}\n\n#{body}\n")
     end)

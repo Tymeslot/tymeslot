@@ -5,11 +5,41 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
 
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
 
   @from ~U[2026-09-01 00:00:00Z]
   @to ~U[2026-10-01 00:00:00Z]
+
+  @item_properties ~w(
+    item:Subject
+    calendar:Start
+    calendar:End
+    calendar:IsAllDayEvent
+    calendar:Location
+    calendar:UID
+    calendar:CalendarItemType
+    calendar:LegacyFreeBusyStatus
+    calendar:IsCancelled
+    calendar:StartTimeZone
+  )
+
+  # Every `t:` element `Exchange.EventNormaliser` reads off a calendar item,
+  # with the property that brings it back. `ItemId` comes with `IdOnly` itself.
+  @field_uri_by_element %{
+    "ItemId" => nil,
+    "Subject" => "item:Subject",
+    "Start" => "calendar:Start",
+    "End" => "calendar:End",
+    "IsAllDayEvent" => "calendar:IsAllDayEvent",
+    "Location" => "calendar:Location",
+    "UID" => "calendar:UID",
+    "CalendarItemType" => "calendar:CalendarItemType",
+    "LegacyFreeBusyStatus" => "calendar:LegacyFreeBusyStatus",
+    "IsCancelled" => "calendar:IsCancelled",
+    "StartTimeZone" => "calendar:StartTimeZone"
+  }
 
   describe "find_folder/0" do
     test "asks for calendar folders under the mailbox root with deep traversal" do
@@ -106,7 +136,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
 
       assert xml =~ ~s(<t:ItemId Id="id-1" ChangeKey="ck-1"/>)
       assert xml =~ ~s(<t:ItemId Id="id-2" ChangeKey="ck-2"/>)
-      assert xml =~ ~s(<t:BaseShape>Default</t:BaseShape>)
+      assert xml =~ ~s(<t:BaseShape>IdOnly</t:BaseShape>)
     end
 
     test "escapes XML metacharacters in the ids" do
@@ -115,24 +145,45 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       assert xml =~ ~s(<t:ItemId Id="a&amp;b" ChangeKey="c&quot;d"/>)
     end
 
-    test "asks for the cancellation flag and the item's time zone on top of the default shape" do
-      # Neither is in `BaseShape=Default`, and a server that does not implement
-      # them omits them from the response rather than faulting, so asking costs
-      # nothing and is the only way to get them where they exist.
-      xml = Requests.get_item([{"id-1", "ck-1"}])
-
-      assert xml =~ ~s(<t:FieldURI FieldURI="calendar:IsCancelled"/>)
-      assert xml =~ ~s(<t:FieldURI FieldURI="calendar:StartTimeZone"/>)
-    end
-
-    test "nests the extra properties inside the item shape where the schema puts them" do
+    test "asks for exactly the properties the normaliser reads, so no event body comes back" do
+      # `BaseShape=Default` would add `t:Body`, every event's full HTML
+      # description, which nothing reads. A property left off this list is
+      # silently absent from the response rather than faulted.
       assert {:ok, doc} =
                [{"id-1", "ck-1"}] |> Requests.get_item() |> Soap.envelope() |> Soap.parse()
+
+      assert Soap.xpath(doc, ~x"//m:GetItem/m:ItemShape/t:BaseShape/text()"s) == "IdOnly"
 
       assert Soap.xpath(
                doc,
                ~x"//m:GetItem/m:ItemShape/t:AdditionalProperties/t:FieldURI/@FieldURI"sl
-             ) == ["calendar:IsCancelled", "calendar:StartTimeZone"]
+             ) == @item_properties
+    end
+
+    test "asks for every element the normaliser reads, and nothing else" do
+      # Scans the normaliser's own xpaths, so a newly read element fails here
+      # until it is both mapped below and added to the request.
+      read = normaliser_elements()
+      unmapped = Enum.reject(read, &Map.has_key?(@field_uri_by_element, &1))
+
+      assert "Subject" in read
+      assert unmapped == []
+
+      requested =
+        [{"id-1", "ck-1"}]
+        |> Requests.get_item()
+        |> Soap.envelope()
+        |> Soap.parse()
+        |> then(fn {:ok, doc} ->
+          Soap.xpath(
+            doc,
+            ~x"//m:GetItem/m:ItemShape/t:AdditionalProperties/t:FieldURI/@FieldURI"sl
+          )
+        end)
+
+      expected = read |> Enum.map(&@field_uri_by_element[&1]) |> Enum.reject(&is_nil/1)
+
+      assert Enum.sort(requested) == Enum.sort(expected)
     end
 
     test "does not request MIME content" do
@@ -159,8 +210,27 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
         assert Soap.xpath(doc, ~x"//m:ItemIds/t:ItemId/@ChangeKey"sl) ==
                  Enum.map(ids, &elem(&1, 1))
 
-        assert Soap.xpath(doc, ~x"//m:GetItem/m:ItemShape/t:BaseShape/text()"s) == "Default"
+        assert Soap.xpath(doc, ~x"//m:GetItem/m:ItemShape/t:BaseShape/text()"s) == "IdOnly"
       end
+    end
+  end
+
+  describe "create_item/2" do
+    test "builds a well-formed request from pasted text carrying characters XML forbids" do
+      spec = %{
+        summary: "Planning\vcall",
+        description: "Agenda\fsee notes\x01",
+        location: "Room\x0B 4",
+        start_time: ~U[2026-09-03 09:00:00Z],
+        end_time: ~U[2026-09-03 10:00:00Z]
+      }
+
+      assert {:ok, doc} =
+               spec |> Requests.create_item(:calendar) |> Soap.envelope() |> Soap.parse()
+
+      assert Soap.xpath(doc, ~x"//t:CalendarItem/t:Subject/text()"s) == "Planningcall"
+      assert Soap.xpath(doc, ~x"//t:CalendarItem/t:Body/text()"s) == "Agendasee notes"
+      assert Soap.xpath(doc, ~x"//t:CalendarItem/t:Location/text()"s) == "Room 4"
     end
   end
 
@@ -312,5 +382,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
     assert Soap.xpath(doc, ~x"#{base}/t:DayOrder/text()"s) == "1"
     assert Soap.xpath(doc, ~x"#{base}/t:Month/text()"s) == "1"
     assert Soap.xpath(doc, ~x"#{base}/t:DayOfWeek/text()"s) == "Sunday"
+  end
+
+  defp normaliser_elements do
+    source = File.read!(EventNormaliser.module_info(:compile)[:source])
+
+    ~r{~x"\./t:(\w+)}
+    |> Regex.scan(source, capture: :all_but_first)
+    |> List.flatten()
+    |> Enum.uniq()
   end
 end

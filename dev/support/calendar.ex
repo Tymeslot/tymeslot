@@ -31,7 +31,7 @@ defmodule Tymeslot.Dev.Calendar do
   Nothing is persisted — a restart clears them along with the rest.
 
   To exercise genuine calendar sync locally, leave both variables unset and the
-  real `Calendar.Operations` module is used.
+  real `Calendar.Runtime.Operations` module is used.
   """
 
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
@@ -103,13 +103,10 @@ defmodule Tymeslot.Dev.Calendar do
   end
 
   @impl CalendarBehaviour
-  def delete_event(uid, _context) do
+  def delete_event(uid, _context, _opts) do
     DebugStore.delete_event(uid)
     :ok
   end
-
-  @impl CalendarBehaviour
-  def delete_event(uid, context, _opts), do: delete_event(uid, context)
 
   @impl CalendarBehaviour
   def get_booking_integration_info(_context), do: {:error, :no_integration}

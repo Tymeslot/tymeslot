@@ -6,22 +6,22 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   require Logger
   alias Tymeslot.Bookings.BookingTitle
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Emails.HostClock
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.Meetings.VideoRooms
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Utils.UrlBuilder
 
   use Gettext, backend: TymeslotWeb.Gettext
-
-  @default_timezone Profiles.get_default_timezone()
 
   @spec from_meeting(map(), map() | nil) :: Tymeslot.Emails.EmailService.appointment_details()
   def from_meeting(meeting, reminder_interval \\ nil) do
@@ -43,6 +43,44 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     meeting
     |> Recipient.as_seen_by(recipient)
     |> build(reminder_interval)
+  end
+
+  @doc """
+  Appointment details for a meeting moved from `original`, which carries the
+  previous `start_time`, `end_time` and `attendee_video_url` (the meeting
+  row no longer holds them), for the reschedule templates to show where the
+  meeting moved from, in each party's timezone.
+  """
+  @spec for_reschedule(MeetingSchema.t(), map()) ::
+          Tymeslot.Emails.EmailService.appointment_details()
+  def for_reschedule(%MeetingSchema{} = meeting, original) do
+    details = build(meeting, nil)
+
+    Map.merge(details, %{
+      original_date: DateTime.to_date(original.start_time),
+      original_start_time: original.start_time,
+      original_start_time_owner_tz:
+        DateTimeUtils.convert_to_timezone(original.start_time, owner_timezone(meeting)),
+      original_start_time_attendee_tz:
+        DateTimeUtils.convert_to_timezone(original.start_time, details.attendee_timezone),
+      original_end_time: original.end_time,
+      original_attendee_video_url: Map.get(original, :attendee_video_url),
+      is_rescheduled: true,
+      rescheduled_at: DateTime.utc_now()
+    })
+  end
+
+  @doc """
+  Appointment details for a booking whose new time was approved after a
+  reschedule sent it back into the approval gate. There is no previous time
+  to compare with, so the templates leave out their "previously scheduled"
+  line.
+  """
+  @spec for_reapproval(MeetingSchema.t()) :: Tymeslot.Emails.EmailService.appointment_details()
+  def for_reapproval(%MeetingSchema{} = meeting) do
+    meeting
+    |> build(nil)
+    |> Map.merge(%{is_rescheduled: true, rescheduled_at: DateTime.utc_now()})
   end
 
   @doc """
@@ -97,7 +135,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   defp build(meeting, reminder_interval) do
-    attendee_locale = Map.get(meeting, :attendee_locale, "en")
+    attendee_locale = RecipientLocale.attendee_locale(meeting)
 
     Gettext.with_locale(TymeslotWeb.Gettext, attendee_locale, fn ->
       owner_timezone = owner_timezone(meeting)
@@ -130,9 +168,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # template. Deliberately namespaced away from the plain `:time_format` key the
   # hero and text bodies read, so an attendee-addressed branch cannot pick it up
   # by accident: only the organiser branches copy it across.
-  defp organizer_time_format(meeting, organizer_locale) do
-    CalendarGrid.get_user_time_format(Map.get(meeting, :organizer_user_id), organizer_locale)
-  end
+  defp organizer_time_format(meeting, organizer_locale),
+    do: HostClock.time_format(meeting, organizer_locale)
 
   # Look up the booking payment row attached to this meeting, if any.
   # Free bookings have no booking_payment row, so this returns nil and the
@@ -142,19 +179,15 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   defp booking_payment_for(_meeting), do: nil
 
-  defp owner_timezone(meeting) do
-    case meeting.organizer_user_id do
-      nil ->
-        Logger.error("Missing organizer_user_id for meeting, using default timezone",
-          meeting_uid: meeting.uid
-        )
+  defp owner_timezone(%{organizer_user_id: nil} = meeting) do
+    Logger.error("Missing organizer_user_id for meeting, using default timezone",
+      meeting_id: meeting.id
+    )
 
-        @default_timezone
-
-      user_id ->
-        Profiles.get_user_timezone(user_id)
-    end
+    HostClock.timezone(meeting)
   end
+
+  defp owner_timezone(meeting), do: HostClock.timezone(meeting)
 
   # A group meeting's row never carries an attendee: its people are its
   # participants, whose own timezone comes in through the recipient overlay.
@@ -169,7 +202,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       nil ->
         Logger.warning(
           "Missing attendee_timezone for meeting, using organizer timezone as emergency fallback",
-          meeting_uid: meeting.uid
+          meeting_id: meeting.id
         )
 
         owner_timezone
@@ -257,10 +290,14 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   defp url_details(meeting, organizer_profile) do
+    links = MeetingLinks.for_meeting(meeting, organizer_profile)
+
     %{
-      view_url: meeting.view_url || "#",
-      reschedule_url: meeting.reschedule_url || "#",
-      cancel_url: meeting.cancel_url || "#",
+      # nil when the meeting has no such link: the templates leave an action
+      # without a URL out rather than linking it to nowhere.
+      view_url: links.view_url,
+      reschedule_url: links.reschedule_url,
+      cancel_url: links.cancel_url,
       # The host's public booking page, resolved at send time rather than read
       # from the meeting row. Unlike the per-meeting action URLs it is not
       # persisted, so it always reflects the host's current username.
@@ -288,14 +325,14 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   defp reminder_details(meeting, reminder_interval) do
-    case ReminderUtils.normalize_reminder(reminder_interval) do
+    case Reminders.normalize_reminder(reminder_interval) do
       {:ok, reminder} ->
         build_reminder_details_from_interval(reminder)
 
       _error ->
         meeting
         |> Map.get(:reminders)
-        |> ReminderUtils.normalize_reminders()
+        |> Reminders.normalize_reminders()
         |> handle_normalized_reminders(meeting)
     end
   end
@@ -315,8 +352,63 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
+  # A meeting booked before reminders were stored as value and unit carries
+  # a label instead. One that reads as an interval is localised like any
+  # other, for both recipients; free text the app no longer writes is kept.
   defp handle_normalized_reminders([], meeting) do
-    case legacy_reminder_label(meeting) do
+    label = legacy_reminder_label(meeting)
+
+    case Reminders.parse_label(label) do
+      {:ok, reminder} -> handle_normalized_reminders([reminder], meeting)
+      :error -> legacy_reminder_details(label)
+    end
+  end
+
+  defp handle_normalized_reminders([reminder], _meeting) do
+    reminder_label = localized_reminder_label(reminder.value, reminder.unit)
+
+    %{
+      reminder_time: reminder_label,
+      reminder_raw: %{value: reminder.value, unit: reminder.unit},
+      default_reminder_time: reminder_label,
+      time_until: reminder_label,
+      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
+      reminders_enabled: true,
+      reminders_summary:
+        dgettext("emails", "I'll send you a reminder %{label} before our appointment.",
+          label: reminder_label
+        )
+    }
+  end
+
+  defp handle_normalized_reminders(reminder_list, _meeting) do
+    closest =
+      Enum.min_by(reminder_list, fn %{value: value, unit: unit} ->
+        Reminders.reminder_interval_seconds(value, unit)
+      end)
+
+    reminder_label = localized_reminder_label(closest.value, closest.unit)
+
+    %{
+      reminder_time: reminder_label,
+      reminder_raw: %{value: closest.value, unit: closest.unit},
+      default_reminder_time: reminder_label,
+      time_until: reminder_label,
+      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
+      reminders_enabled: true,
+      reminders_summary:
+        dngettext(
+          "emails",
+          "You'll receive %{count} reminder before the appointment.",
+          "You'll receive %{count} reminders before the appointment.",
+          length(reminder_list),
+          count: length(reminder_list)
+        )
+    }
+  end
+
+  defp legacy_reminder_details(label) do
+    case label do
       nil ->
         %{
           reminder_time: nil,
@@ -343,49 +435,6 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end
   end
 
-  defp handle_normalized_reminders([reminder], _meeting) do
-    reminder_label = localized_reminder_label(reminder.value, reminder.unit)
-
-    %{
-      reminder_time: reminder_label,
-      reminder_raw: %{value: reminder.value, unit: reminder.unit},
-      default_reminder_time: reminder_label,
-      time_until: reminder_label,
-      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
-      reminders_enabled: true,
-      reminders_summary:
-        dgettext("emails", "I'll send you a reminder %{label} before our appointment.",
-          label: reminder_label
-        )
-    }
-  end
-
-  defp handle_normalized_reminders(reminder_list, _meeting) do
-    closest =
-      Enum.min_by(reminder_list, fn %{value: value, unit: unit} ->
-        ReminderUtils.reminder_interval_seconds(value, unit)
-      end)
-
-    reminder_label = localized_reminder_label(closest.value, closest.unit)
-
-    %{
-      reminder_time: reminder_label,
-      reminder_raw: %{value: closest.value, unit: closest.unit},
-      default_reminder_time: reminder_label,
-      time_until: reminder_label,
-      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
-      reminders_enabled: true,
-      reminders_summary:
-        dngettext(
-          "emails",
-          "You'll receive %{count} reminder before the appointment.",
-          "You'll receive %{count} reminders before the appointment.",
-          length(reminder_list),
-          count: length(reminder_list)
-        )
-    }
-  end
-
   # Derive a display location from the meeting's fields. When a video URL is
   # present the location is "Video Call" regardless of any physical location
   # stored on the record. When nothing is set, return nil so the rendering
@@ -406,26 +455,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     meeting.reminder_time || meeting.default_reminder_time
   end
 
-  # Formats a reminder label using locale-aware unit words.
-  # Must be called from within a Gettext.with_locale block.
-  #
-  # These carry the "time until" context because the label is always consumed
-  # after a preposition ("in %{label}", "%{label} before the meeting"). Case
-  # languages inflect it there: Ukrainian needs the accusative "за 1 годину",
-  # where Shared.Formatting's bare duration needs the nominative "1 година".
-  # Same English words, different grammar — hence a separate msgctxt.
+  # The reminder label in the locale this payload is built in (the
+  # attendee's); see `Formatting.format_reminder_label/2`.
   defp localized_reminder_label(value, unit) do
-    value = ReminderUtils.parse_reminder_value(value)
-    unit = ReminderUtils.normalize_reminder_unit(unit)
-
-    unit_word =
-      case unit do
-        "minutes" -> dpngettext("emails", "time until", "minute", "minutes", value)
-        "hours" -> dpngettext("emails", "time until", "hour", "hours", value)
-        "days" -> dpngettext("emails", "time until", "day", "days", value)
-        _other -> dpngettext("emails", "time until", "minute", "minutes", value)
-      end
-
-    "#{value} #{unit_word}"
+    Formatting.format_reminder_label(
+      %{value: value, unit: unit},
+      Gettext.get_locale(TymeslotWeb.Gettext)
+    )
   end
 end

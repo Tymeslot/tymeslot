@@ -109,12 +109,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   def clear(socket), do: assign(socket, :selected_time, nil)
 
   defp selection(assigns),
-    do:
-      Calculate.validate_time_selection(
-        assigns[:selected_date],
-        assigns[:selected_time],
-        assigns[:available_slots]
-      )
+    do: Calculate.validate_time_selection(assigns[:selected_date], assigns[:selected_time])
 
   # Defensive on the nil date: neither theme's day button deselects any
   # more, so nothing reaches here with nil today. The guard stays because

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
+defmodule Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper do
   @moduledoc """
   Shared Google OAuth helper for all Google integrations.
 
@@ -7,21 +7,18 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   state management, and provides flexible scope configuration.
   """
 
-  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
-  alias Tymeslot.Integrations.Google.Endpoints
+  alias Tymeslot.Integrations.Shared.GoogleConfig
+  alias Tymeslot.Integrations.Shared.OAuth.IdToken
+  alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
-  alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
+  alias Tymeslot.Integrations.Shared.OAuth.State
+  alias Tymeslot.Integrations.Shared.OAuth.TokenEndpoint
 
   require Logger
 
-  @default_scopes %{
-    openid: "openid",
-    email: "email",
-    calendar: "https://www.googleapis.com/auth/calendar",
-    meet: "https://www.googleapis.com/auth/meetings.space.created"
-  }
+  # Authorisation parameters a caller may set beyond the ones built here.
+  @forwarded_options [:include_granted_scopes, :hd]
 
   @doc """
   Generates the OAuth authorization URL for Google services.
@@ -43,7 +40,12 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     integration_id = Keyword.get(options, :integration_id)
     login_hint = Keyword.get(options, :login_hint)
     return_to = Keyword.get(options, :return_to)
-    state = generate_state(user_id, integration_id, return_to: return_to)
+
+    state =
+      generate_state(user_id, integration_id,
+        return_to: return_to,
+        nonce: PendingFlow.nonce(options)
+      )
 
     # Always include openid and email for account identification
     all_scopes = Enum.uniq([:openid, :email | scopes])
@@ -53,7 +55,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     default_prompt = if integration_id, do: "select_account", else: "consent select_account"
 
     base_params = %{
-      client_id: google_client_id(),
+      client_id: GoogleConfig.client_id!(),
       redirect_uri: redirect_uri,
       response_type: "code",
       scope: scope_string,
@@ -62,65 +64,53 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       prompt: Keyword.get(options, :prompt, default_prompt)
     }
 
-    # Add any additional options
+    # Only parameters Google defines are forwarded: the options also carry
+    # Tymeslot's own (`return_to`, `scopes`), which belong in the state or the
+    # scope string, not in a URL Google logs and may reject.
     params =
       options
-      |> Keyword.drop([:access_type, :prompt, :integration_id, :login_hint])
+      |> Keyword.take(@forwarded_options)
       |> Enum.into(base_params)
+      |> Map.merge(PendingFlow.challenge_params(options))
 
     ProviderHelpers.build_authorization_url(
-      Endpoints.authorize_url(),
+      GoogleConfig.authorize_url(),
       params,
       login_hint
     )
   end
 
   @doc """
-  Exchanges authorization code for access and refresh tokens.
+  Exchanges an authorisation code for tokens, with the Google account the id
+  token names (`provider_account_id`, `provider_account_email`).
 
-  ## Parameters
-    - code: Authorization code from Google
-    - redirect_uri: The same redirect URI used in authorization
-    - state: State parameter for validation
+  The callback's `state` is verified by the caller before the code is spent;
+  `opts` carries its flow's `:code_verifier`.
 
   Returns {:ok, tokens} or {:error, reason}
   """
-  @spec exchange_code_for_tokens(String.t(), String.t(), String.t() | nil) ::
+  @spec exchange_code_for_tokens(String.t(), String.t(), keyword()) ::
           {:ok, map()} | {:error, String.t()}
-  def exchange_code_for_tokens(code, redirect_uri, state \\ nil) do
-    body = %{
-      code: code,
-      client_id: google_client_id(),
-      client_secret: google_client_secret(),
-      redirect_uri: redirect_uri,
-      grant_type: "authorization_code"
-    }
+  def exchange_code_for_tokens(code, redirect_uri, opts \\ []) do
+    with {:ok, client_id} <- GoogleConfig.fetch_client_id(),
+         {:ok, client_secret} <- GoogleConfig.fetch_client_secret() do
+      body =
+        PendingFlow.verifier_param(opts, %{
+          code: code,
+          client_id: client_id,
+          client_secret: client_secret,
+          redirect_uri: redirect_uri,
+          grant_type: "authorization_code"
+        })
 
-    case TokenFlow.exchange_code(Endpoints.token_url(), body, log_context: [provider: :google]) do
-      {:ok, response} ->
-        tokens = build_token_map(response)
-
-        case validate_state(state) do
-          {:ok, %{user_id: user_id} = state_data} ->
-            {:ok,
-             tokens
-             |> Map.put(:user_id, user_id)
-             |> Map.put(:integration_id, state_data.integration_id)}
-
-          {:error, _reason} when is_nil(state) ->
-            {:ok, tokens}
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-
-      # No second log line here: `TokenFlow` already logs the status and the
-      # redacted body, and names the provider too.
-      {:error, {:http_error, status, body}} ->
-        {:error, ErrorParser.build_message("OAuth token exchange failed", status, body)}
-
-      {:error, {:network_error, reason}} ->
-        {:error, "Network error during token exchange: #{inspect(reason)}"}
+      # No second log line on failure: `TokenEndpoint` already logs the status
+      # and the redacted body, and names the provider too.
+      case TokenEndpoint.exchange_code(GoogleConfig.token_url(), body,
+             log_context: [provider: :google]
+           ) do
+        {:ok, tokens} -> {:ok, build_token_map(tokens)}
+        {:error, error} -> {:error, TokenEndpoint.error_message(:exchange, error)}
+      end
     end
   end
 
@@ -135,38 +125,20 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   ## Parameters
     - refresh_token: The refresh token
     - current_scope: Current token scope (optional)
-    - opts: `:log_context`, forwarded to `TokenExchange.refresh_access_token/3`
+    - opts: `:log_context`, forwarded to `TokenEndpoint.refresh/3`
 
   Returns {:ok, tokens} or {:error, reason}
   """
   @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
           {:ok, map()} | {:error, String.t()}
   def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
-    body = %{
-      refresh_token: refresh_token,
-      client_id: google_client_id(),
-      client_secret: google_client_secret(),
-      grant_type: "refresh_token"
-    }
-
-    # Add scope if provided to maintain same scope
-    body = if current_scope, do: Map.put(body, :scope, current_scope), else: body
-
-    # No second log line here: `TokenExchange` already logs the status and the
-    # redacted body, and now names the provider too.
-    case TokenExchange.refresh_access_token(Endpoints.token_url(), body,
-           fallback_refresh_token: refresh_token,
-           fallback_scope: current_scope,
+    # No second log line here: `TokenEndpoint` already logs the status and the
+    # redacted body, and names the provider too.
+    case TokenEndpoint.refresh_grant(GoogleConfig, refresh_token, current_scope,
            log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :google)
          ) do
-      {:ok, tokens} ->
-        {:ok, tokens}
-
-      {:error, {:http_error, status, body}} ->
-        {:error, ErrorParser.build_message("Token refresh failed", status, body)}
-
-      {:error, {:network_error, reason}} ->
-        {:error, "Network error during token refresh: #{inspect(reason)}"}
+      {:ok, tokens} -> {:ok, tokens}
+      {:error, error} -> {:error, TokenEndpoint.error_message(:refresh, error)}
     end
   end
 
@@ -179,38 +151,24 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   end
 
   @doc """
-  Validates and extracts state data from state parameter.
-  """
-  @spec validate_state(String.t() | any()) ::
-          {:ok, State.validated()} | {:error, String.t()}
-  def validate_state(state) when is_binary(state) do
-    State.validate(state, state_secret())
-  end
-
-  def validate_state(_invalid), do: {:error, "Invalid state parameter"}
-
-  @doc """
   Returns the secret used to sign and verify Google OAuth `state` parameters.
   """
   @spec state_secret() :: String.t()
-  def state_secret do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google State Secret not configured"
-  end
+  defdelegate state_secret, to: GoogleConfig
 
   # Private functions
 
-  defp build_token_map(response) do
-    expires_at = DateTime.add(Clock.utc_now(), response["expires_in"], :second)
-
+  # Adds the account the id_token names, so a reconnect can match the
+  # integration it belongs to. The token endpoint result itself carries the
+  # raw id_token, which nothing downstream needs.
+  defp build_token_map(tokens) do
     {provider_account_id, provider_account_email} =
-      case IdToken.decode(response["id_token"]) do
+      case IdToken.decode(tokens.id_token) do
         {:ok, claims} ->
           {claims.sub, claims.email}
 
         {:error, reason} ->
-          if response["id_token"] do
+          if tokens.id_token do
             Logger.warning(
               "Failed to decode Google id_token — account dedup falling back to legacy match",
               reason: LogFormat.reason(reason)
@@ -220,14 +178,12 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
           {nil, nil}
       end
 
-    %{
-      access_token: response["access_token"],
-      refresh_token: response["refresh_token"],
-      expires_at: expires_at,
-      scope: response["scope"],
+    tokens
+    |> Map.delete(:id_token)
+    |> Map.merge(%{
       provider_account_id: provider_account_id,
       provider_account_email: provider_account_email
-    }
+    })
   end
 
   defp build_scope_string(scopes) when is_list(scopes) do
@@ -238,20 +194,8 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   defp build_scope_list(scopes) when is_list(scopes) do
     Enum.map(scopes, fn
-      scope when is_atom(scope) -> Map.get(@default_scopes, scope, to_string(scope))
+      scope when is_atom(scope) -> GoogleConfig.scope(scope)
       scope when is_binary(scope) -> scope
     end)
-  end
-
-  defp google_client_id do
-    Application.get_env(:tymeslot, :google_oauth)[:client_id] ||
-      System.get_env("GOOGLE_CLIENT_ID") ||
-      raise "Google Client ID not configured"
-  end
-
-  defp google_client_secret do
-    Application.get_env(:tymeslot, :google_oauth)[:client_secret] ||
-      System.get_env("GOOGLE_CLIENT_SECRET") ||
-      raise "Google Client Secret not configured"
   end
 end

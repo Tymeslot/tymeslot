@@ -15,13 +15,13 @@ defmodule Tymeslot.Emails.Templates.PollNewTimes do
     Formatting,
     MjmlEmail,
     PollHost,
-    Sanitise,
     TemplateHelper,
-    Text,
-    TimezoneHelper
+    Text
   }
 
+  alias Tymeslot.Locales
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
+  alias Tymeslot.Utils.DateTimeUtils
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -31,7 +31,7 @@ defmodule Tymeslot.Emails.Templates.PollNewTimes do
           Swoosh.Email.t()
   def render(%PollSchema{} = poll, %PollParticipantSchema{} = participant, slots, voting_url)
       when is_binary(voting_url) do
-    locale = participant.locale || "en"
+    locale = Locales.acceptable(participant.locale) || Locales.booking_default_locale()
     host_name = PollHost.display_name(poll)
     timezone = participant.timezone || poll.timezone || "UTC"
 
@@ -55,9 +55,7 @@ defmodule Tymeslot.Emails.Templates.PollNewTimes do
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_polls", "New times to vote on in \"%{title}\"", title: poll.title)
-        )
+        dgettext("emails_polls", "New times to vote on in \"%{title}\"", title: poll.title)
       )
       |> html_body(html_body)
       |> text_body(build_text_body(headline, host_name, times, voting_url))
@@ -102,7 +100,7 @@ defmodule Tymeslot.Emails.Templates.PollNewTimes do
 
   defp format_time(slot, timezone, locale) do
     slot.start_time
-    |> TimezoneHelper.convert_to_timezone(timezone)
+    |> DateTimeUtils.convert_to_timezone(timezone)
     |> Formatting.format_datetime(locale)
   end
 end

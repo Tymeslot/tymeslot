@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -82,7 +83,31 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     assert {:error, {:redirect, %{to: "/", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
 
-    assert flash["error"] =~ "already cancelled"
+    assert flash["error"] == "This booking has already been cancelled or moved."
+  end
+
+  @tag :capture_log
+  test "cancel-click on a meeting cancelled since the page loaded says it was already cancelled",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_name: user.name,
+        attendee_timezone: profile.timezone,
+        status: "confirmed"
+      )
+
+    {:ok, view, _html} =
+      live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+    # The host cancels from their dashboard while the attendee's page,
+    # loaded while the meeting was still confirmed, is open.
+    assert {:ok, _cancelled} = Cancel.execute(meeting, caller: :organizer)
+
+    view |> element("[data-testid='cancel-meeting']") |> render_click()
+
+    assert render(view) =~ "This booking was already cancelled."
   end
 
   @tag :capture_log
@@ -136,7 +161,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip] || "unknown"
 
     Enum.each(1..10, fn _i ->
-      RateLimiter.check_meeting_cancel_rate_limit(client_ip)
+      RateLimiter.check(:meeting_cancel, client_ip)
     end)
 
     view |> element("[data-testid='cancel-meeting']") |> render_click()
@@ -249,7 +274,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     assert {:error, {:redirect, %{to: "/", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
 
-    assert flash["error"] == "Der Termin wurde bereits abgesagt"
+    assert flash["error"] == "Diese Buchung wurde bereits storniert oder verschoben."
   end
 
   @tag :capture_log

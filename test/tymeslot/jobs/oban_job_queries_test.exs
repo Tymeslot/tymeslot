@@ -7,6 +7,8 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
   """
   use Tymeslot.DataCase, async: true
 
+  import Ecto.Query
+
   @moduletag :workers
   @moduletag :queries
 
@@ -23,12 +25,14 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
       assert ObanJobQueries.count_active_maintenance_jobs(@worker) == 1
     end
 
-    test "counts available, scheduled, executing and suspended jobs together" do
-      for state <- ~w(available scheduled executing suspended) do
+    # A run waiting to retry has not finished either; counting it as absent
+    # let a second run be scheduled behind it.
+    test "counts every incomplete job, retryable included" do
+      for state <- ~w(available scheduled executing retryable suspended) do
         insert_job(%{worker: @worker, state: state})
       end
 
-      assert ObanJobQueries.count_active_maintenance_jobs(@worker) == 4
+      assert ObanJobQueries.count_active_maintenance_jobs(@worker) == 5
     end
 
     test "ignores terminal jobs" do
@@ -81,6 +85,30 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
       })
 
       assert {0, nil} = ObanJobQueries.delete_meeting_jobs(@worker, "meeting-1")
+    end
+  end
+
+  describe "update_job_to_discarded/2" do
+    test "discards a job still executing and appends the error" do
+      job = insert_job(%{state: "executing", errors: [%{"error" => "earlier"}]})
+
+      assert {:ok, :discarded} =
+               ObanJobQueries.update_job_to_discarded(job, %{error: "stuck", attempt: 1})
+
+      assert %{state: "discarded", discarded_at: %DateTime{}, errors: errors} = Repo.reload!(job)
+      assert [%{"error" => "earlier"}, %{"error" => "stuck", "attempt" => 1}] = errors
+    end
+
+    # The maintenance worker read the job as stuck; it finished before the
+    # discard landed, and must not be marked as dropped.
+    test "leaves a job that finished after it was read" do
+      stale = insert_job(%{state: "executing"})
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^stale.id), set: [state: "completed"])
+
+      assert {:error, :no_longer_executing} =
+               ObanJobQueries.update_job_to_discarded(stale, %{error: "stuck"})
+
+      assert %{state: "completed", errors: []} = Repo.reload!(stale)
     end
   end
 

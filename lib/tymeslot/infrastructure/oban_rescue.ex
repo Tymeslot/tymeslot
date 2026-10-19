@@ -23,11 +23,12 @@ defmodule Tymeslot.Infrastructure.ObanRescue do
 
   Rescuing goes purely on elapsed time, with no idea whether the node running
   the job is still alive, so a window shorter than the longest legitimate run
-  re-runs jobs that are still working and duplicates their side effects. No
-  worker sets an Oban `timeout/1`, so nothing caps a run from above; the
-  longest bounded one is an Exchange calendar sync draining up to 500 pages at
-  30 seconds each, a little over four hours, which is what
-  `@longest_job_hours` records.
+  re-runs jobs that are still working and duplicates their side effects. Only
+  the video transcoder sets an Oban `timeout/1` (under five hours: four
+  variants at their longest, plus slack), so for every other job nothing caps
+  a run from above; the longest bounded one is an Exchange calendar sync
+  draining up to 500 pages at 30 seconds each, a little over four hours, which
+  is what `@longest_job_hours` records.
 
   The check reads the raw application environment rather than Oban's own
   normalised state, so it has to know the shapes a service key accepts: a

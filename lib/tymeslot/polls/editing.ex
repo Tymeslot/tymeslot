@@ -8,7 +8,7 @@ defmodule Tymeslot.Polls.Editing do
   commit:
 
     * a changed deadline or reminders replace the pending reminder and
-      deadline jobs (`PollScheduler.reschedule_deadline_jobs/1`). A deadline
+      deadline jobs (`EmailScheduler.reschedule_poll_deadline_jobs/1`). A deadline
       set again after it passed reopens voting.
     * new times are announced to everyone who has already voted, who would
       otherwise not know there is more to answer. Whoever has not voted yet
@@ -21,7 +21,7 @@ defmodule Tymeslot.Polls.Editing do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries, PollTimeSlotSchema}
@@ -135,10 +135,10 @@ defmodule Tymeslot.Polls.Editing do
   defp after_commit(poll, changeset, added) do
     if Changeset.changed?(changeset, :deadline_at) or
          Changeset.changed?(changeset, :reminder_config) do
-      PollScheduler.reschedule_deadline_jobs(poll)
+      EmailScheduler.reschedule_poll_deadline_jobs(poll)
     end
 
-    if added != [], do: PollScheduler.schedule_new_times(poll, added)
+    if added != [], do: EmailScheduler.schedule_poll_new_times(poll, added)
 
     Polls.broadcast_update(poll.id)
   end

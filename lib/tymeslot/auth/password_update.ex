@@ -12,10 +12,9 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   alias Ecto.Changeset
 
-  alias Tymeslot.Auth.{RateLimit, Session, UserQueries, Validation}
+  alias Tymeslot.Auth.{ErrorFormatter, RateLimit, Session, UserQueries, Validation}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger}
-  alias Tymeslot.Utils.ChangesetUtils
 
   @type error_field :: :current_password | :new_password | :new_password_confirmation
 
@@ -115,7 +114,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
       # The input was validated up front, so what the changeset can still
       # refuse is the password policy itself.
       {:error, %Changeset{} = changeset} ->
-        {:error, %{new_password: ChangesetUtils.get_first_error(changeset)}}
+        {:error, %{new_password: ErrorFormatter.first_error(changeset)}}
     end
   end
 

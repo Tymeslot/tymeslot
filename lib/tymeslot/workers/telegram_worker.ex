@@ -5,6 +5,10 @@ defmodule Tymeslot.Workers.TelegramWorker do
   Resolves the bot token at execution time — never from job args.
   Handles Telegram API error codes per REQ-006.
 
+  A delivery failure is counted against the integration once per job, on
+  its final attempt, and a plan that no longer covers automations switches
+  the integration off.
+
   The send is claimed through `Tymeslot.Workers.DeliveryClaims` before it is
   made, so a job the Oban lifeline rescues after the message reached Telegram
   does not send it to the chat a second time. Only a successful send keeps
@@ -18,27 +22,24 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   require Logger
 
-  # The 429 snooze loop and the "first execution" checks below are both
-  # measured with `SnoozePolicy.executions/1` rather than `job.attempt`.
-  # Neither `attempt` nor `max_attempts` moves far enough on a snooze to bound
-  # the loop, and from Oban 2.24 a snooze rolls `attempt` back — which would
-  # both let it snooze forever and make `attempt == 1` true again on every
-  # execution that followed one.
+  # The 429 snooze loop is bounded with `SnoozePolicy.executions/1` rather
+  # than `job.attempt`: from Oban 2.24 a snooze rolls `attempt` back, so
+  # `attempt` never climbs far enough to bound it. The same rollback is what
+  # lets failures be counted on the final attempt
+  # (`MeetingNotificationJob.final_attempt?/1`): a snooze never spends one.
   @max_rate_limit_snoozes 20
   @min_retry_after_seconds 1
   @max_retry_after_seconds 300
 
-  alias Tymeslot.Features
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
   alias Tymeslot.Workers.DeliveryClaims
+  alias Tymeslot.Workers.MeetingNotificationJob
   alias Tymeslot.Workers.SnoozePolicy
 
   @behaviour ExpectedJobOutcome
@@ -49,6 +50,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   @gone "Integration or meeting not found"
   @disabled "Integration is disabled"
   @insufficient_plan "Insufficient plan"
+  @feature_disabled "Automations are switched off"
   @token_missing "Bot token missing"
   @unauthorized "Unauthorized"
   @bot_blocked "Bot blocked"
@@ -62,6 +64,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         @gone,
         @disabled,
         @insufficient_plan,
+        @feature_disabled,
         @token_missing,
         @unauthorized,
         @bot_blocked,
@@ -85,9 +88,9 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
     with {:ok, integration} <- TelegramQueries.get_integration(integration_id),
          :ok = ErrorTracking.put_context(user_id: integration.user_id),
-         :ok <- check_feature_access(integration.user_id),
+         :ok <- MeetingNotificationJob.feature_gate(integration.user_id),
          :ok <- check_active(integration),
-         {:ok, meeting} <- fetch_meeting(meeting_id, args["participant_id"]),
+         {:ok, meeting} <- MeetingNotificationJob.load_meeting(meeting_id, args["participant_id"]),
          {:ok, token} <- Telegram.resolve_bot_token(integration) do
       timezone = Recipients.get_organizer_timezone(meeting)
       message = MessageBuilder.build_message(event_type, meeting, timezone)
@@ -97,23 +100,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         handle_result(integration, event_type, meeting_id, message, job, result)
       end)
     else
-      {:error, :not_found} ->
-        {:discard, @gone}
-
-      {:error, :disabled} ->
-        {:discard, @disabled}
-
-      {:error, :insufficient_plan} ->
-        {:discard, @insufficient_plan}
-
-      {:error, :feature_access_checker_failed} ->
-        {:error, :feature_access_checker_failed}
-
-      {:error, :no_shared_token} ->
-        {:discard, "Shared bot token not configured"}
-
-      {:error, :no_token} ->
-        {:discard, @token_missing}
+      refusal -> refuse(refusal, integration_id)
     end
   end
 
@@ -127,76 +114,48 @@ defmodule Tymeslot.Workers.TelegramWorker do
     {:discard, "Missing required parameters"}
   end
 
+  # Why a job did not reach the API, as Oban's answer for it.
+  defp refuse({:error, :not_found}, _integration_id), do: {:discard, @gone}
+  defp refuse({:error, :disabled}, _integration_id), do: {:discard, @disabled}
+  defp refuse({:revoked, _reason}, _integration_id), do: {:discard, @insufficient_plan}
+  defp refuse({:discard, :feature_disabled}, _integration_id), do: {:discard, @feature_disabled}
+  defp refuse({:error, :feature_access_checker_failed} = error, _integration_id), do: error
+
+  defp refuse({:error, :no_shared_token}, _integration_id),
+    do: {:discard, "Shared bot token not configured"}
+
+  defp refuse({:error, :no_token}, _integration_id), do: {:discard, @token_missing}
+
   @doc """
   Schedules a message for a meeting event.
 
   `participant_id` names the seat of a group meeting the event is about (see
   `Tymeslot.Meetings.SeatView`); the message then names that seat's
   participant. Each seat is its own message, so it is part of the uniqueness
-  key; a solo meeting passes `nil` and keeps the key it always had.
+  key; a solo meeting passes `nil`, which is stored and keyed as well, so a
+  seat's message and the meeting's own are never taken for duplicates (see
+  `Tymeslot.Workers.MeetingNotificationJob.schedule/5`).
   """
   @spec schedule_delivery(integer(), String.t(), binary(), binary() | nil) ::
           :ok | {:error, term()}
   def schedule_delivery(integration_id, event_type, meeting_id, participant_id \\ nil) do
-    result =
+    MeetingNotificationJob.schedule(
+      __MODULE__,
       %{
         "integration_id" => integration_id,
         "event_type" => event_type,
         "meeting_id" => meeting_id
-      }
-      |> maybe_put_participant(participant_id)
-      |> new(
-        queue: :telegram_messages,
-        priority: 2,
-        unique: [
-          period: 300,
-          # `:worker` has to stay in the comparison. Slack and Telegram
-          # integration ids come from separate sequences and routinely
-          # coincide, so on args alone the two channels share one uniqueness
-          # namespace and whichever inserts second is silently deduped away.
-          fields: [:args, :worker],
-          keys: unique_keys(participant_id)
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} -> :ok
-      {:error, %Ecto.Changeset{errors: [unique: _msg]}} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+      },
+      participant_id,
+      [:integration_id, :event_type, :meeting_id],
+      queue: :telegram_messages
+    )
   end
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    min(round(:math.pow(2, attempt - 1)), 16)
-  end
-
-  defp unique_keys(nil), do: [:integration_id, :event_type, :meeting_id]
-
-  defp unique_keys(_participant_id),
-    do: [:integration_id, :event_type, :meeting_id, :participant_id]
-
-  defp maybe_put_participant(args, nil), do: args
-
-  defp maybe_put_participant(args, participant_id),
-    do: Map.put(args, "participant_id", participant_id)
-
-  # A seat's message (`participant_id` set) names that seat's participant,
-  # cancelled or not; a group meeting row has no attendee of its own.
-  defp fetch_meeting(meeting_id, nil), do: Meetings.get_meeting(meeting_id)
-
-  defp fetch_meeting(meeting_id, participant_id) do
-    with {:ok, meeting} <- Meetings.get_meeting(meeting_id) do
-      SeatView.load(meeting, participant_id, nil)
-    end
-  end
+  defdelegate backoff(job), to: MeetingNotificationJob, as: :chat_backoff
 
   # Private functions
-
-  defp check_feature_access(user_id) do
-    Features.check_access(user_id, :automations_allowed)
-  end
 
   defp check_active(%TelegramIntegrationSchema{} = integration) do
     if TelegramIntegrationSchema.should_be_active?(integration),
@@ -245,7 +204,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   end
 
   defp handle_api_result(integration, %Oban.Job{} = job, result) do
-    executions = SnoozePolicy.executions(job)
+    final_attempt? = MeetingNotificationJob.final_attempt?(job)
 
     case result do
       {:ok, status, _body} when status >= 200 and status < 300 ->
@@ -260,17 +219,17 @@ defmodule Tymeslot.Workers.TelegramWorker do
       # 400 stays matched too: the description is the reliable signal, and an
       # intermediary can rewrite the transport status.
       {:ok, status, body} when status in [400, 403] ->
-        handle_rejection(integration, body, executions)
+        handle_rejection(integration, body, final_attempt?)
 
       {:ok, 429, body} ->
         handle_rate_limit(integration, job, body)
 
       {:ok, status, _body} ->
-        if executions == 1, do: Telegram.record_failure(integration, "HTTP #{status}")
+        if final_attempt?, do: Telegram.record_failure(integration, "HTTP #{status}")
         {:error, {:http_error, status}}
 
       {:error, reason} ->
-        if executions == 1, do: Telegram.record_failure(integration, to_string(reason))
+        if final_attempt?, do: Telegram.record_failure(integration, to_string(reason))
         {:error, reason}
     end
   end
@@ -319,7 +278,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
     end
   end
 
-  defp handle_rejection(integration, body, executions) do
+  defp handle_rejection(integration, body, final_attempt?) do
     description = extract_error_description(body)
 
     cond do
@@ -339,7 +298,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, @chat_unreachable}
 
       true ->
-        if executions == 1,
+        if final_attempt?,
           do: Telegram.record_failure(integration, "Bad Request: #{description}")
 
         {:error, {:bad_request, description}}

@@ -30,10 +30,14 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   alias Oban.Job
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.DeliveryClaims
+  alias Tymeslot.Workers.DeliveryClaims.DeliveryClaimQueries
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.TelegramWorker
   alias Tymeslot.Workers.WebhookWorker
@@ -44,8 +48,13 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   # raises rather than returning `{:error, _}`, which is what made issue #76
   # take the other channels down with it.
   defmodule RaisingEmailService do
-    @spec send_reschedule_emails(map()) :: no_return()
-    def send_reschedule_emails(_content) do
+    @spec send_reschedule_email_to_organizer(String.t(), map()) :: no_return()
+    def send_reschedule_email_to_organizer(_email, _content) do
+      raise KeyError, key: :reminders_summary, term: %{}
+    end
+
+    @spec send_reschedule_email_to_attendee(String.t(), map()) :: no_return()
+    def send_reschedule_email_to_attendee(_email, _content) do
       raise KeyError, key: :reminders_summary, term: %{}
     end
   end
@@ -121,7 +130,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     test "renders and delivers a reschedule email to each party", %{user: user, meeting: meeting} do
       new_params = reschedule_params_for(future_datetime(5, :day))
 
-      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
 
       delivered = delivered_emails()
 
@@ -136,7 +145,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
       original_start = meeting.start_time
       new_params = reschedule_params_for(future_datetime(6, :day))
 
-      assert {:ok, updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, updated} = Reschedule.execute(meeting.uid, new_params, user.id)
       refute DateTime.compare(updated.start_time, original_start) == :eq
 
       delivered = delivered_emails()
@@ -149,7 +158,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
          %{user: user, meeting: meeting} do
       new_params = reschedule_params_for(future_datetime(10, :day))
 
-      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
 
       attendee_email = delivered_emails()[meeting.attendee_email]
 
@@ -163,7 +172,6 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
                Reschedule.execute(
                  meeting.uid,
                  reschedule_params_for(future_datetime(10, :day)),
-                 %{},
                  user.id
                )
 
@@ -173,7 +181,6 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
                Reschedule.execute(
                  meeting.uid,
                  reschedule_params_for(future_datetime(12, :day)),
-                 %{},
                  user.id
                )
 
@@ -193,12 +200,112 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     } do
       new_params = reschedule_params_for(future_datetime(7, :day))
 
-      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
 
       assert [%{args: %{"event_type" => "meeting.rescheduled", "meeting_id" => meeting_id}}] =
                all_enqueued(worker: WebhookWorker)
 
       assert meeting_id == meeting.id
+    end
+  end
+
+  describe "a reschedule overtaken before its notices go out" do
+    test "only the latest move is announced, with its own times", %{user: user, meeting: meeting} do
+      first_target = future_datetime(10, :day)
+      final_target = future_datetime(12, :day)
+
+      assert {:ok, _first} =
+               Reschedule.execute(meeting.uid, reschedule_params_for(first_target), user.id)
+
+      assert {:ok, final} =
+               Reschedule.execute(meeting.uid, reschedule_params_for(final_target), user.id)
+
+      assert DateTime.compare(final.start_time, final_target) == :eq
+
+      assert %{success: 1, discard: 1} = Oban.drain_queue(queue: :emails)
+
+      # One organiser and one attendee notice, not two of each.
+      emails = collect_emails()
+      assert length(emails) == 2
+      delivered = Map.new(emails, &{&1.to |> hd() |> elem(1), &1})
+
+      ics = attendee_ics(delivered, meeting)
+      refute ics.data =~ ics_stamp(first_target)
+      assert ics.data =~ ics_stamp(final_target)
+    end
+
+    test "is dropped when the booking was cancelled meanwhile", %{user: user, meeting: meeting} do
+      assert {:ok, _moved} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(10, :day)),
+                 user.id
+               )
+
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: "cancelled"])
+
+      assert %{success: 0, discard: 1} = Oban.drain_queue(queue: :emails)
+      refute_received {:email, _email}
+    end
+
+    test "is dropped when the booking is no longer in the status the move left it in",
+         %{user: user, meeting: meeting} do
+      assert {:ok, _moved} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(10, :day)),
+                 user.id
+               )
+
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: "awaiting_approval"])
+
+      assert %{success: 0, discard: 1} = Oban.drain_queue(queue: :emails)
+      refute_received {:email, _email}
+    end
+
+    test "is dropped when the booking awaits a new time", %{user: user, meeting: meeting} do
+      assert {:ok, _moved} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(10, :day)),
+                 user.id
+               )
+
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id),
+        set: [reschedule_requested_at: DateTime.utc_now()]
+      )
+
+      assert %{success: 0, discard: 1} = Oban.drain_queue(queue: :emails)
+      refute_received {:email, _email}
+    end
+
+    test "is dropped once the meeting has started", %{user: user, meeting: meeting} do
+      assert {:ok, moved} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(10, :day)),
+                 user.id
+               )
+
+      # The job still names the time the meeting stands at; only the clock
+      # has passed it.
+      started = DateTime.add(DateTime.utc_now(), -5, :minute)
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [start_time: started])
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"})
+
+      Repo.update_all(where(Job, id: ^job.id),
+        set: [
+          args:
+            Map.merge(job.args, %{
+              "rescheduled_to" => DateTime.to_iso8601(started),
+              "status" => moved.status
+            })
+        ]
+      )
+
+      assert %{success: 0, discard: 1} = Oban.drain_queue(queue: :emails)
+      refute_received {:email, _email}
     end
   end
 
@@ -218,7 +325,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
         )
 
       new_params = reschedule_params_for(future_datetime(11, :day))
-      assert {:ok, updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, updated} = Reschedule.execute(meeting.uid, new_params, user.id)
 
       assert [%{scheduled_at: new_scheduled_at, state: "scheduled"} = new_job] =
                all_enqueued(worker: EmailWorker, args: %{"action" => "send_reminder_emails"})
@@ -237,7 +344,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     test "still dispatches the webhook and Telegram jobs", %{user: user, meeting: meeting} do
       new_params = reschedule_params_for(future_datetime(8, :day))
 
-      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
 
       assert [%{args: %{"event_type" => "meeting.rescheduled", "meeting_id" => meeting_id}}] =
                all_enqueued(worker: WebhookWorker)
@@ -248,11 +355,74 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
                all_enqueued(worker: TelegramWorker)
     end
 
+    # The send now runs in the email job, not in `execute/4`, so the raise is
+    # only reached there. It must fail the job, which Oban then retries, and
+    # must not leave the participants' send claimed, or the retry would skip
+    # it. The handler is run here directly: in the worker it runs in a linked
+    # task, whose crash takes the job's process (here the test's) with it.
+    test "the email job fails for a retry, leaving nothing claimed", %{
+      user: user,
+      meeting: meeting
+    } do
+      new_params = reschedule_params_for(future_datetime(8, :day))
+
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"})
+
+      assert_raise KeyError, fn ->
+        EmailHandlers.execute_email_action("send_reschedule_emails", job.args, job.id)
+      end
+
+      refute DeliveryClaimQueries.claimed?(job.id, "reschedule:organizer")
+      refute DeliveryClaimQueries.claimed?(job.id, "reschedule:attendee")
+      refute_received {:email, _email}
+    end
+
+    # Jobs queued by older code claimed the pair as one. Such a job's copies
+    # went out already, so neither is sent again.
+    test "a job holding the legacy participants claim sends no participant copy but tells an unclaimed guest",
+         %{user: user, meeting: meeting} do
+      Application.put_env(:tymeslot, :email_service_module, Tymeslot.EmailServiceMock)
+      TestMocks.setup_email_mocks()
+
+      {:ok, [_guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+
+      new_params = reschedule_params_for(future_datetime(8, :day))
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"})
+
+      :ok = DeliveryClaims.once(job.id, "reschedule:participants", fn -> :ok end)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_organizer, 0, fn _email,
+                                                                                   _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_attendee, 0, fn _email,
+                                                                                  _details ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_guest_reschedule, 1, fn "guest@example.com",
+                                                                      _details ->
+        {:ok, :sent}
+      end)
+
+      assert :ok =
+               EmailHandlers.execute_email_action(
+                 "send_reschedule_emails",
+                 job.args,
+                 job.id
+               )
+    end
+
     test "still persists the new meeting time", %{user: user, meeting: meeting} do
       target = future_datetime(9, :day)
 
       assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, reschedule_params_for(target), %{}, user.id)
+               Reschedule.execute(meeting.uid, reschedule_params_for(target), user.id)
 
       refute DateTime.compare(updated.start_time, meeting.start_time) == :eq
     end
@@ -267,9 +437,22 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     )
   end
 
+  # Every email delivered so far, in delivery order.
+  defp collect_emails(acc \\ []) do
+    receive do
+      {:email, email} -> collect_emails([email | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  defp ics_stamp(%DateTime{} = utc), do: Calendar.strftime(utc, "%Y%m%dT%H%M%S")
+
   # The two emails a reschedule sends, keyed by recipient address, so a test
   # names the one it means instead of depending on delivery order.
+  # The notices go out from an email job, so the queue is run first.
   defp delivered_emails do
+    Oban.drain_queue(queue: :emails)
     assert_received {:email, first}
     assert_received {:email, second}
 

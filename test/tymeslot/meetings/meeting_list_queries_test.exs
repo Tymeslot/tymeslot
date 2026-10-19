@@ -1,9 +1,9 @@
 defmodule Tymeslot.Meetings.MeetingListQueriesTest do
   @moduledoc """
   Coverage for the visibility rules in
-  `MeetingListQueries.list_meetings_for_user_paginated_cursor/2` on a group
-  meeting: the organiser gets the full roster, and a participant's email
-  never matches the meeting row, whose attendee columns are always empty.
+  `MeetingListQueries.list_meetings_for_organizer_paginated_cursor/2` on a
+  group meeting: the organiser gets the full roster, and a participant, who
+  does not organise it, does not get the meeting row.
   """
 
   use Tymeslot.DataCase, async: true
@@ -48,13 +48,13 @@ defmodule Tymeslot.Meetings.MeetingListQueriesTest do
     %{organizer: organizer, meeting: meeting}
   end
 
-  describe "list_meetings_for_user_paginated_cursor/2" do
+  describe "list_meetings_for_organizer_paginated_cursor/2" do
     test "the organiser sees the full participant and guest roster", %{
       organizer: organizer,
       meeting: meeting
     } do
       assert [%{id: id} = loaded] =
-               MeetingListQueries.list_meetings_for_user_paginated_cursor(organizer.email, [])
+               MeetingListQueries.list_meetings_for_organizer_paginated_cursor(organizer.id, [])
 
       assert id == meeting.id
 
@@ -65,9 +65,11 @@ defmodule Tymeslot.Meetings.MeetingListQueriesTest do
                ["first-plus-one@example.com", "other-plus-one@example.com"]
     end
 
-    test "a participant's email does not match the group meeting row" do
-      assert MeetingListQueries.list_meetings_for_user_paginated_cursor(
-               "first@example.com",
+    test "a participant with an account does not get the group meeting row" do
+      participant_user = insert(:user, email: "first@example.com")
+
+      assert MeetingListQueries.list_meetings_for_organizer_paginated_cursor(
+               participant_user.id,
                []
              ) == []
     end

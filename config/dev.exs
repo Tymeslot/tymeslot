@@ -76,6 +76,9 @@ config :tymeslot, TymeslotWeb.Endpoint,
         key <- theme_stylesheets,
         do: {:"tailwind_#{key}", {Tailwind, :install_and_run, [String.to_atom(key), ~w(--watch)]}}
       ),
+  # A project that depends on Core and adds its own patterns has to restate
+  # this list, because a list value replaces rather than merges across config
+  # files. Keep any such copy in step when these patterns change.
   live_reload: [
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
@@ -91,7 +94,8 @@ config :tymeslot, TymeslotWeb.Endpoint,
 # silently overridden the moment you set your own, stranding credentials already
 # written under it. Production supplies the key via runtime.exs.
 config :tymeslot, Tymeslot.Security.Encryption,
-  data_encryption_key: System.get_env("DATA_ENCRYPTION_KEY")
+  data_encryption_key: System.get_env("DATA_ENCRYPTION_KEY"),
+  data_encryption_keys: System.get_env("DATA_ENCRYPTION_KEYS")
 
 # Enable dev routes for dashboard and mailbox
 config :tymeslot, dev_routes: true
@@ -131,54 +135,13 @@ config :tymeslot, Oban,
   # Matches production: a shorter window here would exercise a rescue the
   # deployed system never performs. See `Tymeslot.Infrastructure.ObanRescue`.
   lifeline: [rescue_after: {6, :hours}],
-  cron: [
-    crontab: [
-      # Run every 30 minutes
-      {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
-      # Run every hour at the top of the hour
-      {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
-      # Run hourly, five minutes past, so the hour it evaluates is complete:
-      # aggregate calendar integration health alerting
-      {"5 * * * *", Tymeslot.Workers.IntegrationHealthAlertWorker},
-      # Run daily at 02:45 UTC
-      {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
-      # Run daily at 03:45 UTC to clean up cancelled meetings' orphaned rooms
-      {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
-      # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
-      {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
-      # Run daily at 02:00 UTC to renew expiring webhook channels
-      {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
-      # Run daily at 04:00 UTC
-      {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
-      # Run every 6 hours to detect silent/dead webhook channels
-      {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
-      # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
-      {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
-      # Run daily at 03:30 UTC to prune old/inactive calendar event cache
-      {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
-      # Run daily at 05:30 UTC to flag Zoom grants missing a scope Tymeslot needs
-      {"30 5 * * *", Tymeslot.Workers.ZoomScopeAuditWorker},
-      # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
-      {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
-      # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
-      {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
-      # Run daily at 04:30 UTC to cross-check booking analytics against bookings
-      {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
-      # Run every 15 min to release approval requests whose deadline passed
-      # and whose per-meeting expiry job never fired
-      {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
-      # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
-      {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
-      # Run daily at 07:00 UTC to email the digest of info-severity admin alerts
-      {"0 7 * * *", Tymeslot.Workers.AdminAlertDigestWorker}
-    ]
-  ]
+  # The crontab itself is `:oban_crontab` in config.exs, shared with
+  # production; `Tymeslot.Infrastructure.ObanCron.extend/1` fills it in at
+  # startup.
+  cron: []
 
 # Enable swoosh api client
 config :swoosh, :api_client, Swoosh.ApiClient.Hackney
-
-# Webhook verification enabled by default
-config :tymeslot, :skip_webhook_verification, false
 
 # Enable booking analytics in development so the feature is exercisable locally.
 config :tymeslot, :booking_analytics_enabled, true

@@ -10,18 +10,15 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
   `Tymeslot.Emails.Templates.IntegrationReauthRequired`, nothing here asks the
   owner to reconnect: the credentials work, and the server refuses the room.
 
-  Rendered in the owner's locale. The caller establishes it with
-  `Tymeslot.Emails.RecipientLocale`.
+  Rendered in the owner's locale.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Callouts, Styles, TemplateHelper, Text}
-  alias Tymeslot.Emails.Templates.IntegrationReauthRequired
+  alias Swoosh.Email
+  alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Emails.Shared.{IntegrationLabels, IntegrationNotice}
   alias Tymeslot.Integrations.Video.RoomCreationError
-  alias Tymeslot.Utils.UrlBuilder
-
-  @intent :alert
 
   @type integration :: %{
           required(:provider) => atom() | String.t(),
@@ -29,108 +26,51 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
           optional(atom()) => term()
         }
 
-  @doc "The subject line, in the current locale."
-  @spec subject(integration()) :: String.t()
-  def subject(integration) do
-    dgettext("emails_integrations", "Bookings on %{provider} are getting no video link",
-      provider: provider_label(integration)
-    )
-  end
-
-  @doc "Returns `{html_body, text_body}`."
-  @spec render_both(integration()) :: {String.t(), String.t()}
-  def render_both(integration) do
-    copy = copy(integration)
-    {render_html(copy), render_text(copy)}
-  end
-
-  defp render_html(copy) do
-    mjml_content = """
-    #{Callouts.alert_box(:alert, copy.reason, title: copy.title)}
-
-    #{Text.title_section(dgettext("emails_integrations", "What's happening?"))}
-
-    <mj-text
-      font-size="16px"
-      color="#{Styles.ink_soft()}"
-      line-height="1.5"
-      align="left"
-      css-class="mobile-text"
-    >
-      #{copy.happening}
-    </mj-text>
-
-    #{Text.divider()}
-
-    #{Text.title_section(dgettext("emails_integrations", "What should I do?"))}
-
-    <mj-text color="#{Styles.ink_soft()}" font-size="14px" line-height="1.6">
-      #{copy.action}
-    </mj-text>
-
-    #{Buttons.action_button(@intent, copy.button, copy.settings_url)}
-
-    #{Text.divider()}
-
-    #{Text.system_footer_note(copy.footer)}
-    """
-
-    TemplateHelper.compile_system_template(mjml_content, copy.title, copy.subject,
-      intent: @intent,
-      eyebrow: dgettext("emails_integrations", "Integration"),
-      stage_title: copy.title,
-      stage_subtitle: copy.subject
-    )
-  end
-
-  defp render_text(copy) do
-    """
-    #{copy.title}
-
-    #{copy.reason}
-
-    #{String.upcase(dgettext("emails_integrations", "What's happening?"))}
-    #{copy.happening}
-
-    #{String.upcase(dgettext("emails_integrations", "What should I do?"))}
-    #{copy.action}
-
-    #{copy.button}:
-    #{copy.settings_url}
-
-    #{copy.footer}
-    """
+  @doc "The email, addressed and rendered in the recipient's locale."
+  @spec render(Tymeslot.Emails.EmailService.user_map(), integration()) :: Email.t()
+  def render(user, integration) do
+    RecipientLocale.with_user_locale(user, fn ->
+      IntegrationNotice.email(user, copy(integration))
+    end)
   end
 
   defp copy(%{room_creation_error: code} = integration) do
-    provider = provider_label(integration)
+    provider = IntegrationLabels.provider_name(integration, :video)
+
+    subject =
+      dgettext("emails_integrations", "Bookings on %{provider} are getting no video link",
+        provider: provider
+      )
 
     %{
+      subject: subject,
       title: dgettext("emails_integrations", "Video rooms not created"),
-      subject: subject(integration),
+      preheader: subject,
+      subtitle: subject,
+      eyebrow: dgettext("emails_integrations", "Integration"),
       reason: RoomCreationError.message(code),
+      happening_heading: dgettext("emails_integrations", "What's happening?"),
       happening:
         dgettext(
           "emails_integrations",
           "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working.",
           provider: provider
         ),
-      action:
+      next_heading: dgettext("emails_integrations", "What should I do?"),
+      next:
         dgettext(
           "emails_integrations",
           "Change the setting described above, or ask whoever runs the server to. Once a booking gets its video link again, the notice on your video integration disappears."
         ),
       button: dgettext("emails_integrations", "Open video settings"),
-      settings_url: UrlBuilder.build_url("/dashboard/settings?tab=video"),
+      settings_url: IntegrationLabels.settings_url(:video),
       footer:
-        dgettext(
+        dngettext(
           "emails_integrations",
-          "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts.",
-          days: RoomCreationError.resend_after_days()
+          "This is the only email you will get about this for now. If the same problem is still there in %{count} day, you will hear about it again. Your video settings show the notice for as long as it lasts.",
+          "This is the only email you will get about this for now. If the same problem is still there in %{count} days, you will hear about it again. Your video settings show the notice for as long as it lasts.",
+          RoomCreationError.resend_after_days()
         )
     }
   end
-
-  defp provider_label(integration),
-    do: IntegrationReauthRequired.provider_label(integration, :video)
 end

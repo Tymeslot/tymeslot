@@ -167,38 +167,26 @@ defmodule Tymeslot.Timezones.Data do
 
   @popular_set MapSet.new(@popular_ids)
 
-  @popular_options (
-                     options_map = Map.new(@options, fn {_label, tz_id} = opt -> {tz_id, opt} end)
+  # Labels and ids only: an offset depends on the date it is read on, so it is
+  # added when the list is asked for, never baked in when the module compiles.
+  @popular_pairs (
+                   options_map = Map.new(@options, fn {_label, tz_id} = opt -> {tz_id, opt} end)
 
-                     popular =
-                       @popular_ids
-                       |> Enum.flat_map(fn tz_id ->
-                         case Map.get(options_map, tz_id) do
-                           nil -> []
-                           opt -> [opt]
-                         end
-                       end)
-                       |> Enum.map(fn {label, tz_id} ->
-                         {label, tz_id, Formatting.utc_offset(tz_id)}
-                       end)
+                   popular = Enum.flat_map(@popular_ids, &List.wrap(Map.get(options_map, &1)))
 
-                     rest =
-                       @options
-                       |> Enum.reject(fn {_label, tz_id} ->
-                         MapSet.member?(@popular_set, tz_id)
-                       end)
-                       |> Enum.map(fn {label, tz_id} ->
-                         {label, tz_id, Formatting.utc_offset(tz_id)}
-                       end)
+                   rest =
+                     Enum.reject(@options, fn {_label, tz_id} ->
+                       MapSet.member?(@popular_set, tz_id)
+                     end)
 
-                     popular ++ rest
-                   )
+                   popular ++ rest
+                 )
 
   @spec all_options() :: [{String.t(), String.t()}]
   def all_options, do: @options
 
   @spec search(String.t()) :: [{String.t(), String.t(), String.t()}]
-  def search(""), do: @popular_options
+  def search(""), do: Enum.map(@popular_pairs, &with_offset/1)
 
   def search(term) do
     search_lower = fold_diacritics(term)
@@ -206,11 +194,11 @@ defmodule Tymeslot.Timezones.Data do
     @search_index
     |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_lower) end)
     |> Enum.uniq_by(fn {_key, entry} -> entry.timezone_id end)
-    |> Enum.map(fn {_key, entry} ->
-      {entry.label, entry.timezone_id, Formatting.utc_offset(entry.timezone_id)}
-    end)
     |> Enum.take(50)
+    |> Enum.map(fn {_key, entry} -> with_offset({entry.label, entry.timezone_id}) end)
   end
+
+  defp with_offset({label, tz_id}), do: {label, tz_id, Formatting.utc_offset(tz_id)}
 
   # Même repli que celui appliqué aux clés de l'index, au moment de la construction.
   defp fold_diacritics(texte) do

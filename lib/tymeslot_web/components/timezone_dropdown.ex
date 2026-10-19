@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
 
   use TymeslotWeb.Components.CoreComponents
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
@@ -65,7 +66,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
           <div class="input">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 flex-1 min-w-0">
-                <%= if country_code = Timezones.country_code((@profile && @profile.timezone) || "UTC") do %>
+                <%= if country_code = Timezones.country_code(Profiles.timezone(@profile)) do %>
                   <.timezone_flag
                     country_code={country_code}
                     safe_mode={@safe_flags}
@@ -74,10 +75,10 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 <% end %>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-tymeslot-800 truncate">
-                    {Timezones.format((@profile && @profile.timezone) || "UTC")}
+                    {Timezones.format(Profiles.timezone(@profile))}
                   </div>
                   <div class="text-xs mt-1 text-tymeslot-600">
-                    {TimezoneHelpers.format_local_time((@profile && @profile.timezone) || "UTC")} {dgettext(
+                    {TimezoneHelpers.format_local_time(Profiles.timezone(@profile))} {dgettext(
                       "common",
                       "local time"
                     )}
@@ -86,7 +87,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
               </div>
               <div class="flex items-center gap-2 ml-3">
                 <div class="text-sm px-3 py-1.5 rounded-full bg-tymeslot-100 text-tymeslot-700 font-medium">
-                  {get_timezone_offset((@profile && @profile.timezone) || "UTC")}
+                  {get_timezone_offset(Profiles.timezone(@profile))}
                 </div>
                 <svg
                   class={"w-4 h-4 transition-transform duration-200 text-tymeslot-500 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}

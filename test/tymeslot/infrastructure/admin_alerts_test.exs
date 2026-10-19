@@ -120,6 +120,25 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
     end
   end
 
+  describe "send_alert/2 with an unregistered type" do
+    # Nothing vets an unregistered type, so the warning must not hand the
+    # JSON log encoder a raw term (a tuple does not encode) or an address.
+    test "still sends, and logs the type formatted and masked" do
+      LogCapture.attach()
+      type = {:unregistered, "ops@example.com"}
+
+      assert :ok = AdminAlerts.send_alert(type, %{})
+      assert_received {:alert_sent, ^type, %{}}
+
+      event = LogCapture.await_log("not registered in AlertTypes")
+      alert_type = LogCapture.user_metadata(event).alert_type
+
+      # `=~` raises on anything but a string.
+      assert alert_type =~ "unregistered"
+      refute alert_type =~ "ops@example.com"
+    end
+  end
+
   describe "check_config/0" do
     for {label, recipient} <- [nil: nil, malformed: "not-an-email"] do
       test "logs one error naming the fix when enabled with a #{label} recipient" do

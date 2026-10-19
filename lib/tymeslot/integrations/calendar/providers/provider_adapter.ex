@@ -67,8 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           base_url: decrypted.base_url,
           username: decrypted.username,
           password: decrypted.password,
-          calendar_paths: decrypted.calendar_paths,
-          verify_ssl: decrypted.verify_ssl
+          calendar_paths: decrypted.calendar_paths
         }
 
         case ProviderRegistry.create_client(provider_atom, config, skip_validation: true) do
@@ -95,22 +94,23 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   end
 
   @doc """
-  Lists all events from the calendar using a wide default range (30 days ago to 365 days ahead).
+  Lists all events from the calendar in `default_window/0`.
   """
   @spec get_events(adapter_client()) ::
           {:ok, list()} | {:error, atom(), term()} | {:error, term()}
   def get_events(adapter_client) do
-    start_time =
-      DateTime.utc_now()
-      |> DateTime.add(-30, :day)
-      |> DateTime.truncate(:second)
-
-    end_time =
-      DateTime.utc_now()
-      |> DateTime.add(365, :day)
-      |> DateTime.truncate(:second)
-
+    {start_time, end_time} = default_window()
     get_events(adapter_client, start_time, end_time)
+  end
+
+  @doc """
+  The range `get_events/1` reads: from 30 days ago to 365 days ahead, at
+  `now`.
+  """
+  @spec default_window(DateTime.t()) :: {DateTime.t(), DateTime.t()}
+  def default_window(now \\ DateTime.utc_now()) do
+    now = DateTime.truncate(now, :second)
+    {DateTime.add(now, -30, :day), DateTime.add(now, 365, :day)}
   end
 
   @doc """

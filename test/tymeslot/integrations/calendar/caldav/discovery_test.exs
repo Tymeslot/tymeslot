@@ -5,13 +5,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
   import Tymeslot.CalDAVTestHelpers
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Discovery
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
 
   @caldav_client %{
     base_url: "https://caldav.example.com",
     username: "user",
     password: "pass",
     calendar_paths: [],
-    verify_ssl: true,
     provider: :caldav
   }
 
@@ -380,6 +380,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
 
       assert {:error, _reason} =
                Discovery.discover_calendars(client, skip_breaker: true)
+    end
+
+    # The connection test names the address as the reason, in the owner's
+    # language: matching on the validator's sentence broke once that sentence
+    # was translated.
+    test "names a private address in the owner's language on a connection test" do
+      client = %{@caldav_client | base_url: "https://10.0.0.5"}
+
+      assert {:error, :private_address} =
+               Discovery.test_connection(client, allow_private_ips: false)
+
+      assert {_category, message} =
+               Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+                 ErrorHandler.classify_and_format(:private_address, :caldav)
+               end)
+
+      assert message =~ "Private oder lokale Netzwerkadressen sind nicht zulässig"
     end
 
     test "rejects RFC 1918 private host (10.x)" do

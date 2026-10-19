@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionAllEventsBusyTest d
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -130,6 +131,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionAllEventsBusyTest d
 
       refute Repo.reload!(integration).all_events_busy
       assert has_element?(view, "#{toggle}[aria-pressed='false']")
+    end
+
+    test "is offered on a subscription without a calendar list", %{
+      conn: conn,
+      integration: integration
+    } do
+      integration
+      |> Changeset.change(calendar_list: [])
+      |> Repo.update!()
+
+      view = open_calendars(conn)
+      toggle = "[data-testid='all-events-busy-toggle'][phx-value-id='#{integration.id}']"
+
+      assert has_element?(view, "#{toggle}[aria-pressed='false']")
+      view |> element(toggle) |> render_click()
+      assert Repo.reload!(integration).all_events_busy
     end
 
     test "is not offered on a calendar that is not a subscription", %{conn: conn, user: user} do

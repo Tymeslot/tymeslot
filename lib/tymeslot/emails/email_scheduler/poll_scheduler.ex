@@ -13,11 +13,10 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   handler reads it from the participant when it sends.
   """
 
-  alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Jobs
   alias Tymeslot.Polls.PollSchema
-  alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Workers.EmailWorker
 
   require Logger
@@ -184,7 +183,7 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   # --- Private helpers ---
 
   defp maybe_schedule_reminder(poll, %{value: value, unit: unit}) do
-    lead_seconds = ReminderUtils.reminder_interval_seconds(value, unit)
+    lead_seconds = Reminders.reminder_interval_seconds(value, unit)
     reminder_at = DateTime.add(poll.deadline_at, -lead_seconds, :second)
 
     if DateTime.compare(reminder_at, DateTime.utc_now()) == :gt do
@@ -217,27 +216,18 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
     )
   end
 
+  # Best-effort: callers schedule these after their own commit, and a poll
+  # without its reminder or nudge still works, so a failure is logged by
+  # `Helpers.insert/2` and not returned.
   defp insert_job(args, opts) do
     opts = opts |> Keyword.put(:queue, :emails) |> Keyword.put(:priority, 2)
 
-    case Oban.insert(EmailWorker.new(args, opts)) do
-      {:ok, _job} ->
-        :ok
+    _result =
+      args
+      |> EmailWorker.new(opts)
+      |> Helpers.insert(poll_id: args["poll_id"], participant_id: args["participant_id"])
 
-      {:error, %Changeset{errors: [unique: _details]}} ->
-        # An identical job already exists; treat as scheduled.
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule poll email job",
-          action: args["action"],
-          poll_id: args["poll_id"],
-          participant_id: args["participant_id"],
-          error: Helpers.format_insert_error(reason)
-        )
-
-        :ok
-    end
+    :ok
   end
 
   defp unique_opts(keys) do
