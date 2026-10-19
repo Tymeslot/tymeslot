@@ -1,0 +1,121 @@
+/**
+ * Tests for the month view's HTML (calendar/render_month.js), run against
+ * jsdom: wide, with chips, bars and "+N"; and on a phone, with dots and the
+ * chosen day's agenda below the grid.
+ */
+import { describe, expect, test } from "vitest";
+import { renderMonth } from "../../calendar/render_month.js";
+import { normaliseEvent, parseWall, periodDays } from "../../calendar/time.js";
+
+const strings = {
+  weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  all_day: "All day",
+  today: "Today",
+  ended: "ended",
+  shown_as_free: "shown as free",
+  waiting_to_sync: "waiting to sync",
+  request: "Request",
+  request_expired: "Expired",
+  request_aria: "request waiting for your answer",
+  request_expired_aria: "request expired without an answer",
+  open_day: "%{date}, open day view",
+  empty_day: "Nothing planned on this day.",
+  month_more: "%{count} more on %{date}",
+  month_attention: "includes something that needs your attention",
+  month_select: "%{date}, show this day's events",
+  day_events: "Events: %{count}",
+  agenda_until: "Until %{time}",
+  agenda_from: "From %{time}",
+};
+const ev = (id, title, start, end, extra = {}) => normaliseEvent({ id, kind: "event", title, all_day: false, start, end, colour: "calendar-2", free: false, attention: false, ...extra });
+const days = periodDays("month", "2026-10-14", "monday", true);
+const events = [
+  ev("event-1", "Design review", "2026-10-14T11:00", "2026-10-14T12:00"),
+  ev("event-2", "Planning", "2026-10-14T14:00", "2026-10-14T15:00"),
+  ev("event-3", "Conference", "2026-10-13", "2026-10-16", { all_day: true, colour: "calendar-3" }),
+];
+const draw = (opts = {}) => {
+  const holder = document.createElement("div");
+  holder.innerHTML = renderMonth({ days, date: "2026-10-14", today: "2026-10-14", events, settings: { time_format: "24h" }, strings, phone: false, cellHeight: 100, now: parseWall("2026-10-14T08:30"), ...opts });
+  return holder;
+};
+
+describe("wide", () => {
+  test("six weeks of days, each a cell with its day-number button", () => {
+    const holder = draw();
+    expect(holder.querySelectorAll("[data-month-cell]")).toHaveLength(42);
+    expect(holder.querySelectorAll("button[data-month-day]")).toHaveLength(42);
+    expect(holder.querySelector(".cal-month").getAttribute("aria-label")).toBe("Oct 2026");
+    expect(holder.querySelector('[data-month-day="2026-10-15"]').getAttribute("aria-label")).toBe("Thu 15 Oct, open day view");
+  });
+
+  test("today is marked, the date is the one tab stop, other months are set apart", () => {
+    const holder = draw({ date: "2026-10-20" });
+    expect(holder.querySelector('[data-month-day="2026-10-14"]').getAttribute("aria-current")).toBe("date");
+    expect(holder.querySelector('[data-month-day="2026-10-20"]').getAttribute("tabindex")).toBe("0");
+    expect(holder.querySelectorAll('button[data-month-day][tabindex="0"]')).toHaveLength(1);
+    expect(holder.querySelector('[data-month-cell="2026-09-28"]').classList.contains("is-other-month")).toBe(true);
+    expect(holder.querySelector('[data-month-cell="2026-10-01"]').classList.contains("is-other-month")).toBe(false);
+  });
+
+  test("a multi-day event is one bar across its days", () => {
+    const bar = draw().querySelector('.cal-mbar[data-event-id="event-3"]');
+    expect(bar.getAttribute("style")).toContain("grid-column:2 / 5");
+    expect(bar.getAttribute("style")).toContain("grid-row:2");
+    expect(bar.getAttribute("aria-label")).toBe("Conference, All day, Tue 13 Oct – Thu 15 Oct");
+  });
+
+  test("timed events are chips under the bars, with their start time", () => {
+    const chip = draw().querySelector('.cal-mchip[data-event-id="event-1"]');
+    expect(chip.getAttribute("style")).toContain("grid-column:3;grid-row:3");
+    expect(chip.querySelector(".cal-mchip-time").textContent).toBe("11:00");
+    expect(chip.querySelector(".cal-mchip-title").textContent).toBe("Design review");
+    expect(chip.getAttribute("aria-label")).toBe("Design review, Wed 14 Oct, 11:00–12:00");
+  });
+
+  test("what does not fit goes behind +N, which names the day", () => {
+    const holder = draw({ cellHeight: 48 });
+    const more = holder.querySelector('button[data-month-more="2026-10-14"]');
+    expect(more.textContent).toBe("+3");
+    expect(more.getAttribute("aria-label")).toBe("3 more on Wed 14 Oct");
+    expect(holder.querySelector('.cal-mchip[data-event-id="event-1"]')).toBeNull();
+  });
+
+  test("a +N hiding a request waiting for an answer carries the warning", () => {
+    const request = ev("booking-9", "Anna", "2026-10-14T16:00", "2026-10-14T16:30", { kind: "booking", request: true });
+    const quiet = ev("event-8", "Standup", "2026-10-14T09:00", "2026-10-14T09:15", { attention: true });
+    const more = draw({ cellHeight: 48, events: [...events, request, quiet] }).querySelector('[data-month-more="2026-10-14"]');
+    expect(more.classList.contains("is-warn")).toBe(true);
+    expect(more.getAttribute("aria-label")).toContain("includes something that needs your attention");
+  });
+
+  test("titles are escaped", () => {
+    const holder = draw({ events: [ev("event-7", "<img src=x>", "2026-10-15T09:00", "2026-10-15T10:00")] });
+    expect(holder.querySelector("img")).toBeNull();
+  });
+});
+
+describe("phone", () => {
+  test("cells are buttons with up to three dots, no chips, the chosen day pressed", () => {
+    const holder = draw({ phone: true });
+    expect(holder.querySelector(".cal-mchip")).toBeNull();
+    const wed = holder.querySelector('button[data-month-day="2026-10-14"]');
+    expect(wed.getAttribute("aria-pressed")).toBe("true");
+    expect(wed.querySelectorAll(".cal-dot.cal-month-dot")).toHaveLength(3);
+    expect(wed.getAttribute("aria-label")).toBe("Wed 14 Oct, show this day's events, Events: 3");
+    expect(holder.querySelector('button[data-month-day="2026-10-13"]').querySelectorAll(".cal-month-dot")).toHaveLength(1);
+    expect(holder.querySelector('button[data-month-day="2026-10-20"]').querySelectorAll(".cal-month-dot")).toHaveLength(0);
+    expect(holder.querySelector('button[data-month-day="2026-10-15"]').getAttribute("aria-pressed")).toBe("false");
+  });
+
+  test("the chosen day's events follow the grid", () => {
+    const below = draw({ phone: true }).querySelector(".cal-month-agenda");
+    expect([...below.querySelectorAll("button[data-event-id]")].map((b) => b.dataset.eventId)).toEqual(["event-3", "event-1", "event-2"]);
+  });
+
+  test("a chosen day with nothing on it says so", () => {
+    const below = draw({ phone: true, date: "2026-10-20" }).querySelector(".cal-month-agenda");
+    expect(below.textContent).toContain("Nothing planned on this day.");
+  });
+});

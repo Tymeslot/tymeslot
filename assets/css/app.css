@@ -29,6 +29,7 @@
 @import "./components/calendar-surface.css";
 @import "./components/calendar-editing.css";
 @import "./components/calendar-booking.css";
+@import "./components/calendar-views.css";
 @import "./components/theme-customization.css";
 @import "./components/embed-cards.css";
 @import "./components/onboarding.css";

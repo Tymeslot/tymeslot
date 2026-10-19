@@ -396,12 +396,12 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
 
 // A booking request's flag: "Request" while it waits for the organiser's
 // answer, "Expired" once it can no longer be answered; none on anything else.
-function requestFlag(event, strings) {
+export function requestFlag(event, strings) {
   if (event.expired) return strings.request_expired;
   return event.request ? strings.request : "";
 }
 
-function requestAria(event, strings) {
+export function requestAria(event, strings) {
   return event.expired ? strings.request_expired_aria : strings.request_aria;
 }
 
