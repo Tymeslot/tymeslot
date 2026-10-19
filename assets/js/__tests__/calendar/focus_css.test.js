@@ -41,6 +41,10 @@ test("from 64rem focus mode drops the gutter beside the menu", () => {
   expect(wide).toMatch(/#dashboard-root\[data-calendar-focus\]\s+\.dashboard-main-row\s*\{\s*gap:\s*0;?\s*\}/);
 });
 
+test("from 64rem focus mode hides the strips above the grid", () => {
+  expect(wide).toMatch(/#dashboard-root\[data-calendar-focus\]\s+#calendar-strips\s*>\s*\*\s*\{\s*display:\s*none;?\s*\}/);
+});
+
 test("below 64rem focus mode changes nothing", () => {
   expect(outsideWide).not.toMatch(/data-calendar-focus/);
 });

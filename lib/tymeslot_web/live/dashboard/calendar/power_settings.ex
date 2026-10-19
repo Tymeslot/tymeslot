@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerSettings do
   control fills it, so the hook never meets a missing one.
   """
 
+  import Phoenix.Component, only: [assign: 2]
+
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
 
   @type t :: %{
@@ -39,19 +41,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerSettings do
   end
 
   @doc """
-  Pushes the settings again when the parent's `calendar_focus` changed in
-  this update (`was` is the value before it), so the hook's `focus` follows
-  a toggle from the toolbar, display options or F. The first update of a
-  mount (`was` nil) pushes nothing: the hook asks for its settings itself.
+  Assigns the parent's attributes and, when its `calendar_focus` changed in
+  this update, pushes the settings again, so the hook's `focus` follows a
+  toggle from the toolbar, display options or F (or a tour ending). The
+  first update of a mount pushes nothing: the hook asks for its settings.
   """
-  @spec follow_focus(Phoenix.LiveView.Socket.t(), boolean() | nil) ::
-          Phoenix.LiveView.Socket.t()
-  def follow_focus(%{assigns: %{ready?: true} = assigns} = socket, was)
+  @spec assign_parent(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def assign_parent(%{assigns: %{ready?: true, calendar_focus: was}} = socket, assigns)
       when is_boolean(was) do
-    if Map.get(assigns, :calendar_focus) == was,
+    socket = assign(socket, assigns)
+
+    if socket.assigns.calendar_focus == was,
       do: socket,
       else: SurfaceData.push_settings(socket)
   end
 
-  def follow_focus(socket, _was), do: socket
+  def assign_parent(socket, assigns), do: assign(socket, assigns)
 end

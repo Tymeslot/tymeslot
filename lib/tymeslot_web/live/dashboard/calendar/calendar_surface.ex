@@ -217,10 +217,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     do:
       {:ok,
        socket
-       |> assign(assigns)
+       |> PowerSettings.assign_parent(assigns)
        |> Viewport.adopt_hint()
-       |> SurfaceData.sync()
-       |> PowerSettings.follow_focus(socket.assigns[:calendar_focus])}
+       |> SurfaceData.sync()}
 
   defp schedule_reload(%{assigns: %{pending_reload: nil}} = socket, action) do
     send_update_after(__MODULE__, [id: socket.assigns.id, action: :reload], @reload_delay)

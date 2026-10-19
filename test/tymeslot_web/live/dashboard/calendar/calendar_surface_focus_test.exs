@@ -102,18 +102,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFocusTest do
     assert_reply(lv, %{settings: %{focus: true}})
   end
 
-  test "focus mode leaves out the Up next and onboarding strips", %{conn: conn} do
+  test "the strips stay rendered in focus mode; the stylesheet hides them from lg only", %{
+    conn: conn
+  } do
     %{conn: conn, user: user} = organiser(conn, preferences: [focus_mode: true])
     upcoming_booking(user)
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-    refute has_element?(lv, "[data-testid='up-next-strip']")
-    refute has_element?(lv, "[data-testid='onboarding-checklist']")
+    strips = "#dashboard-root[data-calendar-focus='true'] #calendar-strips"
+    assert has_element?(lv, "#{strips} [data-testid='up-next-strip']", "Strategy sync")
+    assert has_element?(lv, "#{strips} [data-testid='onboarding-checklist']")
 
     lv |> element("#calendar-focus-toggle") |> render_click()
 
-    assert has_element?(lv, "[data-testid='up-next-strip']", "Strategy sync")
-    assert has_element?(lv, "[data-testid='onboarding-checklist']")
+    strips = "#dashboard-root:not([data-calendar-focus]) #calendar-strips"
+    assert has_element?(lv, "#{strips} [data-testid='up-next-strip']")
+    assert has_element?(lv, "#{strips} [data-testid='onboarding-checklist']")
+  end
+
+  test "a running tour leaves the toolbar toggle showing focus mode as off", %{conn: conn} do
+    %{conn: conn} = owner(conn, preferences: [focus_mode: true])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(lv, "#dashboard-tour")
+    assert has_element?(lv, "#calendar-focus-toggle[aria-pressed='false']")
+
+    render_hook(lv, "tour:skip", %{})
+
+    assert has_element?(lv, "#calendar-focus-toggle[aria-pressed='true']")
   end
 
   test "the old calendar ignores a stored focus mode until the organiser switches", %{

@@ -435,4 +435,9 @@
   #dashboard-root[data-calendar-focus] .dashboard-main-row {
     gap: 0;
   }
+
+  /* The Up next and onboarding strips go too; below lg they stay. */
+  #dashboard-root[data-calendar-focus] #calendar-strips > * {
+    display: none;
+  }
 }

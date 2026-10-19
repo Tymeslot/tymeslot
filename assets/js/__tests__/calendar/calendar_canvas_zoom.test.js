@@ -139,6 +139,16 @@ test("a density change goes back to the saved height", () => {
   expect(hour(el)).toBe(38);
 });
 
+test("a settings push that leaves density alone keeps the zoom", () => {
+  const { el, handlers } = mountHook();
+  wheel(el, -100, { ctrlKey: true });
+  const zoomed = hour(el);
+
+  handlers["calendar:settings"]({ ...settings, focus: true });
+
+  expect(hour(el)).toBe(zoomed);
+});
+
 test("zoomTo draws the hour height it is given, within the zoom's bounds", () => {
   const { el, hook } = mountHook();
 

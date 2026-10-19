@@ -149,9 +149,9 @@ export const CalendarCanvas = {
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
     this.handleEvent("calendar:settings", (settings) => {
+      // A density chosen in display options replaces any zoom; other changes keep it.
+      if (settings.density !== this.settings?.density) this.zoomHour = null;
       this.settings = settings;
-      // A density chosen in display options replaces any zoom.
-      this.zoomHour = null;
       this.render();
     });
     this.handleEvent("calendar:preview-closed", () => this.previewClosed());
