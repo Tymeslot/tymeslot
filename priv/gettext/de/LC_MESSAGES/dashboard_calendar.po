@@ -42,7 +42,7 @@ msgstr[1] "%{count} weitere Ereignisse"
 msgid "%{days}d ago"
 msgstr "vor %{days} T"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{day} at %{time}"
 msgstr "%{day} um %{time}"
@@ -62,7 +62,7 @@ msgstr "vor %{hours} Std."
 msgid "%{minutes}m ago"
 msgstr "vor %{minutes} Min."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
@@ -193,7 +193,7 @@ msgstr "Aktualisieren"
 msgid "Refresh now"
 msgstr "Jetzt aktualisieren"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder: %{title}"
 msgstr "Erinnerung: %{title}"
@@ -445,8 +445,7 @@ msgstr "Ganztägig"
 msgid "Also here: %{titles}"
 msgstr "Ebenfalls hier: %{titles}"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Back to the old calendar"
 msgstr "Zurück zum alten Kalender"
@@ -478,14 +477,12 @@ msgstr "Datum auswählen"
 msgid "Close"
 msgstr "Schließen"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Comfortable"
 msgstr "Komfortabel"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Compact"
 msgstr "Kompakt"
@@ -501,8 +498,7 @@ msgstr "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es er
 msgid "Couldn't switch calendars. Please try again."
 msgstr "Die Kalenderansicht konnte nicht gewechselt werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Density"
 msgstr "Anzeigedichte"
@@ -523,8 +519,7 @@ msgstr "Beendet"
 msgid "Events at this time"
 msgstr "Ereignisse zu dieser Zeit"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Fold early hours"
 msgstr "Frühe Stunden einklappen"

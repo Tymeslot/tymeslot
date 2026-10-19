@@ -45,7 +45,7 @@ msgstr[2] "ще %{count} подій"
 msgid "%{days}d ago"
 msgstr "%{days} дн. тому"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{day} at %{time}"
 msgstr "%{day} о %{time}"
@@ -65,7 +65,7 @@ msgstr "%{hours} год тому"
 msgid "%{minutes}m ago"
 msgstr "%{minutes} хв тому"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
@@ -197,7 +197,7 @@ msgstr "Оновити"
 msgid "Refresh now"
 msgstr "Оновити зараз"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder: %{title}"
 msgstr "Нагадування: %{title}"
@@ -451,8 +451,7 @@ msgstr "Увесь день"
 msgid "Also here: %{titles}"
 msgstr "Також тут: %{titles}"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Back to the old calendar"
 msgstr "Повернутися до старого календаря"
@@ -484,14 +483,12 @@ msgstr "Вибрати дату"
 msgid "Close"
 msgstr "Закрити"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Comfortable"
 msgstr "Просторий"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Compact"
 msgstr "Компактний"
@@ -507,8 +504,7 @@ msgstr "Не вдалося зберегти зміну. Спробуйте ще
 msgid "Couldn't switch calendars. Please try again."
 msgstr "Не вдалося перемкнути календар. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Density"
 msgstr "Щільність"
@@ -529,8 +525,7 @@ msgstr "Завершено"
 msgid "Events at this time"
 msgstr "Події в цей час"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Fold early hours"
 msgstr "Згорнути ранні години"

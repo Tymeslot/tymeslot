@@ -45,7 +45,7 @@ msgstr[2] "dalších %{count} událostí"
 msgid "%{days}d ago"
 msgstr "před %{days} d"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{day} at %{time}"
 msgstr "%{day} v %{time}"
@@ -65,7 +65,7 @@ msgstr "před %{hours} h"
 msgid "%{minutes}m ago"
 msgstr "před %{minutes} min"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
@@ -197,7 +197,7 @@ msgstr "Obnovit"
 msgid "Refresh now"
 msgstr "Obnovit nyní"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder: %{title}"
 msgstr "Připomínka: %{title}"
@@ -451,8 +451,7 @@ msgstr "Celý den"
 msgid "Also here: %{titles}"
 msgstr "Také zde: %{titles}"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Back to the old calendar"
 msgstr "Zpět ke starému kalendáři"
@@ -484,14 +483,12 @@ msgstr "Vybrat datum"
 msgid "Close"
 msgstr "Zavřít"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Comfortable"
 msgstr "Pohodlná"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Compact"
 msgstr "Kompaktní"
@@ -507,8 +504,7 @@ msgstr "Změnu se nepodařilo uložit. Zkuste to prosím znovu."
 msgid "Couldn't switch calendars. Please try again."
 msgstr "Kalendář se nepodařilo přepnout. Zkuste to prosím znovu."
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Density"
 msgstr "Hustota"
@@ -529,8 +525,7 @@ msgstr "Skončilo"
 msgid "Events at this time"
 msgstr "Události v tomto čase"
 
-#: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
-#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
 #, elixir-autogen, elixir-format
 msgid "Fold early hours"
 msgstr "Sbalit časné hodiny"

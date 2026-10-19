@@ -10,3 +10,8 @@ msgid ""
 msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_surface.ex
+#, elixir-autogen, elixir-format
+msgid "Press T to go to today, J for the next period and K for the previous period."
+msgstr "Appuyez sur T pour revenir à aujourd’hui, sur J pour la période suivante et sur K pour la période précédente."
