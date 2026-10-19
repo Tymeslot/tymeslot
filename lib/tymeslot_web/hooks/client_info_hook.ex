@@ -6,13 +6,12 @@ defmodule TymeslotWeb.Hooks.ClientInfoHook do
   - :client_ip
   - :user_agent
   - :detected_timezone (from connect params)
-  - :viewport (`:phone` or `:wide`, see `Viewport.from_connect/2`)
+  - :viewport (`:phone` or `:wide`, see `viewport_from_connect/2`)
   """
 
   import Phoenix.Component
   import Phoenix.LiveView, only: [get_connect_params: 1]
 
-  alias TymeslotWeb.Dashboard.Calendar.Viewport
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
@@ -32,7 +31,25 @@ defmodule TymeslotWeb.Hooks.ClientInfoHook do
        client_ip: client_ip,
        user_agent: user_agent,
        detected_timezone: detected_timezone,
-       viewport: Viewport.from_connect(connect_params, user_agent)
+       viewport: viewport_from_connect(connect_params, user_agent)
      )}
   end
+
+  # "Mobi" is in every phone browser's user agent ("Mobile", "Mobile Safari",
+  # Android phones' "Mobile") and in no tablet's: Android tablets leave it
+  # out, and an iPad asks for the desktop site as a Mac.
+  @phone_agents ["Mobi", "iPhone"]
+
+  @doc """
+  The first guess at the viewport, from the socket's connect params (the
+  browser's `matchMedia` answer) or, on the dead render, the user agent.
+  """
+  @spec viewport_from_connect(map() | nil, String.t() | nil) :: :phone | :wide
+  def viewport_from_connect(%{"viewport" => "phone"}, _user_agent), do: :phone
+  def viewport_from_connect(%{"viewport" => "wide"}, _user_agent), do: :wide
+
+  def viewport_from_connect(_params, user_agent) when is_binary(user_agent),
+    do: if(String.contains?(user_agent, @phone_agents), do: :phone, else: :wide)
+
+  def viewport_from_connect(_params, _user_agent), do: :wide
 end

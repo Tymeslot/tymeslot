@@ -17,24 +17,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Viewport do
   import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Hooks.ClientInfoHook
 
   @type t :: :phone | :wide
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  # "Mobi" is in every phone browser's user agent ("Mobile", "Mobile Safari",
-  # Android phones' "Mobile") and in no tablet's: Android tablets leave it
-  # out, and an iPad asks for the desktop site as a Mac.
-  @phone_agents ["Mobi", "iPhone"]
-
   @doc "The first guess, from the socket's connect params or the user agent."
   @spec from_connect(map() | nil, String.t() | nil) :: t()
-  def from_connect(%{"viewport" => "phone"}, _user_agent), do: :phone
-  def from_connect(%{"viewport" => "wide"}, _user_agent), do: :wide
-
-  def from_connect(_params, user_agent) when is_binary(user_agent),
-    do: if(String.contains?(user_agent, @phone_agents), do: :phone, else: :wide)
-
-  def from_connect(_params, _user_agent), do: :wide
+  defdelegate from_connect(params, user_agent), to: ClientInfoHook, as: :viewport_from_connect
 
   @doc "Takes the parent's `viewport_hint` until the hook has reported."
   @spec adopt_hint(socket()) :: socket()
