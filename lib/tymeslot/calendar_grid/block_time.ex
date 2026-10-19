@@ -16,7 +16,9 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
   `{:error, {:queued, reason}}`; neither falls back to time off, which would
   block the time twice once the write lands. A write that succeeds but leaves
   no cached row is `{:error, :not_cached}`. `unblock/2` takes either kind
-  back, for undo; a delete queued for a retry is `{:error, {:queued, reason}}`.
+  back, for undo; a delete queued for a retry is `{:error, {:queued, reason}}`,
+  and an event whose start, end or title has changed since the block is left
+  alone as `{:error, :changed}`: it is no longer the block the undo names.
   """
 
   alias Tymeslot.Availability.TimeOff
@@ -33,8 +35,18 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
   alias Tymeslot.Profiles
   alias Tymeslot.Validation.Constraints
 
+  @typedoc """
+  A block made. An event block keeps the start, end and title it was written
+  with, so `unblock/2` can tell whether the event has been changed since.
+  """
   @type blocked ::
-          %{kind: :event, event: map() | nil}
+          %{
+            kind: :event,
+            event: map(),
+            start_at: DateTime.t(),
+            end_at: DateTime.t(),
+            title: String.t()
+          }
           | %{kind: :time_off, period: TimeOff.period()}
 
   @type refusal ::
@@ -44,6 +56,7 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
           | :too_long
           | :too_far
           | :not_cached
+          | :changed
           | {:queued, term()}
           | :limit_reached
           | :not_found
@@ -74,15 +87,17 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
   @doc """
   Takes back a block `block/4` made: deletes the event (nobody was invited,
   so nobody is told) or the time off. `{:error, :not_found}` when the block
-  is not the user's or is already gone.
+  is not the user's or is already gone, `{:error, :changed}` when the event
+  has been moved or renamed since.
   """
   @spec unblock(pos_integer(), blocked()) :: :ok | {:error, term()}
-  def unblock(user_id, %{
-        kind: :event,
-        event: %{calendar_integration_id: integration_id, uid: uid}
-      }) do
+  def unblock(
+        user_id,
+        %{kind: :event, event: %{calendar_integration_id: integration_id, uid: uid}} = blocked
+      ) do
     with true <- CalendarIntegrationQueries.owned_by?(integration_id, user_id),
          {:ok, row} <- ProviderCalendarEventQueries.get_by_uid(integration_id, uid),
+         :ok <- unchanged(row, blocked),
          {:ok, _deleted} <- EventDeletion.delete_event(user_id, row) do
       :ok
     else
@@ -102,6 +117,16 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
   end
 
   def unblock(_user_id, _result), do: {:error, :not_found}
+
+  defp unchanged(row, %{start_at: start_at, end_at: end_at, title: title}) do
+    if same_instant?(row.start_at, start_at) and same_instant?(row.end_at, end_at) and
+         row.summary == title,
+       do: :ok,
+       else: {:error, :changed}
+  end
+
+  defp same_instant?(%DateTime{} = a, %DateTime{} = b), do: DateTime.compare(a, b) == :eq
+  defp same_instant?(_a, _b), do: false
 
   defp clean_title(title) when is_binary(title) do
     case title |> String.replace("\x00", "") |> String.trim() do
@@ -156,10 +181,24 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
     }
 
     case NewEvent.create(user_id, payload) do
-      {:ok, %{event: %{} = event}} -> {:ok, %{kind: :event, event: event}}
-      {:ok, _no_cached_row} -> {:error, :not_cached}
-      {:error, %{reason: reason, retry: :queued}} -> {:error, {:queued, reason}}
-      {:error, %{reason: reason}} -> {:error, reason}
+      {:ok, %{event: %{} = event}} ->
+        {:ok,
+         %{
+           kind: :event,
+           event: event,
+           start_at: event.start_at,
+           end_at: event.end_at,
+           title: event.summary
+         }}
+
+      {:ok, _no_cached_row} ->
+        {:error, :not_cached}
+
+      {:error, %{reason: reason, retry: :queued}} ->
+        {:error, {:queued, reason}}
+
+      {:error, %{reason: reason}} ->
+        {:error, reason}
     end
   end
 

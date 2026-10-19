@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -94,6 +95,24 @@ defmodule Tymeslot.CalendarGrid.BlockTimeTest do
 
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, result.event.uid)
+    end
+
+    for {what, change} <- [
+          moved: [start_at: ~U[2030-01-01 08:00:00.000000Z]],
+          resized: [end_at: ~U[2030-12-31 23:00:00.000000Z]],
+          renamed: [summary: "Lunch with Ada"]
+        ] do
+      test "undo leaves an event #{what} since alone and says it changed", host do
+        integration = google(host, [%{"id" => "work", "name" => "Work", "selected" => true}])
+        expect_create()
+        {:ok, result} = Changes.block_time(host.user.id, host.start_at, host.end_at, "Focus")
+
+        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, result.event.uid)
+        row |> Ecto.Changeset.change(unquote(Macro.escape(change))) |> Repo.update!()
+
+        assert {:error, :changed} = Changes.unblock_time(host.user.id, result)
+        assert {:ok, _kept} = ProviderCalendarEventQueries.get_by_uid(integration.id, row.uid)
+      end
     end
 
     test "a write queued for a retry is reported as queued, not turned into time off", host do

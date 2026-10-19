@@ -127,7 +127,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
 
   @doc """
   The undo's answer. A failed undo goes back on the stack so Ctrl Z can try
-  again, unless the block is already gone.
+  again, unless the block is already gone or has been moved or renamed
+  since.
   """
   @spec unblocked(socket(), {:ok, term()} | {:exit, term()}) :: socket()
   def unblocked(socket, {:ok, {_entry, :ok}}) do
@@ -145,6 +146,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
         dgettext(
           "dashboard_calendar_booking",
           "Saved. The time will free up once your calendar is reachable again."
+        )
+      )
+
+  def unblocked(socket, {:ok, {_entry, {:error, :changed}}}),
+    do:
+      Toast.show(
+        socket,
+        dgettext(
+          "dashboard_calendar_booking",
+          "Couldn't undo the block. It has been moved or renamed since."
         )
       )
 

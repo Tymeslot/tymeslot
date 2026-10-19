@@ -194,5 +194,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBlockTest do
       assert socket.assigns.undo == bare_socket().assigns.undo
       assert socket.assigns.toast.message == "That change can't be undone any more."
     end
+
+    test "an undo of a block moved or renamed since leaves the stack and says so" do
+      entry = %{kind: :block, key: {:block, 1}, id: nil, result: :r}
+      socket = BlockTime.unblocked(bare_socket(), {:ok, {entry, {:error, :changed}}})
+
+      assert socket.assigns.undo == bare_socket().assigns.undo
+
+      assert socket.assigns.toast.message ==
+               "Couldn't undo the block. It has been moved or renamed since."
+    end
   end
 end
