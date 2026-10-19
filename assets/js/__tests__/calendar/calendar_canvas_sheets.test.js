@@ -8,6 +8,7 @@
  */
 import { afterEach, expect, test, vi } from "vitest";
 import { addDays, makeScale } from "../../calendar/time.js";
+import { VIEWPORT_DEBOUNCE_MS } from "../../hooks/calendar_canvas/viewport.js";
 import { block, event, mockViewport, mountHook, payload, settings, unmountAll } from "./canvas_harness.js";
 
 const days = Array.from({ length: 7 }, (_, k) => addDays("2026-10-12", k));
@@ -36,6 +37,7 @@ afterEach(() => {
   unmountAll();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   document.documentElement.classList.remove("cal-sheet-open");
 });
 
@@ -213,4 +215,70 @@ test("the on-screen keyboard's height reaches CSS as --cal-kb-inset, and goes wi
 
   unmountAll();
   expect(inset()).toBe("");
+});
+
+test("a press on the scrim does not take focus out of the sheet", () => {
+  mockViewport(true);
+  const { el } = mountHook(payload({ events: crowd() }));
+  el.querySelector(".cal-more").click();
+  const scrim = el.querySelector(".cal-scrim");
+
+  for (const type of ["mousedown", "pointerdown"]) {
+    const down = new MouseEvent(type, { bubbles: true, cancelable: true });
+    scrim.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+  }
+});
+
+test("a flip to a wide screen closes the list and the explainer and leaves no sheet", () => {
+  vi.useFakeTimers();
+  const media = mockViewport(true);
+  const { el } = mountHook(payload({ events: crowd() }));
+  el.querySelector(".cal-more").click();
+  expect(el.querySelector(".cal-list.is-sheet")).not.toBeNull();
+
+  media.set(false);
+  vi.advanceTimersByTime(VIEWPORT_DEBOUNCE_MS);
+
+  expect(el.querySelector(".cal-list")).toBeNull();
+  expect(document.querySelector(".cal-scrim")).toBeNull();
+  expect(sheetOpen()).toBe(false);
+});
+
+test("a flip to a wide screen turns quick create's sheet back into a popover", () => {
+  vi.useFakeTimers();
+  const media = mockViewport(true);
+  openQuickCreate();
+  expect(popover().classList.contains("is-sheet")).toBe(true);
+
+  media.set(false);
+  vi.advanceTimersByTime(VIEWPORT_DEBOUNCE_MS);
+
+  expect(popover().classList.contains("is-sheet")).toBe(false);
+  expect(document.querySelector(".cal-scrim")).toBeNull();
+  expect(sheetOpen()).toBe(false);
+});
+
+test("the keyboard rising scrolls the draft clear of quick create's sheet", () => {
+  vi.stubGlobal("innerHeight", 844);
+  const visual = Object.assign(new EventTarget(), { height: 844, offsetTop: 0 });
+  vi.stubGlobal("visualViewport", visual);
+  mockViewport(true);
+  let sheetTop = 600;
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+    if (this.matches("[data-draft-id]")) return { left: 300, right: 400, top: 400, bottom: 426, width: 100, height: 26 };
+    if (this.id === "calendar-quick-create") return { left: 0, right: 390, top: sheetTop, bottom: 844, width: 390, height: 844 - sheetTop };
+    if (this.classList.contains("cal-top")) return { left: 0, right: 390, top: 44, bottom: 80, width: 390, height: 36 };
+    return { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 };
+  });
+  const { el } = openQuickCreate();
+  const scroller = el.querySelector("[data-scroll]");
+  const before = scroller.scrollTop;
+
+  // The keyboard lifts the sheet to where it lies over the draft.
+  sheetTop = 300;
+  visual.height = 500;
+  visual.dispatchEvent(new Event("resize"));
+
+  expect(scroller.scrollTop - before).toBe(134);
 });

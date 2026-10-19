@@ -120,7 +120,7 @@
 
   /* Room for quick create's draft to scroll clear of the sheet, even late
      in the day. */
-  :root.cal-sheet-open .cal-scroll {
+  :root:has(.cal-qc.is-sheet) .cal-scroll {
     padding-bottom: 50dvh;
   }
 }

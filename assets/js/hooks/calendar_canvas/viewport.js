@@ -42,6 +42,11 @@ export const ViewportMixin = {
     const phone = this.media?.matches === true;
     if (phone === this.phone) return;
     this.phone = phone;
+    // A sheet keeps its placement until it closes (decision 11), but not
+    // across a flip: nothing may keep `.is-sheet` on a wide screen.
+    this.closeList();
+    this.closeExplainer();
+    this.placeQuickCreate();
     this.pushEventTo(this.el, "calendar:viewport", { phone });
     // The cache holds the three days; the server's answer confirms them.
     if (phone && this.view === "week" && !this.pending) {

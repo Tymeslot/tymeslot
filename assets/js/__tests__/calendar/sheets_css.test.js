@@ -70,6 +70,6 @@ describe("phone sheets", () => {
   });
 
   test("the grid leaves room to scroll a late draft above a sheet", () => {
-    expect(rule(phone(), ":root.cal-sheet-open .cal-scroll")).toMatch(/padding-bottom:\s*50dvh/);
+    expect(rule(phone(), ":root:has(.cal-qc.is-sheet) .cal-scroll")).toMatch(/padding-bottom:\s*50dvh/);
   });
 });

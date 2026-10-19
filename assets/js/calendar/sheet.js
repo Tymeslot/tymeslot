@@ -79,6 +79,8 @@ function addScrim(element) {
   scrim.className = "cal-scrim";
   scrim.setAttribute("data-sheet-scrim", "");
   scrim.setAttribute("aria-hidden", "true");
+  // Pressing the scrim must not pull focus out of the sheet to <body>.
+  for (const type of ["mousedown", "pointerdown"]) scrim.addEventListener(type, (e) => e.preventDefault());
   scrim.addEventListener("click", (e) => {
     e.stopPropagation();
     element.dispatchEvent(new CustomEvent("calendar:dismiss"));
