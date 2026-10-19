@@ -8,10 +8,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
-  alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
+  alias Tymeslot.MeetingTypes.PaymentValidation
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Validation.Constraints
 
@@ -211,7 +211,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_video_integration()
     |> validate_calendar_destination()
     |> ReminderValidation.validate_changeset()
-    |> validate_payment_fields(opts)
+    |> PaymentValidation.validate_changeset(opts)
     |> validate_group_rules()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
@@ -466,68 +466,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       _other ->
         changeset
     end
-  end
-
-  defp validate_payment_fields(changeset, opts) do
-    changeset = validate_price_settable(changeset, opts)
-
-    if get_field(changeset, :payment_required) do
-      changeset
-      |> validate_required([:price_cents])
-      |> validate_currency_minimum(opts)
-    else
-      changeset
-    end
-  end
-
-  # Asked when the host asks for payment or sets a price, not every time they
-  # touch a meeting type that already has one. A paid type keeps its price
-  # while it cannot be edited (Stripe disconnected, or an account in a legacy
-  # currency that checkout still charges), so that it resumes as it was (see
-  # `Tymeslot.MeetingTypes.FormMapper.build_attrs/3`); reading the stored
-  # `true` with `get_field` would then fail every unrelated save, on a field
-  # the form cannot render in that state. Turning payment off, which clears
-  # the price, stays open.
-  defp validate_price_settable(changeset, opts) do
-    cond do
-      Keyword.get(opts, :price_settable, false) ->
-        changeset
-
-      not price_edit?(changeset) ->
-        changeset
-
-      Keyword.get(opts, :host_charges_enabled, false) ->
-        add_error(
-          changeset,
-          :payment_required,
-          dgettext_noop("errors", "Prices cannot be set in your Stripe account's currency")
-        )
-
-      true ->
-        add_error(
-          changeset,
-          :payment_required,
-          dgettext_noop("errors", "Stripe must be connected")
-        )
-    end
-  end
-
-  defp price_edit?(changeset) do
-    get_change(changeset, :payment_required) == true or
-      (changed?(changeset, :price_cents) and not is_nil(get_field(changeset, :price_cents)))
-  end
-
-  defp validate_currency_minimum(changeset, opts) do
-    minimum = Keyword.get(opts, :currency_minimum_cents, 50)
-    currency = Keyword.get(opts, :currency, "usd")
-
-    validate_number(changeset, :price_cents,
-      greater_than_or_equal_to: minimum,
-      message:
-        dgettext("errors", "must be at least %{minimum}",
-          minimum: Money.format(minimum, currency)
-        )
-    )
   end
 
   # What a group type (more than one participant per slot) cannot also be.
