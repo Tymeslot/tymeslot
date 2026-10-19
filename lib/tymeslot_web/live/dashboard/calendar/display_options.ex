@@ -30,6 +30,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
 
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h": the surface's `time_format`)
+
+  attr :calendar_focus, :boolean,
+    default: false,
+    doc:
+      "focus mode's stored value, from `DashboardLive` (the sheet, phones only, leaves it false)"
+
   attr :target, :any, required: true
 
   @spec display_options(map()) :: Phoenix.LiveView.Rendered.t()
@@ -73,6 +79,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         time_format={@time_format}
         target={@target}
       />
+      <%!-- Below 1024px focus mode changes nothing, so the row is hidden.
+           No target: DashboardLive owns the layout. --%>
+      <div
+        id={"#{@id_prefix}-focus-row"}
+        class={["hidden items-center justify-between gap-3 lg:flex", row()]}
+      >
+        <span class="text-token-sm font-medium text-tymeslot-700">
+          {dgettext("dashboard_calendar_power", "Focus mode")}
+        </span>
+        <StatusSwitch.status_switch
+          id={"#{@id_prefix}-focus"}
+          checked={@calendar_focus}
+          on_change="calendar:toggle_focus"
+          size={:small}
+          aria_label={dgettext("dashboard_calendar_power", "Focus mode")}
+          aria-keyshortcuts="f"
+        />
+      </div>
       <div class="flex flex-col items-start gap-1 border-t border-tymeslot-100 pt-3">
         <.action_button
           id={"#{@id_prefix}-import-ics"}

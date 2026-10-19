@@ -25,6 +25,10 @@ defmodule TymeslotWeb.Components.DashboardLayout do
     default: false,
     doc: "a slimmer top bar, for sections whose content should take the screen"
 
+  attr :focus, :boolean,
+    default: false,
+    doc: "focus mode: from the lg breakpoint the menu is hidden (see `CalendarFocus`)"
+
   attr :sidebar_extensions, :list, default: []
   attr :unseen_announcements, :list, default: []
   slot :inner_block, required: true
@@ -35,6 +39,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
     <div
       class="flex flex-col h-dvh overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       id="dashboard-root"
+      data-calendar-focus={@focus && "true"}
       phx-hook="ClipboardCopy"
     >
       <%!-- Feature-announcement carousel. Renders nothing when the list is empty. --%>
@@ -52,7 +57,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       </div>
 
       <%!-- Main Layout Area --%>
-      <div class="flex lg:gap-8 flex-1 overflow-hidden min-h-0">
+      <div class="dashboard-main-row flex lg:gap-8 flex-1 overflow-hidden min-h-0">
         <DashboardSidebar.sidebar
           current_action={@current_action}
           integration_status={@integration_status}

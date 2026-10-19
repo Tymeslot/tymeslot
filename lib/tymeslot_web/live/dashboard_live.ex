@@ -38,6 +38,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AgendaRefresh
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
+  alias TymeslotWeb.Dashboard.CalendarFocus
   alias TymeslotWeb.Dashboard.CalendarMessages
   alias TymeslotWeb.Dashboard.CalendarUpNextStrip
   alias TymeslotWeb.Dashboard.ComponentDispatch
@@ -77,8 +78,9 @@ defmodule TymeslotWeb.DashboardLive do
 
     # `:agenda` defaults nil so the calendar's Up-next strip can be guarded on
     # the dead render, before `AgendaRefresh.load/1` has run.
-    # `:calendar_redesign` stays nil until the calendar is first opened, which
-    # loads the organiser's switch once for the life of this process.
+    # `:calendar_redesign` and `:calendar_focus` stay nil and false until the
+    # calendar is first opened, which loads the organiser's switch and focus
+    # mode once for the life of this process.
     # `viewport_fit: :cover` lets the root layout write the dashboard's
     # viewport meta (under the notch, resized by the on-screen keyboard).
     {:ok,
@@ -86,6 +88,7 @@ defmodule TymeslotWeb.DashboardLive do
        first_dashboard_visit: first_visit?,
        agenda: nil,
        calendar_redesign: nil,
+       calendar_focus: false,
        viewport_fit: :cover
      )}
   end
@@ -173,17 +176,19 @@ defmodule TymeslotWeb.DashboardLive do
     AgendaRefresh.reschedule(socket)
   end
 
-  # Which calendar surface the organiser chose, read once per process (the
-  # dead render too, so the page never flashes the other surface): later
-  # switches go through `handle_event("calendar:switch_surface", ...)`, which
-  # keeps this assign current.
+  # Which calendar surface the organiser chose and whether focus mode is on,
+  # read once per process (the dead render too, so the page never flashes the
+  # other surface or the menu): later changes go through
+  # `handle_event("calendar:switch_surface", ...)` and
+  # `handle_event("calendar:toggle_focus", ...)`, which keep these current.
   defp assign_calendar_redesign(
          %{assigns: %{calendar_redesign: nil, current_user: %{id: user_id}}} = socket
        ) do
-    assign(
-      socket,
-      :calendar_redesign,
-      CalendarGrid.get_or_create_preferences(user_id).redesign_enabled
+    preferences = CalendarGrid.get_or_create_preferences(user_id)
+
+    assign(socket,
+      calendar_redesign: preferences.redesign_enabled,
+      calendar_focus: preferences.focus_mode
     )
   end
 
@@ -220,6 +225,7 @@ defmodule TymeslotWeb.DashboardLive do
         :should_render_feature,
         ComponentDispatch.should_render_feature?(assigns.live_action, assigns)
       )
+      |> assign(:calendar_focus_active, CalendarFocus.active?(assigns))
 
     ~H"""
     <DashboardLayout.dashboard_layout
@@ -231,6 +237,7 @@ defmodule TymeslotWeb.DashboardLive do
       analytics_allowed={@analytics_allowed}
       full_width={@live_action == :calendar}
       compact_nav={@live_action == :calendar and @calendar_redesign == true}
+      focus={@calendar_focus_active}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
     >
@@ -251,7 +258,10 @@ defmodule TymeslotWeb.DashboardLive do
                phones. --%>
           <div id="calendar-strips" class="shrink-0">
             <div
-              :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+              :if={
+                OnboardingChecklist.visible?(@current_user, @integration_status) and
+                  not @calendar_focus_active
+              }
               class="px-3 pt-2 md:px-4"
             >
               <OnboardingChecklist.onboarding_checklist
@@ -262,7 +272,7 @@ defmodule TymeslotWeb.DashboardLive do
               />
             </div>
             <div
-              :if={@agenda && @agenda.next}
+              :if={@agenda && @agenda.next && not @calendar_focus_active}
               id="calendar-up-next"
               class={@calendar_redesign == true && "max-sm:hidden"}
             >
@@ -293,6 +303,7 @@ defmodule TymeslotWeb.DashboardLive do
               viewport_hint={@viewport}
               live_action={@live_action}
               calendar_left={@calendar_left}
+              calendar_focus={@calendar_focus}
               params={@params}
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
@@ -512,6 +523,11 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   def handle_event("calendar:switch_surface", _params, socket), do: {:noreply, socket}
+
+  # Focus mode hides the dashboard menu, which this LiveView's layout draws,
+  # so the calendar's toggles (toolbar, display options, F) land here.
+  def handle_event("calendar:toggle_focus", _params, socket),
+    do: {:noreply, CalendarFocus.toggle(socket)}
 
   # Private functions
 

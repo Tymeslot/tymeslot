@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :week_start, :atom, required: true
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :rail_open, :boolean, required: true
+  attr :calendar_focus, :boolean, default: false
   attr :hidden_count, :integer, required: true
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :target, :any, required: true
@@ -198,6 +199,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           {PeriodLabels.view_label(view)}
         </button>
       </div>
+      <%!-- Focus mode changes nothing below 1024px, where the menu is a
+           drawer. No phx-target: DashboardLive owns the layout. --%>
+      <.icon_button
+        id="calendar-focus-toggle"
+        icon={if @calendar_focus, do: "hero-arrows-pointing-in", else: "hero-arrows-pointing-out"}
+        size={:sm}
+        label={
+          if @calendar_focus,
+            do: dgettext("dashboard_calendar_power", "Leave focus mode"),
+            else: dgettext("dashboard_calendar_power", "Focus mode")
+        }
+        aria-pressed={to_string(@calendar_focus)}
+        aria-keyshortcuts="f"
+        phx-click="calendar:toggle_focus"
+        class="hidden lg:inline-flex"
+      />
       <.dropdown
         id="calendar-display-options"
         open={@open_menu == :display}
@@ -219,6 +236,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             id_prefix="calendar"
             preferences={@preferences}
             time_format={@time_format}
+            calendar_focus={@calendar_focus}
             target={@target}
           />
         </:panel>

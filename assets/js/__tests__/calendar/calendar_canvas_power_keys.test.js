@@ -182,3 +182,71 @@ describe("overlays that take the keyboard", () => {
     expect(gotos(hook)).toEqual([{ view: "day", date: "2026-10-14" }]);
   });
 });
+
+describe("F: focus mode", () => {
+  const press = (key, extra = {}, target = document.body) =>
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra }));
+  let restore = null;
+
+  // Answers the wide query (1024px and up) with `wide`, every other query no.
+  const stubWidth = (wide) => {
+    const had = Object.prototype.hasOwnProperty.call(window, "matchMedia");
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn((query) => ({
+      matches: query === "(width >= 64rem)" ? wide : false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    restore = () => {
+      if (had) window.matchMedia = original;
+      else delete window.matchMedia;
+    };
+  };
+
+  const mountWithPush = () => {
+    const mounted = mountHook();
+    mounted.hook.pushEvent = vi.fn();
+    return mounted;
+  };
+
+  afterEach(() => {
+    unmountAll();
+    restore?.();
+    restore = null;
+  });
+
+  test("F asks the dashboard to toggle focus mode on a wide screen", () => {
+    stubWidth(true);
+    const { hook } = mountWithPush();
+    press("f");
+    expect(hook.pushEvent).toHaveBeenCalledWith("calendar:toggle_focus", {});
+  });
+
+  test("F does nothing below 1024px, where focus mode changes nothing", () => {
+    stubWidth(false);
+    const { hook } = mountWithPush();
+    press("f");
+    expect(hook.pushEvent).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["Shift", { shiftKey: true }],
+    ["Ctrl (the browser's find)", { ctrlKey: true }],
+    ["Cmd", { metaKey: true }],
+  ])("F does nothing with %s", (_name, extra) => {
+    stubWidth(true);
+    const { hook } = mountWithPush();
+    press(extra.shiftKey ? "F" : "f", extra);
+    expect(hook.pushEvent).not.toHaveBeenCalled();
+  });
+
+  test("F is the field's own letter in an input", () => {
+    stubWidth(true);
+    const { hook } = mountWithPush();
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    press("f", {}, input);
+    expect(hook.pushEvent).not.toHaveBeenCalled();
+  });
+});

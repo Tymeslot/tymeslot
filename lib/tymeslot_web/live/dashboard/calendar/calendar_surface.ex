@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PhoneTabs
   alias TymeslotWeb.Dashboard.Calendar.PowerEvents
   alias TymeslotWeb.Dashboard.Calendar.PowerOverlays
+  alias TymeslotWeb.Dashboard.Calendar.PowerSettings
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
@@ -213,7 +214,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: _other}, socket), do: {:ok, socket}
 
   def update(assigns, socket),
-    do: {:ok, socket |> assign(assigns) |> Viewport.adopt_hint() |> SurfaceData.sync()}
+    do:
+      {:ok,
+       socket
+       |> assign(assigns)
+       |> Viewport.adopt_hint()
+       |> SurfaceData.sync()
+       |> PowerSettings.follow_focus(socket.assigns[:calendar_focus])}
 
   defp schedule_reload(%{assigns: %{pending_reload: nil}} = socket, action) do
     send_update_after(__MODULE__, [id: socket.assigns.id, action: :reload], @reload_delay)
@@ -316,6 +323,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         preferences={@preferences}
         time_format={@time_format}
         rail_open={@rail_open}
+        calendar_focus={@calendar_focus}
         hidden_count={@hidden_count}
         target={@myself}
       />

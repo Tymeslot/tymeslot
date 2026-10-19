@@ -423,3 +423,16 @@
   background-size: 1rem;
 }
 
+
+/* Focus mode on the new calendar (CalendarFocus): from the lg breakpoint,
+   where the menu is a column beside the content, the menu and the row's
+   gutter go. Below it the menu is already a drawer, so nothing changes. */
+@media (width >= 64rem) {
+  #dashboard-root[data-calendar-focus] #dashboard-sidebar {
+    display: none;
+  }
+
+  #dashboard-root[data-calendar-focus] .dashboard-main-row {
+    gap: 0;
+  }
+}

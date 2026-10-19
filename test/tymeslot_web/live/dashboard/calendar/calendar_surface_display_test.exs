@@ -270,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
           |> Floki.find("##{prefix}-display-rows > div:not(.border-t)")
           |> Enum.map(&class_of/1)
 
-        assert length(row_classes) == 7
+        assert length(row_classes) == 8
         assert Enum.reject(row_classes, &(&1 =~ "max-sm:min-h-11")) == []
         assert Enum.reject(row_classes, &(&1 =~ "pointer-coarse:min-h-11")) == []
 

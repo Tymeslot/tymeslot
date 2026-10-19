@@ -38,7 +38,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :show_weekends, :boolean, default: true
     field :desktop_reminders_enabled, :boolean, default: false
     # The redesigned calendar: which surface `/dashboard/calendar` renders,
-    # and how its grid is drawn. `focus_mode` has no control yet.
+    # how its grid is drawn, and whether focus mode hides the dashboard menu
+    # (`TymeslotWeb.Dashboard.CalendarFocus`).
     field :redesign_enabled, :boolean, default: false
     field :density, :string, default: "comfortable"
     field :fold_night, :boolean, default: true
