@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceNoCalendarTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Repo
@@ -44,5 +45,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceNoCalendarTest do
     assert has_element?(lv, "#calendar-rail", "Work account")
     refute has_element?(lv, "#calendar-rail-connect")
     refute has_element?(lv, "#calendar-connect")
+  end
+
+  test "settings say whether accounts exist when none has a writable calendar", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    Repo.delete!(integration)
+
+    insert(:calendar_integration,
+      user: user,
+      name: "Holidays",
+      provider: "ics_url",
+      is_active: true,
+      calendar_list: [%{"id" => "feed", "name" => "Public holidays", "selected" => true}]
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{settings: %{calendars: [], has_accounts: true}})
+    refute has_element?(lv, "#calendar-rail-connect")
+  end
+
+  test "settings say there are no accounts when none is connected", %{
+    conn: conn,
+    integration: integration
+  } do
+    Repo.delete!(integration)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{settings: %{calendars: [], has_accounts: false}})
   end
 end

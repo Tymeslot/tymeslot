@@ -112,7 +112,7 @@ export const CreateMixin = {
   },
 
   quickState() {
-    return { draft: this.draft, strings: this.strings, timeFormat: this.settings.time_format, calendars: this.settings.calendars || [], meetingTypes: this.settings.meeting_types || [] };
+    return { draft: this.draft, strings: this.strings, timeFormat: this.settings.time_format, calendars: this.settings.calendars || [], meetingTypes: this.settings.meeting_types || [], hasAccounts: Boolean(this.settings.has_accounts) };
   },
 
   parseOptions() {

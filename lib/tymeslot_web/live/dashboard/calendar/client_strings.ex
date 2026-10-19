@@ -142,7 +142,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
           "Couldn't confirm the change. Check your bookable times."
         ),
       no_calendar_note:
-        dgettext("dashboard_calendar_booking", "Connect a calendar to add events here.")
+        dgettext("dashboard_calendar_booking", "Connect a calendar to add events here."),
+      read_only_calendars_note:
+        dgettext(
+          "dashboard_calendar_booking",
+          "Your connected calendars are read-only, so events can't be added here."
+        )
     }
   end
 

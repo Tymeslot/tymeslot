@@ -115,3 +115,30 @@ test("with a calendar there is no such note", () => {
   expect(view(event()).querySelector("#calendar-qc-no-calendar")).toBeNull();
   expect(view(opening(), meetingTypes).querySelector("#calendar-qc-no-calendar")).toBeNull();
 });
+
+function noCalendarView(extra = {}) {
+  const holder = document.createElement("div");
+  holder.innerHTML = renderQuickCreate({ draft: { ...event(), calendar: null }, strings, timeFormat: "24h", calendars: [], meetingTypes, ...extra });
+  return holder.firstElementChild;
+}
+
+test("the note is wired to the field, Save and More options", () => {
+  const popover = noCalendarView();
+  const note = popover.querySelector("#calendar-qc-no-calendar");
+
+  expect(note.getAttribute("role")).toBe("note");
+  expect(popover.querySelector("#calendar-qc-field").getAttribute("aria-describedby")).toBe("calendar-qc-hint calendar-qc-no-calendar");
+  expect(popover.querySelector("[data-qc-save]").getAttribute("aria-describedby")).toBe("calendar-qc-no-calendar");
+  expect(popover.querySelector("[data-qc-more]").getAttribute("aria-describedby")).toBe("calendar-qc-no-calendar");
+});
+
+test("with a calendar nothing points at a note", () => {
+  const popover = view(event());
+  expect(popover.querySelector("#calendar-qc-field").getAttribute("aria-describedby")).toBe("calendar-qc-hint");
+  expect(popover.querySelector("[data-qc-save]").hasAttribute("aria-describedby")).toBe(false);
+});
+
+test("connected calendars that are all read-only say so instead of asking to connect one", () => {
+  const note = noCalendarView({ hasAccounts: true }).querySelector("#calendar-qc-no-calendar");
+  expect(note.textContent).toBe("Your connected calendars are read-only, so events can't be added here.");
+});

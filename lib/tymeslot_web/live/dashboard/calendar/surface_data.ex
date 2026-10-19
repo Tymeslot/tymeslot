@@ -258,6 +258,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       working_hours: assigns.working_hours,
       calendars: CalendarDirectory.choices(assigns.accounts),
       default_calendar: CalendarDirectory.default_calendar(assigns.integrations),
+      # Accounts without a writable calendar: quick create says they are read-only.
+      has_accounts: assigns.accounts != [],
       # The meeting types quick create can open for booking (Task 9's list:
       # active, unarchived, `%{id, name, duration}`); `duration` keeps an
       # opening at least one meeting long.

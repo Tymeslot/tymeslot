@@ -1,6 +1,6 @@
 /**
  * HTML for the quick-create popover, as pure functions of its state:
- * `{draft, strings, timeFormat, calendars, meetingTypes}` (calendar/draft.js
+ * `{draft, strings, timeFormat, calendars, meetingTypes, hasAccounts}` (calendar/draft.js
  * has the draft's shape, calendar/opening.js the opening's). The hook
  * (hooks/calendar_canvas/create.js) renders the shell once when it opens and
  * the head and body on every change, so the field keeps its caret while the
@@ -128,8 +128,10 @@ function errorLine(draft) {
   return draft.error ? `<p id="calendar-qc-error" class="cal-qc-error" role="alert">${escapeHtml(draft.error.message)}</p>` : "";
 }
 
+const NO_CALENDAR_ID = "calendar-qc-no-calendar";
+
 function foot({ draft, strings }, label, { more, blocked = false }) {
-  const off = locked(draft) || blocked ? " disabled" : "";
+  const off = (locked(draft) || blocked ? " disabled" : "") + (blocked ? ` aria-describedby="${NO_CALENDAR_ID}"` : "");
   return (
     `<div class="cal-qc-foot">` +
     (more ? `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${off}>${escapeHtml(strings.more_options)}</button>` : "") +
@@ -143,7 +145,8 @@ const hint = (text) => `<p id="calendar-qc-hint" class="cal-qc-hint">${escapeHtm
 // Without a calendar to write to, an event cannot be saved; the note says why.
 function eventBody(state) {
   const blocked = !state.calendars.length;
-  const note = blocked ? `<p id="calendar-qc-no-calendar" class="cal-qc-note">${escapeHtml(state.strings.no_calendar_note)}</p>` : "";
+  const text = state.hasAccounts ? state.strings.read_only_calendars_note : state.strings.no_calendar_note;
+  const note = blocked ? `<p id="${NO_CALENDAR_ID}" class="cal-qc-note" role="note">${escapeHtml(text)}</p>` : "";
   return chips(state) + showAs(state) + note + errorLine(state.draft) + foot(state, saveLabel(state), { more: true, blocked }) + hint(state.strings.quick_create_hint);
 }
 
@@ -168,6 +171,9 @@ export function renderQuickBody(state) {
   return opening(state) ? openBody(state) : eventBody(state);
 }
 
+// The field is described by the hint, and by why saving is off when it is.
+const fieldDescribedBy = ({ calendars }) => (calendars.length ? "calendar-qc-hint" : `calendar-qc-hint ${NO_CALENDAR_ID}`);
+
 // The whole popover, rendered once when it opens.
 export function renderQuickCreate(state) {
   const { draft, strings } = state;
@@ -177,7 +183,7 @@ export function renderQuickCreate(state) {
     `<div class="cal-qc-head" data-qc-head>${renderQuickHead(state)}</div>` +
     `<label for="calendar-qc-field" class="sr-only">${escapeHtml(strings.quick_create_label)}</label>` +
     `<input id="calendar-qc-field" class="cal-qc-field" type="text" autocomplete="off" enterkeyhint="done" ` +
-    `placeholder="${escapeHtml(strings.quick_create_placeholder)}" aria-describedby="calendar-qc-hint" value="${escapeHtml(draft.text)}"${opening(state) ? " hidden" : ""}>` +
+    `placeholder="${escapeHtml(strings.quick_create_placeholder)}" aria-describedby="${fieldDescribedBy(state)}" value="${escapeHtml(draft.text)}"${opening(state) ? " hidden" : ""}>` +
     `<div class="cal-qc-body" data-qc-body>${renderQuickBody(state)}</div>` +
     `</div>`
   );
