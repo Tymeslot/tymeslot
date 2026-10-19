@@ -138,3 +138,16 @@ test("a density change goes back to the saved height", () => {
 
   expect(hour(el)).toBe(38);
 });
+
+test("zoomTo draws the hour height it is given, within the zoom's bounds", () => {
+  const { el, hook } = mountHook();
+
+  hook.zoomTo(80, 400);
+  expect(hour(el)).toBe(80);
+
+  hook.zoomTo(500, 400);
+  expect(hour(el)).toBe(128);
+
+  hook.zoomTo(5, 400);
+  expect(hour(el)).toBe(24);
+});

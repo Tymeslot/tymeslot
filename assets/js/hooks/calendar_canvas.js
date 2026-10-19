@@ -32,7 +32,10 @@
  *  - on a focused event the arrow keys move focus, M moves it from the keyboard,
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
- *  - Ctrl + scroll zooms the hours for the visit (see calendar_canvas/zoom.js);
+ *  - Ctrl + scroll, or a pinch on a touch screen, zooms the hours for the
+ *    visit (see calendar_canvas/zoom.js and calendar_canvas/gestures.js);
+ *  - a sideways swipe over the time grid or the month steps the period and
+ *    pushes `calendar:goto` (see calendar_canvas/gestures.js);
  *  - month and agenda draw from the same cache, D X W M A switch views, and
  *    the agenda asks for more with `calendar:agenda_more` as it scrolls (see
  *    calendar_canvas/views.js);
@@ -51,6 +54,7 @@ import { BookableMixin } from "./calendar_canvas/bookable.js";
 import { CreateMixin } from "./calendar_canvas/create.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
+import { GesturesMixin } from "./calendar_canvas/gestures.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
 import { OpeningMixin } from "./calendar_canvas/opening.js";
 import { TouchDragMixin } from "./calendar_canvas/touch_drag.js";
@@ -104,6 +108,7 @@ export const CalendarCanvas = {
   ...ViewportMixin,
   ...ViewsMixin,
   ...TouchDragMixin,
+  ...GesturesMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -142,6 +147,7 @@ export const CalendarCanvas = {
     this.mountViewport();
     this.mountViews();
     this.mountTouchDrag();
+    this.mountGestures();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -187,6 +193,7 @@ export const CalendarCanvas = {
     this.destroyViewport();
     this.destroyViews();
     this.destroyTouchDrag();
+    this.destroyGestures();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);

@@ -4,9 +4,10 @@
  * hour height (calendar/zoom.js) and keeps the minute under the pointer where
  * it was; Cmd does the same on macOS. The height is kept fractional in
  * `zoomHour` and rounded where it is drawn. Lasts for the visit; a density
- * change resets it.
+ * change resets it. A pinch on a touch screen zooms through the same zoomTo (see
+ * gestures.js).
  */
-import { wheelPixels, zoomedHour } from "../../calendar/zoom.js";
+import { MAX_HOUR, MIN_HOUR, wheelPixels, zoomedHour } from "../../calendar/zoom.js";
 
 const onMac = () => /mac/i.test(globalThis.navigator?.platform || "");
 
@@ -30,24 +31,33 @@ export const ZoomMixin = {
       e.preventDefault();
       return;
     }
-    const cols = this.el.querySelector(".cal-cols");
-    const scroller = this.el.querySelector("[data-scroll]");
-    if (!cols) return;
+    if (!this.el.querySelector(".cal-cols")) return;
     e.preventDefault();
 
+    const scroller = this.el.querySelector("[data-scroll]");
     const delta = wheelPixels(e.deltaY, e.deltaMode, scroller?.clientHeight || 0);
+    this.zoomTo(zoomedHour(this.zoomHour ?? this.hourHeight(), delta), e.clientY);
+  },
+
+  // Draws the hours `hourHeight` high (kept fractional, within MIN_HOUR and
+  // MAX_HOUR) and keeps the minute at `clientY` where it was. The wheel and
+  // a pinch (gestures.js) both land here. True when the drawn height changed.
+  zoomTo(hourHeight, clientY) {
+    const cols = this.el.querySelector(".cal-cols");
+    if (!cols || !this.settings || this.drag) return false;
     const before = this.hourHeight();
-    const minute = this.currentScale().minuteOf(e.clientY - cols.getBoundingClientRect().top);
-    this.zoomHour = zoomedHour(this.zoomHour ?? before, delta);
-    if (this.hourHeight() === before) return;
+    const minute = this.currentScale().minuteOf(clientY - cols.getBoundingClientRect().top);
+    this.zoomHour = Math.min(MAX_HOUR, Math.max(MIN_HOUR, hourHeight));
+    if (this.hourHeight() === before) return false;
 
     this.render();
 
     const nextScroller = this.el.querySelector("[data-scroll]");
     const nextCols = this.el.querySelector(".cal-cols");
     if (nextScroller && nextCols) {
-      nextScroller.scrollTop += nextCols.getBoundingClientRect().top + this.currentScale().yOf(minute) - e.clientY;
+      nextScroller.scrollTop += nextCols.getBoundingClientRect().top + this.currentScale().yOf(minute) - clientY;
       this.scrollTop = nextScroller.scrollTop;
     }
+    return true;
   },
 };

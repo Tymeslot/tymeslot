@@ -56,3 +56,32 @@
 [data-touch-handle] {
   touch-action: none;
 }
+
+/* The grid scrolls up and down by itself; a sideways swipe and a pinch are
+   the hook's (hooks/calendar_canvas/gestures.js). This also stops the
+   browser's page zoom over the grid: a pinch there zooms the hours. */
+.cal-scroll {
+  touch-action: pan-y;
+}
+
+/* The month leaves a sideways swipe to the hook wherever it starts. */
+.cal-canvas:has([data-month-day]),
+.cal-canvas:has([data-month-day]) * {
+  touch-action: pan-y;
+}
+
+/* While a finger swipes, the drawn period follows it (--cal-swipe-x, set by
+   the hook) without spilling past the canvas. */
+.cal-canvas:has(> .cal-swiping) {
+  overflow: hidden;
+}
+
+.cal-swiping {
+  transform: translateX(var(--cal-swipe-x, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-swiping {
+    transform: none;
+  }
+}
