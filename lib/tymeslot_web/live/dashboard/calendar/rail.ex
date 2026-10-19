@@ -10,8 +10,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
 
   Under the calendars, Layers: the bookable-times switch and the meeting
   type it shows (see `RailLayers`). Calendar sets join the rail in a later
-  plan. On phones the rail is hidden and the toolbar's filter chip says
-  what is hidden instead; B still works there.
+  plan. Below 768px the rail is hidden; its calendars and layers open in the
+  Calendars sheet (`CalendarsSheet`), from the toolbar or the phone header,
+  and B still works.
   """
 
   use TymeslotWeb, :html
@@ -53,107 +54,144 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         locale={@locale}
         target={@target}
       />
-      <section aria-labelledby="calendar-rail-heading">
-        <h2
-          id="calendar-rail-heading"
-          class="mb-2 text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500"
-        >
-          {dgettext("dashboard_calendar", "Calendars")}
-        </h2>
-        <div :if={@accounts == []} id="calendar-rail-connect" class="space-y-2">
-          <p class="text-token-sm text-tymeslot-500">
-            {dgettext(
-              "dashboard_calendar_booking",
-              "No calendar connected. Your bookings and bookable times still show here."
-            )}
-          </p>
-          <.action_link
-            id="calendar-connect"
-            patch={~p"/dashboard/integrations?tab=calendars"}
-            variant={:secondary}
-            size={:sm}
-            icon="hero-plus"
-          >
-            {dgettext("dashboard_calendar_booking", "Connect a calendar")}
-          </.action_link>
-        </div>
-        <div :for={account <- @accounts} id={"calendar-account-#{account.id}"} class="mb-3 last:mb-0">
-          <div class="flex items-center gap-2 py-1">
-            <.check
-              checked={not account.hidden}
-              colour={account.colour}
-              label={account.name}
-              event="calendar:toggle_account"
-              values={%{"integration-id" => account.id}}
-              data={[{"data-account-id", account.id}]}
-              target={@target}
-            />
-            <span
-              id={"calendar-account-#{account.id}-name"}
-              class="min-w-0 flex-1 truncate text-token-sm font-semibold text-tymeslot-800"
-            >
-              {account.name}
-            </span>
-            <.lock :if={account.read_only} label={dgettext("dashboard_calendar", "Read only")} />
-            <span
-              :if={MapSet.member?(@syncing_ids, account.id)}
-              data-syncing
-              class="shrink-0 text-tymeslot-400"
-              title={dgettext("dashboard_calendar", "Syncing")}
-            >
-              <.icon name="hero-arrow-path-mini" class="h-4 w-4 motion-safe:animate-spin" />
-              <span class="sr-only">{dgettext("dashboard_calendar", "Syncing")}</span>
-            </span>
-            <span
-              :if={MapSet.member?(@problem_ids, account.id)}
-              data-sync-problem
-              class="shrink-0 text-amber-600"
-              title={dgettext("dashboard_calendar", "Sync problem")}
-            >
-              <.icon name="hero-exclamation-triangle-mini" class="h-4 w-4" />
-              <span class="sr-only">{dgettext("dashboard_calendar", "Sync problem")}</span>
-            </span>
-            <.icon_button
-              :if={
-                not MapSet.member?(@syncing_ids, account.id) and
-                  not MapSet.member?(@reauth_ids, account.id)
-              }
-              id={"calendar-sync-#{account.id}"}
-              icon="hero-arrow-path"
-              size={:sm}
-              label={dgettext("dashboard_calendar", "Sync %{account} now", account: account.name)}
-              phx-click="calendar:sync_account"
-              phx-value-integration-id={account.id}
-              phx-target={@target}
-            />
-          </div>
-          <ul
-            role="group"
-            aria-labelledby={"calendar-account-#{account.id}-name"}
-            class={["ml-6 space-y-0.5", account.hidden && "opacity-60"]}
-          >
-            <li :for={calendar <- account.calendars} class="flex items-center gap-2 py-0.5">
-              <.check
-                checked={not calendar.hidden}
-                disabled={account.hidden}
-                colour={calendar.colour}
-                label={calendar.name}
-                event="calendar:toggle_calendar"
-                values={%{"integration-id" => account.id, "calendar-id" => calendar.id}}
-                data={[{"data-calendar-id", calendar.id}]}
-                target={@target}
-              />
-              <span class="min-w-0 flex-1 truncate text-token-sm text-tymeslot-700">{calendar.name}</span>
-              <.lock
-                :if={calendar.read_only and not account.read_only}
-                label={dgettext("dashboard_calendar", "Read only")}
-              />
-            </li>
-          </ul>
-        </div>
-      </section>
+      <.calendar_list
+        accounts={@accounts}
+        syncing_ids={@syncing_ids}
+        problem_ids={@problem_ids}
+        reauth_ids={@reauth_ids}
+        target={@target}
+      />
       <RailLayers.layers bookable={@bookable} target={@target} />
     </aside>
+    """
+  end
+
+  @doc """
+  The calendars grouped by account, as the rail shows them; the Calendars
+  sheet shows the same list. `id_prefix` keeps the two copies' ids apart:
+  the rail's default keeps the ids it has always had.
+  """
+  attr :id_prefix, :string, default: "calendar-rail"
+
+  attr :show_heading, :boolean,
+    default: true,
+    doc: "false keeps the heading for screen readers only"
+
+  attr :accounts, :list, required: true
+  attr :syncing_ids, :any, default: MapSet.new()
+  attr :problem_ids, :any, default: MapSet.new()
+  attr :reauth_ids, :any, default: MapSet.new()
+  attr :target, :any, required: true
+
+  @spec calendar_list(map()) :: Phoenix.LiveView.Rendered.t()
+  def calendar_list(assigns) do
+    ~H"""
+    <section aria-labelledby={"#{@id_prefix}-heading"}>
+      <h2
+        id={"#{@id_prefix}-heading"}
+        class={[
+          "mb-2 text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500",
+          !@show_heading && "sr-only"
+        ]}
+      >
+        {dgettext("dashboard_calendar", "Calendars")}
+      </h2>
+      <div :if={@accounts == []} id={"#{@id_prefix}-connect"} class="space-y-2">
+        <p class="text-token-sm text-tymeslot-500">
+          {dgettext(
+            "dashboard_calendar_booking",
+            "No calendar connected. Your bookings and bookable times still show here."
+          )}
+        </p>
+        <.action_link
+          id={connect_link_id(@id_prefix)}
+          patch={~p"/dashboard/integrations?tab=calendars"}
+          variant={:secondary}
+          size={:sm}
+          icon="hero-plus"
+        >
+          {dgettext("dashboard_calendar_booking", "Connect a calendar")}
+        </.action_link>
+      </div>
+      <div
+        :for={account <- @accounts}
+        id={item_id(@id_prefix, "account-#{account.id}")}
+        class="mb-3 last:mb-0"
+      >
+        <div class="flex items-center gap-2 py-1">
+          <.check
+            checked={not account.hidden}
+            colour={account.colour}
+            label={account.name}
+            event="calendar:toggle_account"
+            values={%{"integration-id" => account.id}}
+            data={[{"data-account-id", account.id}]}
+            target={@target}
+          />
+          <span
+            id={item_id(@id_prefix, "account-#{account.id}-name")}
+            class="min-w-0 flex-1 truncate text-token-sm font-semibold text-tymeslot-800"
+          >
+            {account.name}
+          </span>
+          <.lock :if={account.read_only} label={dgettext("dashboard_calendar", "Read only")} />
+          <span
+            :if={MapSet.member?(@syncing_ids, account.id)}
+            data-syncing
+            class="shrink-0 text-tymeslot-400"
+            title={dgettext("dashboard_calendar", "Syncing")}
+          >
+            <.icon name="hero-arrow-path-mini" class="h-4 w-4 motion-safe:animate-spin" />
+            <span class="sr-only">{dgettext("dashboard_calendar", "Syncing")}</span>
+          </span>
+          <span
+            :if={MapSet.member?(@problem_ids, account.id)}
+            data-sync-problem
+            class="shrink-0 text-amber-600"
+            title={dgettext("dashboard_calendar", "Sync problem")}
+          >
+            <.icon name="hero-exclamation-triangle-mini" class="h-4 w-4" />
+            <span class="sr-only">{dgettext("dashboard_calendar", "Sync problem")}</span>
+          </span>
+          <.icon_button
+            :if={
+              not MapSet.member?(@syncing_ids, account.id) and
+                not MapSet.member?(@reauth_ids, account.id)
+            }
+            id={item_id(@id_prefix, "sync-#{account.id}")}
+            icon="hero-arrow-path"
+            size={:sm}
+            label={dgettext("dashboard_calendar", "Sync %{account} now", account: account.name)}
+            phx-click="calendar:sync_account"
+            phx-value-integration-id={account.id}
+            phx-target={@target}
+          />
+        </div>
+        <ul
+          role="group"
+          aria-labelledby={item_id(@id_prefix, "account-#{account.id}-name")}
+          class={["ml-6 space-y-0.5", account.hidden && "opacity-60"]}
+        >
+          <li :for={calendar <- account.calendars} class="flex items-center gap-2 py-0.5">
+            <.check
+              checked={not calendar.hidden}
+              disabled={account.hidden}
+              colour={calendar.colour}
+              label={calendar.name}
+              event="calendar:toggle_calendar"
+              values={%{"integration-id" => account.id, "calendar-id" => calendar.id}}
+              data={[{"data-calendar-id", calendar.id}]}
+              target={@target}
+            />
+            <span class="min-w-0 flex-1 truncate text-token-sm text-tymeslot-700">{calendar.name}</span>
+            <.lock
+              :if={calendar.read_only and not account.read_only}
+              label={dgettext("dashboard_calendar", "Read only")}
+            />
+          </li>
+        </ul>
+      </div>
+    </section>
     """
   end
 
@@ -204,4 +242,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
 
   defp value_attrs(values),
     do: Enum.map(values, fn {key, value} -> {"phx-value-#{key}", value} end)
+
+  # The rail keeps the ids it has always had; any other copy prefixes its own.
+  defp item_id("calendar-rail", name), do: "calendar-#{name}"
+  defp item_id(prefix, name), do: "#{prefix}-#{name}"
+
+  defp connect_link_id("calendar-rail"), do: "calendar-connect"
+  defp connect_link_id(prefix), do: "#{prefix}-connect-link"
 end

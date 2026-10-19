@@ -128,3 +128,11 @@ describe("the tabs and the + button", () => {
     expect(body).toMatch(/width:\s*var\(--cal-fab-size\)/);
   });
 });
+
+describe("the Calendars sheet", () => {
+  test("its checkboxes are 44px targets on a phone", () => {
+    const [body] = blocks(phone(), '.cal-sheet-list [role="checkbox"]');
+    expect(body).toMatch(/min-width:\s*2\.75rem/);
+    expect(body).toMatch(/min-height:\s*2\.75rem/);
+  });
+});

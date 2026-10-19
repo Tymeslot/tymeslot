@@ -10,6 +10,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailLayers do
 
   alias TymeslotWeb.Components.UI.StatusSwitch
 
+  attr :id_prefix, :string,
+    default: "calendar-rail",
+    doc: "keeps the rail's and the Calendars sheet's ids apart"
+
   attr :bookable, :map,
     required: true,
     doc: "`%{on, meeting_type, meeting_types}`, see `LayerChoices.rail/2`"
@@ -19,9 +23,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailLayers do
   @spec layers(map()) :: Phoenix.LiveView.Rendered.t()
   def layers(assigns) do
     ~H"""
-    <section id="calendar-rail-layers" aria-labelledby="calendar-rail-layers-heading">
+    <section id={"#{@id_prefix}-layers"} aria-labelledby={"#{@id_prefix}-layers-heading"}>
       <h2
-        id="calendar-rail-layers-heading"
+        id={"#{@id_prefix}-layers-heading"}
         class="mb-2 text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500"
       >
         {dgettext("dashboard_calendar_booking", "Layers")}
@@ -43,30 +47,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailLayers do
       <div :if={@bookable.meeting_types != []} class="space-y-2">
         <div class="flex items-center gap-2">
           <span
-            id="calendar-rail-bookable-label"
+            id={"#{@id_prefix}-bookable-label"}
             class="min-w-0 flex-1 text-token-sm font-semibold text-tymeslot-800"
           >
             {dgettext("dashboard_calendar_booking", "Bookable times")}
           </span>
           <StatusSwitch.status_switch
-            id="calendar-rail-bookable"
+            id={"#{@id_prefix}-bookable"}
             checked={@bookable.on}
             size={:small}
             on_change="calendar:bookable_toggle"
             target={@target}
             phx-value-on={to_string(!@bookable.on)}
-            aria-labelledby="calendar-rail-bookable-label"
+            aria-labelledby={"#{@id_prefix}-bookable-label"}
             aria-keyshortcuts="b"
           />
         </div>
         <form
-          id="calendar-rail-bookable-form"
+          id={"#{@id_prefix}-bookable-form"}
           phx-change="calendar:bookable_type"
           phx-target={@target}
         >
           <.input
             type="select"
-            id="calendar-rail-bookable-type"
+            id={"#{@id_prefix}-bookable-type"}
             name="id"
             label={dgettext("dashboard_calendar_booking", "Meeting type")}
             value={@bookable.meeting_type && @bookable.meeting_type.id}

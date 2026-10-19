@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.SyncProblems
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
+  alias TymeslotWeb.Dashboard.Calendar.CalendarsSheet
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.Creation
@@ -64,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # `calendar:*` events answered by `ViewEvents`: how a view is drawn.
   @view_events ~w(calendar:agenda_more calendar:viewport)
 
-  @menus %{"date" => :date, "display" => :display}
+  @menus %{"date" => :date, "display" => :display, "calendars" => :calendars}
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
   # finished, events changed elsewhere, or a refresh fell back on its timer.
@@ -256,18 +257,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    sync_problems =
+      SyncProblems.list(
+        assigns.integrations,
+        assigns.window_events,
+        SyncStatus.failed_ids(assigns)
+      )
+
     assigns =
       assign(assigns,
         locale: Gettext.get_locale(TymeslotWeb.Gettext),
         days: SurfaceData.days(assigns),
         panel_event: PanelState.current_event(assigns),
         panel_context: PanelState.context(assigns),
-        sync_problems:
-          SyncProblems.list(
-            assigns.integrations,
-            assigns.window_events,
-            SyncStatus.failed_ids(assigns)
-          )
+        sync_problems: sync_problems,
+        problem_ids: MapSet.new(sync_problems, & &1.integration_id),
+        reauth_ids: MapSet.new(for(%{needs_reauth: true, id: id} <- assigns.integrations, do: id))
       )
 
     ~H"""
@@ -303,6 +308,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         days={@days}
         today={@today}
         locale={@locale}
+        hidden_count={@hidden_count}
+        open_menu={@open_menu}
+        target={@myself}
       />
       <SyncBanner.sync_banner problems={@sync_problems} syncing_ids={@syncing_ids} target={@myself} />
       <div class="cal-row relative isolate flex min-h-0 flex-1">
@@ -317,8 +325,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           week_start={Period.week_start(@preferences.week_start_day)}
           locale={@locale}
           syncing_ids={@syncing_ids}
-          problem_ids={MapSet.new(@sync_problems, & &1.integration_id)}
-          reauth_ids={MapSet.new(for(%{needs_reauth: true, id: id} <- @integrations, do: id))}
+          problem_ids={@problem_ids}
+          reauth_ids={@reauth_ids}
           bookable={LayerChoices.rail(@preferences, @bookable_types)}
           target={@myself}
         />
@@ -348,6 +356,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         :if={@preview}
         preview={@preview}
         answering={@answering_request}
+        target={@myself}
+      />
+      <CalendarsSheet.calendars_sheet
+        :if={@open_menu == :calendars}
+        accounts={@accounts}
+        hidden_count={@hidden_count}
+        syncing_ids={@syncing_ids}
+        problem_ids={@problem_ids}
+        reauth_ids={@reauth_ids}
+        bookable={LayerChoices.rail(@preferences, @bookable_types)}
+        density={@preferences.density}
+        fold_night={@preferences.fold_night}
         target={@myself}
       />
       <Toast.toast toast={@toast} target={@myself} />

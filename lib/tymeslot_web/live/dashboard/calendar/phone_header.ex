@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   @moduledoc """
   The calendar's header on a phone, in place of the toolbar: previous, the
-  period, next and Today, each at least 44px. Rendered at every width and
+  period, next, Today and Calendars (which turns amber with a count while
+  calendars are hidden), each at least 44px. Rendered at every width and
   shown only below 40rem (`sm:hidden`), where the toolbar is hidden
   (`max-sm:hidden`), so a phone's first paint is right before any script
   runs. Its controls navigate like the toolbar's (`Navigation.js/3`).
@@ -21,6 +22,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   attr :days, :list, required: true
   attr :today, :any, required: true
   attr :locale, :string, required: true
+  attr :hidden_count, :integer, required: true
+  attr :open_menu, :atom, default: nil
+  attr :target, :any, required: true
 
   @spec phone_header(map()) :: Phoenix.LiveView.Rendered.t()
   def phone_header(assigns) do
@@ -66,6 +70,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         phx-click={Navigation.js(@view, @today, from: {@view, @date})}
       >
         {dgettext("dashboard_calendar", "Today")}
+      </button>
+      <%!-- Filters never hide silently: amber, with the count, while calendars are hidden. --%>
+      <button
+        type="button"
+        id="calendar-phone-calendars"
+        class={[
+          @control,
+          @hidden_count > 0 && "border border-amber-300 bg-amber-50 px-2 text-amber-900"
+        ]}
+        aria-haspopup="dialog"
+        aria-expanded={to_string(@open_menu == :calendars)}
+        phx-click="calendar:toggle_menu"
+        phx-value-menu="calendars"
+        phx-target={@target}
+      >
+        <.icon name="hero-rectangle-stack" class="h-5 w-5" />
+        <span class="sr-only">{dgettext("dashboard_calendar", "Calendars")}</span>
+        <span :if={@hidden_count > 0} class="text-token-xs font-semibold">
+          {dngettext("dashboard_calendar_views", "%{count} hidden", "%{count} hidden", @hidden_count)}
+        </span>
       </button>
     </div>
     """

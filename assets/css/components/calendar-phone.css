@@ -63,3 +63,11 @@
     bottom: auto;
   }
 }
+
+@media (width < 40rem) {
+  /* The Calendars sheet's checkboxes are touch targets; their rows grow with them. */
+  .cal-sheet-list [role="checkbox"] {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}

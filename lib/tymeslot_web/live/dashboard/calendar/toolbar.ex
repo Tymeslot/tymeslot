@@ -53,6 +53,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         phx-target={@target}
         class="hidden md:inline-flex"
       />
+      <%!-- Between 640 and 767px the rail is hidden and the phone header is not shown. --%>
+      <.icon_button
+        id="calendar-calendars-button"
+        icon="hero-rectangle-stack"
+        size={:sm}
+        label={dgettext("dashboard_calendar", "Calendars")}
+        aria-haspopup="dialog"
+        aria-expanded={to_string(@open_menu == :calendars)}
+        phx-click="calendar:toggle_menu"
+        phx-value-menu="calendars"
+        phx-target={@target}
+        class="hidden sm:inline-flex md:hidden"
+      />
       <.action_button
         id="calendar-create"
         variant={:primary}

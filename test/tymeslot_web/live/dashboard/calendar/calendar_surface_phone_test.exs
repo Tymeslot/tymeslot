@@ -197,6 +197,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
   end
 
   describe "the phone header" do
+    test "the Calendars button says when calendars are hidden", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-calendars[class~='h-11']", "Calendars")
+      refute has_element?(lv, "#calendar-phone-calendars", "hidden")
+      refute has_element?(lv, "#calendar-phone-calendars[class~='bg-amber-50']")
+
+      lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+
+      assert has_element?(lv, "#calendar-phone-calendars[class~='bg-amber-50']", "1 hidden")
+    end
+
     test "shows the period between 44px previous and next buttons", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
