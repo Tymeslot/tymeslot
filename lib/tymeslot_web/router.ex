@@ -246,6 +246,8 @@ defmodule TymeslotWeb.Router do
       TymeslotWeb.Plugs.AdditionalDashboardPlugs
     ]
 
+    alias Phoenix.Component
+
     @dashboard_hooks [
       {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
       TymeslotWeb.Hooks.AppLocaleHook,
@@ -269,6 +271,11 @@ defmodule TymeslotWeb.Router do
             Phoenix.LiveView.Socket.t()
           ) :: {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
     def on_mount(:dashboard_hooks, params, session, socket) do
+      # Live navigation inside the session keeps the first page's root layout,
+      # and so its viewport meta: every page here must agree on `cover` (and
+      # pad its own safe areas), whichever one is rendered first.
+      socket = Component.assign(socket, :viewport_fit, :cover)
+
       hooks =
         @dashboard_hooks ++
           dashboard_additional_hooks() ++

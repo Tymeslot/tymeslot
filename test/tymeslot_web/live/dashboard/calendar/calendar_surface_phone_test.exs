@@ -104,6 +104,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       ready(lv, %{"phone" => true})
 
       assert_reply(lv, %{view: "three_day", range: %{from: "2026-10-11", to: "2026-10-20"}})
+      refute_push_event(lv, "calendar:events", %{})
     end
 
     test "a report of a wide screen puts the week back, and a phone again takes it away",
@@ -161,6 +162,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
 
       assert html =~
                ~s(content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content")
+    end
+
+    test "every page of the dashboard session, the account page too, runs under the notch",
+         %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      html = conn |> get(~p"/dashboard/account") |> html_response(200)
+
+      assert html =~ "viewport-fit=cover"
     end
 
     test "pages outside the dashboard keep the plain viewport" do

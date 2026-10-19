@@ -44,19 +44,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Viewport do
   @doc """
   The hook's answer (`phone?`). When the view it implies differs from the
   one shown, the surface follows it as it follows the URL (and pushes the
-  period or the events). Anything but a boolean changes nothing.
+  period or the events), unless `push?` is false: `calendar:ready` replies
+  with the payload itself, so the correction is only assigned. Anything but
+  a boolean changes nothing.
   """
-  @spec report(socket(), term()) :: socket()
-  def report(socket, phone?) when is_boolean(phone?) do
+  @spec report(socket(), term(), boolean()) :: socket()
+  def report(socket, phone?, push? \\ true)
+
+  def report(socket, phone?, push?) when is_boolean(phone?) do
     socket =
       assign(socket, viewport: if(phone?, do: :phone, else: :wide), viewport_reported: true)
 
-    if socket.assigns.ready? and view_changed?(socket.assigns),
-      do: SurfaceData.follow(socket),
-      else: socket
+    cond do
+      not (socket.assigns.ready? and view_changed?(socket.assigns)) -> socket
+      push? -> SurfaceData.follow(socket)
+      true -> socket |> SurfaceData.apply_params() |> SurfaceData.load_window()
+    end
   end
 
-  def report(socket, _not_a_boolean), do: socket
+  def report(socket, _not_a_boolean, _push?), do: socket
 
   defp hint(:phone), do: :phone
   defp hint(_wide_or_missing), do: :wide

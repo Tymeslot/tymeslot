@@ -219,18 +219,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     |> PendingDeletes.reject(assigns.pending_deletes)
   end
 
-  # Applies the hidden choices to the window's unfiltered events, so a toggle
-  # needs no query.
-  # The same period again only closes the date picker. A different day whose
-  # window is the one already loaded (another day of the visible week) updates
-  # the title and range but needs no query: the hook already holds the events.
-  # Either way the hook still hears which period the URL settled on
-  # (`calendar:period`), because it holds a navigation as pending until the
-  # server confirms it and follows nothing else (not even Back) meanwhile.
   @doc """
   Follows the period the URL, the stored default and the viewport now name,
   pushing it to the hook: `calendar:period` when the loaded window holds it,
   otherwise the reloaded window.
+
+  The same period again only closes the date picker. A different day whose
+  window is the one already loaded (another day of the visible week) updates
+  the title and range but needs no query: the hook already holds the events.
+  Either way the hook still hears which period the URL settled on
+  (`calendar:period`), because it holds a navigation as pending until the
+  server confirms it and follows nothing else (not even Back) meanwhile.
   """
   @spec follow(socket()) :: socket()
   def follow(socket) do
@@ -267,6 +266,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     {view, Period.parse_date(params["date"], today)}
   end
 
+  # Applies the hidden choices to the window's unfiltered events, so a toggle
+  # needs no query.
   defp filter_events(socket) do
     events = visible(socket.assigns, socket.assigns.window_events)
 

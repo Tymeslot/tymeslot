@@ -367,7 +367,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # hook says whether it is on a phone first, so the reply's view is the one
   # that width shows (see `Viewport`).
   def handle_event("calendar:ready", params, socket) do
-    socket = Viewport.report(socket, params["phone"])
+    socket = Viewport.report(socket, params["phone"], false)
 
     {:reply,
      Map.put(SurfaceData.payload(socket.assigns, true), :bookable, socket.assigns.bookable),
