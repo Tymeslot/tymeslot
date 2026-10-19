@@ -41,6 +41,23 @@ export function labelPlacement(bands) {
   return [...first].map(([day, startMin]) => ({ day, startMin }));
 }
 
+/**
+ * Where a day's label sits so it never covers an event's title line: among
+ * the day's bands (`{top, bottom}` in pixels, in time order), the first band
+ * top or title line bottom inside a band where a label `height` tall overlaps
+ * no title line (`{top, bottom}`). With nowhere clear it keeps the first
+ * band's top. Returns the band's index and the label's top, or null.
+ */
+export function clearLabelTop(bands, titles, height) {
+  for (const [index, band] of bands.entries()) {
+    const room = Math.max(band.bottom - height, band.top);
+    const candidates = [band.top, ...titles.map((t) => t.bottom).filter((y) => y > band.top && y <= room)].sort((a, b) => a - b);
+    const top = candidates.find((y) => titles.every((t) => t.bottom <= y || t.top >= y + height));
+    if (top !== undefined) return { index, top };
+  }
+  return bands.length ? { index: 0, top: bands[0].top } : null;
+}
+
 /** Whether the next bookable time (`{at, label}`) falls on one of `days`. */
 export function nextInView(next, days) {
   return !!next && days.includes(next.at.slice(0, 10));

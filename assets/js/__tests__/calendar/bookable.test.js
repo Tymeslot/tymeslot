@@ -4,7 +4,7 @@
  * day, and whether any bookable time is in view.
  */
 import { describe, expect, test } from "vitest";
-import { bandsForColumns, bookableInView, labelPlacement, nextInView, windowsForDay } from "../../calendar/bookable.js";
+import { bandsForColumns, bookableInView, clearLabelTop, labelPlacement, nextInView, windowsForDay } from "../../calendar/bookable.js";
 import { parseWall } from "../../calendar/time.js";
 
 const w = (start, end) => ({ start, end });
@@ -61,6 +61,29 @@ describe("labelPlacement", () => {
       { day: "2026-10-15", startMin: 540 },
       { day: "2026-10-16", startMin: 600 },
     ]);
+  });
+});
+
+describe("clearLabelTop", () => {
+  const bands = [
+    { top: 100, bottom: 200 },
+    { top: 300, bottom: 400 },
+  ];
+
+  test("with no title line in the way it sits at the first band's top", () => {
+    expect(clearLabelTop(bands, [], 20)).toEqual({ index: 0, top: 100 });
+    expect(clearLabelTop(bands, [{ top: 150, bottom: 170 }], 20)).toEqual({ index: 0, top: 100 });
+  });
+
+  test("a title line at the band's top moves it to just below that line", () => {
+    expect(clearLabelTop(bands, [{ top: 100, bottom: 120 }], 20)).toEqual({ index: 0, top: 120 });
+    expect(clearLabelTop(bands, [{ top: 95, bottom: 115 }, { top: 115, bottom: 135 }], 20)).toEqual({ index: 0, top: 135 });
+  });
+
+  test("a band with no clear room passes it to the next band, and with none clear it keeps the first top", () => {
+    expect(clearLabelTop(bands, [{ top: 100, bottom: 120 }, { top: 120, bottom: 140 }, { top: 140, bottom: 160 }, { top: 160, bottom: 180 }, { top: 180, bottom: 200 }], 20)).toEqual({ index: 1, top: 300 });
+    expect(clearLabelTop([{ top: 100, bottom: 110 }], [{ top: 100, bottom: 120 }], 20)).toEqual({ index: 0, top: 100 });
+    expect(clearLabelTop([], [], 20)).toBeNull();
   });
 });
 

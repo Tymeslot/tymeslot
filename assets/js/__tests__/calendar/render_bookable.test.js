@@ -125,6 +125,28 @@ describe("labels", () => {
     expect(label.dataset.start).toBe("2026-10-15T22:00");
     expect(label.dataset.end).toBe("2026-10-16T00:00");
   });
+
+  const freeEvent = (id, start, end) => normaliseEvent({ id, kind: "event", title: "Review", all_day: false, start, end, colour: "calendar-2", free: true, attention: false });
+
+  test("an event starting with the band keeps its title line: the label sits just below it", () => {
+    const events = [freeEvent("event-1", "2026-10-15T09:00", "2026-10-15T10:00")];
+    const grid = draw({ events, bookable: layer({ windows: [w("2026-10-15T09:00", "2026-10-15T12:00")] }) });
+    const label = column(grid, "2026-10-15").querySelector("[data-bookable-label]");
+
+    expect(label.style.top).toBe("488px");
+    expect(label.dataset.start).toBe("2026-10-15T09:00");
+  });
+
+  test("a band with no room clear of a title line passes the label to the day's next band", () => {
+    const events = [freeEvent("event-1", "2026-10-15T09:00", "2026-10-15T09:30")];
+    const windows = [w("2026-10-15T09:00", "2026-10-15T09:30"), w("2026-10-15T14:00", "2026-10-15T15:00")];
+    const grid = draw({ events, bookable: layer({ windows }) });
+    const label = column(grid, "2026-10-15").querySelector("[data-bookable-label]");
+
+    expect(label.style.top).toBe(`${14 * 52}px`);
+    expect(label.dataset.start).toBe("2026-10-15T14:00");
+    expect(label.dataset.end).toBe("2026-10-15T15:00");
+  });
 });
 
 describe("the note", () => {

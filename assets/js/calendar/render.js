@@ -8,7 +8,7 @@
  * server renders into `data-strings`; nothing here is hard-coded English.
  */
 import { layoutAllDay } from "./allday.js";
-import { bandsForColumns, bookableInView, labelPlacement, nextInView, windowsForDay } from "./bookable.js";
+import { bandsForColumns, bookableInView, clearLabelTop, labelPlacement, nextInView, windowsForDay } from "./bookable.js";
 import { draggable } from "./drag.js";
 import { LINE_HEIGHT, countLines, isLongWord, layoutColumn } from "./layout.js";
 import {
@@ -37,6 +37,10 @@ const TIME_LINE = 16;
 // The room a title's text has inside a block `width` wide: the block's inset,
 // border and padding. countLines and the long-word marks share it.
 const TITLE_INSET = 15;
+// An event's title line (3px padding, a 15px line, a hair of room) and the
+// bookable label's height (calendar-booking.css), for keeping one off the other.
+const TITLE_LINE = 20;
+const LABEL_HEIGHT = 20;
 // A request block's wider left padding (11px against 6px), and the padding and
 // margin around its flag's text.
 const REQUEST_EDGE = 5;
@@ -201,6 +205,7 @@ function column(iso, events, ctx) {
   // Bookable times go behind everything that follows (calendar-surface.css
   // keeps them under the events and out of the way of clicks).
   html += bookableBands(iso, ctx);
+  const labelAt = html.length;
 
   // Drafts are drawn over the column at full width, never folded into a "+N".
   const drafts = segmentsForDay(events.filter((e) => e.kind === "draft"), iso);
@@ -230,6 +235,9 @@ function column(iso, events, ctx) {
   // Layout stacking doubled, so one odd level between the events and the chip
   // above them is free for a narrow event widened on hover (--cal-lift).
   const lift = 2 * Math.max(0, ...laid.map((item) => (item.chip ? item.z : item.z + 1))) - 1;
+  // The label keeps its place after the bands in the markup (and the focus
+  // order); it is placed once the events are laid out.
+  html = html.slice(0, labelAt) + bookableLabel(iso, laid, ctx) + html.slice(labelAt);
   for (const item of laid) html += item.chip ? chip(item, byId, strings) : eventBlock(item, byId.get(item.id), ctx);
   for (const segment of drafts) html += draftBlock(segment, byId.get(segment.id), ctx, lift + 2);
   if (nowShown && iso === nowDay) html += `<div class="cal-now" style="top:${scale.yOf(nowMinute)}px" aria-hidden="true"></div>`;
@@ -256,24 +264,32 @@ function bookableLayer(bookable, days, scale) {
   return { ...bookable, bands, labels: labelPlacement(bands) };
 }
 
-// The day's bands, then its one label: a button naming the day and the
-// meeting type, carrying the window it sits on for the explainer.
-function bookableBands(iso, { layer, scale, strings }) {
+// The day's bands, behind the events.
+function bookableBands(iso, { layer, scale }) {
   if (!layer) return "";
   let html = "";
   for (const band of layer.bands) {
     if (band.day !== iso) continue;
     html += `<div class="cal-bookable" aria-hidden="true" style="top:${scale.yOf(band.startMin)}px;height:${scale.yOf(band.endMin) - scale.yOf(band.startMin)}px"></div>`;
   }
-  const label = layer.labels.find((l) => l.day === iso);
-  if (!label) return html;
-  const segment = windowsForDay(layer.windows, iso).find((s) => s.endMin > label.startMin);
+  return html;
+}
+
+// The day's one label: a button naming the day and the meeting type,
+// carrying the window it sits on for the explainer. It sits above the events,
+// so it goes where it covers none of their title lines (`laid`).
+function bookableLabel(iso, laid, { layer, scale, strings }) {
+  if (!layer?.labels.some((l) => l.day === iso)) return "";
+  const bands = layer.bands.filter((b) => b.day === iso).sort((a, b) => a.startMin - b.startMin);
+  const titles = laid.map((item) => ({ top: item.top, bottom: item.top + Math.min(item.height, TITLE_LINE) }));
+  const boxes = bands.map((b) => ({ top: scale.yOf(b.startMin), bottom: scale.yOf(b.endMin) }));
+  const { index, top } = clearLabelTop(boxes, titles, LABEL_HEIGHT);
+  const segment = windowsForDay(layer.windows, iso).find((s) => s.endMin > bands[index].startMin);
   const dayStart = dayNumber(iso) * MINUTES_PER_DAY;
   const name = interpolate(strings.bookable_label, { date: dateLabel(iso, strings), meeting_type: layer.meeting_type.name });
   return (
-    html +
     `<button type="button" class="cal-bookable-label" data-bookable-label="${iso}" data-start="${formatWall(dayStart + segment.startMin)}" data-end="${formatWall(dayStart + segment.endMin)}" ` +
-    `aria-haspopup="dialog" aria-expanded="false" aria-label="${escapeHtml(name)}" style="top:${scale.yOf(label.startMin)}px">${escapeHtml(strings.bookable)}</button>`
+    `aria-haspopup="dialog" aria-expanded="false" aria-label="${escapeHtml(name)}" style="top:${top}px">${escapeHtml(strings.bookable)}</button>`
   );
 }
 

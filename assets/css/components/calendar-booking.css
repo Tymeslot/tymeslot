@@ -95,12 +95,13 @@
   pointer-events: none;
 }
 
-/* One label per day, at the top edge of its first band. It sits above the
-   events (z-index one above the column's --cal-lift, which is above every
-   event and chip, and below a draft block and the popovers) so an event
-   overlapping the band's corner never hides it; it is small, so it covers
-   little of an event. A band shorter than the label (under 20px) does not
-   clip it: the label simply extends below the band's bottom edge. */
+/* One label per day, at the top edge of its first band, or lower where an
+   event's title line is there (calendar/bookable.js clearLabelTop). It sits
+   above the events (z-index one above the column's --cal-lift, which is
+   above every event and chip, and below a draft block and the popovers) so
+   an event overlapping the band never hides it. A band shorter than the
+   label (under 20px) does not clip it: the label simply extends below the
+   band's bottom edge. */
 .cal-bookable-label {
   position: absolute;
   left: 4px;
