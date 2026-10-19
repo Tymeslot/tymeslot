@@ -200,7 +200,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         on_toggle="calendar:toggle_menu"
         on_close="calendar:close_menu"
         target={@target}
-        trigger_attrs={[{"phx-value-menu", "display"}]}
+        trigger_attrs={[{"phx-value-menu", "display"}, {"id", "calendar-display-toggle"}]}
         role="dialog"
         panel_label={dgettext("dashboard_calendar", "Display options")}
         aria-label={dgettext("dashboard_calendar", "Display options")}

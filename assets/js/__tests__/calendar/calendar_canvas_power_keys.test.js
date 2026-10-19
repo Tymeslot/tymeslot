@@ -288,13 +288,18 @@ describe("0 to 9: calendar sets", () => {
   });
 
   test.each([
-    ["Shift", { shiftKey: true }],
     ["Ctrl", { ctrlKey: true }],
     ["Alt", { altKey: true }],
   ])("digits do nothing with %s", (_name, extra) => {
     const { hook } = mountHook(withSets(0));
     press("1", extra);
     expect(pushes(hook, "calendar:apply_set")).toEqual([]);
+  });
+
+  test("a digit typed with Shift applies its set (the AZERTY number row)", () => {
+    const { hook } = mountHook(withSets(0));
+    press("1", { shiftKey: true });
+    expect(pushes(hook, "calendar:apply_set")).toEqual([{ position: 1 }]);
   });
 
   test("a digit typed in a field stays the field's", () => {
@@ -310,6 +315,7 @@ describe("0 to 9: calendar sets", () => {
     expect(powerKeyName(key("T"))).toBe("t");
     expect(powerKeyName(key("T", { shiftKey: true }))).toBeNull();
     expect(powerKeyName(key("7"))).toBe("7");
+    expect(powerKeyName(key("7", { shiftKey: true }))).toBe("7");
     expect(powerKeyName(key("7", { code: "Numpad7" }))).toBe("7");
     expect(powerKeyName(key("?", { shiftKey: true }))).toBe("?");
     expect(powerKeyName(key("Enter"))).toBeNull();

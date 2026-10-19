@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
           variant={:ghost}
           size={:sm}
           class="max-sm:min-h-11 pointer-coarse:min-h-11"
-          phx-click={JS.push("calendar:ics_open", target: @target)}
+          phx-click={JS.push("calendar:ics_open", value: %{return: "display"}, target: @target)}
         >
           {dgettext("dashboard_calendar_power", "Import an .ics file")}
         </.action_button>
@@ -111,9 +111,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
           id={"#{@id_prefix}-shortcuts-button"}
           variant={:ghost}
           size={:sm}
-          icon="hero-command-line"
           class="max-sm:min-h-11 pointer-coarse:min-h-11"
-          phx-click={JS.push("calendar:toggle_menu", value: %{menu: "shortcuts"}, target: @target)}
+          phx-click={
+            JS.push("calendar:toggle_menu",
+              value: %{menu: "shortcuts", return: "display"},
+              target: @target
+            )
+          }
         >
           {dgettext("dashboard_calendar", "Keyboard shortcuts")}
         </.action_button>

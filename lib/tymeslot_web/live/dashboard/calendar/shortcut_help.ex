@@ -42,7 +42,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.ShortcutHelp do
             <div :for={{keys, label} <- rows} class="flex items-center justify-between gap-3">
               <dt class="min-w-0 text-token-sm text-tymeslot-700">{label}</dt>
               <dd class="flex shrink-0 items-center gap-1">
-                <kbd :for={key <- keys} class="cal-kbd">{key}</kbd>
+                <%= for {key, index} <- Enum.with_index(keys) do %>
+                  <span :if={index > 0} class="text-token-xs text-tymeslot-500" aria-hidden="true">+</span>
+                  <kbd class="cal-kbd">{key}</kbd>
+                <% end %>
               </dd>
             </div>
           </dl>
@@ -94,6 +97,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.ShortcutHelp do
           dgettext("dashboard_calendar_power", "Open the focused event")},
          {["E"], dgettext("dashboard_calendar_power", "Edit the focused event")},
          {["M"], dgettext("dashboard_calendar_power", "Move the focused event")},
+         {[dpgettext("dashboard_calendar_power", "key", "Arrow keys")],
+          dgettext("dashboard_calendar_power", "While moving: shift the event")},
+         {[
+            dpgettext("dashboard_calendar_power", "key", "Shift"),
+            dpgettext("dashboard_calendar_power", "key", "Arrow keys")
+          ], dgettext("dashboard_calendar_power", "While moving: change its length")},
+         {[dpgettext("dashboard_calendar_power", "key", "Enter")],
+          dgettext("dashboard_calendar_power", "While moving: confirm")},
+         {[dpgettext("dashboard_calendar_power", "key", "Esc")],
+          dgettext("dashboard_calendar_power", "While moving: cancel")},
          {[dpgettext("dashboard_calendar_power", "key", "Delete")],
           dgettext("dashboard_calendar_power", "Delete the focused event")},
          {[dpgettext("dashboard_calendar_power", "key", "Ctrl"), "Z"],
@@ -101,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ShortcutHelp do
        ]},
       {dgettext("dashboard_calendar", "Calendars"),
        [
-         {["1", "9"], dgettext("dashboard_calendar_power", "Apply calendar set 1 to 9")},
+         {["1–9"], dgettext("dashboard_calendar_power", "Apply calendar set 1 to 9")},
          {["0"], dgettext("dashboard_calendar_power", "Leave the calendar set")},
          {["B"], dgettext("dashboard_calendar_power", "Show or hide bookable times")}
        ]},

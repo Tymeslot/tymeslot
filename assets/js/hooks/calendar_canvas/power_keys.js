@@ -47,14 +47,14 @@ export const POWER_KEYS = {
 
 /**
  * The table key `e` stands for: "?" (Shift allowed, it is how "?" is
- * typed), a digit from the number row or the numpad without Shift, or a
+ * typed), a digit from the number row or the numpad (Shift allowed, AZERTY types them with it), or a
  * letter in lower case without Shift. Anything else: null.
  */
 export function powerKeyName(e) {
   if (e.key === "?") return "?";
-  if (e.shiftKey) return null;
   const digit = digitOf(e);
   if (digit !== null) return String(digit);
+  if (e.shiftKey) return null;
   return typeof e.key === "string" && /^[a-z]$/i.test(e.key) ? e.key.toLowerCase() : null;
 }
 

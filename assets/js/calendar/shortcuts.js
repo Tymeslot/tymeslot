@@ -32,9 +32,10 @@ export function isCommandKey(e) {
   return !!(e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key?.toLowerCase() === "k";
 }
 
-// The digit a key types (number row or keypad), or null; Shift with a digit is not one.
+// The digit a key types (number row or keypad), or null. Shift is allowed because
+// the AZERTY number row types its digits with it; the key itself says it is a digit.
 export function digitOf(e) {
-  if (e.shiftKey || !/^[0-9]$/.test(e.key ?? "")) return null;
+  if (!/^[0-9]$/.test(e.key ?? "")) return null;
   return Number(e.key);
 }
 

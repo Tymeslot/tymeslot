@@ -102,4 +102,37 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceShortcutsTest do
 
     refute has_element?(lv, "#calendar-keys-hint", "J and K")
   end
+
+  describe "focus after the display options' modals close" do
+    @ids ["calendar-display-toggle", "calendar-phone-calendars"]
+
+    test "the help opened from display options hands focus back to the toggle", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-display-options > button") |> render_click()
+      lv |> element("#calendar-shortcuts-button") |> render_click()
+      lv |> element("#calendar-shortcuts .modal-close") |> render_click()
+
+      assert_push_event(lv, "calendar:focus", %{ids: @ids})
+    end
+
+    test "the help opened by ? leaves focus to the modal's own restore", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      press_question_mark(lv)
+      lv |> element("#calendar-shortcuts .modal-close") |> render_click()
+
+      refute_push_event(lv, "calendar:focus", _)
+    end
+
+    test "the import modal opened from display options hands focus back", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-display-options > button") |> render_click()
+      lv |> element("#calendar-import-ics") |> render_click()
+      lv |> element("#calendar-import .modal-close") |> render_click()
+
+      assert_push_event(lv, "calendar:focus", %{ids: @ids})
+    end
+  end
 end

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
   """
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [push_event: 3]
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -32,18 +33,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
   @mini_years 1900..2200
 
   @spec handle(String.t(), map(), socket()) :: {:noreply, socket()}
-  def handle("calendar:toggle_menu", %{"menu" => menu}, socket) do
+  def handle("calendar:toggle_menu", %{"menu" => menu} = params, socket) do
     wanted = Map.get(@menus, menu)
     open = if socket.assigns.open_menu == wanted, do: nil, else: wanted
 
-    {:noreply, socket |> assign(:open_menu, open) |> follow_period(open)}
+    {:noreply, socket |> assign(:open_menu, open) |> follow_period(open) |> mark_return(params)}
   end
 
   def handle("calendar:close_menu", _params, socket),
-    do: {:noreply, assign(socket, :open_menu, nil)}
+    do: {:noreply, socket |> assign(:open_menu, nil) |> restore_focus()}
 
   def handle("calendar:mini_shift", %{"dir" => dir}, socket),
     do: {:noreply, shift_mini_cursor(socket, dir)}
+
+  @doc """
+  Notes whether the menu or modal being opened came from the display options
+  (`"return" => "display"`): that dropdown or sheet goes away with the click,
+  and with it the focused button.
+  """
+  @spec mark_return(socket(), map()) :: socket()
+  def mark_return(socket, params),
+    do: assign(socket, :focus_return, params["return"] == "display")
+
+  @doc """
+  When what the display options opened closes, hands focus back to the
+  control that leads to them: the toolbar's toggle, or the phone's Calendars
+  button. Anything opened by a key keeps the modal focus trap's own restore.
+  """
+  @spec restore_focus(socket()) :: socket()
+  def restore_focus(%{assigns: %{focus_return: true}} = socket) do
+    socket
+    |> assign(:focus_return, false)
+    |> push_event("calendar:focus", %{
+      ids: ["calendar-display-toggle", "calendar-phone-calendars"]
+    })
+  end
+
+  def restore_focus(socket), do: socket
 
   defp follow_period(socket, open) when open in @month_menus,
     do: assign(socket, :mini_cursor, Date.beginning_of_month(socket.assigns.date))

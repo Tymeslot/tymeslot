@@ -71,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       viewport: :wide,
       viewport_reported: false,
       open_menu: nil,
+      focus_return: false,
       preview: nil,
       panel: nil,
       event_writes: WriteQueue.new(),

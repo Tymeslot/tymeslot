@@ -94,8 +94,12 @@ describe("digitOf", () => {
     expect(digitOf({ key: "7", code: "Numpad7" })).toBe(7);
   });
 
-  test("is null for Shift with a digit, a letter or a named key", () => {
-    expect(digitOf({ key: "3", shiftKey: true })).toBeNull();
+  test("reads a digit typed with Shift, as the AZERTY number row does", () => {
+    expect(digitOf({ key: "3", shiftKey: true })).toBe(3);
+  });
+
+  test("is null for a symbol, a letter or a named key", () => {
+    expect(digitOf({ key: "#", shiftKey: true })).toBeNull();
     expect(digitOf({ key: "a" })).toBeNull();
     expect(digitOf({ key: "F1" })).toBeNull();
   });

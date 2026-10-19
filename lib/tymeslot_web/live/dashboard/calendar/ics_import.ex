@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceMenus
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.IcsImportFlow
   alias TymeslotWeb.Helpers.UploadHandler
@@ -59,21 +60,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
 
   @doc "Answers the import's events (see `PowerEvents`)."
   @spec handle(String.t(), map(), socket()) :: {:noreply, socket()}
-  def handle("calendar:ics_open", _params, socket), do: {:noreply, open(socket)}
+  def handle("calendar:ics_open", params, socket),
+    do: {:noreply, socket |> SurfaceMenus.mark_return(params) |> open()}
 
   def handle(
         "calendar:ics_close",
         _params,
         %{assigns: %{ics_import: %{stage: :running} = state}} = socket
       ),
-      do: {:noreply, assign(socket, :ics_import, %{state | open: false})}
+      do:
+        {:noreply,
+         socket |> assign(:ics_import, %{state | open: false}) |> SurfaceMenus.restore_focus()}
 
   # A file still uploading is dropped too, or its arrival would open the
   # modal again; a plan still being read is ignored when it lands.
   def handle("calendar:ics_close", _params, socket),
     do:
       {:noreply,
-       socket |> cancel_entries() |> cancel_async(:ics_import_plan) |> assign(:ics_import, nil)}
+       socket
+       |> cancel_entries()
+       |> cancel_async(:ics_import_plan)
+       |> assign(:ics_import, nil)
+       |> SurfaceMenus.restore_focus()}
 
   def handle("calendar:ics_validate", _params, socket) do
     if importing?(socket),
