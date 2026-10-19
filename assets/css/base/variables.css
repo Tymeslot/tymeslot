@@ -357,6 +357,24 @@
   --cal-expired: var(--color-neutral-400);
   --cal-bookable: var(--color-primary-500);
   --cal-bookable-ink: var(--color-primary-800);
+
+  /* The calendar's stacking order (plan 5). Grid internals (3, 30, 40) stay
+     inside the isolated surface row; the dashboard's top bar is 50 and a
+     core modal 9999. */
+  --cal-z-fab: 45;
+  --cal-z-pop: 60;
+  --cal-z-scrim: 65;
+  --cal-z-sheet: 70;
+  --cal-z-editor: 75;
+  --cal-z-toast: 10000;
+
+  /* Phone chrome sizes: the tab bar, the + button, the room lists and the
+     grid leave under it, and the on-screen keyboard's height (written by the
+     calendar hook while the keyboard is open). */
+  --cal-tabs-h: 3.5rem;
+  --cal-fab-size: 3.5rem;
+  --cal-fab-clear: calc(var(--cal-fab-size) + 1.5rem);
+  --cal-kb-inset: 0px;
 }
 
 /* Dark Mode Overrides */

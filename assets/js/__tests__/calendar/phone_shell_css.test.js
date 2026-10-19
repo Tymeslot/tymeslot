@@ -59,3 +59,72 @@ describe("the phone shell", () => {
     expect(hide).toMatch(/display:\s*none/);
   });
 });
+
+describe("the z-index ladder", () => {
+  const variables = read("base/variables.css");
+  const z = (name) => {
+    const match = variables.match(new RegExp(`${name}:\\s*(\\d+);`));
+    expect(match, `${name} is defined`).not.toBeNull();
+    return Number(match[1]);
+  };
+  const coreModal = Number(read("modal.css").match(/z-\[(\d+)\]/)[1]);
+
+  test("the toast sits above core modals, which hold two of the phone's sheets", () => {
+    expect(z("--cal-z-toast")).toBeGreaterThan(coreModal);
+  });
+
+  test("the editor covers sheets, sheets cover their scrim, the scrim covers popovers", () => {
+    expect(z("--cal-z-editor")).toBeGreaterThan(z("--cal-z-sheet"));
+    expect(z("--cal-z-sheet")).toBeGreaterThan(z("--cal-z-scrim"));
+    expect(z("--cal-z-scrim")).toBeGreaterThan(z("--cal-z-pop"));
+  });
+
+  test("the + button stays under the dashboard's top bar (z 50) and every overlay", () => {
+    expect(z("--cal-z-fab")).toBeLessThan(50);
+    expect(z("--cal-z-fab")).toBeLessThan(z("--cal-z-pop"));
+  });
+
+  test("the keyboard inset has a default, so a page without the hook still lays out", () => {
+    expect(variables).toMatch(/--cal-kb-inset:\s*0px;/);
+  });
+});
+
+describe("toasts on every screen", () => {
+  test("the toast region and the hook's notice use the toast token", () => {
+    const [region] = blocks(read("components/calendar-phone.css"), ".cal-toast-region");
+    expect(region).toMatch(/position:\s*fixed/);
+    expect(region).toMatch(/z-index:\s*var\(--cal-z-toast\)/);
+    const notice = blocks(read("components/calendar-editing.css"), ".cal-notice");
+    expect(notice.length).toBeGreaterThan(0);
+    for (const body of notice) expect(body).toMatch(/z-index:\s*var\(--cal-z-toast\)/);
+  });
+
+  test("on a phone toasts rise above the tabs and the + button", () => {
+    const [body] = blocks(phone(), ".cal-toast-region, .cal-notice");
+    expect(body).toMatch(/bottom:\s*calc\(var\(--cal-tabs-h\)\s*\+\s*env\(safe-area-inset-bottom\)\s*\+\s*5\.5rem\)/);
+  });
+
+  test("on a phone toasts move to the top while a sheet, the preview or the editor is open", () => {
+    const selector =
+      ':root.cal-sheet-open :is(.cal-toast-region, .cal-notice), :root:has(#calendar-panel, #calendar-preview, .modal-overlay[style*="display: flex"]) :is(.cal-toast-region, .cal-notice)';
+    const [body] = blocks(phone(), selector);
+    expect(body).toMatch(/top:\s*calc\(env\(safe-area-inset-top\)\s*\+\s*0\.5rem\)/);
+    expect(body).toMatch(/bottom:\s*auto/);
+  });
+});
+
+describe("the tabs and the + button", () => {
+  test("the tab bar clears the home indicator", () => {
+    const [body] = blocks(phone(), ".cal-tabs");
+    expect(body).toMatch(/padding-bottom:\s*env\(safe-area-inset-bottom\)/);
+    expect(body).toMatch(/min-height:\s*calc\(var\(--cal-tabs-h\)\s*\+\s*env\(safe-area-inset-bottom\)\)/);
+  });
+
+  test("the + button floats above the tab bar's end, on its own layer", () => {
+    const [body] = blocks(phone(), ".cal-fab");
+    expect(body).toMatch(/position:\s*fixed/);
+    expect(body).toMatch(/bottom:\s*calc\(var\(--cal-tabs-h\)\s*\+\s*env\(safe-area-inset-bottom\)\s*\+\s*1rem\)/);
+    expect(body).toMatch(/z-index:\s*var\(--cal-z-fab\)/);
+    expect(body).toMatch(/width:\s*var\(--cal-fab-size\)/);
+  });
+});

@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
   gone.
 
   The region is always rendered, so screen readers hear each new message.
+  Its place and layer come from `calendar-phone.css`: above every sheet and
+  modal, and on a phone above the tab bar and the + button.
   """
 
   use TymeslotWeb, :html
@@ -62,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
     ~H"""
     <div
       id="calendar-toast-region"
-      class="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4"
+      class="cal-toast-region pointer-events-none flex justify-center px-4"
       role="status"
       aria-live="polite"
     >

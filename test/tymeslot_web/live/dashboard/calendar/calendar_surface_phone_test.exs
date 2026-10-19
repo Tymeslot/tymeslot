@@ -195,4 +195,126 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       refute has_element?(lv, "#calendar-canvas .cal-skeleton-col:nth-child(2)")
     end
   end
+
+  describe "the phone header" do
+    test "shows the period between 44px previous and next buttons", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-title", "14 to 16 Oct")
+
+      for id <- ~w(calendar-phone-prev calendar-phone-next calendar-phone-today) do
+        assert has_element?(lv, "##{id}[class~='h-11'][class~='min-w-11']")
+      end
+
+      assert has_element?(lv, "#calendar-phone-prev[aria-label='Previous three days']")
+      assert has_element?(lv, "#calendar-phone-next[aria-label='Next three days']")
+    end
+
+    test "next steps by the period shown", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-phone-next") |> render_click()
+
+      assert_patch(lv, ~p"/dashboard/calendar?view=three_day&date=2026-10-17")
+      assert has_element?(lv, "#calendar-phone-title", "17 to 19 Oct")
+    end
+
+    test "Today goes back to today", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+
+      {:ok, lv, _html} =
+        live(phone(conn), ~p"/dashboard/calendar?view=three_day&date=2026-10-30")
+
+      assert has_element?(lv, "#calendar-phone-title", "30 Oct to 1 Nov")
+
+      lv |> element("#calendar-phone-today") |> render_click()
+
+      assert_patch(lv, ~p"/dashboard/calendar?view=three_day&date=2026-10-14")
+    end
+
+    test "is shown on phones only, as the toolbar is hidden there", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-header[class~='sm:hidden']")
+      assert has_element?(lv, "#calendar-toolbar[class~='max-sm:hidden']")
+    end
+
+    test "has a title for a week too, for a phone the server took for wide", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-title", "12 to 18 Oct")
+    end
+  end
+
+  describe "the tabs and the + button" do
+    test "a phone gets Agenda, Day, 3 days and Month, its view current", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      tabs = lv |> element("#calendar-tabs") |> render()
+
+      ids =
+        ~r/id="calendar-tab-(\w+)"/ |> Regex.scan(tabs, capture: :all_but_first) |> List.flatten()
+
+      assert ids == ~w(agenda day three_day month)
+      assert has_element?(lv, "nav#calendar-tabs[aria-label='Views']")
+      assert has_element?(lv, "#calendar-tab-three_day[aria-current='page']", "3 days")
+      refute has_element?(lv, "#calendar-tab-day[aria-current]")
+      assert has_element?(lv, "#calendar-tab-agenda", "Agenda")
+      assert has_element?(lv, "#calendar-tab-month", "Month")
+    end
+
+    test "a tab switches the view where the organiser is", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-tab-month") |> render_click()
+
+      assert_patch(lv, ~p"/dashboard/calendar?view=month&date=2026-10-14")
+      assert has_element?(lv, "#calendar-tab-month[aria-current='page']")
+    end
+
+    test "while a week shows, the 3 days tab is current", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-tab-three_day[aria-current='page']")
+    end
+
+    test "the tab bar is the surface's last child, in normal flow, at least 44px a tab",
+         %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-surface > nav#calendar-tabs:last-child")
+      assert has_element?(lv, "#calendar-tabs[class~='sm:hidden']")
+      assert has_element?(lv, "#calendar-tab-day[class~='min-h-11']")
+    end
+
+    test "the + button opens quick create, as Create does", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(
+               lv,
+               "#calendar-fab[aria-label='New event'][aria-keyshortcuts='c'][phx-click*='calendar:quick-create']"
+             )
+
+      assert has_element?(lv, "#calendar-fab[class~='sm:hidden']")
+    end
+  end
+
+  test "the toast region is placed by the calendar's stylesheet, not by utilities",
+       %{conn: conn} do
+    %{conn: conn} = owner(conn)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(lv, "#calendar-toast-region[class~='cal-toast-region'][role='status']")
+    refute has_element?(lv, "#calendar-toast-region[class~='z-40']")
+    refute has_element?(lv, "#calendar-toast-region[class~='bottom-4']")
+  end
 end

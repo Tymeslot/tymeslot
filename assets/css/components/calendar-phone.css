@@ -18,3 +18,48 @@
     display: none;
   }
 }
+
+/* The toast and the hook's notice sit above everything: sheets, popovers
+   and core modals (which hold two of the phone's sheets). Outside the
+   phone query because the layer is the same at every width; only the
+   placement changes on a phone. */
+.cal-toast-region {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 1rem;
+  z-index: var(--cal-z-toast);
+}
+
+@media (width < 40rem) {
+  /* In normal flow at the foot of the surface; it grows by the home
+     indicator's inset rather than sitting under it. */
+  .cal-tabs {
+    min-height: calc(var(--cal-tabs-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Above the tab bar's right end, in thumb reach. */
+  .cal-fab {
+    position: fixed;
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(var(--cal-tabs-h) + env(safe-area-inset-bottom) + 1rem);
+    z-index: var(--cal-z-fab);
+    width: var(--cal-fab-size);
+    height: var(--cal-fab-size);
+  }
+
+  /* Above the tab bar and the + button. */
+  .cal-toast-region,
+  .cal-notice {
+    bottom: calc(var(--cal-tabs-h) + env(safe-area-inset-bottom) + 5.5rem);
+  }
+
+  /* A sheet, the preview or the full-screen editor covers the bottom of the
+     screen, so a toast moves to the top while one is open. A core modal is
+     open while its overlay is shown (`<.modal>` writes the display inline). */
+  :root.cal-sheet-open :is(.cal-toast-region, .cal-notice),
+  :root:has(#calendar-panel, #calendar-preview, .modal-overlay[style*="display: flex"]) :is(.cal-toast-region, .cal-notice) {
+    top: calc(env(safe-area-inset-top) + 0.5rem);
+    bottom: auto;
+  }
+}

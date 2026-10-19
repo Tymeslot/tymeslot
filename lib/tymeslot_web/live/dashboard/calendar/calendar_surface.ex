@@ -38,6 +38,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
+  alias TymeslotWeb.Dashboard.Calendar.PhoneHeader
+  alias TymeslotWeb.Dashboard.Calendar.PhoneTabs
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
@@ -295,6 +297,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         hidden_count={@hidden_count}
         target={@myself}
       />
+      <PhoneHeader.phone_header
+        view={@view}
+        date={@date}
+        days={@days}
+        today={@today}
+        locale={@locale}
+      />
       <SyncBanner.sync_banner problems={@sync_problems} syncing_ids={@syncing_ids} target={@myself} />
       <div class="cal-row relative isolate flex min-h-0 flex-1">
         <Rail.rail
@@ -357,6 +366,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         time_format={@time_format}
         target={@myself}
       />
+      <%!-- Last, in normal flow: the phone's tab bar (and the + button that floats above it). --%>
+      <PhoneTabs.phone_tabs view={@view} date={@date} />
     </div>
     """
   end

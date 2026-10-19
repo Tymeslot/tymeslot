@@ -325,7 +325,7 @@ button.cal-qc-chip:hover,
   position: fixed;
   bottom: 16px;
   left: 50%;
-  z-index: 70;
+  z-index: var(--cal-z-toast);
   display: flex;
   align-items: center;
   gap: 12px;

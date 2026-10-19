@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
 
   Navigation controls use `Navigation.js/3`, so the grid redraws in the
   browser in the same click that patches the URL.
+
+  Below 40rem it is hidden and `PhoneHeader` and `PhoneTabs` take its place.
   """
 
   use TymeslotWeb, :html
@@ -38,7 +40,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
     ~H"""
     <div
       id="calendar-toolbar"
-      class="flex h-11 shrink-0 items-center gap-2 border-b border-tymeslot-200 bg-white px-3"
+      class="flex h-11 shrink-0 items-center gap-2 border-b border-tymeslot-200 bg-white px-3 max-sm:hidden"
     >
       <.icon_button
         id="calendar-rail-toggle"
