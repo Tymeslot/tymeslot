@@ -20,6 +20,7 @@
  */
 import { DRAG_THRESHOLD, previewBox, slotAt } from "../../calendar/drag.js";
 import { createRange, draftEvent, draftFromRange, draftFromSlot } from "../../calendar/draft.js";
+import { openingLook } from "../../calendar/opening.js";
 import { MINUTES_PER_DAY, formatMinutes, isoFromDay, normaliseEvent } from "../../calendar/time.js";
 
 // What a press on a column must not start on to count as empty.
@@ -193,7 +194,7 @@ export const DraftMixin = {
   startDraft(draft) {
     this.cancelMove?.({ announce: false });
     this.closeList();
-    this.draft = draft;
+    this.draft = this.initialDraft ? this.initialDraft(draft) : draft;
     this.render();
     this.openQuickCreate?.();
   },
@@ -234,6 +235,8 @@ export const DraftMixin = {
     if (!local.length) return events;
     const ids = new Set(local.map((draft) => `draft-${draft.id}`));
     const calendars = this.settings.calendars || [];
-    return [...events.filter((event) => !ids.has(event.id)), ...local.map((draft) => normaliseEvent(draftEvent(draft, calendars)))];
+    const meetingTypes = this.settings.meeting_types || [];
+    const drawn = (draft) => normaliseEvent({ ...draftEvent(draft, calendars), ...openingLook(draft, meetingTypes, this.strings) });
+    return [...events.filter((event) => !ids.has(event.id)), ...local.map(drawn)];
   },
 };

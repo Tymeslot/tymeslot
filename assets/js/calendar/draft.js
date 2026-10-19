@@ -6,9 +6,12 @@
  * A draft holds wall minutes, as time.js does: `start` and `end` (for an
  * all-day draft, midnights, `end` exclusive), plus `allDay`, `calendar` (a
  * `"<integration_id>:<calendar_id>"` key), `title`, `location`, `guests`,
- * `free`, the typed `text`, what the text supplied (`found`), `base` (the
- * slot the text is read against, see parse.js), `memory` (the last timed
- * start and length, for switching all day off again), `status` and `error`.
+ * `free`, the typed `text`, its kind (`kind`: "event" or "open", see
+ * opening.js, with the opening's `meetingType` and `repeat`), where it came
+ * from (`origin`: "next" for C, else null), what the text supplied
+ * (`found`), `base` (the slot the text is read against, see parse.js),
+ * `memory` (the last timed start and length, for switching all day off
+ * again), `status` and `error`.
  *
  * Status: "editing" while quick create is open, "saving" once Save was
  * pressed, "created" once the server accepted it, "panel" once More options
@@ -49,7 +52,7 @@ function remembered(draft) {
   return { ...draft, memory: { startMin: draft.start - dayOf(draft.start) * MINUTES_PER_DAY, length: draft.end - draft.start } };
 }
 
-function rebased(draft) {
+export function rebased(draft) {
   const next = remembered(draft);
   return { ...next, base: baseOf(next), error: null };
 }
@@ -66,6 +69,10 @@ export function draftFromRange(id, range, calendar) {
     location: "",
     guests: [],
     free: false,
+    kind: "event",
+    meetingType: null,
+    repeat: "once",
+    origin: null,
     text: "",
     found: {},
     memory: { startMin: MORNING, length: DEFAULT_LENGTH },

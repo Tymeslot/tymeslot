@@ -253,7 +253,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       time_format: assigns.time_format,
       working_hours: assigns.working_hours,
       calendars: CalendarDirectory.choices(assigns.accounts),
-      default_calendar: CalendarDirectory.default_calendar(assigns.integrations)
+      default_calendar: CalendarDirectory.default_calendar(assigns.integrations),
+      # The meeting types quick create can open for booking (Task 9's list:
+      # active, unarchived, `%{id, name, duration}`); `duration` keeps an
+      # opening at least one meeting long.
+      meeting_types: assigns.bookable_types
     }
   end
 

@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
+  alias TymeslotWeb.Dashboard.Calendar.OpenBooking
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -37,6 +38,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   # The reply only says whether the block was started.
   def handle("calendar:block", params, socket) do
     {reply, socket} = BlockTime.start(socket, params)
+    {:reply, reply, socket}
+  end
+
+  # Quick create's "Open for booking": the reply says whether it opened, or
+  # which field was refused and why (see `OpenBooking`).
+  def handle("calendar:open_booking", params, socket) do
+    {reply, socket} = OpenBooking.open(socket, params)
     {:reply, reply, socket}
   end
 

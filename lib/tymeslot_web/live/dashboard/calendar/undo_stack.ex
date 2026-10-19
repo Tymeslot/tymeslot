@@ -5,7 +5,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.UndoStack do
   `Manipulation.undo/1`): `:timing` for a move or resize, `:edit` for a
   change made in the side panel (`PanelEdits.undo/2`), `:delete` for a
   delete still inside its undo window, `:create` for an event just created
-  (undone by removing it, see `Creation.undo/2`), `:gone` for a delete that
+  (undone by removing it, see `Creation.undo/2`), `:opening` for bookable
+  times opened from quick create (undone by restoring the old hours, see
+  `OpenBooking.undo/2`), `:gone` for a delete that
   has since run (Ctrl Z on it only says it is too late, so it does not reach
   an older change by mistake). Entries that can no longer be undone (a write
   that failed) are dropped with `drop/2`.

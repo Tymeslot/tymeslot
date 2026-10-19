@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   alias TymeslotWeb.Dashboard.Calendar.BlockTime
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
+  alias TymeslotWeb.Dashboard.Calendar.OpenBooking
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -181,6 +182,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   # A block from the bookable layer names no event, so the moving check
   # above does not apply (see `BlockTime`).
   defp undo_entry(socket, %{kind: :block} = entry), do: BlockTime.undo(socket, entry)
+
+  # An opening names no event either (see `OpenBooking`).
+  defp undo_entry(socket, %{kind: :opening} = entry), do: OpenBooking.undo(socket, entry)
 
   defp undo_entry(socket, %{kind: :timing} = entry) do
     %{current_user: user, integrations: integrations} = socket.assigns

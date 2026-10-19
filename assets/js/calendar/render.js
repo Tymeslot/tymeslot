@@ -388,7 +388,7 @@ function draftBlock(segment, event, { strings, settings, scale, colWidth, measur
   // A one-row draft keeps its title readable as an event block does: the
   // start time only, and none when the title would lose its room to it.
   const time = !short ? `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}` : shortRowFits({ width }, title, start, measureWidth) ? start : "";
-  const classes = ["cal-ev", "is-draft", event.pending && "is-pending", event.free && "is-free", short && "is-short"].filter(Boolean).join(" ");
+  const classes = ["cal-ev", "is-draft", event.opening && "is-opening", event.pending && "is-pending", event.free && "is-free", short && "is-short"].filter(Boolean).join(" ");
   return (
     `<div class="${classes}" data-draft-id="${escapeHtml(event.id)}" aria-hidden="true" style="top:${top}px;height:${height}px;--l:1px;--w:${width}px;--z:${z};--cal-ev:${colour(event.colour)}">` +
     `<span class="cal-ev-title">${escapeHtml(title)}</span>` +

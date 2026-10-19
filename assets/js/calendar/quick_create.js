@@ -1,14 +1,18 @@
 /**
  * HTML for the quick-create popover, as pure functions of its state:
- * `{draft, strings, timeFormat, calendars}` (calendar/draft.js has the
- * draft's shape). The hook (hooks/calendar_canvas/create.js) renders the
- * shell once when it opens and the body on every change, so the field keeps
- * its caret while the chips follow what was typed.
+ * `{draft, strings, timeFormat, calendars, meetingTypes}` (calendar/draft.js
+ * has the draft's shape, calendar/opening.js the opening's). The hook
+ * (hooks/calendar_canvas/create.js) renders the shell once when it opens and
+ * the head and body on every change, so the field keeps its caret while the
+ * chips follow what was typed.
  *
- * The chips are real controls: date, start and end open the browser's own
- * picker on a hidden input next to each, all day is a toggle and the
- * calendar a select. Place and guests come from the text and are shown, not
- * edited, here. Every value the organiser typed is escaped.
+ * The head is the kind switch, "Event | Open for booking", offered when the
+ * organiser has a meeting type to open. An event's chips are real controls:
+ * date, start and end open the browser's own picker on a hidden input next
+ * to each, all day is a toggle and the calendar a select. Place and guests
+ * come from the text and are shown, not edited, here. An opening hides the
+ * field and shows its meeting type, date, start and end, and "Just this once
+ * | Every week". Every value the organiser typed is escaped.
  */
 import { colour, dateLabel, escapeHtml } from "./render.js";
 import { MINUTES_PER_DAY, formatMinutes, isoFromDay } from "./time.js";
@@ -19,9 +23,10 @@ const clock = (minute) => {
   const rest = ((minute % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   return `${pad(Math.floor(rest / 60))}:${pad(rest % 60)}`;
 };
+const locked = (draft) => draft.status === "saving" || draft.status === "opening";
 
 // Which chip a refused field belongs to.
-const FIELD_CHIPS = { date: ["start", "all_day"], start: ["start"], end: ["end"], calendar: ["calendar"], place: ["location"], guests: ["guests"] };
+const FIELD_CHIPS = { date: ["start", "all_day"], start: ["start"], end: ["end"], calendar: ["calendar"], place: ["location"], guests: ["guests"], meetingType: ["meeting_type"] };
 
 function invalid(chip, error, allDay = false) {
   const named = error?.field && (FIELD_CHIPS[chip]?.includes(error.field) || (chip === "date" && allDay && error.field === "end"));
@@ -44,6 +49,19 @@ function dateText(draft, strings) {
   return last > first ? `${label} – ${dateLabel(isoFromDay(last), strings)}` : label;
 }
 
+// Date, start and end, shared by both kinds.
+function whenChips(state, found = {}) {
+  const { draft, strings, timeFormat } = state;
+  let html = picker("date", "date", strings.date_chip, dateText(draft, strings), isoFromDay(dayOf(draft.start)), state, found.date);
+  if (!draft.allDay) {
+    html +=
+      picker("start", "time", strings.start_chip, formatMinutes(draft.start % MINUTES_PER_DAY, timeFormat), clock(draft.start), state, found.time) +
+      `<span class="cal-qc-sep" aria-hidden="true">${escapeHtml(strings.time_to)}</span>` +
+      picker("end", "time", strings.end_chip, formatMinutes(draft.end % MINUTES_PER_DAY, timeFormat), clock(draft.end), state, found.time);
+  }
+  return html;
+}
+
 function calendarChip({ draft, strings, calendars }) {
   if (!calendars.length) return "";
   const current = calendars.find((c) => c.key === draft.calendar) || calendars[0];
@@ -61,20 +79,26 @@ function textChip(chip, label, text, error) {
 }
 
 function chips(state) {
-  const { draft, strings, timeFormat } = state;
+  const { draft, strings } = state;
   const found = draft.found || {};
-  let html = picker("date", "date", strings.date_chip, dateText(draft, strings), isoFromDay(dayOf(draft.start)), state, found.date);
-  if (!draft.allDay) {
-    html +=
-      picker("start", "time", strings.start_chip, formatMinutes(draft.start % MINUTES_PER_DAY, timeFormat), clock(draft.start), state, found.time) +
-      `<span class="cal-qc-sep" aria-hidden="true">${escapeHtml(strings.time_to)}</span>` +
-      picker("end", "time", strings.end_chip, formatMinutes(draft.end % MINUTES_PER_DAY, timeFormat), clock(draft.end), state, found.time);
-  }
+  let html = whenChips(state, found);
   html += `<button type="button" class="cal-qc-chip${draft.allDay && found.time ? " is-parsed" : ""}" data-qc-allday data-qc-key="allday" aria-pressed="${draft.allDay}">${escapeHtml(strings.all_day_chip)}</button>`;
   html += calendarChip(state);
   if (draft.location) html += textChip("place", strings.place_chip, draft.location, draft.error);
   if (draft.guests.length) html += textChip("guests", strings.guests_chip, draft.guests.join(", "), draft.error);
   return `<div class="cal-qc-chips">${html}</div>`;
+}
+
+function openChips(state) {
+  const { draft, strings, meetingTypes } = state;
+  const current = meetingTypes.find((type) => type.id === draft.meetingType) || meetingTypes[0];
+  const options = meetingTypes.map((type) => `<option value="${escapeHtml(String(type.id))}"${type === current ? " selected" : ""}>${escapeHtml(type.name)}</option>`).join("");
+  return (
+    `<div class="cal-qc-chips">` +
+    `<label class="cal-qc-chip cal-qc-type"><select data-qc-input="meetingType" data-qc-key="meeting-type" aria-label="${escapeHtml(strings.meeting_type_chip)}"${invalid("meetingType", draft.error)}>${options}</select></label>` +
+    whenChips(state) +
+    `</div>`
+  );
 }
 
 function showAs({ draft, strings }) {
@@ -86,25 +110,59 @@ function showAs({ draft, strings }) {
   );
 }
 
+function repeatRow({ draft, strings }) {
+  const option = (repeat, label) =>
+    `<button type="button" data-qc-repeat="${repeat}" data-qc-key="repeat-${repeat}" aria-pressed="${draft.repeat === repeat}">${escapeHtml(label)}</button>`;
+  return (
+    `<div class="cal-qc-row"><span class="cal-qc-label" id="calendar-qc-repeat">${escapeHtml(strings.repeat_label)}</span>` +
+    `<div class="cal-qc-seg" role="group" aria-labelledby="calendar-qc-repeat">${option("once", strings.just_this_once)}${option("weekly", strings.every_week)}</div></div>`
+  );
+}
+
 function saveLabel({ draft, strings }) {
   if (draft.status === "saving") return strings.saving_draft;
   return draft.guests.length ? strings.save_and_invite : strings.save;
 }
 
+function errorLine(draft) {
+  return draft.error ? `<p id="calendar-qc-error" class="cal-qc-error" role="alert">${escapeHtml(draft.error.message)}</p>` : "";
+}
+
+function foot({ draft, strings }, label, { more }) {
+  const off = locked(draft) ? " disabled" : "";
+  return (
+    `<div class="cal-qc-foot">` +
+    (more ? `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${off}>${escapeHtml(strings.more_options)}</button>` : "") +
+    `<button type="button" class="cal-qc-save action-button action-button--primary action-button--sm" data-qc-save data-qc-key="save"${off}>${escapeHtml(label)}</button>` +
+    `</div>`
+  );
+}
+
+const hint = (text) => `<p id="calendar-qc-hint" class="cal-qc-hint">${escapeHtml(text)}</p>`;
+
+function eventBody(state) {
+  return chips(state) + showAs(state) + errorLine(state.draft) + foot(state, saveLabel(state), { more: true }) + hint(state.strings.quick_create_hint);
+}
+
+function openBody(state) {
+  const { draft, strings } = state;
+  const label = draft.status === "saving" ? strings.saving_draft : strings.open_save;
+  return openChips(state) + repeatRow(state) + errorLine(draft) + foot(state, label, { more: false }) + hint(strings.open_hint);
+}
+
+const opening = (state) => state.draft.kind === "open" && (state.meetingTypes || []).length > 0;
+
+// The kind switch above the field; nothing without a meeting type to open.
+export function renderQuickHead({ draft, strings, meetingTypes = [] }) {
+  if (!meetingTypes.length) return "";
+  const off = locked(draft) ? " disabled" : "";
+  const option = (kind, label) => `<button type="button" data-qc-kind="${kind}" data-qc-key="kind-${kind}" aria-pressed="${draft.kind === kind}"${off}>${escapeHtml(label)}</button>`;
+  return `<div class="cal-qc-seg cal-qc-kind" role="group" aria-label="${escapeHtml(strings.kind_label)}">${option("event", strings.kind_event)}${option("open", strings.kind_open)}</div>`;
+}
+
 // Everything under the field; re-rendered on every change.
 export function renderQuickBody(state) {
-  const { draft, strings } = state;
-  const locked = draft.status === "saving" || draft.status === "opening";
-  return (
-    chips(state) +
-    showAs(state) +
-    (draft.error ? `<p id="calendar-qc-error" class="cal-qc-error" role="alert">${escapeHtml(draft.error.message)}</p>` : "") +
-    `<div class="cal-qc-foot">` +
-    `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${locked ? " disabled" : ""}>${escapeHtml(strings.more_options)}</button>` +
-    `<button type="button" class="cal-qc-save action-button action-button--primary action-button--sm" data-qc-save data-qc-key="save"${locked ? " disabled" : ""}>${escapeHtml(saveLabel(state))}</button>` +
-    `</div>` +
-    `<p id="calendar-qc-hint" class="cal-qc-hint">${escapeHtml(strings.quick_create_hint)}</p>`
-  );
+  return opening(state) ? openBody(state) : eventBody(state);
 }
 
 // The whole popover, rendered once when it opens.
@@ -113,9 +171,10 @@ export function renderQuickCreate(state) {
   return (
     `<div id="calendar-quick-create" class="cal-qc" role="dialog" aria-modal="false" aria-labelledby="calendar-qc-title">` +
     `<h2 id="calendar-qc-title" class="sr-only">${escapeHtml(strings.quick_create_label)}</h2>` +
+    `<div class="cal-qc-head" data-qc-head>${renderQuickHead(state)}</div>` +
     `<label for="calendar-qc-field" class="sr-only">${escapeHtml(strings.quick_create_label)}</label>` +
     `<input id="calendar-qc-field" class="cal-qc-field" type="text" autocomplete="off" enterkeyhint="done" ` +
-    `placeholder="${escapeHtml(strings.quick_create_placeholder)}" aria-describedby="calendar-qc-hint" value="${escapeHtml(draft.text)}">` +
+    `placeholder="${escapeHtml(strings.quick_create_placeholder)}" aria-describedby="calendar-qc-hint" value="${escapeHtml(draft.text)}"${opening(state) ? " hidden" : ""}>` +
     `<div class="cal-qc-body" data-qc-body>${renderQuickBody(state)}</div>` +
     `</div>`
   );

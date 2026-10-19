@@ -451,3 +451,20 @@ button.cal-qc-chip:hover,
     box-shadow: var(--shadow-lg);
   }
 }
+
+/* Quick create's kind switch: Event / Open for booking, across the popover. */
+.cal-qc-head {
+  margin-bottom: 8px;
+}
+
+.cal-qc-head:empty {
+  display: none;
+}
+
+.cal-qc-kind {
+  display: flex;
+}
+
+.cal-qc-kind button {
+  flex: 1;
+}

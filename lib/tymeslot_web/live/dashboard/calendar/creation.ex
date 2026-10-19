@@ -167,16 +167,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     |> settle(draft, params || title, result)
   end
 
-  defp remember(socket, draft, result) do
-    if landed?(result),
-      do:
-        assign(
-          socket,
-          :created_drafts,
-          Enum.take([draft | socket.assigns.created_drafts], @remembered)
-        ),
-      else: socket
-  end
+  defp remember(socket, draft, result),
+    do: if(landed?(result), do: remember_draft(socket, draft), else: socket)
+
+  @doc """
+  Records that the draft `draft` landed, so the same id sent again is not
+  acted on twice (see `taken?/2`). Only the last #{@remembered} are kept.
+  """
+  @spec remember_draft(socket(), String.t()) :: socket()
+  def remember_draft(socket, draft),
+    do:
+      assign(
+        socket,
+        :created_drafts,
+        Enum.take([draft | socket.assigns.created_drafts], @remembered)
+      )
 
   defp landed?({:ok, _created}), do: true
   defp landed?({:error, %{retry: :queued}}), do: true

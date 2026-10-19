@@ -18,7 +18,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
   @spec build(String.t()) :: map()
   def build(locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      locale |> strings() |> Map.merge(request_strings()) |> Map.merge(BookableStrings.strings())
+      locale
+      |> strings()
+      |> Map.merge(request_strings())
+      |> Map.merge(opening_strings())
+      |> Map.merge(BookableStrings.strings())
     end)
   end
 
@@ -109,6 +113,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       create_unconfirmed:
         dgettext("dashboard_calendar_editing", "Couldn't confirm the save. Check your calendar."),
       dismiss: dgettext("dashboard_calendar", "Dismiss")
+    }
+  end
+
+  # Quick create's "Open for booking" kind (see `OpenBooking`).
+  defp opening_strings do
+    %{
+      kind_label: dgettext("dashboard_calendar_booking", "What to add"),
+      kind_event: dgettext("dashboard_calendar_booking", "Event"),
+      kind_open: dgettext("dashboard_calendar_booking", "Open for booking"),
+      meeting_type_chip: dgettext("dashboard_calendar_booking", "Meeting type"),
+      repeat_label: dgettext("dashboard_calendar_booking", "Repeat"),
+      just_this_once: dgettext("dashboard_calendar_booking", "Just this once"),
+      every_week: dgettext("dashboard_calendar_booking", "Every week"),
+      open_save: dgettext("dashboard_calendar_booking", "Open for booking"),
+      open_hint:
+        dgettext(
+          "dashboard_calendar_booking",
+          "Guests can book this time on your booking page. The day's hours widen to include it."
+        ),
+      open_draft_title:
+        dgettext("dashboard_calendar_booking", "Open for %{name}", name: "%{name}"),
+      open_refused:
+        dgettext("dashboard_calendar_booking", "Couldn't open that time. Please try again."),
+      open_unconfirmed:
+        dgettext(
+          "dashboard_calendar_booking",
+          "Couldn't confirm the change. Check your bookable times."
+        )
     }
   end
 

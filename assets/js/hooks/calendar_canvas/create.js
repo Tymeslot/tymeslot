@@ -20,6 +20,9 @@
  * goes and a notice asks the organiser to check their calendar, where the
  * reload shows the event if it landed. "Save and invite"
  * replaces Save when the text names guests, because saving emails them.
+ * The kind switch above the field turns the draft into an opening for a
+ * meeting type (calendar_canvas/opening.js), which hides the field and saves
+ * through `calendar:open_booking` instead.
  * More options pushes `calendar:more_options` and, once the panel opened,
  * hands the draft to it. Escape, or a press outside, cancels; Escape
  * returns focus to where it was. Tab cycles inside the popover. A draft
@@ -31,7 +34,7 @@
  */
 import { applyChip, applyText, draftFromRange, nextSlot, toPayload } from "../../calendar/draft.js";
 import { placePopover } from "../../calendar/popover.js";
-import { renderQuickBody, renderQuickCreate } from "../../calendar/quick_create.js";
+import { renderQuickBody, renderQuickCreate, renderQuickHead } from "../../calendar/quick_create.js";
 import { MINUTES_PER_DAY, isoFromDay, periodDays } from "../../calendar/time.js";
 import { newDraftId } from "./draft.js";
 import { MODALS, TYPING } from "./keys.js";
@@ -42,7 +45,7 @@ const FOLLOW_MS = 400;
 const REPLY_MS = 15000;
 // How long the notice about an unconfirmed save stays, as the server's toast does.
 const NOTICE_MS = 10000;
-const FOCUSABLE = 'input:not([tabindex="-1"]), select, button:not([disabled]):not([hidden])';
+const FOCUSABLE = 'input:not([tabindex="-1"]):not([hidden]), select, button:not([disabled]):not([hidden])';
 
 const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 // Draft ids are ours (calendar_canvas/draft.js: letters and digits), safe in a selector.
@@ -97,19 +100,19 @@ export const CreateMixin = {
   quickCreateNext() {
     if (!this.settings || !this.clock) return;
     if (this.quick) {
-      this.quickField().focus({ preventScroll: true });
+      this.quickFocus();
       return;
     }
     const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
     const range = nextSlot(this.nowMinute(), days, [...this.cache.events.values()], undefined, this.currentScale().firstMinute);
     // The preview (rendered by LiveView) would otherwise stay beside the draft.
     if (document.getElementById("calendar-preview")) this.pushEventTo(this.el, "calendar:close_preview", { refocus: "false" });
-    this.startDraft(draftFromRange(newDraftId(), range, this.defaultCalendar()));
+    this.startDraft({ ...draftFromRange(newDraftId(), range, this.defaultCalendar()), origin: "next" });
     this.followDraft(0);
   },
 
   quickState() {
-    return { draft: this.draft, strings: this.strings, timeFormat: this.settings.time_format, calendars: this.settings.calendars || [] };
+    return { draft: this.draft, strings: this.strings, timeFormat: this.settings.time_format, calendars: this.settings.calendars || [], meetingTypes: this.settings.meeting_types || [] };
   },
 
   parseOptions() {
@@ -132,11 +135,18 @@ export const CreateMixin = {
       document.addEventListener("pointerdown", this.quickOutside);
     }
     this.placeQuickCreate();
-    this.quickField().focus({ preventScroll: true });
+    this.quickFocus();
   },
 
   quickField() {
     return this.quick.element.querySelector("#calendar-qc-field");
+  },
+
+  // The field, or the kind switch while an opening hides the field.
+  quickFocus() {
+    const field = this.quickField();
+    const target = field.hidden ? this.quick.element.querySelector('[data-qc-key="kind-open"]') : field;
+    target?.focus({ preventScroll: true });
   },
 
   // Forgets the popover; the draft is the caller's business.
@@ -181,7 +191,8 @@ export const CreateMixin = {
   quickChange(e) {
     const chip = e.target.dataset?.qcInput;
     if (!chip || this.draft?.status !== "editing") return;
-    this.updateDraft(applyChip(this.draft, chip, e.target.value));
+    if (chip === "meetingType") return this.changeOpening(chip, e.target.value);
+    return this.updateDraft(applyChip(this.draft, chip, e.target.value));
   },
 
   quickClick(e) {
@@ -189,6 +200,8 @@ export const CreateMixin = {
     if (!target || !this.draft) return;
     if (target.dataset.qcPick) return this.openPicker(target);
     if (this.draft.status !== "editing") return undefined;
+    if (target.dataset.qcKind) return this.toKind(target.dataset.qcKind);
+    if (target.dataset.qcRepeat) return this.changeOpening("repeat", target.dataset.qcRepeat);
     if (target.hasAttribute("data-qc-allday")) return this.updateDraft(applyChip(this.draft, "allDay", !this.draft.allDay));
     if (target.dataset.qcFree) return this.updateDraft(applyChip(this.draft, "free", target.dataset.qcFree === "true"));
     if (target.hasAttribute("data-qc-save")) return this.saveQuickCreate();
@@ -253,8 +266,10 @@ export const CreateMixin = {
     if (!this.quick || !this.draft) return;
     const key = document.activeElement?.closest?.("[data-qc-key]")?.dataset.qcKey;
     this.quick.element.querySelector("[data-qc-body]").innerHTML = renderQuickBody(this.quickState());
+    this.quick.element.querySelector("[data-qc-head]").innerHTML = renderQuickHead(this.quickState());
     const field = this.quickField();
     field.readOnly = this.draft.status !== "editing";
+    field.hidden = this.draft.kind === "open";
     if (this.draft.error?.field === "title") {
       field.setAttribute("aria-invalid", "true");
       field.setAttribute("aria-describedby", "calendar-qc-error calendar-qc-hint");
@@ -268,6 +283,8 @@ export const CreateMixin = {
       if (wrap) this.showInput(wrap.querySelector("[data-qc-pick]"), wrap.querySelector("[data-qc-input]"));
     }
     if (key) this.quick.element.querySelector(`[data-qc-key="${key}"]`)?.focus({ preventScroll: true });
+    // An opening hides the field; focus never stays on it.
+    if (field.hidden && document.activeElement === field) this.quickFocus();
     this.placeQuickCreate();
   },
 
@@ -343,6 +360,7 @@ export const CreateMixin = {
 
   saveQuickCreate() {
     if (this.draft?.status !== "editing") return;
+    if (this.draft.kind === "open") return this.saveOpening();
     this.updateDraft({ ...this.draft, status: "saving", error: null });
     const { id } = this.draft;
     this.pushGuarded("calendar:create", toPayload(this.draft), (reply) => this.createReplied(id, reply), () => this.createLost(id));
@@ -352,14 +370,14 @@ export const CreateMixin = {
   // event (and emailed its guests), so saving again could create it twice.
   // The draft goes; the reload after a reconnect, or the server's next
   // payload, shows the event if it landed.
-  createLost(id) {
+  createLost(id, text = this.strings.create_unconfirmed) {
     if (this.draft?.id !== id) return;
     const returnTo = this.quick?.returnTo;
     this.closeQuickCreate();
     this.draft = null;
     this.render();
     this.restoreQuickFocus(returnTo);
-    this.showNotice(this.strings.create_unconfirmed, id);
+    this.showNotice(text, id);
   },
 
   // A message of the hook's own, shaped like the surface's toast, for news
@@ -419,7 +437,7 @@ export const CreateMixin = {
     this.draft = { ...this.draft, status: "editing", error: { field, message: message || this.strings.create_refused } };
     this.render();
     this.refreshQuick();
-    this.quickField()?.focus({ preventScroll: true });
+    if (this.quick) this.quickFocus();
   },
 
   moreOptions() {

@@ -45,6 +45,7 @@ import { CreateMixin } from "./calendar_canvas/create.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
+import { OpeningMixin } from "./calendar_canvas/opening.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
 import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
@@ -85,6 +86,7 @@ export const CalendarCanvas = {
   ...DragMixin,
   ...DraftMixin,
   ...CreateMixin,
+  ...OpeningMixin,
   ...KeysMixin,
   ...ZoomMixin,
   ...BookableMixin,
