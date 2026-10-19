@@ -210,6 +210,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       assert has_element?(lv, "#calendar-phone-calendars[class~='bg-amber-50']", "1 hidden")
     end
 
+    test "a long period wraps to a second line instead of being cut", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-title span[class~='line-clamp-2']", "14 to 16 Oct")
+      refute has_element?(lv, "#calendar-phone-title span[class~='truncate']")
+    end
+
     test "shows the period between 44px previous and next buttons", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")

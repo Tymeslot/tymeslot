@@ -60,7 +60,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         phx-value-menu="date_sheet"
         phx-target={@target}
       >
-        <span class="truncate">{@title}</span>
+        <%!-- Wraps to a second line rather than cutting the period mid-word. --%>
+        <span class="line-clamp-2 min-w-0 text-balance text-center leading-tight">{@title}</span>
         <.icon name="hero-chevron-down-mini" class="h-4 w-4 shrink-0 text-tymeslot-500" />
       </button>
       <button
