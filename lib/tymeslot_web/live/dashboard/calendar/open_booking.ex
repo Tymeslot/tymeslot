@@ -14,7 +14,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
 
   Undo puts the old hours back (`undo/2`). A draft id sent again after its
   opening landed (a reply the hook lost) is accepted without a second write,
-  as `Creation` does for creates.
+  as `Creation` does for creates. Neither redraws the bookable layer itself:
+  every availability write broadcasts `{:availability_changed, user_id}`,
+  and the surface reloads the layer on it.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -27,7 +29,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
   alias Tymeslot.CalendarGrid.Moves
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Toast
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
@@ -53,21 +54,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
   def open(socket, _params), do: {refused(:invalid), socket}
 
   @doc """
-  Undoes an opening: the hours it widened are put back as they were. When
-  they cannot be (changed since on the Availability page, say), the toast
-  says where to change them.
+  Undoes an opening: the hours it widened are put back as they were, but
+  only while they still hold what the opening wrote. When they have changed
+  since (on the Availability page, say), nothing is written and the toast
+  says so and where to change them; any other failure says where too.
   """
   @spec undo(socket(), map()) :: socket()
   def undo(socket, %{kind: :opening, result: result, name: name}) do
     case Opening.restore(socket.assigns.current_user.id, result) do
       :ok ->
-        socket
-        |> Toast.show(
+        Toast.show(
+          socket,
           dgettext("dashboard_calendar_booking", "Bookable times for %{name} put back.",
             name: name
           )
         )
-        |> BookableLayer.load()
+
+      {:error, :changed} ->
+        Toast.show(
+          socket,
+          dgettext(
+            "dashboard_calendar_booking",
+            "Couldn't put the bookable times back. They have changed since. Change them on the Availability page."
+          )
+        )
 
       {:error, _reason} ->
         Toast.show(
@@ -126,11 +136,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
     end
   end
 
-  # Whole minutes, as a create's instants are.
+  # Whole minutes, as a create's instants are, in the years a create may use.
   defp instant(wall, timezone) do
     case Moves.wall_to_utc(wall, timezone) do
-      {:ok, at} -> {:ok, DateTime.truncate(at, :second)}
-      :error -> {:error, :invalid_time}
+      {:ok, at} ->
+        if at.year in Moves.years(),
+          do: {:ok, DateTime.truncate(at, :second)},
+          else: {:error, :invalid_time}
+
+      :error ->
+        {:error, :invalid_time}
     end
   end
 
@@ -153,7 +168,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
     |> assign(:undo, UndoStack.push(socket.assigns.undo, entry))
     |> push_event("calendar:create-settled", %{draft: draft})
     |> Toast.show(opened_text(socket, name, result), undo: true, key: entry.key)
-    |> BookableLayer.load()
   end
 
   defp meeting_type_name(user_id, id) do
@@ -174,8 +188,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
         finish: finish(socket, result)
       )
 
-  defp opened_text(socket, name, %{kind: :weekly, day_of_week: day} = result),
-    do:
+  defp opened_text(socket, name, %{kind: :weekly, day_of_week: day} = result) do
+    weekly =
       dgettext(
         "dashboard_calendar_booking",
         "Open for %{name} every %{weekday}, %{start} to %{finish}",
@@ -183,6 +197,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
         weekday: LocaleFormat.format_weekday_name(day, locale(), :full),
         start: clock(socket, result.start_time),
         finish: finish(socket, result)
+      )
+
+    and_on_date(socket, weekly, result.previous.override)
+  end
+
+  # The slot's date had hours of its own, so they were widened too.
+  defp and_on_date(_socket, text, nil), do: text
+
+  defp and_on_date(socket, text, %{date: date, hours: hours}),
+    do:
+      dgettext(
+        "dashboard_calendar_booking",
+        "%{opened}, and on %{date}, %{start} to %{finish}",
+        opened: text,
+        date: LocaleFormat.format_short_weekday_date(date, locale()),
+        start: clock(socket, hours.start_time),
+        finish: finish(socket, hours)
       )
 
   defp finish(socket, %{end_time: time, ends_next_day: true}),
@@ -217,6 +248,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
 
   defp refusal(reason) when reason in [:before_start, :invalid_range],
     do: {"end", dgettext("dashboard_calendar_booking", "The time must end after it starts.")}
+
+  defp refusal(:widened_too_long),
+    do:
+      {nil,
+       dgettext(
+         "dashboard_calendar_booking",
+         "That would make the day's hours longer than 24 hours. Change them on the Availability page."
+       )}
 
   defp refusal(:too_long),
     do: {"end", dgettext("dashboard_calendar_booking", "Open at most 24 hours at a time.")}

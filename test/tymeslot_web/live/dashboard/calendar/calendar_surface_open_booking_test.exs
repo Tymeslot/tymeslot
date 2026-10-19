@@ -16,9 +16,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
   @moduletag :live
 
   import Tymeslot.Factory
+  import TymeslotWeb.BookableLayerHelpers, only: [await_bookable: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
+  alias Tymeslot.Availability.DateOverrides
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
@@ -50,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       )
 
     {:ok, lv, _html} = live(context.conn, ~p"/dashboard/calendar")
-    Map.merge(context, %{lv: lv, schedule: schedule, intro: intro})
+    Map.merge(context, %{lv: lv, schedule: schedule, intro: intro, profile: profile})
   end
 
   defp evening(meeting_type, changes \\ %{}) do
@@ -73,6 +75,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
     do: AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule.id, date)
 
   defp monday(schedule), do: WeeklySchedule.get_day_availability(schedule.id, 1)
+
+  # A pushed layer whose Monday 19 October window ends at `finish`.
+  defp monday_until?(%{windows: windows}, finish),
+    do: Enum.any?(windows, &(&1.end == "2026-10-19T" <> finish))
+
+  defp custom_hours(schedule, start_time, end_time) do
+    insert(:availability_override,
+      schedule: schedule,
+      date: ~D[2026-10-19],
+      override_type: "custom_hours",
+      start_time: start_time,
+      end_time: end_time
+    )
+  end
 
   describe "what the hook is given" do
     test "the meeting types that can be opened, active and unarchived only", %{
@@ -158,6 +174,48 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
     end
   end
 
+  describe "the bookable layer" do
+    test "redraws after an opening and after its undo", %{lv: lv, intro: intro} do
+      open_booking(lv, evening(intro))
+      assert_reply(lv, %{accepted: true})
+      await_bookable(lv, &monday_until?(&1, "18:30"))
+
+      lv |> element("#calendar-undo") |> render_click()
+      layer = await_bookable(lv, &monday_until?(&1, "17:00"))
+      refute monday_until?(layer, "18:30")
+    end
+  end
+
+  describe "undo after a change elsewhere" do
+    test "leaves hours changed since and says so", %{
+      lv: lv,
+      intro: intro,
+      schedule: schedule,
+      profile: profile
+    } do
+      open_booking(lv, evening(intro))
+      assert_reply(lv, %{accepted: true})
+
+      {:ok, _override} =
+        DateOverrides.upsert(profile.id, schedule.id, %{
+          date: ~D[2026-10-19],
+          override_type: "custom_hours",
+          start_time: ~T[08:00:00],
+          end_time: ~T[20:00:00]
+        })
+
+      lv |> element("#calendar-undo") |> render_click()
+
+      assert has_element?(
+               lv,
+               "#calendar-toast",
+               "Couldn't put the bookable times back. They have changed since. Change them on the Availability page."
+             )
+
+      assert %{start_time: ~T[08:00:00], end_time: ~T[20:00:00]} = override(schedule)
+    end
+  end
+
   describe "every week" do
     test "widens the weekday's hours and says so", %{lv: lv, intro: intro, schedule: schedule} do
       open_booking(lv, evening(intro, %{"repeat" => "weekly"}))
@@ -174,6 +232,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
                "#calendar-toast",
                "Open for Intro call every Monday, 09:00 to 18:30"
              )
+    end
+
+    test "also widens that date's own hours and names them", %{
+      lv: lv,
+      intro: intro,
+      schedule: schedule
+    } do
+      custom_hours(schedule, ~T[10:00:00], ~T[12:00:00])
+
+      open_booking(lv, evening(intro, %{"repeat" => "weekly"}))
+      assert_reply(lv, %{accepted: true})
+
+      assert %{start_time: ~T[10:00:00], end_time: ~T[18:30:00]} = override(schedule)
+
+      assert has_element?(
+               lv,
+               "#calendar-toast",
+               "Open for Intro call every Monday, 09:00 to 18:30, and on Mon 19 Oct, 10:00 to 18:30"
+             )
+    end
+
+    test "undo puts the weekday and that date's own hours back", %{
+      lv: lv,
+      intro: intro,
+      schedule: schedule
+    } do
+      custom_hours(schedule, ~T[10:00:00], ~T[12:00:00])
+      open_booking(lv, evening(intro, %{"repeat" => "weekly"}))
+      assert_reply(lv, %{accepted: true})
+
+      lv |> element("#calendar-undo") |> render_click()
+
+      assert %{start_time: ~T[09:00:00], end_time: ~T[17:00:00]} = monday(schedule)
+      assert %{start_time: ~T[10:00:00], end_time: ~T[12:00:00]} = override(schedule)
     end
 
     test "undo puts the old weekly hours back", %{lv: lv, intro: intro, schedule: schedule} do
@@ -226,6 +318,56 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       })
 
       assert override(schedule) == nil
+    end
+
+    test "a slot over 24 hours", %{lv: lv, intro: intro, schedule: schedule} do
+      open_booking(lv, evening(intro, %{"end" => "2026-10-20T18:00"}))
+
+      assert_reply(lv, %{accepted: false, field: "end", error: "Open at most 24 hours at a time."})
+
+      assert override(schedule) == nil
+    end
+
+    test "a slot that would make the day longer than 24 hours", %{
+      lv: lv,
+      intro: intro,
+      schedule: schedule
+    } do
+      open_booking(
+        lv,
+        evening(intro, %{"start" => "2026-10-19T23:00", "end" => "2026-10-20T10:00"})
+      )
+
+      assert_reply(lv, %{
+        accepted: false,
+        field: nil,
+        error:
+          "That would make the day's hours longer than 24 hours. Change them on the Availability page."
+      })
+
+      assert override(schedule) == nil
+    end
+
+    test "a time that can't be read, or a year the calendar can't show", %{
+      lv: lv,
+      intro: intro,
+      schedule: schedule
+    } do
+      for changes <- [
+            %{"start" => "2026-10-19T25:00"},
+            %{"start" => "2201-10-19T17:00", "end" => "2201-10-19T18:30"}
+          ] do
+        open_booking(lv, evening(intro, changes))
+
+        assert_reply(lv, %{
+          accepted: false,
+          field: "start",
+          error: "That date or time can't be read."
+        })
+      end
+
+      assert override(schedule) == nil
+      assert override(schedule, ~D[2201-10-19]) == nil
     end
 
     test "the edit rate limit", %{lv: lv, user: user, intro: intro, schedule: schedule} do
