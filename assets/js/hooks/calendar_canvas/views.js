@@ -37,7 +37,6 @@ import { MODALS, TYPING } from "./keys.js";
 
 const VIEW_KEYS = { d: "day", x: "three_day", w: "week", m: "month", a: "agenda" };
 const MONTH_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
-const BLOCKS = ".cal-col .cal-ev[data-event-id]";
 // The month's weekday row, above its six weeks.
 const MONTH_HEAD = 28;
 const MIN_CELL = 48;
@@ -119,6 +118,8 @@ export const ViewsMixin = {
     const list = this.el.querySelector("[data-view-scroll]");
     const same = this.drawnView && this.drawnView.view === this.view && this.drawnView.date === this.date;
     this.viewScrollTop = list && same ? list.scrollTop : 0;
+    // The arrows' last day belongs to the month it was in.
+    if (!same) this.monthFocus = null;
     this.drawnView = { view: this.view, date: this.date };
   },
 
@@ -169,16 +170,23 @@ export const ViewsMixin = {
     const days = this.viewDays();
     if (!days.length || this.agendaFinished(days)) return;
     const date = this.date;
+    // A late reply must not clear the busy flag of a newer request.
+    const ticket = (this.agendaTicket = (this.agendaTicket || 0) + 1);
     this.agendaLoading = Date.now();
     this.pushEventTo(this.el, "calendar:agenda_more", { through: days[days.length - 1] }, (reply) => {
-      this.agendaLoading = 0;
-      if (reply?.done) this.agendaDone = date;
+      if (this.agendaTicket === ticket) this.agendaLoading = 0;
       // The server may answer against a newer agenda's window when the organiser
       // navigated before the reply: such a payload is ignored.
       const payload = reply?.payload?.view === "agenda" && reply.payload.date === this.date ? reply.payload : null;
       if (payload) this.cache = applyPayload(this.cache, payload);
-      // A refusal changes nothing to draw: the server's own push follows.
-      if (!payload && !reply?.done) return;
+      // An answer counts when its payload was taken, or when it carries none for the date asked about.
+      const accepted = Boolean(payload) || (Boolean(reply?.done) && !reply.payload && this.date === date);
+      if (accepted && reply?.done) this.agendaDone = date;
+      // A refusal or a stray changes nothing to draw: the end is watched again.
+      if (!accepted) {
+        if (this.view === "agenda") this.watchAgendaEnd();
+        return;
+      }
       // An answer for an agenda the organiser has since left is kept, not drawn.
       if (this.view !== "agenda" || this.date !== date) return;
       if (this.overlayOpen()) this.dirty = true;
@@ -219,6 +227,8 @@ export const ViewsMixin = {
   },
 
   gotoPeriod(view, date) {
+    // The preview (rendered by LiveView) would otherwise stay over the new period.
+    if (document.getElementById("calendar-preview")) this.pushEventTo(this.el, "calendar:close_preview", { refocus: "false" });
     this.navigate({ view, date });
     this.pushEventTo(this.el, "calendar:goto", { view, date });
   },
@@ -237,7 +247,7 @@ export const ViewsMixin = {
     const target = e.target;
     if (target?.isContentEditable || target?.closest?.(`${TYPING}, [role="dialog"], dialog`) || document.querySelector(MODALS)) return;
     // M on a focused event is the event's own key: the keyboard move (keys.js) or nothing.
-    if (view === "month" && target?.closest?.(BLOCKS)) return;
+    if (view === "month" && target?.closest?.("[data-event-id]") && this.el.contains(target)) return;
     e.preventDefault();
     const from = this.pending ?? { view: this.view, date: this.date };
     if (from.view === view) return;

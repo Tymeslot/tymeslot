@@ -55,7 +55,7 @@ function wideWeeks(weeks, cellHeight, ctx) {
       // is explicit, so the picture does not depend on this order.
       week.days.forEach((iso, i) => {
         html += cell(iso, i, ctx);
-        for (const bar of week.bars) if (bar.startIndex === i) html += monthBar(bar, byId.get(bar.id), ctx);
+        for (const bar of week.bars) if (bar.startIndex === i) html += monthBar(bar, byId.get(bar.id), iso, ctx);
         const first = 2 + week.barRows;
         week.chips[iso].forEach((e, k) => (html += monthChip(e, iso, i, first + k, ctx)));
         if (week.more[iso]) html += moreButton(iso, i, first + week.chips[iso].length, week.more[iso], week.warn[iso], ctx);
@@ -83,7 +83,7 @@ function eventClasses(base, e, past, flag, extra = []) {
   return [base, ...extra, past && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
 }
 
-function monthBar(bar, e, { settings, strings, now }) {
+function monthBar(bar, e, iso, { settings, strings, now }) {
   const flag = requestFlag(e, strings);
   const past = e.endMin <= now;
   const first = dateLabel(isoFromDay(e.startDay), strings);
@@ -92,7 +92,7 @@ function monthBar(bar, e, { settings, strings, now }) {
   const label = [e.title, flag && requestAria(e, strings), when, span, past && strings.ended].filter(Boolean).join(", ");
   const classes = eventClasses("cal-mbar", e, past, flag, [bar.cutStart && "cut-start", bar.cutEnd && "cut-end"]);
   return (
-    `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" aria-label="${escapeHtml(label)}" ` +
+    `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
     `style="grid-column:${bar.startIndex + 1} / ${bar.endIndex + 2};grid-row:${bar.lane + 2};--cal-ev:${colour(e.colour)}">` +
     `${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}</button>`
   );
@@ -107,7 +107,7 @@ function monthChip(e, iso, column, row, { settings, strings, now }) {
   const start = e.startMin < dayNumber(iso) * MINUTES_PER_DAY ? "" : formatMinutes(e.startMin % MINUTES_PER_DAY, tf);
   const label = [e.title, flag && requestAria(e, strings), dateLabel(iso, strings), range, e.free && !e.expired && strings.shown_as_free, past && strings.ended, e.attention && strings.waiting_to_sync].filter(Boolean).join(", ");
   return (
-    `<button type="button" class="${eventClasses("cal-mchip", e, past, flag)}" data-event-id="${escapeHtml(e.id)}" aria-label="${escapeHtml(label)}" ` +
+    `<button type="button" class="${eventClasses("cal-mchip", e, past, flag)}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
     `style="grid-column:${column + 1};grid-row:${row};--cal-ev:${colour(e.colour)}">` +
     `<span class="cal-mchip-dot" aria-hidden="true"></span>` +
     (start ? `<span class="cal-mchip-time">${escapeHtml(start)}</span>` : "") +

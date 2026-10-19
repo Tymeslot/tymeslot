@@ -328,3 +328,142 @@ test("outside the time grid a typed day elsewhere moves the draft but not the pe
   expect(pushes(hook, "calendar:goto")).toEqual([]);
   expect(popover()).not.toBeNull();
 });
+
+describe("agenda loading across view changes", () => {
+  const more = (extra = {}) => ({
+    done: false,
+    payload: { view: "agenda", date: "2026-10-14", range: { from: "2026-12-09", to: "2027-01-06" }, now: "2026-10-14T08:30", reset: false, settings, events: [], ...extra },
+  });
+
+  test("a stray payload re-arms the observer, so loading goes on", () => {
+    const { hook } = mountHook(agendaPayload());
+    reachEnd();
+    const before = FakeObserver.last;
+
+    replyTo(hook, "calendar:agenda_more")(more({ date: "2026-11-02" }));
+
+    expect(FakeObserver.last).not.toBe(before);
+    expect(hook.agendaBusy()).toBe(false);
+  });
+
+  test("done with a stray payload does not end the agenda", () => {
+    const { el, hook } = mountHook(agendaPayload());
+    reachEnd();
+    replyTo(hook, "calendar:agenda_more")({ ...more({ date: "2026-11-02" }), done: true });
+    expect(el.querySelector("[data-agenda-sentinel]")).not.toBeNull();
+  });
+
+  test("done for an agenda the organiser has since moved on from does not end this one", () => {
+    const { el, hook } = mountHook(agendaPayload());
+    reachEnd();
+    hook.navigate({ view: "agenda", date: "2026-10-15" });
+    replyTo(hook, "calendar:agenda_more")({ done: true, payload: null });
+    expect(el.querySelector("[data-agenda-sentinel]")).not.toBeNull();
+  });
+
+  test("a late reply does not clear a newer request's busy flag", () => {
+    vi.useFakeTimers();
+    const { hook } = mountHook(agendaPayload());
+    reachEnd();
+    const first = replyTo(hook, "calendar:agenda_more");
+    vi.advanceTimersByTime(10_001);
+    reachEnd();
+    expect(pushes(hook, "calendar:agenda_more")).toHaveLength(2);
+
+    first({ done: false, payload: null });
+
+    expect(hook.agendaBusy()).toBe(true);
+  });
+
+  test("the observer is disconnected on leaving the agenda and on unmount", () => {
+    const { hook } = mountHook(agendaPayload());
+    const observer = FakeObserver.last;
+    expect(observer.target).not.toBeNull();
+    press(document.body, "w");
+    hook.navigate({ view: "week", date: "2026-10-14" });
+    expect(observer.target).toBeNull();
+
+    const second = mountHook(agendaPayload());
+    const next = FakeObserver.last;
+    expect(next.target).not.toBeNull();
+    second.hook.destroyed();
+    expect(next.target).toBeNull();
+  });
+
+  test("the minute's redraw keeps focus on the copy of a multi-day event in its own day", () => {
+    const { el, hook } = mountHook(agendaPayload({ events: [event("night", "Night shift", "2026-10-14T20:00", "2026-10-15T08:00")] }));
+    const rows = el.querySelectorAll('[data-event-id="night"]');
+    expect(rows).toHaveLength(2);
+    rows[1].focus();
+
+    hook.render();
+
+    expect(document.activeElement.dataset.eventId).toBe("night");
+    expect(document.activeElement.closest("[data-agenda-day]").dataset.agendaDay).toBe("2026-10-15");
+  });
+});
+
+describe("month focus and chips", () => {
+  test("another date starts the tab stop afresh", () => {
+    const { el, hook } = mountHook(monthPayload());
+    const wed = el.querySelector('[data-month-day="2026-10-14"]');
+    wed.focus();
+    press(wed, "ArrowRight");
+
+    hook.navigate({ view: "month", date: "2026-10-20" });
+
+    expect(el.querySelector('button[data-month-day][tabindex="0"]').dataset.monthDay).toBe("2026-10-20");
+  });
+
+  test("chips carry their day, so a redraw finds the right copy", () => {
+    const { el } = mountHook(monthPayload());
+    expect(el.querySelector('.cal-mchip[data-event-id="event-3"]').dataset.day).toBe("2026-10-15");
+  });
+});
+
+describe("view letters, more cases", () => {
+  test("M on a focused agenda row is the row's key, not the month view", () => {
+    const { el, hook } = mountHook(agendaPayload());
+    const row = el.querySelector('.cal-agenda button[data-event-id="event-1"]');
+    row.focus();
+    press(row, "m");
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+
+  test("a view change closes an open preview", () => {
+    const { hook } = mountHook();
+    const preview = document.createElement("div");
+    preview.id = "calendar-preview";
+    document.body.appendChild(preview);
+    press(document.body, "d");
+    expect(pushes(hook, "calendar:close_preview")).toEqual([{ refocus: "false" }]);
+  });
+
+  test.each([
+    ["a keyboard move", (hook) => (hook.moving = { id: "event-1" })],
+    ["a drag", (hook) => (hook.drag = {})],
+  ])("are ignored during %s", (_name, start) => {
+    const { hook } = mountHook();
+    start(hook);
+    press(document.body, "d");
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+
+  test("are ignored while a modal is open", () => {
+    const { hook } = mountHook();
+    const modal = document.createElement("div");
+    modal.id = "calendar-delete-confirm";
+    document.body.appendChild(modal);
+    press(document.body, "d");
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+
+  test("are ignored in an editable region", () => {
+    const { hook } = mountHook();
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    document.body.appendChild(editable);
+    press(editable, "d");
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+  });
+});

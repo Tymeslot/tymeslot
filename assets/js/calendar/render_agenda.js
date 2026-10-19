@@ -34,7 +34,7 @@ export function renderAgendaDay(group, opts) {
     (today ? ` <span class="cal-agenda-today">${escapeHtml(strings.today)}</span>` : "") +
     `</h2>`;
   const rows = items.map((item) => `<li>${row(item, day, opts)}</li>`).join("");
-  return `<li class="cal-agenda-day${today ? " is-today" : ""}" data-agenda-day="${day}">${heading}<ul class="cal-agenda-items">${rows}</ul></li>`;
+  return `<li class="cal-agenda-day${today ? " is-today" : ""}" data-agenda-day="${day}" data-day="${day}">${heading}<ul class="cal-agenda-items">${rows}</ul></li>`;
 }
 
 function row(item, day, { strings, timeFormat, now }) {
