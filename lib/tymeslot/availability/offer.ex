@@ -26,35 +26,14 @@ defmodule Tymeslot.Availability.Offer do
   capture it whole and nothing here depends on the web layer.
   """
 
-  alias Tymeslot.Availability.Bookability
-  alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, TimeSlots}
-  alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
+  alias Tymeslot.Availability.{Calculate, GroupSlots, Schedules}
+  alias Tymeslot.Availability.Offer.{Range, Request}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.BookingLimits.Checker
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.{RescheduleContext, SeatMoveContext}
 
-  @default_duration_minutes 30
-
-  # A day. The duration can come from a URL slug, which is visitor input, so an
-  # unbounded parse would let `/:username/99999/book` hold a multi-day slot.
-  defp max_duration_minutes, do: Reach.max_meeting_minutes()
-
-  # How far outside the dates being rendered the booking fetch reaches. A
-  # slot starting on the last rendered date can run for up to a day and keep
-  # its buffer after it, and the window's own bounds are UTC while the days
-  # are the booker's, up to a timezone offset away; nothing further out can
-  # touch a slot inside.
-  defp busy_window_padding_days, do: Reach.utc_padding_days()
-
-  # The longest range `slots_for_range/4` answers: six weeks, the month grid's
-  # display range. A week view asks for seven days; the bound keeps a caller's
-  # mistake from computing a year of slots.
-  @max_range_days 42
+  @default_duration_minutes Request.default_duration_minutes()
+  @max_range_days Range.max_range_days()
 
   @typedoc """
   What a booking page is showing, and to whom.
@@ -114,14 +93,14 @@ defmodule Tymeslot.Availability.Offer do
           {:ok, [term()]} | {:error, any()}
   def slots_for_date(%{profile: %{user_id: user_id} = profile} = request, date_string, duration) do
     with {:ok, date} <- Date.from_iso8601(date_string) do
-      if demo?(request) do
+      if Request.demo?(request) do
         Demo.get_available_slots(
           date_string,
           duration,
           request.user_timezone,
           user_id,
           profile,
-          context(request)
+          Request.demo_context(request)
         )
       else
         free_slots(request, date, duration)
@@ -149,13 +128,13 @@ defmodule Tymeslot.Availability.Offer do
   @spec slots_for_range(request(), Date.t(), Date.t(), String.t() | integer() | nil) ::
           {:ok, %{String.t() => [term()]}} | {:error, any()}
   def slots_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
-    with :ok <- check_range(start_date, end_date) do
-      if demo?(request) do
-        collect_days(start_date, end_date, fn date ->
+    with :ok <- Range.check_range(start_date, end_date) do
+      if Request.demo?(request) do
+        Range.collect_days(start_date, end_date, fn date ->
           slots_for_date(request, Date.to_iso8601(date), duration)
         end)
       else
-        free_slots_in_range(request, start_date, end_date, duration)
+        Range.free_slots_in_range(request, start_date, end_date, duration)
       end
     end
   end
@@ -187,21 +166,7 @@ defmodule Tymeslot.Availability.Offer do
           String.t() | integer() | nil,
           [{:events, :fresh | :cached}]
         ) :: {:ok, %{Date.t() => [DateTime.t()]}} | {:error, any()}
-  def starts_in_range(request, %Date{} = start_date, %Date{} = end_date, duration, opts \\ []) do
-    with :ok <- check_range(start_date, end_date),
-         {:ok, %{starts: starts}} <-
-           range_starts(request, start_date, end_date, duration, opts[:events] || :fresh) do
-      {:ok, starts}
-    end
-  end
-
-  defp check_range(start_date, end_date) do
-    cond do
-      Date.compare(start_date, end_date) == :gt -> {:error, :invalid_range}
-      Date.diff(end_date, start_date) >= @max_range_days -> {:error, :range_too_long}
-      true -> :ok
-    end
-  end
+  defdelegate starts_in_range(request, start_date, end_date, duration, opts \\ []), to: Range
 
   @doc """
   Which days in `start_date..end_date` (inclusive) have at least one free
@@ -219,14 +184,14 @@ defmodule Tymeslot.Availability.Offer do
         end_date,
         duration_minutes
       ) do
-    if demo?(request) do
+    if Request.demo?(request) do
       Demo.get_range_availability(
         user_id,
         start_date,
         end_date,
         request.user_timezone,
         profile,
-        context(request),
+        Request.demo_context(request),
         duration_minutes
       )
     else
@@ -250,7 +215,7 @@ defmodule Tymeslot.Availability.Offer do
   def duration_minutes(%{duration_minutes: minutes}, _fallback) when is_integer(minutes),
     do: minutes
 
-  def duration_minutes(_meeting_type, fallback), do: bounded_duration(fallback)
+  def duration_minutes(_meeting_type, fallback), do: Request.bounded_duration(fallback)
 
   @doc """
   The config the slot engine computes a page's offer from: the scheduling
@@ -263,156 +228,42 @@ defmodule Tymeslot.Availability.Offer do
           (DateTime.t() -> boolean()) | nil,
           pos_integer() | nil
         ) :: map()
-  def config(schedule, meeting_type, limit_checker, duration_minutes) do
-    schedule
-    |> Schedules.config(meeting_type)
-    |> Map.merge(%{limit_checker: limit_checker, duration_minutes: duration_minutes})
-  end
+  defdelegate config(schedule, meeting_type, limit_checker, duration_minutes), to: Request
 
   defp free_slots(%{profile: %{user_id: user_id} = profile} = request, date, duration) do
-    moving = moving_meeting(request)
+    moving = Request.moving_meeting(request)
 
-    with {:ok, events} <- booking_window_events(request, date) do
-      duration_minutes = bounded_duration(duration)
+    with {:ok, events} <- Request.booking_window_events(request, date) do
+      duration_minutes = Request.bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
-      limit_checker = limit_checker(request, moving_uid(moving), date, date)
+      limit_checker = Request.limit_checker(request, Request.moving_uid(moving), date, date)
 
       config =
         meeting_type
         |> Schedules.resolve_for(profile)
-        |> config(meeting_type, limit_checker, duration_minutes)
+        |> Request.config(meeting_type, limit_checker, duration_minutes)
 
-      busy = busy_periods(events, user_id, date, date, moving)
+      busy = Request.busy_periods(events, user_id, date, date, moving)
 
       with {:ok, starts} <-
              Calculate.available_starts(
                date,
                duration_minutes,
                request.user_timezone,
-               owner_timezone(profile),
+               Request.owner_timezone(profile),
                busy,
                config
              ) do
         {:ok,
-         offered_slots(starts, meeting_type, date, %{
+         Request.offered_slots(starts, meeting_type, date, %{
            user_timezone: request.user_timezone,
-           owner_timezone: owner_timezone(profile),
+           owner_timezone: Request.owner_timezone(profile),
            events: busy,
            config: config
          })}
       end
     end
-  end
-
-  # `free_slots/3` for every day of a range, labelled from `range_starts/5`.
-  # Everything that does not depend on the day read once: the calendar (whose
-  # fetch covers the whole booking window whatever date it is given), the
-  # proven reschedule meeting, the booking-limit counts over the range, and
-  # the schedule's weekly hours, overrides and time off for the range and a
-  # day either side, which
-  # `Calculate.available_starts/6` then finds already in the config. The busy
-  # set is merged over the range, so each day sees every booking and event
-  # that `free_slots/3` would merge for it alone.
-  defp free_slots_in_range(request, start_date, end_date, duration) do
-    with {:ok, %{starts: starts, context: context}} <-
-           range_starts(request, start_date, end_date, duration, :fresh) do
-      {:ok,
-       Map.new(starts, fn {date, day_starts} ->
-         {Date.to_iso8601(date), offered_slots(day_starts, request[:meeting_type], date, context)}
-       end)}
-    end
-  end
-
-  # The engine's starts for every day of the range, keyed by date, with the
-  # busy set and config they were computed against (a group type's seat
-  # overlay needs both). `:fresh` asks the calendar; `:cached` is the
-  # booking-window read the day and month views use.
-  defp range_starts(
-         %{profile: %{user_id: user_id} = profile} = request,
-         start_date,
-         end_date,
-         duration,
-         events_source
-       ) do
-    moving = moving_meeting(request)
-
-    with {:ok, events} <- range_events(request, {start_date, end_date}, events_source) do
-      duration_minutes = bounded_duration(duration)
-      meeting_type = request[:meeting_type]
-      limit_checker = limit_checker(request, moving_uid(moving), start_date, end_date)
-
-      config =
-        meeting_type
-        |> Schedules.resolve_for(profile)
-        |> config(meeting_type, limit_checker, duration_minutes)
-
-      config =
-        Calculate.prefetch_schedule_data(
-          config,
-          config.schedule_id,
-          Date.add(start_date, -1),
-          Date.add(end_date, 1)
-        )
-
-      busy = busy_periods(events, user_id, start_date, end_date, moving)
-
-      day_starts = fn date ->
-        Calculate.available_starts(
-          date,
-          duration_minutes,
-          request.user_timezone,
-          owner_timezone(profile),
-          busy,
-          config
-        )
-      end
-
-      with {:ok, starts} <- collect_days(start_date, end_date, day_starts, & &1) do
-        {:ok,
-         %{
-           starts: starts,
-           context: %{
-             user_timezone: request.user_timezone,
-             owner_timezone: owner_timezone(profile),
-             events: busy,
-             config: config
-           }
-         }}
-      end
-    end
-  end
-
-  # The fresh read gets the bookability rule the cached one is stored with.
-  defp range_events(
-         %{profile: %{user_id: user_id}} = request,
-         {start_date, _end_date} = dates,
-         :fresh
-       ) do
-    with {:ok, events} <-
-           CalendarEvents.get_calendar_events_from_context(
-             start_date,
-             user_id,
-             calendar_context(request)
-           ) do
-      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
-    end
-  end
-
-  defp range_events(request, {start_date, _end_date}, :cached),
-    do: booking_window_events(request, start_date)
-
-  # `day_result` for every day of the range, keyed by `key.(date)`; the first
-  # day that fails fails the range.
-  defp collect_days(start_date, end_date, day_result, key \\ &Date.to_iso8601/1) do
-    start_date
-    |> Date.range(end_date)
-    |> Enum.reduce_while({:ok, %{}}, fn date, {:ok, acc} ->
-      case day_result.(date) do
-        {:ok, value} -> {:cont, {:ok, Map.put(acc, key.(date), value)}}
-        {:error, _reason} = error -> {:halt, error}
-      end
-    end)
   end
 
   defp free_days(
@@ -422,8 +273,8 @@ defmodule Tymeslot.Availability.Offer do
          duration_minutes
        ) do
     meeting_type = request[:meeting_type]
-    moving = moving_meeting(request)
-    moving_uid = moving_uid(moving)
+    moving = Request.moving_meeting(request)
+    moving_uid = Request.moving_uid(moving)
 
     # Keyed on the proven uid only, so a mover's view is never served to
     # anyone else and an arbitrary link value cannot mint an entry of its own.
@@ -439,23 +290,23 @@ defmodule Tymeslot.Availability.Offer do
       )
 
     AvailabilityCache.get_or_compute_events(cache_key, fn ->
-      with {:ok, events} <- booking_window_events(request, start_date) do
+      with {:ok, events} <- Request.booking_window_events(request, start_date) do
         config =
           meeting_type
           |> Schedules.resolve_for(profile)
-          |> config(
+          |> Request.config(
             meeting_type,
-            limit_checker(request, moving_uid, start_date, end_date),
+            Request.limit_checker(request, moving_uid, start_date, end_date),
             duration_minutes || @default_duration_minutes
           )
 
-        busy = busy_periods(events, user_id, start_date, end_date, moving)
+        busy = Request.busy_periods(events, user_id, start_date, end_date, moving)
 
         with {:ok, base_map} <-
                Calculate.range_availability(
                  start_date,
                  end_date,
-                 owner_timezone(profile),
+                 Request.owner_timezone(profile),
                  request.user_timezone,
                  busy,
                  config
@@ -463,7 +314,7 @@ defmodule Tymeslot.Availability.Offer do
           {:ok,
            GroupSlots.overlay_range(base_map, meeting_type, start_date, end_date, %{
              user_timezone: request.user_timezone,
-             owner_timezone: owner_timezone(profile),
+             owner_timezone: Request.owner_timezone(profile),
              events: busy,
              config: config
            })}
@@ -471,173 +322,4 @@ defmodule Tymeslot.Availability.Offer do
       end
     end)
   end
-
-  # Only a group type's times carry seat counts; everything else is the plain
-  # labels the booking page has always read. Every start is listed under the
-  # date it begins on, so a bare label plus the page's date is the instant.
-  defp offered_slots(starts, %MeetingTypeSchema{} = meeting_type, date, context) do
-    if MeetingTypeSchema.group?(meeting_type),
-      do: GroupSlots.enrich_day_slots(starts, meeting_type, date, context),
-      else: labels(starts)
-  end
-
-  defp offered_slots(starts, _meeting_type, _date, _context), do: labels(starts)
-
-  defp labels(starts), do: Enum.map(starts, &TimeSlots.format_datetime_slot/1)
-
-  # The provider fetch behind this is window-shaped, not month-shaped:
-  # `Events.get_calendar_events/3` ignores the date it is given and always asks
-  # for `today .. today + advance_booking_days`. Folding it under a key built
-  # from the 42-day *display* range would therefore store the same event list
-  # once per rendered month and guarantee a miss for anything that moves the
-  # calendar, worst of all the next-available forward search, which re-enters
-  # `days_in_range/4` once per hop and would otherwise buy an identical round
-  # trip to the host's calendar each time, on exactly the fully booked hosts
-  # the search exists to help.
-  #
-  # So the events get their own entry, keyed on the user alone because that is
-  # the fetch's entire input. The folded map keeps its display-range key: the
-  # fold is what actually differs between hops. A date click reads the same
-  # entry, so picking a day after the month view costs no provider round trip
-  # either. Its slots can therefore be up to the cache's lifetime old; the
-  # booking submit re-reads the calendars uncached
-  # (`Tymeslot.Bookings.CalendarCheck`), and that read is what refuses a slot
-  # taken in the meantime.
-  #
-  # Errors stay uncached, for the reason `get_or_compute_events/2` exists at
-  # all: a timed-out calendar must be retried on the next request, not pinned
-  # empty for the TTL. `Tymeslot.Availability.changed/1` drops this
-  # entry with the folded maps, so a calendar sync cannot leave the two
-  # disagreeing about how fresh they are.
-  #
-  # The events are cached with the bookability rule already applied
-  # (`Tymeslot.Availability.Bookability`): an override and a calendar's
-  # settings both call `changed/1`, which drops this entry.
-  defp booking_window_events(%{profile: %{user_id: user_id}} = request, start_date) do
-    AvailabilityCache.get_or_compute_events(
-      AvailabilityCache.booking_window_events_key(user_id),
-      fn ->
-        with {:ok, events} <-
-               CalendarEvents.get_calendar_events_from_context(
-                 start_date,
-                 user_id,
-                 calendar_context(request)
-               ) do
-          {:ok, Bookability.apply_to_window(events, user_id)}
-        end
-      end
-    )
-  end
-
-  # Everything that occupies the host's time across `first_date..last_date`:
-  # their connected calendars, plus their own live bookings, which reach the
-  # page this way rather than waiting to be mirrored onto a provider calendar
-  # (see `Tymeslot.Meetings.BusyPeriods`). `moving` is then excluded from the
-  # merged set, dropping the rescheduling meeting along with its mirror so that
-  # a booking is never a conflict with itself.
-  defp busy_periods(events, user_id, first_date, last_date, moving) do
-    events
-    |> Meetings.merge_busy_periods(
-      user_id,
-      utc_day_start(Date.add(first_date, -busy_window_padding_days())),
-      utc_day_start(Date.add(last_date, 1 + busy_window_padding_days()))
-    )
-    |> Meetings.reject_calendar_event_mirrors(moving)
-  end
-
-  defp utc_day_start(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
-
-  # Nil when the host has no booking limits configured, keeping the common path
-  # free of extra queries. The dates are the booker's, so the counts cover
-  # every host date a slot under them can fall on. The meeting being moved is
-  # left out of the counts, exactly as the reschedule submit leaves it out.
-  defp limit_checker(
-         %{profile: %{user_id: user_id} = profile} = request,
-         moving_uid,
-         start_date,
-         end_date
-       ) do
-    Checker.build_slot_checker(
-      user_id,
-      profile,
-      request[:meeting_type],
-      start_date,
-      end_date,
-      exclude_uid: moving_uid,
-      booker_timezone: request.user_timezone
-    )
-  end
-
-  # The meeting a reschedule page is moving, once
-  # `Orchestrator.get_meeting_for_reschedule/2` proves it is this organiser's
-  # and still movable (the lookup the submit's own flow relies on); nil for
-  # anything else. The link parameter is visitor input, so it is never used
-  # unverified.
-  #
-  # The whole record, not just its uid, because the page has to leave the
-  # meeting out of two different counts: the host's booking limits, keyed on
-  # the uid, and the events read back from their connected calendar, where the
-  # meeting appears as the provider event Tymeslot wrote and is matched by
-  # whichever identifier that provider family preserves.
-  #
-  # A seat move vacates its meeting only when the mover is its last seat;
-  # `RescheduleSeat.vacated_meeting/2` is the submit's own rule for that.
-  defp moving_meeting(%{reschedule_seat_token: token, profile: %{user_id: user_id}} = request)
-       when is_binary(token) and is_integer(user_id) do
-    case request[:seat_move] do
-      %SeatMoveContext{token: ^token, seat: seat} -> RescheduleSeat.vacated_meeting(seat, user_id)
-      _not_loaded -> RescheduleSeat.vacated_meeting(token, user_id)
-    end
-  end
-
-  # The page's own load of the meeting, when it names the same meeting for
-  # the same organiser; a fetch then needs no lookup of its own.
-  defp moving_meeting(%{
-         reschedule_uid: uid,
-         reschedule: %RescheduleContext{
-           uid: uid,
-           meeting: %{organizer_user_id: user_id} = meeting
-         },
-         profile: %{user_id: user_id}
-       })
-       when is_binary(uid) and is_integer(user_id),
-       do: meeting
-
-  defp moving_meeting(%{reschedule_uid: uid, profile: %{user_id: user_id}})
-       when is_binary(uid) and is_integer(user_id) do
-    case Orchestrator.get_meeting_for_reschedule(uid, user_id) do
-      {:ok, meeting} -> meeting
-      {:error, _not_movable} -> nil
-    end
-  end
-
-  defp moving_meeting(_request), do: nil
-
-  defp moving_uid(nil), do: nil
-  defp moving_uid(%{uid: uid}), do: uid
-
-  defp demo?(%{profile: profile} = request) do
-    Demo.demo_profile?(profile) || request[:demo_mode?] == true
-  end
-
-  # The context map the calendar fetch reads. Its contract names this one key
-  # only, so the demo provider's extra keys stay out of it.
-  defp calendar_context(%{profile: profile}), do: %{organizer_profile: profile}
-
-  # The context map the demo provider reads.
-  defp context(request) do
-    request
-    |> calendar_context()
-    |> Map.merge(%{demo_mode: request[:demo_mode?] == true, meeting_type: request[:meeting_type]})
-  end
-
-  defp owner_timezone(profile), do: Profiles.timezone(profile)
-
-  defp bounded_duration(minutes) when is_integer(minutes) and minutes > 0,
-    do: min(minutes, max_duration_minutes())
-
-  defp bounded_duration(slug) when is_binary(slug),
-    do: slug |> TimeSlots.parse_duration() |> min(max_duration_minutes())
-
-  defp bounded_duration(_other), do: @default_duration_minutes
 end
