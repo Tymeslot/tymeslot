@@ -90,6 +90,39 @@ describe("wide", () => {
     expect(more.getAttribute("aria-label")).toContain("includes something that needs your attention");
   });
 
+  test("a timed event of a day or more is labelled with its times, not all day", () => {
+    const long = ev("event-10", "Retreat", "2026-10-14T09:00", "2026-10-15T10:00");
+    const bar = draw({ events: [long] }).querySelector('.cal-mbar[data-event-id="event-10"]');
+    expect(bar.getAttribute("aria-label")).toBe("Retreat, 09:00–10:00, Wed 14 Oct – Thu 15 Oct");
+  });
+
+  test("a day's chips and +N follow its cell in document order", () => {
+    const holder = draw();
+    const cell = holder.querySelector('[data-month-cell="2026-10-14"]');
+    expect(cell.nextElementSibling.dataset.eventId).toBe("event-1");
+    expect(holder.querySelector('[data-month-cell="2026-10-13"]').nextElementSibling.dataset.eventId).toBe("event-3");
+    const crowded = draw({ cellHeight: 48 }).querySelector('[data-month-cell="2026-10-14"]');
+    expect(crowded.nextElementSibling.dataset.monthMore).toBe("2026-10-14");
+  });
+
+  test("a bar crossing two weeks is cut at the edges", () => {
+    const trip = ev("event-11", "Trip", "2026-10-15", "2026-10-21", { all_day: true });
+    const bars = [...draw({ events: [trip] }).querySelectorAll('.cal-mbar[data-event-id="event-11"]')];
+    expect(bars).toHaveLength(2);
+    expect(bars[0].classList.contains("cut-end")).toBe(true);
+    expect(bars[0].classList.contains("cut-start")).toBe(false);
+    expect(bars[1].classList.contains("cut-start")).toBe(true);
+    expect(bars[1].classList.contains("cut-end")).toBe(false);
+  });
+
+  test("weeks can start on Sunday", () => {
+    const sunday = periodDays("month", "2026-10-14", "sunday", true);
+    const holder = draw({ days: sunday });
+    expect([...holder.querySelectorAll(".cal-month-weekday")].map((d) => d.textContent)[0]).toBe("Sun");
+    expect(sunday[0]).toBe("2026-09-27");
+    expect(holder.querySelector("[data-month-cell]").dataset.monthCell).toBe("2026-09-27");
+  });
+
   test("titles are escaped", () => {
     const holder = draw({ events: [ev("event-7", "<img src=x>", "2026-10-15T09:00", "2026-10-15T10:00")] });
     expect(holder.querySelector("img")).toBeNull();

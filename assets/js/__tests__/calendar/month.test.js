@@ -23,6 +23,10 @@ test("monthWeeks cuts the month into six weeks of seven days", () => {
   expect(weeks[0][0]).toBe("2026-09-28");
 });
 
+test("monthWeeks follows a Sunday week start", () => {
+  expect(monthWeeks(periodDays("month", "2026-10-16", "sunday", true))[0][0]).toBe("2026-09-27");
+});
+
 describe("monthLayout", () => {
   test("long events run as bars across the week, timed ones are chips in start order", () => {
     const conference = allDay("2026-10-13", "2026-10-16");
@@ -89,6 +93,14 @@ describe("monthLayout", () => {
     expect(row.barRows).toBe(1);
     expect(ids(row.bars)).toEqual([first.id]);
     expect([row.more["2026-10-12"], row.more["2026-10-13"], row.more[WED]]).toEqual([0, 1, 1]);
+  });
+
+  test("a hidden bar that needs attention warns on the days it covers", () => {
+    const first = allDay("2026-10-12", "2026-10-14");
+    const second = allDay("2026-10-13", "2026-10-15", { attention: true });
+    const [row] = monthLayout([week], [first, second], { maxLanes: 2 });
+    expect(row.warn["2026-10-13"]).toBe(true);
+    expect(row.warn["2026-10-12"]).toBe(false);
   });
 
   test("drafts are left out", () => {

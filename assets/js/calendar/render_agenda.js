@@ -28,10 +28,10 @@ export function renderAgendaDay(group, opts) {
   const [, month, date] = day.split("-").map(Number);
   const heading =
     `<h2 class="cal-agenda-date"${today ? ' aria-current="date"' : ""}>` +
-    `<span class="cal-agenda-weekday">${escapeHtml(strings.weekdays[isoWeekday(dayNumber(day)) - 1])}</span>` +
-    `<span class="cal-agenda-num">${date}</span>` +
+    `<span class="cal-agenda-weekday">${escapeHtml(strings.weekdays[isoWeekday(dayNumber(day)) - 1])}</span> ` +
+    `<span class="cal-agenda-num">${date}</span> ` +
     `<span class="cal-agenda-month">${escapeHtml(strings.months[month - 1])}</span>` +
-    (today ? `<span class="cal-agenda-today">${escapeHtml(strings.today)}</span>` : "") +
+    (today ? ` <span class="cal-agenda-today">${escapeHtml(strings.today)}</span>` : "") +
     `</h2>`;
   const rows = items.map((item) => `<li>${row(item, day, opts)}</li>`).join("");
   return `<li class="cal-agenda-day${today ? " is-today" : ""}" data-agenda-day="${day}">${heading}<ul class="cal-agenda-items">${rows}</ul></li>`;

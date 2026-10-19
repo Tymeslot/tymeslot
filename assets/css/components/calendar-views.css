@@ -248,6 +248,11 @@
   border-top: 1px solid var(--cal-line);
 }
 
+.cal-month.is-phone .cal-month-weeks {
+  flex: 0 0 auto;
+  grid-template-rows: none;
+}
+
 /* Dots (month on a phone, week strip) ------------------------------- */
 
 .cal-dots {
@@ -428,6 +433,17 @@
 .cal-strip-day[aria-pressed="true"] .cal-strip-num {
   background: var(--cal-today);
   color: var(--cal-on-booking);
+}
+
+@media (width < 40rem) {
+  .cal-agenda-row,
+  .cal-agenda-later {
+    min-height: 44px;
+  }
+
+  .cal-agenda-row {
+    grid-template-columns: 4.5rem 10px minmax(0, 1fr) auto;
+  }
 }
 
 /* Focus, for every control above. */

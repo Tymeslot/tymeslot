@@ -50,9 +50,12 @@ function wideWeeks(weeks, cellHeight, ctx) {
   return monthLayout(weeks, ctx.events, { maxLanes: lanes })
     .map((week) => {
       let html = `<div class="cal-mweek" style="grid-template-rows:${HEAD_ROW}px repeat(${lanes}, ${LANE}px) minmax(0, 1fr)">`;
-      week.days.forEach((iso, i) => (html += cell(iso, i, ctx)));
-      for (const bar of week.bars) html += monthBar(bar, byId.get(bar.id), ctx);
+      // Each day's cell is followed by its bars (from the day they start on),
+      // chips and "+N", so the document reads day by day; the grid placement
+      // is explicit, so the picture does not depend on this order.
       week.days.forEach((iso, i) => {
+        html += cell(iso, i, ctx);
+        for (const bar of week.bars) if (bar.startIndex === i) html += monthBar(bar, byId.get(bar.id), ctx);
         const first = 2 + week.barRows;
         week.chips[iso].forEach((e, k) => (html += monthChip(e, iso, i, first + k, ctx)));
         if (week.more[iso]) html += moreButton(iso, i, first + week.chips[iso].length, week.more[iso], week.warn[iso], ctx);
@@ -80,12 +83,13 @@ function eventClasses(base, e, past, flag, extra = []) {
   return [base, ...extra, past && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
 }
 
-function monthBar(bar, e, { strings, now }) {
+function monthBar(bar, e, { settings, strings, now }) {
   const flag = requestFlag(e, strings);
   const past = e.endMin <= now;
   const first = dateLabel(isoFromDay(e.startDay), strings);
   const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
-  const label = [e.title, flag && requestAria(e, strings), strings.all_day, span, past && strings.ended].filter(Boolean).join(", ");
+  const when = e.all_day ? strings.all_day : `${formatMinutes(e.startMin % MINUTES_PER_DAY, settings.time_format)}–${formatMinutes(e.endMin % MINUTES_PER_DAY, settings.time_format)}`;
+  const label = [e.title, flag && requestAria(e, strings), when, span, past && strings.ended].filter(Boolean).join(", ");
   const classes = eventClasses("cal-mbar", e, past, flag, [bar.cutStart && "cut-start", bar.cutEnd && "cut-end"]);
   return (
     `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" aria-label="${escapeHtml(label)}" ` +
