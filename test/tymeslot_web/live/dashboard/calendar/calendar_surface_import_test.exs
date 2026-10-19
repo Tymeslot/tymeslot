@@ -13,9 +13,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
   @moduletag :integration
 
   import Mox
+  import Phoenix.LiveView, only: [send_update: 3]
+  import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   alias Ecto.Changeset
+  alias Tymeslot.Factory
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -387,13 +391,117 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       send(task, :continue)
       await_task(task)
     end
+
+    test "a file over the size limit is refused with its limit", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+
+      big = String.duplicate("x", 5_000_001)
+
+      assert {:error, [[_ref, :too_large]]} =
+               lv
+               |> file_input("#calendar-ics-upload", :ics_file, [
+                 %{name: "big.ics", content: big, type: "text/calendar"}
+               ])
+               |> render_upload("big.ics")
+
+      lv |> form("#calendar-ics-upload") |> render_change()
+
+      assert lv |> element(~s([data-testid="calendar-import-error"])) |> render() =~
+               "The file is too large."
+
+      refute has_element?(lv, ~s([data-testid="calendar-import-summary"]))
+    end
+
+    test "a file dropped on this surface's own running import is turned away in its progress",
+         %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn data, _context ->
+        send(test_pid, {:writing, self()})
+
+        receive do
+          :continue -> {:ok, CreatedEvent.new(data.uid)}
+        end
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+      upload(lv, @two_events)
+      start_import(lv)
+      assert_receive {:writing, task}, @task_timeout
+
+      upload(lv, @two_events, "again.ics")
+
+      progress = lv |> element(~s([data-testid="calendar-import-progress"])) |> render()
+      assert progress =~ "Importing 0 of 2 events..."
+
+      assert lv |> element(~s([data-testid="calendar-import-error"])) |> render() =~
+               busy_message()
+
+      refute has_element?(lv, ~s([data-testid="calendar-import-summary"]))
+
+      send(task, :continue)
+      assert_receive {:writing, ^task}, @task_timeout
+      send(task, :continue)
+      await_task(task)
+    end
+  end
+
+  describe "while a file is being read" do
+    test "closing the modal leaves nothing behind when the plan lands", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+
+      lv
+      |> file_input("#calendar-ics-upload", :ics_file, [
+        %{name: "calendar.ics", content: @two_events, type: "text/calendar"}
+      ])
+      |> render_upload("calendar.ics")
+
+      lv |> element("#calendar-import-close") |> render_click()
+      render_async(lv)
+
+      refute has_element?(lv, "#calendar-import")
+      refute has_element?(lv, ~s([data-testid="calendar-import-summary"]))
+    end
+
+    test "a calendar that went while the file was read gives way to the default", %{
+      conn: conn,
+      integration: integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+
+      # "Work" is the default and is what the modal opened on; it leaves the
+      # account's calendar list, and a sync brings the surface up to date.
+      Repo.update!(
+        Changeset.change(integration,
+          calendar_list: [%{"id" => "family", "name" => "Family", "selected" => true}]
+        )
+      )
+
+      send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: :integration_synced
+      )
+
+      # The rail lists the account's calendars until the reload lands.
+      eventually(fn -> not (render(lv) =~ ~s(aria-label="Work")) end)
+
+      upload(lv, @two_events)
+
+      assert lv
+             |> element("#calendar-import-calendar-select option[selected]")
+             |> render() =~ "#{integration.id}:family"
+    end
   end
 
   # An active integration of another organiser, with a "work" calendar.
   defp insert_other_integration,
     do:
-      Tymeslot.Factory.insert(:calendar_integration,
-        user: Tymeslot.Factory.insert(:user),
+      Factory.insert(:calendar_integration,
+        user: Factory.insert(:user),
         provider: "google",
         is_active: true,
         calendar_list: [%{"id" => "work", "name" => "Work", "selected" => true}]

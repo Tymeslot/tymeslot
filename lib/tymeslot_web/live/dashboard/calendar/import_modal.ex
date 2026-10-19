@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   @moduledoc """
   The new calendar's import modal, one view per stage of `IcsImport`:
   choose a file, read it, pick a calendar, follow the import, read the
-  result. Its English is the old calendar's import modal's, kept in that
+  result, and the surface's drop zone (the upload form and overlay). Its English is the old calendar's import modal's, kept in that
   domain (`dashboard_calendar_events`) until plan 7 moves it.
   """
 
@@ -67,6 +67,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
               "You can close this window; the import carries on."
             )}
           </p>
+          <.info_box :if={@ics_import.error} variant={:error}>
+            <span data-testid="calendar-import-error">{@ics_import.error}</span>
+          </.info_box>
         </div>
 
         <div :if={@ics_import.stage == :done} id="calendar-import-result" role="status">
@@ -175,6 +178,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
         </div>
       </:footer>
     </.modal>
+    """
+  end
+
+  attr :uploads, :map, required: true
+  attr :target, :any, required: true
+
+  @doc """
+  The hidden upload form and the drop overlay, the surface root's first
+  children. The root carries `phx-drop-target`, so LiveView marks it
+  `phx-drop-target-active` while a file is over it and the overlay shows.
+  """
+  @spec drop_zone(map()) :: Phoenix.LiveView.Rendered.t()
+  def drop_zone(assigns) do
+    ~H"""
+    <form id="calendar-ics-upload" phx-change="calendar:ics_validate" phx-target={@target}>
+      <.live_file_input upload={@uploads.ics_file} class="sr-only" />
+    </form>
+    <div
+      id="calendar-drop-overlay"
+      class="pointer-events-none absolute inset-0 hidden flex-col items-center justify-center gap-2 rounded-token-lg border-2 border-dashed border-turquoise-400 bg-turquoise-50/90 phx-drop-target-active:flex"
+      aria-hidden="true"
+    >
+      <.icon name="hero-arrow-down-tray" class="h-8 w-8 text-turquoise-600" />
+      <p class="text-token-base font-semibold text-turquoise-800">
+        {dgettext("dashboard_calendar", "Drop an .ics file to import its events")}
+      </p>
+    </div>
     """
   end
 

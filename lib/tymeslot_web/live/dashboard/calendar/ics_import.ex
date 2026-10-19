@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
 
     * `:choose`: waiting for a file, picked in the modal or dropped anywhere
       on the calendar (the upload belongs to the surface root, see
-      `drop_zone/1`, so a drop works with the modal closed);
+      `ImportModal.drop_zone/1`, so a drop works with the modal closed);
     * `:reading`: the file is planned by `IcsImportFlow.plan/2` in
       an async task (`:ics_import_plan`), so a large file never holds up the
       dashboard;
@@ -29,7 +29,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.LiveView, only: [allow_upload: 3, cancel_upload: 3, start_async: 3]
+  import Phoenix.LiveView,
+    only: [allow_upload: 3, cancel_async: 2, cancel_upload: 3, start_async: 3]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.CalendarDirectory
@@ -70,7 +71,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   # A file still uploading is dropped too, or its arrival would open the
   # modal again; a plan still being read is ignored when it lands.
   def handle("calendar:ics_close", _params, socket),
-    do: {:noreply, socket |> cancel_entries() |> assign(:ics_import, nil)}
+    do:
+      {:noreply,
+       socket |> cancel_entries() |> cancel_async(:ics_import_plan) |> assign(:ics_import, nil)}
 
   def handle("calendar:ics_validate", _params, socket) do
     if importing?(socket),
@@ -139,33 +142,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
     |> reload()
   end
 
-  attr :uploads, :map, required: true
-  attr :target, :any, required: true
-
-  @doc """
-  The hidden upload form and the drop overlay, the surface root's first
-  children. The root carries `phx-drop-target`, so LiveView marks it
-  `phx-drop-target-active` while a file is over it and the overlay shows.
-  """
-  @spec drop_zone(map()) :: Phoenix.LiveView.Rendered.t()
-  def drop_zone(assigns) do
-    ~H"""
-    <form id="calendar-ics-upload" phx-change="calendar:ics_validate" phx-target={@target}>
-      <.live_file_input upload={@uploads.ics_file} class="sr-only" />
-    </form>
-    <div
-      id="calendar-drop-overlay"
-      class="pointer-events-none absolute inset-0 hidden flex-col items-center justify-center gap-2 rounded-token-lg border-2 border-dashed border-turquoise-400 bg-turquoise-50/90 phx-drop-target-active:flex"
-      aria-hidden="true"
-    >
-      <.icon name="hero-arrow-down-tray" class="h-8 w-8 text-turquoise-600" />
-      <p class="text-token-base font-semibold text-turquoise-800">
-        {dgettext("dashboard_calendar", "Drop an .ics file to import its events")}
-      </p>
-    </div>
-    """
-  end
-
   # --- Stages ---
 
   # Opens the modal, keeping an import under way or a file already chosen;
@@ -209,29 +185,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
 
     case Enum.reject(UploadHandler.upload_entries(socket, name), & &1.valid?) do
       [] ->
-        update_state(
-          socket,
-          &%{&1 | stage: :choose, plan: nil, summary: nil, error: nil, result: nil}
-        )
+        to_choose(socket, %{})
 
       [entry | _rest] = rejected ->
         reason = socket.assigns.uploads[name] |> upload_errors(entry) |> List.first()
         socket = Enum.reduce(rejected, socket, &cancel_upload(&2, name, &1.ref))
 
-        update_state(
-          socket,
-          &%{
-            &1
-            | stage: :choose,
-              plan: nil,
-              summary: nil,
-              file_name: nil,
-              result: nil,
-              error: IcsImportFlow.upload_error(reason)
-          }
-        )
+        to_choose(socket, %{file_name: nil, error: IcsImportFlow.upload_error(reason)})
     end
   end
+
+  # Back to choosing a file: whatever was read or reported is forgotten, bar
+  # what `extra` sets.
+  defp to_choose(socket, extra),
+    do: update_state(socket, &clear(&1, Map.put(extra, :stage, :choose)))
+
+  defp clear(state, extra),
+    do: Map.merge(%{state | plan: nil, summary: nil, error: nil, result: nil}, extra)
 
   # The upload's own progress callback: the file's arrival, not the form's
   # change event, is what the upload is sure to report.
@@ -258,17 +228,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
         timezone = socket.assigns.timezone
 
         socket
-        |> update_state(
-          &%{
-            &1
-            | stage: :reading,
-              file_name: file_name,
-              plan: nil,
-              summary: nil,
-              error: nil,
-              result: nil
-          }
-        )
+        |> update_state(&clear(&1, %{stage: :reading, file_name: file_name}))
+        |> cancel_async(:ics_import_plan)
         |> start_async(
           :ics_import_plan,
           Tasks.with_context(fn -> {file_name, IcsImportFlow.plan(content, timezone)} end)
@@ -281,23 +242,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
     end
   end
 
-  defp apply_plan(socket, {:ok, plan}),
-    do:
-      update_state(
-        socket,
-        &%{&1 | stage: :ready, plan: plan, summary: IcsImportFlow.summary(plan), error: nil}
-      )
+  # The calendar chosen when the modal opened may have gone (disconnected,
+  # hidden from writing) while the file was read: fall back to the default.
+  defp apply_plan(socket, {:ok, plan}) do
+    default = default_key(socket.assigns)
+
+    update_state(socket, fn state ->
+      key =
+        if state.calendar_key && writable?(socket, state.calendar_key),
+          do: state.calendar_key,
+          else: default
+
+      %{
+        state
+        | stage: :ready,
+          plan: plan,
+          summary: IcsImportFlow.summary(plan),
+          error: nil,
+          calendar_key: key
+      }
+    end)
+  end
 
   defp apply_plan(socket, {:error, reason}),
-    do:
-      update_state(
-        socket,
-        &%{&1 | stage: :choose, plan: nil, summary: nil, error: IcsImportFlow.plan_error(reason)}
-      )
+    do: to_choose(socket, %{error: IcsImportFlow.plan_error(reason)})
 
   # The calendar must be one this organiser can write to (the picker's
   # choices come from their own accounts) and no import of theirs may be
-  # running; then the rate limit. `IcsImport.target/3` checks ownership
+  # running; then the rate limit. `CalendarGrid.IcsImport.target/3` checks ownership
   # again before anything is written.
   defp start(socket, state) do
     user_id = socket.assigns.current_user.id
@@ -370,15 +342,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   # A file arriving while an import runs is dropped; the modal shows that
   # import, or says one is running when this surface did not start it.
   defp turn_away(%{assigns: %{ics_import: %{stage: :running}}} = socket),
-    do: socket |> cancel_entries() |> open()
+    do: socket |> cancel_entries() |> open() |> put_error(IcsImportFlow.busy_message())
 
   defp turn_away(socket) do
     socket
     |> cancel_entries()
+    |> cancel_async(:ics_import_plan)
     |> open()
-    |> update_state(
-      &%{&1 | stage: :choose, plan: nil, summary: nil, error: IcsImportFlow.busy_message()}
-    )
+    |> to_choose(%{error: IcsImportFlow.busy_message()})
   end
 
   defp cancel_entries(socket) do

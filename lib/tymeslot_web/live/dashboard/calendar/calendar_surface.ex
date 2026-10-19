@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
   alias TymeslotWeb.Dashboard.Calendar.FreeBusy
   alias TymeslotWeb.Dashboard.Calendar.IcsImport
+  alias TymeslotWeb.Dashboard.Calendar.ImportModal
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.Navigation
@@ -287,7 +288,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       class="relative flex min-h-0 flex-1 flex-col bg-white"
       phx-drop-target={@uploads.ics_file.ref}
     >
-      <IcsImport.drop_zone uploads={@uploads} target={@myself} />
+      <ImportModal.drop_zone uploads={@uploads} target={@myself} />
       <h1 class="sr-only">{dgettext("dashboard_calendar", "Calendar")}</h1>
       <p id="calendar-keys-hint" class="sr-only">
         {dgettext(
