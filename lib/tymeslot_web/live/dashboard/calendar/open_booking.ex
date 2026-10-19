@@ -57,10 +57,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
   Undoes an opening: the hours it widened are put back as they were, but
   only while they still hold what the opening wrote. When they have changed
   since (on the Availability page, say), nothing is written and the toast
-  says so and where to change them; any other failure says where too.
+  says so and where to change them; any other failure says where too, and
+  unless the hours are gone the opening goes back on the undo stack so
+  Ctrl Z can try again.
   """
   @spec undo(socket(), map()) :: socket()
-  def undo(socket, %{kind: :opening, result: result, name: name}) do
+  def undo(socket, %{kind: :opening, result: result, name: name} = entry) do
     case Opening.restore(socket.assigns.current_user.id, result) do
       :ok ->
         Toast.show(
@@ -79,16 +81,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
           )
         )
 
+      {:error, :not_found} ->
+        Toast.show(socket, could_not_put_back())
+
+      # Anything else may pass on a second try, so Ctrl Z can make one.
       {:error, _reason} ->
-        Toast.show(
-          socket,
-          dgettext(
-            "dashboard_calendar_booking",
-            "Couldn't put the bookable times back. Change them on the Availability page."
-          )
-        )
+        socket
+        |> assign(:undo, UndoStack.push(socket.assigns.undo, entry))
+        |> Toast.show(could_not_put_back())
     end
   end
+
+  defp could_not_put_back,
+    do:
+      dgettext(
+        "dashboard_calendar_booking",
+        "Couldn't put the bookable times back. Change them on the Availability page."
+      )
 
   defp run(socket, draft, params) do
     user_id = socket.assigns.current_user.id

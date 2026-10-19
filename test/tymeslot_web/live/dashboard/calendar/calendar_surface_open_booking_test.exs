@@ -22,12 +22,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
   alias Ecto.Changeset
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.DateOverrides
+  alias Tymeslot.Availability.Opening
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
+  alias TymeslotWeb.Dashboard.Calendar.OpenBooking
+  alias TymeslotWeb.Dashboard.Calendar.UndoStack
 
   setup %{conn: conn} do
     context = owner(conn)
@@ -235,6 +238,51 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
              )
 
       assert %{start_time: ~T[08:00:00], end_time: ~T[20:00:00]} = override(schedule)
+    end
+  end
+
+  describe "an undo that fails for another reason" do
+    defp bare_socket(user),
+      do: %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          id: "calendar-surface",
+          current_user: user,
+          undo: UndoStack.new(),
+          toast: nil,
+          flash: %{}
+        }
+      }
+
+    test "goes back on the stack so Ctrl Z can try again", %{user: user, intro: intro} do
+      {:ok, result} =
+        Opening.open_once(user.id, intro.id, ~U[2026-10-19 16:00:00Z], ~U[2026-10-19 17:30:00Z],
+          timezone: "Europe/London"
+        )
+
+      # Hours the date cannot take, so putting them back fails on the write.
+      unwritable = %{
+        override_type: "custom_hours",
+        start_time: ~T[18:00:00],
+        end_time: ~T[09:00:00],
+        ends_next_day: false,
+        reason: nil
+      }
+
+      entry = %{
+        kind: :opening,
+        key: {:opening, "d1"},
+        id: nil,
+        result: %{result | previous: unwritable},
+        name: "Intro call"
+      }
+
+      socket = OpenBooking.undo(bare_socket(user), entry)
+
+      assert [^entry] = socket.assigns.undo
+
+      assert socket.assigns.toast.message ==
+               "Couldn't put the bookable times back. Change them on the Availability page."
     end
   end
 
