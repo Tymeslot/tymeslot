@@ -1,9 +1,9 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeedTest do
+defmodule TymeslotWeb.Dashboard.DesktopReminderFeedTest do
   use ExUnit.Case, async: true
 
   @moduletag :calendar
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
+  alias TymeslotWeb.Dashboard.DesktopReminderFeed
 
   @now ~U[2026-06-24 12:00:00Z]
 

@@ -6,11 +6,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Clock
-  alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.DesktopReminderFeed
 
   @doc """
   Takes a failed write's change back off the grid. A write the grid queued

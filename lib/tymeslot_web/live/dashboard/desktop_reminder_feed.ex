@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
+defmodule TymeslotWeb.Dashboard.DesktopReminderFeed do
   @moduledoc """
   Builds the desktop-reminder feed handed to the `DesktopReminders` JS hook.
 
@@ -16,6 +16,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   Entries whose fire instant is already more than two minutes in the past are
   dropped — the hook only fires reminders crossing its polling window, so stale
   ones would never fire anyway and only bloat the payload.
+
+  Both calendars build their feed here: the old grid
+  (`CalendarGrid.UpdateHandlers`) and the new surface's `Calendar.ReminderFeed`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

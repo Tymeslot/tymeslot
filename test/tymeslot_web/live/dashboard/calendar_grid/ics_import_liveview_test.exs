@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Security.RateLimiter
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport, as: IcsImportHandler
+  alias TymeslotWeb.Dashboard.IcsImportFlow
 
   setup :set_mox_global
   setup :verify_on_exit!
@@ -500,19 +500,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
 
   describe "the import's result flash" do
     test "is an error naming the refusal when every event's rule was refused" do
-      assert IcsImportHandler.result_flash({:ok, summary(%{rules_refused: 1})}) ==
+      assert IcsImportFlow.result_flash({:ok, summary(%{rules_refused: 1})}) ==
                {:error, "1 event repeats in a way Outlook can't store, so it was not imported."}
     end
 
     test "is a warning reporting both the import and the refusal when some were written" do
-      assert IcsImportHandler.result_flash({:ok, summary(%{created: 1, rules_refused: 1})}) ==
+      assert IcsImportFlow.result_flash({:ok, summary(%{created: 1, rules_refused: 1})}) ==
                {:warning,
                 "Imported 1 event. 1 event repeats in a way Outlook can't store, so it was not imported."}
     end
 
     test "counts several refused series in the plural" do
       assert {:warning, message} =
-               IcsImportHandler.result_flash({:ok, summary(%{created: 3, rules_refused: 2})})
+               IcsImportFlow.result_flash({:ok, summary(%{created: 3, rules_refused: 2})})
 
       assert message =~
                "2 events repeat in a way Outlook can't store, so they were not imported."

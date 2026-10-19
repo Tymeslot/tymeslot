@@ -5,8 +5,9 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   results, and the old grid's timers.
 
   Each message goes to the module that acts on it, mostly
-  `TymeslotWeb.Dashboard.CalendarEventHandlers` and
-  `TymeslotWeb.Dashboard.CalendarRouting`. `handle_info/2` answers what a
+  `TymeslotWeb.Dashboard.CalendarEventHandlers`,
+  `TymeslotWeb.Dashboard.CalendarRouting` and, for an `.ics` import,
+  `TymeslotWeb.Dashboard.IcsImportRunner`. `handle_info/2` answers what a
   LiveView's `handle_info/2` would, or `:unhandled` for a message that is not
   the calendar's, so `DashboardLive` keeps one clause for the whole calendar.
 
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.CalendarRouting
   alias TymeslotWeb.Dashboard.ComponentDispatch
+  alias TymeslotWeb.Dashboard.IcsImportRunner
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -124,13 +126,13 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
       |> rebuild_agenda()
 
   def handle_info({:execute_ics_import, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_ics_import(payload, socket)
+    do: IcsImportRunner.execute(payload, socket)
 
   def handle_info({:ics_import_progress, done}, socket),
-    do: CalendarEventHandlers.handle_ics_import_progress(done, socket)
+    do: IcsImportRunner.progress(done, socket)
 
   def handle_info({:ics_import_result, result}, socket),
-    do: CalendarEventHandlers.handle_ics_import_result(result, socket)
+    do: IcsImportRunner.result(result, socket)
 
   def handle_info({:execute_delete_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)
