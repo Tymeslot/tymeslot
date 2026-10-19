@@ -104,7 +104,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   end
 
   # A meeting confirmed from a poll has nobody to ask for a new time: the host
-  # picks it with `Tymeslot.Bookings.Reschedule.move_by_host/3`.
+  # picks it with `Tymeslot.Bookings.HostMove.move/3`.
   defp refuse_host_managed(meeting) do
     if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
   end

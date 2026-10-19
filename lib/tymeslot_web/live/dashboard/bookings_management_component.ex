@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
-  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
@@ -68,10 +67,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def update(%{host_move: result}, socket) do
-    socket = assign(socket, :host_move_meeting, nil)
-    {:ok, if(result == :moved, do: load_meetings(socket), else: socket)}
-  end
+  def update(%{host_move: result}, socket),
+    do: {:ok, RescheduleRequest.close_host_move(socket, result, &load_meetings/1)}
 
   def update(assigns, socket) do
     # Apply incoming assigns first
@@ -212,7 +209,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id}
         )
 
-        {:noreply, open_reschedule(socket, meeting)}
+        {:noreply, RescheduleRequest.open(socket, meeting)}
 
       {:error, :validation_failed, _error} ->
         {:noreply, socket}
@@ -480,14 +477,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   # Private functions
-
-  # A meeting confirmed from a poll has nobody to ask for a new time, so the
-  # host picks it themselves.
-  defp open_reschedule(socket, meeting) do
-    if MeetingSchema.managed_by_host?(meeting),
-      do: assign(socket, :host_move_meeting, meeting),
-      else: ModalHook.show_modal(socket, :reschedule_request, meeting)
-  end
 
   defp do_cancel_meeting(socket, meeting, params) do
     booking_payment = socket.assigns.cancel_booking_payment

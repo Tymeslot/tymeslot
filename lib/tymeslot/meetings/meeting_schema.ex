@@ -638,7 +638,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   Whether only the host manages the meeting: one confirmed from a poll. Its
   attendee is a guest like everyone else, so they are sent no booking emails
   and the public cancel and reschedule pages refuse it; the host moves it
-  from the dashboard instead (`Tymeslot.Bookings.Reschedule.move_by_host/3`).
+  from the dashboard instead (`Tymeslot.Bookings.HostMove.move/3`).
   """
   @spec managed_by_host?(map()) :: boolean()
   def managed_by_host?(%{managed_by_host: true}), do: true

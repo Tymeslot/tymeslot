@@ -4,6 +4,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   and the host moves it from the dashboard instead of asking anyone to.
   """
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :meetings
   @moduletag :live
@@ -14,9 +15,9 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
-  alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.{Guests, MeetingSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
 
   setup :set_mox_global
   setup :verify_on_exit!
@@ -78,12 +79,6 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   end
 
   test "the host moves it from the dashboard and everyone is told", ctx do
-    stub(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, _details ->
-      {:ok, "sent"}
-    end)
-
-    expect(EmailServiceMock, :send_guest_reschedule, 2, fn _email, _details -> {:ok, "sent"} end)
-
     conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
     {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
@@ -105,6 +100,12 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     assert DateTime.diff(moved.end_time, moved.start_time, :minute) == 45
     assert render(view) =~ "Meeting moved"
     refute has_element?(view, "[data-testid='host-move-form']")
+
+    # The notices to the host and every guest go out from the reschedule job.
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_reschedule_emails", "meeting_id" => ctx.meeting.id}
+    )
   end
 
   test "the dashboard explains a time the host is already booked at", ctx do

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
@@ -24,6 +25,27 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   require Logger
 
   @event [:tymeslot, :dashboard, :meetings, :reschedule, :confirm]
+
+  @doc """
+  Opens the way to a new time for `meeting`: the dialog asking its attendee,
+  or, for a meeting confirmed from a poll, which has nobody to ask, the host's
+  own move (`HostMoveModal`, through `:host_move_meeting`).
+  """
+  @spec open(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def open(socket, meeting) do
+    if MeetingSchema.managed_by_host?(meeting),
+      do: assign(socket, :host_move_meeting, meeting),
+      else: ModalHook.show_modal(socket, :reschedule_request, meeting)
+  end
+
+  @doc "Closes the host's move, refreshing the list once the meeting moved."
+  @spec close_host_move(Phoenix.LiveView.Socket.t(), atom(), (Phoenix.LiveView.Socket.t() ->
+                                                                Phoenix.LiveView.Socket.t())) ::
+          Phoenix.LiveView.Socket.t()
+  def close_host_move(socket, result, reload) do
+    socket = assign(socket, :host_move_meeting, nil)
+    if result == :moved, do: reload.(socket), else: socket
+  end
 
   @doc """
   Sends the request and settles the dialog: closed and the list refreshed on

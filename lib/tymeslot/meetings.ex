@@ -9,7 +9,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{Cancel, CancelSeat, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, CancelSeat, HostMove, Reschedule, RescheduleRequest}
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   alias Tymeslot.Meetings.{
@@ -241,12 +241,12 @@ defmodule Tymeslot.Meetings do
 
   @doc """
   Moves a meeting the host manages, one confirmed from a poll, to start at
-  `new_start`. See `Tymeslot.Bookings.Reschedule.move_by_host/3`.
+  `new_start`. See `Tymeslot.Bookings.HostMove.move/3`.
   """
   @spec move_by_host(String.t(), DateTime.t(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, term()}
   def move_by_host(meeting_uid, new_start, organizer_user_id),
-    do: Reschedule.move_by_host(meeting_uid, new_start, organizer_user_id)
+    do: HostMove.move(meeting_uid, new_start, organizer_user_id)
 
   @doc """
   Cancels the calendar event associated with a meeting asynchronously.

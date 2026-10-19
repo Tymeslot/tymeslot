@@ -15,12 +15,12 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Bookings.{Cancel, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, HostMove, Reschedule, RescheduleRequest}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.{GuestQueries, Guests, GuestSchema, MeetingSchema}
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
-  alias Tymeslot.Workers.EmailWorkerHandlers
 
   setup :verify_on_exit!
 
@@ -59,7 +59,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => ctx.meeting.id
                })
 
@@ -79,7 +79,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       expect(EmailServiceMock, :send_guest_reminder, 2, fn _email, _details -> {:ok, "sent"} end)
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => ctx.meeting.id,
                  "reminder_value" => 30,
                  "reminder_unit" => "minutes"
@@ -118,7 +118,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
     test "cannot move it through the booking page", ctx do
       assert {:error, :managed_by_host} =
-               Reschedule.execute(ctx.meeting.uid, %{}, %{}, ctx.user.id)
+               Reschedule.execute(ctx.meeting.uid, %{}, ctx.user.id)
     end
 
     test "is not asked by the host to pick a new time", ctx do
@@ -126,7 +126,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     end
   end
 
-  describe "move_by_host/3" do
+  describe "HostMove.move/3" do
     test "moves the meeting, keeping its length, and tells the host and every guest", ctx do
       Repo.update_all(
         from(g in GuestSchema, where: g.meeting_id == ^ctx.meeting.id),
@@ -142,7 +142,16 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
       expect(EmailServiceMock, :send_guest_reschedule, 2, fn _email, _details -> {:ok, "sent"} end)
 
-      assert {:ok, moved} = Reschedule.move_by_host(ctx.meeting.uid, new_start, ctx.user.id)
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
+
+      # The notices go out from the reschedule job, as for any move.
+      assert [job] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_reschedule_emails", "meeting_id" => ctx.meeting.id}
+               )
+
+      assert :ok = perform_job(EmailWorker, job.args)
 
       assert moved.start_time == new_start
 
@@ -168,14 +177,14 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       )
 
       assert {:error, :slot_taken} =
-               Reschedule.move_by_host(ctx.meeting.uid, new_start, ctx.user.id)
+               HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
 
       assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
     end
 
     test "refuses a time that has started", ctx do
       assert {:error, :slot_in_past} =
-               Reschedule.move_by_host(
+               HostMove.move(
                  ctx.meeting.uid,
                  DateTime.add(DateTime.utc_now(), -1, :hour),
                  ctx.user.id
@@ -194,7 +203,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
         )
 
       assert {:error, :not_managed_by_host} =
-               Reschedule.move_by_host(
+               HostMove.move(
                  booked.uid,
                  DateTime.add(booked.start_time, 1, :day),
                  ctx.user.id
@@ -203,7 +212,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
     test "does not reach another host's meeting", ctx do
       assert {:error, :meeting_not_found} =
-               Reschedule.move_by_host(
+               HostMove.move(
                  ctx.meeting.uid,
                  DateTime.add(ctx.meeting.start_time, 1, :day),
                  insert(:user).id
