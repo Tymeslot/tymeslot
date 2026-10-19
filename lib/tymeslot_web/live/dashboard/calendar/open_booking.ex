@@ -93,9 +93,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
   defp run(socket, draft, params) do
     user_id = socket.assigns.current_user.id
 
-    with {:ok, request} <- cast(params, socket.assigns.timezone),
+    timezone = socket.assigns.timezone
+
+    with {:ok, request} <- cast(params, timezone),
          :ok <- EditGuard.rate_limit(user_id),
-         {:ok, result} <- write(user_id, request) do
+         {:ok, result} <- write(user_id, request, timezone) do
       {%{accepted: true}, opened(socket, draft, request.meeting_type_id, result)}
     else
       {:error, :rate_limited, _message} = refusal ->
@@ -153,11 +155,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.OpenBooking do
     if DateTime.compare(end_at, start_at) == :gt, do: :ok, else: {:error, :before_start}
   end
 
-  defp write(user_id, %{repeat: :once} = request),
-    do: Opening.open_once(user_id, request.meeting_type_id, request.start_at, request.end_at)
+  # The slot is read on the zone the surface showed it in, so the hours
+  # written are the ones the toast names.
+  defp write(user_id, %{repeat: :once} = request, timezone),
+    do:
+      Opening.open_once(user_id, request.meeting_type_id, request.start_at, request.end_at,
+        timezone: timezone
+      )
 
-  defp write(user_id, %{repeat: :weekly} = request),
-    do: Opening.open_weekly(user_id, request.meeting_type_id, request.start_at, request.end_at)
+  defp write(user_id, %{repeat: :weekly} = request, timezone),
+    do:
+      Opening.open_weekly(user_id, request.meeting_type_id, request.start_at, request.end_at,
+        timezone: timezone
+      )
 
   defp opened(socket, draft, meeting_type_id, result) do
     name = meeting_type_name(socket.assigns.current_user.id, meeting_type_id)

@@ -146,6 +146,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       assert_push_event(lv, "calendar:create-settled", %{draft: "d1"})
     end
 
+    test "reads the slot on the calendar's zone, even after the profile's changed", %{
+      lv: lv,
+      intro: intro,
+      schedule: schedule,
+      profile: profile
+    } do
+      # The calendar was drawn on London time; the profile has moved since.
+      profile |> Ecto.Changeset.change(timezone: "America/New_York") |> Repo.update!()
+
+      open_booking(lv, evening(intro))
+
+      assert_reply(lv, %{accepted: true})
+      assert %{start_time: ~T[09:00:00], end_time: ~T[18:30:00]} = override(schedule)
+
+      assert has_element?(
+               lv,
+               "#calendar-toast",
+               "Open for Intro call on Mon 19 Oct, 09:00 to 18:30"
+             )
+    end
+
     test "undo puts the day back as it was", %{lv: lv, intro: intro, schedule: schedule} do
       open_booking(lv, evening(intro))
       assert_reply(lv, %{accepted: true})

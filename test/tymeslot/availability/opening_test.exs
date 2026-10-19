@@ -129,6 +129,20 @@ defmodule Tymeslot.Availability.OpeningTest do
                )
     end
 
+    test "reads the slot on the zone the caller names, when it names one", host do
+      assert {:ok, %{start_time: ~T[11:00:00], end_time: ~T[19:00:00]}} =
+               Opening.open_once(
+                 host.user.id,
+                 host.meeting_type.id,
+                 at(host.date, ~T[18:00:00], "America/New_York"),
+                 at(host.date, ~T[19:00:00], "America/New_York"),
+                 timezone: "America/New_York"
+               )
+
+      assert {:ok, %{start_time: ~T[11:00:00], end_time: ~T[19:00:00]}} =
+               DateOverrides.get(host.profile_id, host.schedule_id, host.date)
+    end
+
     test "restore puts back a widened override's exact hours and reason", host do
       insert(:availability_override,
         schedule: host.schedule,

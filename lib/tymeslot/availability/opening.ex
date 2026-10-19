@@ -96,11 +96,21 @@ defmodule Tymeslot.Availability.Opening do
   @doc """
   Opens `start_at..end_at` for the meeting type on that date only. The
   result names the hours the date now has and what it had before.
+
+  Takes `timezone:`, the zone the caller read the slot on (the calendar
+  surface's), so the hours written are the ones it shows; the organiser's
+  own zone otherwise.
   """
-  @spec open_once(pos_integer(), pos_integer(), DateTime.t(), DateTime.t()) ::
+  @spec open_once(pos_integer(), pos_integer(), DateTime.t(), DateTime.t(), keyword()) ::
           {:ok, once()} | {:error, reason()}
-  def open_once(user_id, meeting_type_id, %DateTime{} = start_at, %DateTime{} = end_at) do
-    with {:ok, ctx} <- context(user_id, meeting_type_id),
+  def open_once(
+        user_id,
+        meeting_type_id,
+        %DateTime{} = start_at,
+        %DateTime{} = end_at,
+        opts \\ []
+      ) do
+    with {:ok, ctx} <- context(user_id, meeting_type_id, opts),
          {:ok, slot} <- slot(ctx.timezone, start_at, end_at),
          {:ok, current} <- DateOverrides.get(ctx.profile.id, ctx.schedule.id, slot.date),
          {:ok, hours} <- cover(once_hours(current, ctx.schedule.id, slot.date), slot),
@@ -120,12 +130,19 @@ defmodule Tymeslot.Availability.Opening do
   The result names the weekday's new hours and what it had before. When the
   slot's own date has an override that closes it or has hours of its own, that
   override is widened the same way (it would otherwise keep this week's date
-  shut), and `previous.override` holds what it was.
+  shut), and `previous.override` holds what it was. Takes `timezone:` as
+  `open_once/5` does.
   """
-  @spec open_weekly(pos_integer(), pos_integer(), DateTime.t(), DateTime.t()) ::
+  @spec open_weekly(pos_integer(), pos_integer(), DateTime.t(), DateTime.t(), keyword()) ::
           {:ok, weekly()} | {:error, reason()}
-  def open_weekly(user_id, meeting_type_id, %DateTime{} = start_at, %DateTime{} = end_at) do
-    with {:ok, ctx} <- context(user_id, meeting_type_id),
+  def open_weekly(
+        user_id,
+        meeting_type_id,
+        %DateTime{} = start_at,
+        %DateTime{} = end_at,
+        opts \\ []
+      ) do
+    with {:ok, ctx} <- context(user_id, meeting_type_id, opts),
          {:ok, slot} <- slot(ctx.timezone, start_at, end_at) do
       day = Date.day_of_week(slot.date)
       row = WeeklySchedule.get_day_availability(ctx.schedule.id, day)
@@ -184,7 +201,7 @@ defmodule Tymeslot.Availability.Opening do
   end
 
   @doc """
-  Puts back what `open_once/4` or `open_weekly/4` changed: the date's old
+  Puts back what `open_once/5` or `open_weekly/5` changed: the date's old
   override (or none), or the weekday's old hours (or closed) and the widened
   date's old override. Only for the user whose schedule it is, and only
   while those hours are still the ones the opening wrote: otherwise
@@ -321,20 +338,22 @@ defmodule Tymeslot.Availability.Opening do
   defp to_ok({:error, _reason} = error), do: error
 
   # The meeting type must be the user's, active and not archived, and the
-  # schedule it books against must be the user's own.
-  defp context(user_id, meeting_type_id)
+  # schedule it books against must be the user's own. The slot is read on
+  # the zone the caller names, else the organiser's.
+  defp context(user_id, meeting_type_id, opts)
        when is_integer(user_id) and is_integer(meeting_type_id) do
     with %MeetingTypeSchema{is_active: true, is_archived: false} = meeting_type <-
            MeetingTypes.get_meeting_type(meeting_type_id, user_id),
          {:ok, %{id: profile_id} = profile} <- profile(user_id),
          %{profile_id: ^profile_id} = schedule <- Schedules.resolve_for(meeting_type, profile) do
-      {:ok, %{profile: profile, schedule: schedule, timezone: Profiles.timezone(profile)}}
+      timezone = Keyword.get_lazy(opts, :timezone, fn -> Profiles.timezone(profile) end)
+      {:ok, %{profile: profile, schedule: schedule, timezone: timezone}}
     else
       _missing -> {:error, :not_found}
     end
   end
 
-  defp context(_user_id, _meeting_type_id), do: {:error, :not_found}
+  defp context(_user_id, _meeting_type_id, _opts), do: {:error, :not_found}
 
   defp profile(user_id), do: Profiles.get_profile_by_user_id(user_id)
 
