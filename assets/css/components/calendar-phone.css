@@ -160,8 +160,36 @@
     min-height: 44px;
   }
 
-  .cal-panel button {
+  .cal-panel button:not([role="switch"], #calendar-panel-guests li button) {
     min-height: 44px;
+  }
+
+  .cal-panel [role="group"] button,
+  .cal-preview [role="group"] button {
+    min-width: 44px;
+  }
+
+  .cal-panel #calendar-panel-repeat-custom label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* A guest chip's remove button stays small; its hit area is 44px. */
+  #calendar-panel-guests li button {
+    position: relative;
+  }
+
+  #calendar-panel-guests li button::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
   }
 
   .cal-panel :is(input, select, textarea) {

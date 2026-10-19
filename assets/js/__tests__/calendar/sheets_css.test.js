@@ -99,12 +99,33 @@ describe("phone full-screen editor", () => {
   });
 
   test("every button in the panel is 44px high and its fields never make iOS zoom", () => {
-    expect(rule(phone(), ".cal-panel button")).toMatch(/min-height:\s*44px/);
+    expect(rule(phone(), '.cal-panel button:not([role="switch"], #calendar-panel-guests li button)')).toMatch(/min-height:\s*44px/);
     expect(rule(phone(), ".cal-panel :is(input, select, textarea)")).toMatch(/font-size:\s*var\(--font-size-base\)/);
   });
 
   test("the preview sheet's actions are thumb-sized", () => {
     expect(rule(phone(), ".cal-preview :is(button, a)")).toMatch(/min-height:\s*44px/);
     expect(rule(phone(), ".cal-preview .icon-button")).toMatch(/min-width:\s*44px/);
+  });
+});
+
+describe("phone full-screen editor, small controls", () => {
+  test("switches and guest remove buttons keep their size", () => {
+    const body = rule(phone(), '.cal-panel button:not([role="switch"], #calendar-panel-guests li button)');
+    expect(body).toMatch(/min-height:\s*44px/);
+  });
+
+  test("a guest remove button has a centred 44px hit area", () => {
+    expect(rule(phone(), "#calendar-panel-guests li button")).toMatch(/position:\s*relative/);
+    const hit = rule(phone(), "#calendar-panel-guests li button::before");
+    expect(hit).toMatch(/width:\s*44px/);
+    expect(hit).toMatch(/height:\s*44px/);
+  });
+
+  test("segmented buttons and weekday chips are 44px wide", () => {
+    expect(rule(phone(), '.cal-panel [role="group"] button, .cal-preview [role="group"] button')).toMatch(/min-width:\s*44px/);
+    const chip = rule(phone(), ".cal-panel #calendar-panel-repeat-custom label");
+    expect(chip).toMatch(/min-width:\s*44px/);
+    expect(chip).toMatch(/min-height:\s*44px/);
   });
 });
