@@ -644,23 +644,5 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   def managed_by_host?(%{managed_by_host: true}), do: true
   def managed_by_host?(_meeting), do: false
 
-  @doc """
-  The link the organiser joins the video call with: their own (host) room link
-  where the provider issued one, else the shared meeting link; `nil` for a
-  meeting without video.
-  """
-  @spec organizer_join_url(t()) :: String.t() | nil
-  def organizer_join_url(%__MODULE__{} = meeting),
-    do: present_url(meeting.organizer_video_url) || present_url(meeting.meeting_url)
-
-  defp present_url(url) when is_binary(url) do
-    case String.trim(url) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp present_url(_url), do: nil
-
   defp supported_locale_codes, do: Locales.supported_codes()
 end
