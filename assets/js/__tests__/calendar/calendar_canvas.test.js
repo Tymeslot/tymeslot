@@ -76,7 +76,7 @@ afterEach(() => {
 test("asks for data on mount and draws nothing until it arrives", () => {
   const { el, hook } = mountHook();
   const [target, name, params] = hook.pushEventTo.mock.calls[0];
-  expect([target, name, params]).toEqual([el, "calendar:ready", {}]);
+  expect([target, name, params]).toEqual([el, "calendar:ready", { phone: false }]);
   expect(el.querySelector(".cal-ev")).toBeNull();
 });
 

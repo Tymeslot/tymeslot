@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   def dashboard_layout(assigns) do
     ~H"""
     <div
-      class="flex flex-col h-screen overflow-hidden"
+      class="flex flex-col h-dvh overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       id="dashboard-root"
       phx-hook="ClipboardCopy"
     >

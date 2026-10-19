@@ -169,13 +169,50 @@ export function mountHook(first = payload()) {
   });
   hook.mounted();
   mounted.push(hook);
-  hook.pushEventTo.mock.calls[0][3](first);
+  // The first push is calendar:ready; its params say whether a phone asked.
+  const [, , readyParams, reply] = hook.pushEventTo.mock.calls[0];
+  reply(first);
   hook.pushEventTo.mockClear();
-  return { el, hook, handlers, live };
+  return { el, hook, handlers, live, readyParams };
+}
+
+let restoreViewport = null;
+
+/**
+ * Stubs window.matchMedia so the phone query answers `phone`. The returned
+ * `set(next)` changes the answer and fires the change listeners, as a
+ * rotation or a resized window would; `listeners` is the live set.
+ * Call before mountHook. unmountAll puts the window back.
+ */
+export function mockViewport(phone) {
+  const listeners = new Set();
+  const media = {
+    matches: phone,
+    media: "(width < 40rem)",
+    addEventListener: (_type, listener) => listeners.add(listener),
+    removeEventListener: (_type, listener) => listeners.delete(listener),
+  };
+  const other = { matches: false, addEventListener() {}, removeEventListener() {} };
+  const had = Object.prototype.hasOwnProperty.call(window, "matchMedia");
+  const original = window.matchMedia;
+  window.matchMedia = vi.fn((query) => (query === "(width < 40rem)" ? media : other));
+  restoreViewport = () => {
+    if (had) window.matchMedia = original;
+    else delete window.matchMedia;
+  };
+  return {
+    listeners,
+    set(next) {
+      media.matches = next;
+      for (const listener of [...listeners]) listener({ matches: next, media: media.media });
+    },
+  };
 }
 
 export function unmountAll() {
   while (mounted.length) mounted.pop().destroyed();
+  restoreViewport?.();
+  restoreViewport = null;
   document.body.innerHTML = "";
 }
 

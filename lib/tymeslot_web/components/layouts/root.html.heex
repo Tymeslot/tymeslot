@@ -2,7 +2,17 @@
 <html lang={assigns[:locale] || "en"}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%!-- Dashboard pages pad their own safe areas, so only they run under the
+    notch; Android resizes them for the on-screen keyboard as iOS does. --%>
+    <meta
+      name="viewport"
+      content={
+        if assigns[:viewport_fit] == :cover,
+          do:
+            "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
+          else: "width=device-width, initial-scale=1"
+      }
+    />
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta name="csp-nonce" content={assigns[:csp_nonce]} />
     <%!-- Every surface rendered through this layout is private (auth, dashboard,

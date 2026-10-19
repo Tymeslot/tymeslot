@@ -64,6 +64,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       window: nil,
       agenda_through: nil,
       rail_open: true,
+      viewport: :wide,
+      viewport_reported: false,
       open_menu: nil,
       preview: nil,
       panel: nil,
@@ -115,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         |> assign(:ready?, true)
 
       true ->
-        socket |> adopt_if_revived() |> follow_params()
+        socket |> adopt_if_revived() |> follow()
     end
   end
 
@@ -219,6 +221,52 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
   # Applies the hidden choices to the window's unfiltered events, so a toggle
   # needs no query.
+  # The same period again only closes the date picker. A different day whose
+  # window is the one already loaded (another day of the visible week) updates
+  # the title and range but needs no query: the hook already holds the events.
+  # Either way the hook still hears which period the URL settled on
+  # (`calendar:period`), because it holds a navigation as pending until the
+  # server confirms it and follows nothing else (not even Back) meanwhile.
+  @doc """
+  Follows the period the URL, the stored default and the viewport now name,
+  pushing it to the hook: `calendar:period` when the loaded window holds it,
+  otherwise the reloaded window.
+  """
+  @spec follow(socket()) :: socket()
+  def follow(socket) do
+    socket = assign_clock(socket)
+    %{view: view, date: date, window: loaded} = socket.assigns
+
+    case target(socket.assigns) do
+      {^view, ^date} ->
+        socket |> assign(:open_menu, nil) |> push_period()
+
+      _other ->
+        socket = apply_params(socket)
+
+        if window_for(socket.assigns) == loaded,
+          do: push_period(socket),
+          else: socket |> load_window() |> push_events(false)
+    end
+  end
+
+  @doc """
+  The period the surface shows: the URL's view (or the stored default) as
+  the viewport shows it (a week is three days on a phone), around the URL's
+  date (or today).
+  """
+  @spec target(map()) :: {Period.view(), Date.t()}
+  def target(%{params: params, preferences: preferences, today: today} = assigns) do
+    params = params || %{}
+
+    view =
+      params["view"]
+      |> Period.parse_view(Period.default_view(preferences.default_view))
+      |> Period.for_viewport(Map.get(assigns, :viewport, :wide))
+
+    {view, Period.parse_date(params["date"], today)}
+  end
+
   defp filter_events(socket) do
     events = visible(socket.assigns, socket.assigns.window_events)
 
@@ -368,29 +416,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def put_preference(socket, key, value),
     do: assign(socket, :preferences, Map.put(socket.assigns.preferences, key, value))
 
-  # The same period again only closes the date picker. A different day whose
-  # window is the one already loaded (another day of the visible week) updates
-  # the title and range but needs no query: the hook already holds the events.
-  # Either way the hook still hears which period the URL settled on
-  # (`calendar:period`), because it holds a navigation as pending until the
-  # server confirms it and follows nothing else (not even Back) meanwhile.
-  defp follow_params(socket) do
-    socket = assign_clock(socket)
-    %{view: view, date: date, window: loaded} = socket.assigns
-
-    case target(socket.assigns) do
-      {^view, ^date} ->
-        socket |> assign(:open_menu, nil) |> push_period()
-
-      _other ->
-        socket = apply_params(socket)
-
-        if window_for(socket.assigns) == loaded,
-          do: push_period(socket),
-          else: socket |> load_window() |> push_events(false)
-    end
-  end
-
   # LiveView revives a surface rendered again before the browser confirmed
   # its removal (the organiser left the calendar and came straight back). It
   # takes back the queue its guardian has been driving since, as a surface
@@ -447,13 +472,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       )
 
     AgendaLoader.extend_window(assigns, window)
-  end
-
-  defp target(%{params: params, preferences: preferences, today: today}) do
-    params = params || %{}
-
-    {Period.parse_view(params["view"], Period.default_view(preferences.default_view)),
-     Period.parse_date(params["date"], today)}
   end
 
   defp assign_clock(socket) do

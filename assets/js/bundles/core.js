@@ -24,6 +24,7 @@ import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
 import { liveSocketPath } from "../live_socket_path"
 import { takeAttendeePrefill } from "../attendee_prefill"
+import { isPhone } from "../calendar/viewport.js"
 
 // Reveal image fallbacks on load error (replaces inline onerror handlers).
 installImageFallback()
@@ -104,7 +105,10 @@ let liveSocket = new LiveSocket(socketPath, Socket, {
   params: {
     _csrf_token: csrfToken,
     timezone: getUserTimezone(),
-    attendee_prefill: attendeePrefill
+    attendee_prefill: attendeePrefill,
+    // The calendar picks its view by width before its hook has mounted
+    // (TymeslotWeb.Dashboard.Calendar.Viewport).
+    viewport: isPhone() ? "phone" : "wide"
   },
   hooks: CoreHooks
 })

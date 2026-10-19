@@ -6,11 +6,13 @@ defmodule TymeslotWeb.Hooks.ClientInfoHook do
   - :client_ip
   - :user_agent
   - :detected_timezone (from connect params)
+  - :viewport (`:phone` or `:wide`, see `Viewport.from_connect/2`)
   """
 
   import Phoenix.Component
   import Phoenix.LiveView, only: [get_connect_params: 1]
 
+  alias TymeslotWeb.Dashboard.Calendar.Viewport
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
@@ -29,7 +31,8 @@ defmodule TymeslotWeb.Hooks.ClientInfoHook do
      assign(socket,
        client_ip: client_ip,
        user_agent: user_agent,
-       detected_timezone: detected_timezone
+       detected_timezone: detected_timezone,
+       viewport: Viewport.from_connect(connect_params, user_agent)
      )}
   end
 end

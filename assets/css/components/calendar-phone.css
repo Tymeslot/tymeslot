@@ -1,0 +1,20 @@
+/*
+ * The new calendar on a phone: below 40rem, Tailwind's `sm` boundary, the
+ * query PHONE_QUERY in assets/js/calendar/viewport.js names. The server
+ * renders the desktop and the phone chrome alike and these rules choose, so
+ * the first paint is right before any script runs. Every rule sits inside
+ * the phone query unless its comment says why not.
+ */
+
+@media (width < 40rem) {
+  /* A first paint never draws seven columns on a phone: the server shows
+     three days there, and a skeleton rendered before it knew the width is
+     cut to three. */
+  .cal-skeleton:has(> .cal-skeleton-col:nth-child(4)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cal-skeleton-col:nth-child(n + 4) {
+    display: none;
+  }
+}

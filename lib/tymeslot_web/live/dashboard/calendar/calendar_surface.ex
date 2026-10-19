@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Toolbar
   alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.Calendar.ViewEvents
+  alias TymeslotWeb.Dashboard.Calendar.Viewport
   alias TymeslotWeb.Dashboard.Calendar.Visibility
   alias TymeslotWeb.Dashboard.Calendar.Writes
 
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @booking_events ~w(calendar:bookable_toggle calendar:bookable_type calendar:block calendar:open_booking calendar:bookability)
 
   # `calendar:*` events answered by `ViewEvents`: how a view is drawn.
-  @view_events ~w(calendar:agenda_more)
+  @view_events ~w(calendar:agenda_more calendar:viewport)
 
   @menus %{"date" => :date, "display" => :display}
 
@@ -189,7 +190,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # to do with them.
   def update(%{action: _other}, socket), do: {:ok, socket}
 
-  def update(assigns, socket), do: {:ok, socket |> assign(assigns) |> SurfaceData.sync()}
+  def update(assigns, socket),
+    do: {:ok, socket |> assign(assigns) |> Viewport.adopt_hint() |> SurfaceData.sync()}
 
   defp schedule_reload(%{assigns: %{pending_reload: nil}} = socket, action) do
     send_update_after(__MODULE__, [id: socket.assigns.id, action: :reload], @reload_delay)
@@ -294,7 +296,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         target={@myself}
       />
       <SyncBanner.sync_banner problems={@sync_problems} syncing_ids={@syncing_ids} target={@myself} />
-      <div class="relative isolate flex min-h-0 flex-1">
+      <div class="cal-row relative isolate flex min-h-0 flex-1">
         <Rail.rail
           :if={@rail_open}
           accounts={@accounts}
@@ -314,6 +316,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         <Canvas.canvas
           view={@view}
           date={@date}
+          days={@days}
           locale={@locale}
           strings={ClientStrings.build(@locale)}
           target={@myself}
@@ -360,12 +363,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   @impl Phoenix.LiveComponent
   # The reply carries the bookable layer as last pushed (nil until the first
-  # load answers), so a hook mounted after that push still draws it.
-  def handle_event("calendar:ready", _params, socket),
-    do:
-      {:reply,
-       Map.put(SurfaceData.payload(socket.assigns, true), :bookable, socket.assigns.bookable),
-       socket}
+  # load answers), so a hook mounted after that push still draws it. The
+  # hook says whether it is on a phone first, so the reply's view is the one
+  # that width shows (see `Viewport`).
+  def handle_event("calendar:ready", params, socket) do
+    socket = Viewport.report(socket, params["phone"])
+
+    {:reply,
+     Map.put(SurfaceData.payload(socket.assigns, true), :bookable, socket.assigns.bookable),
+     socket}
+  end
 
   def handle_event("calendar:goto", %{"view" => view, "date" => date}, socket) do
     %{view: current_view, date: current_date} = socket.assigns

@@ -9,6 +9,7 @@
  * Data flow:
  *  - on mount and reconnect it pulls a payload with `calendar:ready`, so a
  *    lazily loaded hook never misses data pushed before it existed;
+ *  - it says whether it is on a phone with calendar:ready and reports a change with calendar:viewport (see calendar_canvas/viewport.js);
  *  - the server pushes `calendar:events` whenever what the grid shows changes,
  *    and `calendar:settings` when density or the night fold changes;
  *  - navigation controls patch the URL and dispatch `calendar:navigate` on
@@ -49,6 +50,7 @@ import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
 import { OpeningMixin } from "./calendar_canvas/opening.js";
+import { ViewportMixin } from "./calendar_canvas/viewport.js";
 import { ViewsMixin } from "./calendar_canvas/views.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
@@ -94,6 +96,7 @@ export const CalendarCanvas = {
   ...KeysMixin,
   ...ZoomMixin,
   ...BookableMixin,
+  ...ViewportMixin,
   ...ViewsMixin,
 
   mounted() {
@@ -128,6 +131,7 @@ export const CalendarCanvas = {
     this.mountKeys();
     this.mountZoom();
     this.mountBookable();
+    this.mountViewport();
     this.mountViews();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
@@ -171,6 +175,7 @@ export const CalendarCanvas = {
     this.destroyKeys();
     this.destroyZoom();
     this.destroyBookable();
+    this.destroyViewport();
     this.destroyViews();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
@@ -178,7 +183,7 @@ export const CalendarCanvas = {
   },
 
   requestData() {
-    this.pushEventTo(this.el, "calendar:ready", {}, (reply) => this.receive(reply));
+    this.pushEventTo(this.el, "calendar:ready", { phone: this.phone }, (reply) => this.receive(reply));
   },
 
   // The cache always takes the payload, but the grid only follows its period
@@ -247,7 +252,7 @@ export const CalendarCanvas = {
 
   navigate(detail) {
     if (!detail || !detail.view || !detail.date) return;
-    const { view } = detail;
+    const view = this.viewFor(detail.view);
     const from = this.pending ?? { view: this.view, date: this.date };
     let { date } = detail;
 

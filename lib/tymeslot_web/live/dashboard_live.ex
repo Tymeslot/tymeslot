@@ -79,8 +79,15 @@ defmodule TymeslotWeb.DashboardLive do
     # the dead render, before `AgendaRefresh.load/1` has run.
     # `:calendar_redesign` stays nil until the calendar is first opened, which
     # loads the organiser's switch once for the life of this process.
+    # `viewport_fit: :cover` lets the root layout write the dashboard's
+    # viewport meta (under the notch, resized by the on-screen keyboard).
     {:ok,
-     assign(socket, first_dashboard_visit: first_visit?, agenda: nil, calendar_redesign: nil)}
+     assign(socket,
+       first_dashboard_visit: first_visit?,
+       agenda: nil,
+       calendar_redesign: nil,
+       viewport_fit: :cover
+     )}
   end
 
   @impl Phoenix.LiveView
@@ -275,6 +282,7 @@ defmodule TymeslotWeb.DashboardLive do
               saving={@saving}
               client_ip={@client_ip}
               user_agent={@user_agent}
+              viewport_hint={@viewport}
               live_action={@live_action}
               calendar_left={@calendar_left}
               params={@params}
