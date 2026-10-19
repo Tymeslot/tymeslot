@@ -31,8 +31,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
   file is turned away while either is under way.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   import Phoenix.Component, only: [assign: 3, upload_errors: 2]
 
   import Phoenix.LiveView, only: [cancel_upload: 3, start_async: 3]

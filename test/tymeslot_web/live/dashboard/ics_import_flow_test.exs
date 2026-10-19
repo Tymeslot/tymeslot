@@ -128,6 +128,14 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
                 "Imported 2 events. 1 event could not be imported. (Dentist) The import stopped because your calendar is not responding. Please try again later."}
     end
 
+    test "is a warning when events were written but Outlook dropped skipped dates" do
+      assert IcsImportFlow.result_flash(
+               {:ok, summary(%{total: 2, created: 2, exclusions_dropped: 1})}
+             ) ==
+               {:warning,
+                "Imported 2 events. Outlook could not take the skipped dates of 1 recurring event, so it may show extra occurrences."}
+    end
+
     test "says an import is already running, or that it could not finish" do
       assert IcsImportFlow.result_flash({:error, :already_running}) ==
                {:error, IcsImportFlow.busy_message()}
@@ -135,6 +143,9 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
       assert IcsImportFlow.result_flash({:error, :failed}) ==
                {:error,
                 "The import could not be finished. Some of its events may already be in your calendar."}
+
+      assert IcsImportFlow.result_flash({:error, :whatever}) ==
+               {:error, "Invalid calendar selected"}
     end
   end
 
