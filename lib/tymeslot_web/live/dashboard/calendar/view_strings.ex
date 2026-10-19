@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ViewStrings do
       agenda_later: dgettext("dashboard_calendar_views", "Show later"),
       agenda_loading: dgettext("dashboard_calendar_views", "Loading more"),
       month_more:
-        dgettext("dashboard_calendar_views", "%{count} more on %{date}",
+        dgettext("dashboard_calendar_views", "More on %{date}: %{count}",
           count: "%{count}",
           date: "%{date}"
         ),

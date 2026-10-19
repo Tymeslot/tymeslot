@@ -21,11 +21,6 @@ msgstr[2] "%{count} skrytých"
 
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} more on %{date}"
-msgstr "další: %{count} dne %{date}"
-
-#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
-#, elixir-autogen, elixir-format
 msgid "%{date}, show this day's events"
 msgstr "%{date}, zobrazit události tohoto dne"
 
@@ -88,3 +83,8 @@ msgstr "Do %{time}"
 #, elixir-autogen, elixir-format
 msgid "includes something that needs your attention"
 msgstr "obsahuje něco, co vyžaduje vaši pozornost"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "More on %{date}: %{count}"
+msgstr "Další dne %{date}: %{count}"

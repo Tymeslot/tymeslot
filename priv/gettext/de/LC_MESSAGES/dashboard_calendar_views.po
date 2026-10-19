@@ -20,11 +20,6 @@ msgstr[1] "%{count} ausgeblendet"
 
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} more on %{date}"
-msgstr "%{count} weitere am %{date}"
-
-#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
-#, elixir-autogen, elixir-format
 msgid "%{date}, show this day's events"
 msgstr "%{date}, Ereignisse dieses Tages anzeigen"
 
@@ -87,3 +82,8 @@ msgstr "Bis %{time}"
 #, elixir-autogen, elixir-format
 msgid "includes something that needs your attention"
 msgstr "enthält etwas, das Ihre Aufmerksamkeit braucht"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "More on %{date}: %{count}"
+msgstr "Weitere am %{date}: %{count}"

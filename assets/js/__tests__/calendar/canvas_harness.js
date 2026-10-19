@@ -98,7 +98,7 @@ export const strings = {
   agenda_from: "From %{time}",
   agenda_later: "Show later",
   agenda_loading: "Loading more",
-  month_more: "%{count} more on %{date}",
+  month_more: "More on %{date}: %{count}",
   month_attention: "includes something that needs your attention",
   month_select: "%{date}, show this day's events",
   day_events: "Events: %{count}",

@@ -21,7 +21,7 @@ const strings = {
   request_expired_aria: "request expired without an answer",
   open_day: "%{date}, open day view",
   empty_day: "Nothing planned on this day.",
-  month_more: "%{count} more on %{date}",
+  month_more: "More on %{date}: %{count}",
   month_attention: "includes something that needs your attention",
   month_select: "%{date}, show this day's events",
   day_events: "Events: %{count}",
@@ -78,7 +78,7 @@ describe("wide", () => {
     const holder = draw({ cellHeight: 48 });
     const more = holder.querySelector('button[data-month-more="2026-10-14"]');
     expect(more.textContent).toBe("+3");
-    expect(more.getAttribute("aria-label")).toBe("3 more on Wed 14 Oct");
+    expect(more.getAttribute("aria-label")).toBe("More on Wed 14 Oct: 3");
     expect(holder.querySelector('.cal-mchip[data-event-id="event-1"]')).toBeNull();
   });
 
