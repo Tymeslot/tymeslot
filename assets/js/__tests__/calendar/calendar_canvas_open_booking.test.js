@@ -85,14 +85,21 @@ test("Save sends the opening, not an event, and waits for the reply", () => {
   expect(pushes(hook, "calendar:open_booking")).toHaveLength(1);
 });
 
-test("accepted, the popover closes and the draft goes", () => {
-  const { el, hook } = open();
+test("accepted, the popover closes and the opening stays drawn until the layer arrives", () => {
+  const { el, hook, handlers } = open();
   toOpen();
   q("[data-qc-save]").click();
   reply(hook, "calendar:open_booking", { accepted: true });
 
   expect(popover()).toBeNull();
   expect(hook.draft).toBeNull();
+  expect(drawn(el).querySelector(".cal-ev-title").textContent).toBe("Open for Intro call");
+
+  // An events payload carries no opening, so it stays.
+  handlers["calendar:events"](withTypes());
+  expect(drawn(el)).not.toBeNull();
+
+  handlers["calendar:bookable"]({ on: true, meeting_type: { id: 11, name: "Intro call" }, windows: [{ start: "2026-10-15T09:00", end: "2026-10-15T09:30" }], next: null, error: false, timezone: "Europe/London" });
   expect(drawn(el)).toBeNull();
 });
 

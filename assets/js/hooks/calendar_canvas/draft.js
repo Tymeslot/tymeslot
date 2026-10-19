@@ -15,7 +15,8 @@
  * handed to the side panel it moves to `this.handed` and is drawn until
  * the server's next payload, which carries the server's own copy of the
  * draft (or the created event) under the same id; `calendar:draft-cleared`
- * drops it at once. Nothing here talks to the server: quick create does
+ * drops it at once. An accepted opening is drawn until the next
+ * `calendar:bookable` instead (`holdOpening`), since only the layer shows it. Nothing here talks to the server: quick create does
  * (calendar_canvas/create.js).
  */
 import { DRAG_THRESHOLD, previewBox, slotAt } from "../../calendar/drag.js";
@@ -219,9 +220,24 @@ export const DraftMixin = {
     this.render();
   },
 
-  // A payload arrived: the server's state now includes every draft handed to it.
+  // An accepted opening leaves quick create but stays drawn until the
+  // bookable layer's next push, which carries what it opened; an events
+  // payload, which never does, leaves it alone.
+  holdOpening(draft) {
+    this.draft = null;
+    if (draft) this.handed.set(draft.id, { ...draft, status: "created", awaitsLayer: true });
+    this.render();
+  },
+
+  // A payload arrived: the server's state now includes every draft handed to
+  // it, bar the openings still waiting for the bookable layer.
   settleDrafts() {
-    this.handed.clear();
+    for (const [id, draft] of this.handed) if (!draft.awaitsLayer) this.handed.delete(id);
+  },
+
+  // The bookable layer arrived: the openings it answers are drawn by it now.
+  settleOpenings() {
+    for (const [id, draft] of this.handed) if (draft.awaitsLayer) this.handed.delete(id);
   },
 
   draftCleared(id) {

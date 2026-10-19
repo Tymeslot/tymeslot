@@ -12,8 +12,9 @@
  * With no calendar to write events to, a new draft starts as an opening.
  *
  * Save pushes `calendar:open_booking` and settles as a create does
- * (`pushGuarded`): accepted, the popover closes and the draft goes, since
- * the bookable layer's reload draws the result; refused, the message shows
+ * (`pushGuarded`): accepted, the popover closes and the draft stays drawn
+ * until the next `calendar:bookable` arrives (`holdOpening`), which draws
+ * the result, so the slot never flickers empty in between; refused, the message shows
  * on the chip the reply names; lost, the draft goes and a notice asks the
  * organiser to check their bookable times.
  */
@@ -71,8 +72,7 @@ export const OpeningMixin = {
     if (reply?.accepted) {
       const returnTo = this.quick?.returnTo;
       this.closeQuickCreate();
-      this.draft = null;
-      this.render();
+      this.holdOpening(this.draft);
       this.restoreQuickFocus(returnTo);
       return;
     }

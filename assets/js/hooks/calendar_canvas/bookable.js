@@ -68,6 +68,7 @@ export const BookableMixin = {
 
   receiveBookable(layer) {
     this.bookable = layer;
+    this.settleOpenings();
     if (this.overlayOpen()) {
       this.dirty = true;
       return;
