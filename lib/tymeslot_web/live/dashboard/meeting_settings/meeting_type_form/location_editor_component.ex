@@ -194,9 +194,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
       >
         <:header>
           <%= if @mode == :edit do %>
-            {dgettext("dashboard_meeting_form", "Edit location")}
+            {dgettext("dashboard_meeting_locations", "Edit location")}
           <% else %>
-            {dgettext("dashboard_meeting_form", "Add location")}
+            {dgettext("dashboard_meeting_locations", "Add location")}
           <% end %>
         </:header>
 
@@ -212,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
         >
           <.info_box :if={@group_bookings_enabled} variant={:info}>
             {dgettext(
-              "dashboard_meeting_form",
+              "dashboard_meeting_locations",
               "Group bookings use a location fixed in advance: one video provider, one saved location, or a number for bookers to call."
             )}
           </.info_box>
@@ -229,11 +229,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             id="location_kind"
             name="location[kind]"
             value={field_value(@changeset, :kind)}
-            label={dgettext("dashboard_meeting_form", "Type")}
+            label={dgettext("dashboard_meeting_locations", "Type")}
             options={kind_options()}
           >
             <:description>
-              {dgettext("dashboard_meeting_form", "Decides what happens when a booker picks this.")}
+              {dgettext(
+                "dashboard_meeting_locations",
+                "Decides what happens when a booker picks this."
+              )}
             </:description>
           </.choice_toggle>
 
@@ -242,8 +245,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             value={field_value(@changeset, :label)}
             id="location_label"
             type="text"
-            label={dgettext("dashboard_meeting_form", "Label")}
-            placeholder={dgettext("dashboard_meeting_form", "e.g., Our London office")}
+            label={dgettext("dashboard_meeting_locations", "Label")}
+            placeholder={dgettext("dashboard_meeting_locations", "e.g., Our London office")}
             required
             phx-blur="field_blur"
             phx-value-field="label"
@@ -251,7 +254,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             errors={FormValidationHelpers.field_errors(@field_errors, :label)}
           >
             <:description>
-              {dgettext("dashboard_meeting_form", "What the booker sees in the list of locations.")}
+              {dgettext(
+                "dashboard_meeting_locations",
+                "What the booker sees in the list of locations."
+              )}
             </:description>
           </.input>
 
@@ -277,11 +283,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 value={field_value(@changeset, :collect_from_guest)}
                 id="location_collect_from_guest"
                 type="checkbox"
-                label={dgettext("dashboard_meeting_form", "Ask the booker for their number")}
+                label={dgettext("dashboard_meeting_locations", "Ask the booker for their number")}
               >
                 <:description>
                   {dgettext(
-                    "dashboard_meeting_form",
+                    "dashboard_meeting_locations",
                     "You call them. Leave this off to publish a number for them to call instead."
                   )}
                 </:description>
@@ -293,7 +299,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 value={field_value(@changeset, :details)}
                 id="location_details"
                 type="text"
-                label={dgettext("dashboard_meeting_form", "Number to call")}
+                label={dgettext("dashboard_meeting_locations", "Number to call")}
                 placeholder="+44 20 7946 0000"
                 required
                 phx-blur="field_blur"
@@ -307,10 +313,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
                 value={field_value(@changeset, :details)}
                 id="location_details"
                 type="textarea"
-                label={dgettext("dashboard_meeting_form", "Details (optional)")}
+                label={dgettext("dashboard_meeting_locations", "Details (optional)")}
                 placeholder={
                   dgettext(
-                    "dashboard_meeting_form",
+                    "dashboard_meeting_locations",
                     "Anything the booker needs to know to get there"
                   )
                 }
@@ -322,7 +328,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
               >
                 <:description>
                   {dgettext(
-                    "dashboard_meeting_form",
+                    "dashboard_meeting_locations",
                     "Shown to the booker and written into the calendar invitation."
                   )}
                 </:description>
@@ -356,14 +362,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
             phx-click="cancel"
             phx-target={@myself}
           >
-            {dgettext("dashboard_meeting_form", "Cancel")}
+            {dgettext("dashboard_meeting_locations", "Cancel")}
           </.action_button>
           <.action_button
             type="submit"
             form="location-editor-form"
             variant={:primary}
           >
-            {dgettext("dashboard_meeting_form", "Save location")}
+            {dgettext("dashboard_meeting_locations", "Save location")}
           </.action_button>
         </div>
       </.modal>
@@ -381,14 +387,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
     <div>
       <%= if @video_integrations == [] do %>
         <Forms.label>
-          {dgettext("dashboard_meeting_form", "Video provider")}
+          {dgettext("dashboard_meeting_locations", "Video provider")}
           <span class="text-red-500 ml-0.5">*</span>
         </Forms.label>
         <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
           <p class="text-token-sm text-yellow-700">
-            {dgettext("dashboard_meeting_form", "No video integrations configured.")}
+            {dgettext("dashboard_meeting_locations", "No video integrations configured.")}
             <a href={~p"/dashboard/integrations?tab=video"} class="underline hover:text-yellow-800">
-              {dgettext("dashboard_meeting_form", "Set up video integration")}
+              {dgettext("dashboard_meeting_locations", "Set up video integration")}
             </a>
           </p>
         </div>
@@ -397,7 +403,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           id="location_video_integration_ids"
           name="location[video_integration_ids][]"
           value={field_value(@changeset, :video_integration_ids)}
-          label={dgettext("dashboard_meeting_form", "Video providers")}
+          label={dgettext("dashboard_meeting_locations", "Video providers")}
           options={integration_options(@video_integrations)}
           multiple
           required
@@ -405,7 +411,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
         >
           <:description>
             {dgettext(
-              "dashboard_meeting_form",
+              "dashboard_meeting_locations",
               "Pick one or more. With several, the booker chooses which one the room is created on."
             )}
           </:description>
@@ -496,10 +502,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   defp blank?(value), do: value in [nil, ""]
 
-  defp default_label("video"), do: dgettext("dashboard_meeting_form", "Video call")
-  defp default_label("phone"), do: dgettext("dashboard_meeting_form", "Phone call")
-  defp default_label("in_person"), do: dgettext("dashboard_meeting_form", "In person")
-  defp default_label(_kind), do: dgettext("dashboard_meeting_form", "Somewhere else")
+  defp default_label("video"), do: dgettext("dashboard_meeting_locations", "Video call")
+  defp default_label("phone"), do: dgettext("dashboard_meeting_locations", "Phone call")
+  defp default_label("in_person"), do: dgettext("dashboard_meeting_locations", "In person")
+  defp default_label(_kind), do: dgettext("dashboard_meeting_locations", "Somewhere else")
 
   # A pill shows the integration's name, with the account in its tooltip. Two
   # integrations sharing a name (two Zoom accounts, say) would be two
@@ -528,10 +534,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   defp kind_options do
     for {label, kind} <- [
-          {dgettext("dashboard_meeting_form", "In person"), "in_person"},
-          {dgettext("dashboard_meeting_form", "Video call"), "video"},
-          {dgettext("dashboard_meeting_form", "Phone call"), "phone"},
-          {dgettext("dashboard_meeting_form", "Something else"), "custom"}
+          {dgettext("dashboard_meeting_locations", "In person"), "in_person"},
+          {dgettext("dashboard_meeting_locations", "Video call"), "video"},
+          {dgettext("dashboard_meeting_locations", "Phone call"), "phone"},
+          {dgettext("dashboard_meeting_locations", "Something else"), "custom"}
         ] do
       %{value: kind, label: label, icon: LocationIcons.icon(kind)}
     end

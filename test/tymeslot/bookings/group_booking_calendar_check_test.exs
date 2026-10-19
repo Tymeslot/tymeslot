@@ -52,7 +52,7 @@ defmodule Tymeslot.Bookings.GroupBookingCalendarCheckTest do
     # The first seat creates the meeting; its calendar write is what the rest
     # of these tests then find in the host's calendar.
     {:ok, meeting} =
-      Create.execute(meeting_params, form_data("first@example.com"), skip_calendar_check: true)
+      Create.execute(meeting_params, form_data("first@example.com"))
 
     %{
       profile: profile,
@@ -108,7 +108,7 @@ defmodule Tymeslot.Bookings.GroupBookingCalendarCheckTest do
     test "closes the slot and refuses the booking before any side effect", context do
       for email <- ["second@example.com", "third@example.com"] do
         {:ok, _joined} =
-          Create.execute(context.meeting_params, form_data(email), skip_calendar_check: true)
+          Create.execute(context.meeting_params, form_data(email))
       end
 
       stub_calendar_events([ten_oclock_event(context, uid: context.meeting.calendar_uid)])

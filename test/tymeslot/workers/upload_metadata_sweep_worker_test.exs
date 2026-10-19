@@ -9,12 +9,11 @@ defmodule Tymeslot.Workers.UploadMetadataSweepWorkerTest do
   @moduletag :tmp_dir
 
   alias Tymeslot.Test.MediaFixtures
+  alias Tymeslot.Test.UploadRoot
   alias Tymeslot.Workers.UploadMetadataSweepWorker
 
   setup %{tmp_dir: upload_dir} do
-    previous = Application.get_env(:tymeslot, :upload_directory)
-    Application.put_env(:tymeslot, :upload_directory, upload_dir)
-    on_exit(fn -> Application.put_env(:tymeslot, :upload_directory, previous) end)
+    UploadRoot.point_at(upload_dir)
     :ok
   end
 

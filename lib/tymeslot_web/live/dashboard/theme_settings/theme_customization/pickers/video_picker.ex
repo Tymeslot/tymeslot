@@ -5,7 +5,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Media.UploadConstraints
+  import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.UploadedBackground,
+    only: [uploaded_background: 1]
+
+  alias Tymeslot.Media.Uploads
+  alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
 
   @doc """
@@ -44,14 +48,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                 class="aspect-video bg-tymeslot-900 relative overflow-hidden video-hover-container"
               >
                 <img
-                  src={"/videos/thumbnails/#{video.thumbnail}"}
+                  src={Presets.video_thumbnail_url(video.thumbnail)}
                   alt={video.name}
                   class="video-thumbnail w-full h-full object-cover absolute inset-0 z-10 transition-transform duration-700 group-hover/video:scale-110"
                   data-img-fallback
                   data-fallback-selector="[data-fallback-thumbnail]"
                 />
                 <video
-                  src={"/videos/backgrounds/#{video.file}"}
+                  src={Presets.video_url(video.file)}
                   class="video-preview w-full h-full object-cover absolute inset-0 opacity-0"
                   muted
                   loop
@@ -106,6 +110,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
           </span>
         </div>
       </div>
+
+      <.uploaded_background
+        kind={:video}
+        option={@option}
+        customization={@customization}
+        myself={@myself}
+      />
 
       <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
         <form
@@ -178,22 +189,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
 
           <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">
             {dgettext("dashboard_appearance", "MP4 or WebM. Max %{size} MB.",
-              size: UploadConstraints.max_file_size_mb(:video)
+              size: Uploads.max_file_size_mb(:video)
             )}
           </p>
         </form>
-
-        <%= if @customization.settings["background_video_path"] && @customization.settings["background_value"] == "custom" do %>
-          <div class="mt-8 p-4 bg-amber-50 border border-amber-100 rounded-token-2xl flex items-center gap-3">
-            <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-amber-600 shrink-0" />
-            <p class="text-token-sm font-bold text-amber-800">
-              {dgettext(
-                "dashboard_appearance",
-                "You have a custom video. Selecting a preset will remove it."
-              )}
-            </p>
-          </div>
-        <% end %>
       </div>
     </div>
     """

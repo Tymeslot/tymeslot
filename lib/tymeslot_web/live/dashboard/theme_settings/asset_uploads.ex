@@ -29,16 +29,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [allow_upload: 3, consume_uploaded_entries: 3, send_update: 3]
 
-  alias Tymeslot.Media.UploadConstraints
+  alias Tymeslot.Media.Uploads
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Helpers.ImageUploadErrors
   alias TymeslotWeb.Live.Shared.Flash
-
-  # Five uploads per ten minutes, shared across every field: video encoding is
-  # the expensive part and a per-field budget would multiply the ceiling.
-  @rate_limit_max 5
-  @rate_limit_window_ms 600_000
 
   @doc """
   Declares an upload input for each asset field the theme's spec lists
@@ -57,9 +52,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
         acc
       else
         allow_upload(acc, field,
-          accept: UploadConstraints.allowed_extensions(kind),
+          accept: Uploads.allowed_extensions(kind),
           max_entries: 1,
-          max_file_size: UploadConstraints.max_file_size(kind),
+          max_file_size: Uploads.max_file_size(kind),
           auto_upload: true,
           progress: progress_callback(component, field)
         )
@@ -110,15 +105,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   defp rate_limited(socket, fun) do
     user_id = socket.assigns.profile.user_id
 
-    case RateLimiter.check_rate_limit(
-           "theme_upload:#{user_id}",
-           @rate_limit_max,
-           @rate_limit_window_ms
-         ) do
+    case RateLimiter.check(:theme_upload, user_id) do
       :ok ->
         fun.()
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, _message} ->
         Flash.error(
           dgettext(
             "dashboard_appearance",
@@ -234,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
       dgettext(
         "dashboard_appearance",
         "This file is too large. Please upload one of at most %{size} MB.",
-        size: UploadConstraints.max_file_size_mb(kind)
+        size: Uploads.max_file_size_mb(kind)
       )
 
   def error_message(:image, :not_accepted),

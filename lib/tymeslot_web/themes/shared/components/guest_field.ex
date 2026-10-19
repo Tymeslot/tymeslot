@@ -27,6 +27,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
   attr :guest_error, :string, default: nil
   attr :guests_open, :boolean, default: false
   attr :max_guests, :integer, required: true
+
+  attr :show_cap, :boolean,
+    default: true,
+    doc: "Whether the header shows `added/cap`; see `GuestBooking.cap_visible?/1`"
+
   attr :target, :any, required: true
 
   @spec guest_field(map()) :: Phoenix.LiveView.Rendered.t()
@@ -37,7 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
         <div class="guest-field__header">
           <span class="guest-field__label">{dgettext("booking", "Guests")}</span>
           <div class="guest-field__header-meta">
-            <span class="guest-field__count">{length(@guest_emails)}/{@max_guests}</span>
+            <span class="guest-field__count" data-testid="guest-count">{guest_count(assigns)}</span>
             <button
               type="button"
               class="guest-field__close"
@@ -69,7 +74,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
         </ul>
 
         <form
-          :if={length(@guest_emails) < @max_guests}
+          :if={not @show_cap or length(@guest_emails) < @max_guests}
           id="guest-add-form"
           class="guest-add"
           phx-submit="add_guest"
@@ -108,6 +113,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
     </div>
     """
   end
+
+  defp guest_count(%{show_cap: true} = assigns),
+    do: "#{length(assigns.guest_emails)}/#{assigns.max_guests}"
+
+  defp guest_count(assigns), do: Integer.to_string(length(assigns.guest_emails))
 
   defp guest_initial(email) do
     case email |> to_string() |> String.trim() |> String.first() do

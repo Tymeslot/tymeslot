@@ -35,8 +35,8 @@ defmodule Tymeslot.Meetings.VideoRoomsGuestJoinUrlTest do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.VideoRooms
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.TestMocks
-  alias Tymeslot.Workers.EmailWorkerHandlers
 
   @app_id "tymeslot"
   @secret "jitsi-shared-secret-of-at-least-32-bytes"
@@ -173,7 +173,7 @@ defmodule Tymeslot.Meetings.VideoRoomsGuestJoinUrlTest do
       {:ok, [_guest]} = Guests.create_for_meeting(meeting.id, ["greg@example.com"])
 
       assert :ok =
-               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+               EmailHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
 

@@ -16,6 +16,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
   attr :telegram_testing, :any, required: true
   attr :myself, :any, required: true
 
+  attr :paused, :boolean,
+    default: false,
+    doc: "The owner's plan doesn't include automations: cards paused, nothing can be added"
+
   @spec telegram_tab_content(map()) :: Phoenix.LiveView.Rendered.t()
   def telegram_tab_content(assigns) do
     ~H"""
@@ -26,7 +30,11 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
           count={length(@integrations)}
         >
           <:actions>
-            <.action_button phx-click="show_telegram_form" phx-target={@myself}>
+            <.action_button
+              disabled={@paused}
+              phx-click={!@paused && "show_telegram_form"}
+              phx-target={@myself}
+            >
               {dgettext("dashboard_automation_chat", "Add Telegram Account")}
             </.action_button>
           </:actions>
@@ -38,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
               time_format={@time_format}
               integration={integration}
               testing={@telegram_testing == integration.id}
+              paused={@paused}
               target={@myself}
               on_edit={
                 JS.push("show_edit_telegram_form", value: %{"id" => integration.id}, target: @myself)
@@ -83,7 +92,11 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
       >
         <:graphic><IconComponents.icon name={:telegram} class="w-10 h-10" /></:graphic>
         <:action>
-          <.action_button phx-click="show_telegram_form" phx-target={@myself}>
+          <.action_button
+            disabled={@paused}
+            phx-click={!@paused && "show_telegram_form"}
+            phx-target={@myself}
+          >
             {dgettext("dashboard_automation_chat", "Add Telegram Account")}
           </.action_button>
         </:action>

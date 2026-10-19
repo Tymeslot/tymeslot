@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
   Schedules the organiser's participant list for a planned session
   (`Tymeslot.Meetings.PlannedSessions`) for the moment its registration
   closes. Sent by
-  `Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails`, which
+  `Tymeslot.Notifications.Email.PlannedSessionEmails`, which
   re-checks the session when it runs, so cancelling a session needs no job
   deleted here.
 
@@ -13,12 +13,9 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
   closes again sends a new one.
   """
 
-  alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Workers.EmailWorker
-
-  require Logger
 
   @action "send_registration_closed"
   # 10 years in seconds — one pending list per session, however far ahead it is planned.
@@ -51,20 +48,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
         replace: [scheduled: [:scheduled_at], available: [:scheduled_at]]
       )
 
-    case Oban.insert(job) do
-      {:ok, _job} ->
-        :ok
-
-      {:error, %Changeset{errors: [unique: _details]}} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule participant list email",
-          meeting_id: session.id,
-          error: Helpers.format_insert_error(reason)
-        )
-
-        :ok
-    end
+    _result = Helpers.insert(job, meeting_id: session.id)
+    :ok
   end
 end

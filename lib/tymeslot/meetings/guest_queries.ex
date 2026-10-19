@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
 
@@ -61,6 +62,42 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> live_owner()
     |> order_by([g], asc: g.inserted_at, asc: g.email)
     |> Repo.all()
+  end
+
+  @doc """
+  Records a change to the meeting's end on every live guest (see
+  `list_live_for_meeting/1`). A guest with no end change pending keeps
+  `previous_end`, the end they knew, as their `notified_end_time`; one
+  already pending keeps the end they were last told.
+  """
+  @spec record_end_change(binary(), DateTime.t()) :: non_neg_integer()
+  def record_end_change(meeting_id, %DateTime{} = previous_end) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id)
+      |> where(
+        [g],
+        is_nil(g.participant_id) or
+          g.participant_id in subquery(
+            from(p in Participant, where: is_nil(p.cancelled_at), select: p.id)
+          )
+      )
+      |> update([g],
+        set: [notified_end_time: fragment("COALESCE(?, ?)", g.notified_end_time, ^previous_end)]
+      )
+      |> Repo.update_all([])
+
+    count
+  end
+
+  @doc "Records that the guest has been told the meeting ends at `end_time`."
+  @spec put_notified_end(binary(), DateTime.t()) :: :ok
+  def put_notified_end(guest_id, %DateTime{} = end_time) do
+    Guest
+    |> where([g], g.id == ^guest_id)
+    |> Repo.update_all(set: [notified_end_time: end_time])
+
+    :ok
   end
 
   @doc "Reads a guest's RSVP status as it stands now; `nil` when the guest is gone."

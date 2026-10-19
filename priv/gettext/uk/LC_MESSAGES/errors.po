@@ -1,4 +1,4 @@
-## Ukrainian error translations
+#  Ukrainian error translations
 msgid ""
 msgstr ""
 "Language: uk\n"
@@ -44,6 +44,8 @@ msgstr "містить некоректне значення"
 msgid "has invalid format"
 msgstr "має некоректний формат"
 
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "is invalid"
@@ -215,6 +217,7 @@ msgid "is not a valid colour"
 msgstr "не є коректним кольором"
 
 #: lib/tymeslot/availability/time_off_period_schema.ex
+#: lib/tymeslot/polls/poll_time_slot_schema.ex
 #, elixir-autogen, elixir-format
 msgid "must be after the start time"
 msgstr "має бути пізніше за час початку"
@@ -237,41 +240,10 @@ msgstr[0] "%{count} хвилину"
 msgstr[1] "%{count} хвилини"
 msgstr[2] "%{count} хвилин"
 
-#: lib/tymeslot/security/field_validators/username_validator.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Це ім'я користувача зарезервоване"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username is required"
-msgstr "Потрібно вказати ім'я користувача"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must be a text value"
-msgstr "Ім'я користувача має бути текстовим значенням"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must be at least %{count} character long"
-msgid_plural "Username must be at least %{count} characters long"
-msgstr[0] "Ім'я користувача має містити щонайменше %{count} символ"
-msgstr[1] "Ім'я користувача має містити щонайменше %{count} символи"
-msgstr[2] "Ім'я користувача має містити щонайменше %{count} символів"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must be at most %{count} character long"
-msgid_plural "Username must be at most %{count} characters long"
-msgstr[0] "Ім'я користувача має містити щонайбільше %{count} символ"
-msgstr[1] "Ім'я користувача має містити щонайбільше %{count} символи"
-msgstr[2] "Ім'я користувача має містити щонайбільше %{count} символів"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
-msgstr "Ім'я користувача має починатися з літери або цифри та містити лише малі літери, цифри, підкреслення й дефіси"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
@@ -306,27 +278,27 @@ msgstr[2] "має бути не далі ніж через %{count} років"
 msgid "video server checks"
 msgstr "перевірок сервера відеозв'язку"
 
-#: lib/tymeslot/security/rate_limiter/bookings.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "bookings"
 msgstr "бронювань"
 
-#: lib/tymeslot/security/rate_limiter/calendar.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr "переміщень подій календаря"
 
-#: lib/tymeslot/security/rate_limiter/auth.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "password reset requests"
 msgstr "запитів на скидання пароля"
 
-#: lib/tymeslot/security/rate_limiter/auth.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "signup attempts"
 msgstr "спроб реєстрації"
 
-#: lib/tymeslot/security/rate_limiter/auth.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "verification emails"
 msgstr "листів для підтвердження"
@@ -431,7 +403,411 @@ msgstr "У вас уже є тип зустрічі з такою назвою"
 msgid "fixed dates need group bookings"
 msgstr "фіксовані дати потребують групових бронювань"
 
+#: lib/tymeslot/security/universal_sanitizer.ex
+#, elixir-autogen, elixir-format
+msgid "Input exceeds maximum length (%{max_length} characters)"
+msgstr "Введений текст перевищує максимальну кількість символів (%{max_length})"
+
+#: lib/tymeslot/security/universal_sanitizer.ex
+#, elixir-autogen, elixir-format
+msgid "Input exceeds maximum size (%{max_input_bytes} bytes)"
+msgstr "Введений текст перевищує максимальний розмір (%{max_input_bytes} Б)"
+
+#: lib/tymeslot/security/universal_sanitizer.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid text encoding"
+msgstr "Некоректне кодування тексту"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid domain"
+msgstr "Некоректний домен"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid domain format (e.g. *.example.com)"
+msgstr "Некоректний формат домену (напр. *.example.com)"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid domain format (e.g. example.com)"
+msgstr "Некоректний формат домену (напр. example.com)"
+
+#: lib/tymeslot/timezones/timezones.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid timezone"
+msgstr "Некоректний часовий пояс"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Some domains exceed maximum length (max 255 characters)"
+msgstr "Деякі домени перевищують максимальну довжину (макс. 255 символів)"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a multiple of %{step} minutes"
+msgstr "має бути кратним %{step} хв"
+
+#: lib/tymeslot/availability/breaks.ex
+#, elixir-autogen, elixir-format
+msgid "Break times overlap with existing break"
+msgstr "Час перерви накладається на наявну перерву"
+
+#: lib/tymeslot/meeting_types/payment_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe must be connected"
+msgstr "Потрібно підключити Stripe"
+
+#: lib/tymeslot/availability/breaks.ex
+#, elixir-autogen, elixir-format
+msgid "Work hours not found"
+msgstr "Робочий час не знайдено"
+
+#: lib/tymeslot/meetings/meeting_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a confirmed meeting at this time."
+msgstr "У вас уже є підтверджена зустріч на цей час."
+
+#: lib/tymeslot/meetings/participant_schema.ex
+#, elixir-autogen, elixir-format
+msgid "already has a spot at this time"
+msgstr "уже має місце на цей час"
+
+#: lib/tymeslot/availability/availability_override_schema.ex
+#, elixir-autogen, elixir-format
+msgid "are required for custom hours"
+msgstr "потрібно вказати для індивідуального графіка"
+
+#: lib/tymeslot/availability/weekly_availability_schema.ex
+#, elixir-autogen, elixir-format
+msgid "are required when day is available"
+msgstr "потрібно вказати, якщо день доступний"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "cannot be set for more than 1 year in advance"
+msgstr "не можна встановити більш ніж на 1 рік наперед"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "cannot have more than %{count} reminders"
+msgid_plural "cannot have more than %{count} reminders"
+msgstr[0] "не може містити понад %{count} нагадування"
+msgstr[1] "не може містити понад %{count} нагадування"
+msgstr[2] "не може містити понад %{count} нагадувань"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot have more than %{max} domains (currently %{current})"
+msgstr "перевищує максимальну кількість доменів: %{max} (зараз %{current})"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "contains duplicate reminders"
+msgstr "містить повторювані нагадування"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "contains invalid reminder settings"
+msgstr "містить некоректні налаштування нагадувань"
+
+#: lib/tymeslot/meetings/guest_schema.ex
+#, elixir-autogen, elixir-format
+msgid "has already been added"
+msgstr "уже додано"
+
+#: lib/tymeslot/auth/user_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is already registered"
+msgstr "уже зареєстровано"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is already taken"
+msgstr "уже використовується"
+
+#: lib/tymeslot/integrations/calendar/calendar_appearance_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a palette colour"
+msgstr "не є кольором із палітри"
+
+#: lib/tymeslot/app_settings/app_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a supported language"
+msgstr "не є підтримуваною мовою"
+
+#: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/participant_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a supported locale"
+msgstr "не є підтримуваною мовою"
+
+#: lib/tymeslot/integrations/calendar/colour_override.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid palette key"
+msgstr "не є коректним ключем палітри"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid timezone"
+msgstr "не є коректним часовим поясом"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is required when a calendar integration is selected"
+msgstr "є обов'язковим полем, якщо вибрано інтеграцію календаря"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is required when a target calendar is selected"
+msgstr "є обов'язковим полем, якщо вибрано цільовий календар"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is required when video meetings are enabled"
+msgstr "є обов'язковим полем, якщо ввімкнено відеозустрічі"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is too long"
+msgstr "має задовге значення"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "may only contain lowercase letters, numbers and hyphens"
+msgstr "може містити лише малі літери, цифри та дефіси"
+
+#: lib/tymeslot/availability/availability_break_schema.ex
+#: lib/tymeslot/availability/availability_override_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be %{max} characters or less"
+msgstr "перевищує максимальну кількість символів (%{max})"
+
+#: lib/tymeslot/slack/slack_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a Slack webhook URL (https://hooks.slack.com/services/...)"
+msgstr "має бути URL вебхука Slack (https://hooks.slack.com/services/...)"
+
+#: lib/tymeslot/app_settings/app_settings_schema.ex
+#: lib/tymeslot/theme_customizations/options/accent.ex
+#: lib/tymeslot/theme_customizations/options/background.ex
+#: lib/tymeslot/theme_customizations/options/palette.ex
+#, elixir-autogen, elixir-format
+msgid "must be a hex colour such as #14b8a6"
+msgstr "має бути шістнадцятковим кольором, наприклад #14b8a6"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a list of domains"
+msgstr "має бути списком доменів"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must be a list of reminder settings"
+msgstr "має бути списком налаштувань нагадувань"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#: lib/tymeslot/theme_customizations/theme_customization_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid theme"
+msgstr "має бути коректною темою"
+
+#: lib/tymeslot/availability/availability_break_schema.ex
+#: lib/tymeslot/changeset_validators/availability_window.ex
+#: lib/tymeslot/changeset_validators/time_order.ex
+#, elixir-autogen, elixir-format
+msgid "must be after start time"
+msgstr "має бути пізніше за час початку"
+
+#: lib/tymeslot/meeting_types/payment_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must be at least %{minimum}"
+msgstr "має становити щонайменше %{minimum}"
+
+#: lib/tymeslot/changeset_validators/availability_window.ex
+#, elixir-autogen, elixir-format
+msgid "must be at or before the start time when the hours end the next day"
+msgstr "не може бути пізніше за час початку, якщо робочий час закінчується наступного дня"
+
+#: lib/tymeslot/availability/weekly_availability_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be between 1 (Monday) and 7 (Sunday)"
+msgstr "має бути від 1 (понеділок) до 7 (неділя)"
+
+#: lib/tymeslot/custom_fields/field_definition.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than or equal to min"
+msgstr "має бути не менше за мінімальне значення"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be one of the available icons"
+msgstr "має бути однією з доступних піктограм"
+
+#: lib/tymeslot/availability/availability_break_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be within work hours"
+msgstr "має бути в межах робочого часу"
+
+#: lib/tymeslot/custom_fields/field_definition.ex
+#, elixir-autogen, elixir-format
+msgid "must have at least %{count} option"
+msgid_plural "must have at least %{count} options"
+msgstr[0] "має містити щонайменше %{count} варіант"
+msgstr[1] "має містити щонайменше %{count} варіанти"
+msgstr[2] "має містити щонайменше %{count} варіантів"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must include at least one location"
+msgstr "має містити щонайменше одне місце"
+
+#: lib/tymeslot/custom_fields/field_definition.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain duplicate keys"
+msgstr "не може містити повторюваних ключів"
+
+#: lib/tymeslot/slack/slack_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "workspace already connected"
+msgstr "робочий простір уже підключено"
+
+#: lib/tymeslot/webhooks/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Name cannot be empty"
+msgstr "Назва не може бути порожньою"
+
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "contains invalid events"
+msgstr "містить некоректні події"
+
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "invalid format (expected: 123456789:ABCdef...)"
+msgstr "некоректний формат (очікується: 123456789:ABCdef...)"
+
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "is required"
+msgstr "є обов'язковим полем"
+
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must be a numeric ID or @username"
+msgstr "має бути числовим ID або @username"
+
+#: lib/tymeslot/slack/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must look like https://hooks.slack.com/services/..."
+msgstr "має бути у форматі https://hooks.slack.com/services/..."
+
+#: lib/tymeslot/slack/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "pick a channel"
+msgstr "виберіть канал"
+
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "select at least one event"
+msgstr "виберіть щонайменше одну подію"
+
+#: lib/tymeslot/utils/changeset_errors.ex
+#, elixir-autogen, elixir-format
+msgid "%{field}: %{message}"
+msgstr "%{field}: %{message}"
+
+#: lib/tymeslot/webhooks/webhook_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Contains invalid events: %{events}"
+msgstr "Містить некоректні події: %{events}"
+
+#: lib/tymeslot/webhooks/webhook_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Must select at least one event"
+msgstr "Потрібно вибрати щонайменше одну подію"
+
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen, elixir-format
 msgid "If you are the organiser, please connect a calendar in your dashboard."
 msgstr "Якщо ви організатор, підключіть календар на панелі керування."
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "is not supported by this theme"
+msgstr "не підтримується цією темою"
+
+#: lib/tymeslot/theme_customizations/options/cover.ex
+#, elixir-autogen, elixir-format
+msgid "is required for an uploaded cover"
+msgstr "є обов'язковим для завантаженої обкладинки"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "is required for an uploaded image background"
+msgstr "є обов'язковим для завантаженого фонового зображення"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "is required for an uploaded video background"
+msgstr "є обов'язковим для завантаженого фонового відео"
+
+#: lib/tymeslot/theme_customizations/options/cover.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid cover preset"
+msgstr "має бути коректним шаблоном обкладинки"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid gradient preset"
+msgstr "має бути коректним шаблоном градієнта"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid image preset"
+msgstr "має бути коректним шаблоном зображення"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid video preset"
+msgstr "має бути коректним шаблоном відео"
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "The file could not be read. Please upload it again."
+msgstr "Не вдалося прочитати файл. Завантажте його ще раз."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This file is not an image we can read. Please upload a different image."
+msgstr "Цей файл не є зображенням, яке ми можемо прочитати. Завантажте інше зображення."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This file is too large. Please upload a file of at most %{size} MB."
+msgstr "Цей файл завеликий. Завантажте файл розміром не більше %{size} МБ."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
+msgstr "Цей тип файлу не підтримується. Завантажте зображення JPG, PNG, GIF або WebP."
+
+#: lib/tymeslot/meeting_types/payment_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Prices cannot be set in your Stripe account's currency"
+msgstr "У валюті вашого облікового запису Stripe не можна встановлювати ціни"
+
+#: lib/tymeslot/custom_fields/custom_fields.ex
+#: lib/tymeslot/custom_fields/validator.ex
+#, elixir-autogen, elixir-format
+msgid "Answer is too long"
+msgstr "Відповідь задовга"
+
+#: lib/tymeslot/custom_fields/validator.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown field type"
+msgstr "Невідомий тип поля"

@@ -21,7 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   `:keep_server` would report a change as made that is not on the calendar.
   """
 
-  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, ProviderBreakers}
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
@@ -470,7 +470,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
 
   defp with_breaker(client, opts, fun) do
     provider = Map.get(client, :provider, :caldav)
-    opts = Keyword.put(opts, :host, Base.extract_host_from_url(client.base_url))
+    opts = Keyword.put(opts, :host, ProviderBreakers.host_from_base_url(client.base_url))
     CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end
 end

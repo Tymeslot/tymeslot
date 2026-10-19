@@ -369,11 +369,6 @@ msgstr "Wie weit im Voraus Kunden bei Ihnen buchen können."
 msgid "I'll connect a calendar later"
 msgstr "Ich verbinde später einen Kalender"
 
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone"
-msgstr "Ungültige Zeitzone"
-
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Let's get you up and running in just a few steps."
@@ -599,11 +594,6 @@ msgstr "Dieser Nutzername ist bereits vergeben"
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Dieser Nutzername ist reserviert"
-
-#: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone must be a string"
-msgstr "Zeitzone muss eine Zeichenkette sein"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format

@@ -1,6 +1,8 @@
 defmodule Tymeslot.Timezones.WindowsZones do
   @moduledoc """
-  Static mapping from Windows timezone names to IANA timezone IDs.
+  Static mapping between Windows timezone names and IANA timezone IDs: from
+  Windows to IANA for what Microsoft Graph returns (`to_iana/1`), and from
+  IANA to Windows for what it is sent (`from_iana/2`).
 
   Microsoft Graph's Outlook calendar API returns `timeZone` / `originalStartTimeZone`
   values as either IANA names (when callers set `Prefer: outlook.timezone="UTC"`)
@@ -12,6 +14,8 @@ defmodule Tymeslot.Timezones.WindowsZones do
   (territory `"001"` — the default IANA zone for each Windows zone). It covers
   all 140 Windows zones documented by Microsoft as of 2026.
   """
+
+  alias Tymeslot.Clock
 
   @windows_to_iana %{
     "AUS Central Standard Time" => "Australia/Darwin",
@@ -168,4 +172,154 @@ defmodule Tymeslot.Timezones.WindowsZones do
   end
 
   def to_iana(_other), do: nil
+
+  # The time zone database's links, from each old or alias name to the zone
+  # it names (`America/Montreal` to `America/Toronto`), read from the newest
+  # release kept in `priv/tz`.
+  @tz_dir Path.join([__DIR__, "../../../priv/tz/tzdata*"]) |> Path.wildcard() |> Enum.max()
+  @tz_link_files Enum.map(~w(backward etcetera), &Path.join(@tz_dir, &1))
+  for file <- @tz_link_files, do: @external_resource(file)
+
+  @tz_links @tz_link_files
+            |> Enum.flat_map(&Regex.scan(~r/^Link\s+(\S+)\s+(\S+)/m, File.read!(&1)))
+            |> Map.new(fn [_line, target, link] -> {link, target} end)
+
+  if map_size(@tz_links) < 200,
+    do: raise("read only #{map_size(@tz_links)} links from #{@tz_dir}; has its format changed?")
+
+  # CLDR's own mapping, every territory's IANA zones included, as published
+  # in `windowsZones.xml` (kept verbatim in `priv/cldr/`). CLDR names a few
+  # renamed zones the old way (`Asia/Calcutta`), so each is also kept under
+  # the zone its name links to; a name CLDR lists itself takes precedence.
+  @cldr_path Path.join([__DIR__, "../../../priv/cldr/windowsZones.xml"])
+  @external_resource @cldr_path
+
+  @cldr_entries ~r/<mapZone other="([^"]+)" territory="[^"]+" type="([^"]+)"\/>/
+                |> Regex.scan(File.read!(@cldr_path), capture: :all_but_first)
+                |> Enum.flat_map(fn [windows, zones] ->
+                  Enum.map(String.split(zones), &{&1, windows})
+                end)
+
+  if length(@cldr_entries) < 400,
+    do:
+      raise(
+        "read only #{length(@cldr_entries)} zones from #{@cldr_path}; has its format changed?"
+      )
+
+  @cldr_iana_to_windows Map.merge(
+                          Map.new(@cldr_entries, fn {zone, windows} ->
+                            {Map.get(@tz_links, zone, zone), windows}
+                          end),
+                          Map.new(@cldr_entries)
+                        )
+
+  # How far, and how often, a zone's offsets are compared with a Windows
+  # zone's, from the start of the year an event starts in. A week is shorter
+  # than the gap between any zone's two offset changes.
+  @match_span_days 2 * 365
+  @match_step_days 7
+
+  @doc """
+  The Windows zone name Microsoft Graph should be given for `zone`, an IANA
+  zone name, for an event starting at `anchor`; `"UTC"` when none keeps its
+  offsets.
+
+  Graph accepts every Windows zone name but only some IANA ones, and does
+  not list, among others, `Europe/Madrid`, `Europe/Dublin` or
+  `America/Toronto`. The answer is CLDR's (`Europe/Madrid` is
+  `Romance Standard Time`), found under the zone's name, under the old name
+  CLDR may still use for it, or, for a link such as `America/Montreal`,
+  under the zone it links to. A zone CLDR does not name at all maps to the
+  first Windows zone whose default IANA zone keeps the same UTC offsets for
+  two years from the start of `anchor`'s year, changing
+  them at the same instants, which is the zone Graph then expands the event
+  in; that search is remembered per zone and year. A Windows zone name is
+  returned as given.
+  """
+  @spec from_iana(String.t(), DateTime.t()) :: String.t()
+  def from_iana(zone, anchor \\ Clock.utc_now()) when is_binary(zone) do
+    cond do
+      Map.has_key?(@windows_to_iana, zone) -> zone
+      windows = Map.get(@cldr_iana_to_windows, zone) -> windows
+      windows = Map.get(@cldr_iana_to_windows, Map.get(@tz_links, zone)) -> windows
+      true -> remembered_match(zone, anchor.year)
+    end
+  end
+
+  # A zone's match depends only on the time zone database, which a running
+  # node does not change, so it is kept for the node's life. Zones and years
+  # are few, and a `:persistent_term` write happens once for each.
+  defp remembered_match(zone, year) do
+    key = {__MODULE__, zone, year}
+
+    case :persistent_term.get(key, :unset) do
+      :unset ->
+        windows =
+          same_offsets(zone, DateTime.new!(Date.new!(year, 1, 1), ~T[00:00:00])) || "UTC"
+
+        :persistent_term.put(key, windows)
+        windows
+
+      windows ->
+        windows
+    end
+  end
+
+  defp same_offsets(zone, from) do
+    weekly = Enum.map(0..@match_span_days//@match_step_days, &DateTime.add(from, &1, :day))
+
+    case offsets(zone, weekly) do
+      [] ->
+        nil
+
+      weekly_offsets ->
+        # Each change of `zone`, from the last second before it to the first
+        # second after, so a zone changing at another hour does not match.
+        samples = weekly ++ changes(zone, Enum.zip(weekly, weekly_offsets))
+        wanted = offsets(zone, samples)
+
+        @windows_to_iana
+        |> Enum.sort()
+        |> Enum.find_value(fn {windows, iana} ->
+          if offsets(iana, weekly) == weekly_offsets and offsets(iana, samples) == wanted,
+            do: windows
+        end)
+    end
+  end
+
+  defp changes(zone, weekly) do
+    weekly
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.flat_map(fn
+      [{_earlier, same}, {_later, same}] -> []
+      [{earlier, from}, {later, _to}] -> first_after(zone, from, earlier, later)
+    end)
+  end
+
+  # The last second still at `from` and the first one past it, in
+  # `(earlier, later]`.
+  defp first_after(zone, from, earlier, later) do
+    if DateTime.diff(later, earlier) <= 1 do
+      [earlier, later]
+    else
+      middle = DateTime.add(earlier, div(DateTime.diff(later, earlier), 2), :second)
+
+      if offsets(zone, [middle]) == [from],
+        do: first_after(zone, from, middle, later),
+        else: first_after(zone, from, earlier, middle)
+    end
+  end
+
+  # The total UTC offset of `zone` at each instant, or `[]` for a zone the
+  # time zone database does not know.
+  defp offsets(zone, instants) do
+    instants
+    |> Enum.reduce_while([], fn instant, acc ->
+      case DateTime.shift_zone(instant, zone) do
+        {:ok, local} -> {:cont, [local.utc_offset + local.std_offset | acc]}
+        {:error, _reason} -> {:halt, []}
+      end
+    end)
+    |> Enum.reverse()
+  end
 end

@@ -107,6 +107,47 @@ defmodule Tymeslot.Integrations.Video.AccessTokenTest do
       assert Encryption.decrypt(reloaded.access_token_encrypted) == "fresh-teams-token"
     end
 
+    # Zoom had no `ensure_valid_token/1`, so it was answered as a provider
+    # with no OAuth grant at all.
+    test "mints a Zoom token through the provider's own refresh path", %{user: user} do
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "expired",
+          refresh_token: "zoom-refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      stub(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :needs_refresh} end)
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :refresh_access_token, fn "zoom-refresh",
+                                                                     _scope,
+                                                                     _opts ->
+        {:ok,
+         %{
+           access_token: "fresh-zoom-token",
+           refresh_token: "rotated-zoom-refresh",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+           scope: "meeting:write:meeting"
+         }}
+      end)
+
+      assert {:ok, "fresh-zoom-token"} = Video.access_token(integration.id, user.id)
+
+      {:ok, reloaded} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert Encryption.decrypt(reloaded.refresh_token_encrypted) == "rotated-zoom-refresh"
+    end
+
+    test "answers an integration whose credentials no longer decrypt", %{user: user} do
+      integration =
+        google_meet_integration(user, access_token_encrypted: :crypto.strong_rand_bytes(40))
+
+      assert {:error, :requires_reencryption} = Video.access_token(integration.id, user.id)
+    end
+
     test "refuses a provider that holds no OAuth grant", %{user: user} do
       integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 

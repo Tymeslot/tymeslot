@@ -1,9 +1,10 @@
+#
 msgid ""
 msgstr ""
 "Language: it\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
@@ -45,6 +46,8 @@ msgstr "contiene un valore non valido"
 msgid "has invalid format"
 msgstr "ha un formato non valido"
 
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "is invalid"
@@ -207,6 +210,7 @@ msgid "is not a valid colour"
 msgstr "non è un colore valido"
 
 #: lib/tymeslot/availability/time_off_period_schema.ex
+#: lib/tymeslot/polls/poll_time_slot_schema.ex
 #, elixir-autogen, elixir-format
 msgid "must be after the start time"
 msgstr "deve venire dopo l'ora di inizio"
@@ -228,39 +232,10 @@ msgid_plural "%{count} minutes"
 msgstr[0] "1 minuto"
 msgstr[1] "%{count} minuti"
 
-#: lib/tymeslot/security/field_validators/username_validator.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
 msgstr "Questo nome utente è riservato"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username is required"
-msgstr "Il nome utente è obbligatorio"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must be a text value"
-msgstr "Il nome utente deve essere un valore testuale"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must be at least %{count} character long"
-msgid_plural "Username must be at least %{count} characters long"
-msgstr[0] "Il nome utente deve contenere almeno %{count} carattere"
-msgstr[1] "Il nome utente deve contenere almeno %{count} caratteri"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must be at most %{count} character long"
-msgid_plural "Username must be at most %{count} characters long"
-msgstr[0] "Il nome utente può contenere al massimo %{count} carattere"
-msgstr[1] "Il nome utente può contenere al massimo %{count} caratteri"
-
-#: lib/tymeslot/security/field_validators/username_validator.ex
-#, elixir-autogen, elixir-format
-msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
-msgstr "Il nome utente deve iniziare con una lettera o un numero e può contenere solo lettere minuscole, numeri, trattini bassi e trattini"
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
@@ -294,27 +269,27 @@ msgstr[1] "deve rientrare entro %{count} anni"
 msgid "video server checks"
 msgstr "verifiche del server video"
 
-#: lib/tymeslot/security/rate_limiter/bookings.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "bookings"
 msgstr "prenotazioni"
 
-#: lib/tymeslot/security/rate_limiter/calendar.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr "spostamenti di eventi del calendario"
 
-#: lib/tymeslot/security/rate_limiter/auth.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "password reset requests"
 msgstr "richieste di reimpostazione della password"
 
-#: lib/tymeslot/security/rate_limiter/auth.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "signup attempts"
 msgstr "tentativi di registrazione"
 
-#: lib/tymeslot/security/rate_limiter/auth.ex
+#: lib/tymeslot/security/rate_limiter/limits.ex
 #, elixir-autogen, elixir-format
 msgid "verification emails"
 msgstr "email di verifica"
@@ -362,7 +337,7 @@ msgstr[1] "%{count} minuti"
 #: lib/tymeslot_web/helpers/image_upload_errors.ex
 #, elixir-autogen, elixir-format
 msgid "This image is too large (%{size} megapixels). Please upload an image of at most %{limit} megapixels."
-msgstr "Questa immagine è troppo grande (%{size} megapixel). Carica un’immagine di al massimo %{limit} megapixel."
+msgstr "Questa immagine è troppo grande (%{size} megapixel). Carica un'immagine di al massimo %{limit} megapixel."
 
 #: lib/tymeslot_web/helpers/image_upload_errors.ex
 #, elixir-autogen, elixir-format
@@ -414,7 +389,409 @@ msgstr "Hai già un tipo di riunione con questo nome"
 msgid "fixed dates need group bookings"
 msgstr "le date fisse richiedono le prenotazioni di gruppo"
 
+#: lib/tymeslot/security/universal_sanitizer.ex
+#, elixir-autogen, elixir-format
+msgid "Input exceeds maximum length (%{max_length} characters)"
+msgstr "Il testo inserito supera la lunghezza massima (%{max_length} caratteri)"
+
+#: lib/tymeslot/security/universal_sanitizer.ex
+#, elixir-autogen, elixir-format
+msgid "Input exceeds maximum size (%{max_input_bytes} bytes)"
+msgstr "Il testo inserito supera la dimensione massima (%{max_input_bytes} byte)"
+
+#: lib/tymeslot/security/universal_sanitizer.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid text encoding"
+msgstr "Codifica del testo non valida"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid domain"
+msgstr "Dominio non valido"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid domain format (e.g. *.example.com)"
+msgstr "Formato del dominio non valido (ad es. *.example.com)"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid domain format (e.g. example.com)"
+msgstr "Formato del dominio non valido (ad es. example.com)"
+
+#: lib/tymeslot/timezones/timezones.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid timezone"
+msgstr "Fuso orario non valido"
+
+#: lib/tymeslot/security/security.ex
+#, elixir-autogen, elixir-format
+msgid "Some domains exceed maximum length (max 255 characters)"
+msgstr "Alcuni domini superano la lunghezza massima (max 255 caratteri)"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a multiple of %{step} minutes"
+msgstr "deve essere un multiplo di %{step} minuti"
+
+#: lib/tymeslot/availability/breaks.ex
+#, elixir-autogen, elixir-format
+msgid "Break times overlap with existing break"
+msgstr "Gli orari della pausa si sovrappongono a una pausa esistente"
+
+#: lib/tymeslot/meeting_types/payment_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe must be connected"
+msgstr "Stripe deve essere collegato"
+
+#: lib/tymeslot/availability/breaks.ex
+#, elixir-autogen, elixir-format
+msgid "Work hours not found"
+msgstr "Orario di lavoro non trovato"
+
+#: lib/tymeslot/meetings/meeting_schema.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a confirmed meeting at this time."
+msgstr "Hai già una riunione confermata in questa fascia oraria."
+
+#: lib/tymeslot/meetings/participant_schema.ex
+#, elixir-autogen, elixir-format
+msgid "already has a spot at this time"
+msgstr "ha già un posto in questa fascia oraria"
+
+#: lib/tymeslot/availability/availability_override_schema.ex
+#, elixir-autogen, elixir-format
+msgid "are required for custom hours"
+msgstr "sono obbligatori per gli orari personalizzati"
+
+#: lib/tymeslot/availability/weekly_availability_schema.ex
+#, elixir-autogen, elixir-format
+msgid "are required when day is available"
+msgstr "sono obbligatori quando il giorno è disponibile"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "cannot be set for more than 1 year in advance"
+msgstr "non può essere impostato con più di 1 anno di anticipo"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "cannot have more than %{count} reminders"
+msgid_plural "cannot have more than %{count} reminders"
+msgstr[0] "non può contenere più di %{count} promemoria"
+msgstr[1] "non può contenere più di %{count} promemoria"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot have more than %{max} domains (currently %{current})"
+msgstr "non può contenere più di %{max} domini (attualmente %{current})"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "contains duplicate reminders"
+msgstr "contiene promemoria duplicati"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "contains invalid reminder settings"
+msgstr "contiene impostazioni dei promemoria non valide"
+
+#: lib/tymeslot/meetings/guest_schema.ex
+#, elixir-autogen, elixir-format
+msgid "has already been added"
+msgstr "è già stato aggiunto"
+
+#: lib/tymeslot/auth/user_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is already registered"
+msgstr "è già registrato"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is already taken"
+msgstr "è già in uso"
+
+#: lib/tymeslot/integrations/calendar/calendar_appearance_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a palette colour"
+msgstr "non è un colore della palette"
+
+#: lib/tymeslot/app_settings/app_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a supported language"
+msgstr "non è una lingua supportata"
+
+#: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/participant_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a supported locale"
+msgstr "non è una lingua supportata"
+
+#: lib/tymeslot/integrations/calendar/colour_override.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid palette key"
+msgstr "non è una chiave della palette valida"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid timezone"
+msgstr "non è un fuso orario valido"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is required when a calendar integration is selected"
+msgstr "è obbligatorio quando è selezionata un'integrazione del calendario"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is required when a target calendar is selected"
+msgstr "è obbligatorio quando è selezionato un calendario di destinazione"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is required when video meetings are enabled"
+msgstr "è obbligatorio quando le riunioni video sono attive"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is too long"
+msgstr "è troppo lungo"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "may only contain lowercase letters, numbers and hyphens"
+msgstr "può contenere solo lettere minuscole, numeri e trattini"
+
+#: lib/tymeslot/availability/availability_break_schema.ex
+#: lib/tymeslot/availability/availability_override_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be %{max} characters or less"
+msgstr "non può superare i %{max} caratteri"
+
+#: lib/tymeslot/slack/slack_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a Slack webhook URL (https://hooks.slack.com/services/...)"
+msgstr "deve essere un URL webhook di Slack (https://hooks.slack.com/services/...)"
+
+#: lib/tymeslot/app_settings/app_settings_schema.ex
+#: lib/tymeslot/theme_customizations/options/accent.ex
+#: lib/tymeslot/theme_customizations/options/background.ex
+#: lib/tymeslot/theme_customizations/options/palette.ex
+#, elixir-autogen, elixir-format
+msgid "must be a hex colour such as #14b8a6"
+msgstr "deve essere un colore esadecimale come #14b8a6"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a list of domains"
+msgstr "deve essere un elenco di domini"
+
+#: lib/tymeslot/meeting_types/reminder_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must be a list of reminder settings"
+msgstr "deve essere un elenco di impostazioni dei promemoria"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#: lib/tymeslot/theme_customizations/theme_customization_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid theme"
+msgstr "deve essere un tema valido"
+
+#: lib/tymeslot/availability/availability_break_schema.ex
+#: lib/tymeslot/changeset_validators/availability_window.ex
+#: lib/tymeslot/changeset_validators/time_order.ex
+#, elixir-autogen, elixir-format
+msgid "must be after start time"
+msgstr "deve venire dopo l'ora di inizio"
+
+#: lib/tymeslot/meeting_types/payment_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must be at least %{minimum}"
+msgstr "deve essere di almeno %{minimum}"
+
+#: lib/tymeslot/changeset_validators/availability_window.ex
+#, elixir-autogen, elixir-format
+msgid "must be at or before the start time when the hours end the next day"
+msgstr "non può essere successivo all'ora di inizio quando l'orario termina il giorno dopo"
+
+#: lib/tymeslot/availability/weekly_availability_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be between 1 (Monday) and 7 (Sunday)"
+msgstr "deve essere compreso tra 1 (lunedì) e 7 (domenica)"
+
+#: lib/tymeslot/custom_fields/field_definition.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than or equal to min"
+msgstr "deve essere maggiore o uguale al minimo"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be one of the available icons"
+msgstr "deve essere una delle icone disponibili"
+
+#: lib/tymeslot/availability/availability_break_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be within work hours"
+msgstr "deve rientrare nell'orario di lavoro"
+
+#: lib/tymeslot/custom_fields/field_definition.ex
+#, elixir-autogen, elixir-format
+msgid "must have at least %{count} option"
+msgid_plural "must have at least %{count} options"
+msgstr[0] "deve contenere almeno %{count} opzione"
+msgstr[1] "deve contenere almeno %{count} opzioni"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must include at least one location"
+msgstr "deve includere almeno un luogo"
+
+#: lib/tymeslot/custom_fields/field_definition.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain duplicate keys"
+msgstr "non deve contenere chiavi duplicate"
+
+#: lib/tymeslot/slack/slack_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "workspace already connected"
+msgstr "workspace già collegato"
+
+#: lib/tymeslot/webhooks/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Name cannot be empty"
+msgstr "Il nome non può essere vuoto"
+
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "contains invalid events"
+msgstr "contiene eventi non validi"
+
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "invalid format (expected: 123456789:ABCdef...)"
+msgstr "formato non valido (previsto: 123456789:ABCdef...)"
+
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "is required"
+msgstr "è obbligatorio"
+
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must be a numeric ID or @username"
+msgstr "deve essere un ID numerico o un @username"
+
+#: lib/tymeslot/slack/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "must look like https://hooks.slack.com/services/..."
+msgstr "deve avere il formato https://hooks.slack.com/services/..."
+
+#: lib/tymeslot/slack/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "pick a channel"
+msgstr "scegli un canale"
+
+#: lib/tymeslot/slack/input_validation.ex
+#: lib/tymeslot/telegram/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "select at least one event"
+msgstr "seleziona almeno un evento"
+
+#: lib/tymeslot/utils/changeset_errors.ex
+#, elixir-autogen, elixir-format
+msgid "%{field}: %{message}"
+msgstr "%{field}: %{message}"
+
+#: lib/tymeslot/webhooks/webhook_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Contains invalid events: %{events}"
+msgstr "Contiene eventi non validi: %{events}"
+
+#: lib/tymeslot/webhooks/webhook_schema.ex
+#, elixir-autogen, elixir-format
+msgid "Must select at least one event"
+msgstr "Seleziona almeno un evento"
+
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen, elixir-format
 msgid "If you are the organiser, please connect a calendar in your dashboard."
 msgstr "Se sei l'organizzatore, collega un calendario dalla tua dashboard."
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "is not supported by this theme"
+msgstr "non è supportato da questo tema"
+
+#: lib/tymeslot/theme_customizations/options/cover.ex
+#, elixir-autogen, elixir-format
+msgid "is required for an uploaded cover"
+msgstr "è obbligatorio per un'immagine di copertina caricata"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "is required for an uploaded image background"
+msgstr "è obbligatorio per un'immagine di sfondo caricata"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "is required for an uploaded video background"
+msgstr "è obbligatorio per un video di sfondo caricato"
+
+#: lib/tymeslot/theme_customizations/options/cover.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid cover preset"
+msgstr "deve essere un'immagine di copertina predefinita valida"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid gradient preset"
+msgstr "deve essere una sfumatura predefinita valida"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid image preset"
+msgstr "deve essere un'immagine predefinita valida"
+
+#: lib/tymeslot/theme_customizations/options/background.ex
+#, elixir-autogen, elixir-format
+msgid "must be a valid video preset"
+msgstr "deve essere un video predefinito valido"
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "The file could not be read. Please upload it again."
+msgstr "Non è stato possibile leggere il file. Caricalo di nuovo."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This file is not an image we can read. Please upload a different image."
+msgstr "Questo file non è un'immagine che possiamo leggere. Carica un'altra immagine."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This file is too large. Please upload a file of at most %{size} MB."
+msgstr "Questo file è troppo grande. Carica un file di massimo %{size} MB."
+
+#: lib/tymeslot_web/helpers/image_upload_errors.ex
+#, elixir-autogen, elixir-format
+msgid "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
+msgstr "Questo tipo di file non è accettato. Carica un'immagine JPG, PNG, GIF o WebP."
+
+#: lib/tymeslot/meeting_types/payment_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Prices cannot be set in your Stripe account's currency"
+msgstr "Non è possibile impostare prezzi nella valuta del tuo account Stripe"
+
+#: lib/tymeslot/custom_fields/custom_fields.ex
+#: lib/tymeslot/custom_fields/validator.ex
+#, elixir-autogen, elixir-format
+msgid "Answer is too long"
+msgstr "La risposta è troppo lunga"
+
+#: lib/tymeslot/custom_fields/validator.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown field type"
+msgstr "Tipo di campo sconosciuto"

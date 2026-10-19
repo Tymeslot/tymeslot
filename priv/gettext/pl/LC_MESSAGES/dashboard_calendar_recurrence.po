@@ -1,0 +1,57 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr "Wszystkie wydarzenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Edit recurring event"
+msgstr "Edytuj wydarzenie cykliczne"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This and following events"
+msgstr "To i kolejne wydarzenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event"
+msgstr "To wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Which events should your change apply to?"
+msgstr "To wydarzenie należy do serii cyklicznej. Których wydarzeń ma dotyczyć zmiana?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "every occurrence in the series changes, earlier ones included."
+msgstr "zmieniają się wszystkie wystąpienia w serii, łącznie z wcześniejszymi."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "only this occurrence changes, and the rest of the series stays as it is."
+msgstr "zmienia się tylko to wystąpienie, a reszta serii pozostaje bez zmian."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "this occurrence and every later one change, and the earlier ones stay as they are."
+msgstr "zmienia się to wystąpienie i wszystkie późniejsze, a wcześniejsze pozostają bez zmian."

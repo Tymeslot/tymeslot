@@ -24,6 +24,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
@@ -139,7 +140,11 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
       # open breaker would refuse the recovering cycle before it reached the
       # server. The breaker is not what this test is about; a real server
       # answering a day later meets a closed one.
-      CalendarCircuitBreaker.reset_for_url(:caldav, integration.base_url)
+      CalendarCircuitBreaker.reset(
+        :caldav,
+        ProviderBreakers.host_from_base_url(integration.base_url)
+      )
+
       CalendarCircuitBreaker.reset(:caldav)
 
       ReqTest.stub(:tymeslot_http, fn conn ->

@@ -1,130 +1,70 @@
 defmodule Tymeslot.Emails.Templates.IntegrationUnhealthyTest do
   use Tymeslot.DataCase, async: true
+
   @moduletag :emails
+  @moduletag :integrations
 
   alias Tymeslot.Emails.Templates.IntegrationUnhealthy
 
-  describe "IntegrationUnhealthy.render/3" do
-    test "generates valid HTML output for calendar type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+  @user %{id: 1, email: "user@example.com", name: "Test User"}
 
-      html = IntegrationUnhealthy.render(user, integration, :calendar)
+  describe "render/3" do
+    test "addresses the owner and names the calendar integration in every part" do
+      email = IntegrationUnhealthy.render(@user, %{provider: :google}, :calendar)
 
-      assert html =~ "<!doctype html>"
-      assert html =~ "Integration may need attention"
-      assert html =~ "Google calendar calendar integration have been failing"
-      assert html =~ "Check Integration Settings"
+      assert email.to == [{"Test User", "user@example.com"}]
+      assert email.subject == "Your calendar integration may need attention"
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "Our health checks for your Google Calendar integration"
+        assert body =~ "for at least 48 hours"
+        assert body =~ "Contact your calendar provider if the issue persists"
+        assert body =~ "Check Integration Settings"
+        assert body =~ "/dashboard/integrations?tab=calendars"
+      end
+
+      assert email.html_body =~ "<!doctype html>"
+      assert email.html_body =~ "<strong>Google Calendar</strong> integration"
+      refute email.text_body =~ "<strong>"
     end
 
-    test "generates valid HTML output for video type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :zoom}
+    test "speaks of the video provider for a video integration" do
+      email = IntegrationUnhealthy.render(@user, %{provider: :zoom}, :video)
 
-      html = IntegrationUnhealthy.render(user, integration, :video)
-
-      assert html =~ "<!doctype html>"
-      assert html =~ "Integration may need attention"
-      assert html =~ "Zoom video integration have been failing"
-      assert html =~ "Check Integration Settings"
+      assert email.subject == "Your video integration may need attention"
+      assert email.text_body =~ "probes to your Zoom video integration"
+      assert email.text_body =~ "- Contact your video provider if the issue persists"
+      assert email.html_body =~ "/dashboard/integrations?tab=video"
     end
 
-    test "includes humanized provider label" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+    test "falls back to the provider's name for an unknown kind" do
+      email = IntegrationUnhealthy.render(@user, %{provider: :custom_service}, :other)
 
-      html = IntegrationUnhealthy.render(user, integration, :calendar)
-
-      assert html =~ "Google calendar"
+      assert email.text_body =~ "your Custom service integration have been failing"
+      assert email.html_body =~ ~r{/dashboard/integrations"}
     end
 
-    test "includes integration type in content" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :zoom}
+    test "escapes an unknown provider's identifier in the markup" do
+      email = IntegrationUnhealthy.render(@user, %{provider: :"weird<b>"}, :calendar)
 
-      html = IntegrationUnhealthy.render(user, integration, :video)
-
-      assert html =~ "video"
-    end
-
-    test "includes connection issues warning" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
-
-      html = IntegrationUnhealthy.render(user, integration, :calendar)
-
-      assert String.downcase(html) =~ "connection"
-    end
-
-    test "includes settings action button" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
-
-      html = IntegrationUnhealthy.render(user, integration, :calendar)
-
-      assert html =~ "Check Integration Settings"
-    end
-
-    test "includes 48 hour threshold mention" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
-
-      html = IntegrationUnhealthy.render(user, integration, :calendar)
-
-      assert html =~ "48"
-    end
-
-    test "handles unknown integration type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :custom_service}
-
-      html = IntegrationUnhealthy.render(user, integration, :other)
-
-      assert html =~ "<!doctype html>"
-      # An unrecognised type falls back to its own string form rather than
-      # dropping the provider/type wording altogether.
-      assert html =~ "Custom service other integration have been failing"
-      assert html =~ "Check Integration Settings"
+      assert email.text_body =~ "Weird<b> calendar"
+      refute email.html_body =~ "Weird<b>"
     end
   end
 
-  describe "IntegrationUnhealthy.render_text/3" do
-    test "returns plain text with provider and type details" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :google_calendar}
+  describe "in the recipient's language" do
+    test "writes every part in German for a German-speaking owner" do
+      user = Map.put(@user, :locale, "de")
 
-      text = IntegrationUnhealthy.render_text(user, integration, :calendar)
+      email = IntegrationUnhealthy.render(user, %{provider: :zoom}, :video)
 
-      assert text =~ "Google calendar"
-      assert text =~ "calendar"
-      assert text =~ "48"
-      assert text =~ "Check Integration Settings"
-    end
+      assert email.subject == "Ihre Video-Integration erfordert möglicherweise Aufmerksamkeit"
 
-    test "handles video type" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :zoom}
-
-      text = IntegrationUnhealthy.render_text(user, integration, :video)
-
-      assert text =~ "Zoom"
-      assert text =~ "video"
-    end
-  end
-
-  describe "render_text security" do
-    # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
-    # characters. The security properties that matter are: the function never crashes
-    # on adversarial input and the expected structural content is always present.
-
-    test "IntegrationUnhealthy.render_text returns a valid binary with unusual provider atom" do
-      user = %{id: 1, email: "user@example.com", name: "Test User"}
-      integration = %{provider: :"weird<>provider"}
-
-      text = IntegrationUnhealthy.render_text(user, integration, :calendar)
-
-      assert text =~ "Weird<>provider"
-      assert text =~ "Check Integration Settings"
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "Zoom-Video"
+        assert body =~ "Integrationseinstellungen prüfen"
+        refute body =~ "Check Integration Settings"
+      end
     end
   end
 end

@@ -50,6 +50,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
           ~D[2026-06-30],
           "UTC",
           30,
+          nil,
           nil
         )
 
@@ -104,6 +105,20 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
                )
 
       assert snooze_seconds_3 == 180
+    end
+
+    test "snoozes for as long as the provider's rate limit asked" do
+      meeting = insert(:meeting)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, {:rate_limited, 45}}
+      end)
+
+      assert {:snooze, 45} =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "create",
+                 "meeting_id" => meeting.id
+               })
     end
 
     test "discards on unauthorized" do
@@ -348,7 +363,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.calendar_uid
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _id -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _id, _opts -> :ok end)
 
       assert :ok =
                perform_job(CalendarEventWorker, %{
@@ -362,7 +377,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.calendar_uid
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, meeting ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, meeting, _opts ->
         assert meeting.calendar_integration_id == integration.id
         {:error, :not_found}
       end)

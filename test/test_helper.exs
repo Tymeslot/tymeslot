@@ -2,9 +2,6 @@
 Application.put_env(:swoosh, :api_client, false)
 Application.put_env(:tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Test)
 
-# Enable test mode to skip sleep calls in workers
-Application.put_env(:tymeslot, :test_mode, true)
-
 # Run migrations before tests
 Mix.Task.run("ecto.create", ["--quiet"])
 Mix.Task.run("ecto.migrate", ["--quiet"])
@@ -48,10 +45,15 @@ Tymeslot.Test.SuiteConfig.setup_log_capture()
 
 ExUnit.start()
 
+# A bare `assert_receive` waits ExUnit's default 100 ms, too little on a loaded
+# machine for a message from another process; a passing assertion returns as
+# soon as its message arrives, so a longer bound costs nothing. Absence checks
+# (`refute_receive`) keep their own short default.
 base_config = [
   capture_log: true,
   exclude: Tymeslot.Test.SuiteConfig.default_exclude_tags(),
-  formatters: Tymeslot.Test.SuiteConfig.formatters()
+  formatters: Tymeslot.Test.SuiteConfig.formatters(),
+  assert_receive_timeout: 1_000
 ]
 
 exunit_config =

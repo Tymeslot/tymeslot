@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.26.0",
+      version: "1.27.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -85,9 +85,11 @@ defmodule Tymeslot.MixProject do
     ]
   end
 
-  # Specifies which paths to compile per environment.
-  defp elixirc_paths(:dev), do: ["lib", "dev/support"]
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  # Specifies which paths to compile per environment. `dev_support/tooling`
+  # (the precommit gate, test selection and other dev-only Mix tasks) is never
+  # compiled into a release.
+  defp elixirc_paths(:dev), do: ["lib", "dev/support", "dev_support/tooling"]
+  defp elixirc_paths(:test), do: ["lib", "test/support", "dev_support/tooling"]
   defp elixirc_paths(:prod), do: ["lib"]
   defp elixirc_paths(_), do: ["lib"]
 
@@ -143,7 +145,6 @@ defmodule Tymeslot.MixProject do
       # deliberately as a guard against a future dependency reintroducing a
       # lower requirement and silently downgrading hackney underneath it.
       {:hackney, "~> 4.0", override: true},
-      {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},
       {:gen_smtp, "~> 1.2"},
       {:castore, "~> 1.0"},
@@ -194,7 +195,7 @@ defmodule Tymeslot.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      # `mix precommit` is a task (lib/mix/tasks/precommit.ex), not an alias:
+      # `mix precommit` is a task (dev_support/tooling/mix/tasks/precommit.ex), not an alias:
       # an alias aborts at the first failing step, and the gate is more useful
       # when one run reports everything that needs fixing.
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],

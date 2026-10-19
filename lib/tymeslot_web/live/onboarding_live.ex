@@ -3,8 +3,8 @@ defmodule TymeslotWeb.OnboardingLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ChooseThemeStep
   alias TymeslotWeb.OnboardingLive.ConnectCalendarStep
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   defp booking_host do
-    String.replace(Policy.app_url(), ~r{^https?://}, "")
+    String.replace(UrlBuilder.base_url(), ~r{^https?://}, "")
   end
 
   # The booking policy lives on the profile's default availability schedule,

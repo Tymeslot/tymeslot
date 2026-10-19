@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPickerTest do
 
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Providers.Descriptor
+  alias Tymeslot.Integrations.Shared.Providers.Descriptor
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker
 

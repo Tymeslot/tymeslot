@@ -12,7 +12,10 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   table's older `video_processing` column is no longer read; a later release
   drops it.
   """
+
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
 
   alias Ecto.Changeset
@@ -65,8 +68,11 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
 
       theme_id ->
         case Catalog.customization_spec(theme_id) do
-          {:ok, spec} -> put_settings(changeset, spec, attrs)
-          {:error, :theme_not_found} -> add_error(changeset, :theme_id, "is not a valid theme")
+          {:ok, spec} ->
+            put_settings(changeset, spec, attrs)
+
+          {:error, :theme_not_found} ->
+            add_error(changeset, :theme_id, dgettext_noop("errors", "must be a valid theme"))
         end
     end
   end

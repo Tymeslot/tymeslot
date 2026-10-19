@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   def handle_event("reorder", %{"ids" => ids}, socket) when is_list(ids) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_meeting_type_write_rate_limit(user_id) do
+    case RateLimiter.check(:meeting_type_write, user_id) do
       :ok ->
         case reorder(user_id, ids) do
           :ok -> {:noreply, load_venues(socket)}
@@ -177,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   # rewrites every meeting type offering it. Refused, the form or the
   # confirmation stays open, so the organiser can try again.
   defp with_write_limit(socket, write) do
-    case RateLimiter.check_meeting_type_write_rate_limit(socket.assigns.current_user.id) do
+    case RateLimiter.check(:meeting_type_write, socket.assigns.current_user.id) do
       :ok ->
         write.()
 

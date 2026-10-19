@@ -11,25 +11,28 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
   - Broadcast event for real-time dashboard updates
   """
 
-  use Tymeslot.Payments.Behaviours.WebhookHandler
+  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Payments.Config
+  alias Tymeslot.Payments.Behaviours.WebhookHandler
+  alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.Webhooks.WebhookUtils
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def can_handle?("customer.subscription.trial_will_end"), do: true
-  def can_handle?(_event_type), do: false
-
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def process(event, subscription_object) do
-    subscription_id = subscription_object["id"]
-    # customer_id = subscription_object["customer"]
-    trial_end = subscription_object["trial_end"]
-
+  @impl WebhookHandler
+  def handle(
+        %{
+          "data" => %{
+            "object" => %{
+              "id" => subscription_id,
+              "customer" => _customer,
+              "trial_end" => trial_end
+            }
+          }
+        } = event
+      ) do
     Logger.info("Trial ending soon",
       subscription_id: subscription_id,
       trial_end: trial_end
@@ -38,27 +41,15 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
     # Convert Unix timestamp to DateTime
     case is_integer(trial_end) && DateTime.from_unix(trial_end) do
       {:ok, trial_ends_at} ->
-        # Broadcast event for SaaS to update trial end date and handle notifications
-        PubSub.broadcast_payment_event(:trial_will_end, %{
-          event_id: event["id"],
-          stripe_subscription_id: subscription_id,
-          trial_ends_at: trial_ends_at
-        })
-
-        # Find subscription in our database for local notifications
-        case find_subscription(subscription_id) do
-          nil ->
-            Logger.warning("Trial ending - subscription not found",
-              subscription_id: subscription_id
-            )
-
-            {:ok, :subscription_not_found}
-
-          subscription ->
-            # Send reminder email
-            send_trial_ending_email(subscription)
-
-            {:ok, :trial_ending_notified}
+        # Hand off first: if the handler fails, no email has gone out yet and
+        # Stripe redelivers the event.
+        case PubSub.hand_off_payment_event(:trial_will_end, %{
+               event_id: event["id"],
+               stripe_subscription_id: subscription_id,
+               trial_ends_at: trial_ends_at
+             }) do
+          :ok -> notify_trial_ending(subscription_id, trial_ends_at)
+          {:error, reason} -> {:error, :retry_later, {:hand_off_failed, reason}}
         end
 
       _other ->
@@ -67,42 +58,40 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
           trial_end: LogFormat.reason(trial_end)
         )
 
-        {:error, :invalid_timestamp, "Invalid trial_end timestamp: #{inspect(trial_end)}"}
+        {:error, :permanent, :invalid_timestamp}
     end
   end
 
-  @impl Tymeslot.Payments.Behaviours.WebhookHandler
-  def validate(subscription_object) when is_map(subscription_object) do
-    required_fields = ["id", "customer", "trial_end"]
+  def handle(_event), do: {:error, :permanent, :missing_fields}
 
-    if Enum.all?(required_fields, &Map.has_key?(subscription_object, &1)) do
-      :ok
-    else
-      {:error, :missing_fields, "Missing required fields in trial_will_end object"}
+  defp notify_trial_ending(subscription_id, trial_ends_at) do
+    # Find subscription in our database for local notifications
+    case CustomerLookup.get_subscription_by_subscription_id(subscription_id) do
+      nil ->
+        Logger.warning("Trial ending - subscription not found",
+          subscription_id: subscription_id
+        )
+
+        {:ok, :subscription_not_found}
+
+      subscription ->
+        # Send reminder email
+        send_trial_ending_email(subscription, trial_ends_at)
+
+        {:ok, :trial_ending_notified}
     end
   end
-
-  def validate(_event), do: {:error, :invalid_structure, "Invalid trial_will_end object"}
 
   # Private functions
 
-  defp find_subscription(stripe_subscription_id) do
-    repo = Config.repo()
-    subscription_schema = Config.subscription_schema()
-
-    if subscription_schema && Code.ensure_loaded?(subscription_schema) do
-      repo.get_by(subscription_schema, stripe_subscription_id: stripe_subscription_id)
-    else
-      nil
-    end
-  end
-
-  defp send_trial_ending_email(subscription) do
+  # The template takes the trial's end (from the event, as ISO 8601), not the
+  # subscription: the job stores its arguments as JSON.
+  defp send_trial_ending_email(subscription, trial_ends_at) do
     WebhookUtils.deliver_user_email(
       subscription.user_id,
       :trial_ending_reminder_template,
       :trial_ending_reminder_email,
-      [subscription],
+      [DateTime.to_iso8601(trial_ends_at)],
       success_msg: "Trial ending reminder sent to user #{subscription.user_id}",
       error_msg: "Failed to send trial ending reminder: ",
       standalone_msg: "Trial ending reminder template not configured (Standalone mode)"

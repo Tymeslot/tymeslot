@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   @moduledoc """
-  Oban worker that refreshes a single Outlook Calendar integration.
+  Oban worker that refreshes a single Outlook Calendar integration
+  (`Tymeslot.Integrations.Calendar.Outlook.SyncCycle`) and turns the outcome
+  into the job's verdict.
 
   Outlook syncs are normally event-driven via Microsoft Graph webhooks; this
   worker covers the cases where that is not enough: a user-initiated
@@ -9,21 +11,14 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   delayed, or never-delivered notifications (e.g. WEBHOOK_BASE_URL not
   configured).
 
-  If the integration has a `graph_delta_link`, delta-syncs via
-  `OutlookDeltaSync.fetch_and_apply/1`; otherwise bootstraps a fresh delta
-  baseline via `OutlookCalendarAPI.bootstrap_sync/1` and opportunistically
-  registers a webhook subscription.
-
-  Broadcasts `SyncBroadcast.broadcast_sync_complete/2` on success so the
-  dashboard's progress counter clears.
-
-  A failure that is the remote's and has used up every attempt is discarded
-  rather than failed, so a passing Graph outage does not raise a permanent
-  failure admin alert; see `give_up_or_retry/3`.
+  Refused credentials flag the integration for reconnection. A failure that
+  is the remote's and has used up every attempt is discarded rather than
+  failed, so a passing Graph outage does not raise a permanent failure admin
+  alert; see `give_up_or_retry/3`.
   """
 
   use Oban.Worker,
-    queue: :calendar_integrations,
+    queue: :calendar_events,
     max_attempts: 5,
     unique: [
       period: 60,
@@ -31,18 +26,13 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
       states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
-  require Logger
+  use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.InvalidEventReport
-  alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
-  alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
+  alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Calendar.Outlook.SyncCycle
   alias Tymeslot.Integrations.Shared.ReauthHandling
+  alias Tymeslot.Workers.CalendarSyncJob
   alias Tymeslot.Workers.SyncRequest
 
   @behaviour ExpectedJobOutcome
@@ -52,10 +42,13 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   # that is not Outlook is a bug, and is recorded.
   @integration_gone "Integration not found"
   @transient "Outlook sync failed transiently; the next scheduled sweep will retry"
+  @credentials_rejected "Microsoft Graph rejected credentials — reauthentication required"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason in [@integration_gone, @transient] or reason == ReauthHandling.discard_reason()
+    do:
+      reason in [@integration_gone, @transient, @credentials_rejected] or
+        reason == ReauthHandling.discard_reason()
 
   @doc """
   Enqueues a refresh of the Outlook integration `integration_id`, the one
@@ -85,72 +78,14 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}} = job) do
-    Logger.metadata(calendar_integration_id: integration_id)
-
-    case CalendarIntegrationQueries.get(integration_id) do
-      {:ok, %{provider: "outlook"} = integration} ->
-        fn -> refresh(integration, job) end
-        |> InvalidEventReport.collect()
-        |> SyncRequest.rerun_if_requested(job)
-
-      {:ok, %{provider: provider}} ->
-        Logger.warning(
-          "RefreshOutlookCalendarWorker called for non-Outlook integration; discarding",
-          calendar_integration_id: integration_id,
-          provider: provider
-        )
-
-        {:discard, "Integration is not Outlook"}
-
-      {:error, :not_found} ->
-        Logger.warning("Calendar integration not found; discarding Outlook refresh",
-          calendar_integration_id: integration_id
-        )
-
-        {:discard, @integration_gone}
-
-      {:error, :requires_reencryption, integration} ->
-        CalendarManagement.handle_reauth_required(integration)
-    end
-  end
-
-  defp refresh(%{graph_delta_link: nil} = integration, job), do: bootstrap(integration, job)
+  def perform(%Oban.Job{} = job),
+    do: CalendarSyncJob.run(job, &refresh(&1, job), provider: "outlook")
 
   defp refresh(integration, job) do
-    case OutlookDeltaSync.fetch_and_apply(integration) do
-      :ok ->
-        broadcast_complete(integration)
-        :ok
-
-      {:error, class} ->
-        # DeltaSync clears the stored link on obsolete-endpoint detection (old
-        # `events/delta`) or 410 expiry. Reload to see whether that happened —
-        # if so, finish the job by bootstrapping rather than relying on an
-        # Oban retry to converge on the second pass.
-        case CalendarIntegrationQueries.get(integration.id) do
-          {:ok, %{graph_delta_link: nil} = reloaded} -> bootstrap(reloaded, job)
-          _other -> give_up_or_retry(class, job, :delta_sync_failed)
-        end
-    end
-  end
-
-  defp bootstrap(integration, job) do
-    case Config.outlook_calendar_api_module().bootstrap_sync(integration) do
-      {:ok, updated} ->
-        # Opportunistic webhook (re-)registration. Non-fatal: a seeded delta
-        # link is enough on its own, the next click/sweep can keep things current.
-        Config.outlook_calendar_api_module().register_graph_subscription(updated)
-        broadcast_complete(updated)
-        :ok
-
-      error ->
-        Logger.warning("Outlook bootstrap failed during manual refresh",
-          calendar_integration_id: integration.id,
-          error: LogFormat.reason(error)
-        )
-
-        give_up_or_retry(error_class(error), job, :bootstrap_failed)
+    case SyncCycle.run(integration) do
+      :ok -> :ok
+      {:error, :unauthorized} -> handle_credentials_rejected(integration)
+      {:error, {stage, class}} -> give_up_or_retry(class, job, stage)
     end
   end
 
@@ -168,13 +103,15 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
   defp give_up_or_retry(_class, _job, reason), do: {:error, reason}
 
-  defp error_class({:error, type, _message}) when is_atom(type),
-    do: ErrorAnalysis.classify_error(type)
-
-  defp error_class({:error, reason}), do: ErrorAnalysis.classify_error(reason)
-  defp error_class(_other), do: :hard
-
-  defp broadcast_complete(integration) do
-    SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
+  # Retrying a refused credential cannot help; only the owner reconnecting can.
+  defp handle_credentials_rejected(integration) do
+    Management.flag_for_reconnection(
+      integration,
+      dgettext_noop(
+        "integrations_calendar",
+        "Microsoft rejected the stored credentials. Please reconnect the integration."
+      ),
+      @credentials_rejected
+    )
   end
 end

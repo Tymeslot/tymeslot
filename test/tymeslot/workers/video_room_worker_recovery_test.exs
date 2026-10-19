@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRecoveryTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Ecto.Changeset
   alias Oban.Job
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -82,6 +83,45 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRecoveryTest do
       assert length(email_jobs_after_second) == length(email_jobs_after_first)
     end
 
+    # A booking whose fallback announcement could not be queued is still owed
+    # one: the job fails for a retry instead of snoozing past it, and the next
+    # recovery attempt announces it even though the room is still not there.
+    test "a fallback announcement that cannot be queued is retried on the next recovery attempt" do
+      %{meeting: meeting} = setup_future_meeting_scenario()
+      args = %{"meeting_id" => meeting.id, "announce" => true}
+
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :econnrefused}}
+      end)
+
+      :meck.new(Oban, [:passthrough])
+
+      :meck.expect(Oban, :insert, fn changeset ->
+        if Changeset.get_field(changeset, :args)["action"] == "send_confirmation_emails",
+          do: {:error, :queue_not_available},
+          else: :meck.passthrough([changeset])
+      end)
+
+      try do
+        assert {:error, {:announcement_failed, _reason}} =
+                 perform_job(VideoRoomWorker, args, attempt: 5)
+      after
+        :meck.unload(Oban)
+      end
+
+      assert %{announced_at: nil} = Repo.get!(MeetingSchema, meeting.id)
+
+      assert {:snooze, _seconds} = perform_job(VideoRoomWorker, args, attempt: 6)
+
+      assert [_one] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+               )
+
+      assert %{announced_at: %DateTime{}} = Repo.get!(MeetingSchema, meeting.id)
+    end
+
     test "logs the cause of entering recovery with credentials redacted" do
       %{meeting: meeting} = setup_future_meeting_scenario()
 
@@ -101,6 +141,30 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRecoveryTest do
       event = LogCapture.await_log("Video room creation entering recovery")
       assert event.meta.cause =~ "creation failed"
       refute event.meta.cause =~ "tok_video_secret_987"
+    end
+
+    test "a crash on the final attempt still enters recovery and announces the booking" do
+      %{meeting: meeting} = setup_future_meeting_scenario()
+
+      # The circuit breaker turns a raise or an exit inside the call into an
+      # error, so the crash is one nothing can catch: the creation task killed.
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        Process.exit(self(), :kill)
+      end)
+
+      LogCapture.with_capture([logger_level: :warning], fn ->
+        assert {:snooze, _seconds} =
+                 perform_job(
+                   VideoRoomWorker,
+                   %{"meeting_id" => meeting.id, "announce" => true},
+                   attempt: 5
+                 )
+      end)
+
+      assert all_enqueued(worker: EmailWorker) != []
+
+      event = LogCapture.await_log("Video room creation entering recovery")
+      assert event.meta.cause =~ "creation_crashed"
     end
 
     test "exhausts recovery even when snoozes no longer advance the job's attempt" do

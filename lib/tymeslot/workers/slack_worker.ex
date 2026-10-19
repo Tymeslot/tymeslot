@@ -30,16 +30,14 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   require Logger
 
-  alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Slack
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.DeliveryClaims
+  alias Tymeslot.Workers.MeetingNotificationJob
 
   @behaviour ExpectedJobOutcome
 
@@ -48,6 +46,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   @gone "Integration or meeting not found"
   @disabled "Integration is disabled"
   @insufficient_plan "Insufficient plan"
+  @feature_disabled "Automations are switched off"
   @webhook_revoked "webhook_url_revoked"
   # Auto-disabling Slack errors — token / account / channel are not retry-worthy.
   @auto_disable_errors ~w(token_revoked account_inactive channel_not_found)
@@ -55,7 +54,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
     do:
-      reason in [@gone, @disabled, @insufficient_plan, @webhook_revoked] or
+      reason in [@gone, @disabled, @insufficient_plan, @feature_disabled, @webhook_revoked] or
         reason in @auto_disable_errors
 
   @impl Oban.Worker
@@ -74,9 +73,9 @@ defmodule Tymeslot.Workers.SlackWorker do
 
     with {:ok, integration} <- SlackQueries.get_integration(integration_id),
          :ok = ErrorTracking.put_context(user_id: integration.user_id),
-         :ok <- check_feature_access(integration),
+         :ok <- MeetingNotificationJob.feature_gate(integration.user_id),
          :ok <- check_active(integration),
-         {:ok, meeting} <- fetch_meeting(meeting_id, args["participant_id"]) do
+         {:ok, meeting} <- MeetingNotificationJob.load_meeting(meeting_id, args["participant_id"]) do
       timezone = Recipients.get_organizer_timezone(meeting)
       blocks = MessageBuilder.build_blocks(event_type, meeting, timezone)
 
@@ -87,8 +86,9 @@ defmodule Tymeslot.Workers.SlackWorker do
     else
       {:error, :not_found} -> {:discard, @gone}
       {:error, :disabled} -> {:discard, @disabled}
-      {:error, :insufficient_plan} -> handle_revoked_access(integration_id)
-      {:error, :feature_access_checker_failed} -> {:error, :feature_access_checker_failed}
+      {:revoked, _reason} -> {:discard, @insufficient_plan}
+      {:discard, :feature_disabled} -> {:discard, @feature_disabled}
+      {:error, :feature_access_checker_failed} = error -> error
     end
   end
 
@@ -108,98 +108,37 @@ defmodule Tymeslot.Workers.SlackWorker do
   `participant_id` names the seat of a group meeting the event is about (see
   `Tymeslot.Meetings.SeatView`); the message then names that seat's
   participant. Each seat is its own message, so it is part of the uniqueness
-  key; a solo meeting passes `nil` and keeps the key it always had.
+  key; a solo meeting passes `nil`, which is stored and keyed as well, so a
+  seat's message and the meeting's own are never taken for duplicates (see
+  `Tymeslot.Workers.MeetingNotificationJob.schedule/5`).
   """
   @spec schedule_delivery(integer(), String.t(), binary(), binary() | nil) ::
           :ok | {:error, term()}
   def schedule_delivery(integration_id, event_type, meeting_id, participant_id \\ nil) do
-    result =
+    MeetingNotificationJob.schedule(
+      __MODULE__,
       %{
         "integration_id" => integration_id,
         "event_type" => event_type,
         "meeting_id" => meeting_id
-      }
-      |> maybe_put_participant(participant_id)
-      |> new(
-        queue: :slack_messages,
-        priority: 2,
-        unique: [
-          period: 300,
-          # `:worker` has to stay in the comparison. Slack and Telegram
-          # integration ids come from separate sequences and routinely
-          # coincide, so on args alone the two channels share one uniqueness
-          # namespace and whichever inserts second is silently deduped away.
-          fields: [:args, :worker],
-          keys: unique_keys(participant_id)
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, %Oban.Job{conflict?: true}} -> :ok
-      {:ok, _job} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+      },
+      participant_id,
+      [:integration_id, :event_type, :meeting_id],
+      queue: :slack_messages
+    )
   end
 
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt}) do
-    min(round(:math.pow(2, attempt - 1)), 16)
-  end
-
-  defp unique_keys(nil), do: [:integration_id, :event_type, :meeting_id]
-
-  defp unique_keys(_participant_id),
-    do: [:integration_id, :event_type, :meeting_id, :participant_id]
-
-  defp maybe_put_participant(args, nil), do: args
-
-  defp maybe_put_participant(args, participant_id),
-    do: Map.put(args, "participant_id", participant_id)
-
-  # A seat's message (`participant_id` set) names that seat's participant,
-  # cancelled or not; a group meeting row has no attendee of its own.
-  defp fetch_meeting(meeting_id, nil), do: Meetings.get_meeting(meeting_id)
-
-  defp fetch_meeting(meeting_id, participant_id) do
-    with {:ok, meeting} <- Meetings.get_meeting(meeting_id) do
-      SeatView.load(meeting, participant_id, nil)
-    end
-  end
+  defdelegate backoff(job), to: MeetingNotificationJob, as: :chat_backoff
 
   # ============================================================================
   # Private helpers
   # ============================================================================
 
-  defp check_feature_access(%SlackIntegrationSchema{} = integration) do
-    Features.check_access(integration.user_id, :automations_allowed)
-  end
-
   defp check_active(%SlackIntegrationSchema{} = integration) do
     if SlackIntegrationSchema.status(integration) == :active,
       do: :ok,
       else: {:error, :disabled}
-  end
-
-  defp handle_revoked_access(integration_id) do
-    case SlackQueries.get_integration(integration_id) do
-      {:ok, integration} ->
-        case Slack.auto_disable(integration, "Plan no longer permits automations") do
-          {:ok, _integration} ->
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Failed to auto-disable Slack integration after plan revocation",
-              integration_id: integration_id,
-              reason: LogFormat.reason(reason)
-            )
-        end
-
-      {:error, _reason} ->
-        :ok
-    end
-
-    {:discard, @insufficient_plan}
   end
 
   defp deliver(%SlackIntegrationSchema{app_mode: "oauth"} = integration, blocks) do
@@ -261,13 +200,16 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   defp handle_error(integration, delivery_attrs, job, {:slack_error, err, body}) do
     log_failure(delivery_attrs, err, body)
-    if final_attempt?(job), do: Slack.record_failure(integration, err)
+    if MeetingNotificationJob.final_attempt?(job), do: Slack.record_failure(integration, err)
     {:error, err}
   end
 
   defp handle_error(integration, delivery_attrs, job, {:http_error, status, body}) do
     log_failure(delivery_attrs, "http_#{status}", body)
-    if final_attempt?(job), do: Slack.record_failure(integration, "http_#{status}")
+
+    if MeetingNotificationJob.final_attempt?(job),
+      do: Slack.record_failure(integration, "http_#{status}")
+
     {:error, {:http_error, status}}
   end
 
@@ -278,27 +220,30 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   defp handle_error(integration, delivery_attrs, job, {:webhook_error, status, body}) do
     log_failure(delivery_attrs, "webhook_#{status}", body)
-    if final_attempt?(job), do: Slack.record_failure(integration, "webhook_#{status}")
+
+    if MeetingNotificationJob.final_attempt?(job),
+      do: Slack.record_failure(integration, "webhook_#{status}")
+
     {:error, {:webhook_error, status}}
   end
 
   defp handle_error(integration, delivery_attrs, job, {:transport_error, reason}) do
     log_failure(delivery_attrs, "transport_error", reason)
-    if final_attempt?(job), do: Slack.record_failure(integration, inspect(reason))
+
+    if MeetingNotificationJob.final_attempt?(job),
+      do: Slack.record_failure(integration, inspect(reason))
+
     {:error, :transport_error}
   end
 
   defp handle_error(integration, delivery_attrs, job, reason) do
     log_failure(delivery_attrs, inspect(reason), nil)
-    if final_attempt?(job), do: Slack.record_failure(integration, inspect(reason))
+
+    if MeetingNotificationJob.final_attempt?(job),
+      do: Slack.record_failure(integration, inspect(reason))
+
     {:error, reason}
   end
-
-  # A snoozed job comes back without having spent an attempt, so the number to
-  # compare against is the job's own `max_attempts` rather than a copy of the
-  # `5` above. That records the failure exactly once, on the real last attempt.
-  defp final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}),
-    do: attempt >= max_attempts
 
   defp auto_disable_and_log(integration, reason, delivery_attrs) do
     log_failure(delivery_attrs, reason, nil)

@@ -12,28 +12,6 @@ defmodule Tymeslot.Meetings.QueriesTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
-  describe "get_meeting_for_user/2" do
-    test "returns meeting when user is organizer" do
-      meeting = insert(:meeting, organizer_email: "organizer@example.com")
-
-      assert {:ok, found} = Meetings.get_meeting_for_user(meeting.id, "organizer@example.com")
-      assert found.id == meeting.id
-    end
-
-    test "returns meeting when user is attendee" do
-      meeting = insert(:meeting, attendee_email: "attendee@example.com")
-
-      assert {:ok, found} = Meetings.get_meeting_for_user(meeting.id, "attendee@example.com")
-      assert found.id == meeting.id
-    end
-
-    test "returns error when user is neither organizer nor attendee" do
-      meeting = insert(:meeting)
-
-      assert {:error, :not_found} = Meetings.get_meeting_for_user(meeting.id, "other@example.com")
-    end
-  end
-
   describe "get_meeting_for_organizer/2" do
     test "returns meeting when organizer_user_id matches" do
       user = insert(:user)
@@ -53,9 +31,9 @@ defmodule Tymeslot.Meetings.QueriesTest do
     end
 
     test "returns error when the requester is only the attendee, not the organizer" do
-      # Unlike get_meeting_for_user/2, attendee_email is never consulted here:
-      # an attendee holding a Tymeslot account under the booking email must
-      # not be treated as authorised to act on their own request.
+      # attendee_email is never consulted: an attendee holding a Tymeslot
+      # account under the booking email must not be treated as authorised to
+      # act on their own request.
       user = insert(:user)
       attendee = insert(:user)
 

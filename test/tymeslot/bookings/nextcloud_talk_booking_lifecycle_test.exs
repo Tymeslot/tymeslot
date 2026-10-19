@@ -124,7 +124,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     new_start = DateTime.add(start_time, 2, :day)
 
     assert {:ok, _rescheduled} =
-             Reschedule.execute(booked.uid, reschedule_params(new_start), %{}, user.id)
+             Reschedule.execute(booked.uid, reschedule_params(new_start), user.id)
 
     assert requests() == []
     assert_enqueued(worker: VideoSyncWorker, args: sync_args(booked, "update"))
@@ -149,7 +149,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     # Cancelling deletes the conversation and forgets the room, join links and
     # all: the conversation they point at no longer exists.
-    assert {:ok, _cancelled} = Cancel.execute(booked.uid)
+    assert {:ok, _cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: booked.uid))
     assert requests() == []
     assert_enqueued(worker: VideoSyncWorker, args: sync_args(booked, "delete"))
 
@@ -201,7 +201,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     new_start = DateTime.add(booked.start_time, 1, :day)
 
     assert {:ok, _rescheduled} =
-             Reschedule.execute(booked.uid, reschedule_params(new_start), %{}, user.id)
+             Reschedule.execute(booked.uid, reschedule_params(new_start), user.id)
 
     refute_enqueued(worker: VideoSyncWorker)
     assert requests() == []
@@ -278,7 +278,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     new_start = DateTime.add(meeting.start_time, 1, :day)
 
     assert {:ok, _rescheduled} =
-             Reschedule.execute(meeting.uid, reschedule_params(new_start), %{}, user.id)
+             Reschedule.execute(meeting.uid, reschedule_params(new_start), user.id)
 
     lobby_url = server <> @room_path <> "/" <> @token <> "/webinar/lobby"
     lobby = %{"state" => 1, "timer" => DateTime.to_unix(new_start)}
@@ -312,7 +312,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     new_start = DateTime.add(meeting.start_time, 1, :day)
 
     assert {:ok, _rescheduled} =
-             Reschedule.execute(meeting.uid, reschedule_params(new_start), %{}, user.id)
+             Reschedule.execute(meeting.uid, reschedule_params(new_start), user.id)
 
     # A 403 repeats on every attempt, so the job is discarded, not retried.
     nextcloud_answers([{403, ocs(%{"error" => "permissions"})}])
@@ -335,7 +335,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     new_start = DateTime.add(meeting.start_time, 1, :day)
 
     assert {:ok, _rescheduled} =
-             Reschedule.execute(meeting.uid, reschedule_params(new_start), %{}, user.id)
+             Reschedule.execute(meeting.uid, reschedule_params(new_start), user.id)
 
     # Nextcloud refuses the app password: the job is discarded, since a retry
     # would count against the server's brute-force protection, and the
@@ -348,7 +348,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     # Cancelling sends the refused credentials nowhere, and keeps the room so
     # it can still be deleted once the integration is reconnected.
-    assert {:ok, _cancelled} = Cancel.execute(meeting.uid)
+    assert {:ok, _cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     assert %{discard: 1, failure: 0} = drain_video_rooms()
 
     assert requests() == []
@@ -388,7 +388,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     # The app password is revoked: the first request refused flags the
     # integration.
     assert {:ok, _rescheduled} =
-             Reschedule.execute(meeting.uid, reschedule_params(new_start), %{}, user.id)
+             Reschedule.execute(meeting.uid, reschedule_params(new_start), user.id)
 
     nextcloud_answers([{401, ""}])
     assert %{discard: 1, failure: 0} = drain_video_rooms()
@@ -400,7 +400,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     newer_start = DateTime.add(new_start, 2, :hour)
 
     assert {:ok, _rescheduled} =
-             Reschedule.execute(meeting.uid, reschedule_params(newer_start), %{}, user.id)
+             Reschedule.execute(meeting.uid, reschedule_params(newer_start), user.id)
 
     assert %{discard: 1, failure: 0} = drain_video_rooms()
     assert requests() == []

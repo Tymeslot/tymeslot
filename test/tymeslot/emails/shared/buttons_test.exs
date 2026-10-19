@@ -14,11 +14,9 @@ defmodule Tymeslot.Emails.Shared.ButtonsTest do
       assert html =~ "Book Now"
     end
 
-    test "falls back to href=\"#\" for an invalid URL" do
-      html = Buttons.action_button(:confirmed, "Click", "javascript:alert(1)")
-
-      assert html =~ ~s(href="#")
-      refute html =~ "javascript:"
+    test "renders nothing for an unsafe or missing URL" do
+      assert Buttons.action_button(:confirmed, "Click", "javascript:alert(1)") == ""
+      assert Buttons.action_button(:confirmed, "Click", nil) == ""
     end
 
     test "passes mailto: URL through unchanged" do

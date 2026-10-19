@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.RecurrenceEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -28,6 +29,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
           {:noreply, reverted}
         else
           socket = assign(socket, :recurrence_prompt, nil)
+
+          socket =
+            if prompt[:kind] == :recurrence_rule,
+              do: RecurrenceEdit.clear_draft(socket),
+              else: socket
+
           {:noreply, replay_with_scope(prompt, scope, socket)}
         end
 
@@ -72,12 +79,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   # Neither flashes success up front: a refusal or a failure answers with its
   # own flash once the write settles (see `CalendarEventHandlers`), and
   # flashing "Changes saved." before that would contradict it.
+  #
+  # A change of repeat rule writes the rule built for the scope chosen
+  # (`RecurrenceEdit`): from the series' first start for all of it, from the
+  # occurrence's for it and the following ones, whose `COUNT` the write
+  # counts what is left of the series from.
   defp replay_with_scope(%{kind: :recurrence_rule} = prompt, scope, socket) do
+    rule =
+      case Enum.find(Map.get(prompt, :scope_rules, []), &(&1.scope == scope)) do
+        %{written_rule: rule} -> rule
+        nil -> prompt.recurrence_rule
+      end
+
     EditWorkflow.update_event_async(
       socket,
       prompt.event,
-      %{recurrence_rule: prompt.recurrence_rule},
-      recurrence_scope: scope
+      %{recurrence_rule: rule},
+      recurrence_scope: scope,
+      until_timezone: Map.get(prompt, :until_timezone)
     )
   end
 

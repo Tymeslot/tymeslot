@@ -9,19 +9,26 @@ defmodule Tymeslot.Emails.Shared.Buttons do
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles}
   alias Tymeslot.Emails.Shared.Styles.Tokens
-  alias Tymeslot.Security.UrlValidation
 
   @doc """
   A primary action button — pill-shaped, bold, centred. The background colour
-  comes from the supplied `intent`.
+  comes from the supplied `intent`. Renders nothing when `url` is missing or
+  not safe to link (`Sanitise.safe_url?/1`).
 
   Options:
   - `:size` — `:large`, `:medium`, `:small` (default: `:medium`)
   - `:full_width` — mobile responsiveness (default: `false`)
   - `:width` — explicit width (default: `"auto"`)
   """
-  @spec action_button(Tokens.intent(), String.t(), String.t(), keyword()) :: String.t()
+  @spec action_button(Tokens.intent(), String.t(), String.t() | nil, keyword()) :: String.t()
   def action_button(intent, text, url, opts \\ []) when is_atom(intent) do
+    case Sanitise.sanitize_url(url) do
+      nil -> ""
+      safe_url -> button_section(intent, text, safe_url, opts)
+    end
+  end
+
+  defp button_section(intent, text, safe_url, opts) do
     size = Keyword.get(opts, :size, :medium)
     full_width = Keyword.get(opts, :full_width, false)
     width = Keyword.get(opts, :width, "auto")
@@ -29,15 +36,14 @@ defmodule Tymeslot.Emails.Shared.Buttons do
     """
     <mj-section padding="14px 0">
       <mj-column>
-        #{button_markup(intent, text, url, size, full_width, width)}
+        #{button_markup(intent, text, safe_url, size, full_width, width)}
       </mj-column>
     </mj-section>
     """
   end
 
-  defp button_markup(intent, text, url, size, full_width, width) do
+  defp button_markup(intent, text, safe_url, size, full_width, width) do
     safe_text = Sanitise.sanitize_for_email(text)
-    safe_url = sanitize_button_url(url)
     css_class = if full_width, do: "mobile-button", else: ""
     accent_deep = Styles.intent_accent_deep(intent)
 
@@ -56,14 +62,5 @@ defmodule Tymeslot.Emails.Shared.Buttons do
       #{safe_text}
     </mj-button>
     """
-  end
-
-  defp sanitize_button_url("mailto:" <> _rest = url), do: Sanitise.sanitize_for_email(url)
-
-  defp sanitize_button_url(url) do
-    case UrlValidation.validate_http_url(url) do
-      :ok -> Sanitise.sanitize_for_email(url)
-      _error -> "#"
-    end
   end
 end

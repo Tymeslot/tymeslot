@@ -1,4 +1,4 @@
-defmodule Tymeslot.Integrations.CalendarManagement do
+defmodule Tymeslot.Integrations.Calendar.Management do
   @moduledoc """
   Context for calendar integration CRUD operations.
 
@@ -6,22 +6,19 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   separated from primary calendar logic and discovery operations.
   """
 
-  alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
-  alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar.BookingEligibility
+  alias Tymeslot.Availability
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
-  alias Tymeslot.Integrations.Calendar.PrimarySelection
+  alias Tymeslot.Integrations.Calendar.PrimaryElection
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Locales.WeekStart
-  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   require Logger
 
@@ -38,11 +35,33 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   end
 
   @doc """
-  Lists only active calendar integrations for a user.
+  Lists the user's active calendar integrations whose credentials can be read,
+  decrypted.
+
+  An integration whose credentials no longer decrypt is left out and flagged
+  for reconnection; see `partition_active_calendar_integrations/1`.
   """
   @spec list_active_calendar_integrations(user_id()) :: [CalendarIntegrationSchema.t()]
   def list_active_calendar_integrations(user_id) do
-    CalendarIntegrationQueries.list_active_for_user(user_id)
+    {readable, _unreadable} = partition_active_calendar_integrations(user_id)
+    readable
+  end
+
+  @doc """
+  Splits the user's active calendar integrations into those whose credentials
+  can be read, decrypted, and those whose credentials no longer decrypt (a
+  changed key, a corrupt row), as stored.
+
+  Each unreadable integration not already awaiting reconnection is flagged for
+  it, which also tells the owner. The caller decides what an unreadable one
+  means: the availability check treats it as a calendar it could not read.
+  """
+  @spec partition_active_calendar_integrations(user_id()) ::
+          {[CalendarIntegrationSchema.t()], [CalendarIntegrationSchema.t()]}
+  def partition_active_calendar_integrations(user_id) do
+    user_id
+    |> CalendarIntegrationQueries.list_active_for_user()
+    |> decrypt_or_flag()
   end
 
   @doc """
@@ -131,8 +150,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           | {:error, Ecto.Changeset.t() | %{discovery: String.t()}}
   def create_calendar_integration(attrs) do
     with {:ok, discovered_attrs} <- Discovery.maybe_discover_calendars(attrs),
-         {:ok, integration} <-
-           PrimarySelection.create_with_auto_primary(discovered_attrs),
+         {:ok, integration} <- insert_integration(discovered_attrs),
          {:ok, final_integration} <- ensure_default_booking_calendar(integration) do
       :telemetry.execute([:tymeslot, :calendar, :connected], %{count: 1}, %{
         provider: final_integration.provider
@@ -142,6 +160,28 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     else
       other -> other
     end
+  end
+
+  @doc """
+  Inserts an integration and, when it is bookable and its user has no active
+  primary calendar, makes it the primary, both under the primary lock (see
+  `Tymeslot.Integrations.Calendar.PrimaryElection`). For every path that
+  creates an integration, including an OAuth callback, which has already
+  resolved its calendars.
+  """
+  @spec insert_integration(%{required(:user_id) => user_id(), optional(atom()) => term()}) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def insert_integration(%{user_id: user_id} = attrs) do
+    PrimaryElection.under_lock(user_id, fn ->
+      case CalendarIntegrationQueries.create(attrs) do
+        {:ok, integration} ->
+          PrimaryElection.adopt_if_vacant(integration)
+          integration
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
   end
 
   @doc """
@@ -159,13 +199,40 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     |> maybe_mark_recovered()
   end
 
+  @doc """
+  Pauses an active integration: sets it inactive, never the other way round,
+  and when it was the user's primary calendar elects the next one (see
+  `Tymeslot.Integrations.Calendar.PrimaryElection`), under the same lock as
+  a user's own toggle. For the system pausing an unhealthy integration.
+
+  An integration already inactive stays inactive.
+  """
+  @spec pause_integration(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  def pause_integration(%CalendarIntegrationSchema{} = integration) do
+    PrimaryElection.under_lock(integration.user_id, fn ->
+      primary_id = PrimaryElection.stored_primary_id(integration.user_id)
+
+      # Only ever `false`: whatever the struct says, this never activates.
+      case deactivate_stored(integration) do
+        {:ok, %{id: id, user_id: user_id} = paused} when id == primary_id ->
+          PrimaryElection.elect_next(user_id, [id])
+          paused
+
+        {:ok, paused} ->
+          paused
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
   defp transactional_toggle(integration) do
-    Repo.transaction(fn ->
-      CalendarIntegrationWebhookQueries.lock_user_profile_and_integrations(integration.user_id)
+    PrimaryElection.under_lock(integration.user_id, fn ->
+      current_primary_id = PrimaryElection.stored_primary_id(integration.user_id)
 
-      current_primary_id = get_current_primary_id(integration.user_id)
-
-      case CalendarIntegrationQueries.toggle_active(integration) do
+      case toggle_stored(integration) do
         {:ok, updated} ->
           maybe_rebalance_primary(updated, current_primary_id)
           updated
@@ -174,6 +241,22 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           Repo.rollback(reason)
       end
     end)
+  end
+
+  # Under the lock, the struct handed in may be older than the row: toggled
+  # since, or deleted. Both act on the row as it stands.
+  defp toggle_stored(integration) do
+    case CalendarIntegrationQueries.reload(integration) do
+      nil -> {:error, :not_found}
+      stored -> CalendarIntegrationQueries.toggle_active(stored)
+    end
+  end
+
+  defp deactivate_stored(integration) do
+    case CalendarIntegrationQueries.reload(integration) do
+      nil -> {:error, :not_found}
+      stored -> CalendarIntegrationQueries.deactivate(stored)
+    end
   end
 
   # Marking recovery is deliberately outside the transaction above: it enqueues
@@ -213,47 +296,29 @@ defmodule Tymeslot.Integrations.CalendarManagement do
 
   @doc """
   Sets whether a subscription counts every event in its feed as busy, even
-  those the feed marks free (`all_events_busy`; see `Ics.Provider`). Only a
-  subscription honours the flag, so any other connection is refused. The
-  user's cached availability is dropped, so the next booking page load
-  already reflects the change.
+  those the feed marks free (`all_events_busy`; see `Ics.Provider`), for an
+  integration already loaded for its owner. Only a subscription honours the
+  flag, so any other connection is refused. The owner's cached availability
+  is dropped, so the next booking page load already reflects the change.
+
+  The owner reaches it through `OwnerActions.set_all_events_busy/3`, which
+  charges their write budget first.
   """
-  @spec set_all_events_busy(integer(), integer(), boolean()) ::
+  @spec put_all_events_busy(CalendarIntegrationSchema.t(), boolean()) ::
           {:ok, CalendarIntegrationSchema.t()}
-          | {:error, :not_found | :not_a_subscription | Ecto.Changeset.t()}
-  def set_all_events_busy(integration_id, user_id, busy?) when is_boolean(busy?) do
-    with {:ok, integration} <- get_calendar_integration(integration_id, user_id),
-         :ok <- subscription_only(integration),
+          | {:error, :not_a_subscription | Ecto.Changeset.t()}
+  def put_all_events_busy(%CalendarIntegrationSchema{} = integration, busy?)
+      when is_boolean(busy?) do
+    with :ok <- subscription_only(integration),
          {:ok, updated} <-
            CalendarIntegrationQueries.update(integration, %{all_events_busy: busy?}) do
-      AvailabilityCache.invalidate_for_user(user_id)
+      Availability.changed(updated.user_id)
       {:ok, updated}
     end
   end
 
   defp subscription_only(%{provider: provider}) do
     if ProviderConfig.subscription?(provider), do: :ok, else: {:error, :not_a_subscription}
-  end
-
-  @doc """
-  Deletes a calendar integration.
-  Handles primary calendar reassignment if needed.
-  """
-  @spec delete_calendar_integration(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_calendar_integration(integration) do
-    CalendarPrimary.delete_with_primary_handling(integration)
-  end
-
-  @doc """
-  Flags an integration as needing reauthentication when its stored credentials
-  can no longer be decrypted. Also records the sync error so the dashboard
-  shows the same message the worker logged.
-  """
-  @spec mark_needs_reauth(CalendarIntegrationSchema.t(), String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_needs_reauth(integration, error_message) do
-    CalendarIntegrationQueries.mark_needs_reauth(integration, error_message)
   end
 
   @doc """
@@ -265,16 +330,21 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   when the integration needs reconnecting for a different reason, so the message
   recorded on `sync_error` describes what actually failed.
 
-  Returns an Oban return value: `{:discard, _}` on success (retrying won't
-  recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
-  which causes Oban to retry the job and take another shot at recording the flag.
+  Returns an Oban return value: `{:discard, _}` once flagged (retrying won't
+  recover the credentials) or when the integration's row is gone, and
+  `{:error, _}` when the flag could not be recorded with its email, so Oban
+  retries the job and takes another shot. Credentials under an encryption key
+  missing from the keyring are not flagged (see `ReauthHandling.flag/3`): the
+  job is discarded with `ReauthHandling.key_missing_discard_reason/0`.
   """
   @spec handle_reauth_required(CalendarIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
   def handle_reauth_required(%CalendarIntegrationSchema{} = integration, opts \\ []) do
     case flag_for_reauth(integration, opts) do
       :ok -> {:discard, ReauthHandling.discard_reason()}
-      {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
+      {:error, :not_found} -> {:discard, "Integration no longer exists"}
+      {:error, :notification_failed} -> {:error, "Failed to flag integration for reauth"}
+      {:error, :encryption_key_missing} -> {:discard, ReauthHandling.key_missing_discard_reason()}
     end
   end
 
@@ -285,15 +355,16 @@ defmodule Tymeslot.Integrations.CalendarManagement do
 
   `message` is the explanation shown on the dashboard, passed as its
   untranslated msgid (mark it with `dgettext_noop/2` in the
-  `dashboard_calendar_providers` or `dashboard_integrations` domain) so the
+  `integrations_calendar` or `dashboard_integrations` domain) so the
   dashboard can translate it into the viewer's locale;
   `discard_reason` is the operator-facing reason recorded on the job.
 
   Discarding rather than returning `{:error, _}` is the point. Retrying re-asks
   a question already answered, and an exhausted retry chain raises a
   permanent-failure admin alert about a condition no operator can fix.
-  A failed *flag write* is worth retrying, though: without it the owner is
-  never told why their calendar stopped syncing.
+  A flag that could not be recorded with its email is `{:error, _}` and is
+  retried, though: without it the owner is never told why their calendar
+  stopped syncing.
 
   The first flag also emails the owner a reconnection notice carrying
   `message`; re-flagging an integration already awaiting reconnection does not.
@@ -301,48 +372,36 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @spec flag_for_reconnection(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
           {:discard, String.t()} | {:error, String.t()}
   def flag_for_reconnection(%CalendarIntegrationSchema{} = integration, message, discard_reason) do
-    case flag_and_notify(integration, message) do
+    case ReauthHandling.flag_and_notify(:calendar, integration, message) do
       {:ok, _updated} -> {:discard, discard_reason}
-      {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
+      {:error, :not_found} -> {:discard, "Integration no longer exists"}
+      {:error, :notification_failed} -> {:error, "Failed to flag integration: #{discard_reason}"}
     end
   end
 
-  # Only a false → true transition is news. Re-flagging an integration the owner
-  # has already been told about would email them again about a problem they are
-  # already looking at; the scheduler's uniqueness window is a backstop for
-  # that, not the place to decide it.
-  defp flag_and_notify(%{needs_reauth: true} = integration, message),
-    do: mark_needs_reauth(integration, message)
-
-  # The badge alone reaches only owners who open the dashboard. Everyone else
-  # discovers a dead calendar when a booking needs it, which is too late, so
-  # flagging and notifying are one step and cannot come apart.
-  defp flag_and_notify(integration, message) do
-    with {:ok, updated} = result <- mark_needs_reauth(integration, message) do
-      IntegrationScheduler.schedule_integration_reauth_notification(
-        %{id: updated.user_id},
-        updated,
-        :calendar
-      )
-
-      result
-    end
-  end
-
-  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific
-  # opts. `mark_needs_reauth` is wired to `flag_and_notify/2` rather than the
-  # bare DB write, so that every path ending in "the owner has to reconnect",
-  # this one included and not just `flag_for_reconnection/3`, sends the reauth
-  # email on the false to true transition. See the deferred ticket this closed
-  # for why the two calendar entry points used to disagree on that.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
+      :calendar,
       integration,
-      Keyword.merge(
-        [mark_needs_reauth: &flag_and_notify/2, log_prefix: "Calendar"],
-        opts
-      )
+      Keyword.get(opts, :cause, :credentials_undecryptable)
     )
+  end
+
+  # Only an integration not yet flagged is flagged here: these listings run on
+  # every booking page load, and re-flagging reports the same undecryptable
+  # row to error tracking each time.
+  defp decrypt_or_flag(integrations) do
+    {readable, unreadable} =
+      Enum.split_with(
+        integrations,
+        &(CalendarIntegrationSchema.decryption_status(&1) == :ok)
+      )
+
+    unreadable
+    |> Enum.reject(& &1.needs_reauth)
+    |> Enum.each(&flag_for_reauth/1)
+
+    {Enum.map(readable, &CalendarIntegrationSchema.decrypt_credentials/1), unreadable}
   end
 
   # Callers supply the virtual field names (`:password`), never the encrypted
@@ -383,15 +442,27 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     end
   end
 
+  # The booking calendar must block availability, so storing one makes it
+  # block in the same write (see `Blocking`).
   defp update_default_booking_calendar(integration, default_id) do
-    case CalendarIntegrationQueries.update(integration, %{
-           default_booking_calendar_id: default_id
-         }) do
+    case Blocking.set_default_booking_calendar(integration, default_id) do
       {:ok, updated} ->
         {:ok, updated}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         handle_booking_calendar_update_error(integration, changeset)
+
+      # Deleted, or no longer decrypting, between the insert and this write.
+      # The integration was still created, so it is kept without a default,
+      # as on a unique conflict; the owner can pick one from the dashboard.
+      {:error, reason} ->
+        Logger.warning("Could not set default booking calendar",
+          user_id: integration.user_id,
+          integration_id: integration.id,
+          error: LogFormat.reason(reason)
+        )
+
+        {:ok, integration}
     end
   end
 
@@ -422,60 +493,59 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     end)
   end
 
-  defp get_current_primary_id(user_id) do
-    case CalendarPrimary.get_primary_calendar_integration(user_id) do
-      {:ok, primary} -> primary.id
-      _other -> nil
-    end
-  end
-
   defp maybe_rebalance_primary(%{is_active: false, id: id, user_id: uid}, current_primary_id)
        when current_primary_id == id do
-    promote_or_clear_primary(uid)
+    PrimaryElection.elect_next(uid, [id])
     :ok
   end
 
   defp maybe_rebalance_primary(%{is_active: true} = updated, _current_primary_id) do
-    ensure_primary_on_activate(updated)
+    PrimaryElection.adopt_if_vacant(updated)
     :ok
   end
 
   defp maybe_rebalance_primary(_updated, _current_primary_id), do: :ok
 
-  defp promote_or_clear_primary(user_id) do
-    eligible =
-      user_id
-      |> list_active_calendar_integrations()
-      |> BookingEligibility.filter_bookable()
+  @doc """
+  Writes the tokens an OAuth reconnect has just proved and activates the
+  integration, then adopts it as the user's primary calendar when they have
+  no active one, all under the primary lock, so every activation is decided
+  there (see `Tymeslot.Integrations.Calendar.PrimaryElection`).
 
-    case eligible do
-      [] ->
-        ProfileQueries.clear_primary_calendar_integration(user_id)
-
-      actives ->
-        next = actives |> Enum.sort_by(& &1.inserted_at) |> List.last()
-        if next, do: CalendarPrimary.set_primary_calendar_integration(user_id, next.id)
-    end
-  end
-
-  # Activating an integration adopts it as the primary when the user has none
-  # or the one they have is inactive. A read-only integration is never adopted:
-  # it blocks time but refuses every write, so promoting it would leave the
-  # user with a primary that fails every booking. Leaving the primary as it
-  # stands is the safe answer here; the user still has a working calendar to
-  # promote, and `set_primary_calendar_integration/2` would refuse this one
-  # anyway.
-  defp ensure_primary_on_activate(%{id: updated_id, user_id: user_id} = updated) do
-    if BookingEligibility.bookable?(updated) do
-      case CalendarPrimary.get_primary_calendar_integration(user_id) do
-        {:ok, primary} ->
-          if primary.is_active == false do
-            CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
-          end
-
-        {:error, _reason} ->
-          CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
+  Acts on the row as it stands. Reactivating a paused row is refused with
+  `{:error, :duplicate_account}` when another active integration already uses
+  the same account, as switching it back on would be. Call it after the
+  provider round trip, never around one, so the lock is not held across HTTP.
+  """
+  @spec reconnect_integration(CalendarIntegrationSchema.t(), integration_attrs()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :not_found | :duplicate_account | Ecto.Changeset.t()}
+  def reconnect_integration(%CalendarIntegrationSchema{} = integration, attrs) do
+    PrimaryElection.under_lock(integration.user_id, fn ->
+      with {:ok, stored} <- stored_for_reconnect(integration),
+           :ok <- reactivation_allowed(stored, attrs),
+           {:ok, updated} <- update_calendar_integration(stored, attrs) do
+        if updated.is_active, do: PrimaryElection.adopt_if_vacant(updated)
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
       end
+    end)
+  end
+
+  # Decrypted when it can be, so the reconnected struct still carries any
+  # credential the provider did not send again; as stored when it cannot,
+  # since a reconnect is how an unreadable integration is repaired.
+  defp stored_for_reconnect(%{id: id}) do
+    case CalendarIntegrationQueries.get(id) do
+      {:ok, integration} -> {:ok, integration}
+      {:error, :requires_reencryption, stored} -> {:ok, stored}
+      {:error, :not_found} -> {:error, :not_found}
     end
   end
+
+  defp reactivation_allowed(%{is_active: false} = stored, %{is_active: true}),
+    do: CalendarIntegrationQueries.check_reactivation_conflict(stored)
+
+  defp reactivation_allowed(_stored, _attrs), do: :ok
 end

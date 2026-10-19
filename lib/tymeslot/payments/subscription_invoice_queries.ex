@@ -10,6 +10,20 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
   @default_limit 24
 
   @doc """
+  The Stripe subscription id of a captured invoice, or `nil` when the
+  invoice was never captured.
+  """
+  @spec subscription_id_for_invoice(String.t()) :: String.t() | nil
+  def subscription_id_for_invoice(stripe_invoice_id) do
+    Repo.one(
+      from(pi in SubscriptionInvoice,
+        where: pi.stripe_invoice_id == ^stripe_invoice_id,
+        select: pi.subscription_id
+      )
+    )
+  end
+
+  @doc """
   Inserts an invoice, or merges into it if one with the same
   `stripe_invoice_id` already exists.
 

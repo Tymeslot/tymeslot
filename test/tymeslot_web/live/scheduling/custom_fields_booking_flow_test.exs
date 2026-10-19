@@ -224,6 +224,17 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
         assert match?(%{"confirmed" => true}, note_answer)
       end
+
+      test "a required question left empty is refused in the guest's language",
+           %{conn: conn, profile: profile} do
+        view = navigate_to_booking_form(conn, profile, nil, locale: "de")
+
+        view |> element("button[phx-click='next_step'][phx-target]") |> render_click()
+
+        html = render(view)
+        assert html =~ "Text ist erforderlich"
+        refute html =~ "Text is required"
+      end
     end
 
     describe "#{theme.name}: questions step – back-navigation preserves answers" do

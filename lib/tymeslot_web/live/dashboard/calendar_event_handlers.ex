@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
@@ -32,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
       send_update(CalendarGridComponent,
         id: "calendar",
-        current_time: DateTime.utc_now()
+        current_time: Clock.utc_now()
       )
     end
 
@@ -168,7 +169,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       original_event: payload[:original_event]
     )
 
-    {:noreply, put_flash(socket, :error, update_failed_message(payload[:reason]))}
+    # The inline edit announces its save up front, before the write runs.
+    {:noreply,
+     socket |> clear_flash(:info) |> put_flash(:error, update_failed_message(payload[:reason]))}
   end
 
   # A refusal the domain made names its own reason; everything else is a
@@ -203,6 +206,30 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       "This series' repeat rule cannot be split here. Please make this change in your calendar app."
     )
   end
+
+  # What is left of a count is counted again when the change is written, from
+  # the series as it is then, which a sync may have changed since the scope
+  # was chosen. The prompt offered that scope, so these say the series moved
+  # on under the organiser rather than repeating why a scope is not offered.
+  defp update_failed_message(:ends_before) do
+    dgettext(
+      "dashboard_calendar_events",
+      "This series changed while you were editing it, and nothing is left of it from this event on. Nothing was saved."
+    )
+  end
+
+  # Either the series' first start can no longer be read, or a sync cleared
+  # its rule while it is still marked a series: both leave nothing to count
+  # from.
+  defp update_failed_message(:start_unknown) do
+    dgettext(
+      "dashboard_calendar_events",
+      "This series changed while you were editing it, so the events left in it can no longer be counted. Nothing was saved. Refresh the calendar and try again."
+    )
+  end
+
+  defp update_failed_message(:rule_not_supported_by_outlook),
+    do: EditWorkflow.rule_not_supported_by_outlook_message()
 
   defp update_failed_message(:day_missing_in_some_months),
     do: EditWorkflow.month_end_refused_message()
@@ -468,8 +495,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
   # The reason is a domain term, never copy: an atom such as `:time_conflict`
   # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
-  # the binaries `BookingErrorMessage` already translates, and anything it does
-  # not recognise falls back to a generic sentence there.
+  # atoms `BookingErrorMessage` renders, and anything it does not recognise
+  # falls back to a generic sentence there.
   defp ad_hoc_failed_message(:time_conflict) do
     dgettext(
       "dashboard_calendar_events",

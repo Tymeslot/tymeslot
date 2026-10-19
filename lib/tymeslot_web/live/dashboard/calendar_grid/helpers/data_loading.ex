@@ -3,11 +3,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   import Phoenix.Component, only: [assign: 3]
 
+  require Logger
+
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
+  alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
@@ -74,6 +77,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   @spec load_events(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def load_events(socket) do
+    # The window is the viewer's days in the viewer's zone, so a zone that
+    # just changed has to be assigned before it is computed.
+    socket = assign_timezone(socket)
     integrations = socket.assigns.integrations
     integration_ids = Enum.map(integrations, & &1.id)
     {start_dt, end_dt} = range_for_view(socket.assigns)
@@ -103,12 +109,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     socket
     |> assign(:events, events)
     |> assign(:group_booking_uids, group_booking_uids)
-    |> precompute_derived()
+    |> derive()
   end
 
   @spec precompute_derived(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def precompute_derived(socket) do
-    socket = assign_timezone(socket)
+  def precompute_derived(socket), do: socket |> assign_timezone() |> derive()
+
+  defp derive(socket) do
     assigns = socket.assigns
 
     v_events =
@@ -126,8 +133,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   end
 
   @doc """
-  Resolves the profile's timezone (falling back to UTC when it is invalid) into
-  the `user_timezone` assigns.
+  Resolves the profile's timezone into the `user_timezone` assigns by the
+  owner-zone rule (`Profiles.timezone/1`), the clock the booking engine reads
+  the same host on. A stored zone the rule cannot use is logged once here, so
+  operators can find the account.
 
   Split from `precompute_derived/1` so the initial load can know the user's
   timezone before it picks the date the grid opens on.
@@ -135,9 +144,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   @spec assign_timezone(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_timezone(socket) do
     assigns = socket.assigns
-    raw_tz = get_in(assigns, [:profile, Access.key(:timezone)]) || Timezones.fallback()
-    user_id = get_in(assigns, [:current_user, Access.key(:id)])
-    tz = Timezones.validate_or_utc(raw_tz, user_id: user_id)
+    tz = Profiles.timezone(assigns[:profile])
+    warn_unusable_zone(assigns[:profile], tz, get_in(assigns, [:current_user, Access.key(:id)]))
 
     socket
     |> assign(:user_timezone, tz)
@@ -145,48 +153,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     |> assign(:timezone_country_code, Timezones.country_code(tz))
   end
 
+  defp warn_unusable_zone(%{timezone: stored}, tz, user_id)
+       when is_binary(stored) and stored != tz do
+    Logger.warning("Invalid user timezone; the calendar shows the default zone",
+      timezone: stored,
+      user_id: user_id
+    )
+  end
+
+  defp warn_unusable_zone(_profile, _tz, _user_id), do: :ok
+
+  @doc """
+  The UTC window the grid loads events for: from midnight of the first visible
+  day to midnight after the last, both in the viewer's zone. The event queries
+  match on overlap, so an event that starts before the window and runs into it
+  is loaded without any padding, and nothing outside what the viewer can see is.
+  """
   @spec range_for_view(map()) :: {DateTime.t(), DateTime.t()}
-  def range_for_view(%{view: :week, date: date} = assigns) do
-    ws = PreferenceHelpers.week_start(date, assigns)
-    we = Date.add(ws, 6)
-    range_start = Date.add(ws, -1)
-    range_end = Date.add(we, 1)
-
-    {DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC"),
-     DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
+  def range_for_view(%{user_timezone: tz} = assigns) do
+    days = visible_days(assigns)
+    {local_midnight(List.first(days), tz), local_midnight(Date.add(List.last(days), 1), tz)}
   end
 
-  def range_for_view(%{view: :day, date: date}) do
-    range_start = Date.add(date, -1)
-    range_end = Date.add(date, 1)
+  @doc """
+  The UTC instant `date` begins in `tz`. A zone that moves its clocks at
+  midnight has no 00:00 on that date (the day starts at 01:00), or two of
+  them; the day starts at the first instant either way.
+  """
+  @spec local_midnight(Date.t(), String.t()) :: DateTime.t()
+  def local_midnight(date, tz) do
+    instant =
+      case DateTime.new(date, ~T[00:00:00], tz) do
+        {:ok, midnight} -> midnight
+        {:gap, _before, day_start} -> day_start
+        {:ambiguous, first, _second} -> first
+      end
 
-    {DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC"),
-     DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
-  end
-
-  def range_for_view(%{view: :three_day, date: date}) do
-    range_start = Date.add(date, -1)
-    range_end = Date.add(date, 3)
-
-    {DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC"),
-     DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
-  end
-
-  def range_for_view(%{view: :month, date: date}) do
-    first_of_month = Date.new!(date.year, date.month, 1)
-    range_start = DateTime.new!(Date.add(first_of_month, -7), ~T[00:00:00], "Etc/UTC")
-    range_end = DateTime.new!(Date.add(first_of_month, 38), ~T[00:00:00], "Etc/UTC")
-    {range_start, range_end}
-  end
-
-  # Agenda window: the current date forward 30 days. A one-day pad on each side
-  # keeps timezone-boundary events that touch the window's edge in range.
-  def range_for_view(%{view: :agenda, date: date}) do
-    range_start = Date.add(date, -1)
-    range_end = Date.add(date, @agenda_window_days + 1)
-
-    {DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC"),
-     DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
+    DateTime.shift_zone!(instant, "Etc/UTC")
   end
 
   # Private helpers

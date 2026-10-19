@@ -1,8 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.CreationPrevalidationSkipTest do
   @moduledoc """
   A CalDAV-family provider the operator has switched off has no enabled
-  provider to probe with, so creation goes ahead unprobed. That skip is
-  logged rather than silent.
+  provider to probe with, so a calendar for it is refused rather than
+  created unprobed.
   """
 
   # async: false: the provider toggle is global application env.
@@ -13,13 +13,15 @@ defmodule Tymeslot.Integrations.Calendar.CreationPrevalidationSkipTest do
 
   import Tymeslot.ConfigTestHelpers
 
+  import Tymeslot.Factory
+
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Test.LogCapture
 
-  test "logs a warning with the provider and user when the probe is skipped" do
+  test "refuses a provider that is switched off instead of skipping the probe" do
     providers = Application.get_env(:tymeslot, :calendar_providers)
     with_config(:tymeslot, calendar_providers: Map.put(providers, :zimbra, enabled: false))
-    LogCapture.attach()
 
     attrs = %{
       provider: "zimbra",
@@ -29,16 +31,19 @@ defmodule Tymeslot.Integrations.Calendar.CreationPrevalidationSkipTest do
       password: "pass"
     }
 
-    assert Creation.prevalidate_config(attrs) == {:ok, attrs}
+    assert {:error, %{discovery: message}} = Creation.prevalidate_config(attrs)
+    assert message =~ "Unsupported provider"
+  end
 
-    event =
-      LogCapture.await_log(
-        "Skipped the connection probe for a calendar provider that is switched off"
-      )
+  test "refuses a calendar for a switched-off provider from the connection form" do
+    providers = Application.get_env(:tymeslot, :calendar_providers)
+    with_config(:tymeslot, calendar_providers: Map.put(providers, :zimbra, enabled: false))
+    user = insert(:user)
 
-    assert event.level == :warning
-    assert event.meta.provider == "zimbra"
-    assert event.meta.user_id == 42
+    assert {:error, {:form_errors, %{generic: [_message]}}} =
+             Calendar.create_integration_with_validation(user.id, form("zimbra"))
+
+    assert Calendar.list_integrations(user.id) == []
   end
 
   test "never logs a provider string outside the known CalDAV family" do
@@ -48,5 +53,16 @@ defmodule Tymeslot.Integrations.Calendar.CreationPrevalidationSkipTest do
 
     assert Creation.prevalidate_config(attrs) == {:ok, attrs}
     refute_receive {:captured_log, %{meta: %{provider: _provider}}}
+  end
+
+  defp form(provider) do
+    %{
+      "name" => "Work",
+      "provider" => provider,
+      "url" => "https://dav.example.com/dav/",
+      "username" => "alice",
+      "password" => "secret",
+      "calendar_paths" => ""
+    }
   end
 end

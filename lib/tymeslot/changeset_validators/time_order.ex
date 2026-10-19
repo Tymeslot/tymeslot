@@ -6,6 +6,8 @@ defmodule Tymeslot.ChangesetValidators.TimeOrder do
   schemas and meeting schemas to enforce that end times follow start times.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
 
   @spec validate_time_order(Ecto.Changeset.t(), atom(), atom(), keyword()) ::
@@ -13,7 +15,7 @@ defmodule Tymeslot.ChangesetValidators.TimeOrder do
   def validate_time_order(changeset, start_field, end_field, opts \\ []) do
     start_time = get_field(changeset, start_field)
     end_time = get_field(changeset, end_field)
-    message = Keyword.get(opts, :message, "must be after start time")
+    message = Keyword.get(opts, :message, dgettext_noop("errors", "must be after start time"))
     compare_mod = if match?(%DateTime{}, start_time), do: DateTime, else: Time
 
     if start_time && end_time && compare_mod.compare(start_time, end_time) != :lt do

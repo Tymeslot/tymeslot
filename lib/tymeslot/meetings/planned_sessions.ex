@@ -23,15 +23,15 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     * the host moves it from the meeting type, with everyone on it
       (`move/3`), rather than asking each participant to book again;
     * when registration closes, the host is emailed who signed up
-      (`Tymeslot.Workers.EmailWorkerHandlers.PlannedSessionEmails`).
+      (`Tymeslot.Notifications.Email.PlannedSessionEmails`).
   """
 
   require Logger
 
   alias Ecto.UUID
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Policy, SeatEffects}
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, MeetingAttributes, SeatEffects}
   alias Tymeslot.Clock
-  alias Tymeslot.Emails.EmailScheduler.SessionScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.GroupMeetingQueries
@@ -137,7 +137,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       true ->
         with {:ok, updated} <- GroupMeetingQueries.set_registration_closes_at(session, closes_at) do
           SeatEffects.broadcast_and_invalidate(updated)
-          :ok = SessionScheduler.schedule_registration_closed(updated)
+          :ok = EmailScheduler.schedule_registration_closed(updated)
           {:ok, updated}
         end
     end
@@ -185,7 +185,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
   # The attributes a first booking would give the slot (organiser, location,
   # video integration, reminders, calendar destination), built by the same
-  # `Policy.build_meeting_attributes/1`, then cut back to the slot by
+  # `MeetingAttributes.build/1`, then cut back to the slot by
   # `SeatEffects.slot_attrs/2` as a seat's slot is: a session has no booker.
   defp session_attrs(meeting_type, starts_at, closes_at) do
     duration = meeting_type.duration_minutes
@@ -200,7 +200,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       meeting_type_id: meeting_type.id
     }
     |> BuildParams.new()
-    |> Policy.build_meeting_attributes()
+    |> MeetingAttributes.build()
     |> SeatEffects.slot_attrs(meeting_type.name)
     |> Map.merge(%{
       capacity: meeting_type.max_participants,
@@ -212,7 +212,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   # The calendar event, the slot's own jobs (reminders, video room) and the
   # organiser's participant list for when registration closes.
   defp schedule_session_effects(session) do
-    :ok = SessionScheduler.schedule_registration_closed(session)
+    :ok = EmailScheduler.schedule_registration_closed(session)
 
     with {:ok, _job} <- CalendarJobs.schedule_job(session, "create"),
          {:ok, _defer?} <- SeatEffects.schedule_new_slot_effects(session) do

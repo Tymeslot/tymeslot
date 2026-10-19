@@ -1,6 +1,6 @@
 defmodule Tymeslot.Bookings.ScheduleCheckValidationAgreementTest do
   @moduledoc """
-  `Bookings.Create` runs `Validation.validate_booking_time/3` and
+  `Bookings.Create` runs `Validation.validate_booking_time/2` and
   `ScheduleCheck.validate_slot_on_schedule/5` against the very same
   `scheduling_config`, expecting both to agree on whether "now" makes a
   candidate slot too soon or too far out.
@@ -18,7 +18,8 @@ defmodule Tymeslot.Bookings.ScheduleCheckValidationAgreementTest do
   @moduletag :bookings
 
   alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Bookings.{Policy, ScheduleCheck, Validation}
+  alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Bookings.{ScheduleCheck, Validation}
   alias Tymeslot.Test.ClockHelpers
 
   import Tymeslot.AvailabilityTestHelpers
@@ -37,12 +38,12 @@ defmodule Tymeslot.Bookings.ScheduleCheckValidationAgreementTest do
 
       config =
         user.id
-        |> Policy.scheduling_config(nil)
+        |> Schedules.booking_config(nil)
         |> Map.put(:min_advance_hours, 3)
         |> Map.put(:max_advance_booking_days, 365)
 
       ClockHelpers.with_frozen_clock(frozen_now, fn ->
-        validation_result = Validation.validate_booking_time(start_datetime, "Etc/UTC", config)
+        validation_result = Validation.validate_booking_time(start_datetime, config)
 
         schedule_check_result =
           ScheduleCheck.validate_slot_on_schedule(
@@ -74,13 +75,13 @@ defmodule Tymeslot.Bookings.ScheduleCheckValidationAgreementTest do
 
       config =
         user.id
-        |> Policy.scheduling_config(nil)
+        |> Schedules.booking_config(nil)
         |> Map.put(:min_advance_hours, 3)
         |> Map.put(:max_advance_booking_days, 365)
 
       ClockHelpers.with_frozen_clock(frozen_now, fn ->
-        assert {:error, _reason} =
-                 Validation.validate_booking_time(start_datetime, "Etc/UTC", config)
+        assert {:error, {:too_soon, 3}} =
+                 Validation.validate_booking_time(start_datetime, config)
 
         assert {:error, :slot_not_offered} =
                  ScheduleCheck.validate_slot_on_schedule(

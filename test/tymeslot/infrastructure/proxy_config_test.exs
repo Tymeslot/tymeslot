@@ -10,6 +10,48 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       refute ProxyConfig.matches_no_proxy_pattern?("other.example.com", "internal.example.com")
     end
 
+    # The forms an operator copies from their environment: curl, Go and most
+    # tools read them this way, and a value that silently matched nothing
+    # sent internal traffic to a proxy that refused it.
+    test "a bare domain covers its subdomains, but not a longer name ending in it" do
+      assert ProxyConfig.matches_no_proxy_pattern?("dav.internal.corp", "internal.corp")
+      assert ProxyConfig.matches_no_proxy_pattern?("internal.corp", "internal.corp")
+      refute ProxyConfig.matches_no_proxy_pattern?("notinternal.corp", "internal.corp")
+    end
+
+    test "a leading dot means the same as a leading wildcard" do
+      assert ProxyConfig.matches_no_proxy_pattern?("dav.internal.corp", ".internal.corp")
+      assert ProxyConfig.matches_no_proxy_pattern?("internal.corp", ".internal.corp")
+      refute ProxyConfig.matches_no_proxy_pattern?("notinternal.corp", ".internal.corp")
+    end
+
+    test "ignores case and a trailing dot" do
+      assert ProxyConfig.matches_no_proxy_pattern?("DAV.Internal.Corp", "internal.CORP")
+      assert ProxyConfig.matches_no_proxy_pattern?("dav.internal.corp.", "internal.corp")
+    end
+
+    test "matches a pattern with a port on its host alone" do
+      assert ProxyConfig.matches_no_proxy_pattern?("dav.internal.corp", "internal.corp:8443")
+      assert ProxyConfig.matches_no_proxy_pattern?("::1", "[::1]:8080")
+      assert ProxyConfig.matches_no_proxy_pattern?("::1", "::1")
+      refute ProxyConfig.matches_no_proxy_pattern?("::2", "::1")
+    end
+
+    # The suffix rule is for names: applied to an address, "2.3" would send
+    # 10.1.2.3 around the proxy.
+    test "an address matches only itself or a CIDR range containing it" do
+      assert ProxyConfig.matches_no_proxy_pattern?("10.1.2.3", "10.1.2.3")
+      assert ProxyConfig.matches_no_proxy_pattern?("10.1.2.3", "10.1.2.3:8080")
+      assert ProxyConfig.matches_no_proxy_pattern?("10.1.2.3", "10.0.0.0/8")
+
+      for partial <- ["1.2.3", "2.3", ".2.3", "*.2.3", "3"] do
+        refute ProxyConfig.matches_no_proxy_pattern?("10.1.2.3", partial), partial
+      end
+
+      assert ProxyConfig.should_bypass?("2001:db8::1", ["[2001:db8::1]"])
+      refute ProxyConfig.should_bypass?("2001:db8::1", ["db8::1"])
+    end
+
     test "matches wildcard domain patterns" do
       assert ProxyConfig.matches_no_proxy_pattern?("foo.example.com", "*.example.com")
       assert ProxyConfig.matches_no_proxy_pattern?("bar.example.com", "*.example.com")

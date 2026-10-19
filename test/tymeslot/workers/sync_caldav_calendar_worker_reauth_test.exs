@@ -145,7 +145,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
   end
 
   describe "sweep filter" do
-    test "stream_all_active skips integrations with needs_reauth: true" do
+    test "list_active_page skips integrations with needs_reauth: true" do
       healthy = insert(:calendar_integration, provider: "caldav", is_active: true)
 
       flagged =
@@ -156,9 +156,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
         )
 
       ids =
-        CalendarIntegrationQueries.stream_all_active(100, [], fn row, acc ->
-          [row.id | acc]
-        end)
+        Enum.map(CalendarIntegrationQueries.list_active_page(0, 100), & &1.id)
 
       assert healthy.id in ids
       refute flagged.id in ids
@@ -171,7 +169,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
         insert(:calendar_integration,
           provider: "caldav",
           is_active: true,
-          needs_reauth: true
+          needs_reauth: true,
+          sync_error:
+            "The calendar server rejected the stored credentials. Please reconnect the calendar."
         )
 
       %{integration: integration}
@@ -185,6 +185,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
         })
 
       refute reconnected.needs_reauth
+      assert reconnected.sync_error == nil
     end
 
     test "update/2 leaves the flag intact even when it writes credentials", %{

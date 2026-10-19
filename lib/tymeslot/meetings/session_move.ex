@@ -19,7 +19,7 @@ defmodule Tymeslot.Meetings.SessionMove do
   seat's calendar entry gets a new revision, and every participant (and
   their guests) is emailed the new time with an updated calendar entry,
   one job per seat
-  (`Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails`). Guests'
+  (`Tymeslot.Notifications.Email.GroupMeetingEmails`). Guests'
   answers applied to the old time and are reset, except a decline, which
   stands until the guest answers again.
   """
@@ -29,7 +29,6 @@ defmodule Tymeslot.Meetings.SessionMove do
   alias Tymeslot.Bookings.{CalendarJobs, SeatEffects}
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Emails.EmailScheduler.SessionScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.{GuestQueries, MeetingState, ParticipantQueries, Scheduling, VideoRooms}
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -115,7 +114,7 @@ defmodule Tymeslot.Meetings.SessionMove do
 
   defp after_move(moved, original) do
     SeatEffects.broadcast_and_invalidate(moved)
-    :ok = SessionScheduler.schedule_registration_closed(moved)
+    :ok = EmailScheduler.schedule_registration_closed(moved)
     sync_video_room(moved)
     repin_reminders(moved)
     tell_participants(moved, original)

@@ -7,7 +7,6 @@ defmodule Tymeslot.Emails.Shared.Text do
   """
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles}
-  alias Tymeslot.Security.UrlValidation
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -20,28 +19,16 @@ defmodule Tymeslot.Emails.Shared.Text do
   - `:subtitle` — optional descriptive text below the title
   - `:emoji` — an emoji rendered inline as a prefix to the title
   - `:align` — `"left"`, `"center"`, `"right"` (default: `"left"`)
-  - `:icon` — optional image URL for an icon above the title
   """
   @spec title_section(String.t(), keyword()) :: String.t()
   def title_section(title, opts \\ []) do
     subtitle = Keyword.get(opts, :subtitle)
-    icon = Keyword.get(opts, :icon)
     emoji = Keyword.get(opts, :emoji)
     align = Keyword.get(opts, :align, "left")
 
     safe_title = Sanitise.sanitize_for_email(title)
     safe_subtitle = if subtitle, do: Sanitise.sanitize_for_email(subtitle)
     safe_emoji = if emoji, do: Sanitise.sanitize_for_email(emoji)
-
-    icon_block =
-      case icon && UrlValidation.validate_http_url(icon) do
-        :ok ->
-          safe_icon = Sanitise.sanitize_for_email(icon)
-          ~s(<mj-image src="#{safe_icon}" width="40px" padding="0 0 10px 0" align="#{align}" />)
-
-        _invalid_or_missing ->
-          ""
-      end
 
     title_html =
       if safe_emoji,
@@ -70,7 +57,6 @@ defmodule Tymeslot.Emails.Shared.Text do
     """
     <mj-section padding="16px 0 8px 0">
       <mj-column>
-        #{icon_block}
         <mj-text
           font-size="26px"
           font-weight="800"
@@ -232,16 +218,18 @@ defmodule Tymeslot.Emails.Shared.Text do
 
   @doc """
   A troubleshooting link — shown below a button to help users who can't
-  click it. URL is sanitised.
+  click it. Renders nothing when `url` is missing or not safe to link, as the
+  button above it does.
   """
-  @spec troubleshooting_link(String.t()) :: String.t()
+  @spec troubleshooting_link(String.t() | nil) :: String.t()
   def troubleshooting_link(url) do
-    safe_url =
-      case UrlValidation.validate_http_url(url) do
-        :ok -> Sanitise.sanitize_for_email(url)
-        {:error, _reason} -> "#"
-      end
+    case Sanitise.sanitize_url(url) do
+      nil -> ""
+      safe_url -> troubleshooting_section(safe_url)
+    end
+  end
 
+  defp troubleshooting_section(safe_url) do
     """
     <mj-section padding="8px 0 0 0">
       <mj-column>

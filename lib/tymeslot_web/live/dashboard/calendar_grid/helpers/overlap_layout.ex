@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
   @moduledoc "Overlap-aware column layout algorithm for positioning simultaneous timed events within a day column."
 
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
+
   # Cap visible overlap columns — anything beyond this becomes unreadable (< 33% width).
   # Events that would land in column 4+ are returned as overflow and rendered as a "+N" chip.
   @max_visible_cols 3
@@ -63,21 +65,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
   end
 
   @doc """
-  Returns the UTC boundaries `{day_start, day_end}` for a calendar day in the given timezone.
+  Returns the UTC boundaries `{day_start, day_end}` for a calendar day in the
+  given timezone, each where its day begins, a midnight the clocks skip
+  included (see `DataLoading.local_midnight/2`).
   """
   @spec day_boundary_utc(Date.t(), String.t()) :: {DateTime.t(), DateTime.t()}
-  def day_boundary_utc(date, tz) do
-    day_start = DateTime.shift_zone!(DateTime.new!(date, ~T[00:00:00], tz), "Etc/UTC")
-    day_end = DateTime.shift_zone!(DateTime.new!(Date.add(date, 1), ~T[00:00:00], tz), "Etc/UTC")
-    {day_start, day_end}
-  end
+  def day_boundary_utc(date, tz),
+    do: {DataLoading.local_midnight(date, tz), DataLoading.local_midnight(Date.add(date, 1), tz)}
 
-  # Does this event overlap with the given calendar day (in the user's timezone)?
-  defp event_spans_day?(event, date, tz) do
+  @doc """
+  Whether a timed event falls on `date` in `tz`: overlap with
+  `[day_start, day_end)`, as the event query matches it. An event with no
+  length belongs to the day it starts on, midnight included; one that ends
+  exactly as the day starts does not.
+  """
+  @spec event_spans_day?(map(), Date.t(), String.t()) :: boolean()
+  def event_spans_day?(event, date, tz) do
     {day_start, day_end} = day_boundary_utc(date, tz)
 
     DateTime.compare(event.start_at, day_end) == :lt and
-      DateTime.compare(event.end_at, day_start) == :gt
+      (DateTime.compare(event.end_at, day_start) == :gt or
+         DateTime.compare(event.start_at, day_start) != :lt)
   end
 
   # Clamp an event's display start/end to the boundaries of a single calendar day.

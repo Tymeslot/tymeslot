@@ -10,7 +10,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   ## Discovery Strategy
 
   1. Attempts the provider-specific guessed path (e.g., `/calendars/{user}/`).
-  2. On `:not_found`, `:forbidden`, `:method_not_allowed` or `:server_error`,
+  2. On `:not_found`, `:forbidden`, `:method_not_allowed`, `:server_error` or
+     `:service_unavailable`,
      follows the full RFC 4791 chain:
      - PROPFIND the supplied base URL, then the origin root, until one answers
        with a `current-user-principal` href
@@ -23,7 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, ProviderBreakers}
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Security.SsrfGuard
@@ -45,7 +46,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # particular must not advance: the credentials are wrong, no URL can fix
   # that, and re-presenting a rejected login to a server that locks accounts
   # out makes the user's situation worse rather than better.
-  @wrong_url_errors [:not_found, :forbidden, :method_not_allowed, :server_error]
+  @wrong_url_errors [
+    :not_found,
+    :forbidden,
+    :method_not_allowed,
+    :server_error,
+    :service_unavailable
+  ]
 
   # SSRF guard for outbound discovery/test-connection PROPFINDs.
   #
@@ -63,7 +70,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # request originating from a user-supplied URL — the only path that matters
   # for SSRF — keeps the same posture as persistence.
   defp url_validation_opts(opts) do
-    base = [enforce_https_for_public: true, block_private_ips: true]
+    # A private address comes back as a reason, not a sentence, so the
+    # connection test can name it in the owner's language
+    # (`ErrorMessages.specific_message/2`).
+    base = [
+      enforce_https_for_public: true,
+      block_private_ips: true,
+      private_ip_error_message: :private_address
+    ]
 
     allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
 
@@ -96,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
       result =
         case Http.propfind(discovery_url, client.username, client.password,
                depth: "0",
-               max_retries: 0
+               max_attempts: 1
              ) do
           {:ok, %Req.Response{}} ->
             :ok
@@ -131,7 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # credential error rather than a permissions error. Every other error passes
   # through unchanged.
   defp normalise_test_result(:ok, _client),
-    do: {:ok, dgettext("dashboard_calendar_providers", "CalDAV connection successful")}
+    do: {:ok, dgettext("integrations_calendar", "CalDAV connection successful")}
 
   defp normalise_test_result({:error, :forbidden}, %{provider: :radicale}),
     do: {:error, :unauthorized}
@@ -156,7 +170,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
       with_discovery_breaker(client, opts, fn ->
         discovery_url = UrlBuilder.build_discovery_url(client)
 
-        case Http.propfind(discovery_url, client.username, client.password, max_retries: 0) do
+        case Http.propfind(discovery_url, client.username, client.password, max_attempts: 1) do
           {:ok, %Req.Response{body: body}} ->
             parse_calendar_discovery(body, client)
 
@@ -168,6 +182,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
             )
 
             discover_via_rfc4791(client)
+
+          # The only listing that grows with the number of events is a calendar
+          # collection's, so an address past the budget is almost always one
+          # calendar rather than the account: say so, with the address.
+          {:error, :response_too_large} ->
+            {:error, {:calendar_listing_too_large, display_url(client.base_url)}}
 
           {:error, reason} ->
             {:error, reason}
@@ -312,8 +332,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
   defp with_discovery_breaker(client, opts, fun) when is_function(fun, 0) do
     provider = Map.get(client, :provider, :caldav)
-    host = Base.extract_host_from_url(client.base_url)
-    opts = Keyword.put(opts, :host, host)
+    host = ProviderBreakers.host_from_base_url(client.base_url)
+
+    opts =
+      opts
+      |> Keyword.put(:host, host)
+      |> Keyword.put_new(:skip_breaker, Map.get(client, :skip_breaker, false))
 
     case CalendarCircuitBreaker.with_breaker(provider, opts, fun) do
       {:error, :circuit_breaker_error} = error ->

@@ -10,7 +10,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Telegram.TelegramIntegrationSchema
 
-  describe "changeset/2" do
+  describe "create_changeset/1" do
     test "valid with required fields" do
       user = insert(:user)
 
@@ -20,12 +20,12 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         bot_mode: "own"
       }
 
-      changeset = TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, attrs)
+      changeset = TelegramIntegrationSchema.create_changeset(attrs)
       assert changeset.valid?
     end
 
     test "invalid without required fields" do
-      changeset = TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{})
+      changeset = TelegramIntegrationSchema.create_changeset(%{})
       refute changeset.valid?
 
       assert %{
@@ -38,7 +38,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "",
           user_id: user.id,
           bot_mode: "own"
@@ -56,14 +56,14 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
-          name: String.duplicate("a", 256),
+        TelegramIntegrationSchema.create_changeset(%{
+          name: String.duplicate("a", 101),
           user_id: user.id,
           bot_mode: "own"
         })
 
       refute changeset.valid?
-      assert "should be at most 255 character(s)" in errors_on(changeset).name
+      assert "should be at most 100 character(s)" in errors_on(changeset).name
     end
 
     test "validates bot_mode inclusion" do
@@ -71,7 +71,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
 
       for mode <- ["shared", "own"] do
         changeset =
-          TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+          TelegramIntegrationSchema.create_changeset(%{
             name: "Bot",
             user_id: user.id,
             bot_mode: mode
@@ -85,7 +85,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "invalid"
@@ -99,7 +99,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own",
@@ -113,7 +113,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own",
@@ -121,14 +121,14 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         })
 
       refute changeset.valid?
-      assert "contains invalid events: invalid.event" in errors_on(changeset).events
+      assert "has an invalid entry" in errors_on(changeset).events
     end
 
     test "applies default values" do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own"
@@ -137,6 +137,140 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       assert get_field(changeset, :events) == []
       assert get_field(changeset, :is_active) == true
       assert get_field(changeset, :failure_count) == 0
+    end
+  end
+
+  describe "create_changeset/1 by bot mode" do
+    test "takes the bot token and chat id for an own-bot integration" do
+      changeset =
+        TelegramIntegrationSchema.create_changeset(%{
+          name: "Bot",
+          user_id: insert(:user).id,
+          bot_mode: "own",
+          bot_token: "test_bot_token_123",
+          chat_id: "123456"
+        })
+
+      assert get_change(changeset, :chat_id) == "123456"
+      assert get_change(changeset, :bot_token_encrypted)
+      assert get_change(changeset, :linked_at)
+    end
+
+    test "ignores a chat id for a shared-bot integration" do
+      changeset =
+        TelegramIntegrationSchema.create_changeset(%{
+          name: "Bot",
+          user_id: insert(:user).id,
+          bot_mode: "shared",
+          chat_id: "123456"
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :chat_id) == nil
+      assert get_change(changeset, :linked_at) == nil
+    end
+
+    test "ignores link and delivery state" do
+      changeset =
+        TelegramIntegrationSchema.create_changeset(%{
+          name: "Bot",
+          user_id: insert(:user).id,
+          bot_mode: "shared",
+          link_token: "forged",
+          is_active: false,
+          failure_count: 9,
+          disabled_reason: "forged"
+        })
+
+      assert Map.take(changeset.changes, [:link_token, :link_token_hash]) == %{}
+      assert get_field(changeset, :is_active) == true
+      assert get_field(changeset, :failure_count) == 0
+      assert get_field(changeset, :disabled_reason) == nil
+    end
+  end
+
+  describe "user_changeset/2" do
+    test "never changes the bot mode" do
+      integration = insert(:telegram_integration, bot_mode: "own")
+
+      changeset =
+        TelegramIntegrationSchema.user_changeset(integration, %{name: "New", bot_mode: "shared"})
+
+      assert changeset.valid?
+      assert get_field(changeset, :bot_mode) == "own"
+    end
+
+    test "changes the chat id of an own-bot integration" do
+      integration = insert(:telegram_integration, bot_mode: "own")
+
+      changeset = TelegramIntegrationSchema.user_changeset(integration, %{chat_id: "424242"})
+
+      assert get_change(changeset, :chat_id) == "424242"
+    end
+
+    test "ignores a chat id for a shared-bot integration" do
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: nil)
+
+      changeset =
+        TelegramIntegrationSchema.user_changeset(integration, %{name: "New", chat_id: "424242"})
+
+      assert get_change(changeset, :name) == "New"
+      assert get_change(changeset, :chat_id) == nil
+      assert get_change(changeset, :linked_at) == nil
+    end
+
+    test "ignores delivery state" do
+      integration =
+        insert(:telegram_integration, failure_count: 0, linked_at: DateTime.utc_now(:second))
+
+      changeset =
+        TelegramIntegrationSchema.user_changeset(integration, %{
+          failure_count: 9,
+          is_active: false
+        })
+
+      assert changeset.changes == %{}
+    end
+  end
+
+  describe "link_changeset/2" do
+    test "links a chat and stamps linked_at" do
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: nil)
+
+      changeset =
+        TelegramIntegrationSchema.link_changeset(integration, %{chat_id: "777", link_token: nil})
+
+      assert get_change(changeset, :chat_id) == "777"
+      assert get_change(changeset, :linked_at)
+    end
+
+    test "ignores the organiser's settings" do
+      integration =
+        insert(:telegram_integration, name: "Kept", linked_at: DateTime.utc_now(:second))
+
+      changeset =
+        TelegramIntegrationSchema.link_changeset(integration, %{
+          name: "Changed",
+          bot_mode: "shared"
+        })
+
+      assert changeset.changes == %{}
+    end
+  end
+
+  describe "state_transition_changeset/2" do
+    test "changes only delivery state" do
+      integration = insert(:telegram_integration, chat_id: "123")
+
+      changeset =
+        TelegramIntegrationSchema.state_transition_changeset(integration, %{
+          is_active: false,
+          disabled_reason: "too_many_failures",
+          chat_id: "999",
+          name: "Changed"
+        })
+
+      assert changeset.changes == %{is_active: false, disabled_reason: "too_many_failures"}
     end
   end
 
@@ -277,7 +411,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own",
@@ -295,7 +429,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own",
@@ -309,7 +443,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       user = insert(:user)
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own"
@@ -333,7 +467,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
       original_token = "test_token_abc"
 
       changeset =
-        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+        TelegramIntegrationSchema.create_changeset(%{
           name: "Bot",
           user_id: user.id,
           bot_mode: "own",

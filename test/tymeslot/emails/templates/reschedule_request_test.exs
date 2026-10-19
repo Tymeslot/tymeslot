@@ -2,7 +2,9 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.RescheduleRequest
+  alias TymeslotWeb.Endpoint
 
   import Tymeslot.Factory
 
@@ -71,14 +73,12 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       assert email.html_body =~ "45 minutes"
     end
 
-    test "includes reschedule URL" do
-      email_config = Application.get_env(:tymeslot, :email)
-      domain = email_config[:domain] || "tymeslot.app"
-      reschedule_url = "https://#{domain}/reschedule/token123"
-      meeting = insert(:meeting, reschedule_url: reschedule_url)
+    test "includes the current reschedule URL, not the stored copy" do
+      meeting = insert(:meeting, reschedule_url: "https://stale.example.com/reschedule/token123")
       email = RescheduleRequest.render(meeting)
 
-      assert email.html_body =~ reschedule_url
+      assert email.html_body =~ "#{Endpoint.url()}/meeting/#{meeting.uid}/reschedule"
+      refute email.html_body =~ "stale.example.com"
     end
 
     test "includes call to action button" do
@@ -86,7 +86,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       email = RescheduleRequest.render(meeting)
 
       assert email.html_body =~ "Choose a New Time"
-      assert email.html_body =~ meeting.reschedule_url
+      assert email.html_body =~ "/meeting/#{meeting.uid}/reschedule"
     end
 
     test "converts time to attendee timezone" do
@@ -101,7 +101,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       # 14:00 UTC on 15 March 2025 is 10:00 EDT in New York.
       assert email.html_body =~ "10:00 AM EDT"
       assert email.html_body =~ "America/New_York"
-      assert email.text_body =~ "Timezone: America/New_York"
+      assert email.text_body =~ "Time: 10:00 AM EDT (America/New_York)"
     end
 
     test "handles missing attendee timezone with UTC fallback" do
@@ -110,7 +110,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
 
       assert %Swoosh.Email{} = email
       assert email.html_body =~ "02:00 PM UTC"
-      assert email.text_body =~ "Timezone: UTC"
+      assert email.text_body =~ "Time: 02:00 PM UTC\n"
     end
 
     test "includes apology and explanation text" do
@@ -142,8 +142,15 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       end
     end
 
-    test "raises FunctionClauseError when reschedule_url is nil" do
+    test "still links a booking whose stored reschedule_url is nil" do
       meeting = insert(:meeting, reschedule_url: nil)
+
+      assert RescheduleRequest.render(meeting).text_body =~
+               "/meeting/#{meeting.uid}/reschedule"
+    end
+
+    test "raises FunctionClauseError when there is no reschedule link at all" do
+      meeting = insert(:meeting, capacity: 3, reschedule_url: nil)
 
       assert_raise FunctionClauseError, fn ->
         RescheduleRequest.render(meeting)
@@ -226,6 +233,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       meeting = insert(:meeting, title: "Demo\r\nBcc: attacker@evil.com")
       email = RescheduleRequest.render(meeting)
 
+      email = Delivery.sanitise_headers(email)
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end

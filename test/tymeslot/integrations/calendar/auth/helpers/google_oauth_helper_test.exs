@@ -5,7 +5,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper
-  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
   import Tymeslot.Factory
@@ -71,7 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     test "creates new integration and performs discovery" do
       user = insert(:user)
       insert(:profile, user: user)
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response("at-123", "rt-123")
 
@@ -80,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
         {:ok, [%{id: "cal1", summary: "Primary", primary: true}]}
       end)
 
-      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", "http://uri", state)
       assert integration.user_id == user.id
       assert integration.provider == "google"
 
@@ -108,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
           access_token: "old"
         )
 
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response("new-at", "new-rt", id_token: fake_id_token(account_id))
 
@@ -117,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
         {:ok, [%{id: "cal1", summary: "Primary", primary: true}]}
       end)
 
-      assert {:ok, updated} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, updated} = OAuthHelper.handle_callback("code", "http://uri", state)
       assert updated.id == existing.id
 
       # Decrypt to check virtual fields
@@ -125,10 +124,40 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       assert updated.access_token == "new-at"
     end
 
+    # A paused calendar gives up its place as the primary; reconnecting it
+    # reactivates it, and a user with no other calendar gets it back.
+    test "makes a reactivated integration the primary again when the user has none" do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+      account_id = "google-sub-paused"
+
+      paused =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          provider_account_id: account_id,
+          is_active: false,
+          calendar_list: [%{"id" => "cal1", "name" => "Primary", "selected" => true}]
+        )
+
+      state = %{user_id: user.id, integration_id: nil}
+      expect_token_response("new-at", "new-rt", id_token: fake_id_token(account_id))
+
+      # A reactivated calendar's list is read afresh.
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+        {:ok, [%{id: "cal1", summary: "Primary", primary: true}]}
+      end)
+
+      assert {:ok, reconnected} = OAuthHelper.handle_callback("code", "http://uri", state)
+      assert {reconnected.id, reconnected.is_active} == {paused.id, true}
+
+      assert Repo.reload!(profile).primary_calendar_integration_id == paused.id
+    end
+
     test "handles 3-tuple error from discovery without crashing" do
       user = insert(:user)
       insert(:profile, user: user)
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response("at-ok", "rt-ok")
 
@@ -138,7 +167,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       end)
 
       # Should still succeed — discovery failure is non-fatal
-      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", "http://uri", state)
       assert integration.provider == "google"
     end
 
@@ -151,7 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
 
       user = insert(:user)
       insert(:profile, user: user)
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response("at-push", "rt-push")
 
@@ -163,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
         {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
       end)
 
-      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", "http://uri", state)
 
       event = LogCapture.await_log("Google push channel registration failed")
       assert event.meta.integration_id == integration.id
@@ -173,14 +202,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     test "rejects callback when calendar write scope was not granted" do
       user = insert(:user)
       insert(:profile, user: user)
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
 
       # User clicked "Continue" without ticking the Calendar checkbox —
       # Google still returns a 200 with the partial scope.
       expect_token_response("at-readonly", "rt-readonly", scope: "openid email")
 
       assert {:error, :calendar_scope_missing} =
-               OAuthHelper.handle_callback("code", state, "http://uri")
+               OAuthHelper.handle_callback("code", "http://uri", state)
 
       # No integration row should be created.
       refute Repo.exists?(
@@ -196,7 +225,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     test "rejects callback when only calendar.readonly was granted" do
       user = insert(:user)
       insert(:profile, user: user)
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
 
       expect_token_response(
         "at-ro",
@@ -205,7 +234,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       )
 
       assert {:error, :calendar_scope_missing} =
-               OAuthHelper.handle_callback("code", state, "http://uri")
+               OAuthHelper.handle_callback("code", "http://uri", state)
     end
 
     test "enqueues video room retries for user's pending meetings on success" do
@@ -243,14 +272,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
           end_time: already_end
         )
 
-      state = GoogleOAuthHelper.generate_state(user.id)
+      state = %{user_id: user.id, integration_id: nil}
       expect_token_response("at-success", "rt-success")
 
       expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
         {:ok, [%{id: "cal1", summary: "Primary", primary: true}]}
       end)
 
-      assert {:ok, _integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert {:ok, _integration} = OAuthHelper.handle_callback("code", "http://uri", state)
 
       assert_enqueued(
         worker: Tymeslot.Workers.VideoRoomWorker,

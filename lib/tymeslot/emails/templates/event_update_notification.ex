@@ -8,6 +8,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.Stack
 
   alias Tymeslot.Emails.Shared.{
@@ -55,11 +56,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
         occurrence of a repeating event, or of this and every following
         one, whose details are then those of the occurrence edited
         (optional)
-      - `:attendee_locale`: optional locale string (default: `"en"`)
+      - `:attendee_locale`: optional locale string (default: the booking pages' fallback locale)
   """
   @spec render(String.t(), map()) :: Swoosh.Email.t()
   def render(attendee_email, details) do
-    locale = Map.get(details, :attendee_locale, "en")
+    locale = RecipientLocale.attendee_locale(details)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       meeting_details =
@@ -90,8 +91,8 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       organizer_details =
         TemplateHelper.build_organizer_details(details_for_organizer,
           intent: @intent,
-          eyebrow: dgettext("emails_booking", "Updated"),
-          stage_title: dgettext("emails_booking", "Event updated"),
+          eyebrow: dgettext("emails_booking_changes", "Updated"),
+          stage_title: dgettext("emails_booking_changes", "Event updated"),
           stage_subtitle: updated_line(details)
         )
 
@@ -119,15 +120,13 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       |> to(attendee_email)
       |> MjmlEmail.put_reply_to(details.organizer_name, details.organizer_email)
       |> subject(
-        Sanitise.sanitize_for_header(
-          dgettext("emails_booking", "Updated: %{title} - %{date}",
-            title: details.event_title,
-            date: date_short
-          )
+        dgettext("emails_booking_changes", "Updated: %{title} - %{date}",
+          title: details.event_title,
+          date: date_short
         )
       )
       |> html_body(html_body)
-      |> text_body(build_text_body(details, locale))
+      |> text_body(build_text_body(details, meeting_details, locale))
       |> attachment(build_ics_attachment(ics_details, details, locale))
     end)
   end
@@ -179,11 +178,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
             """
           end)
 
-        change_section(dgettext("emails_booking", "What changed"), """
+        change_section(dgettext("emails_booking_changes", "What changed"), """
         <tr>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
-          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking_changes", "Field")}</th>
+          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking_changes", "Before")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking_changes", "After")}</th>
         </tr>
         #{body_rows}
         """)
@@ -228,7 +227,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   # update of more of the series says how much more it changed.
   defp updated_line(%{series: :all} = details) do
     dgettext(
-      "emails_booking",
+      "emails_booking_changes",
       "%{name} has updated every occurrence of a repeating event you're attending.",
       name: details.organizer_name
     )
@@ -236,14 +235,14 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   defp updated_line(%{series: :following} = details) do
     dgettext(
-      "emails_booking",
+      "emails_booking_changes",
       "%{name} has updated this and every following occurrence of a repeating event you're attending.",
       name: details.organizer_name
     )
   end
 
   defp updated_line(details) do
-    dgettext("emails_booking", "%{name} has updated an event you're attending.",
+    dgettext("emails_booking_changes", "%{name} has updated an event you're attending.",
       name: details.organizer_name
     )
   end
@@ -253,7 +252,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   # nothing was ever recorded to put in it.
   defp build_details_table(changes, locale) do
     rows = Enum.map_join(changes, "\n", &detail_row(&1, locale))
-    change_section(dgettext("emails_booking", "Current details"), rows)
+    change_section(dgettext("emails_booking_changes", "Current details"), rows)
   end
 
   defp detail_row(change, locale) do
@@ -269,66 +268,58 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   end
 
   defp detail_cells({:title, _from, to}, _locale),
-    do: {dgettext("emails_booking", "Title"), escape(to)}
+    do: {dgettext("emails_booking_changes", "Title"), escape(to)}
 
   defp detail_cells({:location, _from, to}, _locale),
-    do: {dgettext("emails_booking", "Location"), escape(to)}
+    do: {dgettext("emails_booking_changes", "Location"), escape(to)}
 
   defp detail_cells({:description, _from, to}, _locale),
-    do: {dgettext("emails_booking", "Description"), escape(Formatting.plain_excerpt(to))}
+    do: {dgettext("emails_booking_changes", "Description"), escape(Formatting.plain_excerpt(to))}
 
   defp detail_cells({:time, _from, to}, locale),
-    do: {dgettext("emails_booking", "Time"), escape(Formatting.format_time_short(to, locale))}
+    do:
+      {dgettext("emails_booking_changes", "Time"),
+       escape(Formatting.format_time_short(to, locale))}
 
   defp change_to_row({:title, from, to}, _locale),
-    do: {dgettext("emails_booking", "Title"), escape(from), escape(to)}
+    do: {dgettext("emails_booking_changes", "Title"), escape(from), escape(to)}
 
   defp change_to_row({:location, from, to}, _locale),
-    do: {dgettext("emails_booking", "Location"), escape(from), escape(to)}
+    do: {dgettext("emails_booking_changes", "Location"), escape(from), escape(to)}
 
   defp change_to_row({:description, _from, _to}, _locale),
     do:
-      {dgettext("emails_booking", "Description"), dgettext("emails_booking", "(previous)"),
-       dgettext("emails_booking", "(updated)")}
+      {dgettext("emails_booking_changes", "Description"),
+       dgettext("emails_booking_changes", "(previous)"),
+       dgettext("emails_booking_changes", "(updated)")}
 
   defp change_to_row({:time, from_start, to_start}, locale),
     do:
-      {dgettext("emails_booking", "Time"),
+      {dgettext("emails_booking_changes", "Time"),
        escape(Formatting.format_time_short(from_start, locale)),
        escape(Formatting.format_time_short(to_start, locale))}
 
   defp change_to_row(_other, _locale), do: nil
 
-  defp escape(nil), do: dgettext("emails_booking", "(none)")
+  defp escape(nil), do: dgettext("emails_booking_changes", "(none)")
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()
 
-  defp build_text_body(details, locale) do
+  defp build_text_body(details, meeting_details, locale) do
     {changes_heading, changes_text} =
       if first_notification?(details),
         do:
-          {dgettext("emails_booking", "Current Details"),
+          {dgettext("emails_booking_changes", "Current Details"),
            TextBodyHelper.format_event_details(details.changes, locale)},
         else:
-          {dgettext("emails_booking", "What Changed"),
+          {dgettext("emails_booking_changes", "What Changed"),
            TextBodyHelper.format_event_changes(details.changes, locale)}
 
-    meeting_details =
-      details
-      |> Map.take([:all_day, :last_date])
-      |> Map.merge(%{
-        date: details.date,
-        start_time: details.start_time,
-        duration: details.duration,
-        location: details.location,
-        meeting_type: details.event_title
-      })
-
     """
-    #{dgettext("emails_booking", "Event Updated")}
+    #{dgettext("emails_booking_changes", "Event Updated")}
 
     #{updated_line(details)}
 
-    #{dgettext("emails_booking", "MEETING DETAILS:")}
+    #{dgettext("emails_booking_changes", "MEETING DETAILS:")}
     #{TextBodyHelper.format_meeting_details(meeting_details, locale)}
 
     #{changes_heading}

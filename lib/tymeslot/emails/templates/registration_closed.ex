@@ -52,11 +52,12 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       copy = copy(details, roster, locale)
+      meeting_details = TemplateHelper.organizer_meeting_details(details)
 
       mjml_content = """
       #{Text.centered_text(copy.lead, padding: "8px 0 16px 0")}
 
-      #{MeetingComponents.meeting_details_table(TemplateHelper.organizer_meeting_details(details), locale)}
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{if line = seats_line(details, roster), do: Text.centered_text(line, font_size: "14px", padding: "8px 0 8px 0")}
 
@@ -77,7 +78,7 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
       |> to({details.organizer_name, organizer_email})
       |> subject(Sanitise.sanitize_for_header(copy.subject))
       |> html_body(TemplateHelper.compile_template(mjml_content, stage))
-      |> text_body(text_body(details, roster, copy, locale))
+      |> text_body(text_body(details, meeting_details, roster, copy, locale))
       |> maybe_attach_csv(roster, details, locale)
     end)
   end
@@ -221,8 +222,7 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
 
   defp guest_label(%{email: email}), do: email
 
-  defp text_body(details, roster, copy, locale) do
-    view = TemplateHelper.as_organizer_view(details)
+  defp text_body(details, meeting_details, roster, copy, locale) do
 
     entries =
       Enum.map_join(roster, "\n", fn entry ->
@@ -238,7 +238,7 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
     #{copy.lead}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{TextBodyHelper.format_meeting_details(view, locale)}
+    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}
 
     #{seats_line(details, roster)}
 

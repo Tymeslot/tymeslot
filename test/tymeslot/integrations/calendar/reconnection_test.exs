@@ -4,9 +4,14 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Ecto.Changeset
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Factory
+  alias Tymeslot.Integrations.Calendar.Blocking
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Reconnection
+  alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
@@ -247,6 +252,150 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert reloaded.calendar_paths == ["/a/"]
       assert Enum.find(reloaded.calendar_list, &(&1.path == "/a/")).selected == true
       assert Enum.find(reloaded.calendar_list, &(&1.path == "/b/")).selected == false
+    end
+
+    test "keeps each known calendar's blocking choice, whatever is selected now", %{
+      integration: integration
+    } do
+      {:ok, integration} =
+        integration
+        |> Changeset.change(
+          calendar_list: [
+            %CalendarEntry{
+              id: "/b/",
+              path: "/b/",
+              selected: true,
+              blocks_availability: false
+            }
+          ]
+        )
+        |> Repo.update()
+
+      payload = %{
+        credentials: %{
+          url: "https://caldav.new.example.com",
+          username: "bob",
+          password: "bobpass"
+        },
+        calendars: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "type" => "calendar"},
+          %{"id" => "/b/", "path" => "/b/", "name" => "B", "type" => "calendar"}
+        ]
+      }
+
+      assert {:ok, updated} =
+               Reconnection.finalise_account_change(integration, payload, ["/a/", "/b/"])
+
+      list = Repo.get!(CalendarIntegrationSchema, updated.id).calendar_list
+      assert Enum.find(list, &(&1.path == "/b/")).blocks_availability == false
+      assert Enum.find(list, &(&1.path == "/a/")).blocks_availability == true
+    end
+
+    test "a booking calendar left unticked stays selected and blocking", %{
+      integration: integration
+    } do
+      {:ok, integration} =
+        integration
+        |> Changeset.change(
+          default_booking_calendar_id: "/a/",
+          calendar_list: [
+            %CalendarEntry{id: "/a/", path: "/a/", selected: true},
+            %CalendarEntry{id: "/b/", path: "/b/", selected: true, blocks_availability: false}
+          ]
+        )
+        |> Repo.update()
+
+      Factory.insert(:meeting_type,
+        user: Repo.get!(UserSchema, integration.user_id),
+        calendar_integration_id: integration.id,
+        target_calendar_id: "/b/"
+      )
+
+      payload = %{
+        credentials: %{url: "https://caldav.example.com", username: "alice", password: "new"},
+        calendars: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "type" => "calendar"},
+          %{"id" => "/b/", "path" => "/b/", "name" => "B", "type" => "calendar"},
+          %{"id" => "/c/", "path" => "/c/", "name" => "C", "type" => "calendar"}
+        ]
+      }
+
+      assert {:ok, updated} = Reconnection.finalise_account_change(integration, payload, ["/c/"])
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, updated.id)
+      assert Enum.sort(reloaded.calendar_paths) == ["/a/", "/b/", "/c/"]
+
+      for path <- ["/a/", "/b/"] do
+        assert %{selected: true, blocks_availability: true} =
+                 Enum.find(reloaded.calendar_list, &(&1.path == path))
+      end
+    end
+
+    # With no booking calendar stored, bookings go to the first selected
+    # writable path, which a reconnect can move to a calendar set to show.
+    test "the calendar bookings move to when the first path vanishes is made to block", %{
+      integration: integration
+    } do
+      {:ok, integration} =
+        integration
+        |> Changeset.change(
+          default_booking_calendar_id: nil,
+          calendar_paths: ["/a/", "/b/"],
+          calendar_list: [
+            %CalendarEntry{id: "/a/", path: "/a/", selected: true},
+            %CalendarEntry{id: "/b/", path: "/b/", selected: true, blocks_availability: false}
+          ]
+        )
+        |> Repo.update()
+
+      payload = %{
+        credentials: %{url: "https://caldav.example.com", username: "alice", password: "new"},
+        calendars: [
+          %{"id" => "/b/", "path" => "/b/", "name" => "B", "type" => "calendar"},
+          %{"id" => "/c/", "path" => "/c/", "name" => "C", "type" => "calendar"}
+        ]
+      }
+
+      assert {:ok, updated} = Reconnection.finalise_account_change(integration, payload, ["/b/"])
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, updated.id)
+      assert CalendarPathResolver.resolve(reloaded) == "/b/"
+
+      assert %{selected: true, blocks_availability: true} =
+               Enum.find(reloaded.calendar_list, &(&1.path == "/b/"))
+    end
+
+    # The integration is read before the write takes the row lock; a choice
+    # the owner made in between is the one the reconnect carries over.
+    test "carries the blocking choices of the row as it stands, not as it was read", %{
+      integration: integration
+    } do
+      {:ok, integration} =
+        integration
+        |> Changeset.change(
+          default_booking_calendar_id: "/a/",
+          calendar_list: [
+            %CalendarEntry{id: "/a/", path: "/a/", selected: true},
+            %CalendarEntry{id: "/b/", path: "/b/", selected: true}
+          ]
+        )
+        |> Repo.update()
+
+      {:ok, _updated} = Blocking.set(integration, "/b/", false)
+
+      payload = %{
+        credentials: %{url: "https://caldav.example.com", username: "alice", password: "new"},
+        calendars: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "type" => "calendar"},
+          %{"id" => "/b/", "path" => "/b/", "name" => "B", "type" => "calendar"}
+        ]
+      }
+
+      assert {:ok, updated} =
+               Reconnection.finalise_account_change(integration, payload, ["/a/", "/b/"])
+
+      list = Repo.get!(CalendarIntegrationSchema, updated.id).calendar_list
+      assert %{selected: true, blocks_availability: false} = Enum.find(list, &(&1.path == "/b/"))
     end
 
     test "matches a selected path that differs only by percent-encoding", %{

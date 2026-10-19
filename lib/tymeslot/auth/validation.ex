@@ -61,8 +61,26 @@ defmodule Tymeslot.Auth.Validation do
     do: InputProcessor.validate_field(email, :email, universal_opts: [metadata: metadata])
 
   @doc """
-  Validates a sign-in form before any account is looked up: a well-formed
-  email, and a password that is present and within the length login hashes.
+  Validates an email address typed to find an existing account (sign-in,
+  password reset): universal sanitisation, then only presence and length.
+
+  The format rules are deliberately not applied. They govern addresses being
+  registered, and an account whose stored address predates them must still
+  be able to sign in and reset its password; an address no account has
+  simply finds nothing.
+  """
+  @spec validate_lookup_email(term(), map()) :: {:ok, String.t()} | {:error, String.t()}
+  def validate_lookup_email(email, metadata \\ %{}),
+    do:
+      InputProcessor.validate_field(email, :email,
+        existing: true,
+        universal_opts: [metadata: metadata]
+      )
+
+  @doc """
+  Validates a sign-in form before any account is looked up: an email that is
+  present and within length (see `validate_lookup_email/2`), and a password
+  that is present and within the length login hashes.
 
   Returns `{:error, errors}` keyed by field (`:email`, `:password`), with
   translated messages ready to show beside each field.
@@ -84,7 +102,7 @@ defmodule Tymeslot.Auth.Validation do
   end
 
   defp email_errors(email) do
-    case validate_email(email) do
+    case validate_lookup_email(email) do
       {:ok, _sanitised} -> %{}
       {:error, message} -> %{email: message}
     end

@@ -1,3 +1,4 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: tymeslot\n"
@@ -205,6 +206,7 @@ msgstr "Logowanie OAuth nie powiodło się – brak dostawcy."
 msgid "Or continue with"
 msgstr "Lub kontynuuj przez"
 
+#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
@@ -503,6 +505,7 @@ msgstr "Do dokończenia rejestracji wymagany jest adres e-mail. Podaj adres e-ma
 msgid "Enter your email to receive a password reset link for your Tymeslot account."
 msgstr "Podaj adres e-mail, żeby otrzymać link do zresetowania hasła do konta Tymeslot."
 
+#: lib/tymeslot/auth/registration.ex
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to create user account. Please try again."
@@ -657,11 +660,6 @@ msgstr "Obecne hasło jest nieprawidłowe"
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
-msgid "Email address is already in use"
-msgstr "Ten adres e-mail jest już używany"
-
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
 msgid "Email changed successfully. Please sign in with your new email."
 msgstr "Adres e-mail został zmieniony. Zaloguj się nowym adresem."
 
@@ -675,25 +673,10 @@ msgstr "Nieprawidłowy lub wygasły token resetowania hasła."
 msgid "Invalid or expired verification link"
 msgstr "Nieprawidłowy lub wygasły link potwierdzający"
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "New email must be different from current email"
-msgstr "Nowy adres e-mail musi różnić się od obecnego"
-
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Nowe hasło musi różnić się od obecnego"
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long."
-msgstr "Hasło musi mieć co najmniej 8 znaków."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Please enter a valid email address."
-msgstr "Podaj poprawny adres e-mail."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -735,7 +718,7 @@ msgstr "Te dane są już używane. Spróbuj z innymi."
 msgid "Too many %{operation} attempts. Please try again later."
 msgstr "Zbyt wiele prób: %{operation}. Spróbuj ponownie później."
 
-#: lib/tymeslot/security/account_lockout.ex
+#: lib/tymeslot/security/rate_limiter/auth.ex
 #, elixir-autogen, elixir-format
 msgid "Too many failed attempts. Please wait before trying again"
 msgstr "Zbyt wiele nieudanych prób. Odczekaj chwilę przed kolejną próbą"
@@ -932,6 +915,52 @@ msgstr "Hasło jest za długie"
 #, elixir-autogen, elixir-format
 msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
 msgstr "Konto z tym adresem e-mail już istnieje. Zaloguj się hasłem albo przez usługę, której użyto przy rejestracji. Jeśli nie pamiętasz hasła, możesz je zresetować na stronie logowania."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Restore my account"
+msgstr "Przywróć konto"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr "Wyloguj się"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back. Your account has been restored and will not be deleted."
+msgstr "Witaj z powrotem. Konto zostało przywrócone i nie zostanie usunięte."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your account could not be restored. Please try again."
+msgstr "Nie udało się przywrócić konta. Spróbuj ponownie."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is being deleted"
+msgstr "Konto jest usuwane"
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is being deleted and can no longer be restored."
+msgstr "Konto jest usuwane i nie można go już przywrócić."
+
+#: lib/tymeslot_web/controllers/auth/account_restore_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
+msgstr "Konto jest w trakcie usuwania (zaplanowano na %{date}). Jeśli chcesz je zachować, przywróć je tutaj."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "The verification email could not be sent. Please try again."
+msgstr "Nie udało się wysłać e-maila potwierdzającego. Spróbuj ponownie."
+
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Email address"
+msgstr "Adres e-mail"
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format

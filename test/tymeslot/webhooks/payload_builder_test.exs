@@ -6,8 +6,10 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Webhooks.PayloadBuilder
+  alias TymeslotWeb.Endpoint
 
   describe "build_payload/3" do
     test "includes the event type, a timestamp, and webhook_id at the top level" do
@@ -53,9 +55,10 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       assert attendee.timezone == "Europe/London"
     end
 
-    test "includes booking URLs" do
+    test "includes booking URLs built now, not the stored copy" do
       meeting =
         build(:meeting,
+          id: UUID.generate(),
           view_url: "https://example.com/view",
           cancel_url: "https://example.com/cancel",
           reschedule_url: "https://example.com/reschedule"
@@ -63,10 +66,12 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
 
+      base = Endpoint.url() <> "/meeting/#{meeting.uid}"
       urls = payload.data.meeting.urls
-      assert urls.view == "https://example.com/view"
-      assert urls.cancel == "https://example.com/cancel"
-      assert urls.reschedule == "https://example.com/reschedule"
+      # The view link is the host's, to the booking in their dashboard.
+      assert urls.view == Endpoint.url() <> "/dashboard/meetings?meeting=#{meeting.id}"
+      assert urls.cancel == base <> "/cancel"
+      assert urls.reschedule == base <> "/reschedule"
     end
 
     test "includes video data when video room is enabled" do

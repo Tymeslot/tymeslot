@@ -16,14 +16,10 @@ defmodule Tymeslot.Payments.Behaviours.StripeProvider do
   @callback cancel_subscription(subscription_id :: String.t(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
 
-  @callback update_subscription(subscription_id :: String.t(), new_price_id :: String.t()) ::
+  @callback resume_subscription(subscription_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
-  @callback update_subscription(
-              subscription_id :: String.t(),
-              new_price_id :: String.t(),
-              opts :: map()
-            ) ::
+  @callback delete_customer(customer_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
   @callback get_subscription(subscription_id :: String.t()) ::
@@ -32,18 +28,24 @@ defmodule Tymeslot.Payments.Behaviours.StripeProvider do
   @callback get_charge(charge_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
-  @callback construct_webhook_event(
-              payload :: binary(),
-              signature :: String.t(),
-              secret :: String.t()
-            ) ::
-              {:ok, map()} | {:error, term()}
-
   @callback expire_checkout_session(session_id :: String.t()) ::
               {:ok, map()} | {:error, term()}
 
   @callback list_subscriptions(params :: map()) ::
               {:ok, map()} | {:error, term()}
 
-  @callback webhook_secret() :: String.t() | nil
+  @callback list_charges(params :: map()) ::
+              {:ok, map()} | {:error, term()}
+
+  @callback list_invoices(params :: map()) ::
+              {:ok, map()} | {:error, term()}
+
+  @callback get_invoice(invoice_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @callback list_invoice_payments(params :: map()) ::
+              {:ok, map()} | {:error, term()}
+
+  @callback update_subscription_automatic_tax(subscription_id :: String.t(), enabled :: boolean()) ::
+              {:ok, map()} | {:error, term()}
 end

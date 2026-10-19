@@ -19,8 +19,8 @@ defmodule Tymeslot.AuthTest do
   alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
-  alias TymeslotWeb.Helpers.ClientIP
 
+  import Tymeslot.AuthTestHelpers, only: [isolated_request_opts: 0]
   import Tymeslot.Factory
 
   describe "authenticate_user/3" do
@@ -35,7 +35,7 @@ defmodule Tymeslot.AuthTest do
                Auth.authenticate_user(
                  user.email,
                  "WrongPassword",
-                 ClientIP.request_opts(%Plug.Conn{})
+                 isolated_request_opts()
                )
 
       # Non-existent user
@@ -43,7 +43,7 @@ defmodule Tymeslot.AuthTest do
                Auth.authenticate_user(
                  "fake@example.com",
                  "Password123!",
-                 ClientIP.request_opts(%Plug.Conn{})
+                 isolated_request_opts()
                )
     end
   end
@@ -61,18 +61,18 @@ defmodule Tymeslot.AuthTest do
                  user,
                  "new@example.com",
                  "WrongPassword",
-                 ClientIP.request_opts(%Plug.Conn{})
+                 isolated_request_opts()
                )
 
-      # Duplicate email blocked
+      # A registered address gets the answer a free one does
       insert(:user, email: "taken@example.com")
 
-      assert {:error, %{new_email: "Email address is already in use"}} =
+      assert {:ok, _user, "Verification email sent to taken@example.com"} =
                Auth.request_email_change(
                  user,
                  "taken@example.com",
                  "CurrentPassword123!",
-                 ClientIP.request_opts(%Plug.Conn{})
+                 isolated_request_opts()
                )
     end
   end
@@ -94,7 +94,7 @@ defmodule Tymeslot.AuthTest do
           "CurrentPassword123!",
           "NewPassword123!",
           "NewPassword123!",
-          ClientIP.request_opts(%Plug.Conn{})
+          isolated_request_opts()
         )
 
       # The pre-change session is revoked, so the old cookie no longer resolves
@@ -107,7 +107,7 @@ defmodule Tymeslot.AuthTest do
                Auth.authenticate_user(
                  user.email,
                  "NewPassword123!",
-                 ClientIP.request_opts(%Plug.Conn{})
+                 isolated_request_opts()
                )
     end
   end
@@ -126,14 +126,14 @@ defmodule Tymeslot.AuthTest do
 
       # Answered exactly as a free address would be; no second account.
       assert {:existing_account, _message} =
-               Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
+               Auth.register_user(params, isolated_request_opts())
     end
   end
 
   describe "verify_user_email/1" do
     test "verifies the email without re-broadcasting :user_registered" do
       user = insert(:unverified_user)
-      token = Token.generate_token()
+      token = Token.generate()
       {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
 
       assert :ok = Auth.subscribe_to_user_registrations()
@@ -147,7 +147,7 @@ defmodule Tymeslot.AuthTest do
       # per-event tallies count a verified password signup twice. The refute
       # matches this test's user id only, so a registration broadcast from a
       # concurrently running async test cannot trip it.
-      refute_receive {:user_registered, %{user: %{id: ^user_id}}}, 200
+      refute_receive {:user_registered, %{user_id: ^user_id}}, 200
     end
   end
 
@@ -155,13 +155,12 @@ defmodule Tymeslot.AuthTest do
     test "delivers a real registration broadcast to the caller" do
       assert :ok = Auth.subscribe_to_user_registrations()
 
-      user = insert(:user)
+      user = insert(:user, provider: "google")
       user_id = user.id
-      metadata = %{terms_accepted: true, ip: "203.0.113.7"}
 
-      assert :ok = Auth.broadcast_user_registered(user, metadata)
+      assert :ok = Auth.broadcast_user_registered(user)
 
-      assert_receive {:user_registered, %{user: %{id: ^user_id}, metadata: ^metadata}}
+      assert_receive {:user_registered, %{user_id: ^user_id, provider: "google"}}
     end
 
     # Subscribers outside this context must not be able to spell the topic or

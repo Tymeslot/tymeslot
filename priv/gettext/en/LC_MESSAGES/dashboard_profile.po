@@ -159,11 +159,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
-msgid "Upload failed: %{reason}"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
-#, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr ""
 
@@ -182,7 +177,7 @@ msgstr ""
 msgid "Unknown timezone"
 msgstr ""
 
-#: lib/tymeslot/profiles.ex
+#: lib/tymeslot/profiles/usernames.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr ""
@@ -272,4 +267,9 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete avatar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
 msgstr ""

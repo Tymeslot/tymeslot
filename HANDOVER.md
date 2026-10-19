@@ -76,7 +76,7 @@ Placing that in a domain namespace shared with provider sync means the domain ch
 
 `Tymeslot.Integrations.Calendar` and its sibling `Calendar.Events` are documented as the entry point to the calendar domain. Several things callers need are not on that façade, so callers reach past it into internals.
 
-`Calendar.Operations` is documented as existing solely to implement the behaviour interface for testing and configuration compatibility, that is, as an adapter. It had become a de facto second public API. `ColourWriteBack`'s own moduledoc states that it is the enqueue mechanism behind `set_event_colour/3` and explicitly not a public entry point, and a foreign context called it directly.
+`Calendar.Runtime.Operations` is documented as existing solely to implement the behaviour interface for testing and configuration compatibility, that is, as an adapter. It had become a de facto second public API. `ColourWriteBack`'s own moduledoc states that it is the enqueue mechanism behind `set_event_colour/3` and explicitly not a public entry point, and a foreign context called it directly.
 
 The concrete cost is that calls routed through `Events` are swappable at the test seam and calls routed around it are not, so the two halves of a single write flow behave differently under test. A comment in `EventMove` admitted the crossing outright, noting that the 3-arity `delete_event/3` is not exposed on the public API. A comment explaining why a boundary is crossed is evidence that the boundary is drawn in the wrong place.
 

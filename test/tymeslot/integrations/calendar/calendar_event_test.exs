@@ -367,6 +367,37 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventTest do
       assert CalendarEvent.blocking?(event)
     end
 
+    # RFC 5545 §3.6.1: a DATE-TIME DTSTART with no end marks a moment.
+    test "a timed event that ends as it starts does not block" do
+      {:ok, event} = build_timed_event(%{end_at: ~U[2026-04-08 10:00:00Z]})
+      refute CalendarEvent.blocking?(event)
+    end
+
+    test "plain map that ends as it starts does not block" do
+      event = %{
+        uid: "x",
+        status: "confirmed",
+        transparency: "opaque",
+        start_time: ~U[2026-04-13 09:00:00Z],
+        end_time: ~U[2026-04-13 09:00:00Z]
+      }
+
+      refute CalendarEvent.blocking?(event)
+    end
+
+    test "an all-day event blocks" do
+      {:ok, event} =
+        build_timed_event(%{
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: ~D[2026-04-08],
+          end_date: ~D[2026-04-09]
+        })
+
+      assert CalendarEvent.blocking?(event)
+    end
+
     defp build_timed_event(overrides) do
       base = %{
         uid: "blocking-test-#{System.unique_integer([:positive])}",

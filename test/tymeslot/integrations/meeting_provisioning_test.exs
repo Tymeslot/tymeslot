@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Test.ClockHelpers
 
   setup :verify_on_exit!
 
@@ -112,6 +113,35 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
         )
 
       assert MeetingProvisioning.plan(cal.id, vid.id, user.id) == {:separate, vid.id}
+    end
+
+    # A video integration the user cannot use plans no room at all, rather
+    # than a separate one the provider call would then refuse.
+    test "returns :none for another user's video integration" do
+      user = insert(:user)
+      cal = insert(:calendar_integration, user: user, provider: "google")
+      someone_elses = insert(:video_integration, provider: "google_meet")
+
+      assert MeetingProvisioning.plan(cal.id, someone_elses.id, user.id) == :none
+    end
+
+    test "returns :none for a switched-off or disconnected video integration" do
+      user = insert(:user)
+      cal = insert(:calendar_integration, user: user, provider: "google")
+      off = insert(:video_integration, user: user, is_active: false)
+      gone = insert(:video_integration, user: user, deleted_at: DateTime.utc_now(:second))
+
+      assert MeetingProvisioning.plan(cal.id, off.id, user.id) == :none
+      assert MeetingProvisioning.plan(cal.id, gone.id, user.id) == :none
+    end
+
+    test "returns {:separate, vid_id} when the calendar is not the user's" do
+      user = insert(:user)
+      someone_elses_calendar = insert(:calendar_integration, provider: "google")
+      vid = insert(:video_integration, user: user, provider: "google_meet")
+
+      assert MeetingProvisioning.plan(someone_elses_calendar.id, vid.id, user.id) ==
+               {:separate, vid.id}
     end
 
     test "returns :none when video_integration_id is nil" do
@@ -260,6 +290,24 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       stub_booking_calendar(meeting, calendar.id)
 
       assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+    end
+
+    # The grace period is measured on Tymeslot.Clock, so it can be pinned.
+    test "measures the grace period on the application clock" do
+      booked_at = ~U[2026-03-01 10:00:00Z]
+
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(provider_event_id: nil, inserted_at: booked_at)
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      ClockHelpers.with_frozen_clock(DateTime.add(booked_at, 119, :second), fn ->
+        assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+      end)
+
+      ClockHelpers.with_frozen_clock(DateTime.add(booked_at, 121, :second), fn ->
+        assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+      end)
     end
 
     test "waits when the stored event belongs to a different calendar integration" do

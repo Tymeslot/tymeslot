@@ -63,15 +63,20 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
     invalid_configuration: "Invalid configuration",
     video_integration_missing: "Video integration missing",
     video_integration_inactive: "Video integration inactive",
+    video_integration_needs_reauth: "Video integration needs reconnecting",
     video_meeting_not_enabled: "Account cannot host video meetings"
   }
 
   # The terminal failures that are an expected end of the job rather than a
-  # fault: the meeting is gone, or only the user can give it a video room.
+  # fault: the meeting is gone, or only the user can give it a video room. An
+  # integration already flagged for reconnecting is one of these: its owner
+  # was told when the provider first refused it, which is the failure
+  # reported (`:unauthorized`); every booking after that is refused here.
   @expected_terminal [
     :meeting_not_found,
     :video_integration_missing,
     :video_integration_inactive,
+    :video_integration_needs_reauth,
     :video_meeting_not_enabled
   ]
   @expected_discard_reasons @terminal |> Map.take(@expected_terminal) |> Map.values()
@@ -94,6 +99,9 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   def categorize(:not_found), do: {:error, :meeting_not_found}
   def categorize(:video_integration_missing), do: {:error, :video_integration_missing}
   def categorize(:video_integration_inactive), do: {:error, :video_integration_inactive}
+
+  def categorize(:video_integration_needs_reauth),
+    do: {:error, :video_integration_needs_reauth}
 
   # The provider reached the account and the account cannot host a meeting:
   # a licence or tenant setting the organiser has to change, so no number of

@@ -154,7 +154,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
     # regress — including back into the internal wording it used to carry
     # ("calendar parsing error"), which tells a booker nothing they can act on.
     @tag :capture_log
-    test "a calendar the host's provider cannot serve shows the booker an actionable message",
+    test "a calendar the host's provider cannot serve tells the booker to try again later",
          %{conn: conn, profile: profile} do
       stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
         {:error, :all_calendars_unavailable}
@@ -186,7 +186,11 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       # Asserted on the rendered page, not the assign: the assign was always
       # set, and what makes this a user-facing bug is the sentence the booker
       # reads while the funnel is failing.
-      assert html =~ "No time slots could be loaded. Please try again."
+      # Every date would fail the same way, so the booker is told to come
+      # back rather than to keep picking dates.
+      assert html =~ "check the host"
+      assert html =~ "Please try again in a few minutes."
+      refute html =~ "No time slots could be loaded"
       refute html =~ "calendar parsing error"
 
       state = :sys.get_state(view.pid).socket.assigns

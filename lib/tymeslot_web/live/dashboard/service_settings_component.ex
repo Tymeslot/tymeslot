@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:venues, data.venues)
       |> assign(:calendar_integrations, data.calendar_integrations)
-      |> assign(:payment_currency, host_currency(data.meeting_types, user_id))
+      |> assign(:payment_currency, price_currency(data.meeting_types, user_id))
 
     {:ok, socket}
   end
@@ -103,15 +103,15 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   defp refresh_editing_type(socket, _meeting_types), do: socket
 
-  # The host's pricing currency, used only to format the price token on paid
-  # meeting type cards. Resolved only when at least one meeting type is
-  # actually paid: unpaid lists render no price, so they skip the query and
-  # take the unused fallback.
-  defp host_currency(meeting_types, user_id) do
+  # The currency stored prices are in (the account's, supported or not),
+  # used only to format the price token on paid meeting type cards. Resolved
+  # only when at least one meeting type is actually paid: unpaid lists render
+  # no price, so they skip the query and take the unused fallback.
+  defp price_currency(meeting_types, user_id) do
     if Enum.any?(meeting_types, & &1.payment_required) do
-      MeetingPayments.host_currency(user_id)
+      MeetingPayments.account_currency(user_id)
     else
-      MeetingPayments.host_currency(nil)
+      MeetingPayments.account_currency(nil)
     end
   end
 
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     if socket.assigns.toggling_type_id == type_id do
       {:noreply, socket}
     else
-      with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
         socket
         |> assign(:toggling_type_id, type_id)
         |> do_toggle_type(type_id, user_id)
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     user_id = socket.assigns.current_user.id
     type_id = String.to_integer(id)
 
-    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       do_toggle_private(socket, type_id, user_id)
     end)
   end
@@ -211,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   def handle_event("confirm_slug_change", _params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       do_confirm_slug_change(socket, user_id)
     end)
   end
@@ -235,7 +235,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   def handle_event("confirm_delete_meeting_type", _params, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       ModalHook.with_modal_data(socket, :delete_meeting_type, fn type ->
         case MeetingTypes.delete_meeting_type(type) do
           {:ok, _result} ->
@@ -254,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   def handle_event("reorder_meeting_types", %{"ids" => ids}, socket) when is_list(ids) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+    with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
       # Convert to integers safely
       meeting_type_ids =
         ids

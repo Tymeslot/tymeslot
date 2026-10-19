@@ -7,11 +7,17 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   - HTTPS_PROXY / https_proxy - Proxy for HTTPS requests
   - NO_PROXY / no_proxy - Comma-separated list of hosts to bypass proxy
 
-  NO_PROXY patterns:
-  - Exact hostname: `internal.example.com`
-  - Wildcard domain: `*.example.com` (matches any subdomain)
+  NO_PROXY patterns, matched as curl and most other tools match them, so a
+  value copied from the environment means the same here:
+  - Domain: `example.com` matches the host and every subdomain of it
+    (`api.example.com`), but not `notexample.com`
+  - Leading dot or wildcard: `.example.com` and `*.example.com` mean the same
+  - Port: `example.com:8443` is matched on the host alone; the port is ignored
+  - IP address: `10.1.2.3`, `::1` or `[::1]`
   - CIDR notation: `10.0.0.0/8`, `192.168.0.0/16`
   - Special: `*` (bypass proxy for all hosts)
+
+  Matching ignores case and a trailing dot on either side.
   """
 
   alias Tymeslot.Infrastructure.ProxyCredentials
@@ -184,19 +190,49 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   def matches_no_proxy_pattern?(_host, "*"), do: true
 
   def matches_no_proxy_pattern?(host, pattern) do
+    host = normalise_name(host)
+
     cond do
-      # Wildcard domain pattern (*.example.com)
-      String.starts_with?(pattern, "*.") ->
-        domain = String.trim_leading(pattern, "*.")
-        host == domain || String.ends_with?(host, "." <> domain)
+      String.contains?(pattern, "/") -> matches_cidr?(host, pattern)
+      ip_literal?(host) -> matches_ip?(host, pattern)
+      true -> matches_domain?(host, pattern)
+    end
+  end
 
-      # CIDR notation (e.g., 10.0.0.0/8)
-      String.contains?(pattern, "/") ->
-        matches_cidr?(host, pattern)
+  # An address matches only itself, or a CIDR range: the suffix rule would
+  # let "2.3" bypass the proxy for 10.1.2.3 (curl since 7.86, and Go, agree).
+  defp matches_ip?(host, pattern) do
+    {:ok, ip} = parse_strict(host)
+    parse_strict(pattern |> strip_port() |> normalise_name()) == {:ok, ip}
+  end
 
-      # Exact hostname match
-      true ->
-        host == pattern
+  defp matches_domain?(host, pattern) do
+    domain = pattern |> strip_port() |> String.trim_leading("*") |> normalise_name()
+    domain != "" and (host == domain or String.ends_with?(host, "." <> domain))
+  end
+
+  defp ip_literal?(host), do: match?({:ok, _ip}, parse_strict(host))
+
+  # Strict: `:inet.parse_address/1` also reads "10.1" as 10.0.0.1.
+  defp parse_strict(string), do: string |> String.to_charlist() |> :inet.parse_strict_address()
+
+  defp normalise_name(name) do
+    name
+    |> String.downcase(:ascii)
+    |> String.trim_leading(".")
+    |> String.trim_trailing(".")
+  end
+
+  # `[::1]:8080` and `example.com:8080` lose the port; a bare IPv6 address
+  # (more than one colon, no brackets) has none to lose.
+  defp strip_port("[" <> bracketed) do
+    bracketed |> String.split("]", parts: 2) |> hd()
+  end
+
+  defp strip_port(pattern) do
+    case String.split(pattern, ":") do
+      [name, port] -> if port =~ ~r/^\d+$/, do: name, else: pattern
+      _none_or_ipv6 -> pattern
     end
   end
 

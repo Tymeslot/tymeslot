@@ -14,6 +14,8 @@ defmodule Tymeslot.ThemeCustomizations.Presets.Covers do
   source page in `source`.
   """
 
+  alias Tymeslot.ThemeCustomizations.Presets.Images
+
   @typedoc "A cover preset."
   @type cover_preset :: %{
           required(:name) => String.t(),
@@ -22,29 +24,28 @@ defmodule Tymeslot.ThemeCustomizations.Presets.Covers do
           optional(:source) => String.t()
         }
 
-  @backgrounds "/images/themes/backgrounds/"
   @covers_dir "/images/themes/covers/"
 
   @covers %{
     "elegant-still-life" => %{
       name: "Elegant Still Life",
-      src: @backgrounds <> "elegant-still-life.webp",
-      thumb: @backgrounds <> "elegant-still-life-thumbnail.webp"
+      src: Images.url("elegant-still-life.webp"),
+      thumb: Images.url("elegant-still-life-thumbnail.webp")
     },
     "artistic-studio" => %{
       name: "Artistic Studio",
-      src: @backgrounds <> "artistic-studio.webp",
-      thumb: @backgrounds <> "artistic-studio-thumbnail.webp"
+      src: Images.url("artistic-studio.webp"),
+      thumb: Images.url("artistic-studio-thumbnail.webp")
     },
     "ocean-sunset" => %{
       name: "Ocean Sunset",
-      src: @backgrounds <> "ocean-sunset.webp",
-      thumb: @backgrounds <> "ocean-sunset-thumbnail.webp"
+      src: Images.url("ocean-sunset.webp"),
+      thumb: Images.url("ocean-sunset-thumbnail.webp")
     },
     "rustic-farmhouse" => %{
       name: "Rustic Farmhouse",
-      src: @backgrounds <> "rustic-farmhouse.webp",
-      thumb: @backgrounds <> "rustic-farmhouse-thumbnail.webp"
+      src: Images.url("rustic-farmhouse.webp"),
+      thumb: Images.url("rustic-farmhouse-thumbnail.webp")
     },
     "botanical" => %{
       name: "Botanical",

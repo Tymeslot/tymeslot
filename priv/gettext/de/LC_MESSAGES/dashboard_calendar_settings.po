@@ -203,6 +203,7 @@ msgstr "Diese Kalender werden derzeit bei der Konfliktprüfung ignoriert."
 msgid "This calendar integration is no longer available."
 msgstr "Diese Kalenderintegration ist nicht mehr verfügbar."
 
+#: lib/tymeslot/integrations/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Unsupported provider"
@@ -237,11 +238,6 @@ msgstr "Reaktivierung nicht möglich - eine andere aktive Integration nutzt dies
 #, elixir-autogen, elixir-format
 msgid "booking target can no longer accept bookings"
 msgstr "Buchungsziel kann keine Buchungen mehr annehmen"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "unknown calendar"
-msgstr "unbekannter Kalender"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex
 #, elixir-autogen, elixir-format
@@ -302,11 +298,6 @@ msgstr[1] "prüft %{selected} von %{count} Kalendern auf Konflikte"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
-msgid "Last synced %{time}"
-msgstr "Zuletzt synchronisiert %{time}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
-#, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Löschen"
 
@@ -315,17 +306,121 @@ msgstr "Löschen"
 msgid "Delete %{name}"
 msgstr "%{name} löschen"
 
+#: lib/tymeslot_web/live/dashboard/calendar_settings/card_notice.ex
+#, elixir-autogen, elixir-format
+msgid "1 change made here was not saved to this calendar."
+msgid_plural "%{count} changes made here were not saved to this calendar."
+msgstr[0] "%{count} hier vorgenommene Änderung wurde nicht in diesem Kalender gespeichert."
+msgstr[1] "%{count} hier vorgenommene Änderungen wurden nicht in diesem Kalender gespeichert."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not retry the changes. Please try again."
+msgstr "Die Änderungen konnten nicht erneut gesendet werden. Bitte versuchen Sie es erneut."
+
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
+msgid "Retry changes"
+msgstr "Änderungen erneut senden"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Send the changes this calendar's server refused to it again"
+msgstr "Die vom Server dieses Kalenders abgelehnten Änderungen erneut senden"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Sending the changes again. This calendar will update shortly."
+msgstr "Die Änderungen werden erneut gesendet. Dieser Kalender wird in Kürze aktualisiert."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/card_notice.ex
+#, elixir-autogen, elixir-format
+msgid "1 change made here was not saved to this calendar. Last error: %{error}"
+msgid_plural "%{count} changes made here were not saved to this calendar. Last error: %{error}"
+msgstr[0] "%{count} hier vorgenommene Änderung wurde nicht in diesem Kalender gespeichert. Letzter Fehler: %{error}"
+msgstr[1] "%{count} hier vorgenommene Änderungen wurden nicht in diesem Kalender gespeichert. Letzter Fehler: %{error}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{count} day ago"
+msgid_plural "Last synced %{count} days ago"
+msgstr[0] "Zuletzt synchronisiert vor %{count} Tag"
+msgstr[1] "Zuletzt synchronisiert vor %{count} Tagen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{count} hour ago"
+msgid_plural "Last synced %{count} hours ago"
+msgstr[0] "Zuletzt synchronisiert vor %{count} Stunde"
+msgstr[1] "Zuletzt synchronisiert vor %{count} Stunden"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced %{count} minute ago"
+msgid_plural "Last synced %{count} minutes ago"
+msgstr[0] "Zuletzt synchronisiert vor %{count} Minute"
+msgstr[1] "Zuletzt synchronisiert vor %{count} Minuten"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last synced just now"
+msgstr "Gerade eben synchronisiert"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/card_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} calendar is no longer on your calendar server, so Tymeslot has stopped using it: %{calendars}"
+msgid_plural "%{count} calendars are no longer on your calendar server, so Tymeslot has stopped using them: %{calendars}"
+msgstr[0] "%{count} Kalender ist auf Ihrem Kalenderserver nicht mehr vorhanden, daher verwendet Tymeslot ihn nicht mehr: %{calendars}"
+msgstr[1] "%{count} Kalender sind auf Ihrem Kalenderserver nicht mehr vorhanden, daher verwendet Tymeslot sie nicht mehr: %{calendars}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss"
+msgstr "Ausblenden"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Dismiss the notice about calendars no longer on the server"
+msgstr "Hinweis zu Kalendern ausblenden, die nicht mehr auf dem Server vorhanden sind"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/card_notice.ex
+#, elixir-autogen, elixir-format
+msgid "“%{calendar}” is no longer on your calendar server, so Tymeslot has stopped using it."
+msgstr "Der Kalender „%{calendar}“ ist auf Ihrem Kalenderserver nicht mehr vorhanden, daher verwendet Tymeslot ihn nicht mehr."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
+#, elixir-autogen, elixir-format
+msgid "Block"
+msgstr "Blockieren"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
+#, elixir-autogen, elixir-format
+msgid "Don't block"
+msgstr "Nicht blockieren"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking calendar always blocks your availability."
+msgstr "Ihr Buchungskalender blockiert immer Ihre Verfügbarkeit."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
+#, elixir-autogen, elixir-format
+msgid "Busy times of %{calendar}"
+msgstr "Belegte Zeiten von %{calendar}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
+#, elixir-autogen, elixir-format
 msgid "Block the time of every event in this feed, also those it marks as free"
-msgstr "Die Zeit jedes Eintrags in diesem Feed blockieren, auch der als frei markierten"
+msgstr ""
+"Die Zeit jedes Eintrags in diesem Feed blockieren, auch der als frei markierten"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Events this calendar marks as free no longer block time"
-msgstr "Als frei markierte Einträge dieses Kalenders blockieren keine Zeit mehr"
+msgstr ""
+"Als frei markierte Einträge dieses Kalenders blockieren keine Zeit mehr"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
 #, elixir-autogen, elixir-format
 msgid "Every event busy"
 msgstr "Jeder Termin belegt"
@@ -338,4 +433,105 @@ msgstr "Jeder Eintrag dieses Kalenders blockiert jetzt Zeit"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "read-only, every event blocks time, also those marked free"
-msgstr "schreibgeschützt, jeder Eintrag blockiert Zeit, auch als frei markierte"
+msgstr ""
+"schreibgeschützt, jeder Eintrag blockiert Zeit, auch als frei markierte"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "12-hour or 24-hour clock"
+msgstr "12- oder 24-Stunden-Format"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "12h"
+msgstr "12h"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "24h"
+msgstr "24h"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Also switches the current view"
+msgstr "Wechselt auch die aktuelle Ansicht"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Settings"
+msgstr "Kalendereinstellungen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Day"
+msgstr "Tag"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Default view"
+msgstr "Standardansicht"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop reminders"
+msgstr "Desktop-Erinnerungen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Display Saturday and Sunday in week view"
+msgstr "Samstag und Sonntag in der Wochenansicht anzeigen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "First day of week"
+msgstr "Erster Wochentag"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Mon"
+msgstr "Mo"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr "Monat"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Show ISO week numbers in month view"
+msgstr "ISO-Kalenderwochen in der Monatsansicht anzeigen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Show browser notifications before events while Tymeslot is open"
+msgstr "Browser-Benachrichtigungen vor Ereignissen anzeigen, während Tymeslot geöffnet ist"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Show weekends"
+msgstr "Wochenenden anzeigen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start weeks on Monday or Sunday"
+msgstr "Wochen montags oder sonntags beginnen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Sun"
+msgstr "So"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Time format"
+msgstr "Zeitformat"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr "Woche"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Week numbers"
+msgstr "Kalenderwochen"

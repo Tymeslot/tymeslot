@@ -32,8 +32,8 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Video.RoomCreationErrorQueries
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
@@ -99,7 +99,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   def track(%VideoIntegrationSchema{}, {:ok, %{room_data: %RoomData{adopted: true}}}), do: :ok
 
   def track(%VideoIntegrationSchema{} = integration, {:ok, _room}) do
-    VideoIntegrationQueries.clear_room_creation_error(integration.id)
+    RoomCreationErrorQueries.clear(integration.id)
 
     Logger.info("Video provider created a room again, clearing the recorded refusal",
       integration_id: integration.id,
@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
 
   def clear_proven_by_connection_test(%VideoIntegrationSchema{} = integration) do
     if integration.room_creation_error in capability_codes() do
-      VideoIntegrationQueries.clear_room_creation_error(integration.id)
+      RoomCreationErrorQueries.clear(integration.id)
     end
 
     :ok
@@ -163,7 +163,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
       code: code
     )
 
-    VideoIntegrationQueries.release_room_creation_error_notice(integration_id, code)
+    RoomCreationErrorQueries.release_notice(integration_id, code)
   end
 
   @doc """
@@ -175,42 +175,42 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   def message(:conversation_creation_restricted),
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud Talk does not allow this user to create conversations. In the Talk administration settings on Nextcloud, allow the user's group to create conversations, or connect a user who may."
       )
 
   def message(:talk_not_allowed),
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "This Nextcloud user may not use Talk. In the Talk administration settings on Nextcloud, add the user to a group that may use Talk, or connect a user who may."
       )
 
   def message(:password_required),
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud Talk requires a password on public conversations, so guests could not join from the booking's link. In the Talk administration settings on Nextcloud, turn off the password requirement for public conversations."
       )
 
   def message(:talk_not_found),
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud did not find Talk at this address. Check that the Talk app is installed and enabled, and that the server address is the one you open Nextcloud at."
       )
 
   def message(:redirected),
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud redirected the request to create a conversation. Edit the integration and enter the address your browser ends up on when you open Nextcloud."
       )
 
   def message(:conversation_refused),
     do:
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud Talk refused to create a conversation. Check the Talk administration settings on Nextcloud; the next booking tries again."
       )
 
@@ -221,7 +221,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
       code: code
     )
 
-    VideoIntegrationQueries.record_room_creation_error(integration.id, code)
+    RoomCreationErrorQueries.record(integration.id, code)
     notify_once(integration, code)
   end
 
@@ -234,7 +234,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
         resend_after = DateTime.add(now, -@resend_after_days, :day)
 
         with true <-
-               VideoIntegrationQueries.claim_room_creation_error_notice(
+               RoomCreationErrorQueries.claim_notice(
                  integration.id,
                  code,
                  now,

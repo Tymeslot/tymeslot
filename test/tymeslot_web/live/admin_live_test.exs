@@ -8,13 +8,10 @@ defmodule TymeslotWeb.AdminLiveTest do
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
 
-  alias Ecto.Changeset
   alias Phoenix.Flash
   alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.AdminUserQueries
-  alias Tymeslot.Repo
   alias TymeslotWeb.Helpers.ClientIP
 
   setup do
@@ -134,7 +131,8 @@ defmodule TymeslotWeb.AdminLiveTest do
 
       assert Application.get_env(:tymeslot, :registration_enabled) == false
       assert %{registration_enabled: false} = AppSettings.get!()
-      assert html =~ "Registration enabled disabled."
+      assert html =~ "Registration turned off."
+      refute html =~ "Registration enabled disabled."
     end
 
     test "clicking the Enabled tag persists and takes effect immediately", %{conn: conn} do
@@ -150,7 +148,7 @@ defmodule TymeslotWeb.AdminLiveTest do
 
       assert Application.get_env(:tymeslot, :registration_enabled) == true
       assert %{registration_enabled: true} = AppSettings.get!()
-      assert html =~ "Registration enabled enabled."
+      assert html =~ "Registration turned on."
     end
 
     test "toggling booking analytics persists and flips Analytics.enabled?/0", %{conn: conn} do
@@ -166,7 +164,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       assert Application.get_env(:tymeslot, :booking_analytics_enabled) == false
       assert %{booking_analytics_enabled: false} = AppSettings.get!()
       refute Analytics.enabled?()
-      assert html =~ "Booking analytics disabled."
+      assert html =~ "Booking analytics turned off."
     end
 
     test "the tag matching the effective value is disabled so re-clicks are no-ops", %{conn: conn} do
@@ -419,204 +417,8 @@ defmodule TymeslotWeb.AdminLiveTest do
     end
   end
 
-  describe "users tab" do
-    setup %{conn: conn} do
-      admin = insert(:user, is_admin: true)
-      other_admin = insert(:user, is_admin: true)
-      regular = insert(:user, is_admin: false)
-
-      {:ok,
-       conn: log_in_user(conn, admin), admin: admin, other_admin: other_admin, regular: regular}
-    end
-
-    test "users tab shows total-user and admin counts at the top", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/users")
-
-      assert html =~ "Total users"
-      assert html =~ "Admins"
-    end
-
-    test "users tab lists each user's display name and booking slug", %{conn: conn} do
-      user = insert(:user, is_admin: false)
-
-      insert(:profile,
-        user: user,
-        full_name: "Ada Lovelace",
-        username: "ada-lovelace"
-      )
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/users")
-
-      assert html =~ "Display name"
-      assert html =~ "Booking slug"
-      assert html =~ "Ada Lovelace"
-      assert html =~ "ada-lovelace"
-    end
-
-    test "users tab renders a placeholder for users without a profile", %{
-      conn: conn,
-      admin: admin,
-      other_admin: other_admin,
-      regular: regular
-    } do
-      # Give every other user a profile, so `regular` — inserted without one in
-      # the setup block — is the only source of placeholders.
-      insert(:profile, user: admin, full_name: "Grace Hopper", username: "grace-hopper")
-      insert(:profile, user: other_admin, full_name: "Alan Turing", username: "alan-turing")
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/users")
-
-      assert html =~ regular.email
-      assert html =~ "Grace Hopper"
-      assert html =~ "Alan Turing"
-
-      # Exactly two placeholders: display name and booking slug for `regular`.
-      assert length(Regex.scan(~r/—/, html)) == 2
-    end
-
-    test "promote sets is_admin to true", %{conn: conn, regular: regular} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/users")
-
-      lv |> promote_button(regular.id) |> render_click()
-      lv |> confirm_promote() |> render_click()
-
-      assert Repo.reload!(regular).is_admin
-    end
-
-    test "promote confirmation modal opens with the target's email", %{
-      conn: conn,
-      regular: regular
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/admin/users")
-
-      html = lv |> promote_button(regular.id) |> render_click()
-
-      assert html =~ "Promote user to admin"
-
-      # The email must sit inside the single interpolated question, not merely
-      # somewhere on the page — guards against the sentence being split back
-      # into gettext fragments around the value. Scope to the modal body: the
-      # row's button carries a contiguous "Promote <email> to admin" aria-label,
-      # so a full-page match would pass even if the body were re-fragmented.
-      # (The en translation drops the trailing "?".)
-      modal_body = lv |> element("#confirm-role-change-modal .modal-body") |> render()
-      assert modal_body =~ "Promote #{regular.email} to admin"
-    end
-
-    test "cancelling the modal does not change admin status", %{conn: conn, regular: regular} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/users")
-
-      lv |> promote_button(regular.id) |> render_click()
-      render_hook(lv, "cancel_pending_action", %{})
-
-      refute Repo.reload!(regular).is_admin
-    end
-
-    test "demote sets is_admin to false on another admin", %{conn: conn, other_admin: other_admin} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/users")
-
-      lv |> demote_button(other_admin.id) |> render_click()
-
-      # The email must sit inside the single interpolated question for the
-      # non-self demote variant — guards against the sentence being split back
-      # into gettext fragments around the value. Scope to the modal body: the
-      # row's button carries a contiguous "Demote <email> from admin" aria-label,
-      # so a full-page match would pass even if the body were re-fragmented.
-      # (The en translation drops the trailing "?".)
-      modal_body = lv |> element("#confirm-role-change-modal .modal-body") |> render()
-      assert modal_body =~ "Demote #{other_admin.email} from admin"
-
-      lv |> confirm_demote() |> render_click()
-
-      refute Repo.reload!(other_admin).is_admin
-    end
-
-    test "demote button is replaced by a note when the actor is the only admin",
-         %{conn: conn, admin: admin} do
-      # Demote every admin except the current user, leaving them as the only
-      # admin. The UI must offer no way to demote — instead an inline note
-      # explains why.
-      AdminUserQueries.list_admins()
-      |> Enum.reject(&(&1.id == admin.id))
-      |> Enum.each(fn other -> AdminUserQueries.set_admin(other, false) end)
-
-      {:ok, lv, html} = live(conn, ~p"/admin/users")
-
-      # No active demote button for the self row.
-      refute has_element?(lv, ~s|button[phx-click="request_demote"][phx-value-id="#{admin.id}"]|)
-
-      # The inline note is visible.
-      assert html =~ "last-admin-self-note"
-      assert html =~ "You&#39;re the only admin"
-
-      # And the user remains an admin.
-      assert Repo.reload!(admin).is_admin
-    end
-
-    test "admin can demote themselves when another admin exists; redirects to /dashboard",
-         %{conn: conn, admin: admin, other_admin: other_admin} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/users")
-
-      # The self-row's demote button IS clickable because another admin remains.
-      assert has_element?(lv, ~s|button[phx-click="request_demote"][phx-value-id="#{admin.id}"]|)
-
-      lv |> demote_button(admin.id) |> render_click()
-
-      # Modal copy uses the self-aware variant.
-      assert render(lv) =~ "Demote yourself"
-
-      # Confirming triggers a redirect (full reload) to /dashboard.
-      assert {:error, {:redirect, %{to: redirect_to}}} =
-               lv |> confirm_demote() |> render_click()
-
-      assert redirect_to == ~p"/dashboard"
-
-      # Self is now demoted; other_admin still has admin rights.
-      refute Repo.reload!(admin).is_admin
-      assert Repo.reload!(other_admin).is_admin
-    end
-
-    test "after self-demote, /admin redirects to /dashboard with a flash",
-         %{conn: conn, admin: admin} do
-      # Simulate the post-demote state: user is no longer admin.
-      {:ok, _user} = AdminUserQueries.set_admin(admin, false)
-
-      conn = get(conn, ~p"/admin")
-
-      assert redirected_to(conn) == ~p"/dashboard"
-      assert Flash.get(conn.assigns.flash, :error) == "Admin access required."
-    end
-
-    test "after self-demote, the dashboard dropdown no longer shows Admin Settings",
-         %{conn: conn, admin: admin} do
-      # The dashboard requires onboarding to be complete before it renders.
-      {:ok, admin} =
-        admin
-        |> Changeset.change(onboarding_completed_at: DateTime.utc_now(:second))
-        |> Repo.update()
-
-      {:ok, _user} = AdminUserQueries.set_admin(admin, false)
-
-      {:ok, _lv, html} = live(conn, ~p"/dashboard")
-
-      refute html =~ "Admin Settings"
-    end
-  end
-
   defp promote_button(lv, id) do
     element(lv, ~s|button[phx-click="request_promote"][phx-value-id="#{id}"]|)
-  end
-
-  defp demote_button(lv, id) do
-    element(lv, ~s|button[phx-click="request_demote"][phx-value-id="#{id}"]|)
-  end
-
-  defp confirm_promote(lv) do
-    element(lv, ~s|#confirm-role-change-modal button[phx-click="promote_user"]|)
-  end
-
-  defp confirm_demote(lv) do
-    element(lv, ~s|#confirm-role-change-modal button[phx-click="demote_user"]|)
   end
 
   defp setting_tag(lv, key, state) do

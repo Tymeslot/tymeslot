@@ -20,6 +20,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
@@ -143,84 +144,112 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
       end)
     end
 
-    test "retries instead of purging once a page fills up" do
+    test "drains every page in one run, then purges" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
-
-      insert_meeting_for_user(user, %{
-        start_offset: 86_400,
-        video_integration_id: integration.id,
-        video_provider: "zoom",
-        video_room_id: "page-1"
-      })
-
-      insert_meeting_for_user(user, %{
-        start_offset: 172_800,
-        video_integration_id: integration.id,
-        video_provider: "zoom",
-        video_room_id: "page-2"
-      })
+      insert_meetings(user, integration, 2)
 
       {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
-
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
-      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+      expect(HTTPClientMock, :request, 2, fn :delete, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
-      # Only one of the two rooms is drained (the injected page limit is 1),
-      # so the job must retry rather than purge with the second room left
-      # behind, silently orphaned.
-      assert {:error, :more_rooms_to_drain} =
-               perform_job(
-                 VideoIntegrationDisconnectWorker,
-                 %{"integration_id" => integration.id}
-               )
+      # Two rooms at one per page: a full page is progress, not a failure, so
+      # the run moves on to the next page instead of spending an attempt.
+      assert :ok =
+               perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+      assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+    end
+
+    test "snoozes once a run has drained its pages, keeping the row" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+      insert_meetings(user, integration, 11)
+
+      {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, 10, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:snooze, _seconds} =
+               perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
 
       assert {:ok, _still_there} = VideoIntegrationQueries.get(integration.id)
     end
 
-    test "purges once the retry finds the next page empty" do
+    # A full page the provider keeps refusing to empty used to return
+    # `:more_rooms_to_drain` on every attempt, the last included, so the job
+    # ran out of attempts without ever reaching the purge, and the row kept
+    # its OAuth credentials for good.
+    test "purges a full page of refused deletes on the last attempt" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
-
-      insert_meeting_for_user(user, %{
-        video_integration_id: integration.id,
-        video_provider: "zoom",
-        video_room_id: "page-1"
-      })
+      insert_meetings(user, integration, 1)
 
       {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
-
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
-      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 204, body: ""}}
+      stub(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: "{}"}}
       end)
 
-      # A single meeting exactly filling a page of 1 cannot be told apart from
-      # "there might be one more" without an extra round trip, so the worker
-      # conservatively retries rather than risk purging with a room left
-      # behind. The room itself is drained on this pass either way.
-      assert {:error, :more_rooms_to_drain} =
-               perform_job(
-                 VideoIntegrationDisconnectWorker,
-                 %{"integration_id" => integration.id}
-               )
+      assert {:error, :room_cleanup_incomplete} =
+               perform_job(VideoIntegrationDisconnectWorker, job_args(integration), attempt: 1)
 
       assert {:ok, _still_there} = VideoIntegrationQueries.get(integration.id)
 
-      # The retry's page comes back empty (the only meeting was already
-      # drained above), so this pass purges.
+      LogCapture.attach()
+
       assert :ok =
-               perform_job(
-                 VideoIntegrationDisconnectWorker,
-                 %{"integration_id" => integration.id},
-                 attempt: 2
-               )
+               perform_job(VideoIntegrationDisconnectWorker, job_args(integration), attempt: 5)
 
       assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+
+      # The page was full of refused rooms, so whatever lies past it was
+      # never tried.
+      event = LogCapture.await_log("Giving up on provider room cleanup")
+      assert LogCapture.user_metadata(event)[:more_rooms_may_remain] == true
+    end
+
+    test "purges on the last attempt while pages are still draining" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+      insert_meetings(user, integration, 11)
+
+      {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, 10, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      LogCapture.attach()
+
+      assert :ok =
+               perform_job(VideoIntegrationDisconnectWorker, job_args(integration), attempt: 5)
+
+      assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+
+      event = LogCapture.await_log("Giving up on provider room cleanup")
+      assert LogCapture.user_metadata(event)[:more_rooms_may_remain] == true
+    end
+  end
+
+  defp job_args(integration), do: %{"integration_id" => integration.id}
+
+  defp insert_meetings(user, integration, count) do
+    for n <- 1..count do
+      insert_meeting_for_user(user, %{
+        start_offset: 86_400 * n,
+        video_integration_id: integration.id,
+        video_provider: "zoom",
+        video_room_id: "page-#{n}"
+      })
     end
   end
 

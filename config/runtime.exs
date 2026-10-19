@@ -99,9 +99,7 @@ if config_env() == :prod do
   # Structured JSON logging for production containers.
   #
   # `:all_except` captures every keyword metadata field passed inline or set on
-  # the process, minus the noisy OTP internals listed below. `:domain` is kept
-  # because StructuredLogger tags log lines with `domain: :authentication`,
-  # `:database`, etc. — that key is what enables domain-faceted log queries.
+  # the process, minus the noisy OTP internals listed below.
   config :logger, :default_handler,
     formatter:
       LoggerJSON.Formatters.Basic.new(metadata: {:all_except, [:conn, :socket, :mfa, :pid, :gl]})
@@ -109,6 +107,21 @@ if config_env() == :prod do
   # Database configuration based on deployment type (define early as it's used for URL scheme)
   # "cloudron" or the legacy "main"; "docker" if DEPLOYMENT_TYPE is unset or unknown
   deployment_type = Tymeslot.Infrastructure.DeploymentType.current()
+
+  # A blank OAuth state secret counts as unset, which leaves that provider
+  # unconfigured. Documented setups ship the variables blank, so this only
+  # warns, in case a blank one was meant to hold a value.
+  case Tymeslot.Integrations.Shared.OAuthConfig.blank_state_secrets(System.get_env()) do
+    [] ->
+      :ok
+
+    names ->
+      IO.warn(
+        "#{Enum.join(names, ", ")} set but blank; the provider is treated as not " <>
+          "configured. Set a random value to enable it, or unset the variable.",
+        []
+      )
+  end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -122,16 +135,20 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  # Data-at-rest encryption key, decoupled from SECRET_KEY_BASE so the cookie
-  # signing secret can be rotated without touching stored credentials. Absent is
-  # allowed (the keyring falls back to the legacy SECRET_KEY_BASE-derived key and
-  # keeps writing the old format), so existing deployments upgrade with no change;
-  # a malformed value raises in the encryption module. Once set, run the
-  # re-encryption sweep (see README, "Data-at-rest encryption") to migrate
-  # existing values, then the two secrets are fully independent.
+  # Data-at-rest encryption keys, decoupled from SECRET_KEY_BASE so the cookie
+  # signing secret can be rotated without touching stored credentials.
+  # DATA_ENCRYPTION_KEY is key 1; DATA_ENCRYPTION_KEYS ("2:<b64>,1:<b64>", first
+  # entry primary) adds keys for rotation. Both absent is allowed (the keyring
+  # falls back to the legacy SECRET_KEY_BASE-derived key and keeps writing the
+  # old format), so existing deployments upgrade with no change; a malformed
+  # value stops the boot (see Tymeslot.Security.Encryption.Keyring). Once a key
+  # is set, run the re-encryption sweep (see README, "Data-at-rest encryption").
   data_encryption_key = System.get_env("DATA_ENCRYPTION_KEY")
+  data_encryption_keys = System.get_env("DATA_ENCRYPTION_KEYS")
 
-  if is_nil(data_encryption_key) do
+  # Blank counts as unset, as it does for the keyring: Compose passes an unset
+  # `${DATA_ENCRYPTION_KEY}` through as an empty string.
+  if Enum.all?([data_encryption_key, data_encryption_keys], &(String.trim(&1 || "") == "")) do
     IO.warn(
       "DATA_ENCRYPTION_KEY is not set; data-at-rest credentials are still encrypted " <>
         "with a key derived from SECRET_KEY_BASE. Rotating SECRET_KEY_BASE would make " <>
@@ -142,7 +159,10 @@ if config_env() == :prod do
     )
   end
 
-  config :tymeslot, Tymeslot.Security.Encryption, data_encryption_key: data_encryption_key
+  config :tymeslot, Tymeslot.Security.Encryption,
+    data_encryption_key: data_encryption_key,
+    data_encryption_keys: data_encryption_keys,
+    legacy_key_retired: System.get_env("LEGACY_KEY_RETIRED") in ["true", "1", "yes"]
 
   host =
     System.get_env("PHX_HOST") ||
@@ -254,51 +274,9 @@ if config_env() == :prod do
     # warns at boot when this drifts out of the safe band.
     lifeline: [rescue_after: {6, :hours}],
     pruner: [max_age: {7, :days}],
-    cron: [
-      crontab: [
-        # Run every 30 minutes for Oban maintenance
-        {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
-        # Run every hour for queue health monitoring
-        {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
-        # Run hourly, five minutes past, so the hour it evaluates is complete:
-        # aggregate calendar integration health alerting
-        {"5 * * * *", Tymeslot.Workers.IntegrationHealthAlertWorker},
-        # Run daily at 02:45 UTC for video room recovery scan
-        {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
-        # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
-        # meetings whose video room was never cleaned up
-        {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
-        # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
-        {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
-        # Run daily at 03:15 UTC
-        {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
-        # Run daily at 02:00 UTC to renew expiring webhook channels
-        {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
-        # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
-        {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
-        # Run daily at 04:00 UTC for cross-domain data retention pruning
-        {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
-        # Run every 6 hours to detect silent/dead webhook channels
-        {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
-        # Run daily at 03:30 UTC to prune old/inactive calendar event cache
-        {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
-        # Run daily at 05:30 UTC to flag Zoom grants missing a scope Tymeslot needs
-        {"30 5 * * *", Tymeslot.Workers.ZoomScopeAuditWorker},
-        # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
-        {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
-        # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
-        {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
-        # Run daily at 04:30 UTC to cross-check booking analytics against bookings
-        {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
-        # Run every 15 min to release approval requests whose deadline passed
-        # and whose per-meeting expiry job never fired
-        {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
-        # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
-        {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
-        # Run daily at 07:00 UTC to email the digest of info-severity admin alerts
-        {"0 7 * * *", Tymeslot.Workers.AdminAlertDigestWorker}
-      ]
-    ]
+    # The crontab itself is `:oban_crontab` in config.exs, shared with dev;
+    # `Tymeslot.Infrastructure.ObanCron.extend/1` fills it in at startup.
+    cron: []
 
   # Disable the Zoom update scope where the Marketplace app behind this
   # deployment is not configured for `meeting:update:meeting`. Requesting it
@@ -469,7 +447,9 @@ if config_env() == :prod do
     if stripe_webhook_secret do
       config :tymeslot, :stripe_webhook_secret, stripe_webhook_secret
     else
-      Logger.warning("STRIPE_WEBHOOK_SECRET not set — webhook signature verification disabled")
+      Logger.warning(
+        "STRIPE_WEBHOOK_SECRET not set: /webhooks/stripe refuses every delivery with a 503"
+      )
     end
 
     # Stripe Connect webhook secret (separate from the platform webhook secret)
@@ -879,7 +859,7 @@ if config_env() != :test and
 end
 
 # Base URL for docs hub links across the dashboard and the feature-announcement
-# modal (TymeslotWeb.Live.Shared.DocsUrl, the single reader of this key).
+# modal (Tymeslot.Docs, the single reader of this key).
 # Defaults to the hosted docs site; a self-hoster running their own docs points
 # this at it instead. A blank value is treated as unset for the same reason as
 # WEBHOOK_BASE_URL above. A trailing slash is trimmed by the reader, not here.

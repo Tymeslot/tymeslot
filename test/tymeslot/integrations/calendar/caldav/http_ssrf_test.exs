@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpSsrfTest do
                  "https://internal-caldav.corp/calendars/user/",
                  "user",
                  "pass",
-                 max_retries: 0
+                 max_attempts: 1
                )
     end
   end
