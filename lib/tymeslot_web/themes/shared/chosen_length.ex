@@ -3,10 +3,10 @@ defmodule TymeslotWeb.Themes.Shared.ChosenLength do
   The length a booking page is working with, for a meeting type that offers
   several (`Tymeslot.MeetingTypes.Lengths`).
 
-  Two assigns carry it. `:chosen_length_minutes` is the booker's pick — from
-  the length step, or preselected by `?minutes=` on a direct link.
-  `:reschedule_length_minutes` is the length of the booking being moved, which
-  a reschedule keeps rather than asking for again. Neither is trusted on its
+  `:chosen_length_minutes` is the booker's pick — from the length step, or
+  preselected by `?minutes=` on a direct link. A reschedule keeps the length
+  of the booking it moves rather than asking for it again, read from the
+  booking the page loaded (`:reschedule_context`). Neither is trusted on its
   own: `Tymeslot.Availability.Offer.duration_minutes/3` resolves either against
   the lengths the type actually offers, and the booking submit does the same.
 
@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Themes.Shared.ChosenLength do
 
   alias Tymeslot.Availability.Offer
   alias Tymeslot.MeetingTypes.Lengths
-  alias Tymeslot.Scheduling.ThemeFlow
 
   @doc """
   Whether the booker picks a length: the meeting type offers several, and
@@ -35,8 +34,13 @@ defmodule TymeslotWeb.Themes.Shared.ChosenLength do
   against the meeting type; `Offer.duration_minutes/3` does that.
   """
   @spec minutes(map()) :: pos_integer() | nil
-  def minutes(assigns),
-    do: assigns[:reschedule_length_minutes] || assigns[:chosen_length_minutes]
+  def minutes(assigns), do: booked_minutes(assigns) || assigns[:chosen_length_minutes]
+
+  defp booked_minutes(%{reschedule_context: %{meeting: %{duration: minutes}}})
+       when is_integer(minutes) and minutes > 0,
+       do: minutes
+
+  defp booked_minutes(_assigns), do: nil
 
   @doc """
   The meeting type as booked for the length in `minutes/1`, for code that
@@ -79,27 +83,5 @@ defmodule TymeslotWeb.Themes.Shared.ChosenLength do
     if Lengths.offers?(meeting_type, socket.assigns[:chosen_length_minutes]),
       do: socket,
       else: assign(socket, :chosen_length_minutes, nil)
-  end
-
-  @doc """
-  Records the length of the booking a reschedule is moving, once.
-
-  Read from the meeting itself, scoped to the organiser, so the grid a
-  reschedule is offered is the one its booking was made on — however the page
-  was entered.
-  """
-  @spec assign_for_reschedule(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def assign_for_reschedule(socket) do
-    uid = socket.assigns[:reschedule_meeting_uid]
-
-    if is_binary(uid) and is_nil(socket.assigns[:reschedule_length_minutes]) do
-      assign(
-        socket,
-        :reschedule_length_minutes,
-        ThemeFlow.reschedule_length_minutes(uid, socket.assigns[:organizer_user_id])
-      )
-    else
-      socket
-    end
   end
 end

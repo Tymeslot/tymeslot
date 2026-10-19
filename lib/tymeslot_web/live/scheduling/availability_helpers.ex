@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Availability.{Calculate, Offer, Schedules}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Tasks
+  alias TymeslotWeb.Themes.Shared.ChosenLength
 
   require Logger
 
@@ -190,7 +191,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     Offer.duration_minutes(
       assigns[:meeting_type],
       assigns[:duration] || assigns[:selected_duration],
-      assigns[:reschedule_length_minutes] || assigns[:chosen_length_minutes]
+      ChosenLength.minutes(assigns)
     )
   end
 

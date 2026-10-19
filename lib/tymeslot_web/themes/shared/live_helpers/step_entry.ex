@@ -188,7 +188,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
-    |> ChosenLength.assign_for_reschedule()
     |> maybe_subscribe_to_group_seats()
     |> BookingLocation.assign_for_meeting_type(
       meeting_type,

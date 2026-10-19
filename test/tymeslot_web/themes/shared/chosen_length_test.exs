@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.ChosenLengthTest do
       assigns = %{
         meeting_type: @several,
         chosen_length_minutes: 15,
-        reschedule_length_minutes: 60
+        reschedule_context: %{meeting: %{duration: 60}}
       }
 
       assert ChosenLength.meeting_type(assigns).duration_minutes == 60
