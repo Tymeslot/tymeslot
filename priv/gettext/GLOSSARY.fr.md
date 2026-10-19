@@ -143,6 +143,13 @@ Settled while translating; reuse rather than re-coining.
 | **popup modal** | **Fenêtre modale** **[SETTLED]**, over marketing's *Modale popup*; in prose *en fenêtre modale* |
 | floating button | **Bouton flottant** |
 | Close modal | **Fermer la fenêtre modale** **[SETTLED]**, distinct from *Close dialogs* → **Fermer les boîtes de dialogue**; the English keeps modal and dialog apart, so French does too |
+| **bookable times** (the hatched layer on the organiser's calendar) | **plages réservables**; *bookable* (pill) → **Réservable**. Not *disponibilités* and not *créneaux libres*: *free* is the opposite of *busy* |
+| **Open for booking** (opening extra time for a meeting type) | **Ouvrir à la réservation**; the toast "Open for %{name} …" → **Ouvert pour %{name} …**; "Just this once" → **Uniquement cette fois**, "Every week" → **Chaque semaine** |
+| **Layers** (calendar rail heading) | **Calques** |
+| **Treat as Busy / Treat as Free** | **Considérer comme occupé / libre**; "Treat as" → **Considérer comme** |
+| Block this time / Blocked | **Bloquer ce créneau** / **Bloqué** |
+| Copy free times | **Copier les créneaux libres** |
+| Request (pill for a booking awaiting approval) / Expired | **Demande** / **Expirée** (feminine, agreeing with *demande*) |
 
 **Weekday abbreviations:** `Lun.` · `Mar.` · `Mer.` · `Jeu.` · `Ven.` · `Sam.` · `Dim.`
 **[SETTLED]**, with the full stop. French abbreviation by truncation takes a point, and

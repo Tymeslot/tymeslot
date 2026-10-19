@@ -182,6 +182,15 @@ fragment: read how the code uses it.
 | retry / try again | spróbuj ponownie |
 | loading | wczytywanie |
 | failed | nie powiodło się |
+| bookable times (calendar layer) | terminy do rezerwacji; short pill "Bookable" = "Do rezerwacji"; never "dostępne" or "wolne" |
+| open for booking (extra time for a meeting type) | otwórz do rezerwacji; toast "Otwarto do rezerwacji: %{name}, …"; "Just this once" / "Every week" = "Tylko ten raz" / "Co tydzień" |
+| layers (calendar rail) | warstwy |
+| treat as busy / free (read-only all-day event) | traktuj jako zajęty / wolny; "Treated as busy for bookings" = "Przy rezerwacjach traktowane jako zajęte" |
+| block this time / blocked | zablokuj ten termin / zablokowane (default event title) |
+| copy free times | skopiuj wolne terminy |
+| booking request (short pill) / expired (pill) | prośba / wygasła |
+| accept (a booking request) | zatwierdź; "Accepting…" = "Zatwierdzanie…" |
+| hatched (times) | zakreskowane |
 
 ## Notes
 

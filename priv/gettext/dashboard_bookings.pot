@@ -101,7 +101,7 @@ msgstr ""
 msgid "Enter a valid partial refund amount."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr ""
@@ -156,7 +156,7 @@ msgstr ""
 msgid "Meeting cancelled and refund issued."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr ""
@@ -344,6 +344,7 @@ msgid "Awaiting your approval"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr ""
@@ -389,6 +390,7 @@ msgid "Reason (optional)"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr ""
@@ -409,11 +411,13 @@ msgid "That meeting's start time has already passed."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr ""

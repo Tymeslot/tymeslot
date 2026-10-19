@@ -102,6 +102,12 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | staff | **працівники** |
 | Agenda (calendar view) | **Розклад** |
 | Weekly Schedule (availability) | **Тижневий розклад** |
+| **bookable times** (the hatched layer on the organiser's calendar) | **час для бронювання**; the short band label *Bookable* → **Можна забронювати**. Never `доступний час` (that is *availability*) or `вільний час` (the opposite of *busy*) |
+| **open for booking** (opening extra time for a meeting type) | **відкрити для бронювання** / **відкрито для бронювання**; *Just this once* → **Лише цього разу**, *Every week* → **Щотижня** |
+| **treat as busy / free** (a local setting on a read-only all-day event) | **для бронювань вважається зайнятим / вільним**; the label *Treat as* before the Busy/Free choice → **Для бронювань** |
+| **Layers** (calendar rail heading) | **Шари** |
+| **block this time** / **Blocked** | **заблокувати цей час** / **Заблоковано** |
+| **Request** (pill on a calendar block) / **booking request** | **Запит** / **запит на бронювання**; the *Expired* pill → **Протерміновано** |
 
 ### Sessions, lessons, no-shows, deposits and other marketing terms
 

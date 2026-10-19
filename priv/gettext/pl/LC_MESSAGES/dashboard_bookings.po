@@ -97,7 +97,7 @@ msgstr "Zamknij"
 msgid "Enter a valid partial refund amount."
 msgstr "Podaj prawidłową kwotę częściowego zwrotu."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr "Nie udało się odwołać spotkania. Spróbuj ponownie."
@@ -152,7 +152,7 @@ msgstr "Notatki ze spotkania"
 msgid "Meeting cancelled and refund issued."
 msgstr "Spotkanie odwołane, zwrot zrealizowany."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Spotkanie odwołane, ale nie udało się zrealizować zwrotu. Wykonaj zwrot ręcznie w panelu Stripe."
@@ -341,6 +341,7 @@ msgid "Awaiting your approval"
 msgstr "Czeka na zatwierdzenie"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Rezerwacja potwierdzona. Powiadomiono zaproszonego."
@@ -386,6 +387,7 @@ msgid "Reason (optional)"
 msgstr "Powód (opcjonalnie)"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Prośba odrzucona. Termin jest znów wolny."
@@ -406,11 +408,13 @@ msgid "That meeting's start time has already passed."
 msgstr "Godzina rozpoczęcia tego spotkania już minęła."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Nie udało się zatwierdzić tej prośby."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Nie udało się odrzucić tej prośby."

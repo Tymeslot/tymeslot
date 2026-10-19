@@ -162,6 +162,16 @@ flow and in the dashboard.
 | free/busy | livre/ocupado |
 | payout | repasse |
 | custom domain | domínio próprio |
+| bookable times · bookable (the calendar layer) | horários agendáveis · Agendável; never *horários disponíveis* or *livres* here |
+| Layers (calendar rail heading) | Camadas |
+| hatched (times on the calendar) | hachurados |
+| Open for booking (add bookable time) · Open for %{name} | Abrir para agendamento · Aberto para %{name} |
+| Just this once · Every week | Só desta vez · Toda semana |
+| Treat as · Treat as Busy / Free (read-only all-day event) | Considerar como · Considerado ocupado / livre para agendamentos |
+| Block this time · Blocked (event title) · Unblocked | Bloquear este horário · Bloqueado · Desbloqueado |
+| Copy free times | Copiar horários livres |
+| Request · Expired (calendar pill for a booking request) | Pedido · Expirado (masculine, agreeing with *pedido*) |
+| put back (bookable times restored by undo) | restaurados |
 
 **Settings flash messages** put the name after a colon, *"Configuração ativada: %{name}."*
 (also *desativada*, *atualizada*), so the participle agrees with *configuração* and never

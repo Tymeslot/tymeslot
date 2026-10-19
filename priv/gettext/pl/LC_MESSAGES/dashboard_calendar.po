@@ -448,6 +448,7 @@ msgid "Before %{time}: %{count}"
 msgstr "Przed %{time}: %{count}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
 #, elixir-autogen, elixir-format
 msgid "Busy"
 msgstr "Zajęty"
@@ -519,16 +520,19 @@ msgid "Fold the hours before %{time}"
 msgstr "Zwiń godziny przed %{time}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
 #, elixir-autogen, elixir-format
 msgid "Free"
 msgstr "Wolny"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
 #, elixir-autogen, elixir-format
 msgid "Guests can book this time"
 msgstr "Goście mogą zarezerwować ten termin"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
 #, elixir-autogen, elixir-format
 msgid "Guests can't book this time"
 msgstr "Goście nie mogą zarezerwować tego terminu"
@@ -573,11 +577,6 @@ msgstr "Następne trzy dni"
 #, elixir-autogen, elixir-format
 msgid "Next week"
 msgstr "Następny tydzień"
-
-#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars connected yet."
-msgstr "Nie podłączono jeszcze żadnego kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
@@ -897,6 +896,7 @@ msgstr "Problem z synchronizacją"
 msgid "Syncing"
 msgstr "Synchronizowanie"
 
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
 #: lib/tymeslot_web/live/dashboard/calendar/manipulation.ex
 #, elixir-autogen, elixir-format
 msgid "That change can't be undone any more."
