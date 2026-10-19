@@ -262,7 +262,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
         assert Enum.reject(controls, &(class_of(&1) =~ "pointer-coarse:[&>button]:min-h-11")) ==
                  []
 
-        assert Enum.reject(switches, &(class_of(&1) =~ "before:-inset-y-3")) == []
+        # The shared coarse-pointer rule (buttons.css) pads `.status-toggle`.
+        assert Enum.reject(switches, &(class_of(&1) =~ "status-toggle")) == []
 
         row_classes =
           rows
@@ -271,6 +272,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
 
         assert length(row_classes) == 7
         assert Enum.reject(row_classes, &(&1 =~ "max-sm:min-h-11")) == []
+        assert Enum.reject(row_classes, &(&1 =~ "pointer-coarse:min-h-11")) == []
 
         back = Floki.find(rows, "##{prefix}-back-to-old")
         assert class_of(back) =~ "max-sm:min-h-11"

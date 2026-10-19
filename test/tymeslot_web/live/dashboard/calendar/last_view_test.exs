@@ -78,4 +78,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.LastViewTest do
 
     assert default_view(user) == "week"
   end
+
+  test "widening a phone is not a choice of view", %{conn: conn} do
+    %{conn: conn, user: user} = owner(conn, preferences: [default_view: "agenda"])
+
+    {:ok, lv, _html} =
+      live(
+        put_connect_params(conn, %{"viewport" => "phone"}),
+        ~p"/dashboard/calendar?view=week&date=2026-10-14"
+      )
+
+    canvas(lv, "calendar:ready", %{"phone" => true})
+    # Wide again: the three days become the week, which nobody chose.
+    canvas(lv, "calendar:viewport", %{"phone" => false})
+    render(lv)
+
+    assert default_view(user) == "agenda"
+  end
 end

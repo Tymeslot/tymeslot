@@ -250,7 +250,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
         socket |> assign(:open_menu, nil) |> push_period()
 
       _other ->
-        socket = socket |> apply_params(opts) |> LastView.remember()
+        socket = apply_params(socket, opts)
+        # A resize or rotation (`keep_open?`) is not a choice of view.
+        socket = if opts[:keep_open?], do: socket, else: LastView.remember(socket)
 
         if window_for(socket.assigns) == loaded,
           do: push_period(socket),

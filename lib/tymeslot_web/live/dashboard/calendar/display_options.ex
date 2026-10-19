@@ -19,11 +19,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Phones and coarse pointers get a 44px hit area on every row: the row is
-  # at least 44px tall, segments stretch to it, and a switch's invisible
-  # ::before pad reaches 44x44 around its 36x20 body.
+  # at least 44px tall and segments stretch to it. A switch needs nothing
+  # here: `.status-toggle::before` already pads it to 44x44 on coarse pointers.
   @row "max-sm:min-h-11 pointer-coarse:min-h-11"
   @segments "max-sm:[&>button]:min-h-11 max-sm:[&>button]:px-3 pointer-coarse:[&>button]:min-h-11 pointer-coarse:[&>button]:px-3"
-  @switch "relative before:absolute before:-inset-x-1 before:-inset-y-3 before:content-['']"
 
   attr :id_prefix, :string,
     required: true,
@@ -65,7 +64,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
           on_change="calendar:toggle_fold_night"
           target={@target}
           size={:small}
-          class={switch_pad()}
           aria_label={dgettext("dashboard_calendar", "Fold early hours")}
         />
       </div>
@@ -93,7 +91,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
 
   defp row, do: @row
   defp segments, do: @segments
-  defp switch_pad, do: @switch
 
   # Rows 3 to 7: what the week shows and how times read. Weekends and the
   # week start reload the window; the others redraw from the settings (see
@@ -111,9 +108,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
       assign(assigns,
         monday: monday,
         sunday: sunday,
-        week_start: Atom.to_string(Period.week_start(assigns.preferences.week_start_day)),
-        row: @row,
-        segments: @segments
+        week_start: Atom.to_string(Period.week_start(assigns.preferences.week_start_day))
       )
 
     ~H"""
@@ -132,14 +127,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
       event="calendar:toggle_week_numbers"
       target={@target}
     />
-    <div class={["flex items-center justify-between gap-3", @row]}>
+    <div class={["flex items-center justify-between gap-3", row()]}>
       <span class="text-token-sm font-medium text-tymeslot-700">
         {dgettext("dashboard_calendar_power", "Week starts on")}
       </span>
       <.segmented_control
         id={"#{@id_prefix}-week-start"}
         size={:sm}
-        class={@segments}
+        class={segments()}
         value={@week_start}
         on_change="calendar:set_week_start"
         param="option"
@@ -150,14 +145,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         <:option value="sunday" label={@sunday} />
       </.segmented_control>
     </div>
-    <div class={["flex items-center justify-between gap-3", @row]}>
+    <div class={["flex items-center justify-between gap-3", row()]}>
       <span class="text-token-sm font-medium text-tymeslot-700">
         {dgettext("dashboard_calendar_power", "Clock")}
       </span>
       <.segmented_control
         id={"#{@id_prefix}-time-format"}
         size={:sm}
-        class={@segments}
+        class={segments()}
         value={@time_format}
         on_change="calendar:set_time_format"
         param="option"
@@ -193,10 +188,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   attr :target, :any, required: true
 
   defp switch_row(assigns) do
-    assigns = assign(assigns, row: @row, pad: @switch)
-
     ~H"""
-    <div class={["flex items-start justify-between gap-3", @row]}>
+    <div class={["flex items-start justify-between gap-3", row()]}>
       <div class="min-w-0">
         <span class="block text-token-sm font-medium text-tymeslot-700">{@label}</span>
         <span
@@ -213,7 +206,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         on_change={@event}
         target={@target}
         size={:small}
-        class={@pad}
         aria_label={@label}
         aria-describedby={@description && "#{@id}-description"}
       />
