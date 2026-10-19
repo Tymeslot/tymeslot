@@ -95,7 +95,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         phx-value-menu="calendars"
         phx-target={@target}
       >
-        <.icon name="hero-rectangle-stack" class="h-5 w-5" />
+        <%!-- The count replaces the icon, so the period keeps its room at 360px. --%>
+        <.icon :if={@hidden_count == 0} name="hero-rectangle-stack" class="h-5 w-5" />
         <span class="sr-only">{dgettext("dashboard_calendar", "Calendars")}</span>
         <span :if={@hidden_count > 0} class="text-token-xs font-semibold">
           {dngettext("dashboard_calendar_views", "%{count} hidden", "%{count} hidden", @hidden_count)}

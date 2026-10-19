@@ -210,6 +210,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       assert has_element?(lv, "#calendar-phone-calendars[class~='bg-amber-50']", "1 hidden")
     end
 
+    # At 360px the icon beside "1 hidden" left the period a few letters wide.
+    test "the hidden count takes the icon's place until none are hidden", %{
+      conn: conn
+    } do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-calendars svg")
+
+      lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+
+      refute has_element?(lv, "#calendar-phone-calendars svg")
+      assert has_element?(lv, "#calendar-phone-calendars .sr-only", "Calendars")
+
+      lv |> element("#calendar-rail [data-calendar-id='family']") |> render_click()
+
+      assert has_element?(lv, "#calendar-phone-calendars svg")
+    end
+
     test "a long period wraps to a second line instead of being cut", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
