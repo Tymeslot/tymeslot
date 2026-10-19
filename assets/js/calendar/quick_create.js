@@ -9,7 +9,8 @@
  * The head is the kind switch, "Event | Open for booking", offered when the
  * organiser has a meeting type to open. An event's chips are real controls:
  * date, start and end open the browser's own picker on a hidden input next
- * to each, all day is a toggle and the calendar a select. Place and guests
+ * to each (on a coarse pointer that input takes the tap itself and is named
+ * like its chip, `coarse` in the state), all day is a toggle and the calendar a select. Place and guests
  * come from the text and are shown, not edited, here. An opening hides the
  * field and shows its meeting type, date, start and end, and "Just this once
  * | Every week". Every value the organiser typed is escaped.
@@ -33,11 +34,15 @@ function invalid(chip, error, allDay = false) {
   return named ? ' aria-invalid="true" aria-describedby="calendar-qc-error"' : "";
 }
 
-function picker(chip, type, label, text, value, { draft }, parsed) {
+// On a coarse pointer the native input lies over the chip and takes the tap
+// (calendar-editing.css), so assistive technology must reach it too: it
+// carries the chip's full name instead of hiding. It stays out of the tab order.
+function picker(chip, type, label, text, value, { draft, coarse = false }, parsed) {
+  const name = coarse ? `${label}: ${text}` : label;
   return (
     `<span class="cal-qc-chip-wrap">` +
     `<button type="button" class="cal-qc-chip${parsed ? " is-parsed" : ""}" data-qc-pick="${chip}" data-qc-key="${chip}" aria-label="${escapeHtml(`${label}: ${text}`)}"${invalid(chip, draft.error, draft.allDay)}>${escapeHtml(text)}</button>` +
-    `<input class="cal-qc-native" type="${type}" data-qc-input="${chip}" data-qc-key="${chip}-input" value="${escapeHtml(value)}" tabindex="-1" aria-hidden="true" aria-label="${escapeHtml(label)}"${type === "time" ? ' step="900"' : ""}>` +
+    `<input class="cal-qc-native" type="${type}" data-qc-input="${chip}" data-qc-key="${chip}-input" value="${escapeHtml(value)}" tabindex="-1"${coarse ? "" : ' aria-hidden="true"'} aria-label="${escapeHtml(name)}"${type === "time" ? ' step="900"' : ""}>` +
     `</span>`
   );
 }

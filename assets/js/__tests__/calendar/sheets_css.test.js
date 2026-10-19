@@ -129,3 +129,24 @@ describe("phone full-screen editor, small controls", () => {
     expect(chip).toMatch(/min-height:\s*44px/);
   });
 });
+
+describe("quick create on touch", () => {
+  test("on a phone the chips and buttons are 44px and the chips' text is readable", () => {
+    const chips = rule(phone(), ".cal-qc-chip, .cal-qc-native.is-open");
+    expect(chips).toMatch(/min-height:\s*44px/);
+    expect(chips).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+    expect(rule(phone(), "span.cal-qc-chip")).toMatch(/line-height:\s*42px/);
+    expect(rule(phone(), ".cal-qc-seg button, .cal-qc-more, .cal-qc-save")).toMatch(/min-height:\s*44px/);
+  });
+
+  test("on a phone the select and the native inputs never make iOS zoom", () => {
+    expect(rule(phone(), ".cal-qc-calendar select, .cal-qc-native")).toMatch(/font-size:\s*var\(--font-size-base\)/);
+  });
+
+  test("on a coarse pointer the native date and time inputs take the tap themselves", () => {
+    const coarse = mediaBodies(read("calendar-editing.css"), "(pointer: coarse)").join("\n");
+    const body = rule(coarse, ".cal-qc-native");
+    expect(body).toMatch(/pointer-events:\s*auto/);
+    expect(body).toMatch(/font-size:\s*var\(--font-size-base\)/);
+  });
+});

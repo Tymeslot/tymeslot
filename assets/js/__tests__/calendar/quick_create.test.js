@@ -136,3 +136,14 @@ test("a refused end on an all-day draft marks the date chip", () => {
 test("the native inputs have their own focus key", () => {
   expect(view(base()).querySelector('[data-qc-input="start"]').getAttribute("data-qc-key")).toBe("start-input");
 });
+
+test("on a coarse pointer the native inputs, which take the tap, are named like their chips and not hidden", () => {
+  const touch = view(base(), { coarse: true });
+  const start = touch.querySelector('[data-qc-input="start"]');
+  expect(start.hasAttribute("aria-hidden")).toBe(false);
+  expect(start.getAttribute("aria-label")).toBe("Starts: 10:00");
+  expect(start.getAttribute("tabindex")).toBe("-1");
+
+  const mouse = view(base()).querySelector('[data-qc-input="start"]');
+  expect(mouse.getAttribute("aria-hidden")).toBe("true");
+});

@@ -36,6 +36,7 @@ import { applyChip, applyText, draftFromRange, nextSlot, toPayload } from "../..
 import { applyPlacement, placeOverlay, releaseSheet, sheetCovers } from "../../calendar/sheet.js";
 import { renderQuickBody, renderQuickCreate, renderQuickHead } from "../../calendar/quick_create.js";
 import { MINUTES_PER_DAY, isTimeGrid, isoFromDay, periodDays } from "../../calendar/time.js";
+import { isCoarse } from "../../calendar/viewport.js";
 import { newDraftId } from "./draft.js";
 import { MODALS, TYPING } from "./keys.js";
 
@@ -115,7 +116,7 @@ export const CreateMixin = {
   },
 
   quickState() {
-    return { draft: this.draft, strings: this.strings, timeFormat: this.settings.time_format, calendars: this.settings.calendars || [], meetingTypes: this.settings.meeting_types || [], hasAccounts: Boolean(this.settings.has_accounts) };
+    return { draft: this.draft, strings: this.strings, timeFormat: this.settings.time_format, calendars: this.settings.calendars || [], meetingTypes: this.settings.meeting_types || [], hasAccounts: Boolean(this.settings.has_accounts), coarse: isCoarse() };
   },
 
   parseOptions() {

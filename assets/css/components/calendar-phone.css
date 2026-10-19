@@ -204,3 +204,33 @@
     min-width: 44px;
   }
 }
+
+/* Quick create's sheet at thumb size: 44px chips and buttons, 14px chip
+   text, 16px in the select and the native inputs so iOS never zooms. */
+@media (width < 40rem) {
+  .cal-qc-chips {
+    gap: 8px;
+  }
+
+  .cal-qc-chip,
+  .cal-qc-native.is-open {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: var(--font-size-sm);
+  }
+
+  span.cal-qc-chip {
+    line-height: 42px;
+  }
+
+  .cal-qc-seg button,
+  .cal-qc-more,
+  .cal-qc-save {
+    min-height: 44px;
+  }
+
+  .cal-qc-calendar select,
+  .cal-qc-native {
+    font-size: var(--font-size-base);
+  }
+}

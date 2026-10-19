@@ -172,6 +172,17 @@ button.cal-qc-chip:hover,
   pointer-events: auto;
 }
 
+/* On touch the input over each date and time chip takes the tap itself, so
+   the browser's own picker opens on every touch browser, including those
+   where showPicker() is missing or refused; its change moves the draft as
+   the chip's would. 16px, so focusing it never zooms on iOS. */
+@media (pointer: coarse) {
+  .cal-qc-native {
+    font-size: var(--font-size-base);
+    pointer-events: auto;
+  }
+}
+
 /* 16px on iOS, so focusing the select or the shown input never zooms. */
 @supports (-webkit-touch-callout: none) {
   .cal-qc-calendar select,

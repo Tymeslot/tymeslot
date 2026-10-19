@@ -9,3 +9,12 @@ export const PHONE_QUERY = "(width < 40rem)";
 export function isPhone(win = typeof window === "undefined" ? undefined : window) {
   return typeof win?.matchMedia === "function" && win.matchMedia(PHONE_QUERY).matches === true;
 }
+
+// A finger, not a mouse, is the main pointer: quick create's native inputs
+// take the tap, and (Task 13) tapping selects an event and shows its resize
+// handle. Not a width test: a touch tablet in desktop chrome counts too.
+export const COARSE_QUERY = "(pointer: coarse)";
+
+export function isCoarse(win = typeof window === "undefined" ? undefined : window) {
+  return typeof win?.matchMedia === "function" && win.matchMedia(COARSE_QUERY).matches === true;
+}
