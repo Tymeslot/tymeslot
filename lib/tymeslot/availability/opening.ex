@@ -15,11 +15,18 @@ defmodule Tymeslot.Availability.Opening do
   `Tymeslot.Availability.AvailabilityActions`.
 
   Times are read on the organiser's clock, and a slot belongs to the date it
-  starts on. A window is at most 24 hours, so a slot or a widened window
-  longer than that is refused with `:too_long`.
+  starts on. A window is at most 24 hours, so a slot longer than that is
+  refused with `:too_long`, and a slot that would widen the day past it with
+  `:widened_too_long`.
+
+  `restore/2` puts back only hours the opening left as it wrote them: when
+  the day (or, for every week, the widened date too) holds other hours by
+  then, it refuses with `:changed` and writes nothing, so an undo never
+  overwrites a newer change.
   """
 
   alias Tymeslot.Availability.AvailabilityActions
+  alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.DateOverrides
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklySchedule
@@ -56,12 +63,14 @@ defmodule Tymeslot.Availability.Opening do
           previous: override_snapshot() | nil
         }
 
+  @type hours :: %{start_time: Time.t(), end_time: Time.t(), ends_next_day: boolean()}
+
   @type weekly_previous :: %{
           is_available: boolean(),
           start_time: Time.t() | nil,
           end_time: Time.t() | nil,
           ends_next_day: boolean(),
-          override: %{date: Date.t(), was: override_snapshot()} | nil
+          override: %{date: Date.t(), was: override_snapshot(), hours: hours()} | nil
         }
 
   @type weekly :: %{
@@ -79,6 +88,8 @@ defmodule Tymeslot.Availability.Opening do
           | :invalid_range
           | :in_past
           | :too_long
+          | :widened_too_long
+          | :changed
           | :breaks_outside_hours
           | :invalid_hours
 
@@ -157,7 +168,7 @@ defmodule Tymeslot.Availability.Opening do
   defp widen_date(ctx, date, {current, hours}, row) do
     case write_once(ctx, date, hours, current) do
       {:ok, _override} ->
-        {:ok, %{date: date, was: override_snapshot(current)}}
+        {:ok, %{date: date, was: override_snapshot(current), hours: hours}}
 
       {:error, _reason} = error ->
         # The weekday is already widened; put it back so nothing half-applies.
@@ -174,37 +185,84 @@ defmodule Tymeslot.Availability.Opening do
 
   @doc """
   Puts back what `open_once/4` or `open_weekly/4` changed: the date's old
-  override (or none), or the weekday's old hours (or closed). Only for the
-  user whose schedule it is.
+  override (or none), or the weekday's old hours (or closed) and the widened
+  date's old override. Only for the user whose schedule it is, and only
+  while those hours are still the ones the opening wrote: otherwise
+  `{:error, :changed}`, with nothing written.
   """
   @spec restore(pos_integer(), once() | weekly()) :: :ok | {:error, reason()}
-  def restore(user_id, %{kind: :once, schedule_id: schedule_id, date: date, previous: nil}) do
-    with {:ok, profile} <- profile(user_id) do
-      DateOverrides.delete(profile.id, schedule_id, date)
-    end
-  end
+  def restore(user_id, %{kind: :once, schedule_id: schedule_id, date: date} = result) do
+    with {:ok, profile} <- profile(user_id),
+         :ok <- unchanged_date(profile.id, schedule_id, date, result) do
+      case result.previous do
+        nil ->
+          DateOverrides.delete(profile.id, schedule_id, date)
 
-  def restore(user_id, %{kind: :once, schedule_id: schedule_id, date: date, previous: previous}) do
-    with {:ok, profile} <- profile(user_id) do
-      profile.id
-      |> put_back_override(schedule_id, date, previous)
-      |> to_ok()
+        previous ->
+          profile.id
+          |> put_back_override(schedule_id, date, previous)
+          |> to_ok()
+      end
     end
   end
 
   def restore(user_id, %{kind: :weekly, schedule_id: schedule_id, day_of_week: day} = result) do
+    override = Map.get(result.previous, :override)
+
     with {:ok, profile} <- profile(user_id),
+         :ok <- owned(profile.id, schedule_id),
+         :ok <- unchanged_day(schedule_id, day, result),
+         :ok <- unchanged_override(profile.id, schedule_id, override),
          {:ok, _row} <- restore_weekly(profile.id, schedule_id, day, result.previous) do
-      case result.previous do
-        %{override: %{date: date, was: was}} ->
+      case override do
+        %{date: date, was: was} ->
           profile.id |> put_back_override(schedule_id, date, was) |> to_ok()
 
-        _no_override ->
+        nil ->
           :ok
       end
     else
       {:error, _reason} = error -> map_write_error(error)
     end
+  end
+
+  defp owned(profile_id, schedule_id) do
+    case AvailabilityScheduleQueries.get_for_profile(schedule_id, profile_id) do
+      nil -> {:error, :not_found}
+      _schedule -> :ok
+    end
+  end
+
+  # The weekday still holds the hours the opening gave it.
+  defp unchanged_day(schedule_id, day, hours) do
+    case WeeklySchedule.get_day_availability(schedule_id, day) do
+      %{is_available: true} = row -> same_hours(row, hours)
+      _closed_or_gone -> {:error, :changed}
+    end
+  end
+
+  defp unchanged_override(_profile_id, _schedule_id, nil), do: :ok
+
+  defp unchanged_override(profile_id, schedule_id, %{date: date, hours: hours}),
+    do: unchanged_date(profile_id, schedule_id, date, hours)
+
+  # The date still holds the custom hours the opening wrote for it.
+  defp unchanged_date(profile_id, schedule_id, date, hours) do
+    case DateOverrides.get(profile_id, schedule_id, date) do
+      {:ok, %{override_type: "custom_hours"} = override} -> same_hours(override, hours)
+      {:ok, _other_or_none} -> {:error, :changed}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp same_hours(window, hours) do
+    same? =
+      match?(%Time{}, window.start_time) and match?(%Time{}, window.end_time) and
+        minutes(window.start_time) == minutes(hours.start_time) and
+        minutes(window.end_time) == minutes(hours.end_time) and
+        window.ends_next_day == true == hours.ends_next_day
+
+    if same?, do: :ok, else: {:error, :changed}
   end
 
   # The weekday exactly as it was, closed or open: a closed day keeps the
@@ -328,7 +386,7 @@ defmodule Tymeslot.Availability.Opening do
     from = min(open_from, slot.from)
     to = max(open_to, slot.to)
 
-    if to - from > @day_minutes, do: {:error, :too_long}, else: hours(from, to)
+    if to - from > @day_minutes, do: {:error, :widened_too_long}, else: hours(from, to)
   end
 
   defp hours(from, to) do
