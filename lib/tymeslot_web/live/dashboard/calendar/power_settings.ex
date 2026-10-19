@@ -33,12 +33,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerSettings do
   def settings(assigns) do
     %{
       show_week_numbers: assigns.preferences.show_week_numbers,
-      sets: [],
-      active_set: 0,
+      sets:
+        for(
+          set <- Map.get(assigns, :calendar_sets, []),
+          do: %{position: set.position, name: set.name}
+        ),
+      active_set: active_position(Map.get(assigns, :active_set)),
       focus: Map.get(assigns, :calendar_focus) == true,
       desktop_reminders: assigns.preferences.desktop_reminders_enabled
     }
   end
+
+  defp active_position(%{position: position}), do: position
+  defp active_position(nil), do: 0
 
   @doc """
   Assigns the parent's attributes and, when its `calendar_focus` changed in

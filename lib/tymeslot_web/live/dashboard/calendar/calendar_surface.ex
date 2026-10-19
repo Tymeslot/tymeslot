@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PowerSettings
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
+  alias TymeslotWeb.Dashboard.Calendar.RailSets
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.SurfaceMenus
@@ -284,6 +285,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         panel_event: PanelState.current_event(assigns),
         panel_context: PanelState.context(assigns),
         sync_problems: sync_problems,
+        set_view: RailSets.view(assigns),
         problem_ids: MapSet.new(sync_problems, & &1.integration_id),
         reauth_ids: MapSet.new(for(%{needs_reauth: true, id: id} <- assigns.integrations, do: id))
       )
@@ -324,6 +326,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         rail_open={@rail_open}
         calendar_focus={@calendar_focus}
         hidden_count={@hidden_count}
+        set_name={@set_view.name}
         target={@myself}
       />
       <PhoneHeader.phone_header
@@ -333,6 +336,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         today={@today}
         locale={@locale}
         hidden_count={@hidden_count}
+        set_name={@set_view.name}
         open_menu={@open_menu}
         target={@myself}
       />
@@ -341,6 +345,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         <Rail.rail
           :if={@rail_open}
           week_numbers={@preferences.show_week_numbers}
+          set_view={@set_view}
           accounts={@accounts}
           mini_cursor={@mini_cursor}
           view={@view}
@@ -387,6 +392,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         :if={@open_menu == :calendars}
         accounts={@accounts}
         hidden_count={@hidden_count}
+        set_view={@set_view}
         syncing_ids={@syncing_ids}
         problem_ids={@problem_ids}
         reauth_ids={@reauth_ids}

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.DisplayOptions
+  alias TymeslotWeb.Dashboard.Calendar.FilterChip
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PeriodLabels
@@ -33,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :rail_open, :boolean, required: true
   attr :calendar_focus, :boolean, default: false
   attr :hidden_count, :integer, required: true
+  attr :set_name, :string, default: nil
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :target, :any, required: true
   attr :week_numbers, :boolean, default: false
@@ -147,35 +149,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         </:panel>
       </.dropdown>
       <div class="flex-1"></div>
-      <%!-- Filters never hide silently: whenever the rail is not showing
-           (collapsed, or always on a phone), hidden calendars show here. --%>
-      <div
-        :if={@hidden_count > 0}
-        id="calendar-filter-chip"
-        class={[
-          "inline-flex items-center gap-1 rounded-token-full border border-amber-300 bg-amber-50 py-0.5 pl-3 pr-1 text-token-xs font-semibold text-amber-900",
-          @rail_open && "md:hidden"
-        ]}
-      >
-        <span>
-          {dngettext(
-            "dashboard_calendar",
-            "%{count} calendar hidden",
-            "%{count} calendars hidden",
-            @hidden_count
-          )}
-        </span>
-        <button
-          type="button"
-          id="calendar-show-all"
-          phx-click="calendar:show_all"
-          phx-target={@target}
-          aria-label={dgettext("dashboard_calendar", "Show all calendars")}
-          class="inline-flex h-6 w-6 items-center justify-center rounded-token-full hover:bg-amber-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500"
-        >
-          <.icon name="hero-x-mark-mini" class="h-4 w-4" />
-        </button>
-      </div>
+      <FilterChip.filter_chip
+        hidden_count={@hidden_count}
+        set_name={@set_name}
+        rail_open={@rail_open}
+        target={@target}
+      />
       <div
         role="group"
         aria-label={dgettext("dashboard_calendar", "View")}

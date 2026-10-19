@@ -5,6 +5,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   toolbar's between 640 and 767px. A core modal, so a bottom sheet on a
   phone.
 
+  The calendar sets sit above the calendars, as in the rail; while a set is
+  active they mark it and offer No set, so the hidden-calendars row gives way.
+
   While calendars are hidden its first row says how many and shows them
   all, since the phone header has no room for the toolbar's filter chip.
   The display options (`DisplayOptions`, the toolbar's own) sit at its
@@ -20,9 +23,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   alias TymeslotWeb.Dashboard.Calendar.DisplayOptions
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.RailLayers
+  alias TymeslotWeb.Dashboard.Calendar.RailSets
 
   attr :accounts, :list, required: true
   attr :hidden_count, :integer, required: true
+  attr :set_view, :map, required: true, doc: "see `RailSets.view/1`"
   attr :syncing_ids, :any, default: MapSet.new()
   attr :problem_ids, :any, default: MapSet.new()
   attr :reauth_ids, :any, default: MapSet.new()
@@ -42,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
       <:header>{dgettext("dashboard_calendar", "Calendars")}</:header>
       <div class="cal-sheet-list space-y-5">
         <div
-          :if={@hidden_count > 0}
+          :if={@hidden_count > 0 and is_nil(@set_view.name)}
           id="calendar-sheet-hidden"
           class="flex items-center gap-3 rounded-token-lg border border-amber-300 bg-amber-50 py-1 pl-3 pr-1 text-token-sm font-semibold text-amber-900"
         >
@@ -64,6 +69,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
             {dgettext("dashboard_calendar", "Show all calendars")}
           </button>
         </div>
+        <RailSets.sets
+          id_prefix="calendar-sheet"
+          sets={@set_view.sets}
+          active_position={@set_view.active_position}
+          editor={@set_view.editor}
+          target={@target}
+        />
         <Rail.calendar_list
           id_prefix="calendar-sheet"
           show_heading={false}
@@ -71,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
           syncing_ids={@syncing_ids}
           problem_ids={@problem_ids}
           reauth_ids={@reauth_ids}
+          set_active={not is_nil(@set_view.name)}
           target={@target}
         />
         <RailLayers.layers id_prefix="calendar-sheet" bookable={@bookable} target={@target} />

@@ -5,7 +5,8 @@
  * one of them (MODALS). Today is Wednesday 14 October 2026.
  */
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { mockViewport, mountHook, payload, pushes, unmountAll } from "./canvas_harness.js";
+import { powerKeyName } from "../../hooks/calendar_canvas/power_keys.js";
+import { mockViewport, mountHook, payload, pushes, settings, unmountAll } from "./canvas_harness.js";
 
 const press = (target, key, extra = {}) => target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra }));
 const gotos = (hook) => pushes(hook, "calendar:goto");
@@ -248,5 +249,72 @@ describe("F: focus mode", () => {
     document.body.appendChild(input);
     press("f", {}, input);
     expect(hook.pushEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("0 to 9: calendar sets", () => {
+  const press = (key, extra = {}, target = document.body) =>
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra }));
+  const withSets = (active_set) =>
+    payload({ settings: { ...settings, sets: [{ position: 1, name: "Work" }, { position: 3, name: "Family" }], active_set } });
+  const live = () => document.getElementById("calendar-live").textContent;
+
+  afterEach(() => unmountAll());
+
+  test("a set's digit applies it and says so", () => {
+    const { hook } = mountHook(withSets(0));
+    press("3");
+    expect(pushes(hook, "calendar:apply_set")).toEqual([{ position: 3 }]);
+    expect(live()).toBe("Showing the Family set");
+  });
+
+  test("a digit with no set, or the active set's own, does nothing", () => {
+    const { hook } = mountHook(withSets(1));
+    press("2");
+    press("1");
+    expect(pushes(hook, "calendar:apply_set")).toEqual([]);
+  });
+
+  test("0 leaves the active set, and does nothing with none active", () => {
+    const { hook } = mountHook(withSets(1));
+    press("0");
+    expect(pushes(hook, "calendar:apply_set")).toEqual([{ position: 0 }]);
+    expect(live()).toBe("Calendar set turned off");
+    unmountAll();
+
+    const idle = mountHook(withSets(0));
+    press("0");
+    expect(pushes(idle.hook, "calendar:apply_set")).toEqual([]);
+  });
+
+  test.each([
+    ["Shift", { shiftKey: true }],
+    ["Ctrl", { ctrlKey: true }],
+    ["Alt", { altKey: true }],
+  ])("digits do nothing with %s", (_name, extra) => {
+    const { hook } = mountHook(withSets(0));
+    press("1", extra);
+    expect(pushes(hook, "calendar:apply_set")).toEqual([]);
+  });
+
+  test("a digit typed in a field stays the field's", () => {
+    const { hook } = mountHook(withSets(0));
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    press("1", {}, input);
+    expect(pushes(hook, "calendar:apply_set")).toEqual([]);
+  });
+
+  test("powerKeyName maps letters, digits and ? and nothing else", () => {
+    const key = (k, extra = {}) => new KeyboardEvent("keydown", { key: k, ...extra });
+    expect(powerKeyName(key("T"))).toBe("t");
+    expect(powerKeyName(key("T", { shiftKey: true }))).toBeNull();
+    expect(powerKeyName(key("7"))).toBe("7");
+    expect(powerKeyName(key("7", { code: "Numpad7" }))).toBe("7");
+    expect(powerKeyName(key("?", { shiftKey: true }))).toBe("?");
+    expect(powerKeyName(key("Enter"))).toBeNull();
+    // `/` belongs to the command bar (Task 14), never to this table.
+    expect(powerKeyName(key("/"))).toBeNull();
+    expect(powerKeyName(key("+"))).toBeNull();
   });
 });

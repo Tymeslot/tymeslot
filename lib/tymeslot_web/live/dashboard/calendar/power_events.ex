@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
+  alias TymeslotWeb.Dashboard.Calendar.SetEvents
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -29,7 +30,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
     "calendar:ics_close" => IcsImport,
     "calendar:ics_validate" => IcsImport,
     "calendar:ics_calendar" => IcsImport,
-    "calendar:ics_start" => IcsImport
+    "calendar:ics_start" => IcsImport,
+    "calendar:apply_set" => SetEvents,
+    "calendar:edit_set" => SetEvents,
+    "calendar:cancel_set_edit" => SetEvents,
+    "calendar:save_set" => SetEvents,
+    "calendar:delete_set" => SetEvents
   }
 
   # The power layer's `start_async/3` work: the task's name, then the module
@@ -57,7 +63,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   @doc "The power layer's assigns, at their defaults."
   @spec defaults(socket()) :: socket()
   def defaults(socket),
-    do: assign(socket, reminder_feed: [], reminder_ref: nil, ics_import: nil)
+    do:
+      assign(socket,
+        reminder_feed: [],
+        reminder_ref: nil,
+        ics_import: nil,
+        calendar_sets: [],
+        active_set: nil,
+        manual_hidden_keys: MapSet.new(),
+        set_editor: nil
+      )
 
   # The `send_update/3` actions of the power layer, which
   # `CalendarSurface.update/2` routes to `update/2`.

@@ -12,6 +12,8 @@ export const strings = {
   weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   all_day: "All day",
+  set_applied: "Showing the %{name} set",
+  set_cleared: "Calendar set turned off",
   more: "more",
   also_here: "Also here: %{titles}",
   shown_as_free: "shown as free",

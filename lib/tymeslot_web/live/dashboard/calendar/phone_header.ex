@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   @moduledoc """
   The calendar's header on a phone, in place of the toolbar: previous, the
   period (which opens `DateSheet`), next, Today and Calendars (which turns
-  amber with a count while calendars are hidden), each at least 44px.
+  amber with the active set's name, or a count while calendars are hidden),
+  each at least 44px.
   Rendered at every width and shown only below 40rem (`sm:hidden`), where
   the toolbar is hidden (`max-sm:hidden`), so a phone's first paint is
   right before any script runs. Its controls navigate like the toolbar's
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   attr :today, :any, required: true
   attr :locale, :string, required: true
   attr :hidden_count, :integer, required: true
+  attr :set_name, :string, default: nil
   attr :open_menu, :atom, default: nil
   attr :target, :any, required: true
 
@@ -87,7 +89,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         id="calendar-phone-calendars"
         class={[
           @control,
-          @hidden_count > 0 && "border border-amber-300 bg-amber-50 px-2 text-amber-900"
+          (@hidden_count > 0 or not is_nil(@set_name)) &&
+            "border border-amber-300 bg-amber-50 px-2 text-amber-900"
         ]}
         aria-haspopup="dialog"
         aria-expanded={to_string(@open_menu == :calendars)}
@@ -95,10 +98,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         phx-value-menu="calendars"
         phx-target={@target}
       >
-        <%!-- The count replaces the icon, so the period keeps its room at 360px. --%>
-        <.icon :if={@hidden_count == 0} name="hero-rectangle-stack" class="h-5 w-5" />
+        <%!-- The set's name or the count replaces the icon, so the period keeps its room at 360px. --%>
+        <.icon
+          :if={@hidden_count == 0 and is_nil(@set_name)}
+          name="hero-rectangle-stack"
+          class="h-5 w-5"
+        />
         <span class="sr-only">{dgettext("dashboard_calendar", "Calendars")}</span>
-        <span :if={@hidden_count > 0} class="text-token-xs font-semibold">
+        <span :if={@set_name} class="max-w-24 truncate text-token-xs font-semibold">{@set_name}</span>
+        <span :if={@hidden_count > 0 and is_nil(@set_name)} class="text-token-xs font-semibold">
           {dngettext("dashboard_calendar_views", "%{count} hidden", "%{count} hidden", @hidden_count)}
         </span>
       </button>

@@ -9,8 +9,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   one.
 
   Under the calendars, Layers: the bookable-times switch and the meeting
-  type it shows (see `RailLayers`). Calendar sets join the rail in a later
-  plan. Below 768px the rail is hidden; its calendars and layers open in the
+  type it shows (see `RailLayers`). Under the mini month, calendar sets
+  (see `RailSets`): saved groups of calendars, each applied by its digit.
+  Below 768px the rail is hidden; its calendars and layers open in the
   Calendars sheet (`CalendarsSheet`), from the toolbar or the phone header,
   and B still works.
   """
@@ -20,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
 
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.RailLayers
+  alias TymeslotWeb.Dashboard.Calendar.RailSets
 
   attr :accounts, :list, required: true
   attr :syncing_ids, :any, default: MapSet.new()
@@ -33,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :week_start, :atom, required: true
   attr :locale, :string, required: true
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
+  attr :set_view, :map, required: true, doc: "see `RailSets.view/1`"
   attr :target, :any, required: true
   attr :week_numbers, :boolean, default: false
 
@@ -56,11 +59,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         target={@target}
         week_numbers={@week_numbers}
       />
+      <RailSets.sets
+        sets={@set_view.sets}
+        active_position={@set_view.active_position}
+        editor={@set_view.editor}
+        target={@target}
+      />
       <.calendar_list
         accounts={@accounts}
         syncing_ids={@syncing_ids}
         problem_ids={@problem_ids}
         reauth_ids={@reauth_ids}
+        set_active={not is_nil(@set_view.name)}
         target={@target}
       />
       <RailLayers.layers bookable={@bookable} target={@target} />
@@ -83,6 +93,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :syncing_ids, :any, default: MapSet.new()
   attr :problem_ids, :any, default: MapSet.new()
   attr :reauth_ids, :any, default: MapSet.new()
+
+  attr :set_active, :boolean,
+    default: false,
+    doc: "a calendar set is active: ticking a calendar in a hidden account edits the set"
+
   attr :target, :any, required: true
 
   @spec calendar_list(map()) :: Phoenix.LiveView.Rendered.t()
@@ -177,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
           <li :for={calendar <- account.calendars} class="flex items-center gap-2 py-0.5">
             <.check
               checked={not calendar.hidden}
-              disabled={account.hidden}
+              disabled={account.hidden and not @set_active}
               colour={calendar.colour}
               label={calendar.name}
               event="calendar:toggle_calendar"

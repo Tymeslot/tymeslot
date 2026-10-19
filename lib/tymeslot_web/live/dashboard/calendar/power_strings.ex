@@ -13,6 +13,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerStrings do
   @spec strings() :: map()
   def strings do
     %{
+      set_applied:
+        dgettext("dashboard_calendar_power", "Showing the %{name} set", name: "%{name}"),
+      set_cleared: dgettext("dashboard_calendar_power", "Calendar set turned off"),
       week_number: dgettext("dashboard_calendar_power", "Week %{number}", number: "%{number}")
     }
   end
