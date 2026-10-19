@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
   alias TymeslotWeb.Dashboard.Calendar.Creation
+  alias TymeslotWeb.Dashboard.Calendar.DateSheet
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
@@ -65,7 +66,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # `calendar:*` events answered by `ViewEvents`: how a view is drawn.
   @view_events ~w(calendar:agenda_more calendar:viewport)
 
-  @menus %{"date" => :date, "display" => :display, "calendars" => :calendars}
+  @menus %{
+    "date" => :date,
+    "display" => :display,
+    "calendars" => :calendars,
+    "date_sheet" => :date_sheet
+  }
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
   # finished, events changed elsewhere, or a refresh fell back on its timer.
@@ -368,6 +374,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         bookable={LayerChoices.rail(@preferences, @bookable_types)}
         density={@preferences.density}
         fold_night={@preferences.fold_night}
+        target={@myself}
+      />
+      <DateSheet.date_sheet
+        :if={@open_menu == :date_sheet}
+        mini_cursor={@mini_cursor}
+        view={@view}
+        date={@date}
+        days={@days}
+        today={@today}
+        week_start={Period.week_start(@preferences.week_start_day)}
+        locale={@locale}
         target={@myself}
       />
       <Toast.toast toast={@toast} target={@myself} />

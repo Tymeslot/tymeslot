@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
   defp phone(conn), do: put_connect_params(conn, %{"viewport" => "phone"})
 
   defp open_calendars(lv), do: lv |> element("#calendar-phone-calendars") |> render_click()
+  defp open_dates(lv), do: lv |> element("#calendar-phone-title") |> render_click()
 
   describe "the Calendars sheet" do
     setup %{conn: conn} do
@@ -163,5 +164,71 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
     assert has_element?(lv, "#calendar-rail #calendar-rail-layers")
     assert has_element?(lv, "#calendar-calendars-sheet #calendar-sheet-account-#{integration.id}")
     refute has_element?(lv, "#calendar-calendars-sheet #calendar-account-#{integration.id}")
+  end
+
+  describe "the date sheet" do
+    setup %{conn: conn} do
+      context = owner(conn)
+      Map.put(context, :conn, phone(context.conn))
+    end
+
+    test "the header's period opens a month of 44px days", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(
+               lv,
+               "button#calendar-phone-title[aria-haspopup='dialog']",
+               "14 to 16 Oct"
+             )
+
+      assert has_element?(lv, "#calendar-phone-title[aria-label='Choose a date, 14 to 16 Oct']")
+
+      open_dates(lv)
+
+      assert has_element?(lv, "#calendar-phone-title[aria-expanded='true']")
+      assert has_element?(lv, "#calendar-date-sheet #calendar-sheet-month", "October 2026")
+      assert has_element?(lv, "#calendar-sheet-month button[aria-pressed='true'][class~='h-11']")
+      assert has_element?(lv, "#calendar-date-sheet #calendar-sheet-today", "Today")
+      assert has_element?(lv, "#calendar-rail-month button[class~='h-7']")
+    end
+
+    test "a day goes there in the current view and closes the sheet", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+
+      lv |> element("#calendar-sheet-month button", ~r/^\s*20\s*$/) |> render_click()
+
+      assert_patch(lv, ~p"/dashboard/calendar?view=three_day&date=2026-10-20")
+      refute has_element?(lv, "#calendar-date-sheet")
+    end
+
+    test "Today goes back to today and closes the sheet", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=three_day&date=2026-10-30")
+      open_dates(lv)
+
+      lv |> element("#calendar-sheet-today") |> render_click()
+
+      assert_patch(lv, ~p"/dashboard/calendar?view=three_day&date=2026-10-14")
+      refute has_element?(lv, "#calendar-date-sheet")
+    end
+
+    test "Today with today shown only closes the sheet", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+
+      lv |> element("#calendar-sheet-today") |> render_click()
+
+      refute has_element?(lv, "#calendar-date-sheet")
+      refute_patched(lv)
+    end
+
+    test "the arrows page the sheet's month", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dates(lv)
+
+      lv |> element("#calendar-sheet-month button[aria-label='Next month']") |> render_click()
+
+      assert has_element?(lv, "#calendar-sheet-month", "November 2026")
+    end
   end
 end

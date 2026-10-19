@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   @moduledoc """
   The calendar's header on a phone, in place of the toolbar: previous, the
-  period, next, Today and Calendars (which turns amber with a count while
+  period (which opens `DateSheet`), next, Today and Calendars (which turns amber with a count while
   calendars are hidden), each at least 44px. Rendered at every width and
   shown only below 40rem (`sm:hidden`), where the toolbar is hidden
   (`max-sm:hidden`), so a phone's first paint is right before any script
@@ -48,12 +48,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
       >
         <.icon name="hero-chevron-left" class="h-5 w-5" />
       </button>
-      <span
+      <button
+        type="button"
         id="calendar-phone-title"
-        class="min-w-0 flex-1 truncate text-center text-token-base font-semibold text-tymeslot-900"
+        class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-token-lg px-2 text-token-base font-semibold text-tymeslot-900 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400"
+        aria-haspopup="dialog"
+        aria-expanded={to_string(@open_menu == :date_sheet)}
+        aria-label={dgettext("dashboard_calendar", "Choose a date, %{period}", period: @title)}
+        phx-click="calendar:toggle_menu"
+        phx-value-menu="date_sheet"
+        phx-target={@target}
       >
-        {@title}
-      </span>
+        <span class="truncate">{@title}</span>
+        <.icon name="hero-chevron-down-mini" class="h-4 w-4 shrink-0 text-tymeslot-500" />
+      </button>
       <button
         type="button"
         id="calendar-phone-next"

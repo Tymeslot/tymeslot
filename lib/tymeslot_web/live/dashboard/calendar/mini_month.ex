@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   @moduledoc """
-  A month of day buttons with the visible range marked, used in the rail and
-  in the period title's date picker. A day click navigates like every other
-  control (`Navigation.js/3`), keeping the current view.
+  A month of day buttons with the visible range marked, used in the rail, in
+  the period title's date picker and in the phone's date sheet
+  (`size={:touch}`). A day click navigates like every other control
+  (`Navigation.js/3`), keeping the current view.
   """
 
   use TymeslotWeb, :html
@@ -11,6 +12,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Helpers.LocaleFormat
+
+  @day_sizes %{compact: "h-7 text-token-xs", touch: "h-11 text-token-sm"}
 
   attr :id, :string, required: true
   attr :cursor, :any, required: true, doc: "the first of the month shown"
@@ -21,6 +24,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
   attr :week_start, :atom, required: true
   attr :locale, :string, required: true
   attr :target, :any, required: true
+
+  attr :size, :atom,
+    default: :compact,
+    values: [:compact, :touch],
+    doc: ":touch makes each day a 44px target, for the date sheet on a phone"
 
   @spec mini_month(map()) :: Phoenix.LiveView.Rendered.t()
   def mini_month(assigns) do
@@ -70,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
           aria-label={LocaleFormat.format_weekday_date(day, @locale)}
           aria-current={if(day == @today, do: "date")}
           aria-pressed={to_string(day in @days)}
-          class={day_class(day, @cursor, @days, @today)}
+          class={day_class(day, @cursor, @days, @today, @size)}
         >
           {day.day}
         </button>
@@ -79,9 +87,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.MiniMonth do
     """
   end
 
-  defp day_class(day, cursor, days, today) do
+  defp day_class(day, cursor, days, today, size) do
     [
-      "h-7 rounded-token-md text-token-xs tabular-nums focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
+      Map.fetch!(@day_sizes, size),
+      "rounded-token-md tabular-nums focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
       cond do
         day == today -> "bg-turquoise-700 font-semibold text-white"
         day in days -> "bg-turquoise-50 font-semibold text-turquoise-800"
