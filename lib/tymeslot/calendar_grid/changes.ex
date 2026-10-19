@@ -222,6 +222,14 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate block_time(user_id, start_at, end_at, title), to: BlockTime, as: :block
 
   @doc """
+  Whether `start_at..end_at` is a span `block_time/4` takes. See
+  `Tymeslot.CalendarGrid.BlockTime.check_span/2`.
+  """
+  @spec check_block_span(DateTime.t(), DateTime.t()) ::
+          :ok | {:error, :invalid_range | :in_past | :too_long}
+  defdelegate check_block_span(start_at, end_at), to: BlockTime, as: :check_span
+
+  @doc """
   Takes back a block, for undo. See `Tymeslot.CalendarGrid.BlockTime.unblock/2`.
   """
   @spec unblock_time(pos_integer(), BlockTime.blocked()) :: :ok | {:error, term()}

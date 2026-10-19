@@ -137,7 +137,15 @@ defmodule Tymeslot.CalendarGrid.BlockTime do
 
   defp clean_title(_title), do: {:error, :invalid_title}
 
-  defp check_span(start_at, end_at) do
+  @doc """
+  Whether `start_at..end_at` can be blocked: it lasts more than nothing
+  (`:invalid_range`), has not ended (`:in_past`) and is no longer than an
+  event the calendar can draw, a week (`:too_long`). `block/4` asks it
+  first; the calendar asks it before starting a block.
+  """
+  @spec check_span(DateTime.t(), DateTime.t()) ::
+          :ok | {:error, :invalid_range | :in_past | :too_long}
+  def check_span(%DateTime{} = start_at, %DateTime{} = end_at) do
     cond do
       DateTime.compare(end_at, start_at) != :gt -> {:error, :invalid_range}
       DateTime.compare(end_at, Clock.utc_now()) != :gt -> {:error, :in_past}

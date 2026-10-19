@@ -83,20 +83,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBlockTest do
     assert_reply(lv, %{accepted: false, error: "That time can't be blocked."})
   end
 
-  test "a time already over is refused", %{conn: conn} do
+  test "a time already over is refused and says so", %{conn: conn} do
     lv = loaded(conn)
 
     block(lv, %{"start" => "2026-10-13T09:00", "end" => "2026-10-13T10:00"})
 
-    assert_reply(lv, %{accepted: false, error: "That time can't be blocked."})
+    assert_reply(lv, %{accepted: false, error: "That time has already passed."})
   end
 
-  test "more than a day is refused", %{conn: conn} do
+  test "a span past the block's own limit of a week is refused and names it", %{conn: conn} do
+    lv = loaded(conn)
+
+    block(lv, %{"start" => "2026-10-15T09:00", "end" => "2026-10-22T09:01"})
+
+    assert_reply(lv, %{accepted: false, error: "You can block at most a week at a time."})
+  end
+
+  test "a span longer than a day but within the week is accepted", %{conn: conn} do
     lv = loaded(conn)
 
     block(lv, %{"start" => "2026-10-15T09:00", "end" => "2026-10-16T09:01"})
 
-    assert_reply(lv, %{accepted: false, error: "That time can't be blocked."})
+    assert_reply(lv, %{accepted: true})
   end
 
   test "text that is not a time is refused", %{conn: conn} do

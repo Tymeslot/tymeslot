@@ -3,9 +3,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
   "Block this time" from the bookable layer's explainer, and its undo.
 
   The hook sends the labelled window's wall-clock start and end
-  (`calendar:block`). They are read in the organiser's zone and checked: a
-  real span of at most a day that has not ended, within the edit rate
-  limit. The block itself (`Tymeslot.CalendarGrid.Changes.block_time/4`: an
+  (`calendar:block`). They are read in the organiser's zone and checked by
+  the rule the block itself applies (`Changes.check_block_span/2`: a real
+  span of at most a week that has not ended), within the edit rate limit. The block itself (`Tymeslot.CalendarGrid.Changes.block_time/4`: an
   event that blocks availability on the default calendar, or a part-day
   time off without one) can reach a calendar provider, so it runs off the
   LiveView process under the name `{:block, n}`; the reply only says it was
@@ -22,10 +22,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
   import Phoenix.LiveView, only: [start_async: 3]
 
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.Moves
-  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Tasks
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.Manipulation
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -34,8 +33,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
   alias TymeslotWeb.Live.Shared.Flash
 
   @type socket :: Phoenix.LiveView.Socket.t()
-
-  @max_seconds 24 * 60 * 60
 
   @doc """
   Checks the window the hook sent and starts blocking it. Answers the
@@ -48,8 +45,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
 
     with {:ok, start_at} <- Moves.wall_to_utc(start, timezone),
          {:ok, end_at} <- Moves.wall_to_utc(finish, timezone),
-         :ok <- blockable(start_at, end_at),
-         :ok <- RateLimiter.check(:calendar_event_edit, user_id) do
+         :ok <- Changes.check_block_span(start_at, end_at),
+         :ok <- EditGuard.rate_limit(user_id) do
       key = {:block, System.unique_integer([:positive])}
       title = dgettext("dashboard_calendar_booking", "Blocked")
 
@@ -65,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
       {%{accepted: true}, socket}
     else
       {:error, :rate_limited, message} -> {%{accepted: false, error: message}, socket}
+      {:error, reason} when reason in [:in_past, :too_long] -> {refused(reason), socket}
       _invalid -> {refused(), socket}
     end
   end
@@ -171,14 +169,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
 
   def unblocked(socket, {:exit, _reason}), do: Flash.put_flash(socket, :error, undo_failed())
 
-  defp blockable(start_at, end_at) do
-    seconds = DateTime.diff(end_at, start_at)
-
-    if seconds > 0 and seconds <= @max_seconds and DateTime.after?(end_at, Clock.utc_now()),
-      do: :ok,
-      else: :error
-  end
-
   defp blocked_text(socket, start_at, end_at) do
     finish =
       end_at
@@ -200,6 +190,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
       error: dgettext("dashboard_calendar_booking", "That time can't be blocked.")
     }
 
+  defp refused(reason), do: %{accepted: false, error: refusal(reason)}
+
   defp refusal(:limit_reached),
     do:
       dgettext(
@@ -209,6 +201,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.BlockTime do
 
   defp refusal(:too_far),
     do: dgettext("dashboard_calendar_booking", "That's too far ahead to block.")
+
+  defp refusal(:too_long),
+    do: dgettext("dashboard_calendar_booking", "You can block at most a week at a time.")
 
   defp refusal(:in_past),
     do: dgettext("dashboard_calendar_booking", "That time has already passed.")
