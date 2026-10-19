@@ -116,8 +116,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   } do
     copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
 
-    # Cancelled, with its calendar copy not yet removed: the one case where a
-    # booking's copy still reaches the grid, since a live booking replaces it.
+    # Cancelled, with its calendar copy not yet removed. A booking the grid
+    # draws replaces its copy; this one is not drawn, so its copy shows.
     insert(:meeting,
       organizer_user: user,
       status: "cancelled",
@@ -139,8 +139,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   } do
     copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
 
-    # Cancelled, with its calendar copy not yet removed: the one case where a
-    # booking's copy still reaches the grid, since a live booking replaces it.
+    # Cancelled, with its calendar copy not yet removed. A booking the grid
+    # draws replaces its copy; this one is not drawn, so its copy shows.
     insert(:meeting,
       organizer_user: user,
       status: "cancelled",
@@ -182,8 +182,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   } do
     copy = event(integration, "work", "Booked call", ~U[2026-10-15 13:00:00Z], 30)
 
-    # Cancelled, with its calendar copy not yet removed: the one case where a
-    # booking's copy still reaches the grid, since a live booking replaces it.
+    # Cancelled, with its calendar copy not yet removed. A booking the grid
+    # draws replaces its copy; this one is not drawn, so its copy shows.
     insert(:meeting,
       organizer_user: user,
       status: "cancelled",

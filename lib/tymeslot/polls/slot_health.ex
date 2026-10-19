@@ -71,7 +71,11 @@ defmodule Tymeslot.Polls.SlotHealth do
   end
 
   # All-day events arrive as bare dates; they block the host's local day, the
-  # same stretch the booking page and the booking submit block.
+  # same stretch the booking page and the booking submit block. Which events
+  # block differs from the booking page, though: only `CalendarEvent.blocking?/1`
+  # is asked here, not `Bookability`, so an all-day event a read-only calendar
+  # marks free (a holiday feed's day) and the organiser's "Treat as" choices
+  # are not taken into account.
   @spec busy_intervals(list(), String.t()) :: [map()]
   defp busy_intervals(events, owner_timezone) do
     events
