@@ -91,6 +91,18 @@ export const strings = {
   free_times_zone: "Times in %{zone}",
   free_times_none: "No bookable times on these days.",
   time_range: "%{start} to %{finish}",
+  today: "Today",
+  agenda_label: "Agenda",
+  agenda_empty: "Nothing planned in these weeks.",
+  agenda_until: "Until %{time}",
+  agenda_from: "From %{time}",
+  agenda_later: "Show later",
+  agenda_loading: "Loading more",
+  month_more: "%{count} more on %{date}",
+  month_attention: "includes something that needs your attention",
+  month_select: "%{date}, show this day's events",
+  day_events: "Events: %{count}",
+  strip_label: "Days of this week",
 };
 
 // Writable calendars, as settings.calendars carries them.

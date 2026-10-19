@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMonthTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.CalendarMock
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
 
   setup %{conn: conn}, do: owner(conn)
 
@@ -97,6 +98,71 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMonthTest do
       render_async(lv)
 
       refute_push_event(lv, "calendar:bookable", _layer)
+    end
+  end
+
+  describe "the toolbar, the stored default and the client copy" do
+    test "the view switch offers Month and Agenda after the time views", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("#calendar-toolbar") |> render()
+
+      positions =
+        for view <- ~w(day three_day week month agenda),
+            do: html |> :binary.match(~s(id="calendar-view-#{view}")) |> elem(0)
+
+      assert positions == Enum.sort(positions)
+      assert lv |> element("#calendar-view-month") |> render() =~ "Month"
+      assert lv |> element("#calendar-view-agenda") |> render() =~ "Agenda"
+    end
+
+    test "Month patches the URL and pushes six weeks with a month's grid either side", %{
+      conn: conn
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-view-month") |> render_click()
+
+      assert_patch(lv, "/dashboard/calendar?view=month&date=2026-10-14")
+
+      assert_push_event(lv, "calendar:events", %{
+        view: "month",
+        reset: false,
+        range: %{from: "2026-08-31", to: "2026-12-07"}
+      })
+
+      assert has_element?(lv, "#calendar-view-month[aria-pressed='true']")
+    end
+
+    test "Agenda patches the URL and pushes four weeks either side of its first", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-view-agenda") |> render_click()
+
+      assert_patch(lv, "/dashboard/calendar?view=agenda&date=2026-10-14")
+
+      assert_push_event(lv, "calendar:events", %{
+        view: "agenda",
+        range: %{from: "2026-09-16", to: "2026-12-09"}
+      })
+
+      assert lv |> element("#calendar-period-title") |> render() =~ "From Wed 14 Oct"
+    end
+
+    test "a stored default of month or agenda opens that view", %{conn: conn, user: user} do
+      {:ok, _prefs} = CalendarPreferencesQueries.upsert(user.id, %{default_view: "month"})
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert has_element?(lv, "#calendar-view-month[aria-pressed='true']")
+
+      {:ok, _prefs} = CalendarPreferencesQueries.upsert(user.id, %{default_view: "agenda"})
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert has_element?(lv, "#calendar-view-agenda[aria-pressed='true']")
+    end
+
+    test "the canvas carries the month and agenda copy", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-canvas[data-strings*='agenda_later']")
+      assert has_element?(lv, "#calendar-canvas[data-strings*='Nothing planned in these weeks.']")
     end
   end
 end

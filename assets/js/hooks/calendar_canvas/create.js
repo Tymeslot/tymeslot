@@ -35,7 +35,7 @@
 import { applyChip, applyText, draftFromRange, nextSlot, toPayload } from "../../calendar/draft.js";
 import { placePopover } from "../../calendar/popover.js";
 import { renderQuickBody, renderQuickCreate, renderQuickHead } from "../../calendar/quick_create.js";
-import { MINUTES_PER_DAY, isoFromDay, periodDays } from "../../calendar/time.js";
+import { MINUTES_PER_DAY, isTimeGrid, isoFromDay, periodDays } from "../../calendar/time.js";
 import { newDraftId } from "./draft.js";
 import { MODALS, TYPING } from "./keys.js";
 
@@ -103,7 +103,7 @@ export const CreateMixin = {
       this.quickFocus();
       return;
     }
-    const days = periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends);
+    const days = this.createDays();
     const range = nextSlot(this.nowMinute(), days, [...this.cache.events.values()], undefined, this.currentScale().firstMinute);
     // The preview (rendered by LiveView) would otherwise stay beside the draft.
     if (document.getElementById("calendar-preview")) this.pushEventTo(this.el, "calendar:close_preview", { refocus: "false" });
@@ -313,6 +313,8 @@ export const CreateMixin = {
   // its day when that is not visible, else the draft scrolls into sight.
   followDraft(delay = FOLLOW_MS) {
     clearTimeout(this.followTimer);
+    // Month and agenda draw no draft to bring into view (calendar_canvas/views.js).
+    if (!isTimeGrid(this.view)) return;
     this.followTimer = setTimeout(() => {
       this.followTimer = null;
       if (!this.draft) return;

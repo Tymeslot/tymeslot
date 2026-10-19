@@ -31,10 +31,12 @@ defmodule Tymeslot.CalendarGrid.PeriodTest do
     end
   end
 
-  test "default_view/1 opens the stored day view and the week for everything else" do
+  test "default_view/1 opens the stored view the surface draws, and the week for anything else" do
     assert Period.default_view("day") == :day
     assert Period.default_view("week") == :week
-    assert Period.default_view("month") == :week
+    assert Period.default_view("month") == :month
+    assert Period.default_view("agenda") == :agenda
+    assert Period.default_view("fortnight") == :week
     assert Period.default_view(nil) == :week
   end
 

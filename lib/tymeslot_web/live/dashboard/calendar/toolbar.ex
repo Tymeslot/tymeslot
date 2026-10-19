@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         class="inline-flex gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5"
       >
         <button
-          :for={{view, label} <- view_options()}
+          :for={view <- Period.views()}
           type="button"
           id={"calendar-view-#{view}"}
           aria-pressed={to_string(view == @view)}
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             )
           ]}
         >
-          {label}
+          {PeriodLabels.view_label(view)}
         </button>
       </div>
       <.dropdown
@@ -241,13 +241,5 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
       </.dropdown>
     </div>
     """
-  end
-
-  defp view_options do
-    [
-      day: dgettext("dashboard_calendar", "Day"),
-      three_day: dgettext("dashboard_calendar", "3 days"),
-      week: dgettext("dashboard_calendar", "Week")
-    ]
   end
 end

@@ -29,6 +29,9 @@
  *    Delete and Ctrl Z push `calendar:delete` and `calendar:undo` (see
  *    calendar_canvas/keys.js);
  *  - Ctrl + scroll zooms the hours for the visit (see calendar_canvas/zoom.js);
+ *  - month and agenda draw from the same cache, D X W M A switch views, and
+ *    the agenda asks for more with `calendar:agenda_more` as it scrolls (see
+ *    calendar_canvas/views.js);
  *  - the server pushes `calendar:bookable`, the bookable-times layer drawn
  *    behind the events; B switches it, and a day's label opens the explainer
  *    that pushes `calendar:block` (see calendar_canvas/bookable.js);
@@ -46,10 +49,11 @@ import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
 import { OpeningMixin } from "./calendar_canvas/opening.js";
+import { ViewsMixin } from "./calendar_canvas/views.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
-import { renderGrid, renderList, renderSkeleton } from "../calendar/render.js";
-import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
+import { renderList } from "../calendar/render.js";
+import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isTimeGrid, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
 
 const TICK_MS = 60_000;
 // How long an answer for another period may disagree with a pending
@@ -61,7 +65,7 @@ export const PENDING_GRACE_MS = 1_500;
 const PREVIEW_ESTIMATE = { width: 320, height: 240 };
 // What a redraw can hand focus back to, most specific first. `day` tells the
 // per-column night buttons apart, which share an empty attribute value.
-const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle", "data-bookable-label", "data-bookable-show"];
+const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle", "data-bookable-label", "data-bookable-show", "data-month-day", "data-month-more", "data-agenda-later"];
 
 function canvasMeasure() {
   let context = null;
@@ -90,6 +94,7 @@ export const CalendarCanvas = {
   ...KeysMixin,
   ...ZoomMixin,
   ...BookableMixin,
+  ...ViewsMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -123,6 +128,7 @@ export const CalendarCanvas = {
     this.mountKeys();
     this.mountZoom();
     this.mountBookable();
+    this.mountViews();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -165,6 +171,7 @@ export const CalendarCanvas = {
     this.destroyKeys();
     this.destroyZoom();
     this.destroyBookable();
+    this.destroyViews();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
@@ -272,6 +279,8 @@ export const CalendarCanvas = {
 
   sameDays(view, date) {
     if (!this.settings || view !== this.view) return false;
+    // A month or an agenda redraws for any other date (the date is a phone's chosen day, or where the list starts).
+    if (!isTimeGrid(view)) return date === this.date;
     const { week_start: start, show_weekends: weekends } = this.settings;
     return periodDays(view, date, start, weekends).join() === periodDays(this.view, this.date, start, weekends).join();
   },
@@ -310,7 +319,7 @@ export const CalendarCanvas = {
     if (!isLoaded(this.cache, days)) {
       this.dropList();
       this.dropExplainer();
-      this.el.innerHTML = renderSkeleton(days, this.strings);
+      this.el.innerHTML = this.viewSkeleton(days);
       this.el.setAttribute("aria-busy", "true");
       this.placeQuickCreate();
       return;
@@ -322,7 +331,7 @@ export const CalendarCanvas = {
     this.dropList();
     this.dropExplainer();
     this.lastWidth = this.el.clientWidth;
-    this.el.innerHTML = renderGrid({
+    this.el.innerHTML = this.drawView({
       view: this.view,
       days,
       events: this.withDraft(this.withMoving(eventsForDays(this.cache, days))),
@@ -338,6 +347,7 @@ export const CalendarCanvas = {
     });
     this.el.setAttribute("aria-busy", "false");
     this.applyRoving();
+    this.afterView();
 
     const scroller = this.el.querySelector("[data-scroll]");
     if (scroller) scroller.scrollTop = this.scrollTop ?? this.initialScroll(days, now);
@@ -423,6 +433,7 @@ export const CalendarCanvas = {
       return this.render();
     }
 
+    if (this.viewClick(e)) return undefined;
     if (this.slotClick(e)) return undefined;
     return this.closeList();
   },

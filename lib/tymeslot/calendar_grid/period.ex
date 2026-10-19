@@ -67,11 +67,14 @@ defmodule Tymeslot.CalendarGrid.Period do
   def parse_view(_value, default), do: default
 
   @doc """
-  The view to open when the URL names none: the stored default when the
-  surface draws it, otherwise the week (month and agenda arrive later).
+  The view to open when the URL names none: the stored default (day, week,
+  month or agenda), else the week. A phone shows a week as three days
+  (`for_viewport/2`) without the stored value changing.
   """
   @spec default_view(String.t() | nil) :: view()
   def default_view("day"), do: :day
+  def default_view("month"), do: :month
+  def default_view("agenda"), do: :agenda
   def default_view(_stored), do: :week
 
   @doc """
