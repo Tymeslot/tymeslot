@@ -10,7 +10,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceAgendaTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Mox
+  import TymeslotWeb.BookableLayerHelpers
   import TymeslotWeb.CalendarSurfaceHelpers
+
+  alias Tymeslot.CalendarMock
 
   setup %{conn: conn}, do: owner(conn)
 
@@ -145,5 +149,46 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceAgendaTest do
     {:ok, week, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-14")
     more(week, "2026-10-25")
     assert_reply(week, %{payload: nil, done: false})
+  end
+
+  test "a new period starts the agenda again from its base window", %{conn: conn} do
+    lv = open(conn)
+
+    for through <- ~w(2026-12-08 2027-01-05) do
+      more(lv, through)
+      assert_reply(lv, %{done: false})
+    end
+
+    lv |> element("#calendar-next") |> render_click()
+
+    assert_push_event(
+      lv,
+      "calendar:events",
+      %{reset: false, range: %{from: "2026-10-14", to: "2027-01-06"}},
+      1_000
+    )
+  end
+
+  describe "with a meeting type" do
+    setup %{user: user} do
+      open_days(user)
+      meeting_type(user)
+      :ok
+    end
+
+    test "agenda computes no bookable times", %{conn: conn} do
+      test_pid = self()
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        send(test_pid, :fetched)
+        {:ok, []}
+      end)
+
+      lv = open(conn)
+      render_async(lv)
+
+      refute_push_event(lv, "calendar:bookable", _layer)
+      refute_received :fetched
+    end
   end
 end

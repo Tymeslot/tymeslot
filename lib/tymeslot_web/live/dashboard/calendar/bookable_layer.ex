@@ -50,11 +50,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookableLayer do
   is on and has a meeting type, else pushed at once with no windows. While
   a load is in flight it only marks that load stale; another starts once it
   answers. Month and agenda draw no bookable times, so there it neither
-  computes nor pushes; the next time view's window loads it again.
+  computes nor pushes, and a load still running is marked stale so its
+  answer is dropped; the next time view's window loads it again.
   """
   @spec load(socket()) :: socket()
   def load(socket) do
-    if Period.time_grid?(socket.assigns.view), do: load_layer(socket), else: socket
+    cond do
+      Period.time_grid?(socket.assigns.view) -> load_layer(socket)
+      socket.assigns.bookable_load == :running -> assign(socket, :bookable_load, :stale)
+      true -> socket
+    end
   end
 
   defp load_layer(socket) do

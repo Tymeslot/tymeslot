@@ -77,5 +77,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMonthTest do
 
       assert %{on: true} = await_bookable(lv, &on_day?(&1, "2026-10-15"))
     end
+
+    test "a week load still running when the month opens is dropped", %{conn: conn} do
+      test_pid = self()
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        send(test_pid, {:held, self()})
+
+        receive do
+          :release -> {:ok, []}
+        end
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-14")
+      assert_receive {:held, fetcher}, 2_000
+
+      render_patch(lv, ~p"/dashboard/calendar?view=month&date=2026-10-14")
+      send(fetcher, :release)
+      render_async(lv)
+
+      refute_push_event(lv, "calendar:bookable", _layer)
+    end
   end
 end
