@@ -223,7 +223,6 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
   defp guest_label(%{email: email}), do: email
 
   defp text_body(details, meeting_details, roster, copy, locale) do
-
     entries =
       Enum.map_join(roster, "\n", fn entry ->
         entry
