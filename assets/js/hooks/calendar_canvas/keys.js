@@ -27,13 +27,14 @@ import { cancelledText, movingText, rangeText, savingText } from "../../calendar
 import { draggable } from "../../calendar/drag.js";
 import { beginMove, moveStep, nextFocus } from "../../calendar/keyboard.js";
 import { MINUTES_PER_DAY, dayNumber, formatWall, isoFromDay, normaliseEvent, periodDays } from "../../calendar/time.js";
+import { MODALS, TYPING } from "../../calendar/shortcuts.js";
+
+export { MODALS, TYPING };
 
 const BLOCKS = ".cal-col .cal-ev[data-event-id]";
-export const MODALS = "#calendar-series-scope, #calendar-delete-confirm";
 const MODAL_WATCH_MS = 10_000;
 const REPEAT_ANNOUNCE_MS = 300;
 const SWALLOW_CLICK_MS = 1000;
-export const TYPING = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
 // Fields with a text undo of their own: Ctrl Z there stays the browser's.
 // Anywhere else (a button, a switch, a checkbox, the side panel) it undoes
 // the last change.

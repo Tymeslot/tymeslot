@@ -338,6 +338,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
              "Press C to add an event at the next free time."
   end
 
+  test "the keys hint names T, J and K", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(
+             lv,
+             "#calendar-keys-hint",
+             "Press T to go to today, J for the next period and K for the previous period."
+           )
+  end
+
+  test "the hook's first request carries the power layer's settings at their defaults",
+       %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+
+    assert_reply(lv, %{
+      settings: %{
+        show_week_numbers: false,
+        sets: [],
+        active_set: 0,
+        focus: false,
+        desktop_reminders: false
+      }
+    })
+  end
+
   test "the parent re-rendering pushes no events", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 

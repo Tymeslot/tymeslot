@@ -39,6 +39,7 @@
  *  - month and agenda draw from the same cache, D X W M A switch views, and
  *    the agenda asks for more with `calendar:agenda_more` as it scrolls (see
  *    calendar_canvas/views.js);
+ *  - T, J and K go to today and step the period (see calendar_canvas/power_keys.js);
  *  - the server pushes `calendar:bookable`, the bookable-times layer drawn
  *    behind the events; B switches it, and a day's label opens the explainer
  *    that pushes `calendar:block` (see calendar_canvas/bookable.js);
@@ -56,14 +57,14 @@ import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
 import { GesturesMixin } from "./calendar_canvas/gestures.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
+import { ListMixin } from "./calendar_canvas/list.js";
 import { OpeningMixin } from "./calendar_canvas/opening.js";
+import { PowerKeysMixin } from "./calendar_canvas/power_keys.js";
 import { TouchDragMixin } from "./calendar_canvas/touch_drag.js";
 import { ViewportMixin } from "./calendar_canvas/viewport.js";
 import { ViewsMixin } from "./calendar_canvas/views.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
-import { applyPlacement, placeOverlay, releaseSheet } from "../calendar/sheet.js";
-import { renderList } from "../calendar/render.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isTimeGrid, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
 
 const TICK_MS = 60_000;
@@ -109,6 +110,8 @@ export const CalendarCanvas = {
   ...ViewsMixin,
   ...TouchDragMixin,
   ...GesturesMixin,
+  ...ListMixin,
+  ...PowerKeysMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -119,19 +122,12 @@ export const CalendarCanvas = {
     this.clock = null;
     this.nightOpen = false;
     this.scrollTop = null;
-    this.list = null;
-    this.listAnchor = null;
     this.pending = null;
     this.graceTimer = null;
     this.lastWidth = null;
     this.measureWidth = this.measureWidth || canvasMeasure();
 
-    this.outside = (e) => {
-      // A press on the chip itself is left to its click, which toggles the
-      // list; one on a sheet's scrim to the scrim's click, which closes it.
-      if (e.target.closest?.("[data-sheet-scrim]")) return;
-      if (this.list && !this.list.contains(e.target) && !this.listAnchorEl?.contains(e.target)) this.closeList();
-    };
+    this.mountList();
     this.listeners = [
       ["calendar:navigate", (e) => this.navigate(e.detail)],
       ["click", (e) => this.handleClick(e)],
@@ -148,6 +144,7 @@ export const CalendarCanvas = {
     this.mountViews();
     this.mountTouchDrag();
     this.mountGestures();
+    this.mountPowerKeys();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -183,7 +180,7 @@ export const CalendarCanvas = {
     this.resizer?.disconnect();
     if (this.frame) cancelAnimationFrame(this.frame);
     this.frame = null;
-    this.closeList();
+    this.destroyList();
     this.destroyDrag();
     this.destroyDraft();
     this.destroyCreate();
@@ -194,6 +191,7 @@ export const CalendarCanvas = {
     this.destroyViews();
     this.destroyTouchDrag();
     this.destroyGestures();
+    this.destroyPowerKeys();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
@@ -571,45 +569,5 @@ export const CalendarCanvas = {
     );
     target?.focus({ preventScroll: true });
     return !!target;
-  },
-
-  showList(events, anchor, label) {
-    const reopening = this.list && this.listAnchorEl === anchor;
-    this.closeList();
-    this.closeExplainer();
-    if (reopening) return;
-    const holder = document.createElement("div");
-    holder.innerHTML = renderList([...events].sort((a, b) => a.startMin - b.startMin), { strings: this.strings, timeFormat: this.settings.time_format, label });
-    const list = holder.firstElementChild;
-    this.el.appendChild(list);
-
-    const size = { width: list.offsetWidth || 240, height: list.offsetHeight || 160 };
-    applyPlacement(list, placeOverlay(anchor.getBoundingClientRect(), size, viewport(), { sheet: this.sheetMode() }));
-    list.addEventListener("calendar:dismiss", () => this.closeList());
-    this.list = list;
-    this.listAnchor = this.focusKeyOf(anchor);
-    this.listAnchorEl = anchor;
-    document.addEventListener("pointerdown", this.outside);
-    list.querySelector("button")?.focus();
-  },
-
-  // Forget the list without touching focus (the grid redraw has removed it,
-  // or is about to); its sheet state goes with it.
-  dropList() {
-    releaseSheet(this.list);
-    document.removeEventListener("pointerdown", this.outside);
-    this.list = null;
-    this.listAnchorEl = null;
-    this.dirty = false;
-  },
-
-  closeList() {
-    if (!this.list) return;
-    const hadFocus = this.list.contains(document.activeElement);
-    const stale = this.dirty;
-    this.list.remove();
-    this.dropList();
-    if (stale) this.render();
-    if (hadFocus) this.focusBy(this.listAnchor);
   },
 };

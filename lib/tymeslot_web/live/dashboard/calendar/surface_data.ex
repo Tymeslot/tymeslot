@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PendingDeletes
+  alias TymeslotWeb.Dashboard.Calendar.PowerSettings
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SyncStatus
   alias TymeslotWeb.Dashboard.Calendar.UndoStack
@@ -314,22 +315,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def settings(assigns) do
     preferences = assigns.preferences
 
-    %{
-      week_start: Atom.to_string(Period.week_start(preferences.week_start_day)),
-      show_weekends: preferences.show_weekends,
-      density: preferences.density,
-      fold_night: preferences.fold_night,
-      time_format: assigns.time_format,
-      working_hours: assigns.working_hours,
-      calendars: CalendarDirectory.choices(assigns.accounts),
-      default_calendar: CalendarDirectory.default_calendar(assigns.integrations),
-      # Accounts without a writable calendar: quick create says they are read-only.
-      has_accounts: assigns.accounts != [],
-      # The meeting types quick create can open for booking (Task 9's list:
-      # active, unarchived, `%{id, name, duration}`); `duration` keeps an
-      # opening at least one meeting long.
-      meeting_types: assigns.bookable_types
-    }
+    Map.merge(
+      %{
+        week_start: Atom.to_string(Period.week_start(preferences.week_start_day)),
+        show_weekends: preferences.show_weekends,
+        density: preferences.density,
+        fold_night: preferences.fold_night,
+        time_format: assigns.time_format,
+        working_hours: assigns.working_hours,
+        calendars: CalendarDirectory.choices(assigns.accounts),
+        default_calendar: CalendarDirectory.default_calendar(assigns.integrations),
+        # Accounts without a writable calendar: quick create says they are read-only.
+        has_accounts: assigns.accounts != [],
+        # The meeting types quick create can open for booking (Task 9's list:
+        # active, unarchived, `%{id, name, duration}`); `duration` keeps an
+        # opening at least one meeting long.
+        meeting_types: assigns.bookable_types
+      },
+      PowerSettings.settings(assigns)
+    )
   end
 
   @doc "The payload for the loaded window; `reset` tells the hook to drop its cache first."

@@ -280,6 +280,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
         )}
         {dgettext("dashboard_calendar_booking", "Press B to show or hide your bookable times.")}
+        {dgettext(
+          "dashboard_calendar_power",
+          "Press T to go to today, J for the next period and K for the previous period."
+        )}
       </p>
       <%!-- Filled by the calendar hook (textContent); phx-update ignore keeps LiveView from clearing it. --%>
       <div id="calendar-live" class="sr-only" aria-live="polite" phx-update="ignore"></div>

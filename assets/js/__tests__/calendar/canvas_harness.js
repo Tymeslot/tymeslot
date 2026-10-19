@@ -111,7 +111,8 @@ export const calendars = [
   { key: "7:personal", name: "Personal", account: "anna@example.com", colour: "calendar-5" },
 ];
 
-export const settings = { week_start: "monday", show_weekends: true, density: "comfortable", fold_night: false, time_format: "24h", working_hours: {}, calendars, default_calendar: "7:work" };
+// The power layer's keys (PowerSettings) at their defaults, as the server sends them before Tasks 4 to 11 fill them.
+export const settings = { week_start: "monday", show_weekends: true, density: "comfortable", fold_night: false, time_format: "24h", working_hours: {}, calendars, default_calendar: "7:work", show_week_numbers: false, sets: [], active_set: 0, focus: false, desktop_reminders: false };
 
 export const event = (id, title, start, end, extra = {}) => ({
   id,
