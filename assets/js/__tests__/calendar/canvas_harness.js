@@ -221,3 +221,18 @@ export function pushes(hook, name) {
 }
 
 export const block = (el, id) => el.querySelector(`.cal-col .cal-ev[data-event-id="${id}"]`);
+
+// A touch pointer event as a phone sends it, dispatched on `target`. A finger
+// holds the primary button (buttons 1) until it lifts or is cancelled; the
+// first finger is the primary one. The pointer fields are pinned on the
+// instance, so the event reads the same whichever constructor jsdom offers.
+// Returns the event, so a test can read defaultPrevented.
+export function touch(target, type, { x = 0, y = 0, pointerId = 1 } = {}) {
+  const Constructor = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+  const e = new Constructor(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+  const lifted = type === "pointerup" || type === "pointercancel";
+  const fields = { pointerId, pointerType: "touch", isPrimary: pointerId === 1, buttons: lifted ? 0 : 1 };
+  for (const [key, value] of Object.entries(fields)) Object.defineProperty(e, key, { value });
+  target.dispatchEvent(e);
+  return e;
+}

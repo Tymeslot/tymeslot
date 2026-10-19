@@ -23,6 +23,9 @@
  *    drops it, since the server reads the URL again;
  *  - a drag moves or resizes an event the organiser can change and pushes
  *    `calendar:move` on the drop (see calendar_canvas/drag.js);
+ *  - on a touch screen a long-press on an event starts the same drag, and a
+ *    tapped event shows a handle that resizes its end (see
+ *    calendar_canvas/touch_drag.js);
  *  - a click or a drag on an empty slot drops a draft for quick create (see
  *    calendar_canvas/draft.js), whose popover pushes `calendar:create` or
  *    `calendar:more_options` (see calendar_canvas/create.js);
@@ -50,6 +53,7 @@ import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
 import { OpeningMixin } from "./calendar_canvas/opening.js";
+import { TouchDragMixin } from "./calendar_canvas/touch_drag.js";
 import { ViewportMixin } from "./calendar_canvas/viewport.js";
 import { ViewsMixin } from "./calendar_canvas/views.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
@@ -99,6 +103,7 @@ export const CalendarCanvas = {
   ...BookableMixin,
   ...ViewportMixin,
   ...ViewsMixin,
+  ...TouchDragMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -136,6 +141,7 @@ export const CalendarCanvas = {
     this.mountBookable();
     this.mountViewport();
     this.mountViews();
+    this.mountTouchDrag();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -180,6 +186,7 @@ export const CalendarCanvas = {
     this.destroyBookable();
     this.destroyViewport();
     this.destroyViews();
+    this.destroyTouchDrag();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
@@ -366,6 +373,8 @@ export const CalendarCanvas = {
     }
     // The draft may have moved under the quick-create popover.
     this.placeQuickCreate();
+    // The selected event's ring and handle (touch_drag.js) go on the fresh blocks.
+    this.decorate();
   },
 
   // First draw: an hour and a half before now when today is in view, else
@@ -442,6 +451,8 @@ export const CalendarCanvas = {
     }
 
     if (this.viewClick(e)) return undefined;
+    // With an event selected on a touch screen, a tap on the empty grid only lets go of it.
+    if (this.selectedId && this.emptyColumn(target)) return this.clearSelection();
     if (this.slotClick(e)) return undefined;
     return this.closeList();
   },
@@ -458,6 +469,7 @@ export const CalendarCanvas = {
       if (!e.repeat) {
         this.closeExplainer();
         this.closeList();
+        this.clearSelection();
       }
       return undefined;
     }
@@ -472,6 +484,7 @@ export const CalendarCanvas = {
   },
 
   open(id, anchor) {
+    this.select(id);
     this.cancelMove({ announce: false });
     this.lastOpened = id;
     // Opened from a "+N" list, focus returns to its chip: the event itself may

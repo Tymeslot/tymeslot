@@ -14,7 +14,7 @@
  * move with no button held cancels; only the pointer that pressed counts.
  * The columns' position is read afresh on every move, and a scroll (or the
  * auto-scroll near the scroller's edge) re-runs the last move, so the block
- * stays under the pointer. Touch is left to the phone layout.
+ * stays under the pointer. Touch enters through touch_drag.js, which fills `this.press` after a long-press and calls `startDrag`.
  */
 import { DRAG_THRESHOLD, beginDrag, dragRange, draggable, previewBox, slotAt } from "../../calendar/drag.js";
 import { MINUTES_PER_DAY, formatMinutes, formatWall, isoFromDay, normaliseEvent, periodDays } from "../../calendar/time.js";
@@ -149,7 +149,9 @@ export const DragMixin = {
   followPointer() {
     if (!this.drag?.last) return;
     const geometry = this.gridGeometry();
-    this.drag.range = dragRange(this.drag.state, slotAt(this.drag.last, geometry), geometry.scale.firstMinute);
+    // A touch resize holds the edge from below it (touch_drag.js): shiftY puts the pointer back on the edge.
+    const { x, y } = this.drag.last;
+    this.drag.range = dragRange(this.drag.state, slotAt({ x, y: y + (this.drag.shiftY ?? 0) }, geometry), geometry.scale.firstMinute);
     this.drawDrag(geometry);
   },
 
