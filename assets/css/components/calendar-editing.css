@@ -144,9 +144,11 @@ button.cal-qc-chip:hover,
 }
 
 /* The native date or time input lies over its chip, so a tap on the chip
-   opens the browser's picker (the input takes no pointer events, so the
-   click reaches the chip, whose handler calls showPicker). Where showPicker is missing the hook hides the
-   chip and shows the input itself (.is-open), drawn as a chip. */
+   opens the browser's picker. With a mouse the input takes no pointer
+   events, so the click reaches the chip, whose handler calls showPicker; on
+   touch it takes the tap itself (see the coarse block below). Where
+   showPicker is missing the hook hides the chip and shows the input itself
+   (.is-open), drawn as a chip. */
 .cal-qc-chip-wrap {
   position: relative;
   display: inline-flex;

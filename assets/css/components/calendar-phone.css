@@ -212,11 +212,15 @@
     gap: 8px;
   }
 
-  .cal-qc-chip,
-  .cal-qc-native.is-open {
+  .cal-qc-chip {
     min-height: 44px;
     padding-inline: 14px;
     font-size: var(--font-size-sm);
+  }
+
+  .cal-qc-native.is-open {
+    min-height: 44px;
+    padding-inline: 14px;
   }
 
   span.cal-qc-chip {
@@ -230,7 +234,8 @@
   }
 
   .cal-qc-calendar select,
-  .cal-qc-native {
+  .cal-qc-native,
+  .cal-qc-native.is-open {
     font-size: var(--font-size-base);
   }
 }

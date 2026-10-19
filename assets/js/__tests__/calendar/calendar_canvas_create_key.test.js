@@ -150,3 +150,21 @@ test("late in the evening the grid moves to tomorrow when it is not in view", ()
   expect(hook.draft).toMatchObject({ allDay: false });
   expect(hook.date).toBe("2026-10-19");
 });
+
+test("quick create's native inputs are named, not hidden, only when the pointer is coarse", () => {
+  const coarse = (on) => vi.stubGlobal("matchMedia", (query) => ({ matches: on && query === "(pointer: coarse)" }));
+  const hidden = () => popover().querySelector('[data-qc-input="start"]').hasAttribute("aria-hidden");
+
+  coarse(true);
+  mountHook();
+  press(document.body, "c");
+  expect(hidden()).toBe(false);
+  unmountAll();
+  popover()?.remove();
+
+  coarse(false);
+  mountHook();
+  press(document.body, "c");
+  expect(hidden()).toBe(true);
+  vi.unstubAllGlobals();
+});

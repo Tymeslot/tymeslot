@@ -10,9 +10,10 @@
  * organiser has a meeting type to open. An event's chips are real controls:
  * date, start and end open the browser's own picker on a hidden input next
  * to each (on a coarse pointer that input takes the tap itself and is named
- * like its chip, `coarse` in the state), all day is a toggle and the calendar a select. Place and guests
- * come from the text and are shown, not edited, here. An opening hides the
- * field and shows its meeting type, date, start and end, and "Just this once
+ * like its chip, `coarse` in the state), all day is a toggle and the calendar
+ * a select. Place and guests come from the text and are shown, not edited,
+ * here. An opening hides the field and shows its meeting type, date, start
+ * and end, and "Just this once
  * | Every week". Every value the organiser typed is escaped.
  */
 import { colour, dateLabel, escapeHtml } from "./render.js";
