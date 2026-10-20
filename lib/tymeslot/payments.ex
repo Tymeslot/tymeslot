@@ -153,6 +153,13 @@ defmodule Tymeslot.Payments do
   defdelegate charge_invoice(charge_id), to: ChargeInvoice, as: :for_charge_id
 
   @doc """
+  As `charge_invoice/1`, for a charge the caller already holds (a webhook
+  body or an API read), so the charge itself is not read again.
+  """
+  @spec invoice_for_charge(map()) :: {:ok, ChargeInvoice.t()} | {:error, term()}
+  defdelegate invoice_for_charge(charge), to: ChargeInvoice, as: :for_charge
+
+  @doc """
   Records a checkout session's outcome against its transaction row, attaching
   the subscription it produced.
   """

@@ -81,7 +81,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     # Check if refund exceeds threshold before revoking access. Computed up
     # front (it depends only on the charge, not on a local subscription
     # lookup) so the broadcast below can carry the decision instead of
-    # leaving the SaaS consumer to re-derive — or skip — it.
+    # leaving the configured payment-event handler to re-derive (or skip) it.
     should_revoke = should_revoke_access?(total_refunded, charge_amount)
 
     Logger.info("Refund received",
