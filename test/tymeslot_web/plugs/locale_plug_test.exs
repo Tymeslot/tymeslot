@@ -137,25 +137,25 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
     end
 
     test "handles multiple languages with quality scores", %{conn: conn} do
-      # es has the highest quality but is unsupported, so it is skipped in favour
+      # ja has the highest quality but is unsupported, so it is skipped in favour
       # of the highest-quality supported language (de over en).
       conn =
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_req_header("accept-language", "es;q=0.9,de;q=0.8,en;q=0.7")
+        |> put_req_header("accept-language", "ja;q=0.9,de;q=0.8,en;q=0.7")
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"
     end
 
     test "picks first supported language from list", %{conn: conn} do
-      # es is not supported, so should fall to de
+      # ja is not supported, so should fall to de
       conn =
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_req_header("accept-language", "es,de,en")
+        |> put_req_header("accept-language", "ja,de,en")
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"
