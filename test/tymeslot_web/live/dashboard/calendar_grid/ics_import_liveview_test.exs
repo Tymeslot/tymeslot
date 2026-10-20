@@ -46,6 +46,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
   END:VCALENDAR\r
   """
 
+  @mixed_refusals """
+  BEGIN:VCALENDAR\r
+  VERSION:2.0\r
+  BEGIN:VEVENT\r
+  UID:one@example.com\r
+  SUMMARY:Dentist\r
+  DTSTART:20261105T090000Z\r
+  DTEND:20261105T093000Z\r
+  END:VEVENT\r
+  BEGIN:VEVENT\r
+  UID:two@example.com\r
+  SUMMARY:Standup\r
+  DTSTART:20261102T090000Z\r
+  DTEND:20261102T091500Z\r
+  RRULE:FREQ=WEEKLY;COUNT=4\r
+  END:VEVENT\r
+  BEGIN:VEVENT\r
+  UID:three@example.com\r
+  SUMMARY:Month close\r
+  DTSTART:20261231T090000Z\r
+  DTEND:20261231T100000Z\r
+  RRULE:FREQ=MONTHLY\r
+  END:VEVENT\r
+  BEGIN:VEVENT\r
+  UID:four@example.com\r
+  SUMMARY:Review\r
+  DTSTART:20261106T090000Z\r
+  DTEND:20261106T100000Z\r
+  END:VEVENT\r
+  END:VCALENDAR\r
+  """
+
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     _profile = insert(:profile, user: user, timezone: "Etc/UTC")
@@ -491,10 +523,53 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.IcsImportLiveviewTest do
       ref = Process.monitor(task)
       assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
 
-      html = settle(lv)
+      text = lv |> settle() |> Floki.parse_document!() |> Floki.text()
 
-      assert html =~
-               "1 event could not be imported. (Dentist) 1 of them repeats on a day some months"
+      assert text =~
+               "1 event repeats in a way Outlook can't store, so it was not imported. 1 of them repeats on a day some months"
+
+      refute text =~ "could not be imported"
+    end
+
+    # Both refusals are Outlook having no way to store how a series repeats,
+    # so they share one line; only the calendar's own failure is a failure.
+    test "reports a month-end series with the rules Outlook can't store, apart from failures",
+         %{conn: conn} do
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn
+        %{summary: "Dentist"}, _context ->
+          send(test_pid, {:task, self()})
+          {:error, :server_error}
+
+        %{summary: "Standup"}, _context ->
+          {:error, :rule_not_supported_by_outlook}
+
+        %{summary: "Month close"}, _context ->
+          {:error, :day_missing_in_some_months}
+
+        data, _context ->
+          {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_import(lv)
+      upload(lv, @mixed_refusals)
+      start_import(lv)
+
+      assert_receive {:task, task}, @task_timeout
+      ref = Process.monitor(task)
+      assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
+
+      text = lv |> settle() |> Floki.parse_document!() |> Floki.text()
+
+      assert text =~ "Imported 1 event."
+      assert text =~ "1 event could not be imported. (Dentist)"
+
+      assert text =~
+               "2 events repeat in a way Outlook can't store, so they were not imported. 1 of them repeats on a day some months"
+
+      assert length(String.split(text, "could not be imported")) == 2
     end
   end
 
