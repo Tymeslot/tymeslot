@@ -403,6 +403,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         uploads={@uploads}
         accounts={@accounts}
         open_menu={@open_menu}
+        command={@command}
         target={@myself}
       />
       <SurfaceModals.modals

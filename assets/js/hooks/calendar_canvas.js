@@ -52,6 +52,7 @@
  */
 import { applyPayload, emptyCache, eventsForDays, isLoaded } from "../calendar/cache.js";
 import { BookableMixin } from "./calendar_canvas/bookable.js";
+import { CommandMixin } from "./calendar_canvas/command.js";
 import { CreateMixin } from "./calendar_canvas/create.js";
 import { DragMixin } from "./calendar_canvas/drag.js";
 import { DraftMixin } from "./calendar_canvas/draft.js";
@@ -112,6 +113,7 @@ export const CalendarCanvas = {
   ...GesturesMixin,
   ...ListMixin,
   ...PowerKeysMixin,
+  ...CommandMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -145,6 +147,7 @@ export const CalendarCanvas = {
     this.mountTouchDrag();
     this.mountGestures();
     this.mountPowerKeys();
+    this.mountCommand();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -192,6 +195,7 @@ export const CalendarCanvas = {
     this.destroyTouchDrag();
     this.destroyGestures();
     this.destroyPowerKeys();
+    this.destroyCommand();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);

@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   @moduledoc """
-  The calendar surface's single toolbar row: Create, Today, previous and next, the
-  period title (which opens a date picker), the view switch and display
-  options. Rare actions (import, refresh, settings) stay out of it, as the
-  spec asks.
+  The calendar surface's single toolbar row: Create, Today, previous and
+  next, the period title (which opens a date picker), search (which opens
+  the command bar), the view switch and display options. Rare actions
+  (import, refresh, settings) stay out of it, as the spec asks.
 
   Navigation controls use `Navigation.js/3`, so the grid redraws in the
   browser in the same click that patches the URL.
@@ -149,6 +149,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         </:panel>
       </.dropdown>
       <div class="flex-1"></div>
+      <.icon_button
+        id="calendar-search"
+        icon="hero-magnifying-glass"
+        size={:sm}
+        label={dgettext("dashboard_calendar_power", "Search and commands")}
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
+        phx-click={JS.dispatch("calendar:command-open", to: "#calendar-canvas")}
+      />
       <FilterChip.filter_chip
         hidden_count={@hidden_count}
         set_name={@set_name}

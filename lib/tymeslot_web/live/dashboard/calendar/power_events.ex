@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
 
   import Phoenix.Component, only: [assign: 2]
 
+  alias TymeslotWeb.Dashboard.Calendar.CommandSearch
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
@@ -35,12 +36,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
     "calendar:edit_set" => SetEvents,
     "calendar:cancel_set_edit" => SetEvents,
     "calendar:save_set" => SetEvents,
-    "calendar:delete_set" => SetEvents
+    "calendar:delete_set" => SetEvents,
+    "calendar:command_query" => CommandSearch,
+    "calendar:command_close" => CommandSearch
   }
 
   # The power layer's `start_async/3` work: the task's name, then the module
   # whose `async/3` takes its result.
-  @async %{ics_import_plan: IcsImport}
+  @async %{ics_import_plan: IcsImport, command_search: CommandSearch}
 
   @doc "The events `handle/3` answers."
   @spec events() :: [String.t()]
@@ -71,7 +74,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
         calendar_sets: [],
         active_set: nil,
         manual_hidden_keys: MapSet.new(),
-        set_editor: nil
+        set_editor: nil,
+        command: CommandSearch.empty()
       )
 
   # The `send_update/3` actions of the power layer, which

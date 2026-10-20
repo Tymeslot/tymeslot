@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   @moduledoc """
   The calendar's header on a phone, in place of the toolbar: previous, the
-  period (which opens `DateSheet`), next, Today and Calendars (which turns
-  amber with the active set's name, or a count while calendars are hidden),
-  each at least 44px.
+  period (which opens `DateSheet`), next, search (the command bar), Today
+  and Calendars (which turns amber with the active set's name, or a count
+  while calendars are hidden), each at least 44px.
   Rendered at every width and shown only below 40rem (`sm:hidden`), where
   the toolbar is hidden (`max-sm:hidden`), so a phone's first paint is
   right before any script runs. Its controls navigate like the toolbar's
@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PeriodLabels
@@ -74,6 +75,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         phx-click={Navigation.js(@view, Period.shift(@view, @date, 1), step: 1)}
       >
         <.icon name="hero-chevron-right" class="h-5 w-5" />
+      </button>
+      <button
+        type="button"
+        id="calendar-phone-search"
+        class={@control}
+        aria-label={dgettext("dashboard_calendar_power", "Search and commands")}
+        aria-haspopup="dialog"
+        phx-click={JS.dispatch("calendar:command-open", to: "#calendar-canvas")}
+      >
+        <.icon name="hero-magnifying-glass" class="h-5 w-5" />
       </button>
       <button
         type="button"
