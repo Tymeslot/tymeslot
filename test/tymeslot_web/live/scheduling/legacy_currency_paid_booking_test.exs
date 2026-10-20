@@ -22,10 +22,12 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -145,15 +147,30 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
   end
 
   @tag :capture_log
-  test "a zero-decimal legacy currency is refused before any meeting is made",
+  test "a zero-decimal legacy currency is not offered on the booking page",
        %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
     legacy_account(user, "jpy")
+
+    assert {:error, {:redirect, %{to: to}}} =
+             live(conn, "/#{profile.username}/#{MeetingTypes.effective_slug(meeting_type)}")
+
+    assert to == "/#{profile.username}"
+  end
+
+  # The page leaves such a type out, but one already open when the account
+  # changes still reaches the submit, which refuses it.
+  @tag :capture_log
+  test "a zero-decimal legacy currency is refused before any meeting is made",
+       %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
+    account = legacy_account(user, "ron")
 
     expect(StripeAdapterMock, :create_checkout_session, 0, fn _params, _opts ->
       flunk("no checkout session may be created")
     end)
 
     view = navigate_to_booking_form(conn, profile, meeting_type)
+
+    account |> Changeset.change(default_currency: "jpy") |> Repo.update!()
 
     submit(view)
 
