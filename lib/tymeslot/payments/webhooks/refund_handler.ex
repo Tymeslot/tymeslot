@@ -42,6 +42,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.ChargeInvoice
   alias Tymeslot.Payments.Config
@@ -322,7 +323,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       other ->
         Logger.info("Latest refund not readable; sending the refund email",
           charge_id: charge["id"],
-          reason: inspect(other)
+          reason: LogFormat.reason(other)
         )
 
         nil
