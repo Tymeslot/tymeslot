@@ -3,8 +3,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
   The grid's write queue as plain data: the references it gives writes,
   how it waits for an event another driver is writing, and what it can
   still save for a later sync when it will never be driven to its end. The ordering itself is covered end to end by
-  `TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest` and
-  `SeriesHoldLiveViewTest`.
+  `TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest` and
+  `CalendarSurfaceWriteLendingTest`.
   """
 
   use ExUnit.Case, async: true

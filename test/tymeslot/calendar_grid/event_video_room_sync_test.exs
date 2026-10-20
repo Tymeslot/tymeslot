@@ -1,11 +1,11 @@
-defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
+defmodule Tymeslot.CalendarGrid.EventVideoRoomSyncTest do
   @moduledoc """
   What the calendar grid's own edits do to a Nextcloud Talk conversation made
   for one of its events: deleting the event deletes the conversation, moving it
   moves the conversation's lobby, moving it to another calendar keeps the
   conversation with it, and switching an event's video to Talk records the
-  conversation so it is deleted later. The grid's edits are driven through the
-  context that performs them, exactly as the LiveView drives them; only the
+  conversation so it is deleted later. The edits are driven through the
+  context that performs them, as the calendar's LiveView drives them; only the
   calendar provider and the HTTP client are stubbed.
   """
 
@@ -30,7 +30,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
 
   @rooms_path "/ocs/v2.php/apps/spreed/api/v4/room"
 
@@ -298,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       assert {:ok, _result} =
                Changes.delete_event(
                  user.id,
-                 NotificationFlows.build_delete_payload(synced, user.id, false)
+                 address(synced)
                )
 
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
@@ -371,12 +370,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       # Deleting one occurrence keeps the conversation the others still use.
       assert :ok =
                second
-               |> NotificationFlows.build_delete_payload(user.id, false)
+               |> address()
                |> CalendarGrid.delete_event_video_rooms()
 
       refute_enqueued(worker: VideoSyncWorker, args: %{"action" => "delete"})
       assert Repo.get(EventVideoRoomSchema, room.id)
     end
+  end
+
+  # What addresses an event for a delete, as the new calendar stores it with
+  # a scheduled delete (`Tymeslot.CalendarGrid.ScheduledDelete`).
+  defp address(event) do
+    Map.take(event, [
+      :uid,
+      :provider,
+      :calendar_integration_id,
+      :provider_event_id,
+      :provider_calendar_id,
+      :recurring_event_id,
+      :recurrence_rule
+    ])
   end
 
   defp create_grid_event(user, calendar, talk, extra \\ []) do

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
   @moduletag :live
 
   import TymeslotWeb.CalendarSurfaceHelpers
+  import Tymeslot.Factory, only: [insert: 2]
   import Phoenix.LiveView, only: [send_update: 3]
 
   alias Tymeslot.CalendarMock
@@ -170,6 +171,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     calendar_writes()
 
     create(lv, lunch("#{integration.id}:nowhere"))
+
+    assert_reply(lv, %{accepted: false, field: "calendar", error: "Choose one of your calendars."})
+
+    refute_receive {:created, _event_data}, 100
+  end
+
+  test "a draft for another organiser's calendar is refused, and nothing is written", %{
+    lv: lv
+  } do
+    calendar_writes()
+
+    stranger =
+      insert(:calendar_integration,
+        is_active: true,
+        provider: "google",
+        calendar_list: [%{"id" => "work", "name" => "Work", "selected" => true}]
+      )
+
+    create(lv, lunch("#{stranger.id}:work"))
 
     assert_reply(lv, %{accepted: false, field: "calendar", error: "Choose one of your calendars."})
 
