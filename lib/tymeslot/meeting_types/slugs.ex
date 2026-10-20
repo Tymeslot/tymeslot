@@ -10,6 +10,7 @@ defmodule Tymeslot.MeetingTypes.Slugs do
 
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.MeetingTypes.PaymentAccess
 
   @doc """
   Finds a meeting type by its effective slug.
@@ -18,7 +19,9 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   public listing but are still bookable through their direct link. An inactive
   type is therefore unreachable, which is what pauses a shared link when the
   organiser turns the type off. A paused group type
-  (`Tymeslot.MeetingTypes.GroupAccess`) is unreachable for the same reason.
+  (`Tymeslot.MeetingTypes.GroupAccess`) and a paid type whose host is not
+  accepting payments (`Tymeslot.MeetingTypes.PaymentAccess`) are unreachable
+  for the same reason.
   """
   @spec find_by_slug(integer(), String.t()) :: Ecto.Schema.t() | nil
   def find_by_slug(user_id, slug) do
@@ -26,6 +29,7 @@ defmodule Tymeslot.MeetingTypes.Slugs do
       user_id
       |> MeetingTypeQueries.list_active_meeting_types()
       |> GroupAccess.reject_paused()
+      |> PaymentAccess.reject_unsellable()
 
     # Prefer a type whose custom `slug` field is an exact match over one that
     # only matches via its name-derived slug. This prevents a public type from
