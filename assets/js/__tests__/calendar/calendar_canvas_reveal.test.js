@@ -104,6 +104,27 @@ test("on a phone the 3-day view is kept", async () => {
   expect(opened(hook)).toEqual([{ id: "event-3" }]);
 });
 
+test("a weekend event in a week without weekends is revealed in the day view", async () => {
+  const sat = event("event-sat", "Market", "2026-10-17T10:00", "2026-10-17T11:00");
+  const { hook } = mountHook(payload({ settings: { ...settings, show_weekends: false }, events: [sat] }));
+
+  hook.revealEvent({ ids: ["event-sat"], date: "2026-10-17", startMin: 600, allDay: false });
+  await tick();
+
+  expect(pushes(hook, "calendar:goto")).toEqual([{ view: "day", date: "2026-10-17" }]);
+});
+
+test("a date the shown period does not draw ends with the notice, not silence", async () => {
+  const { hook } = mountHook(payload({ settings: { ...settings, show_weekends: false } }));
+  withStrings(hook);
+  const reveal = { ids: ["event-sat"], date: "2026-10-17", view: "week", opened: hook.lastOpened };
+  hook.reveal = reveal;
+
+  hook.tryReveal(reveal, false);
+
+  expect(document.getElementById("calendar-notice").textContent).toContain(MISSED);
+});
+
 test("after six seconds without the event the hook gives up with a notice", async () => {
   vi.useFakeTimers();
   const { hook } = mountHook();

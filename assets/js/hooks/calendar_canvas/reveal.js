@@ -23,6 +23,7 @@ import { isTimeGrid, periodDays } from "../../calendar/time.js";
 
 const REVEAL_MS = 6000;
 const REVEAL_NOTICE = "reveal-missed";
+const isWeekend = (iso) => [0, 6].includes(new Date(`${iso}T00:00:00Z`).getUTCDay());
 
 export const RevealMixin = {
   mountReveal() {
@@ -37,6 +38,8 @@ export const RevealMixin = {
   revealEvent({ ids, date, startMin = null, allDay = false }) {
     if (!ids?.length || !date || !this.settings) return;
     this.endReveal();
+    // A weekend day has no column in a week without weekends: show it as a day.
+    if (this.viewFor(this.view) === "week" && !this.settings.show_weekends && isWeekend(date)) this.view = "day";
     const timeGrid = isTimeGrid(this.viewFor(this.view));
     if (timeGrid && needsNight(startMin, allDay, this.settings, this.nightOpen)) this.nightOpen = true;
     if (timeGrid && !allDay && startMin != null) {
@@ -47,7 +50,7 @@ export const RevealMixin = {
     this.gotoPeriod(this.view, date);
     // The same days needed no navigation: draw them again for the night and the scroll.
     if (!this.pending) this.render();
-    const reveal = { ids, date, opened: this.lastOpened };
+    const reveal = { ids, date, view: this.view, opened: this.lastOpened };
     this.reveal = reveal;
     this.revealTimer = setTimeout(() => this.tryReveal(reveal, true), REVEAL_MS);
     this.afterReveal();
@@ -68,13 +71,18 @@ export const RevealMixin = {
   tryReveal(reveal, final) {
     if (this.reveal !== reveal) return;
     if (this.quick || this.lastOpened !== reveal.opened) return this.endReveal();
-    if (this.settings && !this.pending && !this.revealDrawn(reveal.date)) return this.endReveal();
+    if (this.settings && !this.pending && !this.revealDrawn(reveal.date)) return this.revealShown(reveal) ? this.revealMissed() : this.endReveal();
     const target = this.settings && !this.drag && !this.createDrag ? revealTarget(this.el, reveal.ids, this.cache) : null;
     if (target?.node.isConnected) {
       this.endReveal();
       return this.openRevealed(target);
     }
     return final ? this.revealMissed() : undefined;
+  },
+
+  // Whether the organiser is still in the period the reveal asked for.
+  revealShown(reveal) {
+    return this.view === reveal.view && periodDays(this.view, this.date, this.settings.week_start, true).includes(reveal.date);
   },
 
   revealDrawn(date) {
