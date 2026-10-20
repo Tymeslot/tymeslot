@@ -8,8 +8,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest do
   LiveView's write guardian (`Tymeslot.CalendarGrid.WriteGuardian`).
 
   The calendar mock holds every write until the test releases it, so the
-  tests decide when, and how, each write answers. Ported from the old
-  calendar's `EventWriteOrderTest`.
+  tests decide when, and how, each write answers.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -89,6 +88,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest do
 
       assert settled(lv) =~ "Failed to update event"
 
+      # The panel keeps the change that is still being written and has put
+      # back the title the calendar refused.
+      assert has_element?(lv, "#calendar-panel-title[value='Team Standup']")
+      assert has_element?(lv, "#calendar-panel-location[value='Room 9']")
+
       answer(second, :ok)
       settled(lv)
 
@@ -158,6 +162,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest do
     answer(write, {:error, :unauthorized})
 
     assert settled(lv) =~ "Failed to update event"
+    assert has_element?(lv, "#calendar-panel-title[value='Team Standup']")
     assert cached(integration, standup).summary == "Team Standup"
   end
 

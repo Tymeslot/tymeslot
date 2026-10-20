@@ -7,8 +7,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
   those writes left it (see "A grid mounted in another LiveView" in
   `Tymeslot.CalendarGrid.WriteGuardian`).
 
-  The calendar mock holds every write until the test releases it. Ported
-  from the old calendar's `EventWriteLendingTest`.
+  The calendar mock holds every write until the test releases it.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -73,6 +72,99 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
     answer(third, :ok)
     settled(lv)
     refute_receive {:write_started, _pid, _uid, _payload}, 200
+  end
+
+  # The new tab's guardian drives its own queue; the old guardian, killed
+  # outright after the new tab is gone too, still has its kept edit started by
+  # whoever is left.
+  test "an edit kept by a calendar that is gone starts once the old guardian is killed outright",
+       %{conn: conn, standup: standup} do
+    old_lv = open_event(conn, standup)
+    rename(old_lv, "First title")
+    assert_receive {:write_started, first, _uid, %{summary: "First title"}}, @write_timeout
+
+    old_guardian = WriteGuardian.whereis(old_lv.pid)
+    kill(old_lv)
+
+    lv = open_event(conn, standup)
+    rename(lv, "Third title")
+
+    # The new calendar's guardian now drives its queue.
+    kill(lv)
+    refute_receive {:write_started, _pid, _uid, _payload}, 200
+
+    Process.exit(old_guardian, :kill)
+
+    assert_receive {:write_started, kept, _uid, %{summary: "Third title"}}, @write_timeout
+    answer(kept, :ok)
+    answer(first, :ok)
+
+    refute_receive {:write_started, _pid, _uid, _payload}, 200
+  end
+
+  # A write to the whole series is refused while another LiveView is still
+  # writing one occurrence of it: that occurrence's write could land after it
+  # and undo it.
+  describe "a change to a whole series while another tab writes one occurrence" do
+    @series_busy "A change to this series is still saving. Please make this change once it has saved."
+
+    setup %{conn: conn, integration: integration, standup: standup} do
+      # `standup` is a plain event; the series is two other occurrences.
+      _ = standup
+
+      first =
+        event(integration, "work", "Retro", ~U[2026-10-15 09:00:00Z], 30,
+          recurring_event_id: "retro-series",
+          uid: "retro-series_20261015T090000Z"
+        )
+
+      second =
+        event(integration, "work", "Retro", ~U[2026-10-22 09:00:00Z], 30,
+          recurring_event_id: "retro-series",
+          uid: "retro-series_20261022T090000Z"
+        )
+
+      # The other tab writes the second occurrence and stays busy with it.
+      other_tab = open_event(conn, second)
+      rename(other_tab, "Retro, renamed")
+      other_tab |> element("#calendar-scope-this_only") |> render_click()
+      assert_receive {:write_started, writing, _uid, %{summary: "Retro, renamed"}}, @write_timeout
+
+      %{first: first, writing: writing, other_tab: other_tab}
+    end
+
+    test "a move of the whole series is refused, and nothing is written", %{
+      conn: conn,
+      first: first
+    } do
+      {:ok, lv, _html} = live(conn, "/dashboard/calendar")
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:move", %{
+        "id" => "event-#{first.id}",
+        "start" => "2026-10-15T11:00",
+        "end" => "2026-10-15T11:30"
+      })
+
+      lv |> element("#calendar-scope-all") |> render_click()
+
+      assert settled(lv) =~ @series_busy
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
+
+    test "a change from the panel to the whole series is refused, and nothing is written", %{
+      conn: conn,
+      first: first
+    } do
+      lv = open_event(conn, first)
+
+      rename(lv, "Retro, again")
+      lv |> element("#calendar-scope-all") |> render_click()
+
+      assert settled(lv) =~ @series_busy
+      refute_receive {:write_started, _pid, _uid, _payload}, 200
+    end
   end
 
   # After a short drop the server often notices the old connection only at

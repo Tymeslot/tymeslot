@@ -4,7 +4,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
   how it waits for an event another driver is writing, and what it can
   still save for a later sync when it will never be driven to its end. The ordering itself is covered end to end by
   `TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest` and
-  `CalendarSurfaceWriteLendingTest`.
+  `CalendarSurfaceWriteLendingTest` (which also covers a write to a whole
+  series refused while another tab writes one occurrence).
   """
 
   use ExUnit.Case, async: true
