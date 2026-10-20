@@ -102,11 +102,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
     # Extract properties
     uid = extract_property(lines, "UID")
-    summary = extract_property(lines, "SUMMARY")
-    description = extract_property(lines, "DESCRIPTION")
-    location = extract_property(lines, "LOCATION")
-    organizer = extract_organizer(lines)
-    attendees = extract_attendees(lines)
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
     exdates = extract_exdates(lines, vtimezones)
@@ -124,13 +119,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       end
 
     if uid && start_time do
-      %{
+      lines
+      |> descriptive_properties()
+      |> Map.merge(%{
         uid: uid,
-        summary: summary,
-        description: description,
-        location: location,
-        organizer: organizer,
-        attendees: attendees,
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
         recurrence_id_range: extract_recurrence_id_range(lines),
@@ -160,22 +152,33 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         floating: floating?(dtstart),
         # The event's VALARMs, as written: each alarm's ACTION and TRIGGER,
         # which the normaliser maps to the reminders it can represent.
-        valarm: extract_alarms(subcomponents),
-        transparency: normalize_transp(extract_property(lines, "TRANSP")),
-        status: extract_property(lines, "STATUS"),
-        class: extract_property(lines, "CLASS"),
-        colour:
-          extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
-      }
+        valarm: extract_alarms(subcomponents)
+      })
     else
       Logger.debug("Skipping event with missing required fields",
         uid: uid,
-        summary: summary,
+        summary: extract_property(lines, "SUMMARY"),
         has_start: !is_nil(start_time)
       )
 
       nil
     end
+  end
+
+  # What the event says about itself, beside its identity and timing.
+  defp descriptive_properties(lines) do
+    %{
+      summary: extract_property(lines, "SUMMARY"),
+      description: extract_property(lines, "DESCRIPTION"),
+      location: extract_property(lines, "LOCATION"),
+      organizer: extract_organizer(lines),
+      attendees: extract_attendees(lines),
+      transparency: normalize_transp(extract_property(lines, "TRANSP")),
+      status: extract_property(lines, "STATUS"),
+      class: extract_property(lines, "CLASS"),
+      colour:
+        extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
+    }
   end
 
   # A VEVENT's subcomponents (its VALARMs, and RFC 9073's PARTICIPANT or
