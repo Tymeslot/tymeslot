@@ -73,7 +73,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
     MeetingEmails.with_meeting(meeting_id, "reschedule emails", fn meeting ->
       case overtaken(meeting, args) do
         nil ->
-          send_reschedule_emails(meeting, Map.get(args, "original"), job_id)
+          send_reschedule_emails(meeting, args, job_id)
 
         reason ->
           Logger.info("Skipping reschedule emails overtaken by a later change",
@@ -111,8 +111,9 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   # Each copy, the organiser's, the attendee's and each guest's, is claimed
   # for the job, so the guests are told on this run whatever became of the
   # participants' copies, and a retry writes only to whoever was missed.
-  defp send_reschedule_emails(meeting, original, job_id) do
-    content = content(meeting, original)
+  defp send_reschedule_emails(meeting, args, job_id) do
+    original = Map.get(args, "original")
+    content = meeting |> content(original) |> put_moved_by(args["moved_by"])
     service = Config.email_service_module()
 
     participants =
@@ -146,6 +147,12 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
       attendee_video_url: original["attendee_video_url"]
     })
   end
+
+  # A move the host made in their own calendar
+  # (`Tymeslot.Bookings.FollowCalendar.execute/4`): the organiser's copy
+  # says so rather than naming the attendee.
+  defp put_moved_by(content, "host"), do: Map.put(content, :moved_by, :host)
+  defp put_moved_by(content, _attendee), do: content
 
   defp parse_datetime(iso) when is_binary(iso) do
     {:ok, datetime, _offset} = DateTime.from_iso8601(iso)
