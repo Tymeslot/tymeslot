@@ -118,6 +118,13 @@ describe("opening and closing", () => {
     expect(isOpen()).toBe(true);
   });
 
+  test("a held Ctrl K is swallowed without changing the bar", () => {
+    mountWithBar();
+    const e = press(document.body, "k", { ctrlKey: true, repeat: true });
+    expect(e.defaultPrevented).toBe(true);
+    expect(isOpen()).toBe(false);
+  });
+
   test("Ctrl K over quick create cancels it and opens the bar", () => {
     const { hook } = mountWithBar();
     hook.quickCreateNext();
@@ -219,6 +226,48 @@ describe("rows", () => {
     expect(pushes(hook, "calendar:goto")).toEqual([{ view: "week", date: "2026-10-28" }]);
   });
 
+  test("keys with focus outside the bar send it back to the input, and aria-expanded follows the rows", () => {
+    const { input, results } = mountWithBar();
+    open();
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+    results.innerHTML = result("event-1", "2026-10-21");
+    press(input, "ArrowDown");
+    expect(input.getAttribute("aria-expanded")).toBe("true");
+
+    const outside = document.getElementById("outside-field");
+    outside.focus();
+    const e = press(outside, "Tab");
+
+    expect(e.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(input);
+  });
+
+  test("a mousedown on the panel's dead space keeps focus; on the input it does not interfere", () => {
+    const { bar, input } = mountWithBar();
+    open();
+    bar.querySelector("form").classList.add("cal-command-panel");
+    const dead = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    bar.querySelector("form").dispatchEvent(dead);
+    const onInput = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    input.dispatchEvent(onInput);
+    expect(dead.defaultPrevented).toBe(true);
+    expect(onInput.defaultPrevented).toBe(false);
+  });
+
+  test("Enter ignores server rows while a search is running", () => {
+    const { hook, input, results } = mountWithBar();
+    open();
+    results.setAttribute("aria-busy", "true");
+    results.innerHTML = result("event-1", "2026-10-21");
+    press(input, "Enter");
+    expect(isOpen()).toBe(true);
+    expect(pushes(hook, "calendar:goto")).toEqual([]);
+
+    results.setAttribute("aria-busy", "false");
+    press(input, "Enter");
+    expect(isOpen()).toBe(false);
+  });
+
   test("Tab and Shift Tab stay inside the bar", () => {
     const { bar, input } = mountWithBar();
     open();
@@ -239,5 +288,6 @@ test("the stylesheet keeps the bar closed until data-open, above sheets and belo
 
   expect(css).toMatch(/\.cal-command:not\(\[data-open\]\)\s*\{\s*display:\s*none;/);
   expect(css).toMatch(/\.cal-command\s*\{[^}]*z-index:\s*var\(--cal-z-command\)/);
+  expect(css).toMatch(/height:\s*calc\(100dvh - var\(--cal-kb-inset, 0px\)\)/);
   expect(variables).toMatch(/--cal-z-command:\s*80;/);
 });

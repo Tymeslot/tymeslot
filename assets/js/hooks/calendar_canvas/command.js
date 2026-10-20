@@ -48,6 +48,10 @@ export const CommandMixin = {
     };
     this.commandOpenEvent = () => this.openCommand();
     this.commandClick = (e) => this.commandClicked(e);
+    // A click on the panel's dead space must not pull focus out of the input.
+    this.commandMouseDown = (e) => {
+      if (this.commandOpen() && e.target?.closest?.(".cal-command-panel") && !e.target.closest(`${FOCUSABLE}, ${OPTION}`)) e.preventDefault();
+    };
     this.commandTyped = (e) => {
       if (e.target.id !== "calendar-command-input") return;
       this.commandActive = null;
@@ -57,12 +61,13 @@ export const CommandMixin = {
     document.addEventListener("keydown", this.commandCapture, true);
     document.addEventListener("keydown", this.commandSlash);
     document.addEventListener("click", this.commandClick);
+    document.addEventListener("mousedown", this.commandMouseDown);
     document.addEventListener("input", this.commandTyped);
     this.el.addEventListener("calendar:command-open", this.commandOpenEvent);
     const bar = this.commandBar();
     if (bar && typeof MutationObserver !== "undefined") {
       this.commandObserver = new MutationObserver(() => this.syncActive());
-      this.commandObserver.observe(bar, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected", "aria-activedescendant"] });
+      this.commandObserver.observe(bar, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected", "aria-activedescendant", "aria-expanded"] });
     }
   },
 
@@ -70,6 +75,7 @@ export const CommandMixin = {
     document.removeEventListener("keydown", this.commandCapture, true);
     document.removeEventListener("keydown", this.commandSlash);
     document.removeEventListener("click", this.commandClick);
+    document.removeEventListener("mousedown", this.commandMouseDown);
     document.removeEventListener("input", this.commandTyped);
     this.el.removeEventListener("calendar:command-open", this.commandOpenEvent);
     this.commandObserver?.disconnect();
@@ -94,9 +100,10 @@ export const CommandMixin = {
 
   commandCaptureKey(e) {
     if (isCommandKey(e)) {
-      if (e.repeat || e.isComposing || this.drag || this.createDrag || coreModalOpen()) return;
+      // Taken before the guards, so a held Ctrl K never reaches the browser's own search.
       e.preventDefault();
       e.stopPropagation();
+      if (e.repeat || e.isComposing || this.drag || this.createDrag || coreModalOpen()) return;
       if (this.commandOpen()) this.closeCommand();
       else this.openCommand();
       return;
@@ -108,20 +115,23 @@ export const CommandMixin = {
       this.closeCommand();
       return;
     }
-    if (!e.target?.closest?.("#calendar-command")) return;
     if (STEPS[e.key] || e.key === "Home" || e.key === "End" || e.key === "Tab") {
       e.preventDefault();
       e.stopPropagation();
-      if (e.key === "Tab") this.cycleCommandFocus(e.shiftKey ? -1 : 1);
+      const inside = e.target?.closest?.("#calendar-command");
+      if (!inside) this.commandField()?.focus({ preventScroll: true });
+      else if (e.key === "Tab") this.cycleCommandFocus(e.shiftKey ? -1 : 1);
       else if (STEPS[e.key]) this.moveActive(STEPS[e.key]);
       else this.setActive(e.key === "Home" ? this.commandRows()[0] : this.commandRows().at(-1));
       return;
     }
     // Enter on the close button is the button's own.
-    if (e.key === "Enter" && !e.target.closest("[data-command-close]")) {
+    if (e.key === "Enter" && e.target?.closest?.("#calendar-command") && !e.target.closest("[data-command-close]")) {
       e.preventDefault();
       e.stopPropagation();
-      const rows = this.commandRows();
+      // Server rows wait for a search still running; the hook's own rows never do.
+      const busy = document.getElementById("calendar-command-results")?.getAttribute("aria-busy") === "true";
+      const rows = this.commandRows().filter((row) => !busy || !row.closest("#calendar-command-results"));
       this.runRow(rows.find((row) => row.id === this.commandActive) ?? rows[0]);
     }
   },
@@ -197,6 +207,8 @@ export const CommandMixin = {
     }
     const field = this.commandField();
     if (!field) return;
+    const expanded = String(rows.length > 0);
+    if (field.getAttribute("aria-expanded") !== expanded) field.setAttribute("aria-expanded", expanded);
     if (this.commandActive && field.getAttribute("aria-activedescendant") !== this.commandActive) field.setAttribute("aria-activedescendant", this.commandActive);
     else if (!this.commandActive && field.hasAttribute("aria-activedescendant")) field.removeAttribute("aria-activedescendant");
   },

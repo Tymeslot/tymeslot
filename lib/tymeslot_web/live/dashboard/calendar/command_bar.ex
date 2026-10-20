@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandBar do
             type="text"
             value={@command.query}
             role="combobox"
-            aria-expanded="true"
+            aria-expanded="false"
             aria-controls="calendar-command-list"
             aria-autocomplete="list"
             aria-labelledby="calendar-command-label"
@@ -163,6 +163,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandBar do
     </div>
     """
   end
+
+  defp status(%{error: true}),
+    do: dgettext("dashboard_calendar_power", "Search failed. Try again.")
 
   defp status(%{loading: true}), do: dgettext("dashboard_calendar_power", "Searching…")
 

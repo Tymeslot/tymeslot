@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandSearch do
 
   @doc "The `command` assign of a closed or empty bar."
   @spec empty() :: map()
-  def empty, do: %{query: "", events: [], bookings: [], loading: false}
+  def empty, do: %{query: "", events: [], bookings: [], loading: false, error: false}
 
   @doc "Answers `calendar:command_query` and `calendar:command_close`."
   @spec handle(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
@@ -73,7 +73,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandSearch do
     %{events: events, bookings: bookings} = rows(hits, socket.assigns)
 
     {:noreply,
-     assign(socket, :command, %{query: query, events: events, bookings: bookings, loading: false})}
+     assign(socket, :command, %{
+       query: query,
+       events: events,
+       bookings: bookings,
+       loading: false,
+       error: false
+     })}
   end
 
   def async(:command_search, {:ok, _stale}, socket), do: {:noreply, socket}
@@ -82,7 +88,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandSearch do
     if reason != {:shutdown, :cancel},
       do: Logger.warning("Calendar search failed", reason: LogFormat.reason(reason))
 
-    {:noreply, assign(socket, :command, %{socket.assigns.command | loading: false})}
+    {:noreply,
+     assign(socket, :command, %{
+       socket.assigns.command
+       | events: [],
+         bookings: [],
+         loading: false,
+         error: reason != {:shutdown, :cancel}
+     })}
   end
 
   @doc "The bar's rows for `hits` (see `CalendarGrid.search_calendar/5`), in the organiser's zone and clock."
@@ -119,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandSearch do
       now = Clock.utc_now()
 
       socket
-      |> assign(:command, %{socket.assigns.command | query: query, loading: true})
+      |> assign(:command, %{socket.assigns.command | query: query, loading: true, error: false})
       |> start_async(
         :command_search,
         Tasks.with_context(fn ->

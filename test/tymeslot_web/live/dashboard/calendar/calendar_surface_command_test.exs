@@ -183,4 +183,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCommandTest do
     refute status(lv) =~ "Searching"
     assert has_element?(lv, "#calendar-command-input[value='']")
   end
+
+  describe "CommandSearch.async/3" do
+    alias TymeslotWeb.Dashboard.Calendar.CommandSearch
+
+    defp socket(command),
+      do: %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, command: command}}
+
+    test "a failed search clears the rows and flags the error" do
+      command = %{CommandSearch.empty() | query: "design", loading: true, events: [:old]}
+
+      {:noreply, socket} = CommandSearch.async(:command_search, {:exit, :boom}, socket(command))
+
+      assert %{events: [], bookings: [], loading: false, error: true} = socket.assigns.command
+    end
+
+    test "a cancelled search is not an error" do
+      {:noreply, socket} =
+        CommandSearch.async(
+          :command_search,
+          {:exit, {:shutdown, :cancel}},
+          socket(%{CommandSearch.empty() | loading: true})
+        )
+
+      assert socket.assigns.command.error == false
+    end
+
+    test "an answer to an older query changes nothing" do
+      command = %{CommandSearch.empty() | query: "planning", loading: true}
+
+      {:noreply, socket} =
+        CommandSearch.async(
+          :command_search,
+          {:ok, {"design", %{events: [], bookings: []}}},
+          socket(command)
+        )
+
+      assert socket.assigns.command == command
+    end
+  end
 end
