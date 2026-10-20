@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @moduledoc """
   The preview that opens when an event on the grid is clicked:
-  which calendar it sits in, when it is (with how far away), where, who and how each has answered (`PreviewGuests`),
-  whether guests can book over it, and whether it is still waiting to sync.
+  which calendar it sits in, when it is (with how far away), where, who and
+  how each has answered (`PreviewGuests`), whether guests can book over it,
+  and whether it is still waiting to sync.
 
   Rendered by LiveView rather than by the hook from payload data: it needs
   translated, locale-formatted text and rules only the server holds (account

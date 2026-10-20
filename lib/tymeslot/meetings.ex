@@ -109,15 +109,10 @@ defmodule Tymeslot.Meetings do
     to: MeetingListQueries,
     as: :preload_live_participants
 
-  @doc """
-  `meeting` (or each of a list of meetings) with the guests whose invitation
-  still stands loaded into `:guests`, oldest first.
-  """
-  @spec with_live_guests(MeetingSchema.t()) :: MeetingSchema.t()
-  @spec with_live_guests([MeetingSchema.t()]) :: [MeetingSchema.t()]
-  defdelegate with_live_guests(meeting),
-    to: MeetingListQueries,
-    as: :preload_live_guests
+  @doc "`with_live_participants/1` and the guests whose invitation still stands, in one preload."
+  @spec with_live_people(MeetingSchema.t()) :: MeetingSchema.t()
+  @spec with_live_people([MeetingSchema.t()]) :: [MeetingSchema.t()]
+  defdelegate with_live_people(meeting), to: MeetingListQueries, as: :preload_live_people
 
   @doc """
   Sets `capacity` on a meeting type's future, live group meetings so they

@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.RailSets
+  alias TymeslotWeb.Dashboard.Calendar.ReloadQueue
   alias TymeslotWeb.Dashboard.Calendar.ShortcutHelp
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -64,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Visibility
   alias TymeslotWeb.Dashboard.Calendar.Writes
 
-  @reload_delay 250
+  @reload_delay ReloadQueue.delay()
 
   # `calendar:*` events answered by `SurfaceBookingEvents` (every `booking:*`
   # event goes there too).
@@ -83,15 +84,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @power_updates PowerEvents.update_actions()
   @power_async PowerEvents.async_keys()
 
-  # The parent's refresh messages (see `CalendarEventHandlers`): a sync
-  # finished, events changed elsewhere, a refresh fell back on its timer, or
-  # a guest answered an invitation (a booking's guests load with the events).
-  @refresh_actions [
-    :events_updated,
-    :integration_synced,
-    :refresh_events,
-    :refresh_guest_summaries
-  ]
+  @refresh_actions ReloadQueue.refresh_actions()
 
   # What each prompt can send; the module that acts on it parses it again.
   @timing_scopes ~w(this_only following all)
@@ -236,13 +229,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
        |> Viewport.adopt_hint()
        |> SurfaceData.sync()}
 
-  defp schedule_reload(%{assigns: %{pending_reload: nil}} = socket, action) do
-    send_update_after(__MODULE__, [id: socket.assigns.id, action: :reload], @reload_delay)
-    assign(socket, :pending_reload, scope(action))
-  end
-
-  defp schedule_reload(%{assigns: %{pending_reload: scope}} = socket, action),
-    do: assign(socket, :pending_reload, widest(scope, scope(action)))
+  defp schedule_reload(socket, action), do: ReloadQueue.schedule(socket, __MODULE__, action)
 
   defp schedule_bookable(%{assigns: %{bookable_pending: true}} = socket), do: socket
 
@@ -276,12 +263,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # A video change that changed nothing (see `PanelVideo.unchanged/2`).
   defp unchanged_video(socket, ref, :unchanged), do: PanelVideo.unchanged(socket, ref)
   defp unchanged_video(socket, _ref, _outcome), do: socket
-
-  defp scope(action) when action in [:events_updated, :refresh_guest_summaries], do: :events
-  defp scope(_action), do: :full
-
-  defp widest(:full, _scope), do: :full
-  defp widest(_scope, other), do: other
 
   @impl Phoenix.LiveComponent
   def render(assigns) do

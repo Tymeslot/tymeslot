@@ -1,12 +1,14 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   @moduledoc """
-  The side panel's Guests row: a row per guest with their answer (`GuestReplies`, `GuestStatusPill`) and a remove button, and
-  an email field with Invite. In the edit mode (`guests_row/1`) both act at
+  The side panel's Guests row: a row per guest with their answer
+  (`GuestReplies`, `GuestStatusPill`) and a remove button, and an email
+  field with Invite. In the edit mode (`guests_row/1`) both act at
   once, emailing the guest concerned (`PanelGuests`); in the new-event mode
   (`draft_guests/1`) they only change the draft, and nobody is emailed until
   "Create and invite". On an event someone else organises the edit mode
-  lists the guests without either control, since both email them. Also the "Guests haven't been told" note
-  (`untold_note/1`) the panel shows below its header.
+  lists the guests without either control, since both email them. Also the
+  "Guests haven't been told" note (`untold_note/1`) the panel shows below
+  its header.
   """
 
   use TymeslotWeb, :html

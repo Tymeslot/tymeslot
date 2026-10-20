@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
   The pill showing how a guest has answered an invitation to a booking.
 
   Shared by the meeting card's guest list and the add-guest modal, so a guest
-  reads the same in both places. `"tentative"`, which only a calendar reports, is a guest who may come. Any other status is an invitation still waiting for an answer.
+  reads the same in both places. `"tentative"`, which only a calendar
+  reports, is a guest who may come. Any other status is an invitation still
+  waiting for an answer.
   """
 
   use Phoenix.Component

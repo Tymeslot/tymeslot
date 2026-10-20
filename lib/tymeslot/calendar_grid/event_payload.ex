@@ -35,6 +35,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EditGuard
+  alias Tymeslot.CalendarGrid.GuestReplies
   alias Tymeslot.Integrations.Calendar.Attendee
 
   @type context :: %{
@@ -194,10 +195,10 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
 
   defp calendar_key(_event), do: nil
 
-  defp guest_count(%{kind: :booking, participants: [_first | _rest] = participants}),
-    do: length(participants)
-
-  defp guest_count(%{kind: :booking}), do: 1
+  # The booker (or a group meeting's participants) plus the invited guests,
+  # as the preview lists them.
+  defp guest_count(%{kind: :booking} = booking),
+    do: booking |> GuestReplies.of_event() |> length()
 
   defp guest_count(event) do
     event

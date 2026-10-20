@@ -246,6 +246,15 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
 
       assert %{guests: 2} = EventPayload.event(group, @context)
     end
+
+    test "a booking's invited guests count beside the person who booked" do
+      invited = [
+        %{name: nil, email: "grace@example.com", status: "pending"},
+        %{name: "Alan", email: "alan@example.com", status: "declined"}
+      ]
+
+      assert %{guests: 3} = EventPayload.event(booking(guests: invited), @context)
+    end
   end
 
   describe "draft/4" do

@@ -44,8 +44,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     user_id
     |> meetings(start_dt, end_dt, Keyword.get(opts, :include_expired, false))
     |> drop_mirrored(cached_events, Keyword.get(opts, :keep_mirrored, false))
-    |> Meetings.with_live_participants()
-    |> Meetings.with_live_guests()
+    |> Meetings.with_live_people()
     |> Enum.map(&to_event(&1, now))
   end
 
