@@ -344,8 +344,8 @@ defmodule Tymeslot.Meetings do
 
   @doc """
   Lists the organiser's booking requests that expired unanswered and overlap
-  the `[from, to)` window, ordered by start time. The calendar
-  draws them, so a request nobody answered does not vanish without a trace.
+  the `[from, to)` window, ordered by start time. The calendar draws them,
+  so a request nobody answered does not vanish without a trace.
   """
   @spec list_expired_requests_in_range_for_organizer(pos_integer(), DateTime.t(), DateTime.t()) ::
           [MeetingSchema.t()]

@@ -2,10 +2,10 @@ defmodule Tymeslot.CalendarGrid.ColourTokens do
   @moduledoc """
   CSS colour token names for the calendar's client-drawn grid.
 
-  The grid is drawn by JavaScript, which sets `--cal-ev: var(--color-<token>)` on
-  each event, so it needs the token rather than the class. The token is the
-  class without its `bg-` prefix, which keeps the palette defined once, in
-  `Tymeslot.Integrations.Calendar.EventColour` and `base/variables.css`.
+  The grid is drawn by JavaScript, which sets `--cal-ev: var(--color-<token>)`
+  on each event, so it needs the token rather than the class. The token is
+  the class without its `bg-` prefix, which keeps the palette defined once,
+  in `Tymeslot.Integrations.Calendar.EventColour` and `base/variables.css`.
 
   `"booking"` is the bookings' token: `--color-booking` points at the
   surface's own booking colour rather than a palette entry.

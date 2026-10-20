@@ -5,9 +5,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
   by (`step_label/2`) and each view's name (`view_label/1`). Shared by the
   toolbar and the phone header, so the two never disagree.
 
-  Strings the toolbar already had keep their
-  `dashboard_calendar` msgids ("Month", "Agenda", "Previous month", "Next
-  month"); only the new ones are in `dashboard_calendar_views`.
+  Strings the toolbar already had keep their `dashboard_calendar` msgids
+  ("Month", "Agenda", "Previous month", "Next month"); only the new ones are
+  in `dashboard_calendar_views`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

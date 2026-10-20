@@ -180,10 +180,10 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   @doc """
-  The calendar's search: events nearest to now first, a
-  repeating event once, bookings by their guest and in place of their
-  calendar copies, calendars the organiser has hidden (or left out of the
-  active set) excluded. See `Tymeslot.CalendarGrid.EventSearch.search/5`.
+  The calendar's search: events nearest to now first, a repeating event once,
+  bookings by their guest and in place of their calendar copies, calendars
+  the organiser has hidden (or left out of the active set) excluded. See
+  `Tymeslot.CalendarGrid.EventSearch.search/5`.
   """
   @spec search_calendar(integer(), String.t(), [map()], EffectiveVisibility.t(), keyword()) ::
           %{events: [EventSearch.hit()], bookings: [EventSearch.hit()]}

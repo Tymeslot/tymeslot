@@ -4,8 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs do
   open something on click, and how a keyboard reaches it.
 
   Every surface that opens an appointment builds its attributes here, so the
-  overview and the agenda list agree on what "clickable"
-  means.
+  overview and the agenda list agree on what "clickable" means.
   """
 
   @typedoc """

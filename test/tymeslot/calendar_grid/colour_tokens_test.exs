@@ -1,8 +1,9 @@
 defmodule Tymeslot.CalendarGrid.ColourTokensTest do
   @moduledoc """
   The CSS colour tokens the client-drawn grid paints with. They must resolve
-  exactly as the Tailwind classes of `calendar_colour_classes/2` do: the event's own colour, then
-  its calendar's, then its account's, then the neutral fallback.
+  exactly as the Tailwind classes of `calendar_colour_classes/2` do: the
+  event's own colour, then its calendar's, then its account's, then the
+  neutral fallback.
   """
 
   use ExUnit.Case, async: true

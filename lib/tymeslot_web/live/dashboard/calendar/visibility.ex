@@ -2,9 +2,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
   @moduledoc """
   Shows and hides calendars from the surface's rail and the filter chip.
 
-  Two stores, and both are kept: hiding an account
-  writes `hidden_integration_ids` on the calendar preferences; hiding one
-  calendar writes its `calendar_appearances` row through
+  Two stores, and both are kept: hiding an account writes
+  `hidden_integration_ids` on the calendar preferences; hiding one calendar
+  writes its `calendar_appearances` row through
   `Tymeslot.Integrations.Calendar.Appearance`, which checks the account is
   the organiser's. The surface holds the calendar store in
   `manual_hidden_keys`.

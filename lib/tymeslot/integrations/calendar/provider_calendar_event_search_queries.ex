@@ -4,12 +4,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
 
   `search/3` lists matches earliest first (`CalendarGrid.search_events/4`);
   `search_around/3` is the calendar's command bar search, nearest to a
-  moment first: what is ahead in
-  ascending order, then what has passed, latest first. Both match the term
-  case-insensitively against `summary`, `description` and `location`, scoped
-  to the user's active integrations, and leave out rows with half their
-  timing. Moved out of `ProviderCalendarEventQueries`, which sits at Core's
-  module-size limit.
+  moment first: what is ahead in ascending order, then what has passed,
+  latest first. Both match the term case-insensitively against `summary`,
+  `description` and `location`, scoped to the user's active integrations,
+  and leave out rows with half their timing. Moved out of
+  `ProviderCalendarEventQueries`, which sits at Core's module-size limit.
   """
 
   import Ecto.Query, warn: false
