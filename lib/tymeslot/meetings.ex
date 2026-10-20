@@ -353,6 +353,11 @@ defmodule Tymeslot.Meetings do
     to: MeetingListQueries,
     as: :list_expired_requests_for_organizer_in_range
 
+  @doc "Searches the organiser's drawn bookings around `:from`. See `MeetingListQueries.search_for_organizer/3`."
+  @spec search_for_organizer(pos_integer(), String.t(), keyword()) ::
+          %{upcoming: [MeetingSchema.t()], past: [MeetingSchema.t()]}
+  defdelegate search_for_organizer(organizer_user_id, term, opts), to: MeetingListQueries
+
   @doc "Every meeting id `user_id` organises, past and future."
   @spec list_meeting_ids_for_organizer(pos_integer()) :: [Ecto.UUID.t()]
   defdelegate list_meeting_ids_for_organizer(user_id),

@@ -330,6 +330,70 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> Repo.all()
   end
 
+  @default_booking_search_limit 10
+
+  @doc """
+  Searches the organiser's bookings the calendar draws (live ones, and
+  requests that expired unanswered) by title, guest name, guest email and
+  meeting type, case-insensitively and with the term matched literally.
+  Returns those starting on or after `:from` in ascending order
+  (`upcoming`) and those before it, latest first (`past`), each capped at
+  `:limit` (default #{@default_booking_search_limit}). A blank term returns
+  empty sides without a query.
+  """
+  @spec search_for_organizer(pos_integer(), String.t(), keyword()) :: %{
+          upcoming: [Meeting.t()],
+          past: [Meeting.t()]
+        }
+  def search_for_organizer(organizer_user_id, term, opts) do
+    case String.trim(to_string(term)) do
+      "" ->
+        %{upcoming: [], past: []}
+
+      trimmed ->
+        from_utc = Keyword.fetch!(opts, :from)
+        limit = Keyword.get(opts, :limit, @default_booking_search_limit)
+        drawn = drawn_matching(organizer_user_id, "%" <> escape_like(trimmed) <> "%")
+
+        %{
+          upcoming:
+            drawn
+            |> where([m], m.start_time >= ^from_utc)
+            |> order_by([m], asc: m.start_time, asc: m.id)
+            |> limit(^limit)
+            |> Repo.all(),
+          past:
+            drawn
+            |> where([m], m.start_time < ^from_utc)
+            |> order_by([m], desc: m.start_time, desc: m.id)
+            |> limit(^limit)
+            |> Repo.all()
+        }
+    end
+  end
+
+  # The organiser's matching bookings in either state the calendar draws:
+  # `MeetingState` owns both rules, so they are composed rather than restated.
+  defp drawn_matching(organizer_user_id, pattern) do
+    matching =
+      Meeting
+      |> for_organizer(organizer_user_id)
+      |> where(
+        [m],
+        ilike(m.title, ^pattern) or ilike(m.attendee_name, ^pattern) or
+          ilike(m.attendee_email, ^pattern) or ilike(m.meeting_type, ^pattern)
+      )
+
+    live = matching |> MeetingState.where_slot_live() |> select([m], m.id)
+    expired = matching |> MeetingState.where_expired_request() |> select([m], m.id)
+
+    where(matching, [m], m.id in subquery(live) or m.id in subquery(expired))
+  end
+
+  # Escapes LIKE/ILIKE wildcard metacharacters so a typed term is matched
+  # literally rather than as a pattern.
+  defp escape_like(term), do: String.replace(term, ~r/[\\%_]/, "\\\\\\0")
+
   @doc """
   Get every upcoming meeting the organiser holds, whatever its status, soonest
   first.

@@ -14,6 +14,8 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
   alias Tymeslot.CalendarGrid.CalendarDirectory
+  alias Tymeslot.CalendarGrid.EffectiveVisibility
+  alias Tymeslot.CalendarGrid.EventSearch
   alias Tymeslot.CalendarGrid.EventVideoRoomPresence
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
@@ -30,6 +32,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Integrations.Calendar.SyncSchedule
   alias Tymeslot.Integrations.HealthCheck
@@ -60,7 +63,7 @@ defmodule Tymeslot.CalendarGrid do
   # The cache's writers refuse a half-timed row, but one stored before they
   # did would crash the grid's layout (a timed event without an end has
   # nowhere to stop), so it is left out and logged instead. Search leaves such
-  # rows out in its query (`ProviderCalendarEventQueries.search/3`).
+  # rows out in its query (`ProviderCalendarEventSearchQueries.search/3`).
   defp placeable?(%ProviderCalendarEventSchema{} = row) do
     complete? = ProviderCalendarEventSchema.timing_complete?(Map.from_struct(row))
 
@@ -160,7 +163,7 @@ defmodule Tymeslot.CalendarGrid do
   from a calendar the user has *selectively* deselected, a finer grain than
   `:hidden_integration_ids`. Selection is pushed into the query itself (see
   `Tymeslot.Integrations.Calendar.visibility_rules/1` and
-  `ProviderCalendarEventQueries.search/3`) rather than filtered afterwards, so
+  `ProviderCalendarEventSearchQueries.search/3`) rather than filtered afterwards, so
   a busy deselected calendar can't crowd real matches out of the results: the
   `LIMIT` only ever counts rows the caller can actually see.
   """
@@ -169,12 +172,24 @@ defmodule Tymeslot.CalendarGrid do
   def search_events(user_id, term, integrations, opts \\ []) do
     rules = Calendar.visibility_rules(integrations)
 
-    ProviderCalendarEventQueries.search(
+    ProviderCalendarEventSearchQueries.search(
       user_id,
       term,
       Keyword.put(opts, :visibility_rules, rules)
     )
   end
+
+  @doc """
+  The redesigned calendar's search: events nearest to now first, a
+  repeating event once, bookings by their guest and in place of their
+  calendar copies, calendars the organiser has hidden (or left out of the
+  active set) excluded. See `Tymeslot.CalendarGrid.EventSearch.search/5`.
+  """
+  @spec search_calendar(integer(), String.t(), [map()], EffectiveVisibility.t(), keyword()) ::
+          %{events: [EventSearch.hit()], bookings: [EventSearch.hit()]}
+  defdelegate search_calendar(user_id, term, integrations, visibility, opts),
+    to: EventSearch,
+    as: :search
 
   @doc "Enqueues a sync of each of the user's active integrations. See `Freshness.refresh_events/1`."
   defdelegate refresh_events(user_id), to: Freshness
