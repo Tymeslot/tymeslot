@@ -32,14 +32,15 @@ describe("commandRows", () => {
 
   test("a set's row shows its digit and applies it", () => {
     const [work] = rows("work");
-    expect(work).toEqual({ id: "set-1", label: "Switch to Work", keys: "1", run: { type: "push", event: "calendar:apply_set", params: { position: 1 } } });
+    expect(work).toMatchObject({ id: "set-1", label: "Switch to Work", keys: "1", run: { type: "key", key: "1" } });
   });
 
   test("leaving the set is offered on 0 only while a set is active", () => {
     expect(labels(rows("leave the"))).not.toContain("Leave the calendar set");
     const settings = { ...commandSettings, active_set: 2 };
     const [leave] = rows("leave the", { settings });
-    expect(leave).toEqual({ id: "set-0", label: "Leave the calendar set", keys: "0", run: { type: "push", event: "calendar:apply_set", params: { position: 0 } } });
+    expect(leave).toMatchObject({ id: "set-0", label: "Leave the calendar set", keys: "0", run: { type: "key", key: "0" } });
+    expect(labels(rows("switch", { settings }))).toEqual(["Switch to Work"]);
   });
 
   test("display toggles name the choice they switch to", () => {
@@ -55,14 +56,34 @@ describe("commandRows", () => {
   });
 
   test("focus mode goes to the dashboard, and is not offered on a phone", () => {
-    expect(rows("focus")[0]).toMatchObject({ label: "Focus mode", keys: "F", run: { type: "push_view", event: "calendar:toggle_focus", params: {} } });
+    expect(rows("focus")[0]).toMatchObject({ label: "Focus mode", keys: "F", run: { type: "key", key: "f" } });
     expect(rows("focus", { settings: { ...commandSettings, focus: true } })[0].label).toBe("Leave focus mode");
-    expect(labels(rows("focus", { phone: true }))).toEqual([]);
+    expect(labels(rows("focus", { wide: false }))).toEqual([]);
   });
 
   test("prefix matches come first, and at most six commands follow a query", () => {
     expect(rows("w")[0].label).toBe("Week");
     expect(rows("e").length).toBe(6);
+  });
+
+  test("keywords and letters without a decomposition match", () => {
+    expect(labels(rows("availability"))).toEqual(["Show or hide bookable times"]);
+    expect(labels(rows("notifications"))).toEqual(["Turn on desktop notifications"]);
+    expect(labels(rows("help"))).toEqual(["Keyboard shortcuts"]);
+    expect(rows("set")[0].label).toBe("Switch to Work");
+    expect(matchScore("Łódź", "lod")).toBe(3);
+    expect(matchScore("Straße", "strasse")).toBe(3);
+    expect(matchScore("Ørsted", "or")).toBe(3);
+  });
+
+  test("a phone has no Week view command", () => {
+    expect(labels(rows("", { phone: true }))).not.toContain("Week");
+    expect(labels(rows("", { phone: false }))).toContain("Week");
+  });
+
+  test("a set's name is not interpreted", () => {
+    const settings = { ...commandSettings, sets: [{ position: 1, name: "<img src=x onerror=alert(1)>" }] };
+    expect(rows("img", { settings })[0].label).toBe("Switch to <img src=x onerror=alert(1)>");
   });
 
   test("the old calendar is one command away", () => {
@@ -97,6 +118,11 @@ describe("addRow", () => {
 
   test("a bare title goes last, with no time to show", () => {
     expect(addRow("Dentist", opts)).toMatchObject({ first: false, hint: null, text: "Dentist" });
+  });
+
+  test("a line is read against the base quick create would start from", () => {
+    const base = { day: "2026-10-14", startMin: 15 * 60, length: 45, allDay: false, days: 1, calendar: null };
+    expect(addRow("tomorrow Dentist", { ...opts, base })).toMatchObject({ hint: "Thu 15 Oct, 15:00" });
   });
 
   test("one character, or no title, adds nothing", () => {

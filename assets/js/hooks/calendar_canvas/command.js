@@ -33,8 +33,8 @@
 import { addRow, commandRows, dateRow } from "../../calendar/commands.js";
 import { applyText } from "../../calendar/draft.js";
 import { escapeHtml } from "../../calendar/render.js";
+import { POWER_KEYS, WIDE } from "./power_keys.js";
 import { CORE_MODAL_OPEN, isCommandKey, plainKeyAllowed } from "../../calendar/shortcuts.js";
-import { MINUTES_PER_DAY, isoFromDay, shiftPeriod } from "../../calendar/time.js";
 
 const OPTION = '[role="option"]';
 const ROWS = `#calendar-command-instant ${OPTION}, #calendar-command-results ${OPTION}, #calendar-command-after ${OPTION}`;
@@ -151,8 +151,8 @@ export const CommandMixin = {
       e.stopPropagation();
       // Server rows wait for a search still running; the hook's own rows never do.
       const busy = document.getElementById("calendar-command-results")?.getAttribute("aria-busy") === "true";
-      const rows = this.commandRows().filter((row) => !busy || !row.closest("#calendar-command-results"));
-      this.runRow(rows.find((row) => row.id === this.commandActive) ?? rows[0]);
+      const rows = this.commandRows().filter((row) => !busy || !row.closest("#calendar-command-results, #calendar-command-after"));
+      this.runRow(rows.find((row) => row.id === this.commandActive) ?? (this.commandActive && busy ? undefined : rows[0]));
     }
   },
 
@@ -204,9 +204,10 @@ export const CommandMixin = {
     this.clearInstant();
     this.instantRows = new Map();
     if (!this.settings || !this.clock) return;
-    const opts = { ...this.parseOptions(), strings: this.strings, timeFormat: this.settings.time_format };
+    const base = String(query ?? "").trim().length > 1 ? this.nextDraft().base : undefined;
+    const opts = { ...this.parseOptions(), base, strings: this.strings, timeFormat: this.settings.time_format };
     const add = addRow(query, opts);
-    const commands = commandRows(query, { settings: this.settings, strings: this.strings, phone: Boolean(this.phone) });
+    const commands = commandRows(query, { settings: this.settings, strings: this.strings, phone: Boolean(this.phone), wide: Boolean(window.matchMedia?.(WIDE)?.matches) });
     this.fillGroup("calendar-command-instant", [dateRow(query, opts), add?.first ? add : null, ...commands].filter(Boolean));
     this.fillGroup("calendar-command-after", add && !add.first ? [add] : []);
   },
@@ -275,17 +276,18 @@ export const CommandMixin = {
   },
 
   runCommand(command) {
-    if (command.id === "goto") return this.leaveForGrid(() => this.gotoPeriod(this.view, command.date));
+    if (command.id === "goto") return this.leaveForGrid(() => this.gotoPeriod(this.periodFrom().view, command.date));
     if (command.id === "add") return this.addFromLine(command.text);
     const { run } = command;
-    const from = this.pending ?? { view: this.view, date: this.date };
+    const from = this.periodFrom();
     switch (run.type) {
       case "view":
-        return this.leaveForGrid(() => this.gotoPeriod(run.view, from.date));
-      case "today":
-        return this.leaveForGrid(() => this.gotoPeriod(from.view, isoFromDay(Math.floor(this.nowMinute() / MINUTES_PER_DAY))));
-      case "step":
-        return this.leaveForGrid(() => this.gotoPeriod(from.view, shiftPeriod(from.view, from.date, run.step)));
+        return this.leaveForGrid(() => from.view !== run.view && this.gotoPeriod(run.view, from.date));
+      case "key":
+        // T and J/K move the grid; the rest (F, ?, the digits) leave focus where it was.
+        if ("tjk".includes(run.key)) return this.leaveForGrid(() => POWER_KEYS[run.key](this));
+        this.closeCommand();
+        return POWER_KEYS[run.key](this);
       case "create":
         this.closeCommand({ restoreFocus: false });
         return this.quickCreateNext();
@@ -298,9 +300,6 @@ export const CommandMixin = {
       case "push_view":
         this.closeCommand();
         return this.pushEvent(run.event, run.params);
-      case "help":
-        this.closeCommand();
-        return this.pushEventTo(this.el, "calendar:toggle_menu", { menu: "shortcuts" });
       default:
         return this.closeCommand();
     }

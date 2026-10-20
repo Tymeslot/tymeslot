@@ -296,6 +296,10 @@ test("the stylesheet keeps the bar closed until data-open, above sheets and belo
   expect(variables).toMatch(/--cal-z-command:\s*80;/);
 });
 
+const mockWide = (matches) => {
+  window.matchMedia = (q) => ({ matches: q.includes("64rem") ? matches : false, media: q, addEventListener() {}, removeEventListener() {} });
+};
+
 describe("the hook's own rows", () => {
   const typeIn = (input, text) => {
     input.value = text;
@@ -365,6 +369,7 @@ describe("the hook's own rows", () => {
   });
 
   test("focus mode is pushed to the dashboard, not the surface", () => {
+    mockWide(true);
     const { hook, input } = mount();
     typeIn(input, "focus");
     press(input, "Enter");
@@ -377,6 +382,97 @@ describe("the hook's own rows", () => {
     const { hook, input } = mount();
     typeIn(input, "focus");
     expect(rowLabels(hook)).not.toContain("Focus mode");
+  });
+
+  test("a set's name is drawn escaped", () => {
+    const { hook, input, bar } = mount();
+    hook.settings = { ...hook.settings, sets: [{ position: 1, name: "<img src=x onerror=alert(1)>" }] };
+    typeIn(input, "img");
+    expect(bar.querySelector("img")).toBeNull();
+    expect(bar.querySelector('[data-command-row="set-1"] .cal-command-row-title').textContent).toBe("Switch to <img src=x onerror=alert(1)>");
+  });
+
+  test("Add pushes no create event of its own", () => {
+    const { hook, input } = mount();
+    typeIn(input, "Dentist");
+    press(input, "Enter");
+    expect(hook.pushEvent.mock.calls).toEqual([]);
+    expect(pushes(hook).filter((p) => /create|save/.test(p.event ?? ""))).toEqual([]);
+  });
+
+  test("Add hints at the time the draft would get, not at 09:00", () => {
+    const { hook, input } = mount();
+    typeIn(input, "Dentist tomorrow");
+    const base = hook.nextDraft().base;
+    expect(base).toBeDefined();
+    const meta = hook.commandRows().find((row) => row.dataset.commandRow === "add").querySelector(".cal-command-row-meta").textContent;
+    const hh = String(Math.floor(base.startMin / 60)).padStart(2, "0");
+    expect(meta.endsWith(`${hh}:${String(base.startMin % 60).padStart(2, "0")}`)).toBe(true);
+  });
+
+  test("Today, Next period and Show all run", () => {
+    const { hook, input } = mount();
+    typeIn(input, "next period");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:goto")).toHaveLength(1);
+    press(document.body, "k", { ctrlKey: true });
+    typeIn(hook.commandField(), "show all");
+    press(hook.commandField(), "Enter");
+    expect(pushes(hook, "calendar:show_all")).toEqual([{}]);
+  });
+
+  test("Today goes to today's period", () => {
+    const { hook, input } = mount();
+    typeIn(input, "today");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:goto")).toHaveLength(1);
+  });
+
+  test("Import opens the importer, help the shortcuts, Back the old calendar", () => {
+    const { hook, input } = mount();
+    typeIn(input, "import");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:ics_open")).toEqual([{}]);
+
+    press(document.body, "k", { ctrlKey: true });
+    typeIn(hook.commandField(), "keyboard");
+    press(hook.commandField(), "Enter");
+    expect(pushes(hook, "calendar:toggle_menu")).toEqual([{ menu: "shortcuts" }]);
+
+    press(document.body, "k", { ctrlKey: true });
+    typeIn(hook.commandField(), "old calendar");
+    press(hook.commandField(), "Enter");
+    expect(hook.pushEvent).toHaveBeenCalledWith("calendar:switch_surface", { enabled: false });
+  });
+
+  test("Leave the calendar set, while one is active", () => {
+    const { hook, input } = mount();
+    hook.settings = { ...hook.settings, active_set: 1 };
+    typeIn(input, "leave the");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:apply_set")).toEqual([{ position: 0 }]);
+  });
+
+  test("focus mode is offered on a wide screen and not on a narrow one", () => {
+    mockWide(false);
+    let m = mount();
+    typeIn(m.input, "focus");
+    expect(rowLabels(m.hook)).not.toContain("Focus mode");
+    unmountAll();
+    mockWide(true);
+    m = mount();
+    typeIn(m.input, "focus");
+    expect(rowLabels(m.hook)).toContain("Focus mode");
+  });
+
+  test("while a search is busy Enter does not fall to the Add row", () => {
+    const { hook, input, results } = mount();
+    typeIn(input, "zzqq");
+    results.setAttribute("aria-busy", "true");
+    hook.pushEvent.mockClear();
+    press(input, "Enter");
+    expect(document.getElementById("calendar-command").hasAttribute("data-open")).toBe(true);
+    expect(hook.quick).toBeNull();
   });
 
   test("a view command switches the view on the current date", () => {

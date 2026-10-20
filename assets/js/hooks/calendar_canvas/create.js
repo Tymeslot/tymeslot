@@ -99,19 +99,19 @@ export const CreateMixin = {
     this.closeNotice();
   },
 
-  // Quick create at the next free slot of the visible days, or of tomorrow
-  // late in the evening; the grid follows when that day is not in view.
+  // The draft at the next free slot of the visible days, or of tomorrow late
+  // in the evening; the command bar reads a line against its `base`.
+  nextDraft() {
+    const range = nextSlot(this.nowMinute(), this.createDays(), [...this.cache.events.values()], undefined, this.currentScale().firstMinute);
+    return { ...draftFromRange(newDraftId(), range, this.defaultCalendar()), origin: "next" };
+  },
+
   quickCreateNext() {
     if (!this.settings || !this.clock) return;
-    if (this.quick) {
-      this.quickFocus();
-      return;
-    }
-    const days = this.createDays();
-    const range = nextSlot(this.nowMinute(), days, [...this.cache.events.values()], undefined, this.currentScale().firstMinute);
-    // The preview (rendered by LiveView) would otherwise stay beside the draft.
+    if (this.quick) return this.quickFocus();
+    // The preview would otherwise stay beside the draft.
     if (document.getElementById("calendar-preview")) this.pushEventTo(this.el, "calendar:close_preview", { refocus: "false" });
-    this.startDraft({ ...draftFromRange(newDraftId(), range, this.defaultCalendar()), origin: "next" });
+    this.startDraft(this.nextDraft());
     this.followDraft(0);
   },
 

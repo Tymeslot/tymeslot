@@ -16,7 +16,7 @@ import { digitOf, plainKeyAllowed } from "../../calendar/shortcuts.js";
 import { MINUTES_PER_DAY, isoFromDay, shiftPeriod } from "../../calendar/time.js";
 
 // Focus mode changes nothing below 1024px, where the dashboard menu is a drawer.
-const WIDE = "(width >= 64rem)";
+export const WIDE = "(width >= 64rem)";
 
 // 0 leaves the active set; 1 to 9 apply theirs. A digit with no set, or the
 // active set's own, does nothing. The live region says what changed, since
