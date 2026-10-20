@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
   meeting and its reminder emails. Drawn inside the form `PanelNewForm`
   draws, so a change reaches `panel:draft_change` like any other field.
   Each box and the toggle sit in a 44px row below 640px, where the panel is
-  a sheet under a thumb.
+  a sheet under a thumb, and their labels fill the row so the whole row taps.
   """
 
   use TymeslotWeb, :html
@@ -29,7 +29,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
       id="calendar-panel-meeting"
       class="space-y-3 rounded-token-lg border border-tymeslot-200 p-3"
     >
-      <div id="calendar-panel-meeting-row" class="flex min-h-11 items-center sm:min-h-0">
+      <div
+        id="calendar-panel-meeting-row"
+        class="flex min-h-11 items-center sm:min-h-0 [&_label]:flex [&_label]:min-h-11 [&_label]:items-center sm:[&_label]:min-h-0"
+      >
         <.input
           type="checkbox"
           id="calendar-panel-meeting-toggle"
@@ -48,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
         <.input
           id="calendar-panel-meeting-guest-name"
           name="guest_name"
+          maxlength="255"
           value={@values["guest_name"]}
           label={dgettext("dashboard_calendar_events", "Guest name")}
           placeholder={dgettext("dashboard_calendar_events", "Ada Lovelace")}
@@ -74,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
           <input type="hidden" name="reminders[]" value="" />
           <div
             :for={{key, label} <- reminder_choices()}
-            class="flex min-h-11 items-center sm:min-h-0"
+            class="flex min-h-11 items-center sm:min-h-0 [&_label]:flex [&_label]:min-h-11 [&_label]:items-center sm:[&_label]:min-h-0"
           >
             <.input
               type="checkbox"

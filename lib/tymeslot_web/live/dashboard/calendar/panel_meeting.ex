@@ -125,6 +125,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
         count: MeetingParams.max_guests()
       )
 
+  # Notes allow more than a meeting's note does, so text typed before the box
+  # was ticked can be too long.
+  def refusal_message(:note, :too_long),
+    do:
+      dgettext(
+        "dashboard_calendar_power",
+        "The note to the guest is too long. Keep it under 2,000 characters."
+      )
+
   # The form offers no way to send the rest; they come from forged input.
   def refusal_message(field, reason)
       when field in [:guests, :guest_name, :note, :locale, :all_day],

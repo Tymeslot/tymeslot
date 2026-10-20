@@ -451,3 +451,8 @@ msgstr "Usar o relógio de 24 horas"
 #, elixir-autogen, elixir-format
 msgid "Send as a Tymeslot meeting"
 msgstr "Enviar como reunião Tymeslot"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The note to the guest is too long. Keep it under 2,000 characters."
+msgstr "A nota para o convidado é demasiado longa. Use menos de 2000 caracteres."

@@ -208,6 +208,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     meeting = eventually(fn -> Repo.one(MeetingSchema) end, timeout: @task_timeout)
     assert meeting.attendee_email == "ada@example.com"
 
+    assert Enum.map(meeting.reminders, &{&1["value"], &1["unit"]}) == [
+             {1, "hours"},
+             {1, "days"}
+           ]
+
     assert [%{email: "grace@example.com", invited_by: :organizer}] =
              GuestQueries.list_for_meeting(meeting.id)
 
@@ -234,6 +239,54 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert has_element?(lv, "#calendar-panel [role=status]", "Guest name is required")
     assert has_element?(lv, "#calendar-panel-create:not([disabled])")
     refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+  end
+
+  test "a note typed before the box was ticked, past the meeting's limit, is refused as such", %{
+    conn: conn,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration)
+    render_change(new_form(lv), %{"description" => String.duplicate("a", 2001)})
+    as_meeting(lv)
+    trace(lv)
+
+    create_meeting(lv)
+
+    assert has_element?(
+             lv,
+             "#calendar-panel [role=status]",
+             "The note to the guest is too long. Keep it under 2,000 characters."
+           )
+
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+  end
+
+  test "the guest's name takes at most 255 characters", %{conn: conn, integration: integration} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration)
+    as_meeting(lv)
+
+    assert has_element?(lv, ~s|#calendar-panel-meeting-guest-name[maxlength="255"]|)
+  end
+
+  test "a reminder ticked and the meeting then unticked creates a plain event, sending no meeting",
+       %{conn: conn, integration: integration} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration)
+    as_meeting(lv)
+    render_change(new_form(lv), %{"reminders" => ["", "1_hours"]})
+    render_change(new_form(lv), %{"meeting" => "false"})
+    refute has_element?(lv, "#calendar-panel-meeting-fields")
+    trace(lv)
+
+    render_submit(new_form(lv), %{"intent" => "create"})
+
+    assert_receive {:provider_call, task_pid, %{summary: "New event"}}, @task_timeout
+    ref = Process.monitor(task_pid)
+    assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
+    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+    assert Repo.all(MeetingSchema) == []
   end
 
   test "more guests than a meeting takes are refused with the meeting's own limit", %{
