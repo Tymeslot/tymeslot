@@ -21,10 +21,12 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
@@ -156,6 +158,91 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
       assert ada["responseStatus"] == "accepted"
       assert alan["email"] == "alan@example.com"
       refute Map.has_key?(alan, "responseStatus")
+    end
+  end
+
+  describe "whose event a grid edit of a synced Google event says it is" do
+    # Another app's marks, as the sync stored the raw event.
+    @foreign_properties %{
+      "private" => %{"crmId" => "deal-42"},
+      "shared" => %{"room" => "4.12"}
+    }
+    @foreign_source %{"title" => "Acme CRM", "url" => "https://crm.example.com/deal/42"}
+
+    defp put_and_capture do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :put, _url, body, _headers, _opts ->
+        send(test_pid, {:put, body})
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "sprintreview"})}}
+      end)
+    end
+
+    defp stored_as(event, attrs) do
+      event
+      |> Changeset.change(attrs)
+      |> Repo.update!()
+    end
+
+    test "leaves an event someone else made unmarked, with their properties intact", %{
+      user: user,
+      event: event
+    } do
+      event =
+        stored_as(event,
+          created_by_tymeslot: false,
+          provider_metadata: %{
+            "id" => "sprintreview",
+            "extendedProperties" => @foreign_properties,
+            "source" => @foreign_source,
+            "guestsCanModify" => true,
+            "guestsCanInviteOthers" => false
+          }
+        )
+
+      put_and_capture()
+
+      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+
+      assert_received {:put, body}
+      sent = Jason.decode!(body)
+
+      assert sent["summary"] == "Renamed"
+      assert sent["extendedProperties"] == @foreign_properties
+      assert sent["source"] == @foreign_source
+      assert sent["guestsCanModify"] == true
+      assert sent["guestsCanInviteOthers"] == false
+    end
+
+    test "keeps Tymeslot's mark on its own event, alongside another app's", %{
+      user: user,
+      event: event
+    } do
+      event =
+        stored_as(event,
+          created_by_tymeslot: true,
+          provider_metadata: %{
+            "id" => "sprintreview",
+            "extendedProperties" => %{
+              "private" => %{"createdBy" => "tymeslot", "crmId" => "deal-42"},
+              "shared" => %{"room" => "4.12"}
+            }
+          }
+        )
+
+      put_and_capture()
+
+      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+
+      assert_received {:put, body}
+      sent = Jason.decode!(body)
+
+      assert sent["extendedProperties"] == %{
+               "private" => %{"createdBy" => "tymeslot", "crmId" => "deal-42"},
+               "shared" => %{"room" => "4.12"}
+             }
+
+      assert sent["source"]["title"] == "Tymeslot"
     end
   end
 end

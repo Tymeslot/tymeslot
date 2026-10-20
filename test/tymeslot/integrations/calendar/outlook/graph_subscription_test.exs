@@ -16,8 +16,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
 
@@ -254,6 +256,154 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       assert {:ok, updated} = GraphSubscription.bootstrap_sync(integration)
       assert updated.graph_delta_link =~ "deltatoken=empty"
+    end
+
+    # A re-bootstrap after a 410 or an obsolete delta link is the only pass
+    # that sees a move made while no link was tracking; the new link reports
+    # only later changes, so the snapshot has to reconcile it.
+    test "reconciles a meeting whose event was moved while no delta link was tracking",
+         %{integration: integration} do
+      TestMocks.setup_email_mocks()
+
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "graph-id-moved",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1800, :second)
+        )
+
+      moved_start = DateTime.add(start_time, 7200, :second)
+
+      moved = %{
+        "id" => "graph-id-moved",
+        "iCalUId" => "outlook-moved@example.com",
+        "subject" => "Booked meeting",
+        "showAs" => "busy",
+        "isAllDay" => false,
+        "isCancelled" => false,
+        "start" => %{"dateTime" => DateTime.to_iso8601(moved_start), "timeZone" => "UTC"},
+        "end" => %{
+          "dateTime" => moved_start |> DateTime.add(1800, :second) |> DateTime.to_iso8601(),
+          "timeZone" => "UTC"
+        }
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [moved],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+             })
+         }}
+      end)
+
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+               MeetingQueries.get_meeting(meeting.id)
+    end
+  end
+
+  # The weekly re-bootstrap reconciles every booking in its year-long window
+  # at once, so it must leave alone what is in step and what is already past.
+  describe "bootstrap_sync/1 reconciling the full snapshot" do
+    setup do
+      TestMocks.setup_email_mocks()
+      Application.put_env(:swoosh, :shared_test_process, self())
+      on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+      :ok
+    end
+
+    defp booking(integration, start_time, attrs \\ []) do
+      insert(
+        :meeting,
+        Keyword.merge(
+          [
+            calendar_integration_id: integration.id,
+            provider_event_id: "graph-id-booking",
+            start_time: start_time,
+            end_time: DateTime.add(start_time, 1800, :second)
+          ],
+          attrs
+        )
+      )
+    end
+
+    defp outlook_event(start_time) do
+      %{
+        "id" => "graph-id-booking",
+        "iCalUId" => "outlook-booking@example.com",
+        "subject" => "Booked meeting",
+        "showAs" => "busy",
+        "isAllDay" => false,
+        "isCancelled" => false,
+        "start" => %{"dateTime" => DateTime.to_iso8601(start_time), "timeZone" => "UTC"},
+        "end" => %{
+          "dateTime" => start_time |> DateTime.add(1800, :second) |> DateTime.to_iso8601(),
+          "timeZone" => "UTC"
+        }
+      }
+    end
+
+    defp expect_snapshot(events) do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => events,
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+             })
+         }}
+      end)
+    end
+
+    test "leaves a booking in step with its event unflagged and tells nobody",
+         %{integration: integration} do
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+      meeting = booking(integration, start_time)
+
+      expect_snapshot([outlook_event(start_time)])
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
+      refute_received {:email, _email}
+    end
+
+    test "clears an earlier flag once the booking is back in step with its event",
+         %{integration: integration} do
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+      meeting = booking(integration, start_time, calendar_sync_status: "externally_modified")
+
+      expect_snapshot([outlook_event(start_time)])
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
+      refute_received {:email, _email}
+    end
+
+    # The first re-bootstrap after deploy reads a year of history at once;
+    # bookings already past are never touched, however far their events have
+    # drifted.
+    test "does not flag a past booking whose event diverges, nor tell anyone",
+         %{integration: integration} do
+      start_time = DateTime.add(DateTime.utc_now(:second), -3 * 86_400, :second)
+      meeting = booking(integration, start_time)
+
+      expect_snapshot([outlook_event(DateTime.add(start_time, 7200, :second))])
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
+      refute_received {:email, _email}
     end
   end
 

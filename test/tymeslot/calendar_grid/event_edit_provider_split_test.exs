@@ -327,6 +327,36 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       refute_enqueued(worker: SyncGoogleCalendarWorker)
     end
 
+    test "leaves the tail of somebody else's series theirs, with their properties", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      refute occurrence.created_by_tymeslot
+
+      # Another app's mark on the master, and nothing of Tymeslot's.
+      foreign = %{"private" => %{"crmId" => "deal-42"}, "shared" => %{"room" => "4.12"}}
+      master = Map.put(@google_master, "extendedProperties", foreign)
+
+      serve(fn
+        :get, _url -> {200, master}
+        method, url -> google().(method, url)
+      end)
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :following
+               )
+
+      sent = requests()
+      assert methods(sent) == [:get, :get, :post, :patch]
+
+      tail = body_of(sent, :post)
+      assert tail["summary"] == "Standup"
+      assert tail["extendedProperties"] == foreign
+      refute Map.has_key?(tail, "source")
+      refute Map.has_key?(body_of(sent, :patch), "extendedProperties")
+    end
+
     test "an edit from the first occurrence on is written to the master alone", %{
       user: user,
       first: first
