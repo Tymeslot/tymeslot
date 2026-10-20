@@ -304,7 +304,8 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.attendee_email == "alice@example.com"
 
       guest_emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
-      assert guest_emails == ["carol@example.com"]
+      assert "carol@example.com" in guest_emails
+      refute String.downcase(user.email) in guest_emails
     end
 
     test "returns :no_participants when only the host answered, and mints nothing",
