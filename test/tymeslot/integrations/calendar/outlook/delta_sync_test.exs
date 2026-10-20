@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -141,6 +142,101 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
 
       assert {:ok, %{created_by_tymeslot: false}} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-theirs")
+    end
+  end
+
+  describe "fetch_and_apply/1 - removed events" do
+    test "drops the cached event and tells the open grids" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
+        )
+
+      user_id = integration.user_id
+      gone = graph_event(%{"id" => "graph-id-gone", "iCalUId" => "uid-gone"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [gone],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+      assert {:ok, _cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-gone")
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user_id}")
+
+      # Graph reports a deletion as the bare id under `@removed`.
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [
+                 %{"id" => "graph-id-gone", "@removed" => %{"reason" => "deleted"}}
+               ],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      {:ok, integration} = CalendarIntegrationQueries.get(integration.id)
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-gone")
+
+      assert_receive {:calendar_events_updated, ^user_id, ["graph-id-gone"]}
+    end
+
+    # A removal-only sweep upserts nothing, so the availability invalidation
+    # the upsert path does never runs; the freed time has to be announced on
+    # its own.
+    test "invalidates the host's cached availability" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
+        )
+
+      key =
+        AvailabilityCache.availability_range_key(
+          integration.user_id,
+          ~D[2030-09-01],
+          ~D[2030-09-07],
+          "Etc/UTC",
+          30,
+          nil,
+          nil
+        )
+
+      AvailabilityCache.put(key, {:stale, :before_removal})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [
+                 %{"id" => "graph-id-gone", "@removed" => %{"reason" => "deleted"}}
+               ],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
     end
   end
 

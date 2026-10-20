@@ -449,6 +449,52 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     )
   end
 
+  @doc """
+  Whether a job of `worker` for `meeting_id` has not finished yet, that is, is
+  `available`, `scheduled`, `executing`, `retryable` or `suspended`.
+
+  Callers use it to tell that a write the worker was queued to make is still to
+  come (or in flight), so what that write will change must not be second-guessed
+  meanwhile.
+  """
+  @spec pending_meeting_job?(module() | String.t(), term()) :: boolean()
+  def pending_meeting_job?(worker, meeting_id) do
+    worker_name = normalize_worker_name(worker)
+
+    Repo.exists?(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: j.state in ^@incomplete_states,
+        where: fragment("?->>'meeting_id' = ?", j.args, ^to_string(meeting_id))
+      )
+    )
+  end
+
+  @doc """
+  Whether a job of `worker` for `meeting_id` is still pending (as
+  `pending_meeting_job?/2` asks) or completed at or after `since`.
+
+  A caller holding a copy of something the worker writes, read from the outside
+  world starting at `since`, uses it to tell whether that copy may predate the
+  worker's latest write: a job that completed while the copy was being read can
+  have landed after the part that matters was read. Discarded and cancelled
+  jobs wrote nothing, so they never count.
+  """
+  @spec meeting_job_since?(module() | String.t(), term(), DateTime.t()) :: boolean()
+  def meeting_job_since?(worker, meeting_id, %DateTime{} = since) do
+    worker_name = normalize_worker_name(worker)
+
+    Repo.exists?(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: fragment("?->>'meeting_id' = ?", j.args, ^to_string(meeting_id)),
+        where:
+          j.state in ^@incomplete_states or
+            (j.state == "completed" and j.completed_at >= ^since)
+      )
+    )
+  end
+
   # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
   # normalises a module into that form so a match against `j.worker` can't
   # silently miss every job. Callers that already hold the stored name (e.g. a

@@ -70,6 +70,34 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
                ProviderCalendarEventQueries.get_by_uid(integration.id, "grid-event-uid")
     end
 
+    test "leaves a grid edit of somebody else's event unmarked" do
+      integration = caldav_integration()
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "their-event",
+        provider: "caldav",
+        created_by_tymeslot: false
+      )
+
+      target = %{uid: "their-event", calendar_integration_id: integration.id}
+      assert :ok = QueueWiring.tag(target, :update, event_data())
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "their-event")
+      assert row.sync_state == "locally_modified"
+      assert row.created_by_tymeslot == false
+    end
+
+    test "marks an event the grid is creating as Tymeslot's" do
+      integration = caldav_integration()
+      target = %{uid: "grid-created", calendar_integration_id: integration.id}
+
+      assert :ok = QueueWiring.tag(target, :create, event_data())
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "grid-created")
+      assert row.created_by_tymeslot == true
+    end
+
     test "writes locally_created with summary/times for :create" do
       integration = caldav_integration()
       meeting = build_meeting(integration, "new-uid")

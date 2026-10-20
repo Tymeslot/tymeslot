@@ -213,10 +213,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
           intent: @intent,
           eyebrow: dgettext("emails_booking", "Rescheduled"),
           stage_title: dgettext("emails_booking", "Meeting rescheduled"),
-          stage_subtitle:
-            dgettext("emails_booking", "%{name} has moved your meeting.",
-              name: appointment_details.attendee_name
-            )
+          stage_subtitle: organizer_moved_line(appointment_details)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -512,6 +509,18 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     """
   end
 
+  # Who moved the meeting, as the organiser is told. A move the host made in
+  # their own calendar (`moved_by: :host`, set by
+  # `Tymeslot.Bookings.FollowCalendar.execute/4`) is not the attendee's.
+  defp organizer_moved_line(%{moved_by: :host}),
+    do: dgettext("emails_booking", "You moved this meeting in your calendar.")
+
+  defp organizer_moved_line(appointment_details) do
+    dgettext("emails_booking", "%{name} has moved your meeting.",
+      name: appointment_details.attendee_name
+    )
+  end
+
   defp build_organizer_text_body(appointment_details, meeting_details) do
     locale = organizer_locale(appointment_details)
 
@@ -527,7 +536,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     """
     #{dgettext("emails_booking", "Meeting Rescheduled")}
 
-    #{dgettext("emails_booking", "%{name} has moved your meeting.", name: appointment_details.attendee_name)}#{attendee_info}
+    #{organizer_moved_line(appointment_details)}#{attendee_info}
     #{previous_time_line(appointment_details, :organizer, locale)}
     #{dgettext("emails_booking", "NEW MEETING DETAILS:")}
     #{meeting_details}#{video_section}#{custom_answers}#{action_links}
