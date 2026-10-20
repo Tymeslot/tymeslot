@@ -24,14 +24,21 @@ defmodule Tymeslot.Security.Encryption.Keyring do
   With no versioned key at all, the primary is the legacy key (version 0), which
   is how an install that never set `DATA_ENCRYPTION_KEY` keeps working.
 
-  Every key is the SHA-256 of at least 32 decoded bytes. Errors never include
-  key material.
+  Every key is the SHA-256 of at least 32 decoded bytes. A configuration that
+  cannot work raises `ConfigError`, naming what is wrong and how to fix it;
+  errors never include key material.
   """
+
+  alias Tymeslot.Security.Encryption.ConfigError
 
   @legacy_version 0
   @aad "Tymeslot.Encryption"
   @min_key_bytes 32
   @min_secret_key_base_bytes 64
+
+  @generate_key "Generate a new one with `openssl rand -base64 48 | tr -d '\\n'`; " <>
+                  "no credential can have been stored under a key that cannot be read, " <>
+                  "so replacing it loses nothing"
 
   @type t :: %{
           current_version: 0..255,
@@ -45,8 +52,8 @@ defmodule Tymeslot.Security.Encryption.Keyring do
   def aad, do: @aad
 
   @doc """
-  Builds the keyring from the current application config, raising with an
-  operator-readable message when the configuration cannot work.
+  Builds the keyring from the current application config, raising
+  `ConfigError` when the configuration cannot work.
   """
   @spec build!() :: t()
   def build! do
@@ -58,9 +65,11 @@ defmodule Tymeslot.Security.Encryption.Keyring do
     retired? = config[:legacy_key_retired] == true
 
     if retired? and current_version == @legacy_version do
-      raise "LEGACY_KEY_RETIRED is set but no DATA_ENCRYPTION_KEY or DATA_ENCRYPTION_KEYS " <>
-              "is configured, so there is no key to write with. Configure a data " <>
-              "encryption key, or unset LEGACY_KEY_RETIRED."
+      raise ConfigError,
+        reason:
+          "LEGACY_KEY_RETIRED is set but no DATA_ENCRYPTION_KEY or DATA_ENCRYPTION_KEYS " <>
+            "is configured, so there is no key to write with",
+        fix: "Configure a data encryption key, or unset LEGACY_KEY_RETIRED"
     end
 
     %{
@@ -85,9 +94,12 @@ defmodule Tymeslot.Security.Encryption.Keyring do
         keys
 
       {:ok, _other} ->
-        raise "DATA_ENCRYPTION_KEY is key 1, but DATA_ENCRYPTION_KEYS lists a different " <>
-                "key under id 1. Use the DATA_ENCRYPTION_KEY value for the 1: entry, " <>
-                "or give the other key a new id."
+        raise ConfigError,
+          reason:
+            "DATA_ENCRYPTION_KEY is key 1, but DATA_ENCRYPTION_KEYS lists a different " <>
+              "key under id 1",
+          fix:
+            "Use the DATA_ENCRYPTION_KEY value for the 1: entry, or give the other key a new id"
     end
   end
 
@@ -120,14 +132,21 @@ defmodule Tymeslot.Security.Encryption.Keyring do
       {id, derive!(String.trim(encoded), label)}
     else
       _invalid ->
-        raise "#{label} must be `<id>:<base64 key>` with an id from 1 to 255"
+        raise ConfigError,
+          reason: "#{label} must be `<id>:<base64 key>` with an id from 1 to 255",
+          fix: "Separate entries with commas, for example `2:<new key>,1:<current key>`"
     end
   end
 
   defp reject_duplicate_ids!(entries) do
     case entries |> Enum.frequencies_by(&elem(&1, 0)) |> Enum.find(&(elem(&1, 1) > 1)) do
-      nil -> entries
-      {id, _count} -> raise "DATA_ENCRYPTION_KEYS lists id #{id} more than once"
+      nil ->
+        entries
+
+      {id, _count} ->
+        raise ConfigError,
+          reason: "DATA_ENCRYPTION_KEYS lists id #{id} more than once",
+          fix: "Give every key its own id, and never reuse an id for a different key"
     end
   end
 
@@ -137,11 +156,18 @@ defmodule Tymeslot.Security.Encryption.Keyring do
         :crypto.hash(:sha256, raw)
 
       {:ok, raw} ->
-        raise "#{label} must decode to at least #{@min_key_bytes} bytes of entropy, " <>
-                "got #{byte_size(raw)}"
+        raise ConfigError,
+          reason:
+            "#{label} must decode to at least #{@min_key_bytes} bytes of entropy, " <>
+              "got #{byte_size(raw)}",
+          fix: @generate_key
 
       :error ->
-        raise "#{label} must be valid Base64"
+        raise ConfigError,
+          reason: "#{label} must be valid Base64",
+          fix:
+            "Use standard Base64 with `=` padding; URL-safe characters (`-`, `_`) are " <>
+              "refused. " <> @generate_key
     end
   end
 
@@ -149,7 +175,13 @@ defmodule Tymeslot.Security.Encryption.Keyring do
     secret_base = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)[:secret_key_base]
 
     if is_nil(secret_base) or byte_size(secret_base) < @min_secret_key_base_bytes do
-      raise "SECRET_KEY_BASE must be at least #{@min_secret_key_base_bytes} bytes for secure encryption"
+      raise ConfigError,
+        reason:
+          "SECRET_KEY_BASE must be at least #{@min_secret_key_base_bytes} bytes to derive " <>
+            "the legacy encryption key",
+        fix:
+          "Replace it with a value from `openssl rand -base64 64 | tr -d '\\n'`, which " <>
+            "signs every user out once"
     end
 
     :crypto.hash(:sha256, secret_base <> @aad)

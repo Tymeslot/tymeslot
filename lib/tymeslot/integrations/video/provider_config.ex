@@ -69,7 +69,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       display_name: "MiroTalk P2P",
       rooms: [],
       icon: "mirotalk",
-      description: dgettext_noop("dashboard_video", "Self-hosted peer-to-peer video meetings"),
+      description: dgettext_noop("integrations_video", "Self-hosted peer-to-peer video meetings"),
       button_text: "Connect MiroTalk",
       click_event: "connect_mirotalk",
       circuit_breaker_enabled: true
@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "google_meet",
       description:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "Full OAuth integration with automatic room creation"
         ),
       button_text: "Connect Google Meet",
@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "teams",
       description:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "Enterprise OAuth integration with organisational accounts"
         ),
       button_text: "Connect Teams",
@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "zoom",
       description:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "OAuth integration with automatic Zoom meeting creation"
         ),
       button_text: "Connect Zoom",
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       rooms: [],
       icon: "kmeet",
       description:
-        dgettext_noop("dashboard_video", "Infomaniak's hosted video meetings, Swiss-based"),
+        dgettext_noop("integrations_video", "Infomaniak's hosted video meetings, Swiss-based"),
       button_text: "Connect kMeet",
       click_event: "connect_kmeet",
       circuit_breaker_enabled: false
@@ -132,7 +132,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       display_name: "Jitsi Meet",
       rooms: [],
       icon: "jitsi",
-      description: dgettext_noop("dashboard_video", "Your own Jitsi Meet server"),
+      description: dgettext_noop("integrations_video", "Your own Jitsi Meet server"),
       button_text: "Connect Jitsi",
       click_event: "connect_jitsi",
       circuit_breaker_enabled: false
@@ -145,7 +145,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "nextcloud_talk",
       description:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "A Talk conversation on your own Nextcloud for every booking"
         ),
       button_text: "Connect Nextcloud Talk",
@@ -158,7 +158,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       rooms: [],
       icon: "custom",
       description:
-        dgettext_noop("dashboard_video", "Any video platform with static meeting URLs"),
+        dgettext_noop("integrations_video", "Any video platform with static meeting URLs"),
       button_text: "Add Custom Link",
       click_event: "connect_custom",
       circuit_breaker_enabled: false
@@ -270,7 +270,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def description(provider) do
     Gettext.dgettext(
       TymeslotWeb.Gettext,
-      "dashboard_video",
+      "integrations_video",
       metadata(provider).description
     )
   end

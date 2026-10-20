@@ -149,7 +149,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     {:error,
      {:unauthorized,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Nextcloud refused this integration's app password earlier. Edit the integration and enter a new app password."
       )}}
   end
@@ -181,12 +181,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
          {:ok, login} <-
            require_present(
              config[:client_id],
-             dgettext("dashboard_video", "Login name is required")
+             dgettext("integrations_video", "Login name is required")
            ),
          {:ok, _app_password} <-
            require_present(
              config[:client_secret],
-             dgettext("dashboard_video", "App password is required")
+             dgettext("integrations_video", "App password is required")
            ) do
       validate_account_length(base_url, login)
     end
@@ -402,7 +402,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
          :ok <- check_conversation_rights(spreed, config) do
       {:ok,
        String.trim(
-         dgettext("dashboard_video", "Connected to Nextcloud Talk %{version}",
+         dgettext("integrations_video", "Connected to Nextcloud Talk %{version}",
            version: Map.get(spreed, "version", "")
          )
        )}
@@ -413,7 +413,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_video",
+        "integrations_video",
         "Talk is not available to this account. Check that the Talk app is installed and enabled for your user."
       )}}
   end
@@ -425,7 +425,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       {:error,
        {:unreachable,
         dgettext(
-          "dashboard_video",
+          "integrations_video",
           "This Nextcloud Talk is too old. Tymeslot needs Talk 21.1 or later."
         )}}
     end
@@ -444,7 +444,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
     {:unauthorized,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "Nextcloud refused the login name or app password. Create an app password in Nextcloud under Personal settings, Security, and enter it with your login name."
      )}
   end
@@ -452,7 +452,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure(:rate_limited, _config) do
     {:throttled,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "Nextcloud is refusing requests from Tymeslot for now, usually after too many failed logins. Wait a few minutes before trying again."
      )}
   end
@@ -460,7 +460,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure(:not_found, _config) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "No Nextcloud answered at this address. Enter the address you open Nextcloud at, including any subfolder."
      )}
   end
@@ -468,7 +468,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure({:redirected, _location}, _config) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "The server redirected the request. Enter the address your browser ends up on when you open Nextcloud, starting with https://."
      )}
   end
@@ -476,7 +476,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp connection_failure(:invalid_response, _config) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "The server did not answer like a Nextcloud server. Check the address."
      )}
   end
@@ -492,7 +492,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp status_failure(status) do
     {:unreachable,
      dgettext(
-       "dashboard_video",
+       "integrations_video",
        "Nextcloud answered with status %{status}. Check the address, or try again later.",
        status: status
      )}
@@ -500,7 +500,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp unreachable_failure(reason) do
     {:unreachable,
-     dgettext("dashboard_video", "Could not reach the server: %{reason}", reason: reason)}
+     dgettext("integrations_video", "Could not reach the server: %{reason}", reason: reason)}
   end
 
   # Only a saved integration can be flagged. The check a new integration runs
@@ -512,7 +512,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       event: "nextcloud_talk_credentials_rejected",
       message:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "Nextcloud refused the app password. Edit this integration and enter a new app password."
         )
     )
@@ -531,7 +531,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
              https: :for_public,
              https_error_message:
                dgettext(
-                 "dashboard_video",
+                 "integrations_video",
                  "Use an https:// server URL. Nextcloud receives your app password with every request."
                )
            ) do
@@ -546,7 +546,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     else
       {:error,
        dgettext(
-         "dashboard_video",
+         "integrations_video",
          "The server URL and login name are too long to store together. Use a shorter server address."
        )}
     end

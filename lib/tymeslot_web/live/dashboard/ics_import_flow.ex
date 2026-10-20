@@ -83,16 +83,16 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   def upload_error(:too_large),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "The file is too large. Files up to %{size} MB can be imported.",
         size: div(IcsImport.max_bytes(), 1_000_000)
       )
 
   def upload_error(:not_accepted),
-    do: dgettext("dashboard_calendar_events", "Only .ics calendar files can be imported.")
+    do: dgettext("dashboard_calendar_import", "Only .ics calendar files can be imported.")
 
   def upload_error(_other),
-    do: dgettext("dashboard_calendar_events", "The file could not be uploaded. Please try again.")
+    do: dgettext("dashboard_calendar_import", "The file could not be uploaded. Please try again.")
 
   @doc "Why a file could not be planned."
   @spec plan_error(IcsImport.plan_error()) :: String.t()
@@ -101,17 +101,17 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   def plan_error(:invalid_file),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "This file could not be read as a calendar. Please choose an .ics file."
       )
 
   def plan_error(:no_events),
-    do: dgettext("dashboard_calendar_events", "This file contains no events to import.")
+    do: dgettext("dashboard_calendar_import", "This file contains no events to import.")
 
   def plan_error(:too_many_events),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "This file contains more than %{count} events. Please split it into smaller files.",
         count: IcsImport.max_events()
       )
@@ -121,19 +121,19 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   def start_error(:rate_limited),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "Too many imports. Please wait a while before importing another file."
       )
 
   def start_error(:invalid_calendar),
-    do: dgettext("dashboard_calendar_events", "Invalid calendar selected")
+    do: dgettext("dashboard_calendar_import", "Invalid calendar selected")
 
   @doc "What a calendar says while one of the user's imports is running."
   @spec busy_message() :: String.t()
   def busy_message,
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "An import is still running. Please wait for it to finish before importing another file."
       )
 
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
     do:
       {:error,
        dgettext(
-         "dashboard_calendar_events",
+         "dashboard_calendar_import",
          "The import could not be finished. Some of its events may already be in your calendar."
        )}
 
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   defp created_message(count),
     do:
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "Imported 1 event.",
         "Imported %{count} events.",
         count
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   defp rules_refused_message(count),
     do:
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "1 event repeats in a way Outlook can't store, so it was not imported.",
         "%{count} events repeat in a way Outlook can't store, so they were not imported.",
         count
@@ -208,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
 
     message =
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "1 event could not be imported.",
         "%{count} events could not be imported.",
         failed
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   defp month_end_refused_message(count),
     do:
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day.",
         "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day.",
         count
@@ -234,28 +234,28 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   defp halted_message(:unauthorized),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "The import stopped because your calendar needs to be reconnected."
       )
 
   defp halted_message(reason) when reason in [:unavailable, :circuit_open],
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "The import stopped because your calendar is not responding. Please try again later."
       )
 
   defp halted_message(_reason),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "The import stopped because the calendar could not be written to."
       )
 
   defp exclusions_message(count),
     do:
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_import",
         "Outlook could not take the skipped dates of 1 recurring event, so it may show extra occurrences.",
         "Outlook could not take the skipped dates of %{count} recurring events, so they may show extra occurrences.",
         count

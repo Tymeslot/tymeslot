@@ -333,7 +333,9 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   Returns an Oban return value: `{:discard, _}` once flagged (retrying won't
   recover the credentials) or when the integration's row is gone, and
   `{:error, _}` when the flag could not be recorded with its email, so Oban
-  retries the job and takes another shot.
+  retries the job and takes another shot. Credentials under an encryption key
+  missing from the keyring are not flagged (see `ReauthHandling.flag/3`): the
+  job is discarded with `ReauthHandling.key_missing_discard_reason/0`.
   """
   @spec handle_reauth_required(CalendarIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
@@ -342,6 +344,7 @@ defmodule Tymeslot.Integrations.Calendar.Management do
       :ok -> {:discard, ReauthHandling.discard_reason()}
       {:error, :not_found} -> {:discard, "Integration no longer exists"}
       {:error, :notification_failed} -> {:error, "Failed to flag integration for reauth"}
+      {:error, :encryption_key_missing} -> {:discard, ReauthHandling.key_missing_discard_reason()}
     end
   end
 
@@ -352,7 +355,7 @@ defmodule Tymeslot.Integrations.Calendar.Management do
 
   `message` is the explanation shown on the dashboard, passed as its
   untranslated msgid (mark it with `dgettext_noop/2` in the
-  `dashboard_calendar_providers` or `dashboard_integrations` domain) so the
+  `integrations_calendar` or `dashboard_integrations` domain) so the
   dashboard can translate it into the viewer's locale;
   `discard_reason` is the operator-facing reason recorded on the job.
 

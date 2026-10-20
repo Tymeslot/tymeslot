@@ -32,14 +32,13 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
     ],
     invalid_url_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
       ),
-    connected_message:
-      dgettext("dashboard_calendar_providers", "Apple iCloud connection successful"),
+    connected_message: dgettext("integrations_calendar", "Apple iCloud connection successful"),
     not_found_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Apple iCloud CalDAV endpoint not found. The server URL must be https://caldav.icloud.com"
       )
 end

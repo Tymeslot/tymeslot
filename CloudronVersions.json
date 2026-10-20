@@ -4257,6 +4257,53 @@
       },
       "publishState": "published",
       "ts": "Fri, 16 Oct 2026 14:09:39 GMT"
+    },
+    "1.27.0": {
+      "creationDate": "Mon, 19 Oct 2026 15:08:00 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* [BREAKING] encryption: Refuse to start with an unusable data encryption key: an install whose DATA_ENCRYPTION_KEY is not valid Base64 or decodes to fewer than 32 bytes no longer starts. Such an install could not store or read any credential, so it holds none encrypted under that key: replace the value with one from `openssl rand -base64 48` and restart.\nSelf-service account deletion, a choice of which calendars block your booking page, monthly and yearly repeating events, and a long run of calendar sync and payment refund fixes across Google, Outlook, Exchange and CalDAV. Self-hosters: Tymeslot now refuses to start when DATA_ENCRYPTION_KEY or SECRET_KEY_BASE cannot be used, and logs how to fix it. This release also removes the unencrypted copies of stored secrets, so take a backup before upgrading; going back to an earlier version afterwards needs that backup.\n* You can delete your account from account settings, and admins can delete user accounts from the admin users tab\n* In calendar integrations, choose for each calendar whether its events block times on your booking page, including CalDAV calendars shared as busy times only\n* The dashboard calendar's event editor can now repeat an event monthly or yearly\n* When a host changes a meeting's end time in their own calendar, attendees now get an email with the new end\n* Calendar reconnect, integration health and payment dispute emails now arrive in your account's language\n* Self-hosters: rotate the data encryption key with DATA_ENCRYPTION_KEYS without losing stored calendar and video credentials",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.27.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.27.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Mon, 19 Oct 2026 15:08:00 GMT"
     }
   }
 }

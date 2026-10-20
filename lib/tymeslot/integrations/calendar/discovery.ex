@@ -71,9 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     else
       _other ->
         {:error,
-         dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
-           provider: provider
-         )}
+         dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}
     end
   end
 
@@ -144,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         {:error,
          {:unknown,
           dgettext(
-            "dashboard_calendar_providers",
+            "integrations_calendar",
             "Calendar discovery could not be attributed to your account. Please try again."
           )}}
     end
@@ -203,9 +201,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:error, :unknown_provider} ->
         {:error,
          {:config,
-          dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
-            provider: provider
-          )}}
+          dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}}
     end
   end
 
@@ -262,7 +258,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
          %{
            discovery:
              dgettext(
-               "dashboard_calendar_providers",
+               "integrations_calendar",
                "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
              )
          }}
@@ -315,7 +311,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:error,
        {:unknown,
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Calendar discovery could not be attributed to your account. Please try again."
         )}}
 
@@ -346,9 +342,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     do:
       {:error,
        {:config,
-        dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
-          provider: provider
-        )}}
+        dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}}
 
   defp resolve_provider_atom(p) do
     case ProviderRegistry.validate_provider(p) do
@@ -483,7 +477,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
 
       true ->
         {:error,
-         dgettext("dashboard_calendar_providers", "Unsupported provider: %{provider}",
+         dgettext("integrations_calendar", "Unsupported provider: %{provider}",
            provider: provider_atom
          )}
     end
@@ -499,5 +493,5 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   # Everything the choke point can still refuse with bare: `:unattributable`,
   # and an unresolvable provider.
   defp format_discovery_error(_arg),
-    do: dgettext("dashboard_calendar_providers", "Calendar discovery failed")
+    do: dgettext("integrations_calendar", "Calendar discovery failed")
 end

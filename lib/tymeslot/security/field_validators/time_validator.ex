@@ -22,11 +22,11 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidator do
         end
 
       :error ->
-        {:error, dgettext("errors", "Time must be in HH:MM format")}
+        {:error, dgettext("errors_input", "Time must be in HH:MM format")}
     end
   end
 
-  def validate(_value, _opts), do: {:error, dgettext("errors", "Time must be text")}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "Time must be text")}
 
   defp parse_time(value) do
     trimmed = String.trim(value)
@@ -52,7 +52,7 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidator do
   defp check_bound(time, bound, dir) when is_binary(bound) do
     case parse_time(bound) do
       {:ok, b} -> compare_bound(time, b, dir)
-      :error -> {:error, dgettext("errors", "Time range configuration is invalid")}
+      :error -> {:error, dgettext("errors_input", "Time range configuration is invalid")}
     end
   end
 
@@ -62,18 +62,18 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidator do
   defp compare_bound(time, bound, :min) do
     if Time.compare(time, bound) in [:eq, :gt],
       do: :ok,
-      else: {:error, dgettext("errors", "Time is before the earliest allowed time")}
+      else: {:error, dgettext("errors_input", "Time is before the earliest allowed time")}
   end
 
   defp compare_bound(time, bound, :max) do
     if Time.compare(time, bound) in [:eq, :lt],
       do: :ok,
-      else: {:error, dgettext("errors", "Time is after the latest allowed time")}
+      else: {:error, dgettext("errors_input", "Time is after the latest allowed time")}
   end
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, dgettext("errors", "Time is required")},
+      do: {:error, dgettext("errors_input", "Time is required")},
       else: :ok
   end
 end

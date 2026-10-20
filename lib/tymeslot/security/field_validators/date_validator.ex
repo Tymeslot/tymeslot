@@ -16,21 +16,21 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
       :ok
     else
       {:error, :invalid_format} ->
-        {:error, dgettext("errors", "Date must be in YYYY-MM-DD format")}
+        {:error, dgettext("errors_input", "Date must be in YYYY-MM-DD format")}
 
       {:error, msg} when is_binary(msg) ->
         {:error, msg}
 
       _other ->
-        {:error, dgettext("errors", "Date is invalid")}
+        {:error, dgettext("errors_input", "Date is invalid")}
     end
   end
 
-  def validate(_value, _opts), do: {:error, dgettext("errors", "Date must be text")}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "Date must be text")}
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, dgettext("errors", "Date is required")},
+      do: {:error, dgettext("errors_input", "Date is required")},
       else: :ok
   end
 
@@ -41,10 +41,10 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
       {:ok, b} ->
         if Date.compare(date, b) in [:eq, :gt],
           do: :ok,
-          else: {:error, dgettext("errors", "Date is before the earliest allowed date")}
+          else: {:error, dgettext("errors_input", "Date is before the earliest allowed date")}
 
       _err ->
-        {:error, dgettext("errors", "Date range configuration is invalid")}
+        {:error, dgettext("errors_input", "Date range configuration is invalid")}
     end
   end
 
@@ -53,10 +53,10 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
       {:ok, b} ->
         if Date.compare(date, b) in [:eq, :lt],
           do: :ok,
-          else: {:error, dgettext("errors", "Date is after the latest allowed date")}
+          else: {:error, dgettext("errors_input", "Date is after the latest allowed date")}
 
       _err ->
-        {:error, dgettext("errors", "Date range configuration is invalid")}
+        {:error, dgettext("errors_input", "Date range configuration is invalid")}
     end
   end
 

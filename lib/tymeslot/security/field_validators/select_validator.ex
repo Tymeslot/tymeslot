@@ -16,16 +16,16 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidator do
     if value in allowed_keys(definition) do
       :ok
     else
-      {:error, dgettext("errors", "Please choose one of the available options")}
+      {:error, dgettext("errors_input", "Please choose one of the available options")}
     end
   end
 
   def validate(_value, _definition, _opts),
-    do: {:error, dgettext("errors", "Selection must be a single option")}
+    do: {:error, dgettext("errors_input", "Selection must be a single option")}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, dgettext("errors", "Please choose an option")},
+      do: {:error, dgettext("errors_input", "Please choose an option")},
       else: :ok
   end
 

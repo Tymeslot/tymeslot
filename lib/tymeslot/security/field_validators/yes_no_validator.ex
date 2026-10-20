@@ -17,10 +17,10 @@ defmodule Tymeslot.Security.FieldValidators.YesNoValidator do
 
   def validate(nil, _definition, opts) do
     if Keyword.get(opts, :required, false),
-      do: {:error, dgettext("errors", "Answer is required")},
+      do: {:error, dgettext("errors_input", "Answer is required")},
       else: :ok
   end
 
   def validate(_value, _definition, _opts),
-    do: {:error, dgettext("errors", "Answer must be yes or no")}
+    do: {:error, dgettext("errors_input", "Answer must be yes or no")}
 end

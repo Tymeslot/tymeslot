@@ -323,7 +323,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   defp translate_tooltip(%{tooltip: tooltip} = locked),
     do: %{
       locked
-      | tooltip: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_calendar_providers", tooltip)
+      | tooltip: Gettext.dgettext(TymeslotWeb.Gettext, "integrations_calendar", tooltip)
     }
 
   @doc "How `provider` is presented. See `ProviderConfig.Metadata`."
@@ -443,7 +443,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # prefers; this clause serves direct callers of this module. Both translate
   # the same msgid, so the two paths cannot disagree.
   def display_name(:ics_url),
-    do: dgettext("dashboard_calendar_providers", "Calendar subscription")
+    do: dgettext("integrations_calendar", "Calendar subscription")
 
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"

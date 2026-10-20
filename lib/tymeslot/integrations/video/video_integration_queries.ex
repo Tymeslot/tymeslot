@@ -522,6 +522,21 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Whether a user other than `user_id` has an integration of `provider` on the
+  external account `provider_account_id` that still holds a token, whatever
+  its state: a disconnected row keeps its grant until its room cleanup drains.
+  """
+  @spec account_held_by_other_user?(String.t(), String.t(), integer()) :: boolean()
+  def account_held_by_other_user?(provider, provider_account_id, user_id)
+      when is_binary(provider) and is_binary(provider_account_id) and is_integer(user_id) do
+    VideoIntegrationSchema
+    |> where([v], v.provider == ^provider and v.provider_account_id == ^provider_account_id)
+    |> where([v], v.user_id != ^user_id)
+    |> where([v], not is_nil(v.refresh_token_encrypted) or not is_nil(v.access_token_encrypted))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Deletes every integration matching `(provider, provider_account_id)` regardless
   of the owning user. Used by provider-initiated revocation flows (e.g. the Zoom
   deauthorization webhook) where the only identifier we receive is the provider's

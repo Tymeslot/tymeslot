@@ -47,41 +47,41 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     cond do
       String.contains?(error, ["401", "unauthorized", "authentication"]) ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Authentication failed. Please check your credentials."
         )
 
       String.contains?(error, ["404", "not found"]) ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Resource not found. Please verify your configuration."
         )
 
       String.contains?(error, ["500", "502", "503", "504"]) ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "The calendar service is temporarily unavailable. Please try again later."
         )
 
       String.contains?(error, ["timeout", "timed out"]) ->
-        dgettext("dashboard_calendar_providers", "The request timed out. Please try again.")
+        dgettext("integrations_calendar", "The request timed out. Please try again.")
 
       String.contains?(error, ["SSL", "TLS", "certificate"]) ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Secure connection failed. Please check your server configuration."
         )
 
       String.contains?(error, ["network", "connection refused", "ECONNREFUSED"]) ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Unable to connect to the calendar service. Please check the URL and try again."
         )
 
       true ->
         # Generic message for unknown errors
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "An error occurred while communicating with the calendar service."
         )
     end
@@ -89,28 +89,28 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   def sanitize_error_message(:unauthorized, :apple) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
     )
   end
 
   def sanitize_error_message(:unauthorized, :mailbox_org) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Authentication failed. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
     )
   end
 
   def sanitize_error_message(:unauthorized, :nextcloud) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Authentication failed. Check your Nextcloud username and password, or generate an app password under Settings → Security."
     )
   end
 
   def sanitize_error_message(:unauthorized, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Authentication failed. Please check your credentials."
     )
   end
@@ -131,21 +131,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   def sanitize_error_message(:forbidden, :mailbox_org) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Access denied. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
     )
   end
 
   def sanitize_error_message(:forbidden, :apple) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Access denied. iCloud requires an app-specific password generated at appleid.apple.com — your Apple ID password will not work for CalDAV."
     )
   end
 
   def sanitize_error_message(:forbidden, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Access denied. You do not have permission to access this calendar resource."
     )
   end
@@ -167,21 +167,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     Logger.error("Calendar provider error", provider: provider, error: code)
 
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "An error occurred while communicating with the calendar service."
     )
   end
 
   def sanitize_error_message(:not_found, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Resource not found. Please verify your configuration."
     )
   end
 
   def sanitize_error_message(:rate_limited, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Too many requests. Please wait a moment and try again."
     )
   end
@@ -192,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   def sanitize_error_message(:network_error, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Network connection failed. Please check your internet connection."
     )
   end
@@ -200,7 +200,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   def sanitize_error_message(reason, _provider)
       when reason in [:server_error, :service_unavailable] do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The calendar service encountered an error. Please try again later."
     )
   end
@@ -211,7 +211,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   def sanitize_error_message(error, provider) do
     Logger.error("Unknown calendar error", provider: provider, error: LogFormat.reason(error))
-    dgettext("dashboard_calendar_providers", "An unexpected error occurred. Please try again.")
+    dgettext("integrations_calendar", "An unexpected error occurred. Please try again.")
   end
 
   @doc """

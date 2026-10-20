@@ -191,8 +191,8 @@ defmodule Tymeslot.CalendarGrid do
     to: EventSearch,
     as: :search
 
-  @doc "Enqueues a sync of each of the user's active integrations. See `Freshness.refresh_events/1`."
-  defdelegate refresh_events(user_id), to: Freshness
+  @doc "Enqueues a sync of each of the user's active integrations. See `Freshness.refresh_events/2`."
+  defdelegate refresh_events(user_id, how \\ :requested), to: Freshness
 
   @doc "The consecutive failed sync cycles of each of the user's calendar integrations, by id."
   @spec sync_failures(integer()) :: %{integer() => pos_integer()}

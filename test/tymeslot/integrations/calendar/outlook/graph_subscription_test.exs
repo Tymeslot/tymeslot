@@ -16,8 +16,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
 
@@ -254,6 +256,58 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       assert {:ok, updated} = GraphSubscription.bootstrap_sync(integration)
       assert updated.graph_delta_link =~ "deltatoken=empty"
+    end
+
+    # A re-bootstrap after a 410 or an obsolete delta link is the only pass
+    # that sees a move made while no link was tracking; the new link reports
+    # only later changes, so the snapshot has to reconcile it.
+    test "reconciles a meeting whose event was moved while no delta link was tracking",
+         %{integration: integration} do
+      TestMocks.setup_email_mocks()
+
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "graph-id-moved",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1800, :second)
+        )
+
+      moved_start = DateTime.add(start_time, 7200, :second)
+
+      moved = %{
+        "id" => "graph-id-moved",
+        "iCalUId" => "outlook-moved@example.com",
+        "subject" => "Booked meeting",
+        "showAs" => "busy",
+        "isAllDay" => false,
+        "isCancelled" => false,
+        "start" => %{"dateTime" => DateTime.to_iso8601(moved_start), "timeZone" => "UTC"},
+        "end" => %{
+          "dateTime" => moved_start |> DateTime.add(1800, :second) |> DateTime.to_iso8601(),
+          "timeZone" => "UTC"
+        }
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [moved],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
+             })
+         }}
+      end)
+
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+
+      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+               MeetingQueries.get_meeting(meeting.id)
     end
   end
 

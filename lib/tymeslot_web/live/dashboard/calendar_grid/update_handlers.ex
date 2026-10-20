@@ -392,7 +392,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     if socket.assigns.stale_integrations != [] do
       user_id = socket.assigns.current_user.id
 
-      result = CalendarGrid.refresh_events(user_id)
+      result = CalendarGrid.refresh_events(user_id, :opened)
 
       case result do
         {:ok, %{enqueued: 0}} ->

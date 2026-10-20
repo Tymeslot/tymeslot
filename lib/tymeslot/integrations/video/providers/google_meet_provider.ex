@@ -181,12 +181,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     with {:ok, valid_token} <- ensure_valid_token(config),
          {:ok, _calendar_list} <- get_calendar_list(valid_token) do
-      {:ok, dgettext("dashboard_video", "Google Meet connected successfully!")}
+      {:ok, dgettext("integrations_video", "Google Meet connected successfully!")}
     else
       {:error, reason} ->
         Logger.error("Google Meet connection test failed", reason: Redactor.redact(reason))
 
-        {:error, dgettext("dashboard_video", "Connection test failed: %{reason}", reason: reason)}
+        {:error,
+         dgettext("integrations_video", "Connection test failed: %{reason}", reason: reason)}
     end
   end
 
@@ -358,7 +359,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       event: "google_meet_token_revoked",
       message:
         dgettext_noop(
-          "dashboard_video",
+          "integrations_video",
           "Google Meet access was revoked. Please reconnect your Google account."
         )
     )
@@ -382,7 +383,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
           {:error, _decode_error} ->
             {:error,
-             dgettext("dashboard_video", "Invalid JSON response from Google Calendar API")}
+             dgettext("integrations_video", "Invalid JSON response from Google Calendar API")}
         end
 
       {:ok, %Req.Response{status: status, body: body}} ->
@@ -392,7 +393,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         )
 
         {:error,
-         dgettext("dashboard_video", "HTTP %{status} (see logs for details)", status: status)}
+         dgettext("integrations_video", "HTTP %{status} (see logs for details)", status: status)}
 
       {:error, reason} ->
         {:error, inspect(reason)}

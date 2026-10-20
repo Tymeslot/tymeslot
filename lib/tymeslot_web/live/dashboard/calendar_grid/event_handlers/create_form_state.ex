@@ -417,7 +417,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   Handles every event the meeting-mode reminder picker sends, named by the
   `meeting_` prefix it renders them with.
 
-  One clause for all five keeps the component's own dispatch to a single
+  One clause for all six keeps the component's own dispatch to a single
   entry: the picker's state is a map inside `creating_event`, so nothing here
   needs to know which field an event touches.
   """
@@ -442,6 +442,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   defp apply_meeting_reminder_event("meeting_add_reminder", state, params),
     do: ReminderPickerState.add_custom(state, params)
+
+  defp apply_meeting_reminder_event("meeting_commit_custom_reminder", state, params),
+    do: ReminderPickerState.commit_pending(state, params)
 
   defp apply_meeting_reminder_event("meeting_remove_reminder", state, params),
     do: ReminderPickerState.remove(state, params)

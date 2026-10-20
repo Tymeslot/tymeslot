@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
       <.card variant={:flat} padding={:sm} class="space-y-3">
         <.subsection_header
           level={4}
-          title={dgettext("dashboard_meeting_form", "New saved location")}
+          title={dgettext("dashboard_meeting_locations", "New saved location")}
         />
 
         <.form
@@ -89,8 +89,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
         >
           <.input
             field={@form[:name]}
-            label={dgettext("dashboard_meeting_form", "Name")}
-            placeholder={dgettext("dashboard_meeting_form", "e.g., Berlin office")}
+            label={dgettext("dashboard_meeting_locations", "Name")}
+            placeholder={dgettext("dashboard_meeting_locations", "e.g., Berlin office")}
             maxlength={VenueSchema.name_max_length()}
             required
           />
@@ -99,8 +99,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
             field={@form[:description]}
             type="textarea"
             rows={3}
-            label={dgettext("dashboard_meeting_form", "Address and directions (optional)")}
-            placeholder={dgettext("dashboard_meeting_form", "12 High Street, London EC1A 1BB")}
+            label={dgettext("dashboard_meeting_locations", "Address and directions (optional)")}
+            placeholder={dgettext("dashboard_meeting_locations", "12 High Street, London EC1A 1BB")}
             maxlength={VenueSchema.description_max_length()}
           />
 
@@ -111,10 +111,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.NewVenueComponen
               phx-click="toggle_new_venue"
               phx-target={@editor}
             >
-              {dgettext("dashboard_meeting_form", "Cancel")}
+              {dgettext("dashboard_meeting_locations", "Cancel")}
             </.action_button>
             <.action_button type="submit" variant={:primary}>
-              {dgettext("dashboard_meeting_form", "Add to saved locations")}
+              {dgettext("dashboard_meeting_locations", "Add to saved locations")}
             </.action_button>
           </div>
         </.form>

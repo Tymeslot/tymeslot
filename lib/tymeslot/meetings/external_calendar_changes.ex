@@ -24,12 +24,15 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Validation.Constraints
   alias Tymeslot.Workers.VideoSyncWorker
 
   @type signal :: :deleted | :modified
 
   @externally_deleted "externally_deleted"
   @externally_modified "externally_modified"
+
+  @max_duration_minutes Constraints.duration_minutes_range().last
 
   @doc """
   Applies an external calendar change signal to the linked meeting, if any.
@@ -80,8 +83,11 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   with an updated calendar entry, and the host is told who was
   (`Tymeslot.Notifications.Email.EndChangeEmails`).
 
-  An end at or before the start is no length a meeting can have; that event
-  is treated as an external modification for the host to look at.
+  An end at or before the start is no length a meeting can have, and one
+  that makes it longer than any meeting type may last
+  (`Tymeslot.Validation.Constraints.duration_minutes_range/0`) is more likely
+  a slip of the host's mouse than a booking to announce; either event is
+  treated as an external modification for the host to look at.
   """
   @spec apply_end_change(Meeting.t(), DateTime.t()) :: :ok | {:error, term()}
   def apply_end_change(%Meeting{} = meeting, %DateTime{} = end_time) do
@@ -93,6 +99,9 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
         ignore(meeting, :end_moved, "meeting slot has already elapsed")
 
       not DateTime.after?(end_time, meeting.start_time) ->
+        apply_change_to_meeting(meeting, :modified)
+
+      DateTime.diff(end_time, meeting.start_time, :minute) > @max_duration_minutes ->
         apply_change_to_meeting(meeting, :modified)
 
       true ->
@@ -161,6 +170,22 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
         :ok
     end
+  end
+
+  @doc """
+  Records the end the host's calendar event shows for a meeting at a sync
+  that found it in step, as the end a later end change is measured against
+  (see `Tymeslot.Integrations.Calendar.TimingChange`). Writes only when it
+  differs from the one already recorded; nil (an event with no hours) records
+  nothing.
+  """
+  @spec record_seen_calendar_end(Meeting.t(), DateTime.t() | nil) :: :ok
+  def record_seen_calendar_end(_meeting, nil), do: :ok
+
+  def record_seen_calendar_end(%Meeting{seen_calendar_end_time: seen} = meeting, end_time) do
+    if seen && DateTime.compare(seen, end_time) == :eq,
+      do: :ok,
+      else: MeetingCalendarQueries.put_seen_calendar_end(meeting.id, end_time)
   end
 
   @doc """

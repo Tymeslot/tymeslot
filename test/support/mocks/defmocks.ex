@@ -12,6 +12,7 @@ alias Tymeslot.Mocks.StripeBehaviours.{
   StripeChargeBehaviour,
   StripeCustomerBehaviour,
   StripeInvoiceBehaviour,
+  StripeInvoicePaymentBehaviour,
   StripeSessionBehaviour,
   StripeSubscriptionBehaviour
 }
@@ -72,3 +73,4 @@ Mox.defmock(StripeSessionMock, for: StripeSessionBehaviour)
 Mox.defmock(StripeSubscriptionMock, for: StripeSubscriptionBehaviour)
 Mox.defmock(StripeChargeMock, for: StripeChargeBehaviour)
 Mox.defmock(StripeInvoiceMock, for: StripeInvoiceBehaviour)
+Mox.defmock(StripeInvoicePaymentMock, for: StripeInvoicePaymentBehaviour)

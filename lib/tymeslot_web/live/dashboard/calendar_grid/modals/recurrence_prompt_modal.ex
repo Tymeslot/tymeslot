@@ -51,11 +51,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
       on_cancel={JS.push("cancel_recurrence_prompt", target: @myself)}
       size={:small}
     >
-      <:header>{dgettext("dashboard_calendar_events", "Edit recurring event")}</:header>
+      <:header>{dgettext("dashboard_calendar_recurrence", "Edit recurring event")}</:header>
 
       <p class="text-token-sm text-tymeslot-500 mb-4">
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_recurrence",
           "This event is part of a repeating series. Which events should your change apply to?"
         )}
       </p>
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
             variant={:secondary}
             phx-click={JS.push("cancel_recurrence_prompt", target: @myself)}
           >
-            {dgettext("dashboard_calendar_events", "Cancel")}
+            {dgettext("dashboard_calendar_recurrence", "Cancel")}
           </.action_button>
         </div>
       </:footer>
@@ -125,31 +125,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
 
   defp listed_scopes(prompt), do: for(scope <- offered_scopes(prompt), do: {scope, nil})
 
-  defp scope_label(:this_only), do: dgettext("dashboard_calendar_events", "This event")
+  defp scope_label(:this_only), do: dgettext("dashboard_calendar_recurrence", "This event")
 
   defp scope_label(:following),
-    do: dgettext("dashboard_calendar_events", "This and following events")
+    do: dgettext("dashboard_calendar_recurrence", "This and following events")
 
-  defp scope_label(:all), do: dgettext("dashboard_calendar_events", "All events")
+  defp scope_label(:all), do: dgettext("dashboard_calendar_recurrence", "All events")
 
   defp scope_description(:this_only),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_recurrence",
         "only this occurrence changes, and the rest of the series stays as it is."
       )
 
   defp scope_description(:following),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_recurrence",
         "this occurrence and every later one change, and the earlier ones stay as they are."
       )
 
   defp scope_description(:all),
     do:
       dgettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_recurrence",
         "every occurrence in the series changes, earlier ones included."
       )
 end

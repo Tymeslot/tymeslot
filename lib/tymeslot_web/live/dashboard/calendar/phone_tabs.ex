@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneTabs do
     </button>
     <nav
       id="calendar-tabs"
-      aria-label={dgettext("dashboard_calendar_events", "Views")}
+      aria-label={dgettext("dashboard_calendar", "Views")}
       class="cal-tabs flex shrink-0 border-t border-tymeslot-200 bg-white sm:hidden"
     >
       <button

@@ -213,6 +213,85 @@ defmodule TymeslotWeb.AccountDeletion.AccountDeletionJourneyTest do
     refute_enqueued(worker: TelegramWorker)
   end
 
+  test "a Google or Zoom account another host also connected stays connected for that host",
+       %{conn: conn} do
+    with_config(:tymeslot, :account_deletion_grace_days, 0)
+
+    with_config(:tymeslot, :zoom_oauth,
+      client_id: "zoom-id",
+      client_secret: "zoom-secret",
+      state_secret: "zoom-state"
+    )
+
+    leaving = host("leaving-sharer")
+    staying = host("staying-sharer")
+
+    insert(:calendar_integration,
+      user: leaving,
+      provider: "google",
+      provider_account_id: "google-sub-shared",
+      google_channel_id: "chan-1",
+      google_channel_resource_id: "res-1",
+      access_token_encrypted: Encryption.encrypt("cal-access"),
+      refresh_token_encrypted: Encryption.encrypt("cal-refresh"),
+      token_expires_at: in_an_hour()
+    )
+
+    insert(:video_integration,
+      user: leaving,
+      provider: "zoom",
+      provider_account_id: "zoom-user-shared",
+      access_token_encrypted: Encryption.encrypt("zoom-access"),
+      refresh_token_encrypted: Encryption.encrypt("zoom-refresh"),
+      token_expires_at: in_an_hour()
+    )
+
+    # The other host connected the same Google account for Meet, not for a
+    # calendar, and the same Zoom user.
+    staying_meet =
+      insert(:video_integration,
+        user: staying,
+        provider: "google_meet",
+        provider_account_id: "google-sub-shared",
+        refresh_token_encrypted: Encryption.encrypt("meet-refresh")
+      )
+
+    staying_zoom =
+      insert(:video_integration,
+        user: staying,
+        provider: "zoom",
+        provider_account_id: "zoom-user-shared",
+        access_token_encrypted: Encryption.encrypt("other-zoom-access")
+      )
+
+    test_pid = self()
+
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, url, _body, _headers, _opts ->
+      send(test_pid, {:called, url})
+      {:ok, %Req.Response{status: 204, body: ""}}
+    end)
+
+    stub(Tymeslot.HTTPClientMock, :post, fn url, _body, _headers, _opts ->
+      send(test_pid, {:called, url})
+      {:ok, %Req.Response{status: 200, body: ""}}
+    end)
+
+    assert {:error, {:redirect, %{to: "/auth/login"}}} = request_deletion(conn, leaving)
+    assert [job] = all_enqueued(worker: AccountDeletionWorker)
+    assert perform_job(AccountDeletionWorker, job.args) == :ok
+
+    # The leaving host's own channel is stopped and its rows are gone...
+    assert_received {:called, "https://www.googleapis.com/calendar/v3/channels/stop"}
+    assert rows_referencing(leaving.id) == []
+
+    # ...but neither grant the other host relies on is revoked.
+    refute_received {:called, "https://oauth2.googleapis.com/revoke"}
+    refute_received {:called, "https://zoom.us/oauth/revoke" <> _query}
+
+    assert Repo.get(VideoIntegrationSchema, staying_meet.id).refresh_token_encrypted
+    assert Repo.get(VideoIntegrationSchema, staying_zoom.id).access_token_encrypted
+  end
+
   test "self-hosted: with no grace period the account is deleted at once and never frozen",
        %{conn: conn} do
     with_config(:tymeslot, :account_deletion_grace_days, 0)

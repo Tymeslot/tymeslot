@@ -26,6 +26,9 @@ defmodule Tymeslot.Payments.Stripe do
   defp charge_mod, do: Application.get_env(:tymeslot, :stripe_charge_mod, Stripe.Charge)
   defp invoice_mod, do: Application.get_env(:tymeslot, :stripe_invoice_mod, Stripe.Invoice)
 
+  defp invoice_payment_mod,
+    do: Application.get_env(:tymeslot, :stripe_invoice_payment_mod, Stripe.InvoicePayment)
+
   @doc """
   Creates a Stripe customer for the given email.
   """
@@ -190,6 +193,31 @@ defmodule Tymeslot.Payments.Stripe do
     Logger.info("Listing Stripe invoices", params: LogFormat.reason(params))
 
     with {:ok, opts} <- api_key_opts(), do: invoice_mod().list(params, opts)
+  end
+
+  @doc """
+  Retrieves a Stripe invoice.
+  """
+  @impl StripeProvider
+  @spec get_invoice(String.t()) :: stripe_result()
+  def get_invoice(invoice_id) when is_binary(invoice_id) do
+    Logger.info("Retrieving Stripe invoice", invoice_id: invoice_id)
+
+    with {:ok, opts} <- api_key_opts(), do: invoice_mod().retrieve(invoice_id, %{}, opts)
+  end
+
+  @doc """
+  Lists the payments made against invoices, one page at a time, with
+  Stripe's own filters (`invoice`, `payment`, `status`, `limit`,
+  `starting_after`). Filtering on `payment` finds the invoice a payment
+  intent paid: `%{payment: %{type: "payment_intent", payment_intent: id}}`.
+  """
+  @impl StripeProvider
+  @spec list_invoice_payments(map()) :: stripe_result()
+  def list_invoice_payments(params) when is_map(params) do
+    Logger.info("Listing Stripe invoice payments", params: LogFormat.reason(params))
+
+    with {:ok, opts} <- api_key_opts(), do: invoice_payment_mod().list(params, opts)
   end
 
   @doc """

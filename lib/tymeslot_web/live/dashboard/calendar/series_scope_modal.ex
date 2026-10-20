@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
     >
       <p>{question(@prompt)}</p>
       <p :if={@prompt.kind == :timing} id="calendar-scope-undo-note" class="text-tymeslot-500">
-        {dgettext("dashboard_calendar", "Only “This event” can be undone.")}
+        {dgettext("dashboard_calendar_recurrence", "Only “This event” can be undone.")}
       </p>
       <:actions>
         <.action_button
@@ -58,32 +58,32 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
 
   defp choices(kind) when kind in [:timing, :panel],
     do: [
-      {"this_only", dgettext("dashboard_calendar", "This event")},
-      {"following", dgettext("dashboard_calendar", "This and following events")},
-      {"all", dgettext("dashboard_calendar", "All events")}
+      {"this_only", dgettext("dashboard_calendar_recurrence", "This event")},
+      {"following", dgettext("dashboard_calendar_recurrence", "This and following events")},
+      {"all", dgettext("dashboard_calendar_recurrence", "All events")}
     ]
 
   defp choices(:delete),
     do: [
-      {"occurrence", dgettext("dashboard_calendar", "This event")},
-      {"series", dgettext("dashboard_calendar", "All events")}
+      {"occurrence", dgettext("dashboard_calendar_recurrence", "This event")},
+      {"series", dgettext("dashboard_calendar_recurrence", "All events")}
     ]
 
   defp choices(:panel_repeat),
     do: [
-      {"following", dgettext("dashboard_calendar", "This and following events")},
-      {"all", dgettext("dashboard_calendar", "All events")}
+      {"following", dgettext("dashboard_calendar_recurrence", "This and following events")},
+      {"all", dgettext("dashboard_calendar_recurrence", "All events")}
     ]
 
   defp title(kind) when kind in [:timing, :panel, :panel_repeat],
-    do: dgettext("dashboard_calendar", "Change a repeating event")
+    do: dgettext("dashboard_calendar_recurrence", "Change a repeating event")
 
-  defp title(:delete), do: dgettext("dashboard_calendar", "Delete a repeating event")
+  defp title(:delete), do: dgettext("dashboard_calendar_recurrence", "Delete a repeating event")
 
   defp question(%{kind: :panel, title: title}),
     do:
       dgettext(
-        "dashboard_calendar",
+        "dashboard_calendar_recurrence",
         "“%{title}” repeats. Which events should your changes apply to? Your answer holds until you close the details.",
         title: title
       )
@@ -91,20 +91,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
   defp question(%{kind: :panel_repeat, title: title}),
     do:
       dgettext(
-        "dashboard_calendar",
+        "dashboard_calendar_recurrence",
         "“%{title}” repeats. Should the new pattern apply to this and the following events, or to all of them?",
         title: title
       )
 
   defp question(%{kind: :timing, title: title}),
     do:
-      dgettext("dashboard_calendar", "“%{title}” repeats. Which events should change?",
+      dgettext("dashboard_calendar_recurrence", "“%{title}” repeats. Which events should change?",
         title: title
       )
 
   defp question(%{kind: :delete, title: title}),
     do:
-      dgettext("dashboard_calendar", "“%{title}” repeats. Which events should be deleted?",
+      dgettext("dashboard_calendar_recurrence", "“%{title}” repeats. Which events should be deleted?",
         title: title
       )
 end

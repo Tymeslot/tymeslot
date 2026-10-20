@@ -211,6 +211,9 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   rescheduled, cancelled or sent a reschedule request in the meantime is left
   alone: the end was read against what it was before.
 
+  The new end is the one the host's calendar shows, so it becomes the
+  meeting's `seen_calendar_end_time` too.
+
   The new end is a new revision of every calendar entry that carries the
   meeting, so the meeting's `ical_sequence` advances, and so does each live
   group seat's, which is a calendar entry of its own: an update sent at an
@@ -243,6 +246,7 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
           end_time: ^end_time,
           duration: ^DateTime.diff(end_time, start_time, :minute),
           notified_end_time: fragment("COALESCE(?, ?)", m.notified_end_time, ^previous_end),
+          seen_calendar_end_time: ^end_time,
           updated_at: ^DateTime.utc_now(:second)
         ],
         inc: [ical_sequence: 1]
@@ -257,6 +261,19 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+  end
+
+  @doc """
+  Records `end_time` as the end the host's calendar event showed for the
+  meeting at this sync (`seen_calendar_end_time`).
+  """
+  @spec put_seen_calendar_end(String.t(), DateTime.t()) :: :ok
+  def put_seen_calendar_end(meeting_id, %DateTime{} = end_time) do
+    Meeting
+    |> where([m], m.id == ^meeting_id)
+    |> Repo.update_all(set: [seen_calendar_end_time: end_time])
+
+    :ok
   end
 
   @doc """

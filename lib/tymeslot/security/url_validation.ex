@@ -155,25 +155,25 @@ defmodule Tymeslot.Security.UrlValidation do
   # Translated when the refusal is made, in the caller's locale: these come
   # back as plain strings, outside a changeset's `{message, opts}`.
   defp default_length_error(max_length),
-    do: dgettext("errors", "URL must be %{max} characters or less", max: max_length)
+    do: dgettext("errors_input", "URL must be %{max} characters or less", max: max_length)
 
   defp default_invalid_message,
-    do: dgettext("errors", "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)")
+    do: dgettext("errors_input", "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)")
 
   defp default_scheme_error,
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Enter a full address starting with https://, for example https://example.com"
       )
 
   defp default_blocked_protocol_error,
-    do: dgettext("errors", "Only HTTP and HTTPS URLs are allowed")
+    do: dgettext("errors_input", "Only HTTP and HTTPS URLs are allowed")
 
-  defp default_https_error, do: dgettext("errors", "Use HTTPS for non-local servers")
+  defp default_https_error, do: dgettext("errors_input", "Use HTTPS for non-local servers")
 
   defp default_private_ip_error,
-    do: dgettext("errors", "Private or local network addresses are not allowed")
+    do: dgettext("errors_input", "Private or local network addresses are not allowed")
 
   defp contains_disallowed_substring?(url, disallowed_protocols) do
     Enum.any?(disallowed_protocols, &String.contains?(url, &1))

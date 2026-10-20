@@ -117,7 +117,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The Exchange server rejected the stored credentials. Please reconnect the integration."
       ),
       @credentials_rejected
@@ -131,7 +131,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
       ),
       @no_mailbox
@@ -208,28 +208,28 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   @spec sync_error_message(term()) :: String.t()
   def sync_error_message({:empty_feed_with_populated_cache, @busy_only}) do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Exchange reported no busy time at all, but the cache still holds some. Keeping it in place and retrying rather than treating your diary as free."
     )
   end
 
   def sync_error_message({:empty_feed_with_populated_cache, _role}) do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Exchange returned no calendar events, but the cache still holds some. Keeping them in place and retrying rather than emptying your calendar view."
     )
   end
 
   def sync_error_message({:soap_fault, _message}) do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The Exchange server rejected the request."
     )
   end
 
   def sync_error_message(:no_response_code) do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The Exchange server answered the free/busy request with nothing Tymeslot could read. Retrying rather than treating your diary as free."
     )
   end

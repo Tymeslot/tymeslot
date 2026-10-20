@@ -29,17 +29,17 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
 
   def validate(value, opts) when is_binary(value) do
     if String.length(value) > @max_length do
-      {:error, dgettext("errors", "Number is too long")}
+      {:error, dgettext("errors_input", "Number is too long")}
     else
       case parse(value) do
         {:ok, n} -> check_bounds(n, opts)
-        :error -> {:error, dgettext("errors", "Number is not valid")}
+        :error -> {:error, dgettext("errors_input", "Number is not valid")}
       end
     end
   end
 
   def validate(value, opts) when is_number(value), do: check_bounds(value, opts)
-  def validate(_value, _opts), do: {:error, dgettext("errors", "Number must be numeric")}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "Number must be numeric")}
 
   # `Float.parse/1` and `Integer.parse/1` raise `ArgumentError` on
   # pathological input — IEEE-754 overflow for ≥ 309-digit strings, and
@@ -82,10 +82,10 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
 
     cond do
       is_number(min) and n < min ->
-        {:error, dgettext("errors", "Number must be at least %{min}", min: min)}
+        {:error, dgettext("errors_input", "Number must be at least %{min}", min: min)}
 
       is_number(max) and n > max ->
-        {:error, dgettext("errors", "Number must be at most %{max}", max: max)}
+        {:error, dgettext("errors_input", "Number must be at most %{max}", max: max)}
 
       true ->
         :ok
@@ -105,7 +105,7 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, dgettext("errors", "Number is required")},
+      do: {:error, dgettext("errors_input", "Number is required")},
       else: :ok
   end
 end

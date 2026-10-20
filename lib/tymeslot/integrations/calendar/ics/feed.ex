@@ -102,13 +102,13 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   def error_message({:http_status, status}),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar feed returned HTTP %{status}.",
         status: status
       )
 
   def error_message(reason),
-    do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_calendar_providers", msgid(reason))
+    do: Gettext.dgettext(TymeslotWeb.Gettext, "integrations_calendar", msgid(reason))
 
   @doc """
   The sentence a failed subscription sync stores on the integration
@@ -127,17 +127,17 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
           String.t()
   def sync_error_message(exception) when is_exception(exception) do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Calendar subscription sync failed while saving a fetched event. Tymeslot will try again on the next sync."
     )
   end
 
   def sync_error_message({:http_status, _status}),
-    do: dgettext_noop("dashboard_calendar_providers", "The calendar feed returned an error.")
+    do: dgettext_noop("integrations_calendar", "The calendar feed returned an error.")
 
   def sync_error_message(:empty_feed_with_populated_cache) do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The calendar feed came back empty, but the cache still holds previously synced events. Keeping the cache in place and retrying rather than emptying your diary."
     )
   end
@@ -148,49 +148,48 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   defp msgid(:unauthorised),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar feed rejected the link. It may have been revoked or reset."
       )
 
   defp msgid(:not_found),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar feed URL returned 404. Check that the link is complete and still published."
       )
 
   defp msgid(:invalid_ics),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "That URL did not return a calendar feed. Make sure it points at an .ics file."
       )
 
   defp msgid(:too_large),
-    do:
-      dgettext_noop("dashboard_calendar_providers", "That calendar feed is too large to process.")
+    do: dgettext_noop("integrations_calendar", "That calendar feed is too large to process.")
 
   defp msgid(:too_many_redirects),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar feed redirected too many times."
       )
 
   defp msgid(:missing_url),
-    do: dgettext_noop("dashboard_calendar_providers", "Enter the calendar feed URL.")
+    do: dgettext_noop("integrations_calendar", "Enter the calendar feed URL.")
 
   defp msgid({:blocked, _reason}),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "That URL points at a blocked address and cannot be reached."
       )
 
   defp msgid(_reason),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Could not reach the calendar feed. Check the URL and try again."
       )
 

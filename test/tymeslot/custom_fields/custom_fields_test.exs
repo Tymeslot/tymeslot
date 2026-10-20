@@ -74,6 +74,19 @@ defmodule Tymeslot.CustomFieldsTest do
       assert Map.has_key?(errs, "a")
     end
 
+    test "the raw length cap error is in the caller's locale" do
+      snapshot = [
+        %{"id" => "a", "type" => "short_text", "label" => "Notes", "required" => false}
+      ]
+
+      huge = String.duplicate("x", 6_000)
+
+      assert {:error, %{"a" => "Antwort ist zu lang"}} =
+               Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+                 CustomFields.validate_answers(snapshot, %{"a" => huge})
+               end)
+    end
+
     test "multi_select answers are stored deduped and canonicalised" do
       snapshot = [
         %{

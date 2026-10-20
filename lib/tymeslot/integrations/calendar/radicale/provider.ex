@@ -16,13 +16,13 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
     ],
     invalid_url_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
       ),
-    connected_message: dgettext("dashboard_calendar_providers", "Radicale connection successful"),
+    connected_message: dgettext("integrations_calendar", "Radicale connection successful"),
     not_found_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Radicale server not found. Check your server URL and port if needed."
       )
 end

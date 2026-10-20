@@ -124,7 +124,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),
       @calendar_gone
@@ -147,7 +147,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Google rejected the stored credentials. Please reconnect the integration."
       ),
       @credentials_rejected
@@ -167,7 +167,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
       ),
       @calendar_disabled

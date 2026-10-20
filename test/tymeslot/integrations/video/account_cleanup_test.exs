@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.AccountCleanupTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Video.AccountCleanup
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.Encryption
@@ -24,6 +25,12 @@ defmodule Tymeslot.Integrations.Video.AccountCleanupTest do
       refresh_token_encrypted: Encryption.encrypt(refresh),
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
     )
+  end
+
+  defp on_account(integration, account_id) do
+    integration
+    |> Changeset.change(provider_account_id: account_id)
+    |> Repo.update!()
   end
 
   defp flip_last_byte(binary) do
@@ -104,6 +111,89 @@ defmodule Tymeslot.Integrations.Video.AccountCleanupTest do
     end)
 
     assert AccountCleanup.run(user.id) == :ok
+  end
+
+  describe "an account another Tymeslot account also connected" do
+    setup do
+      with_config(:tymeslot, :zoom_oauth,
+        client_id: "zoom-id",
+        client_secret: "zoom-secret",
+        state_secret: "zoom-state"
+      )
+
+      stub(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :post, fn url, body, _headers, _opts ->
+        send(test_pid, {:revoke, url, body})
+        {:ok, %Req.Response{status: 200, body: ~s({"status":"success"})}}
+      end)
+
+      %{user: insert(:user), other: insert(:user)}
+    end
+
+    test "keeps a Google Meet grant another account's Google Meet relies on",
+         %{user: user, other: other} do
+      user
+      |> oauth_video("google_meet", "meet-access", "meet-refresh")
+      |> on_account("google-sub-shared")
+
+      other
+      |> oauth_video("google_meet", "other-access", "other-refresh")
+      |> on_account("google-sub-shared")
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      refute_received {:revoke, _url, _body}
+    end
+
+    test "keeps a Google Meet grant another account's Google calendar relies on",
+         %{user: user, other: other} do
+      user
+      |> oauth_video("google_meet", "meet-access", "meet-refresh")
+      |> on_account("google-sub-shared")
+
+      insert(:calendar_integration,
+        user: other,
+        provider: "google",
+        provider_account_id: "google-sub-shared",
+        refresh_token_encrypted: Encryption.encrypt("calendar-refresh")
+      )
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      refute_received {:revoke, _url, _body}
+    end
+
+    test "keeps a Zoom authorisation another account relies on", %{user: user, other: other} do
+      user
+      |> oauth_video("zoom", "zoom-access", "zoom-refresh")
+      |> on_account("zoom-user-shared")
+
+      other
+      |> oauth_video("zoom", "other-access", "other-refresh")
+      |> on_account("zoom-user-shared")
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      refute_received {:revoke, _url, _body}
+    end
+
+    test "still revokes a Zoom authorisation on a Zoom user nobody else connected",
+         %{user: user, other: other} do
+      user
+      |> oauth_video("zoom", "zoom-access", "zoom-refresh")
+      |> on_account("zoom-user-1")
+
+      other
+      |> oauth_video("zoom", "other-access", "other-refresh")
+      |> on_account("zoom-user-2")
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      assert_received {:revoke, "https://zoom.us/oauth/revoke?token=zoom-access", _body}
+    end
   end
 
   test "makes no call for Teams or MiroTalk" do

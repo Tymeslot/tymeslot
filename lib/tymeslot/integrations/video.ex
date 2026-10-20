@@ -98,7 +98,9 @@ defmodule Tymeslot.Integrations.Video do
   Returns an Oban return value: `{:discard, _}` once flagged (retrying won't
   recover the credentials) or when the integration's row is gone, and
   `{:error, _}` when the flag could not be recorded with its email, so Oban
-  retries the job and takes another shot.
+  retries the job and takes another shot. Credentials under an encryption key
+  missing from the keyring are not flagged (see `ReauthHandling.flag/3`): the
+  job is discarded with `ReauthHandling.key_missing_discard_reason/0`.
   """
   @spec handle_reauth_required(VideoIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
@@ -107,6 +109,7 @@ defmodule Tymeslot.Integrations.Video do
       :ok -> {:discard, ReauthHandling.discard_reason()}
       {:error, :not_found} -> {:discard, "Integration no longer exists"}
       {:error, :notification_failed} -> {:error, "Failed to flag integration for reauth"}
+      {:error, :encryption_key_missing} -> {:discard, ReauthHandling.key_missing_discard_reason()}
     end
   end
 

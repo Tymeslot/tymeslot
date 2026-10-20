@@ -28,14 +28,13 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
     ],
     invalid_url_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Invalid mailbox.org URL. The server must be https://dav.mailbox.org."
       ),
-    connected_message:
-      dgettext("dashboard_calendar_providers", "mailbox.org connection successful"),
+    connected_message: dgettext("integrations_calendar", "mailbox.org connection successful"),
     not_found_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "mailbox.org CalDAV endpoint not found. Confirm the server URL is https://dav.mailbox.org"
       )
 end

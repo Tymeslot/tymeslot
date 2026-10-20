@@ -22,10 +22,10 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
     ],
     invalid_url_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
       ),
-    connected_message: dgettext("dashboard_calendar_providers", "Zimbra connection successful"),
+    connected_message: dgettext("integrations_calendar", "Zimbra connection successful"),
     not_found_message:
-      dgettext("dashboard_calendar_providers", "Zimbra server not found. Check your server URL.")
+      dgettext("integrations_calendar", "Zimbra server not found. Check your server URL.")
 end

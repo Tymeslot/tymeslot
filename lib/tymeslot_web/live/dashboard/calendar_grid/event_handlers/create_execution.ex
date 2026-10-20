@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -34,7 +35,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # limited like inviting guests to an existing booking. The check comes last
   # so that a form still being corrected does not spend the budget.
   defp handle_save_event_with(%{mode: :meeting} = creating, socket) do
-    with :ok <- authorize_optional_integration(socket, creating[:integration_id]),
+    with {:ok, creating} <- commit_pending_reminder(creating),
+         :ok <- authorize_optional_integration(socket, creating[:integration_id]),
          {:ok, start_at, end_at} <- resolve_timed_range(creating, socket),
          :ok <- validate_meeting_fields(creating, socket.assigns.current_user.email),
          {:ok, guest_emails} <- extra_guest_emails(creating),
@@ -46,32 +48,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
       send(self(), {:execute_create_ad_hoc_meeting, params})
 
-      {:noreply, assign(socket, :saving_event, true)}
+      {:noreply, socket |> assign(:creating_event, creating) |> assign(:saving_event, true)}
     else
-      {:error, message} when is_binary(message) ->
-        send(self(), {:flash, {:error, message}})
-        {:noreply, socket}
-
-      {:error, :rate_limited, _message} ->
-        send(
-          self(),
-          {:flash,
-           {:warning,
-            dgettext(
-              "dashboard_calendar_events",
-              "Too many new meetings. Please wait a moment."
-            )}}
-        )
-
-        {:noreply, socket}
-
-      {:error, :unauthorized} ->
-        send(
-          self(),
-          {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid calendar selected")}}
-        )
-
-        {:noreply, socket}
+      error -> meeting_save_failed(error, socket)
     end
   end
 
@@ -104,6 +83,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
             {:noreply, socket}
         end
     end
+  end
+
+  # Why a meeting-mode save stopped short. A rejected reminder is already
+  # worded inside the picker, so it needs no flash of its own.
+  defp meeting_save_failed({:error, :reminder_rejected, creating}, socket),
+    do: {:noreply, assign(socket, :creating_event, creating)}
+
+  defp meeting_save_failed({:error, message}, socket) when is_binary(message) do
+    send(self(), {:flash, {:error, message}})
+    {:noreply, socket}
+  end
+
+  defp meeting_save_failed({:error, :rate_limited, _message}, socket) do
+    send(
+      self(),
+      {:flash,
+       {:warning,
+        dgettext(
+          "dashboard_calendar_events",
+          "Too many new meetings. Please wait a moment."
+        )}}
+    )
+
+    {:noreply, socket}
+  end
+
+  defp meeting_save_failed({:error, :unauthorized}, socket) do
+    send(
+      self(),
+      {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid calendar selected")}}
+    )
+
+    {:noreply, socket}
   end
 
   # The recurrence editor composes the rule as the form changes, so it can
@@ -160,6 +172,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       reminders: reminders_of(creating)
     }
   end
+
+  # Create feels like it submits everything in the modal, so a custom reminder
+  # typed but never added goes in with it. One that fails validation keeps the
+  # modal open with the picker's own message rather than creating the meeting
+  # as if nothing had been typed.
+  defp commit_pending_reminder(%{meeting_reminders: %{} = state} = creating) do
+    if ReminderPickerState.pending?(state) do
+      case ReminderPickerState.add_custom(state) do
+        {:ok, added} ->
+          {:ok, Map.put(creating, :meeting_reminders, added)}
+
+        {:noop, rejected} ->
+          {:error, :reminder_rejected, Map.put(creating, :meeting_reminders, rejected)}
+      end
+    else
+      {:ok, creating}
+    end
+  end
+
+  defp commit_pending_reminder(creating), do: {:ok, creating}
 
   # What the reminder picker holds, or nothing at all. Nothing is an answer
   # here: a quick-added meeting sends the reminders the host picked and no

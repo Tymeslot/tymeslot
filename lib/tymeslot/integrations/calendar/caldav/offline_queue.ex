@@ -486,28 +486,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp no_primary_path_message do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "No calendar is selected for this connection, so the change could not be sent to the calendar server."
     )
   end
 
   defp unsendable_change_message do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Tymeslot could not send this change to the calendar server."
     )
   end
 
   defp recurring_event_message do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
     )
   end
 
   defp incomplete_event_message do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "This change is missing the event's start or end time, so it could not be sent to the calendar server."
     )
   end

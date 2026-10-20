@@ -34,6 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.Calendar.TimingChange
   alias Tymeslot.Meetings
   alias Tymeslot.Profiles
 
@@ -433,7 +434,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
         :ok
 
       meeting ->
-        case timing_change(meeting, cal_event, host_zone) do
+        case TimingChange.classify(meeting, cal_event, host_zone) do
           :moved ->
             reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified)
 
@@ -446,6 +447,12 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
             # divergence that has since resolved would otherwise leave the host
             # with a badge and a notification that was never withdrawn.
             Meetings.resolve_external_calendar_change(meeting)
+
+            # In step, or a difference already accepted: what the calendar
+            # shows now is what a later end change is measured against. Not
+            # recorded when the end moved, since a followed end records itself
+            # and one that was refused must be seen as moved again next pass.
+            Meetings.record_seen_calendar_end(meeting, TimingChange.seen_end(cal_event))
         end
     end
   end
@@ -457,33 +464,6 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     |> Meetings.calendar_event_identifiers()
     |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
   end
-
-  # How the provider event's timing differs from the meeting's. A moved start
-  # is for the host to look at; an end that moved alone is the host
-  # lengthening or shortening the meeting, which the meeting follows.
-  #
-  # An all-day event carries no hours, so only its first day is compared, on
-  # the host's calendar: the meeting's UTC date is the day before for a
-  # morning meeting east of UTC.
-  defp timing_change(meeting, %CalendarEvent{all_day: true} = cal_event, host_zone) do
-    meeting_day = meeting.start_time |> DateTime.shift_zone!(host_zone) |> DateTime.to_date()
-
-    if cal_event.start_date == meeting_day, do: :none, else: :moved
-  end
-
-  # Timed event with no start_at — should not occur for valid timed events, treat as unchanged.
-  defp timing_change(_meeting, %CalendarEvent{start_at: nil}, _host_zone), do: :none
-
-  defp timing_change(meeting, %CalendarEvent{start_at: start_at, end_at: end_at}, _host_zone) do
-    cond do
-      not same_second?(meeting.start_time, start_at) -> :moved
-      is_nil(end_at) or same_second?(meeting.end_time, end_at) -> :none
-      true -> {:end_moved, DateTime.truncate(end_at, :second)}
-    end
-  end
-
-  defp same_second?(a, b),
-    do: DateTime.compare(DateTime.truncate(a, :second), DateTime.truncate(b, :second)) == :eq
 
   @doc """
   Removes externally deleted provider events from the local cache and

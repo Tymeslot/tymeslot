@@ -403,8 +403,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # itself fire iTIP). The `SCHEDULE-AGENT=CLIENT` parameter is kept as
   # defence-in-depth for servers that honour RFC 6638 §7.1 even though
   # Zimbra silently strips it (see issue #41).
-  @spec build_organizer_line(map()) :: String.t() | nil
-  def build_organizer_line(%{organizer_email: email} = event)
+  #
+  # In `{:organiser_attendee, _}` mode the line carries the address the owner
+  # line does (`Scheduling.owner_attendee_address/2`), so an organiser whose
+  # address is not on the account still organises their own event: the server
+  # then lists them once and accepts later guest changes (issue #151).
+  @spec build_organizer_line(map(), Scheduling.mode()) :: String.t() | nil
+  def build_organizer_line(event, mode \\ :contact)
+
+  def build_organizer_line(%{organizer_email: email} = event, {:organiser_attendee, addresses})
+      when is_binary(email) do
+    event
+    |> Map.put(:organizer_email, Scheduling.owner_attendee_address(email, addresses))
+    |> build_organizer_line()
+  end
+
+  def build_organizer_line(%{organizer_email: email} = event, _mode)
       when is_binary(email) and email != "" do
     case Map.get(event, :organizer_name) do
       name when is_binary(name) and name != "" ->
@@ -415,5 +429,5 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
     end
   end
 
-  def build_organizer_line(_event), do: nil
+  def build_organizer_line(_event, _mode), do: nil
 end

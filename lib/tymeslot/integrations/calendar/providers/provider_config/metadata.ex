@@ -15,29 +15,27 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
   @metadata %{
     caldav: %{
       icon: "caldav",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Universal CalDAV server support"),
+      description: dgettext_noop("integrations_calendar", "Universal CalDAV server support"),
       button_text: "Connect CalDAV",
       click_event: "connect_provider"
     },
     radicale: %{
       icon: "radicale",
       description:
-        dgettext_noop("dashboard_calendar_providers", "Lightweight self-hosted calendar server"),
+        dgettext_noop("integrations_calendar", "Lightweight self-hosted calendar server"),
       button_text: "Connect Radicale",
       click_event: "connect_provider"
     },
     nextcloud: %{
       icon: "nextcloud",
-      description:
-        dgettext_noop("dashboard_calendar_providers", "Self-hosted Nextcloud calendar sync"),
+      description: dgettext_noop("integrations_calendar", "Self-hosted Nextcloud calendar sync"),
       button_text: "Connect Nextcloud",
       click_event: "connect_provider"
     },
     zimbra: %{
       icon: "zimbra",
       description:
-        dgettext_noop("dashboard_calendar_providers", "Enterprise Zimbra calendar integration"),
+        dgettext_noop("integrations_calendar", "Enterprise Zimbra calendar integration"),
       button_text: "Connect Zimbra",
       click_event: "connect_provider"
     },
@@ -45,7 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
       icon: "mailbox_org",
       description:
         dgettext_noop(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Sync calendars from your mailbox.org account"
         ),
       button_text: "Connect mailbox.org",
@@ -55,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
       icon: "apple",
       description:
         dgettext_noop(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Sync calendars from your Apple iCloud account"
         ),
       button_text: "Connect Apple iCloud",
@@ -65,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
       icon: "baikal",
       description:
         dgettext_noop(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "PHP-based CalDAV/CardDAV server integration"
         ),
       button_text: "Connect Baikal",
@@ -75,7 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
       icon: "ics_url",
       description:
         dgettext_noop(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Subscribe to a published calendar feed, read-only"
         ),
       button_text: "Subscribe to a feed",
@@ -85,7 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
       icon: "google",
       description:
         dgettext_noop(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Full OAuth integration with Google Meet support"
         ),
       button_text: "Connect Google",
@@ -94,7 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
     outlook: %{
       icon: "outlook",
       description:
-        dgettext_noop("dashboard_calendar_providers", "Microsoft 365 and Outlook.com integration"),
+        dgettext_noop("integrations_calendar", "Microsoft 365 and Outlook.com integration"),
       button_text: "Connect Outlook",
       click_event: "connect_provider"
     },
@@ -102,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
       icon: "exchange",
       description:
         dgettext_noop(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "On-premises Microsoft Exchange Server, two-way sync"
         ),
       button_text: "Connect Exchange",
@@ -110,7 +108,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
     },
     demo: %{
       icon: "demo",
-      description: dgettext_noop("dashboard_calendar_providers", "Homepage demo provider"),
+      description: dgettext_noop("integrations_calendar", "Homepage demo provider"),
       button_text: "Demo Enabled",
       click_event: nil
     }
@@ -145,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
     do:
       Gettext.dgettext(
         TymeslotWeb.Gettext,
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         metadata(provider).description
       )
 

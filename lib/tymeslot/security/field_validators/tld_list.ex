@@ -196,15 +196,15 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   # One complete msgid per label, so no translation has to splice a
   # translated "Email" or "Domain" into a sentence it cannot inflect.
   defp reserved_message(tld, "Email"),
-    do: dgettext("errors", "Email has a reserved domain ending (.%{tld})", tld: tld)
+    do: dgettext("errors_input", "Email has a reserved domain ending (.%{tld})", tld: tld)
 
   defp reserved_message(tld, _domain),
-    do: dgettext("errors", "Domain has a reserved domain ending (.%{tld})", tld: tld)
+    do: dgettext("errors_input", "Domain has a reserved domain ending (.%{tld})", tld: tld)
 
   defp unrecognised_message(tld, nil, "Email"),
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Email has an unrecognised domain ending (.%{tld}). If it is correct, this version of Tymeslot predates it and needs updating.",
         tld: tld
       )
@@ -212,7 +212,7 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   defp unrecognised_message(tld, nil, _domain),
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Domain has an unrecognised domain ending (.%{tld}). If it is correct, this version of Tymeslot predates it and needs updating.",
         tld: tld
       )
@@ -220,7 +220,7 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   defp unrecognised_message(tld, suggestion, "Email"),
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Email has an unrecognised domain ending (.%{tld}). Did you mean .%{suggestion}?",
         tld: tld,
         suggestion: suggestion
@@ -229,22 +229,22 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   defp unrecognised_message(tld, suggestion, _domain),
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Domain has an unrecognised domain ending (.%{tld}). Did you mean .%{suggestion}?",
         tld: tld,
         suggestion: suggestion
       )
 
   defp invalid_message(tld, nil, "Email"),
-    do: dgettext("errors", "Email has an invalid domain ending (.%{tld})", tld: tld)
+    do: dgettext("errors_input", "Email has an invalid domain ending (.%{tld})", tld: tld)
 
   defp invalid_message(tld, nil, _domain),
-    do: dgettext("errors", "Domain has an invalid domain ending (.%{tld})", tld: tld)
+    do: dgettext("errors_input", "Domain has an invalid domain ending (.%{tld})", tld: tld)
 
   defp invalid_message(tld, suggestion, "Email"),
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Email has an invalid domain ending (.%{tld}). Did you mean .%{suggestion}?",
         tld: tld,
         suggestion: suggestion
@@ -253,7 +253,7 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   defp invalid_message(tld, suggestion, _domain),
     do:
       dgettext(
-        "errors",
+        "errors_input",
         "Domain has an invalid domain ending (.%{tld}). Did you mean .%{suggestion}?",
         tld: tld,
         suggestion: suggestion

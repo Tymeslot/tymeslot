@@ -215,12 +215,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   def perform_connection_test(config) do
     case find_folder(config) do
       {:ok, _messages} ->
-        {:ok, dgettext("dashboard_calendar_providers", "Exchange connection successful")}
+        {:ok, dgettext("integrations_calendar", "Exchange connection successful")}
 
       {:error, :not_found} ->
         {:error,
          dgettext(
-           "dashboard_calendar_providers",
+           "integrations_calendar",
            "EWS endpoint not found. It usually ends in /EWS/Exchange.asmx."
          )}
 

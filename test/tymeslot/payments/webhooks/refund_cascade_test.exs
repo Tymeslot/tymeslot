@@ -9,6 +9,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
 
   alias Swoosh.Email
   alias Tymeslot.Payments.PaymentTransactionSchema
+  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Payments.Webhooks.RefundHandler
@@ -32,6 +33,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       )
     end
   end
+
+  setup :verify_on_exit!
 
   setup do
     original_manager = Application.get_env(:tymeslot, :subscription_manager)
@@ -57,13 +60,22 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
   # manager keeps: they carry the same user, customer and subscription ids.
   defp stub_lookups_over_transactions do
     stub(SubscriptionManagerMock, :get_subscription_by_customer_id, fn id ->
-      Repo.get_by(PaymentTransactionSchema, stripe_customer_id: id)
+      PaymentTransactionSchema |> Repo.get_by(stripe_customer_id: id) |> as_subscription()
     end)
 
     stub(SubscriptionManagerMock, :get_subscription_by_subscription_id, fn id ->
-      Repo.get_by(PaymentTransactionSchema, subscription_id: id)
+      PaymentTransactionSchema |> Repo.get_by(subscription_id: id) |> as_subscription()
     end)
   end
+
+  defp as_subscription(nil), do: nil
+
+  defp as_subscription(transaction),
+    do: %{
+      user_id: transaction.user_id,
+      status: transaction.status,
+      stripe_subscription_id: transaction.subscription_id
+    }
 
   defp with_object(event, object), do: Map.put(event, "data", %{"object" => object})
 
@@ -80,7 +92,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     insert(:payment_transaction,
       user: user,
       status: "active",
-      stripe_customer_id: customer_id
+      stripe_customer_id: customer_id,
+      subscription_id: "sub_current"
     )
 
     {user, customer_id}
@@ -109,6 +122,12 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "full refund hands the revocation to the payment-event handler and notifies the user" do
       {user, customer_id} = linked_subscription()
 
+      {:ok, _invoice} =
+        SubscriptionInvoiceQueries.upsert(%{
+          stripe_invoice_id: "in_current",
+          subscription_id: "sub_current"
+        })
+
       charge = refunded_charge(customer_id, 10_000, 10_000, "in_current")
       event = refunded_event()
 
@@ -122,7 +141,9 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
           total_refunded: 10_000,
           charge_amount: 10_000,
           refund_percentage: 100.0,
-          should_revoke: true
+          should_revoke: true,
+          invoice_id: "in_current",
+          subscription_id: "sub_current"
         }
       }
 
@@ -226,6 +247,91 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
       assert_received {:refund_email, ^user_id, 10_000, "eur", false}
+    end
+
+    # Invoices are recorded only from when recording began. A customer who
+    # resubscribed since an older invoice holds a newer subscription; the
+    # refund must name the one Stripe says the invoice billed, never the
+    # customer's current one.
+    test "a refund of an invoice paid before invoices were recorded names its own subscription" do
+      {user, customer_id} = linked_subscription()
+
+      expect(StripeMock, :get_invoice, fn "in_before_recording" ->
+        {:ok, %{id: "in_before_recording", subscription: "sub_before_resubscribing"}}
+      end)
+
+      charge = refunded_charge(customer_id, 10_000, 10_000, "in_before_recording")
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      assert_received %{
+        event: :charge_refunded,
+        data: %{
+          invoice_id: "in_before_recording",
+          subscription_id: "sub_before_resubscribing",
+          should_revoke: true
+        }
+      }
+
+      user_id = user.id
+      # The notice goes out from a job; the current subscription carries on.
+      Oban.drain_queue(queue: :emails)
+      assert_received {:refund_email, ^user_id, 10_000, "eur", false}
+    end
+
+    # From API version 2025-03-31.basil a charge no longer names its
+    # invoice; the invoice is found through the charge's payment intent.
+    test "a charge that does not name its invoice is traced through its payment intent" do
+      {user, customer_id} = linked_subscription()
+
+      expect(StripeMock, :list_invoice_payments, fn %{
+                                                      payment: %{
+                                                        type: "payment_intent",
+                                                        payment_intent: "pi_current"
+                                                      }
+                                                    } ->
+        {:ok, %{data: [%{invoice: "in_current"}], has_more: false}}
+      end)
+
+      expect(StripeMock, :get_invoice, fn "in_current" ->
+        {:ok,
+         %{id: "in_current", parent: %{subscription_details: %{subscription: "sub_current"}}}}
+      end)
+
+      charge =
+        customer_id
+        |> refunded_charge(10_000, 10_000)
+        |> Map.delete("invoice")
+        |> Map.put("payment_intent", "pi_current")
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      assert_received %{
+        event: :charge_refunded,
+        data: %{invoice_id: "in_current", subscription_id: "sub_current", should_revoke: true}
+      }
+
+      user_id = user.id
+      # The notice goes out from a job.
+      Oban.drain_queue(queue: :emails)
+      assert_received {:refund_email, ^user_id, 10_000, "eur", true}
+    end
+
+    test "a failed Stripe lookup retries the delivery instead of guessing the subscription" do
+      {_user, customer_id} = linked_subscription()
+
+      expect(StripeMock, :get_invoice, fn "in_before_recording" -> {:error, :timeout} end)
+
+      charge = refunded_charge(customer_id, 10_000, 10_000, "in_before_recording")
+
+      assert {:error, :retry_later, {:stripe_lookup_failed, :timeout}} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      refute_received %{event: :charge_refunded}
+      Oban.drain_queue(queue: :emails)
+      refute_received {:refund_email, _user_id, _amount, _currency, _revoked}
     end
 
     test "a handler failure returns retry_later and skips the user notification" do

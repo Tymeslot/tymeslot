@@ -201,7 +201,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
       disallowed_protocol_error: invalid_url_message(),
       https_error_message:
         dgettext(
-          "dashboard_video",
+          "integrations_video",
           "Use an https:// server URL when token authentication is configured, so the tokens in meeting links are not sent unencrypted."
         )
     )
@@ -214,28 +214,31 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
     base_url = Map.get(config, :base_url)
 
     cond do
-      base_url in [nil, ""] -> {:error, dgettext("dashboard_video", "Base URL is required")}
+      base_url in [nil, ""] -> {:error, dgettext("integrations_video", "Base URL is required")}
       not LinkRoom.http_url?(base_url) -> {:error, invalid_url_message()}
       true -> with :ok <- LinkRoom.validate_base_url(base_url), do: {:ok, base_url}
     end
   end
 
   defp invalid_url_message,
-    do: dgettext("dashboard_video", "Invalid URL format. Please provide a valid HTTP/HTTPS URL.")
+    do:
+      dgettext("integrations_video", "Invalid URL format. Please provide a valid HTTP/HTTPS URL.")
 
   defp validate_credentials(nil, nil), do: :ok
 
   defp validate_credentials(_app_id, nil),
-    do: {:error, dgettext("dashboard_video", "Enter the App secret that belongs to this App ID")}
+    do:
+      {:error, dgettext("integrations_video", "Enter the App secret that belongs to this App ID")}
 
   defp validate_credentials(nil, _secret),
-    do: {:error, dgettext("dashboard_video", "Enter the App ID that belongs to this App secret")}
+    do:
+      {:error, dgettext("integrations_video", "Enter the App ID that belongs to this App secret")}
 
   defp validate_credentials(_app_id, secret) when byte_size(secret) < @min_secret_bytes,
     do:
       {:error,
        dgettext(
-         "dashboard_video",
+         "integrations_video",
          "The App secret must be at least %{bytes} bytes long. Every guest receives a token signed with it, so a short secret can be recovered from any booking link.",
          bytes: @min_secret_bytes
        )}

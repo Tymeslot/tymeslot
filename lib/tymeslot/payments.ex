@@ -9,6 +9,7 @@ defmodule Tymeslot.Payments do
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   alias Tymeslot.Payments.{
+    ChargeInvoice,
     Config,
     CustomerLookup,
     DatabaseOperations,
@@ -131,6 +132,16 @@ defmodule Tymeslot.Payments do
   """
   @spec parse_user_id(any()) :: integer() | nil
   defdelegate parse_user_id(id), to: CustomerLookup
+
+  @doc """
+  The invoice a platform charge paid and the subscription that invoice
+  billed, read from Stripe where the charge and the recorded invoices do not
+  say. Returns `{:error, reason}` when Stripe cannot be reached, so a caller
+  acting on the answer retries rather than guessing. See
+  `Tymeslot.Payments.ChargeInvoice`.
+  """
+  @spec charge_invoice(String.t()) :: {:ok, ChargeInvoice.t()} | {:error, term()}
+  defdelegate charge_invoice(charge_id), to: ChargeInvoice, as: :for_charge_id
 
   @doc """
   Records a checkout session's outcome against its transaction row, attaching

@@ -366,14 +366,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            DateTime.add(DateTime.utc_now(), 1, :day)
          ) do
       {:ok, _events} ->
-        {:ok, dgettext("dashboard_calendar_providers", "Google Calendar connection successful")}
+        {:ok, dgettext("integrations_calendar", "Google Calendar connection successful")}
 
       {:error, :unauthorized, message} ->
         {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
-        {:error,
-         dgettext("dashboard_calendar_providers", "Rate limited - please try again later")}
+        {:error, dgettext("integrations_calendar", "Rate limited - please try again later")}
 
       {:error, _type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :google)

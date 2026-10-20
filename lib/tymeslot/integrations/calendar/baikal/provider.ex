@@ -19,13 +19,13 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
     ],
     invalid_url_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Invalid Baikal URL. Should be your Baikal server URL including /dav.php (e.g., https://baikal.example.com/dav.php)"
       ),
-    connected_message: dgettext("dashboard_calendar_providers", "Baikal connection successful"),
+    connected_message: dgettext("integrations_calendar", "Baikal connection successful"),
     not_found_message:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Baikal server not found. Confirm the URL includes /dav.php (e.g., https://baikal.example.com/dav.php)."
       )
 end

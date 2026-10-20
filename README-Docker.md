@@ -676,7 +676,9 @@ rotated freely without touching stored data.
    ```
 
    The report lists, per table and column, how many values each key version holds (`v0` is the
-   legacy key) and how many no configured key opens (`unreadable`). It never prints a value.
+   legacy key) and how many no configured key opens (`unreadable`). Values under a key id that is
+   no longer configured are counted under that id, and the id is named on a line of its own. It
+   never prints a value.
    Once no `v0` appears, set `LEGACY_KEY_RETIRED=true` and restart. From then on
    `SECRET_KEY_BASE` plays no part in data-at-rest encryption and can be rotated freely.
 
@@ -753,9 +755,11 @@ the next rotation after this one adds key 3.
 
 8. **Retire the old key.** Remove the `1:` entry from `DATA_ENCRYPTION_KEYS` and unset
    `DATA_ENCRYPTION_KEY`, then restart. Removing a key while the report still shows values under
-   its id makes those values unreadable (their integrations ask to be reconnected) until the key
-   is added back; nothing is altered in the meantime. If the old key leaked, also treat the
-   backups taken before the rotation as exposed.
+   its id makes those values unreadable until the key is added back; nothing is altered in the
+   meantime. The app logs an error at every boot naming the missing key id and how many values
+   each table and column still holds under it, and the integrations those values belong to stop
+   syncing without asking their owners to reconnect, since adding the key back recovers them.
+   If the old key leaked, also treat the backups taken before the rotation as exposed.
 
 **Single container (Docker Compose).** `docker compose up -d` stops the old container before the
 new one starts, so no two instances ever run with different keys, and phases 1 and 2 may be done

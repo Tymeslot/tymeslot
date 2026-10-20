@@ -299,6 +299,42 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert render(view) =~ "All changes saved"
     end
 
+    # The form autosaves on Add, so a value typed and left in the open custom
+    # row used to be lost when the host moved on. Focus leaving the row now
+    # adds it, and the add saves like any other.
+    test "a custom reminder typed but not added is saved when focus leaves the row", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30, reminder_config: [])
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
+      view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
+
+      view
+      |> element(~s|input[name="reminder[value]"]|)
+      |> render_change(%{"reminder" => %{"value" => "3"}})
+
+      html =
+        view
+        |> element("#reminder-custom-row")
+        |> render_hook("commit_custom_reminder", %{
+          "reminder" => %{"value" => "3", "unit" => "hours"}
+        })
+
+      assert html =~ "3 hours before"
+
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).reminder_config == [
+               %{"value" => 3, "unit" => "hours"}
+             ]
+    end
+
     test "the custom reminder unit select keeps the chosen unit across re-renders", %{
       conn: conn,
       user: user

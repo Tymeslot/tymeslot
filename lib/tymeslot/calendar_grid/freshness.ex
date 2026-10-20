@@ -14,27 +14,34 @@ defmodule Tymeslot.CalendarGrid.Freshness do
   @doc """
   Enqueues sync workers for all active integrations belonging to the user.
 
-  Each integration's sync is asked for through `SyncSchedule.request_sync/1`,
-  which names the worker its provider uses; one whose provider has no
-  schedule is reported in `:errors`.
+  Each integration's sync is asked for through `SyncSchedule`, which names
+  the worker its provider uses; one whose provider has no schedule is
+  reported in `:errors`.
 
-  Returns `{:ok, %{enqueued: count, errors: [{integration_id, reason}]}}`.
+  `how` is `:requested` for the owner's Refresh (`SyncSchedule.request_sync/1`),
+  which brings forward even a sync waiting out an error's backoff, or
+  `:opened` for the refresh the grid starts by itself when opened on stale
+  events (`SyncSchedule.request_sync_unless_backing_off/1`), which leaves
+  such a sync to its backoff and counts it in `:skipped`.
+
+  Returns `{:ok, %{enqueued: count, skipped: count, errors: [{integration_id, reason}]}}`.
   """
-  @spec refresh_events(integer()) ::
+  @spec refresh_events(integer(), :requested | :opened) ::
           {:ok,
            %{
              enqueued: non_neg_integer(),
              skipped: non_neg_integer(),
              errors: [{integer(), term()}]
            }}
-  def refresh_events(user_id) do
+  def refresh_events(user_id, how \\ :requested) do
     # The context call decrypts credentials; acceptable overhead for a
     # user-initiated refresh since we need id + provider for each integration.
     integrations = Management.list_active_calendar_integrations(user_id)
 
     {enqueued, skipped, errors} =
       Enum.reduce(integrations, {0, 0, []}, fn integration, {count, skip, errs} ->
-        case SyncSchedule.request_sync(integration) do
+        case request(integration, how) do
+          {:ok, :backing_off} -> {count, skip + 1, errs}
           {:ok, _job} -> {count + 1, skip, errs}
           {:error, reason} -> {count, skip, [{integration.id, reason} | errs]}
         end
@@ -91,6 +98,11 @@ defmodule Tymeslot.CalendarGrid.Freshness do
   end
 
   # Private
+
+  defp request(integration, :requested), do: SyncSchedule.request_sync(integration)
+
+  defp request(integration, :opened),
+    do: SyncSchedule.request_sync_unless_backing_off(integration)
 
   # Outlook pending initial setup: subscription registration hasn't succeeded yet
   # (e.g. WEBHOOK_BASE_URL not configured). This is "pending", not "stale" —

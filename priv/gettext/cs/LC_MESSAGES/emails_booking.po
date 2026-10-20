@@ -16,16 +16,6 @@ msgstr ""
 msgid "%{amount} paid"
 msgstr "Zaplaceno %{amount}"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "%{amount} returned for “%{title}”"
-msgstr "%{amount} vráceno za „%{title}“"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "%{amount} returned to your card"
-msgstr "%{amount} vráceno na vaši kartu"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
@@ -40,56 +30,6 @@ msgstr "%{name} přesunul(a) vaši schůzku."
 #, elixir-autogen, elixir-format
 msgid "%{name} has scheduled a meeting with you."
 msgstr "Máte novou schůzku s uživatelem %{name}."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} has updated an event you're attending."
-msgstr "Uživatel %{name} upravil událost, které se účastníte."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(none)"
-msgstr "(nevyplněno)"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(previous)"
-msgstr "(původní)"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(updated)"
-msgstr "(nový)"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "A meeting changed in your external calendar."
-msgstr "Ve vašem externím kalendáři se změnila schůzka."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "A partial refund was issued."
-msgstr "Byla vrácena část platby."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Action required"
-msgstr "Vyžaduje pozornost"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Action required: \"%{title}\" was deleted from your external calendar (%{date})"
-msgstr "Vyžaduje pozornost: schůzka „%{title}“ byla smazána z externího kalendáře (%{date})"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Action required: \"%{title}\" was rescheduled in your external calendar (%{date})"
-msgstr "Vyžaduje pozornost: schůzka „%{title}“ byla přesunuta v externím kalendáři (%{date})"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "After"
-msgstr "Nově"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -106,11 +46,6 @@ msgstr "Schůzka je potvrzena"
 msgid "Attendee paid: %{amount}"
 msgstr "Platba účastníka: %{amount}"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Before"
-msgstr "Původně"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -121,11 +56,6 @@ msgstr "S pozdravem"
 #, elixir-autogen, elixir-format
 msgid "CAN YOU STILL MAKE IT?"
 msgstr "MŮŽETE SE STÁLE ZÚČASTNIT?"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "CANCELLED APPOINTMENT DETAILS:"
-msgstr "ÚDAJE O ZRUŠENÉ SCHŮZCE:"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -153,76 +83,25 @@ msgstr "Zrušit schůzku"
 msgid "Cancel Appointment"
 msgstr "Zrušit schůzku"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelled"
-msgstr "Zrušeno"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard."
-msgstr "Zrušení samo o sobě nic nevrací. Vraťte platbu nebo ji zamítněte v sekci Platby na své nástěnce."
-
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
 msgstr "Potvrzeno"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Current Details"
-msgstr "Aktuální údaje"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Current details"
-msgstr "Aktuální údaje"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "DETAILS:"
 msgstr "PODROBNOSTI:"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Date:"
-msgstr "Datum:"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Date: %{date}"
 msgstr "Datum: %{date}"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Description"
-msgstr "Popis"
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Does the new time not work?"
 msgstr "Nový termín vám nevyhovuje?"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Duration:"
-msgstr "Délka:"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Event Updated"
-msgstr "Událost byla upravena"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Event updated"
-msgstr "Událost byla upravena"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Field"
-msgstr "Údaj"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
@@ -234,11 +113,6 @@ msgstr "Peníze dorazí podle vašeho obvyklého výplatního plánu Stripe."
 msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
 msgstr "Dobrý den, %{guest}, jako hosta vás na tuto schůzku s uživatelem %{organizer} pozval uživatel %{booker}."
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled."
-msgstr "Dobrý den, %{guest}, schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla zrušena."
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
@@ -249,7 +123,6 @@ msgstr "Dobrý den, %{guest}, schůzka s %{organizer}, na kterou vás pozval(a) 
 msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up."
 msgstr "Dobrý den, %{guest}, blíží se schůzka s %{organizer}, na kterou vás pozval %{booker}."
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
@@ -257,68 +130,22 @@ msgstr "Dobrý den, %{guest}, blíží se schůzka s %{organizer}, na kterou vá
 msgid "Hi %{guest},"
 msgstr "Dobrý den, %{guest},"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - %{amount} of your %{original} payment has been refunded."
-msgstr "Dobrý den, %{name}, z vaší platby %{original} vám bylo vráceno %{amount}."
-
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
 msgstr "Dobrý den, %{name}, termín mám zapsaný v kalendáři a těším se na naši schůzku."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience."
-msgstr "Dobrý den, %{name}, naše schůzka byla zrušena. Omlouvám se za komplikace."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - our appointment has been moved. Here's the new time, and my calendar is already updated."
 msgstr "Dobrý den %{name} - naše schůzka byla přesunuta. Zde je nový termín, můj kalendář je již aktualizovaný."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - your payment of %{amount} has been refunded in full."
-msgstr "Dobrý den, %{name}, vaše platba %{amount} vám byla vrácena v plné výši."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
 msgstr "Dobrý den, %{name},"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
-msgstr "Dobrý den, %{name}, z vaší platby %{original} vám bylo vráceno %{amount}."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, your payment of %{amount} has been refunded in full."
-msgstr "Dobrý den, %{name}, vaše platba %{amount} vám byla vrácena v plné výši."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi - %{amount} of your %{original} payment has been refunded."
-msgstr "Dobrý den, z vaší platby %{original} vám bylo vráceno %{amount}."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi - your payment of %{amount} has been refunded in full."
-msgstr "Dobrý den, vaše platba %{amount} vám byla vrácena v plné výši."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi, %{amount} of your %{original} payment has been refunded."
-msgstr "Dobrý den, z vaší platby %{original} vám bylo vráceno %{amount}."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi, your payment of %{amount} has been refunded in full."
-msgstr "Dobrý den, vaše platba %{amount} vám byla vrácena v plné výši."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -336,26 +163,6 @@ msgstr "Těším se na náš rozhovor."
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
 msgstr "Těším se na naši schůzku. Termín mám zapsaný v kalendáři a budu pro vás k dispozici."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
-msgstr "Pokud se schůzka neuskuteční, zrušte ji prosím ve službě Tymeslot, aby byl účastník informován a termín se uvolnil."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-msgstr "Pokud je nový čas konečný, upravte nebo přesuňte rezervaci ve službě Tymeslot, aby účastník dostal aktuální údaje."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "If you have any questions, please don't hesitate to reach out."
-msgstr "Máte-li jakékoli dotazy, neváhejte se ozvat."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "If you have any questions, please reply to this email and %{name} will be happy to help."
-msgstr "Máte-li jakékoli dotazy, odpovězte prosím na tento e-mail a %{name} vám pomůže."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -378,16 +185,6 @@ msgstr "Připojit se k videoschůzce"
 msgid "Join when you're ready"
 msgstr "Připojte se, až budete chtít"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Location"
-msgstr "Místo"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Location:"
-msgstr "Místo:"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -396,33 +193,10 @@ msgstr "Těším se na setkání s vámi."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "ÚDAJE O SCHŮZCE:"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting"
-msgstr "Schůzka"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Cancelled"
-msgstr "Schůzka byla zrušena"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Cancelled - %{date} with %{name}"
-msgstr "Schůzka zrušena: %{date} – %{name}"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Deleted in External Calendar"
-msgstr "Schůzka smazána v externím kalendáři"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -433,16 +207,6 @@ msgstr "Schůzka přesunuta"
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled - %{date} with %{name}"
 msgstr "Schůzka přesunuta: %{date} – %{name}"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Rescheduled in External Calendar"
-msgstr "Schůzka přesunuta v externím kalendáři"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting cancelled"
-msgstr "Schůzka byla zrušena"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -457,16 +221,6 @@ msgstr "Schůzka přesunuta"
 msgid "Meeting with %{name}"
 msgstr "Schůzka s uživatelem %{name}"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting with:"
-msgstr "Schůzka s uživatelem:"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting: %{title}"
-msgstr "Schůzka: %{title}"
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "NEW MEETING DETAILS:"
@@ -479,7 +233,6 @@ msgstr "Potřebujete změnit plány?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Potřebujete něco změnit?"
@@ -495,7 +248,6 @@ msgid "New Appointment: %{name} - %{date}"
 msgstr "Nová schůzka: %{name} – %{date}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "New booking"
 msgstr "Nová rezervace"
@@ -505,25 +257,10 @@ msgstr "Nová rezervace"
 msgid "New link for the new time"
 msgstr "Nový odkaz pro nový čas"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Not specified"
-msgstr "Neuvedeno"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "ORIGINAL BOOKING DETAILS:"
-msgstr "ÚDAJE O PŮVODNÍ REZERVACI:"
-
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Only %{booker} can move or cancel the meeting itself."
 msgstr "Přesunout nebo zrušit samotnou schůzku může pouze %{booker}."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Original payment: %{amount}"
-msgstr "Původní platba: %{amount}"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -550,20 +287,10 @@ msgstr "PŘIJATÁ PLATBA:"
 msgid "PREPARATION REMINDERS:"
 msgstr "PŘÍPRAVA NA SCHŮZKU:"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Partial Refund Issued - %{amount}"
-msgstr "Vrácena část platby: %{amount}"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Payment receipt"
 msgstr "Doklad o platbě"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Please review and update the booking in Tymeslot."
-msgstr "Zkontrolujte prosím rezervaci ve službě Tymeslot a upravte ji."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -590,21 +317,6 @@ msgstr "Máte dotazy? %{contact_info}"
 msgid "Quick actions"
 msgstr "Rychlé akce"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "REFUND DETAILS:"
-msgstr "PODROBNOSTI O VRÁCENÍ PLATBY:"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "REFUND ISSUED"
-msgstr "PLATBA VRÁCENA"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "REFUND OUTSTANDING:"
-msgstr "PLATBA K VRÁCENÍ:"
-
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "REMINDER: Our meeting in %{time_until}"
@@ -624,36 +336,6 @@ msgstr "Připojte se, až přijde čas"
 #, elixir-autogen, elixir-format
 msgid "Reference: %{ref}"
 msgstr "Referenční číslo: %{ref}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refund Issued - %{amount}"
-msgstr "Platba vrácena: %{amount}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refund details"
-msgstr "Podrobnosti o vrácení platby"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Refund outstanding"
-msgstr "Platba k vrácení"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refunded"
-msgstr "Vráceno"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refunded amount: %{amount}"
-msgstr "Vrácená částka: %{amount}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."
-msgstr "Vrácení platby se na původním platebním prostředku obvykle projeví do 5–10 pracovních dní, podle vaší banky."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -679,7 +361,6 @@ msgid "Reschedule"
 msgstr "Přesunout schůzku"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Rescheduled"
 msgstr "Přesunuto"
@@ -698,11 +379,6 @@ msgstr "ZAČÍNÁ ZA %{time_until}"
 #, elixir-autogen, elixir-format
 msgid "Same link, new time"
 msgstr "Stejný odkaz, nový čas"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule New Appointment"
-msgstr "Naplánovat novou schůzku"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -726,40 +402,10 @@ msgstr "Začíná za %{time_until}"
 msgid "Starting soon"
 msgstr "Začíná brzy"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The appointment with %{name} has been cancelled."
-msgstr "Schůzka s uživatelem %{name} byla zrušena."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The attendee has been notified of the cancellation."
-msgstr "Účastník byl o zrušení informován."
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee has been notified of the new time."
 msgstr "Účastník byl informován o novém termínu."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot."
-msgstr "Schůzka „%{title}“ byla smazána z vašeho externího kalendáře, ale ve službě Tymeslot je stále aktivní."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place."
-msgstr "Schůzka „%{title}“ byla smazána z vašeho externího kalendáře. Služba Tymeslot tuto rezervaci stále eviduje – zkontrolujte ji prosím a pokud se schůzka neuskuteční, zrušte ji zde."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly."
-msgstr "Schůzka „%{title}“ byla přesunuta ve vašem externím kalendáři. Služba Tymeslot stále eviduje původní rezervaci – zkontrolujte prosím údaje a rezervaci podle toho upravte nebo zrušte."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below."
-msgstr "Schůzka „%{title}“ byla přesunuta ve vašem externím kalendáři. Služba Tymeslot stále eviduje původní rezervaci uvedenou níže."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -771,11 +417,6 @@ msgstr "Schůzka byla přesunuta."
 msgid "The meeting is coming up"
 msgstr "Schůzka se blíží"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting with %{organizer} that %{booker} invited you to has been cancelled."
-msgstr "Schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla zrušena."
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
@@ -786,66 +427,10 @@ msgstr "Schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla přesu
 msgid "The meeting with %{organizer} that %{booker} invited you to is coming up."
 msgstr "Blíží se schůzka s %{organizer}, na kterou vás pozval %{booker}."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This meeting was <strong>removed from your external calendar</strong> but is still active in Tymeslot. If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
-msgstr "Tato schůzka byla <strong>odstraněna z vašeho externího kalendáře</strong>, ale ve službě Tymeslot je stále aktivní. Pokud se schůzka neuskuteční, zrušte ji prosím ve službě Tymeslot, aby byl účastník informován a termín se uvolnil."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-msgstr "Tato schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas. Pokud je nový čas konečný, upravte nebo přesuňte rezervaci ve službě Tymeslot, aby účastník dostal aktuální údaje."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This notification was triggered automatically when a change was detected in your external calendar."
-msgstr "Toto upozornění bylo odesláno automaticky poté, co byla ve vašem externím kalendáři zjištěna změna."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "This time slot is now available for booking again."
-msgstr "Tento termín je nyní opět k dispozici pro rezervaci."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Time"
-msgstr "Čas"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Time:"
-msgstr "Čas:"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Název"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot platform fee: %{amount}"
 msgstr "Poplatek platformy Tymeslot: %{amount}"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Updated"
-msgstr "Aktualizováno"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Updated: %{title} - %{date}"
-msgstr "Aktualizováno: %{title} – %{date}"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "View Meeting Details"
-msgstr "Zobrazit údaje o schůzce"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "View meeting:"
-msgstr "Zobrazit schůzku:"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
@@ -857,11 +442,6 @@ msgstr "Zobrazit doklad"
 msgid "View receipt: %{url}"
 msgstr "Zobrazit doklad: %{url}"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Visit:"
-msgstr "Navštivte:"
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "WILL YOU BE THERE AT THE NEW TIME?"
@@ -872,21 +452,6 @@ msgstr "ZÚČASTNÍTE SE V NOVÉM ČASE?"
 msgid "WILL YOU BE THERE?"
 msgstr "ZÚČASTNÍTE SE?"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "We're writing to confirm that your appointment has been cancelled."
-msgstr "Potvrzujeme, že vaše schůzka byla zrušena."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "What Changed"
-msgstr "Co se změnilo"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "What changed"
-msgstr "Co se změnilo"
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Will you be there at the new time?"
@@ -896,11 +461,6 @@ msgstr "Zúčastníte se v novém čase?"
 #, elixir-autogen, elixir-format
 msgid "Will you be there?"
 msgstr "Zúčastníte se?"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Would you like to schedule a new appointment?"
-msgstr "Chcete si naplánovat novou schůzku?"
 
 #: lib/tymeslot/emails/shared/template_helper.ex
 #, elixir-autogen, elixir-format
@@ -922,20 +482,10 @@ msgstr "Svou odpověď můžete kdykoli změnit pomocí tlačítek výše."
 msgid "You can change your response any time using the links above."
 msgstr "Svou odpověď můžete kdykoli změnit pomocí odkazů výše."
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."
-msgstr "Nemusíte nic dělat. Pokud jste si schůzku přidali do kalendáře, přiložený soubor ji tam označí jako zrušenou."
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "You received %{amount}"
 msgstr "Náleží vám %{amount}"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "You still hold %{amount} for this booking."
-msgstr "Za tuto rezervaci u vás stále zůstává %{amount}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -972,40 +522,15 @@ msgstr "Vaše dřívější odpověď platila pro původní čas, dejte nám pro
 msgid "Your meeting has moved."
 msgstr "Vaše schůzka byla přesunuta."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Your payment was refunded."
-msgstr "Vaše platba byla vrácena."
-
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "soon"
 msgstr "brzy"
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "with %{name}"
-msgstr "s uživatelem %{name}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "your host"
-msgstr "váš hostitel"
-
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "⏰ Meeting with %{name} in %{time_until}"
 msgstr "⏰ Schůzka s uživatelem %{name} za %{time_until}"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} has updated every occurrence of a repeating event you're attending."
-msgstr "Uživatel %{name} upravil všechny výskyty opakované události, které se účastníte."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} has updated this and every following occurrence of a repeating event you're attending."
-msgstr "Uživatel %{name} upravil tento a všechny následující výskyty opakované události, které se účastníte."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -1022,124 +547,20 @@ msgstr "Jako hosta vás na tuto schůzku zve %{organizer}."
 msgid "Hi %{guest} - %{organizer} has invited you as a guest to this meeting."
 msgstr "Dobrý den, %{guest}, jako hosta vás na tuto schůzku zve %{organizer}."
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - the meeting %{organizer} invited you to has been cancelled."
-msgstr "Dobrý den, %{guest}, schůzka, na kterou vás zve %{organizer}, byla zrušena."
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Dobrý den, %{guest}, schůzka, na kterou vás zve %{organizer}, byla přesunuta na nový čas."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting %{organizer} invited you to has been cancelled."
-msgstr "Schůzka, na kterou vás zve %{organizer}, byla zrušena."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Schůzka, na kterou vás zve %{organizer}, byla přesunuta na nový čas."
 
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} booked a spot in your group meeting."
-msgstr "%{name} si rezervoval(a) místo ve vaší skupinové schůzce."
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} cancelled their spot. The meeting goes ahead for everyone else."
-msgstr "%{name} zrušil(a) své místo. Schůzka pro ostatní proběhne podle plánu."
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} moved their spot from %{from} to %{to}."
-msgstr "%{name} přesunul(a) své místo z %{from} na %{to}."
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "%{taken} of %{count} spot taken"
-msgid_plural "%{taken} of %{count} spots taken"
-msgstr[0] "Obsazeno %{taken} z %{count} místa"
-msgstr[1] "Obsazeno %{taken} ze %{count} míst"
-msgstr[2] "Obsazeno %{taken} z %{count} míst"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "A participant cancelled their spot"
-msgstr "Účastník zrušil své místo"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "A participant moved their spot"
-msgstr "Účastník přesunul své místo"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "A spot was booked"
-msgstr "Bylo rezervováno místo"
-
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
 msgstr "Otevřít v přehledu"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "Spot booked: %{name} - %{date}"
-msgstr "Místo rezervováno: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "Spot cancelled: %{name} - %{date}"
-msgstr "Místo zrušeno: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "Spot moved: %{name} - %{date}"
-msgstr "Místo přesunuto: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} moved their spot to %{to}."
-msgstr "%{name} přesunul(a) své místo na %{to}."
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again."
-msgstr "%{name} zrušil(a) své místo. V tomto termínu už nikdo nezůstal, takže schůzka byla zrušena a čas je opět volný."
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "Nobody is left at the earlier time, so that meeting has been cancelled and the time is free again."
-msgstr "V původním termínu už nikdo nezůstal, takže tamní schůzka byla zrušena a čas je opět volný."
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "Slot freed: %{name} cancelled - %{date}"
-msgstr "Termín uvolněn: %{name} zrušil(a) - %{date}"
-
-#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
-#, elixir-autogen, elixir-format
-msgid "The last participant cancelled their spot"
-msgstr "Poslední účastník zrušil své místo"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Book Another Time"
-msgstr "Rezervovat jiný termín"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "CANCELLED SPOT:"
-msgstr "ZRUŠENÉ MÍSTO:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
-msgstr "Dobrý den, %{name}, vzdali jste se svého místa na %{meeting} dne %{date}."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -1151,35 +572,10 @@ msgstr "Dobrý den, %{name}, vaše místo bylo přesunuto z %{from} na %{to}."
 msgid "Hi %{name} - your spot has moved to %{to}."
 msgstr "Dobrý den, %{name}, vaše místo bylo přesunuto na %{to}."
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "If you added the meeting to your calendar, the attached file removes it there."
-msgstr "Pokud jste si schůzku přidali do kalendáře, přiložený soubor ji z něj odstraní."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Spot cancelled"
-msgstr "Místo zrušeno"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Spot cancelled - %{date} with %{name}"
-msgstr "Místo zrušeno - %{date} s %{name}"
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Spot moved - %{date} with %{name}"
 msgstr "Místo přesunuto - %{date} s %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting goes ahead for the others."
-msgstr "Pro ostatní schůzka proběhne podle plánu."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Would you like to book another time?"
-msgstr "Chcete si rezervovat jiný termín?"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
@@ -1196,31 +592,6 @@ msgstr "Vaše místo bylo přesunuto na %{to}."
 msgid "Your spot has moved."
 msgstr "Vaše místo bylo přesunuto."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
-msgstr "Skupinovou schůzku nelze přesunout pro všechny najednou. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Please review the group meeting in Tymeslot."
-msgstr "Zkontrolujte prosím skupinovou schůzku ve službě Tymeslot."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
-msgstr "Skupinová schůzka „%{title}“ byla přesunuta ve vašem externím kalendáři. Služba Tymeslot stále eviduje původní čas pro všechny účastníky a skupinovou schůzku nelze přesunout pro všechny najednou."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
-msgstr "Tato skupinová schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas a účastníci s ním stále počítají. Chcete-li zachovat původní čas, vraťte událost ve svém kalendáři zpět. Chcete-li ho změnit, pošlete účastníkům z nástěnky žádost o přesunutí, nebo tam schůzku zrušte, aby byl každý účastník informován."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "\"%{title}\" now ends at %{time} (%{date})"
-msgstr "„%{title}“ nyní končí v %{time} (%{date})"
-
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting with %{organizer} now ends at %{to} instead of %{from}. It still starts at the same time, so your answer stands."
@@ -1230,11 +601,6 @@ msgstr "Dobrý den, %{guest}, schůzka s %{organizer} nyní končí v %{to} mís
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - our meeting now ends at %{to} instead of %{from}. It still starts at the same time, and my calendar is already updated."
 msgstr "Dobrý den %{name} - naše schůzka nyní končí v %{to} místo v %{from}. Začíná stále ve stejný čas, můj kalendář je již aktualizovaný."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting end updated from your calendar"
-msgstr "Konec schůzky aktualizován podle vašeho kalendáře"
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
@@ -1260,40 +626,6 @@ msgstr "Stejný odkaz, nový čas konce"
 #, elixir-autogen, elixir-format
 msgid "The meeting now ends at %{time}."
 msgstr "Schůzka nyní končí v %{time}."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Their guest was emailed too."
-msgid_plural "Their %{count} guests were emailed too."
-msgstr[0] "E-mail dostal také host."
-msgstr[1] "E-mail dostali také %{count} hosté."
-msgstr[2] "E-mail dostalo také %{count} hostů."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "We emailed %{name} the new end time, with an updated calendar entry."
-msgstr "Poslali jsme %{name} e-mail s novým časem konce a aktualizovanou položkou kalendáře."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "You changed when \"%{title}\" ends in your external calendar, so Tymeslot updated the booking: it now ends at %{to} instead of %{from}."
-msgstr "Ve svém externím kalendáři jste změnili konec schůzky „%{title}“, Tymeslot proto upravil rezervaci: nyní končí v %{to} místo v %{from}."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "We emailed %{count} participant the new end time, with an updated calendar entry."
-msgid_plural "We emailed %{count} participants the new end time, with an updated calendar entry."
-msgstr[0] "Poslali jsme %{count} účastníkovi e-mail s novým časem konce a aktualizovanou položkou kalendáře."
-msgstr[1] "Poslali jsme %{count} účastníkům e-mail s novým časem konce a aktualizovanou položkou kalendáře."
-msgstr[2] "Poslali jsme %{count} účastníkům e-mail s novým časem konce a aktualizovanou položkou kalendáře."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "We emailed the guest the new end time, with an updated calendar entry."
-msgid_plural "We emailed %{count} guests the new end time, with an updated calendar entry."
-msgstr[0] "Poslali jsme hostovi e-mail s novým časem konce a aktualizovanou položkou kalendáře."
-msgstr[1] "Poslali jsme %{count} hostům e-mail s novým časem konce a aktualizovanou položkou kalendáře."
-msgstr[2] "Poslali jsme %{count} hostům e-mail s novým časem konce a aktualizovanou položkou kalendáře."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format

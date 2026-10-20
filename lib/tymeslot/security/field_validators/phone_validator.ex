@@ -44,30 +44,30 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
       # persisted, so a number padded with hundreds of cosmetic spaces would
       # otherwise survive (trim hides the bloat) and bloat the stored JSONB.
       String.length(value) > @max_length ->
-        {:error, dgettext("errors", "Phone number is too long")}
+        {:error, dgettext("errors_input", "Phone number is too long")}
 
       Regex.match?(~r/[A-Za-z]/, main) ->
-        {:error, dgettext("errors", "Phone number contains invalid characters")}
+        {:error, dgettext("errors_input", "Phone number contains invalid characters")}
 
       not Regex.match?(~r/^\+?[\d\s\-\(\)\.]+$/, main) ->
-        {:error, dgettext("errors", "Phone number contains invalid characters")}
+        {:error, dgettext("errors_input", "Phone number contains invalid characters")}
 
       digit_count(main) < @min_digits ->
-        {:error, dgettext("errors", "Phone number is too short")}
+        {:error, dgettext("errors_input", "Phone number is too short")}
 
       digit_count(main) > @max_digits ->
-        {:error, dgettext("errors", "Phone number is too long")}
+        {:error, dgettext("errors_input", "Phone number is too long")}
 
       true ->
         :ok
     end
   end
 
-  def validate(_value, _opts), do: {:error, dgettext("errors", "Phone number must be text")}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "Phone number must be text")}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, dgettext("errors", "Phone number is required")}
+      {:error, dgettext("errors_input", "Phone number is required")}
     else
       :ok
     end

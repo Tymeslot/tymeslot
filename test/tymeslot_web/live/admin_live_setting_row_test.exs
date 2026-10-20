@@ -65,7 +65,10 @@ defmodule TymeslotWeb.AdminLiveSettingRowTest do
   defp row_header_muted?(html, key) do
     chunk = settings_row(html, key)
 
-    case Regex.run(~r/<div class="flex-1 min-w-0">\s*<div class="([^"]*)"/, chunk) do
+    case Regex.run(
+           ~r/<div class="flex-1 basis-full sm:basis-0 min-w-0">\s*<div class="([^"]*)"/,
+           chunk
+         ) do
       [_all, classes] -> String.contains?(classes, "opacity-60")
       nil -> flunk("no row header found for #{key}")
     end

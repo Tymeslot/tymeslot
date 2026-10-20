@@ -47,8 +47,11 @@ defmodule Tymeslot.Factory do
   @default_password "Password123!"
   @default_password_hash Password.hash_password(@default_password)
 
-  @spec meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
-  def meeting_factory do
+  @spec meeting_factory(map()) :: Tymeslot.Meetings.MeetingSchema.t()
+  # Like a meeting created through its changeset, the calendar is known to show
+  # the meeting's own end until a sync says otherwise; pass
+  # `seen_calendar_end_time: nil` for a meeting that predates that record.
+  def meeting_factory(attrs) do
     start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
     end_time = DateTime.add(start_time, 60, :minute)
 
@@ -77,6 +80,13 @@ defmodule Tymeslot.Factory do
       ical_sequence: 0,
       last_notified_state: %{}
     }
+    |> merge_attributes(attrs)
+    |> evaluate_lazy_attributes()
+    |> then(fn meeting ->
+      if Map.has_key?(attrs, :seen_calendar_end_time),
+        do: meeting,
+        else: %{meeting | seen_calendar_end_time: meeting.end_time}
+    end)
   end
 
   @spec meeting_with_status(String.t()) :: term()

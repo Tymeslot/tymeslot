@@ -134,7 +134,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "CalDAV server rejected the stored credentials. Please reconnect the integration."
       ),
       @credentials_rejected
@@ -152,7 +152,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
       ),
       @calendar_gone
@@ -174,7 +174,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     Management.flag_for_reconnection(
       integration,
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
       ),
       @no_calendar

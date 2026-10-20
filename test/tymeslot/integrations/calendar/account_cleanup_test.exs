@@ -63,6 +63,63 @@ defmodule Tymeslot.Integrations.Calendar.AccountCleanupTest do
     assert_received {:revoke, "https://oauth2.googleapis.com/revoke", "token=calendar-refresh"}
   end
 
+  describe "a Google account another Tymeslot account also connected" do
+    setup do
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :post, url, _body, _headers, _opts ->
+        send(test_pid, {:stop, url})
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      stub(Tymeslot.HTTPClientMock, :post, fn url, body, _headers, _opts ->
+        send(test_pid, {:revoke, url, body})
+        {:ok, %Req.Response{status: 200, body: ""}}
+      end)
+
+      user = insert(:user)
+
+      oauth_calendar(user, %{
+        provider: "google",
+        provider_account_id: "google-sub-shared",
+        google_channel_id: "chan-1",
+        google_channel_resource_id: "res-1"
+      })
+
+      %{user: user, other: insert(:user)}
+    end
+
+    test "through its calendar keeps the grant, while the channel is still stopped",
+         %{user: user, other: other} do
+      oauth_calendar(other, %{provider: "google", provider_account_id: "google-sub-shared"})
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      assert_received {:stop, "https://www.googleapis.com/calendar/v3/channels/stop"}
+      refute_received {:revoke, _url, _body}
+    end
+
+    test "through its Google Meet keeps the grant", %{user: user, other: other} do
+      insert(:video_integration,
+        user: other,
+        provider: "google_meet",
+        provider_account_id: "google-sub-shared"
+      )
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      refute_received {:revoke, _url, _body}
+    end
+
+    test "on a different Google account does not stop the revoke", %{user: user, other: other} do
+      oauth_calendar(other, %{provider: "google", provider_account_id: "google-sub-other"})
+
+      assert AccountCleanup.run(user.id) == :ok
+
+      assert_received {:revoke, "https://oauth2.googleapis.com/revoke", "token=calendar-refresh"}
+    end
+  end
+
   test "a channel Google no longer has counts as stopped, without a warning" do
     user = insert(:user)
 

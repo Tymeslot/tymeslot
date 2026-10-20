@@ -270,8 +270,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       {_raw_ical, _no_etag} ->
         refresh_and_put(client, url, uid, event_data, policy, opts)
 
+      # Open-Xchange silently drops an update that names another `ORGANIZER`
+      # than the stored one, and the organiser a rebuild writes depends on
+      # the account's addresses (see `CalDAV.Scheduling`), which may have
+      # changed since the create. Its own copy is patched instead, and the
+      # patch never touches `ORGANIZER`.
       :none ->
-        rebuild_and_put(client, url, uid, event_data, policy, opts)
+        if Scheduling.open_xchange?(client),
+          do: refresh_and_put(client, url, uid, event_data, policy, opts),
+          else: rebuild_and_put(client, url, uid, event_data, policy, opts)
     end
   end
 

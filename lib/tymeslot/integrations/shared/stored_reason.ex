@@ -13,7 +13,8 @@ defmodule Tymeslot.Integrations.Shared.StoredReason do
   comes back unchanged.
   """
 
-  @domains ~w[dashboard_calendar_providers dashboard_integrations dashboard_video]
+  @domains ~w[integrations_calendar integrations_video dashboard_calendar_providers
+              dashboard_integrations dashboard_video]
 
   @doc "The gettext domains a stored reason is looked up in, as a msgid."
   @spec domains() :: [String.t()]

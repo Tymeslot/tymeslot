@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncSchedule do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Jobs
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncDebugCalendarWorker
@@ -125,6 +126,30 @@ defmodule Tymeslot.Integrations.Calendar.SyncSchedule do
   def request_sync(integration) do
     with {:ok, %{worker: worker}} <- schedule(integration) do
       request(worker, integration.id)
+    end
+  end
+
+  @doc """
+  Asks for a sync of `integration` because the grid was opened on stale
+  events: as `request_sync/1` does, except that a sync already waiting out
+  an error's backoff (a failed attempt, or a snooze past an open breaker or
+  a rate limit) is left to it, `{:ok, :backing_off}`. Opening the grid
+  again and again must not hammer a provider that is failing; the owner's
+  explicit Refresh goes through `request_sync/1` and does bring it forward.
+
+  The check is not atomic with the request: a sync that fails in between
+  is brought forward once, as on any request.
+  """
+  @spec request_sync_unless_backing_off(
+          CalendarIntegrationSchema.t()
+          | %{provider: String.t(), id: pos_integer()}
+        ) ::
+          {:ok, Oban.Job.t() | :backing_off} | {:error, :unsupported_provider | term()}
+  def request_sync_unless_backing_off(integration) do
+    with {:ok, %{worker: worker}} <- schedule(integration) do
+      if Jobs.backing_off?(worker, %{"calendar_integration_id" => integration.id}),
+        do: {:ok, :backing_off},
+        else: request(worker, integration.id)
     end
   end
 

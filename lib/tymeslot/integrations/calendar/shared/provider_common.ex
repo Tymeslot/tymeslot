@@ -59,7 +59,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       Keyword.get(
         opts,
         :message,
-        dgettext("dashboard_calendar_providers", "Invalid URL format")
+        dgettext("integrations_calendar", "Invalid URL format")
       )
 
     allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
@@ -71,10 +71,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       internal_names_local: allow_private,
       block_private_ips: not allow_private,
       https_error_message:
-        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
+        dgettext("integrations_calendar", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Private or local network addresses are not allowed"
         )
     )

@@ -91,6 +91,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           ical_sequence: integer(),
           last_notified_state: map(),
           notified_end_time: DateTime.t() | nil,
+          seen_calendar_end_time: DateTime.t() | nil,
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
           show_as_free: boolean(),
@@ -294,6 +295,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # a change not yet announced; nil when it knows the meeting as booked or
     # last rescheduled. Written only by the end change and reschedule paths.
     field(:notified_end_time, :utc_datetime)
+    # The calendar end at the last sync in step (`Calendar.TimingChange`); own end on insert.
+    field(:seen_calendar_end_time, :utc_datetime)
 
     # Custom booking fields
     field(:custom_fields_snapshot, {:array, :map}, default: [])
@@ -521,6 +524,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> ensure_calendar_uid()
+    |> ensure_seen_calendar_end()
     |> validate_required([:calendar_uid | required_fields])
     # Every writer copies `organizer_email` from the host's stored account (or
     # the operator's configured fallback), never from a form, so it is held
@@ -571,6 +575,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       _present -> changeset
     end
   end
+
+  defp ensure_seen_calendar_end(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs),
+    do: put_change(cs, :seen_calendar_end_time, get_field(cs, :end_time))
+
+  defp ensure_seen_calendar_end(changeset), do: changeset
 
   defp calculate_duration(changeset) do
     # Only calculate duration if not provided

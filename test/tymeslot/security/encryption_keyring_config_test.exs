@@ -4,7 +4,10 @@ defmodule Tymeslot.Security.EncryptionKeyringConfigTest do
   use ExUnit.Case, async: false
   @moduletag :security
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.Encryption.ConfigError
 
   @endpoint TymeslotWeb.Endpoint
 
@@ -75,14 +78,14 @@ defmodule Tymeslot.Security.EncryptionKeyringConfigTest do
   test "raises when DATA_ENCRYPTION_KEY is not valid Base64" do
     put_data_encryption_key("not valid base64 !!!")
 
-    assert_raise RuntimeError, ~r/valid Base64/, fn -> Encryption.encrypt("x") end
+    assert_raise ConfigError, ~r/valid Base64/, fn -> Encryption.encrypt("x") end
   end
 
   test "raises when DATA_ENCRYPTION_KEY decodes to fewer than 32 bytes" do
     short_key = Base.encode64(:crypto.strong_rand_bytes(16))
     put_data_encryption_key(short_key)
 
-    assert_raise RuntimeError, ~r/at least 32 bytes/, fn -> Encryption.encrypt("x") end
+    assert_raise ConfigError, ~r/at least 32 bytes/, fn -> Encryption.encrypt("x") end
   end
 
   describe "DATA_ENCRYPTION_KEYS" do
@@ -137,25 +140,25 @@ defmodule Tymeslot.Security.EncryptionKeyringConfigTest do
     test "refuses a different key under id 1 than DATA_ENCRYPTION_KEY" do
       put_keys(data_encryption_key: @key_1, data_encryption_keys: "2:#{@key_2},1:#{@key_3}")
 
-      error = assert_raise RuntimeError, fn -> Encryption.validate!() end
-      assert error.message =~ "different key under id 1"
-      refute_key_material(error.message)
+      error = assert_raise ConfigError, fn -> Encryption.validate!() end
+      assert Exception.message(error) =~ "different key under id 1"
+      refute_key_material(Exception.message(error))
     end
 
     test "refuses an id listed twice" do
       put_keys(data_encryption_keys: "2:#{@key_2},2:#{@key_3}")
 
-      error = assert_raise RuntimeError, fn -> Encryption.validate!() end
-      assert error.message =~ "id 2 more than once"
+      error = assert_raise ConfigError, fn -> Encryption.validate!() end
+      assert Exception.message(error) =~ "id 2 more than once"
     end
 
     for entry <- ["0:KEY", "256:KEY", "two:KEY", "KEY"] do
       test "refuses the malformed entry #{inspect(entry)}" do
         put_keys(data_encryption_keys: String.replace(unquote(entry), "KEY", @key_2))
 
-        error = assert_raise RuntimeError, fn -> Encryption.validate!() end
-        assert error.message =~ "entry 1 must be `<id>:<base64 key>`"
-        refute_key_material(error.message)
+        error = assert_raise ConfigError, fn -> Encryption.validate!() end
+        assert Exception.message(error) =~ "entry 1 must be `<id>:<base64 key>`"
+        refute_key_material(Exception.message(error))
       end
     end
 
@@ -163,9 +166,9 @@ defmodule Tymeslot.Security.EncryptionKeyringConfigTest do
       short = Base.encode64(:crypto.strong_rand_bytes(16))
       put_keys(data_encryption_keys: "2:#{@key_2},1:#{short}")
 
-      error = assert_raise RuntimeError, fn -> Encryption.validate!() end
-      assert error.message =~ "entry 2 must decode to at least 32 bytes"
-      refute_key_material(error.message)
+      error = assert_raise ConfigError, fn -> Encryption.validate!() end
+      assert Exception.message(error) =~ "entry 2 must decode to at least 32 bytes"
+      refute_key_material(Exception.message(error))
     end
   end
 
@@ -248,7 +251,7 @@ defmodule Tymeslot.Security.EncryptionKeyringConfigTest do
     test "refuses to start with no versioned key to write with" do
       put_keys(data_encryption_key: nil, legacy_key_retired: true)
 
-      assert_raise RuntimeError, ~r/no key to write with/, fn -> Encryption.validate!() end
+      assert_raise ConfigError, ~r/no key to write with/, fn -> Encryption.validate!() end
     end
   end
 
@@ -256,13 +259,47 @@ defmodule Tymeslot.Security.EncryptionKeyringConfigTest do
     test "raises at boot for a malformed key, before any value is touched" do
       put_data_encryption_key("not valid base64 !!!")
 
-      assert_raise RuntimeError, ~r/valid Base64/, fn -> Encryption.validate!() end
+      assert_raise ConfigError, ~r/valid Base64/, fn -> Encryption.validate!() end
     end
 
     test "accepts a working configuration" do
       put_keys(data_encryption_key: @key_1, data_encryption_keys: "2:#{@key_2}")
 
       assert Encryption.validate!() == :ok
+    end
+
+    test "refuses a SECRET_KEY_BASE too short to derive the legacy key" do
+      put_keys(data_encryption_key: @key_1)
+      put_secret_key_base("too short")
+
+      error = assert_raise ConfigError, fn -> Encryption.validate!() end
+      assert error.reason =~ "SECRET_KEY_BASE must be at least 64 bytes"
+      assert error.fix =~ "openssl rand -base64 64"
+    end
+  end
+
+  describe "check_config/0" do
+    test "logs what is wrong and how to fix it, and returns the error instead of raising" do
+      put_data_encryption_key("abc-def_ghi")
+
+      log =
+        capture_log(fn ->
+          assert {:error, %ConfigError{reason: "DATA_ENCRYPTION_KEY must be valid Base64"}} =
+                   Encryption.check_config()
+        end)
+
+      assert log =~ "Tymeslot cannot start: the data encryption key configuration is invalid."
+      assert log =~ "DATA_ENCRYPTION_KEY must be valid Base64."
+      assert log =~ "URL-safe characters (`-`, `_`) are refused."
+      assert log =~ "openssl rand -base64 48"
+    end
+
+    test "logs nothing for a working configuration" do
+      put_data_encryption_key(@key_1)
+
+      log = capture_log(fn -> assert Encryption.check_config() == :ok end)
+
+      refute log =~ "cannot start"
     end
   end
 

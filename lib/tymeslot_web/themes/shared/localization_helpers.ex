@@ -18,11 +18,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     grouped = Enum.group_by(slots, &time_period(&1.time))
 
     [
-      {dgettext("booking", "Early Morning"), sorted_period(grouped, :early_morning)},
-      {dgettext("booking", "Morning"), sorted_period(grouped, :morning)},
-      {dgettext("booking", "Afternoon"), sorted_period(grouped, :afternoon)},
-      {dgettext("booking", "Evening"), sorted_period(grouped, :evening)},
-      {dgettext("booking", "Late Night"), sorted_period(grouped, :late_night)}
+      {dgettext("datetime", "Early Morning"), sorted_period(grouped, :early_morning)},
+      {dgettext("datetime", "Morning"), sorted_period(grouped, :morning)},
+      {dgettext("datetime", "Afternoon"), sorted_period(grouped, :afternoon)},
+      {dgettext("datetime", "Evening"), sorted_period(grouped, :evening)},
+      {dgettext("datetime", "Late Night"), sorted_period(grouped, :late_night)}
     ]
   end
 
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       month = month_in_date(dt.month)
       time_str = format_time_by_locale(dt)
 
-      dgettext("booking", "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}",
+      dgettext("datetime", "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}",
         weekday: weekday,
         day: dt.day,
         month: month,
@@ -73,12 +73,12 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       )
     else
       _error ->
-        dgettext("booking", "%{date} at %{time}", date: date, time: time)
+        dgettext("datetime", "%{date} at %{time}", date: date, time: time)
     end
   end
 
   def format_booking_datetime(_date, _time, _timezone),
-    do: dgettext("booking", "Invalid date/time")
+    do: dgettext("datetime", "Invalid date/time")
 
   @doc """
   When a meeting starting at `time` on `date` (the booker's clock) ends on a
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
          {:ok, start} <- DateTimeUtils.resolve_local(start_date, start_time, timezone),
          finish = DateTime.add(start, TimeSlots.parse_duration(duration), :minute),
          :gt <- Date.compare(DateTime.to_date(finish), start_date) do
-      dgettext("booking", "Ends %{time} on %{weekday} %{day} %{month}",
+      dgettext("datetime", "Ends %{time} on %{weekday} %{day} %{month}",
         time: format_time_by_locale(finish),
         weekday: mid_sentence_weekday(Date.day_of_week(DateTime.to_date(finish))),
         day: finish.day,
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   def format_meeting_datetime(start_time, timezone) do
     case to_attendee_datetime(start_time, timezone) do
       {:ok, dt} ->
-        dgettext("booking", "%{day} %{month} %{year} at %{time} %{timezone}",
+        dgettext("datetime", "%{day} %{month} %{year} at %{time} %{timezone}",
           day: dt.day,
           month: month_in_date(dt.month),
           year: dt.year,
@@ -175,7 +175,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   def format_meeting_datetime_compact(start_time, timezone) do
     case to_attendee_datetime(start_time, timezone) do
       {:ok, dt} ->
-        dgettext("booking", "%{weekday} %{day} %{month}, %{time}",
+        dgettext("datetime", "%{weekday} %{day} %{month}, %{time}",
           weekday: get_weekday_name(Date.day_of_week(DateTime.to_date(dt))),
           day: dt.day,
           month: month_in_date(dt.month),
@@ -250,7 +250,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   def format_full_date_label(%Date{} = date) do
-    dgettext("booking", "%{weekday}, %{date}",
+    dgettext("datetime", "%{weekday}, %{date}",
       weekday: get_weekday_name(Date.day_of_week(date)),
       date: format_date(date)
     )
@@ -275,7 +275,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
         format_minutes(minutes)
 
       true ->
-        dgettext("booking", "Unknown duration")
+        dgettext("datetime", "Unknown duration")
     end
   end
 
@@ -285,7 +285,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @spec format_duration(any()) :: String.t()
-  def format_duration(_other), do: dgettext("booking", "Unknown duration")
+  def format_duration(_other), do: dgettext("datetime", "Unknown duration")
 
   # A month named inside a date takes a different form from a standalone one in
   # several locales: Ukrainian and Czech use the genitive ("15 червня 2026"),
@@ -313,13 +313,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   @spec get_weekday_name(integer()) :: String.t()
   defp get_weekday_name(day) do
     case day do
-      1 -> dgettext("booking", "Monday")
-      2 -> dgettext("booking", "Tuesday")
-      3 -> dgettext("booking", "Wednesday")
-      4 -> dgettext("booking", "Thursday")
-      5 -> dgettext("booking", "Friday")
-      6 -> dgettext("booking", "Saturday")
-      7 -> dgettext("booking", "Sunday")
+      1 -> dgettext("datetime", "Monday")
+      2 -> dgettext("datetime", "Tuesday")
+      3 -> dgettext("datetime", "Wednesday")
+      4 -> dgettext("datetime", "Thursday")
+      5 -> dgettext("datetime", "Friday")
+      6 -> dgettext("datetime", "Saturday")
+      7 -> dgettext("datetime", "Sunday")
     end
   end
 
@@ -335,13 +335,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     headings =
       Enum.map(
         [
-          dgettext("booking", "Mon"),
-          dgettext("booking", "Tue"),
-          dgettext("booking", "Wed"),
-          dgettext("booking", "Thu"),
-          dgettext("booking", "Fri"),
-          dgettext("booking", "Sat"),
-          dgettext("booking", "Sun")
+          dgettext("datetime", "Mon"),
+          dgettext("datetime", "Tue"),
+          dgettext("datetime", "Wed"),
+          dgettext("datetime", "Thu"),
+          dgettext("datetime", "Fri"),
+          dgettext("datetime", "Sat"),
+          dgettext("datetime", "Sun")
         ],
         &String.slice(&1, 0, 3)
       )
@@ -358,13 +358,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   @spec day_name_short(integer()) :: String.t()
   def day_name_short(day_of_week) do
     case day_of_week do
-      1 -> dgettext("booking", "MON")
-      2 -> dgettext("booking", "TUE")
-      3 -> dgettext("booking", "WED")
-      4 -> dgettext("booking", "THU")
-      5 -> dgettext("booking", "FRI")
-      6 -> dgettext("booking", "SAT")
-      7 -> dgettext("booking", "SUN")
+      1 -> dgettext("datetime", "MON")
+      2 -> dgettext("datetime", "TUE")
+      3 -> dgettext("datetime", "WED")
+      4 -> dgettext("datetime", "THU")
+      5 -> dgettext("datetime", "FRI")
+      6 -> dgettext("datetime", "SAT")
+      7 -> dgettext("datetime", "SUN")
     end
   end
 
@@ -376,26 +376,26 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   @spec format_advance_booking_days(integer() | nil) :: String.t()
   def format_advance_booking_days(days) when is_integer(days) and days <= 0,
-    do: dgettext("booking", "same day only")
+    do: dgettext("datetime", "same day only")
 
-  def format_advance_booking_days(1), do: dgettext("booking", "1 day in advance")
+  def format_advance_booking_days(1), do: dgettext("datetime", "1 day in advance")
 
   def format_advance_booking_days(days) when is_integer(days) and days < 7,
-    do: dgettext("booking", "%{days} days in advance", days: days)
+    do: dgettext("datetime", "%{days} days in advance", days: days)
 
-  def format_advance_booking_days(7), do: dgettext("booking", "1 week in advance")
+  def format_advance_booking_days(7), do: dgettext("datetime", "1 week in advance")
 
   def format_advance_booking_days(days) when is_integer(days) and days < 30,
     do: format_weeks_advance(days)
 
-  def format_advance_booking_days(30), do: dgettext("booking", "1 month in advance")
+  def format_advance_booking_days(30), do: dgettext("datetime", "1 month in advance")
 
   def format_advance_booking_days(days) when is_integer(days) and days < 365,
     do: format_months_advance(days)
 
-  def format_advance_booking_days(365), do: dgettext("booking", "1 year in advance")
+  def format_advance_booking_days(365), do: dgettext("datetime", "1 year in advance")
   def format_advance_booking_days(days) when is_integer(days), do: format_years_advance(days)
-  def format_advance_booking_days(_arg), do: dgettext("booking", "90 days in advance")
+  def format_advance_booking_days(_arg), do: dgettext("datetime", "90 days in advance")
 
   @doc """
   Formats a time on the clock the visitor's language uses.
@@ -467,7 +467,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       week_start.year == week_end.year ->
         LocaleFormat.capitalize_first(
-          dgettext("booking", "%{start_month} – %{end_month} %{year}",
+          dgettext("datetime", "%{start_month} – %{end_month} %{year}",
             start_month: standalone_month(week_start.month),
             end_month: standalone_month(week_end.month),
             year: week_start.year
@@ -476,7 +476,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       true ->
         LocaleFormat.capitalize_first(
-          dgettext("booking", "%{start_month} %{start_year} – %{end_month} %{end_year}",
+          dgettext("datetime", "%{start_month} %{start_year} – %{end_month} %{end_year}",
             start_month: standalone_month(week_start.month),
             start_year: week_start.year,
             end_month: standalone_month(week_end.month),
@@ -488,16 +488,16 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   # Internal helpers
 
-  defp format_minutes(1), do: dgettext("booking", "1 minute")
+  defp format_minutes(1), do: dgettext("datetime", "1 minute")
 
   defp format_minutes(minutes) when minutes < 60,
-    do: dgettext("booking", "%{minutes} minutes", minutes: minutes)
+    do: dgettext("datetime", "%{minutes} minutes", minutes: minutes)
 
-  defp format_minutes(60), do: dgettext("booking", "1 hour")
+  defp format_minutes(60), do: dgettext("datetime", "1 hour")
 
   defp format_minutes(minutes) when rem(minutes, 60) == 0 do
     hours = div(minutes, 60)
-    dgettext("booking", "%{count} hours", count: hours)
+    dgettext("datetime", "%{count} hours", count: hours)
   end
 
   defp format_minutes(minutes) do
@@ -506,15 +506,15 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
     hour_text =
       if hours == 1,
-        do: dgettext("booking", "1 hour"),
-        else: dgettext("booking", "%{count} hours", count: hours)
+        do: dgettext("datetime", "1 hour"),
+        else: dgettext("datetime", "%{count} hours", count: hours)
 
     minute_text =
       if mins == 1,
-        do: dgettext("booking", "1 minute"),
-        else: dgettext("booking", "%{count} minutes", count: mins)
+        do: dgettext("datetime", "1 minute"),
+        else: dgettext("datetime", "%{count} minutes", count: mins)
 
-    dgettext("booking", "%{hour_text} %{minute_text}",
+    dgettext("datetime", "%{hour_text} %{minute_text}",
       hour_text: hour_text,
       minute_text: minute_text
     )
@@ -532,11 +532,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   defp shift_or_keep(dt, _timezone), do: dt
 
   defp format_weeks_advance(days),
-    do: dgettext("booking", "%{weeks} weeks in advance", weeks: div(days, 7))
+    do: dgettext("datetime", "%{weeks} weeks in advance", weeks: div(days, 7))
 
   defp format_months_advance(days),
-    do: dgettext("booking", "%{months} months in advance", months: div(days, 30))
+    do: dgettext("datetime", "%{months} months in advance", months: div(days, 30))
 
   defp format_years_advance(days),
-    do: dgettext("booking", "%{years} years in advance", years: div(days, 365))
+    do: dgettext("datetime", "%{years} years in advance", years: div(days, 365))
 end

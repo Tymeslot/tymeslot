@@ -11,8 +11,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
+  alias Tymeslot.TestMocks
 
   # The circuit breaker runs in a GenServer process that is separate from the
   # test process. Use global mode so mocks are visible from that process.
@@ -141,6 +143,117 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
 
       assert {:ok, %{created_by_tymeslot: false}} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-theirs")
+    end
+  end
+
+  describe "fetch_and_apply/1 - linked meetings" do
+    setup do
+      TestMocks.setup_email_mocks()
+      :ok
+    end
+
+    # The sweep is the only way an integration without a Graph subscription
+    # (no WEBHOOK_BASE_URL, or one Microsoft cannot reach) hears of a change,
+    # so a booking moved in Outlook has to be reconciled here exactly as the
+    # webhook path (`SyncOutlookCalendarWorker`) reconciles it.
+    test "reconciles a meeting whose event was moved in Outlook" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
+        )
+
+      start_time = DateTime.add(DateTime.utc_now(:second), 86_400, :second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "graph-id-moved",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1800, :second)
+        )
+
+      moved_start = DateTime.add(start_time, 7200, :second)
+
+      moved =
+        graph_event(%{
+          "id" => "graph-id-moved",
+          "start" => %{"dateTime" => DateTime.to_iso8601(moved_start), "timeZone" => "UTC"},
+          "end" => %{
+            "dateTime" => moved_start |> DateTime.add(1800, :second) |> DateTime.to_iso8601(),
+            "timeZone" => "UTC"
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [moved],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      assert {:ok, %{calendar_sync_status: "externally_modified"}} =
+               MeetingQueries.get_meeting(meeting.id)
+    end
+  end
+
+  describe "fetch_and_apply/1 - removed events" do
+    test "drops the cached event and tells the open grids" do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
+        )
+
+      user_id = integration.user_id
+      gone = graph_event(%{"id" => "graph-id-gone", "iCalUId" => "uid-gone"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [gone],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+      assert {:ok, _cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-gone")
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user_id}")
+
+      # Graph reports a deletion as the bare id under `@removed`.
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [
+                 %{"id" => "graph-id-gone", "@removed" => %{"reason" => "deleted"}}
+               ],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      {:ok, integration} = CalendarIntegrationQueries.get(integration.id)
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-gone")
+
+      assert_receive {:calendar_events_updated, ^user_id, ["graph-id-gone"]}
     end
   end
 

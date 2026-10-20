@@ -175,8 +175,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
              )
     end
 
-    test "an invoice with no recorded subscription is taken to be the current one's" do
-      assert RefundHandler.refunds_current_subscription?(
+    # The subscription is read from Stripe when not recorded here, so an
+    # invoice that names none billed none: the current subscription is not
+    # assumed, since it may be one taken out after the refunded invoice.
+    test "an invoice that billed no subscription does not refund the current one" do
+      refute RefundHandler.refunds_current_subscription?(
                %{invoice_id: "in_1", subscription_id: nil},
                @current
              )

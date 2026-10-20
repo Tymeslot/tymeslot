@@ -8,6 +8,7 @@
 import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { ServerUrlField } from "../hooks/server_url_field"
+import { ReminderCustomRow } from "../hooks/reminder_custom_row"
 import { installKeyboardClick } from "../keyboard_click"
 
 // Define dashboard-specific hooks (lazy-loaded to minimize initial bundle size,
@@ -16,6 +17,8 @@ const DashboardHooks = {
   // Registered eagerly: it is a few lines, and it has to be in place before
   // the first submit of an integration form rather than one request later.
   ServerUrlField,
+  // Eager for the same reason: a lazy load could miss the first focusout.
+  ReminderCustomRow,
   AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),
   EmbedPreview: lazyHook("EmbedPreview", () => import("../hooks/embed_preview")),
   MeetingTypeSortable: lazyHook("MeetingTypeSortable", () => import("../hooks/meeting_type_sortable")),

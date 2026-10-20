@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.NextDayEndComponentTes
       guest_error: nil,
       guest_input: "",
       guests_open: false,
+      guest_cap_visible: true,
       is_rescheduling: false,
       location_error: nil,
       location_options: [],

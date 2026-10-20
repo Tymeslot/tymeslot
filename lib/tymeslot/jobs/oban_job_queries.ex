@@ -56,6 +56,27 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Whether a job of `worker` whose args contain `args` is waiting out an
+  error: `retryable` after a failed attempt, or `scheduled` by a snooze (an
+  open circuit breaker, a provider's rate limit), which Oban counts in the
+  job's `meta` under `"snoozed"`.
+  """
+  @spec backing_off?(module(), map()) :: boolean()
+  def backing_off?(worker, args) when is_map(args) do
+    worker_name = normalize_worker_name(worker)
+
+    Repo.exists?(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: fragment("? @> ?", j.args, ^args),
+        where:
+          j.state == "retryable" or
+            (j.state == "scheduled" and fragment("(?->>'snoozed') IS NOT NULL", j.meta))
+      )
+    )
+  end
+
+  @doc """
   Counts maintenance worker jobs in active states.
 
   Active is every incomplete state, `retryable` and `suspended` included: a

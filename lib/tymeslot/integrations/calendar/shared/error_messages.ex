@@ -153,7 +153,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   @spec specific_message(any(), provider()) :: String.t() | nil
   def specific_message({:calendar_home_not_found, url}, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings.",
       url: url
     )
@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   def specific_message({:calendar_listing_too_large, url}, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The calendar server at %{url} listed more items than Tymeslot can process at once. If this address points at a single calendar, enter your account's server address instead, and Tymeslot will find your calendars there.",
       url: url
     )
@@ -174,7 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   # cannot describe the same failure differently.
   def specific_message(:tls_error, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The server's TLS certificate was rejected. If it is self-signed or issued by an internal certificate authority, turn off certificate verification."
     )
   end
@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   # `CalDAV.Errors.describe_error/1`, which words it for the sync status.
   def specific_message(:response_too_large, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "The calendar server returned more data than Tymeslot can process at once."
     )
   end
@@ -195,7 +195,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   # rather than at the address it resolves to, so the refusal keeps its
   # meaning, in the owner's locale.
   def specific_message(:private_address, _provider) do
-    dgettext("dashboard_calendar_providers", "Private or local network addresses are not allowed")
+    dgettext("integrations_calendar", "Private or local network addresses are not allowed")
   end
 
   def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
@@ -219,48 +219,48 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
     case category do
       :auth ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Authentication failed for %{provider}. Please check your username and password",
           provider: provider_name
         )
 
       :permission ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Access denied. You don't have permission to access this %{provider} resource",
           provider: provider_name
         )
 
       :timeout ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Connection to %{provider} timed out. The server may be slow or unreachable",
           provider: provider_name
         )
 
       :rate_limit ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Too many requests to %{provider}. Please wait a moment and try again",
           provider: provider_name
         )
 
       :network ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Unable to connect to %{provider}. Please check your network connection and server URL",
           provider: provider_name
         )
 
       :config ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "%{provider} configuration error. Please verify your server URL and settings",
           provider: provider_name
         )
 
       :unknown ->
-        dgettext("dashboard_calendar_providers", "An unexpected error occurred with %{provider}",
+        dgettext("integrations_calendar", "An unexpected error occurred with %{provider}",
           provider: provider_name
         )
     end
@@ -286,35 +286,35 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   defp get_auth_suggestion(:auth, :nextcloud) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Try using an app password instead of your regular password. You can create one in Nextcloud's security settings"
     )
   end
 
   defp get_auth_suggestion(:auth, :radicale) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Check your Radicale credentials. If using htpasswd authentication, ensure the password is correct"
     )
   end
 
   defp get_auth_suggestion(:auth, :mailbox_org) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead"
     )
   end
 
   defp get_auth_suggestion(:auth, :apple) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "iCloud requires an app-specific password. Generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password"
     )
   end
 
   defp get_auth_suggestion(:auth, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Double-check your credentials and ensure they haven't expired"
     )
   end
@@ -323,21 +323,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   defp get_network_suggestion(:network, :nextcloud) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Verify the URL format: https://your-domain.com (Nextcloud path will be added automatically)"
     )
   end
 
   defp get_network_suggestion(:network, :radicale) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Verify the Radicale URL including port if needed (e.g., https://radicale.example.com:5232)"
     )
   end
 
   defp get_network_suggestion(:network, :caldav) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Verify the full CalDAV URL including the path (e.g., https://server.com/caldav/)"
     )
   end
@@ -346,14 +346,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   defp get_config_suggestion(:config, :radicale) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Check that Radicale is running and accessible at the specified URL and port"
     )
   end
 
   defp get_config_suggestion(:config, _provider) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Check that the server URL is correct and the CalDAV service is enabled"
     )
   end
@@ -362,13 +362,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   defp get_other_suggestion(:timeout) do
     dgettext(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "If the problem persists, contact your calendar server administrator"
     )
   end
 
   defp get_other_suggestion(:rate_limit) do
-    dgettext("dashboard_calendar_providers", "Wait 60 seconds before trying again")
+    dgettext("integrations_calendar", "Wait 60 seconds before trying again")
   end
 
   defp get_other_suggestion(_category), do: nil
@@ -379,7 +379,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   defp format_provider_name(provider) do
     case provider do
-      :caldav -> dgettext("dashboard_calendar_providers", "CalDAV server")
+      :caldav -> dgettext("integrations_calendar", "CalDAV server")
       :nextcloud -> "Nextcloud"
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
@@ -387,7 +387,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       :apple -> "Apple iCloud"
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
-      _other_provider -> dgettext("dashboard_calendar_providers", "calendar provider")
+      _other_provider -> dgettext("integrations_calendar", "calendar provider")
     end
   end
 end

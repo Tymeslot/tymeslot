@@ -36,10 +36,15 @@ defmodule Tymeslot.Security.Encryption do
   encrypted under a key that is no longer available). `decrypt_with_status/1`
   surfaces the same failure as `{:error, :requires_reencryption}` for callers that
   need to react — for example, calendar sync workers flag the affected integration
-  for reauthentication instead of crashing.
+  for reauthentication instead of crashing. A value written under a key since
+  dropped from the keyring is the operator's to fix, by adding the key back;
+  `absent_key_version/1` tells it apart, so such an integration is reported
+  rather than flagged, and the boot check names the missing ids.
   """
 
-  alias Tymeslot.Security.Encryption.Keyring
+  require Logger
+
+  alias Tymeslot.Security.Encryption.{ConfigError, Keyring}
 
   @aad Keyring.aad()
 
@@ -150,6 +155,42 @@ defmodule Tymeslot.Security.Encryption do
   end
 
   @doc """
+  Names the key a value was written under when that key is missing from the
+  keyring: an operator's configuration mistake, recovered by adding the key
+  back, rather than a credential that is gone.
+
+  Returns `{:ok, id}` when no configured key opens the value and its version
+  prefix names a key id that is not configured but plausibly was: one below
+  the highest configured id, since ids are allocated upwards and a dropped
+  one sits below the key that replaced it, or id 1, the
+  `DATA_ENCRYPTION_KEY` slot. Returns `:error` for a value that opens, an
+  empty one, and one no id accounts for (corrupt, or on the legacy key).
+
+  The prefix of a legacy v0 value is a random nonce byte, so the attribution
+  is a strong hint rather than proof: bounding the ids it accepts keeps a v0
+  value from being taken for one under an arbitrary id. Its plaintext is never
+  returned.
+  """
+  @spec absent_key_version(binary() | nil) :: {:ok, 1..255} | :error
+  def absent_key_version(encrypted) do
+    with {:error, :requires_reencryption} <- open(encrypted),
+         <<version, _rest::binary>> when byte_size(encrypted) >= @versioned_min_size <-
+           encrypted,
+         true <- absent_id?(version, keyring().keys) do
+      {:ok, version}
+    else
+      _opens_or_unattributable -> :error
+    end
+  end
+
+  @doc """
+  The ids of the versioned keys configured, in ascending order. Empty when
+  only the legacy key is in use.
+  """
+  @spec configured_versions() :: [1..255]
+  def configured_versions, do: keyring().keys |> Map.keys() |> Enum.sort()
+
+  @doc """
   Returns `true` when a stored value is already written under the current primary
   version, i.e. the re-encryption sweep has nothing to do for it.
 
@@ -168,14 +209,36 @@ defmodule Tymeslot.Security.Encryption do
   def current_version, do: keyring().current_version
 
   @doc """
-  Builds and caches the keyring, raising with an operator-readable message when
-  the key configuration cannot work. Called once at application start.
+  Builds and caches the keyring, raising `ConfigError` when the key
+  configuration cannot work.
   """
   @spec validate!() :: :ok
   def validate! do
     reset_keyring()
     _keyring = keyring()
     :ok
+  end
+
+  @doc """
+  The boot-time form of `validate!/0`. On a key configuration that cannot work
+  it logs what is wrong and how to fix it, and returns the error so the
+  application can refuse to start without burying the reason in a stack trace.
+  """
+  @spec check_config() :: :ok | {:error, ConfigError.t()}
+  def check_config do
+    validate!()
+  rescue
+    error in ConfigError ->
+      Logger.error(
+        "Tymeslot cannot start: the data encryption key configuration is invalid. " <>
+          Exception.message(error) <>
+          " Nothing has been read or changed; start Tymeslot again once the " <>
+          "configuration is fixed. The data-at-rest encryption section of the " <>
+          "installation guide explains every setting.",
+        event_type: "encryption_config_invalid"
+      )
+
+      {:error, error}
   end
 
   @doc """
@@ -219,6 +282,11 @@ defmodule Tymeslot.Security.Encryption do
   end
 
   defp open(_value), do: :empty
+
+  defp absent_id?(version, keys) do
+    highest = keys |> Map.keys() |> Enum.max(fn -> 1 end)
+    version in 1..max(highest, 1)//1 and not Map.has_key?(keys, version)
+  end
 
   defp aead_decrypt(key, nonce, tag, ciphertext) do
     case :crypto.crypto_one_time_aead(:aes_256_gcm, key, nonce, ciphertext, @aad, tag, false) do

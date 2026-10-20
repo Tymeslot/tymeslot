@@ -21,11 +21,11 @@ defmodule Tymeslot.Security.FieldValidators.UrlValidator do
     UrlValidation.validate_http_url(String.trim(value))
   end
 
-  def validate(_value, _opts), do: {:error, dgettext("errors", "URL must be text")}
+  def validate(_value, _opts), do: {:error, dgettext("errors_input", "URL must be text")}
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, dgettext("errors", "URL is required")},
+      do: {:error, dgettext("errors_input", "URL is required")},
       else: :ok
   end
 end

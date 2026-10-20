@@ -11,9 +11,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.FamilyProvider do
           password: "Radicale password",
           calendar_paths: "List of calendar UUIDs to sync (auto-discovered if not provided)"
         ],
-        invalid_url_message: dgettext("dashboard_calendar_providers", "Invalid Radicale URL. ..."),
-        connected_message: dgettext("dashboard_calendar_providers", "Radicale connection successful"),
-        not_found_message: dgettext("dashboard_calendar_providers", "Radicale server not found. ...")
+        invalid_url_message: dgettext("integrations_calendar", "Invalid Radicale URL. ..."),
+        connected_message: dgettext("integrations_calendar", "Radicale connection successful"),
+        not_found_message: dgettext("integrations_calendar", "Radicale server not found. ...")
 
   Everything else comes from the member's row in `CalDAV.Family` (its display
   name and any fixed server address) or is the same for every member. The

@@ -370,6 +370,25 @@ defmodule Tymeslot.Integrations.Calendar.BlockingTest do
       assert "2:00 PM" in offered(ctx.profile, ctx.date, "30min")
     end
 
+    test "blocks a calendar's times at once when its connection is switched back on", ctx do
+      {:ok, off} = OwnerActions.toggle_integration(ctx.user.id, ctx.integration.id)
+
+      # Seeds the cache with the answer computed without the connection.
+      assert "2:00 PM" in offered(ctx.profile, ctx.date, "30min")
+
+      {:ok, %{is_active: true}} = OwnerActions.toggle_integration(ctx.user.id, off.id)
+
+      refute "2:00 PM" in offered(ctx.profile, ctx.date, "30min")
+    end
+
+    test "frees a calendar's times at once when its connection is paused", ctx do
+      refute "2:00 PM" in offered(ctx.profile, ctx.date, "30min")
+
+      {:ok, %{is_active: false}} = Management.pause_integration(ctx.integration)
+
+      assert "2:00 PM" in offered(ctx.profile, ctx.date, "30min")
+    end
+
     test "frees a calendar's times at once when it is switched off", ctx do
       refute "2:00 PM" in offered(ctx.profile, ctx.date, "30min")
 

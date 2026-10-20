@@ -578,13 +578,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   # Same msgids the provider modules themselves use, so the message a user
   # sees does not depend on which of the two paths produced it.
   defp success_message(:nextcloud),
-    do: dgettext("dashboard_calendar_providers", "Nextcloud connection successful")
+    do: dgettext("integrations_calendar", "Nextcloud connection successful")
 
   defp success_message(:radicale),
-    do: dgettext("dashboard_calendar_providers", "Radicale connection successful")
+    do: dgettext("integrations_calendar", "Radicale connection successful")
 
   defp success_message(_arg),
-    do: dgettext("dashboard_calendar_providers", "CalDAV connection successful")
+    do: dgettext("integrations_calendar", "CalDAV connection successful")
 
   # Matches on the fields rather than on `%Client{}`: the redaction guarantee
   # comes from `build_client/2` constructing the struct, not from strictness

@@ -159,6 +159,40 @@ defmodule Tymeslot.Payments.StripeTest do
     end
   end
 
+  describe "get_invoice/1" do
+    setup do
+      Application.put_env(:tymeslot, :stripe_invoice_mod, StripeInvoiceMock)
+      on_exit(fn -> Application.delete_env(:tymeslot, :stripe_invoice_mod) end)
+    end
+
+    test "retrieves the invoice by id" do
+      expect(StripeInvoiceMock, :retrieve, fn "in_1", %{}, opts ->
+        assert opts[:api_key] == "sk_test_fake"
+        {:ok, %{id: "in_1", subscription: "sub_1"}}
+      end)
+
+      assert {:ok, %{id: "in_1", subscription: "sub_1"}} = Stripe.get_invoice("in_1")
+    end
+  end
+
+  describe "list_invoice_payments/1" do
+    setup do
+      Application.put_env(:tymeslot, :stripe_invoice_payment_mod, StripeInvoicePaymentMock)
+      on_exit(fn -> Application.delete_env(:tymeslot, :stripe_invoice_payment_mod) end)
+    end
+
+    test "passes Stripe's filters through and returns the page" do
+      params = %{payment: %{type: "payment_intent", payment_intent: "pi_1"}}
+
+      expect(StripeInvoicePaymentMock, :list, fn ^params, opts ->
+        assert opts[:api_key] == "sk_test_fake"
+        {:ok, %{data: [%{invoice: "in_1"}], has_more: false}}
+      end)
+
+      assert {:ok, %{data: [%{invoice: "in_1"}]}} = Stripe.list_invoice_payments(params)
+    end
+  end
+
   describe "update_subscription_automatic_tax/2" do
     test "sets automatic tax to the given value" do
       expect(StripeSubscriptionMock, :update, fn "sub_123", params, opts ->

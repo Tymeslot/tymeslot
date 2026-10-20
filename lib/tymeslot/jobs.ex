@@ -33,6 +33,12 @@ defmodule Tymeslot.Jobs do
   defdelegate count_inserted_since(worker, args, since), to: ObanJobQueries
 
   @doc """
+  Whether a job of `worker` whose args contain `args` is waiting out an
+  error's backoff. See `Tymeslot.Jobs.ObanJobQueries.backing_off?/2`.
+  """
+  defdelegate backing_off?(worker, args), to: ObanJobQueries
+
+  @doc """
   Whether another of `worker`'s jobs for `meeting_id` started executing before
   `job` and is executing still. See
   `Tymeslot.Jobs.ObanJobQueries.earlier_job_executing?/3`.

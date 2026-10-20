@@ -17,16 +17,16 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidator do
 
     cond do
       not Enum.all?(values, &is_binary/1) ->
-        {:error, dgettext("errors", "Selections must be strings")}
+        {:error, dgettext("errors_input", "Selections must be strings")}
 
       not MapSet.subset?(given, allowed) ->
-        {:error, dgettext("errors", "Some selections are not valid options")}
+        {:error, dgettext("errors_input", "Some selections are not valid options")}
 
       min && MapSet.size(given) < min ->
-        {:error, dgettext("errors", "Please choose at least %{min}", min: min)}
+        {:error, dgettext("errors_input", "Please choose at least %{min}", min: min)}
 
       max && MapSet.size(given) > max ->
-        {:error, dgettext("errors", "Please choose at most %{max}", max: max)}
+        {:error, dgettext("errors_input", "Please choose at most %{max}", max: max)}
 
       true ->
         :ok
@@ -34,11 +34,11 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidator do
   end
 
   def validate(_value, _definition, _opts),
-    do: {:error, dgettext("errors", "Selections must be a list")}
+    do: {:error, dgettext("errors_input", "Selections must be a list")}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true),
-      do: {:error, dgettext("errors", "Please choose at least one option")},
+      do: {:error, dgettext("errors_input", "Please choose at least one option")},
       else: :ok
   end
 

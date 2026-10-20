@@ -514,6 +514,12 @@ defmodule Tymeslot.Meetings do
     as: :apply_end_change
 
   @doc """
+  Records the end the host's calendar event shows for a meeting found in step
+  with it, as the end a later end change is measured against.
+  """
+  defdelegate record_seen_calendar_end(meeting, end_time), to: ExternalCalendarChanges
+
+  @doc """
   Clears an `"externally_modified"` flag on a meeting whose provider event
   agrees with it again.
 

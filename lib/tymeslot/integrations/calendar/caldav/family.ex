@@ -51,7 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Family do
         url: "https://dav.mailbox.org",
         tooltip:
           dgettext_noop(
-            "dashboard_calendar_providers",
+            "integrations_calendar",
             "mailbox.org always uses this CalDAV server, so the address cannot be changed"
           )
       }
@@ -63,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Family do
         url: "https://caldav.icloud.com",
         tooltip:
           dgettext_noop(
-            "dashboard_calendar_providers",
+            "integrations_calendar",
             "Apple iCloud always uses this CalDAV server, so the address cannot be changed"
           )
       }

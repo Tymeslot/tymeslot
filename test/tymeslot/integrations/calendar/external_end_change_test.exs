@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -135,6 +136,69 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
       assert updated.calendar_sync_status == "externally_modified"
       assert updated.end_time == ctx.meeting.end_time
+    end
+  end
+
+  # A meeting booked before meetings followed calendar end changes may carry
+  # an end its host changed long ago, which nothing acted on at the time.
+  describe "a meeting whose calendar end already differed" do
+    setup ctx do
+      meeting =
+        ctx.meeting |> Changeset.change(seen_calendar_end_time: nil) |> Repo.update!()
+
+      with_video_room(meeting)
+      %{meeting: meeting}
+    end
+
+    test "is left as it is, and nobody is told", ctx do
+      sync(ctx, ctx.meeting.start_time, ~T[11:30:00])
+
+      assert_unchanged(ctx.meeting)
+      refute_enqueued(worker: EmailWorker)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting(ctx.meeting.id)
+      assert reloaded.calendar_sync_status == nil
+      assert reloaded.ical_sequence == ctx.meeting.ical_sequence
+      assert reloaded.seen_calendar_end_time == DateTime.new!(ctx.date, ~T[11:30:00], "Etc/UTC")
+    end
+
+    test "follows a change the host makes after that, and tells the attendees", ctx do
+      sync(ctx, ctx.meeting.start_time, ~T[11:30:00])
+      sync(ctx, ctx.meeting.start_time, ~T[12:00:00])
+
+      new_end = DateTime.new!(ctx.date, ~T[12:00:00], "Etc/UTC")
+      {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
+      assert updated.end_time == new_end
+      assert updated.seen_calendar_end_time == new_end
+      assert updated.ical_sequence == ctx.meeting.ical_sequence + 1
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["action"] == "send_end_change_emails"
+      assert job.args["meeting_id"] == ctx.meeting.id
+    end
+
+    test "an end put back to the meeting's own is in step again", ctx do
+      sync(ctx, ctx.meeting.start_time, ~T[11:30:00])
+      sync(ctx, ctx.meeting.start_time, ~T[10:30:00])
+
+      assert_unchanged(ctx.meeting)
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
+
+  describe "an end stretched past any meeting's length" do
+    test "is flagged for the host, not written or announced", ctx do
+      sync_events(ctx, %{
+        "start" => %{"dateTime" => DateTime.to_iso8601(ctx.meeting.start_time)},
+        "end" => %{
+          "dateTime" => DateTime.to_iso8601(DateTime.add(ctx.meeting.start_time, 3, :day))
+        }
+      })
+
+      {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
+      assert updated.calendar_sync_status == "externally_modified"
+      assert updated.end_time == ctx.meeting.end_time
+      refute_enqueued(worker: EmailWorker)
     end
   end
 
@@ -291,7 +355,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
     end_time = DateTime.add(meeting.start_time, minutes, :minute)
 
     meeting
-    |> Changeset.change(end_time: end_time, duration: minutes)
+    |> Changeset.change(end_time: end_time, duration: minutes, seen_calendar_end_time: end_time)
     |> Repo.update!()
   end
 

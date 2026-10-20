@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
         :nextcloud,
         PathUtils.ensure_scheme(config[:base_url]),
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"
         )
       )
@@ -173,7 +173,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
     case CaldavCommon.test_connection(client) do
       {:ok, _message} ->
-        {:ok, dgettext("dashboard_calendar_providers", "Nextcloud connection successful")}
+        {:ok, dgettext("integrations_calendar", "Nextcloud connection successful")}
 
       # Reported as a reason, not as copy: see
       # `ProviderCommon.test_caldav_provider_connection/2`, which every other
@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       {:error, :not_found} ->
         {:error,
          dgettext(
-           "dashboard_calendar_providers",
+           "integrations_calendar",
            "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."
          )}
 

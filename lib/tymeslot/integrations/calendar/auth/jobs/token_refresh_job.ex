@@ -307,7 +307,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   # it has run, so nothing reads the text back any more.
   defp refresh_failure_message do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Tymeslot could not renew its access to this calendar. It will try again shortly."
     )
   end

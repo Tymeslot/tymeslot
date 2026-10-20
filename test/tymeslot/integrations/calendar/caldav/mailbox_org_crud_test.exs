@@ -324,10 +324,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
         %{method: "PROPFIND"} = conn ->
           CalDAVTestHelpers.answer_address_lookup(conn, ["user@mailbox.org"])
 
-        %{method: "HEAD"} = conn ->
+        %{method: "GET"} = conn ->
           conn
           |> Conn.put_resp_header("etag", "\"2785358-1-1777300818156\"")
-          |> Conn.send_resp(200, "")
+          |> Conn.send_resp(200, stored_event("organiser@custom-domain.example"))
 
         conn ->
           assert conn.method == "PUT"
@@ -337,18 +337,62 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
           Conn.send_resp(conn, 201, "")
       end)
 
-      assert :ok =
-               Events.update_calendar_event(
-                 client(),
-                 @calendar_path,
-                 "9d983fc6-11a8-4d3c-b258-2ec3de2d34d8",
-                 %{
-                   summary: "Updated",
-                   start_time: ~U[2026-05-01 10:00:00Z],
-                   end_time: ~U[2026-05-01 11:00:00Z]
-                 },
-                 skip_breaker: true
-               )
+      assert :ok = update_uncached()
+    end
+
+    # Open-Xchange silently drops an update naming another organiser than the
+    # stored one, so an update with no cached copy patches the server's copy,
+    # whose `ORGANIZER` the patch leaves alone, rather than rebuilding an
+    # event that would name the account's address.
+    test "an update with no cached copy keeps the organiser the server stored" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn
+        %{method: "PROPFIND"} = conn ->
+          CalDAVTestHelpers.answer_address_lookup(conn, ["user@mailbox.org"])
+
+        %{method: "GET"} = conn ->
+          conn
+          |> Conn.put_resp_header("etag", "\"1\"")
+          |> Conn.send_resp(200, stored_event("organiser@custom-domain.example"))
+
+        %{method: "PUT"} = conn ->
+          {:ok, body, conn} = Conn.read_body(conn)
+          send(test_pid, {:put, body})
+          Conn.send_resp(conn, 201, "")
+      end)
+
+      assert :ok = update_uncached()
+      assert_receive {:put, body}
+      lines = unfolded_lines(body)
+
+      assert Enum.filter(lines, &String.starts_with?(&1, "ORGANIZER")) ==
+               ["ORGANIZER;CN=Owner:mailto:organiser@custom-domain.example"]
+
+      assert "SUMMARY:Updated" in lines
+    end
+
+    test "an update whose event is gone recreates it under the account's address" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn
+        %{method: "PROPFIND"} = conn ->
+          CalDAVTestHelpers.answer_address_lookup(conn, ["user@mailbox.org"])
+
+        %{method: method} = conn when method in ["GET", "HEAD"] ->
+          Conn.send_resp(conn, 404, "")
+
+        %{method: "PUT"} = conn ->
+          {:ok, body, conn} = Conn.read_body(conn)
+          send(test_pid, {:put, body})
+          Conn.send_resp(conn, 201, "")
+      end)
+
+      assert :ok = update_uncached(%{organizer_email: "organiser@custom-domain.example"})
+      assert_receive {:put, body}
+
+      assert Enum.filter(unfolded_lines(body), &String.starts_with?(&1, "ORGANIZER")) ==
+               ["ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:user@mailbox.org"]
     end
 
     test "create against the base64-id calendar path uses the server-root URL" do
@@ -411,5 +455,45 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
 
       assert match?({:error, _}, result)
     end
+  end
+
+  defp update_uncached(extra \\ %{}) do
+    Events.update_calendar_event(
+      client(),
+      @calendar_path,
+      "9d983fc6-11a8-4d3c-b258-2ec3de2d34d8",
+      Map.merge(
+        %{
+          summary: "Updated",
+          start_time: ~U[2026-05-01 10:00:00Z],
+          end_time: ~U[2026-05-01 11:00:00Z]
+        },
+        extra
+      ),
+      skip_breaker: true
+    )
+  end
+
+  defp stored_event(organiser) do
+    """
+    BEGIN:VCALENDAR\r
+    VERSION:2.0\r
+    BEGIN:VEVENT\r
+    UID:9d983fc6-11a8-4d3c-b258-2ec3de2d34d8\r
+    DTSTAMP:20260427T100000Z\r
+    DTSTART:20260501T090000Z\r
+    DTEND:20260501T100000Z\r
+    SUMMARY:Booked\r
+    ORGANIZER;CN=Owner:mailto:#{organiser}\r
+    ATTENDEE;CN=Owner;ROLE=CHAIR;PARTSTAT=ACCEPTED:mailto:user@mailbox.org\r
+    END:VEVENT\r
+    END:VCALENDAR\r
+    """
+  end
+
+  defp unfolded_lines(body) do
+    body
+    |> String.replace(~r/\r?\n[ \t]/, "")
+    |> String.split(~r/\r?\n/, trim: true)
   end
 end

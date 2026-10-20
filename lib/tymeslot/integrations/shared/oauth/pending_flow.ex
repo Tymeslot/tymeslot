@@ -61,14 +61,20 @@ defmodule Tymeslot.Integrations.Shared.OAuth.PendingFlow do
 
   @doc """
   Consumes `user_id`'s `provider` flow `nonce` and returns its code verifier.
-  A flow already consumed, expired, or not theirs is `{:error, :flow_not_found}`.
+  A flow already consumed, expired, or not theirs is `{:error, :flow_not_found}`,
+  and so is one whose verifier no configured key opens (its key removed from
+  the keyring mid-flow): the user starts the flow again.
   """
   @spec consume(String.t() | nil, pos_integer(), atom()) ::
           {:ok, String.t()} | {:error, :flow_not_found}
   def consume(nonce, user_id, provider) when is_binary(nonce) and is_atom(provider) do
-    case PendingFlowQueries.consume(nonce, user_id, Atom.to_string(provider), now()) do
-      {:ok, flow} -> {:ok, Encryption.decrypt(flow.code_verifier_encrypted)}
-      :error -> {:error, :flow_not_found}
+    with {:ok, flow} <-
+           PendingFlowQueries.consume(nonce, user_id, Atom.to_string(provider), now()),
+         {:ok, code_verifier} when is_binary(code_verifier) <-
+           Encryption.decrypt_with_status(flow.code_verifier_encrypted) do
+      {:ok, code_verifier}
+    else
+      _consumed_expired_or_unreadable -> {:error, :flow_not_found}
     end
   end
 

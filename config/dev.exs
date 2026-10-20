@@ -76,6 +76,9 @@ config :tymeslot, TymeslotWeb.Endpoint,
         key <- theme_stylesheets,
         do: {:"tailwind_#{key}", {Tailwind, :install_and_run, [String.to_atom(key), ~w(--watch)]}}
       ),
+  # A project that depends on Core and adds its own patterns has to restate
+  # this list, because a list value replaces rather than merges across config
+  # files. Keep any such copy in step when these patterns change.
   live_reload: [
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",

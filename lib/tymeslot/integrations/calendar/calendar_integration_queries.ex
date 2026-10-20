@@ -258,6 +258,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Whether a user other than `user_id` has a calendar of `provider` on the
+  external account `provider_account_id` that still holds a token, active or
+  not.
+  """
+  @spec account_held_by_other_user?(String.t(), String.t(), integer()) :: boolean()
+  def account_held_by_other_user?(provider, provider_account_id, user_id)
+      when is_binary(provider) and is_binary(provider_account_id) and is_integer(user_id) do
+    CalendarIntegrationSchema
+    |> where([c], c.provider == ^provider and c.provider_account_id == ^provider_account_id)
+    |> where([c], c.user_id != ^user_id)
+    |> where([c], not is_nil(c.refresh_token_encrypted) or not is_nil(c.access_token_encrypted))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Finds any calendar integration (active or inactive) by provider and account ID for a user.
   Used to detect inactive duplicates before creating a new row.
   """

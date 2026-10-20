@@ -137,8 +137,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsAttendeeWriteTest do
 
     # The reporter's case: an organiser on a custom domain the account does
     # not list as its own. The server adds its owner whatever the event says,
-    # so the owner line is written under the address it would have added.
-    test "lists the account's own address as the chair for an organiser the account does not own" do
+    # so the owner line is written under the address it would have added, and
+    # `ORGANIZER` names that address too, so the server takes the event for
+    # the owner's own and accepts later changes to its guests.
+    test "writes the account's own address as organiser and chair for an organiser the account does not own" do
       lines =
         create_and_capture(
           client(:mailbox_org, "https://dav.mailbox.org"),
@@ -150,7 +152,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsAttendeeWriteTest do
                "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Julian:mailto:julian@example.com"
              ]
 
-      assert "ORGANIZER;SCHEDULE-AGENT=CLIENT;CN=Owner:mailto:owner@example.com" in lines
+      assert Enum.filter(lines, &String.starts_with?(&1, "ORGANIZER")) ==
+               ["ORGANIZER;SCHEDULE-AGENT=CLIENT;CN=Owner:mailto:login@mailbox.org"]
     end
 
     test "lists an organiser writing from an alias the account owns under that alias" do

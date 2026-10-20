@@ -19,7 +19,8 @@ defmodule Tymeslot.Release.Encryption do
   @doc """
   How many stored values each key version still holds, per table and column.
   Read-only. Retire the legacy key only once no `v0` values remain, and remove
-  a key from `DATA_ENCRYPTION_KEYS` only once none remain under its id.
+  a key from `DATA_ENCRYPTION_KEYS` only once none remain under its id. A key
+  id that holds values but is no longer configured is named on its own line.
   """
   @spec key_report() :: CredentialReencryption.KeyReport.report()
   def key_report do
@@ -32,6 +33,14 @@ defmodule Tymeslot.Release.Encryption do
     end
 
     IO.puts("total: #{format_counts(report.totals)}")
+
+    for {version, columns} <- Enum.sort(report.missing_keys) do
+      IO.puts(
+        "key #{version} is not configured but holds values (#{Enum.sum(Map.values(columns))}): " <>
+          "add it back under the same id"
+      )
+    end
+
     report
   end
 

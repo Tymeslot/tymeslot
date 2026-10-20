@@ -61,7 +61,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
       meeting = %{
         MeetingLinks.with_current_links(meeting)
-        | title: meeting.title || dgettext("emails_booking", "Meeting")
+        | title: meeting.title || dgettext("emails_booking_changes", "Meeting")
       }
 
       # The host's own clock, as their other booking emails use.
@@ -90,14 +90,14 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       owner_time = DateTimeUtils.convert_to_timezone(meeting.start_time, owner_timezone)
       time_format = HostClock.time_format(meeting, locale)
-      title = meeting.title || dgettext("emails_booking", "Meeting")
+      title = meeting.title || dgettext("emails_booking_changes", "Meeting")
       to = end_label(meeting.end_time, owner_time, locale, time_format)
       from = end_label(notice.previous_end_time, owner_time, locale, time_format)
       meeting = %{MeetingLinks.with_current_links(meeting) | title: title}
 
       summary =
         dgettext(
-          "emails_booking",
+          "emails_booking_changes",
           "You changed when \"%{title}\" ends in your external calendar, so Tymeslot updated the booking: it now ends at %{to} instead of %{from}.",
           title: Sanitise.sanitize_for_email(title),
           to: to,
@@ -108,45 +108,46 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       view_url = view_url(meeting, UrlBuilder.build_url("/dashboard/meetings"))
 
       mjml_content = """
-      #{Callouts.alert_box(:confirmed, summary, title: dgettext("emails_booking", "Meeting end updated from your calendar"))}
+      #{Callouts.alert_box(:confirmed, summary, title: dgettext("emails_booking_changes", "Meeting end updated from your calendar"))}
 
       #{Text.centered_text(Sanitise.sanitize_for_email(told), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: meeting.location, location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type, time_format: time_format}, locale)}
 
-      #{Buttons.action_button(:confirmed, dgettext("emails_booking", "View Meeting Details"), view_url, full_width: true)}
+      #{Buttons.action_button(:confirmed, dgettext("emails_booking_changes", "View Meeting Details"), view_url, full_width: true)}
 
-      #{Text.system_footer_note(dgettext("emails_booking", "This notification was triggered automatically when a change was detected in your external calendar."))}
+      #{Text.system_footer_note(dgettext("emails_booking_changes", "This notification was triggered automatically when a change was detected in your external calendar."))}
       """
 
       html_body =
         TemplateHelper.compile_system_template(
           mjml_content,
-          dgettext("emails_booking", "Meeting end updated from your calendar"),
-          dgettext("emails_booking", "A meeting changed in your external calendar."),
+          dgettext("emails_booking_changes", "Meeting end updated from your calendar"),
+          dgettext("emails_booking_changes", "A meeting changed in your external calendar."),
           intent: :confirmed,
-          eyebrow: dgettext("emails_booking", "Updated"),
-          stage_title: dgettext("emails_booking", "Meeting end updated from your calendar"),
+          eyebrow: dgettext("emails_booking_changes", "Updated"),
+          stage_title:
+            dgettext("emails_booking_changes", "Meeting end updated from your calendar"),
           stage_subtitle: told
         )
 
       text_body = """
-      #{dgettext("emails_booking", "Meeting end updated from your calendar")}
+      #{dgettext("emails_booking_changes", "Meeting end updated from your calendar")}
 
       #{summary}
 
       #{told}
 
-      #{dgettext("emails_booking", "View meeting:")}
+      #{dgettext("emails_booking_changes", "View meeting:")}
       #{view_url}
 
-      #{dgettext("emails_booking", "This notification was triggered automatically when a change was detected in your external calendar.")}
+      #{dgettext("emails_booking_changes", "This notification was triggered automatically when a change was detected in your external calendar.")}
       """
 
       MjmlEmail.base_email()
       |> to(recipient(meeting.organizer_name, organizer_email))
       |> subject(
-        dgettext("emails_booking", "\"%{title}\" now ends at %{time} (%{date})",
+        dgettext("emails_booking_changes", "\"%{title}\" now ends at %{time} (%{date})",
           title: title,
           time: to,
           date: Formatting.format_date_short(owner_time, locale)
@@ -180,14 +181,14 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   defp attendees_line(meeting, attendees) do
     if Meeting.group?(meeting) do
       dngettext(
-        "emails_booking",
+        "emails_booking_changes",
         "We emailed %{count} participant the new end time, with an updated calendar entry.",
         "We emailed %{count} participants the new end time, with an updated calendar entry.",
         length(attendees)
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "We emailed %{name} the new end time, with an updated calendar entry.",
         name: Enum.join(attendees, ", ")
       )
@@ -198,7 +199,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
   defp guests_line(guests, true) do
     dngettext(
-      "emails_booking",
+      "emails_booking_changes",
       "Their guest was emailed too.",
       "Their %{count} guests were emailed too.",
       guests
@@ -208,7 +209,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   # No attendee was reached, so "their" would have nobody to refer to.
   defp guests_line(guests, false) do
     dngettext(
-      "emails_booking",
+      "emails_booking_changes",
       "We emailed the guest the new end time, with an updated calendar entry.",
       "We emailed %{count} guests the new end time, with an updated calendar entry.",
       guests
@@ -243,9 +244,9 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
     #{explanation_section(discrepancy, meeting)}
 
-    #{Buttons.action_button(@intent, dgettext("emails_booking", "View Meeting Details"), view_url, full_width: true)}
+    #{Buttons.action_button(@intent, dgettext("emails_booking_changes", "View Meeting Details"), view_url, full_width: true)}
 
-    #{Text.system_footer_note(dgettext("emails_booking", "This notification was triggered automatically when a change was detected in your external calendar."))}
+    #{Text.system_footer_note(dgettext("emails_booking_changes", "This notification was triggered automatically when a change was detected in your external calendar."))}
     """
 
     # This is an automated alert to the organiser about their own booking,
@@ -254,9 +255,9 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     TemplateHelper.compile_system_template(
       mjml_content,
       alert_title,
-      dgettext("emails_booking", "A meeting changed in your external calendar."),
+      dgettext("emails_booking_changes", "A meeting changed in your external calendar."),
       intent: @intent,
-      eyebrow: dgettext("emails_booking", "Action required"),
+      eyebrow: dgettext("emails_booking_changes", "Action required"),
       stage_title: alert_title,
       stage_subtitle: stage_subtitle(meeting)
     )
@@ -269,8 +270,9 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   # meeting from the dashboard.
   defp stage_subtitle(meeting) do
     if Meeting.group?(meeting),
-      do: dgettext("emails_booking", "Please review the group meeting in Tymeslot."),
-      else: dgettext("emails_booking", "Please review and update the booking in Tymeslot.")
+      do: dgettext("emails_booking_changes", "Please review the group meeting in Tymeslot."),
+      else:
+        dgettext("emails_booking_changes", "Please review and update the booking in Tymeslot.")
   end
 
   defp alert_parts(:deleted, meeting) do
@@ -279,11 +281,11 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     {
       :cancelled,
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place.",
         title: title
       ),
-      dgettext("emails_booking", "Meeting Deleted in External Calendar")
+      dgettext("emails_booking_changes", "Meeting Deleted in External Calendar")
     }
   end
 
@@ -293,20 +295,20 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     {
       :alert,
       modified_alert_message(meeting, title),
-      dgettext("emails_booking", "Meeting Rescheduled in External Calendar")
+      dgettext("emails_booking_changes", "Meeting Rescheduled in External Calendar")
     }
   end
 
   defp modified_alert_message(meeting, title) do
     if Meeting.group?(meeting) do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once.",
         title: title
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly.",
         title: title
       )
@@ -318,7 +320,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     <mj-section padding="12px 0 0 0">
       <mj-column>
         <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="1.6">
-          #{dgettext("emails_booking", "This meeting was <strong>removed from your external calendar</strong> but is still active in Tymeslot. If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up.")}
+          #{dgettext("emails_booking_changes", "This meeting was <strong>removed from your external calendar</strong> but is still active in Tymeslot. If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up.")}
         </mj-text>
       </mj-column>
     </mj-section>
@@ -340,12 +342,12 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   defp modified_explanation_html(meeting) do
     if Meeting.group?(meeting) do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
       )
     end
@@ -361,22 +363,22 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     custom_answers = TextBodyHelper.format_custom_answers(meeting, locale)
 
     """
-    #{dgettext("emails_booking", "Meeting Deleted in External Calendar")}
+    #{dgettext("emails_booking_changes", "Meeting Deleted in External Calendar")}
 
-    #{dgettext("emails_booking", "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot.", title: meeting.title)}
+    #{dgettext("emails_booking_changes", "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot.", title: meeting.title)}
 
-    #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{dgettext("emails_booking", "Date:")} #{Formatting.format_date(owner_time, locale)}
-    #{dgettext("emails_booking", "Time:")} #{Formatting.format_time(owner_time, locale, time_format)}
-    #{dgettext("emails_booking", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
-    #{dgettext("emails_booking", "Location:")} #{meeting.location || dgettext("emails_booking", "Not specified")}
+    #{dgettext("emails_booking_changes", "MEETING DETAILS:")}
+    #{dgettext("emails_booking_changes", "Date:")} #{Formatting.format_date(owner_time, locale)}
+    #{dgettext("emails_booking_changes", "Time:")} #{Formatting.format_time(owner_time, locale, time_format)}
+    #{dgettext("emails_booking_changes", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
+    #{dgettext("emails_booking_changes", "Location:")} #{meeting.location || dgettext("emails_booking_changes", "Not specified")}
     #{custom_answers}
-    #{dgettext("emails_booking", "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up.")}
+    #{dgettext("emails_booking_changes", "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up.")}
 
-    #{dgettext("emails_booking", "View meeting:")}
+    #{dgettext("emails_booking_changes", "View meeting:")}
     #{view_url}
 
-    #{dgettext("emails_booking", "This notification was triggered automatically when a change was detected in your external calendar.")}
+    #{dgettext("emails_booking_changes", "This notification was triggered automatically when a change was detected in your external calendar.")}
     """
   end
 
@@ -386,34 +388,34 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     custom_answers = TextBodyHelper.format_custom_answers(meeting, locale)
 
     """
-    #{dgettext("emails_booking", "Meeting Rescheduled in External Calendar")}
+    #{dgettext("emails_booking_changes", "Meeting Rescheduled in External Calendar")}
 
-    #{dgettext("emails_booking", "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below.", title: meeting.title)}
+    #{dgettext("emails_booking_changes", "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below.", title: meeting.title)}
 
-    #{dgettext("emails_booking", "ORIGINAL BOOKING DETAILS:")}
-    #{dgettext("emails_booking", "Date:")} #{Formatting.format_date(owner_time, locale)}
-    #{dgettext("emails_booking", "Time:")} #{Formatting.format_time(owner_time, locale, time_format)}
-    #{dgettext("emails_booking", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
-    #{dgettext("emails_booking", "Location:")} #{meeting.location || dgettext("emails_booking", "Not specified")}
+    #{dgettext("emails_booking_changes", "ORIGINAL BOOKING DETAILS:")}
+    #{dgettext("emails_booking_changes", "Date:")} #{Formatting.format_date(owner_time, locale)}
+    #{dgettext("emails_booking_changes", "Time:")} #{Formatting.format_time(owner_time, locale, time_format)}
+    #{dgettext("emails_booking_changes", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
+    #{dgettext("emails_booking_changes", "Location:")} #{meeting.location || dgettext("emails_booking_changes", "Not specified")}
     #{custom_answers}
     #{modified_next_steps_text(meeting)}
 
-    #{dgettext("emails_booking", "View meeting:")}
+    #{dgettext("emails_booking_changes", "View meeting:")}
     #{view_url}
 
-    #{dgettext("emails_booking", "This notification was triggered automatically when a change was detected in your external calendar.")}
+    #{dgettext("emails_booking_changes", "This notification was triggered automatically when a change was detected in your external calendar.")}
     """
   end
 
   defp modified_next_steps_text(meeting) do
     if Meeting.group?(meeting) do
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
       )
     else
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
       )
     end
@@ -426,7 +428,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   defp email_subject(:deleted, title, date_short),
     do:
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Action required: \"%{title}\" was deleted from your external calendar (%{date})",
         title: title,
         date: date_short
@@ -435,7 +437,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   defp email_subject(:modified, title, date_short),
     do:
       dgettext(
-        "emails_booking",
+        "emails_booking_changes",
         "Action required: \"%{title}\" was rescheduled in your external calendar (%{date})",
         title: title,
         date: date_short

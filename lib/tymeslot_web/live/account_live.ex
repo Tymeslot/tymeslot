@@ -42,8 +42,9 @@ defmodule TymeslotWeb.AccountLive do
               variant={:secondary}
               size={:sm}
               icon="hero-arrow-left"
+              aria-label={dgettext("account", "Back to Dashboard")}
             >
-              {dgettext("account", "Back to Dashboard")}
+              <span class="hidden sm:inline">{dgettext("account", "Back to Dashboard")}</span>
             </.action_link>
 
             <%!-- User dropdown --%>

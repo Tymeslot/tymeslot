@@ -508,6 +508,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("commit_custom_reminder", params, socket) do
+    socket |> picker_state() |> ReminderPickerState.commit_pending(params) |> apply_picker(socket)
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("remove_reminder", params, socket) do
     socket |> picker_state() |> ReminderPickerState.remove(params) |> apply_picker(socket)
   end

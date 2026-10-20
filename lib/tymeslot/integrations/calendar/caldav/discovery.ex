@@ -145,7 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # credential error rather than a permissions error. Every other error passes
   # through unchanged.
   defp normalise_test_result(:ok, _client),
-    do: {:ok, dgettext("dashboard_calendar_providers", "CalDAV connection successful")}
+    do: {:ok, dgettext("integrations_calendar", "CalDAV connection successful")}
 
   defp normalise_test_result({:error, :forbidden}, %{provider: :radicale}),
     do: {:error, :unauthorized}

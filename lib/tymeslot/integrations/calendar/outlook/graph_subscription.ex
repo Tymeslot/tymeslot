@@ -68,6 +68,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
            {:ok, _count} <- Sync.upsert_cache(integration, calendar_events) do
         FeedCalendar.relabel(integration, Enum.map(calendar_events, & &1.uid))
 
+        # A re-bootstrap (after a 410 or an obsolete delta link) is the only
+        # pass that sees a change made while no link was tracking: the new
+        # link reports only what changes after it. So the snapshot is
+        # reconciled like a delta, and before the link is stored, so that a
+        # crash here leaves the next sweep to bootstrap again.
+        Sync.post_commit_reconciliation(integration, calendar_events)
+
         # The window the new link tracks starts now, which is what
         # `DeltaSync.rebootstrap_due?/1` measures its age from.
         persist_subscription(integration, %{

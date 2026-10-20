@@ -19,42 +19,42 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   def connection_error_message(:timeout),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Calendar service is not responding. Please try again later."
       )
 
   def connection_error_message(:authentication_failed),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Authentication failed. Please reconnect your calendar."
       )
 
   def connection_error_message(:token_expired),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Your calendar access has expired. Please reconnect."
       )
 
   def connection_error_message(:network_error),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Unable to reach calendar service. Check your internet connection."
       )
 
   def connection_error_message(:invalid_credentials),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Invalid calendar credentials. Please update your connection."
       )
 
   def connection_error_message(_other),
     do:
       dgettext(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Failed to connect to calendar. Please try again or reconnect."
       )
 
@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
     case errors do
       [] ->
         dgettext(
-          "dashboard_calendar_providers",
+          "integrations_calendar",
           "Calendar discovery failed. Please check your credentials and try again."
         )
 

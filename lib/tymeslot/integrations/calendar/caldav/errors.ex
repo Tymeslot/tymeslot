@@ -46,80 +46,80 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   def describe_error({:free_busy_unreadable, _reason}),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "A calendar shared with you as busy times only could not be read. Its last known busy times still block your booking page."
       )
 
   def describe_error({:unexpected_status, _status}),
-    do: dgettext_noop("dashboard_calendar_providers", "The calendar server refused the request.")
+    do: dgettext_noop("integrations_calendar", "The calendar server refused the request.")
 
   def describe_error(:unauthorized),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server rejected the stored credentials. Please reconnect the calendar."
       )
 
   def describe_error(:forbidden),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server refused access to this calendar."
       )
 
   def describe_error(:not_found),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The event no longer exists on the calendar server."
       )
 
   def describe_error(:method_not_allowed),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
       )
 
   def describe_error(:precondition_failed),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The event changed on the calendar server since Tymeslot last synced it."
       )
 
   def describe_error(:rate_limited),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically."
       )
 
   def describe_error(:network_error),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "Tymeslot could not reach the calendar server. Tymeslot will retry automatically."
       )
 
   def describe_error(:invalid_response),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server returned a response Tymeslot could not understand."
       )
 
   def describe_error(:response_too_large),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server returned more data than Tymeslot can process at once."
       )
 
   def describe_error(:server_error),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server reported an error. Tymeslot will retry automatically."
       )
 
@@ -128,14 +128,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   def describe_error(:server_unresponsive),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server did not respond. Tymeslot will retry automatically."
       )
 
   def describe_error(:timeout),
     do:
       dgettext_noop(
-        "dashboard_calendar_providers",
+        "integrations_calendar",
         "The calendar server took too long to respond. Tymeslot will retry automatically."
       )
 
@@ -143,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
 
   defp unknown_error_description do
     dgettext_noop(
-      "dashboard_calendar_providers",
+      "integrations_calendar",
       "Tymeslot could not complete the request against the calendar server."
     )
   end

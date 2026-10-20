@@ -5,6 +5,12 @@ defmodule Tymeslot.Integrations.Video.AccountCleanup do
   Zoom's. Microsoft Teams has no practical per-token revoke, and MiroTalk or
   a custom link holds no grant, so those are left alone.
 
+  A grant another account still relies on is not revoked (`GrantSharing`):
+  Google's revoke ends the grant for every account on that Google account,
+  calendars included, and Zoom's removes the app for the Zoom user, whose
+  deauthorisation webhook would then disconnect every account linked to it.
+  The deleted account's own rows still go with the account.
+
   Rooms are not deleted: a guest may still join a meeting that the deletion
   removes from Tymeslot, and deleting the room would break their link.
 
@@ -17,6 +23,7 @@ defmodule Tymeslot.Integrations.Video.AccountCleanup do
 
   alias Tymeslot.Infrastructure.BestEffort
   alias Tymeslot.Integrations.Shared.OAuth.GoogleTokenRevocation
+  alias Tymeslot.Integrations.Shared.OAuth.GrantSharing
   alias Tymeslot.Integrations.Video.AccessToken
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -29,7 +36,7 @@ defmodule Tymeslot.Integrations.Video.AccountCleanup do
     |> Enum.each(fn integration ->
       BestEffort.run(
         :revoke_grant,
-        fn -> clean_up(integration) end,
+        fn -> if GrantSharing.shared?(integration), do: :ok, else: clean_up(integration) end,
         "Account deletion: video grant revocation failed; carrying on",
         provider: integration.provider,
         integration_id: integration.id,

@@ -102,6 +102,26 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
     end
   end
 
+  describe "seen_calendar_end_time" do
+    # Its calendar event is written with the meeting's own end, so a sync that
+    # later reads a different one is reading a change the host made.
+    test "a new meeting starts from its own end" do
+      cs = Meeting.changeset(%Meeting{}, @valid_base_attrs)
+
+      assert Changeset.get_change(cs, :seen_calendar_end_time) == @valid_base_attrs.end_time
+    end
+
+    # What a sync recorded is the calendar's end, which an update to the
+    # meeting does not change.
+    test "an update leaves the recorded end alone" do
+      meeting = insert(:meeting)
+
+      cs = Meeting.changeset(meeting, %{end_time: DateTime.add(meeting.end_time, 1800)})
+
+      refute Changeset.changed?(cs, :seen_calendar_end_time)
+    end
+  end
+
   describe "provider_event_id" do
     test "accepts an id at Google's 1024-character maximum" do
       attrs = Map.put(@valid_base_attrs, :provider_event_id, String.duplicate("a", 1024))

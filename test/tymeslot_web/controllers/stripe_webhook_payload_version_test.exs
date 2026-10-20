@@ -25,10 +25,13 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
 
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.Payments.PaymentTransactionSchema
+  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Repo
   alias Tymeslot.StripeWebhookFixtures
+
+  setup :verify_on_exit!
 
   @platform_secret "whsec_platform_2020"
   @connect_secret "whsec_connect_2020"
@@ -90,6 +93,48 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
         })
 
       body = StripeWebhookFixtures.body("charge.refunded")
+      signature = StripeWebhookFixtures.signature(body, @platform_secret)
+
+      assert conn |> post_signed("/webhooks/stripe", body, signature) |> response(200) == ""
+
+      assert_received %{
+        event: :charge_refunded,
+        data: %{
+          invoice_id: "in_1SfixtureRenewal",
+          subscription_id: "sub_paid_for",
+          should_revoke: true
+        }
+      }
+    end
+
+    # An endpoint moved to API version 2025-03-31.basil or later renders the
+    # charge without its invoice; the refund still names the subscription,
+    # found through the charge's payment intent.
+    test "a refund of a charge without its invoice field names the subscription it paid for",
+         %{conn: conn} do
+      {:ok, _invoice} =
+        SubscriptionInvoiceQueries.upsert(%{
+          stripe_invoice_id: "in_1SfixtureRenewal",
+          subscription_id: "sub_paid_for"
+        })
+
+      expect(StripeMock, :list_invoice_payments, fn %{
+                                                      payment: %{
+                                                        type: "payment_intent",
+                                                        payment_intent: "pi_1SfixtureRenewal"
+                                                      }
+                                                    } ->
+        {:ok, %{data: [%{invoice: "in_1SfixtureRenewal"}], has_more: false}}
+      end)
+
+      body =
+        "charge.refunded"
+        |> StripeWebhookFixtures.event()
+        |> update_in(["data", "object"], &Map.delete(&1, "invoice"))
+        |> Map.put("id", "evt_1SfixtureRefundWithoutInvoice")
+        |> Jason.encode!()
+
+      refute body =~ ~s("invoice")
       signature = StripeWebhookFixtures.signature(body, @platform_secret)
 
       assert conn |> post_signed("/webhooks/stripe", body, signature) |> response(200) == ""

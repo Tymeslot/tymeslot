@@ -175,9 +175,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
       >
         <:header>
           <%= if @mode == :edit do %>
-            {dgettext("dashboard_meeting_form", "Edit question")}
+            {dgettext("dashboard_meeting_questions", "Edit question")}
           <% else %>
-            {dgettext("dashboard_meeting_form", "Add question")}
+            {dgettext("dashboard_meeting_questions", "Add question")}
           <% end %>
         </:header>
 
@@ -196,8 +196,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :label)}
             id="definition_label"
             type="text"
-            label={dgettext("dashboard_meeting_form", "Label")}
-            placeholder={dgettext("dashboard_meeting_form", "e.g., Company name")}
+            label={dgettext("dashboard_meeting_questions", "Label")}
+            placeholder={dgettext("dashboard_meeting_questions", "e.g., Company name")}
             required
             phx-blur="field_blur"
             phx-value-field="label"
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             errors={FormValidationHelpers.field_errors(@field_errors, :label)}
           >
             <:description>
-              {dgettext("dashboard_meeting_form", "The question shown to the booker.")}
+              {dgettext("dashboard_meeting_questions", "The question shown to the booker.")}
             </:description>
           </.input>
 
@@ -214,9 +214,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :help_text)}
             id="definition_help_text"
             type="text"
-            label={dgettext("dashboard_meeting_form", "Help text (optional)")}
+            label={dgettext("dashboard_meeting_questions", "Help text (optional)")}
             placeholder={
-              dgettext("dashboard_meeting_form", "e.g., Enter your company's registered name")
+              dgettext("dashboard_meeting_questions", "e.g., Enter your company's registered name")
             }
             phx-blur="field_blur"
             phx-value-field="help_text"
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
           >
             <:description>
               {dgettext(
-                "dashboard_meeting_form",
+                "dashboard_meeting_questions",
                 "Shown below the question - use it to clarify what you're asking or give an example."
               )}
             </:description>
@@ -236,11 +236,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :type)}
             id="definition_type"
             type="select"
-            label={dgettext("dashboard_meeting_form", "Type")}
+            label={dgettext("dashboard_meeting_questions", "Type")}
             options={type_options()}
           >
             <:description>
-              {dgettext("dashboard_meeting_form", "Controls how the booker enters their answer.")}
+              {dgettext("dashboard_meeting_questions", "Controls how the booker enters their answer.")}
             </:description>
           </.input>
 
@@ -249,11 +249,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :required)}
             id="definition_required"
             type="checkbox"
-            label={dgettext("dashboard_meeting_form", "Required")}
+            label={dgettext("dashboard_meeting_questions", "Required")}
           >
             <:description>
               {dgettext(
-                "dashboard_meeting_form",
+                "dashboard_meeting_questions",
                 "The booker must answer this question before they can continue."
               )}
             </:description>
@@ -273,10 +273,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 value={field_value(@changeset, :body)}
                 id="definition_body"
                 type="textarea"
-                label={dgettext("dashboard_meeting_form", "Body text")}
+                label={dgettext("dashboard_meeting_questions", "Body text")}
                 placeholder={
                   dgettext(
-                    "dashboard_meeting_form",
+                    "dashboard_meeting_questions",
                     "Text that the booker must acknowledge before proceeding"
                   )
                 }
@@ -289,7 +289,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               >
                 <:description>
                   {dgettext(
-                    "dashboard_meeting_form",
+                    "dashboard_meeting_questions",
                     "The notice the booker must read and confirm before they can continue."
                   )}
                 </:description>
@@ -301,7 +301,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   value={field_value(@changeset, :min)}
                   id="definition_min"
                   type={bound_input_type(t)}
-                  label={dgettext("dashboard_meeting_form", "Min")}
+                  label={dgettext("dashboard_meeting_questions", "Min")}
                   errors={FormValidationHelpers.field_errors(@field_errors, :min)}
                 >
                   <:description>{bound_min_hint(t)}</:description>
@@ -311,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   value={field_value(@changeset, :max)}
                   id="definition_max"
                   type={bound_input_type(t)}
-                  label={dgettext("dashboard_meeting_form", "Max")}
+                  label={dgettext("dashboard_meeting_questions", "Max")}
                   errors={FormValidationHelpers.field_errors(@field_errors, :max)}
                 >
                   <:description>{bound_max_hint(t)}</:description>
@@ -329,7 +329,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             >
               <p class="font-medium text-token-sm mb-3">
                 {dgettext(
-                  "dashboard_meeting_form",
+                  "dashboard_meeting_questions",
                   "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
                 )}
               </p>
@@ -340,7 +340,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   phx-click="cancel_type_change"
                   phx-target={@myself}
                 >
-                  {dgettext("dashboard_meeting_form", "Cancel")}
+                  {dgettext("dashboard_meeting_questions", "Cancel")}
                 </.action_button>
                 <.action_button
                   type="button"
@@ -348,7 +348,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   phx-click="confirm_type_change"
                   phx-target={@myself}
                 >
-                  {dgettext("dashboard_meeting_form", "Yes, change type")}
+                  {dgettext("dashboard_meeting_questions", "Yes, change type")}
                 </.action_button>
               </div>
             </div>
@@ -361,10 +361,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               phx-click="cancel"
               phx-target={@myself}
             >
-              {dgettext("dashboard_meeting_form", "Cancel")}
+              {dgettext("dashboard_meeting_questions", "Cancel")}
             </.action_button>
             <.action_button type="submit" variant={:primary}>
-              {dgettext("dashboard_meeting_form", "Save question")}
+              {dgettext("dashboard_meeting_questions", "Save question")}
             </.action_button>
           </div>
         </.form>
@@ -383,10 +383,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
     ~H"""
     <div>
       <label class="label">
-        {dgettext("dashboard_meeting_form", "Options")} <span class="text-red-500 ml-0.5">*</span>
+        {dgettext("dashboard_meeting_questions", "Options")}
+        <span class="text-red-500 ml-0.5">*</span>
       </label>
       <p class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal -mt-1 mb-3">
-        {dgettext("dashboard_meeting_form", "Each entry becomes a selectable choice for the booker.")}
+        {dgettext(
+          "dashboard_meeting_questions",
+          "Each entry becomes a selectable choice for the booker."
+        )}
       </p>
       <div class="space-y-2">
         <%= for {option, index} <- Enum.with_index(options_list(@changeset)) do %>
@@ -401,7 +405,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               name={"definition[options][#{index}][label]"}
               value={option.label || ""}
               class="input flex-1"
-              placeholder={dgettext("dashboard_meeting_form", "Option %{number}", number: index + 1)}
+              placeholder={
+                dgettext("dashboard_meeting_questions", "Option %{number}", number: index + 1)
+              }
               phx-blur="field_blur"
               phx-value-field="options"
               phx-target={@myself}
@@ -411,7 +417,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               variant={:danger}
               size={:sm}
               class="shrink-0"
-              label={dgettext("dashboard_meeting_form", "Remove option")}
+              label={dgettext("dashboard_meeting_questions", "Remove option")}
               phx-click="remove_option"
               phx-value-index={index}
               phx-target={@myself}
@@ -427,7 +433,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
         phx-click="add_option"
         phx-target={@myself}
       >
-        {dgettext("dashboard_meeting_form", "Add option")}
+        {dgettext("dashboard_meeting_questions", "Add option")}
       </.action_button>
       <%= for error <- FormValidationHelpers.field_errors(@field_errors, :options) do %>
         <p class="field-error">{translate_options_error(error)}</p>
@@ -473,35 +479,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   defp bound_input_type("time"), do: "time"
 
   defp bound_min_hint("number"),
-    do: dgettext("dashboard_meeting_form", "Lowest value the booker may enter.")
+    do: dgettext("dashboard_meeting_questions", "Lowest value the booker may enter.")
 
   defp bound_min_hint("date"),
-    do: dgettext("dashboard_meeting_form", "Earliest date the booker may choose.")
+    do: dgettext("dashboard_meeting_questions", "Earliest date the booker may choose.")
 
   defp bound_min_hint("time"),
-    do: dgettext("dashboard_meeting_form", "Earliest time the booker may choose.")
+    do: dgettext("dashboard_meeting_questions", "Earliest time the booker may choose.")
 
   defp bound_max_hint("number"),
-    do: dgettext("dashboard_meeting_form", "Highest value the booker may enter.")
+    do: dgettext("dashboard_meeting_questions", "Highest value the booker may enter.")
 
   defp bound_max_hint("date"),
-    do: dgettext("dashboard_meeting_form", "Latest date the booker may choose.")
+    do: dgettext("dashboard_meeting_questions", "Latest date the booker may choose.")
 
   defp bound_max_hint("time"),
-    do: dgettext("dashboard_meeting_form", "Latest time the booker may choose.")
+    do: dgettext("dashboard_meeting_questions", "Latest time the booker may choose.")
 
   defp type_options do
     [
-      {dgettext("dashboard_meeting_form", "Short text"), "short_text"},
-      {dgettext("dashboard_meeting_form", "Number"), "number"},
-      {dgettext("dashboard_meeting_form", "Single choice"), "single_select"},
-      {dgettext("dashboard_meeting_form", "Multiple choice"), "multi_select"},
-      {dgettext("dashboard_meeting_form", "Yes / No"), "yes_no"},
-      {dgettext("dashboard_meeting_form", "Phone"), "phone"},
-      {dgettext("dashboard_meeting_form", "URL"), "url"},
-      {dgettext("dashboard_meeting_form", "Date"), "date"},
-      {dgettext("dashboard_meeting_form", "Time"), "time"},
-      {dgettext("dashboard_meeting_form", "Note for acknowledgement"), "note"}
+      {dgettext("dashboard_meeting_questions", "Short text"), "short_text"},
+      {dgettext("dashboard_meeting_questions", "Number"), "number"},
+      {dgettext("dashboard_meeting_questions", "Single choice"), "single_select"},
+      {dgettext("dashboard_meeting_questions", "Multiple choice"), "multi_select"},
+      {dgettext("dashboard_meeting_questions", "Yes / No"), "yes_no"},
+      {dgettext("dashboard_meeting_questions", "Phone"), "phone"},
+      {dgettext("dashboard_meeting_questions", "URL"), "url"},
+      {dgettext("dashboard_meeting_questions", "Date"), "date"},
+      {dgettext("dashboard_meeting_questions", "Time"), "time"},
+      {dgettext("dashboard_meeting_questions", "Note for acknowledgement"), "note"}
     ]
   end
 end

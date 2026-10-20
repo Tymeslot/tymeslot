@@ -56,29 +56,29 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
     cond do
       trimmed_name == "" ->
         if Keyword.get(opts, :required, true),
-          do: {:error, dgettext("errors", "Name cannot be blank")},
+          do: {:error, dgettext("errors_input", "Name cannot be blank")},
           else: :ok
 
       String.length(trimmed_name) < min_length ->
         {:error,
-         dgettext("errors", "Name is too short (minimum %{min_length} characters)",
+         dgettext("errors_input", "Name is too short (minimum %{min_length} characters)",
            min_length: min_length
          )}
 
       String.length(trimmed_name) > max_length ->
         {:error,
-         dgettext("errors", "Name is too long (maximum %{max_length} characters)",
+         dgettext("errors_input", "Name is too long (maximum %{max_length} characters)",
            max_length: max_length
          )}
 
       Regex.match?(@invalid_chars_regex, trimmed_name) ->
-        {:error, dgettext("errors", "Name contains invalid characters")}
+        {:error, dgettext("errors_input", "Name contains invalid characters")}
 
       all_numbers?(trimmed_name) ->
-        {:error, dgettext("errors", "Name cannot be only numbers")}
+        {:error, dgettext("errors_input", "Name cannot be only numbers")}
 
       excessive_whitespace?(trimmed_name) ->
-        {:error, dgettext("errors", "Name contains excessive whitespace")}
+        {:error, dgettext("errors_input", "Name contains excessive whitespace")}
 
       true ->
         :ok
@@ -86,7 +86,7 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
   end
 
   def validate(_name, _opts) do
-    {:error, dgettext("errors", "Name must be a text value")}
+    {:error, dgettext("errors_input", "Name must be a text value")}
   end
 
   # Private helper functions
@@ -102,7 +102,7 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true) do
-      {:error, dgettext("errors", "Name is required")}
+      {:error, dgettext("errors_input", "Name is required")}
     else
       :ok
     end

@@ -3,7 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.AccountCleanup do
   Tells Google and Microsoft to stop working for an account that is being
   deleted, for every calendar it connected:
 
-    * Google: stops the push channel, then revokes the OAuth grant.
+    * Google: stops the push channel, then revokes the OAuth grant, unless
+      another account still holds a calendar or Google Meet on the same
+      Google account (`GrantSharing`): the revoke would end its grant too.
     * Outlook: deletes the Graph change-notification subscription. Microsoft
       offers no practical per-token revoke for this flow; the grant becomes
       unusable once the stored refresh token is deleted with the account.
@@ -25,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.AccountCleanup do
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Shared.OAuth.GoogleTokenRevocation
+  alias Tymeslot.Integrations.Shared.OAuth.GrantSharing
 
   @spec run(pos_integer()) :: :ok
   def run(user_id) do
@@ -46,7 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.AccountCleanup do
   # one does not skip the next.
   defp clean_up(%CalendarIntegrationSchema{provider: "google"} = integration) do
     step(integration, :stop_push_channel, fn -> PushChannel.stop_push_channel(integration) end)
-    step(integration, :revoke_grant, fn -> GoogleTokenRevocation.revoke_grant(integration) end)
+    step(integration, :revoke_grant, fn -> revoke_unless_shared(integration) end)
   end
 
   defp clean_up(%CalendarIntegrationSchema{provider: "outlook"} = integration),
@@ -56,6 +59,12 @@ defmodule Tymeslot.Integrations.Calendar.AccountCleanup do
       end)
 
   defp clean_up(_integration), do: :ok
+
+  defp revoke_unless_shared(integration) do
+    if GrantSharing.shared?(integration),
+      do: :ok,
+      else: GoogleTokenRevocation.revoke_grant(integration)
+  end
 
   defp step(integration, name, fun) do
     BestEffort.run(name, fun, "Account deletion: calendar cleanup step failed; carrying on",

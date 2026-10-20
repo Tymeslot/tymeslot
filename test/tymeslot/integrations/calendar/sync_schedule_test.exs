@@ -162,4 +162,78 @@ defmodule Tymeslot.Integrations.Calendar.SyncScheduleTest do
       end
     end
   end
+
+  describe "request_sync_unless_backing_off/1" do
+    # A sync job of `integration` left in `state`, due four minutes from now.
+    defp waiting_sync(integration, state, meta \\ %{}) do
+      {:ok, %{worker: worker}} = SyncSchedule.schedule(integration)
+
+      {:ok, job} =
+        %{"calendar_integration_id" => integration.id} |> worker.new() |> Oban.insert()
+
+      due = DateTime.add(DateTime.utc_now(), 240, :second)
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+        set: [state: state, scheduled_at: due, attempt: 1, meta: meta]
+      )
+
+      Repo.get!(Oban.Job, job.id)
+    end
+
+    defp due_soon?(job) do
+      %{scheduled_at: scheduled_at} = Repo.get!(Oban.Job, job.id)
+      DateTime.before?(scheduled_at, DateTime.add(DateTime.utc_now(), 5, :second))
+    end
+
+    for provider <- ["google", "outlook", "caldav", "exchange", "ics_url"] do
+      test "leaves a retrying #{provider} sync to its backoff" do
+        integration = insert(:calendar_integration, provider: unquote(provider))
+        retrying = waiting_sync(integration, "retryable")
+
+        assert {:ok, :backing_off} = SyncSchedule.request_sync_unless_backing_off(integration)
+
+        assert Repo.get!(Oban.Job, retrying.id).scheduled_at == retrying.scheduled_at
+      end
+    end
+
+    test "leaves a sync snoozed past an open breaker to its snooze" do
+      integration = insert(:calendar_integration, provider: "exchange")
+      snoozed = waiting_sync(integration, "scheduled", %{"snoozed" => 1})
+
+      assert {:ok, :backing_off} = SyncSchedule.request_sync_unless_backing_off(integration)
+
+      refute due_soon?(snoozed)
+    end
+
+    test "brings forward a sync merely scheduled for later" do
+      integration = insert(:calendar_integration, provider: "caldav")
+      scheduled = waiting_sync(integration, "scheduled")
+
+      assert {:ok, %Oban.Job{id: id}} =
+               SyncSchedule.request_sync_unless_backing_off(integration)
+
+      assert id == scheduled.id
+      assert due_soon?(scheduled)
+    end
+
+    test "asks for a sync when none is waiting" do
+      integration = insert(:calendar_integration, provider: "ics_url")
+
+      assert {:ok, %Oban.Job{}} = SyncSchedule.request_sync_unless_backing_off(integration)
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "leaves request_sync/1 bringing a retrying sync forward" do
+      integration = insert(:calendar_integration, provider: "exchange")
+      retrying = waiting_sync(integration, "retryable")
+
+      assert {:ok, %Oban.Job{}} = SyncSchedule.request_sync(integration)
+
+      assert due_soon?(retrying)
+    end
+  end
 end

@@ -74,7 +74,7 @@ defmodule Tymeslot.Security.RetiredLegacyKeyTest do
     HealthCheck.perform_single_check(:calendar, calendar.id)
     HealthCheck.perform_single_check(:video, video.id)
     Management.list_active_calendar_integrations(user.id)
-    KeyReport.warn_if_retired_key_holds_values()
+    KeyReport.warn_about_unreadable_values()
 
     # The paths ran: the integrations are flagged for reconnection.
     assert Repo.get!(CalendarIntegrationSchema, calendar.id).needs_reauth
@@ -106,7 +106,7 @@ defmodule Tymeslot.Security.RetiredLegacyKeyTest do
     } do
       put_keys(data_encryption_key: @data_key, legacy_key_retired: true)
 
-      KeyReport.warn_if_retired_key_holds_values()
+      KeyReport.warn_about_unreadable_values()
 
       assert_receive {:captured_log,
                       %{
@@ -133,7 +133,7 @@ defmodule Tymeslot.Security.RetiredLegacyKeyTest do
 
       put_keys(data_encryption_key: @data_key, legacy_key_retired: true)
 
-      KeyReport.warn_if_retired_key_holds_values()
+      KeyReport.warn_about_unreadable_values()
 
       assert_receive {:captured_log,
                       %{
@@ -156,7 +156,7 @@ defmodule Tymeslot.Security.RetiredLegacyKeyTest do
     test "stays silent when the legacy key is not retired" do
       put_keys(data_encryption_key: @data_key)
 
-      KeyReport.warn_if_retired_key_holds_values()
+      KeyReport.warn_about_unreadable_values()
 
       refute_receive {:captured_log,
                       %{meta: %{event_type: "encryption_retired_key_values_remain"}}}

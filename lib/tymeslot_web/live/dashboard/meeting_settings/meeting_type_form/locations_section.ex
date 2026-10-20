@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     <section id={"locations-section-#{@form_id}"} class="space-y-4">
       <.subsection_header
         icon="hero-map-pin"
-        title={dgettext("dashboard_meeting_form", "Location")}
+        title={dgettext("dashboard_meeting_locations", "Location")}
         description={location_hint(@locations, @group_bookings_enabled)}
       >
         <:actions>
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             phx-target={@myself}
             data-testid="add-location"
           >
-            {dgettext("dashboard_meeting_form", "Add location")}
+            {dgettext("dashboard_meeting_locations", "Add location")}
           </.action_button>
         </:actions>
       </.subsection_header>
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 phx-target={@myself}
                 size={:sm}
               >
-                {dgettext("dashboard_meeting_form", "Edit")}
+                {dgettext("dashboard_meeting_locations", "Edit")}
               </.action_button>
               <%!-- A meeting type has to be held somewhere, so the last
                     location cannot be deleted; the host edits it instead. --%>
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
                 phx-target={@myself}
                 size={:sm}
               >
-                {dgettext("dashboard_meeting_form", "Delete")}
+                {dgettext("dashboard_meeting_locations", "Delete")}
               </.action_button>
             </div>
           </.card>
@@ -228,7 +228,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
 
   defp location_hint(_locations, true = _group_bookings_enabled) do
     dgettext(
-      "dashboard_meeting_form",
+      "dashboard_meeting_locations",
       "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
     )
   end
@@ -237,13 +237,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
 
   defp location_hint([_single]) do
     dgettext(
-      "dashboard_meeting_form",
+      "dashboard_meeting_locations",
       "Where this meeting is held. Add a second location and bookers will be asked to choose."
     )
   end
 
   defp location_hint(_locations) do
-    dgettext("dashboard_meeting_form", "Bookers will be asked to choose one of these.")
+    dgettext("dashboard_meeting_locations", "Bookers will be asked to choose one of these.")
   end
 
   # The second line of a row: enough to tell two similar options apart at a
@@ -254,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   defp summary(%LocationOption{kind: "video"} = location, video_integrations, _venues) do
     case Enum.filter(video_integrations, &(&1.id in location.video_integration_ids)) do
       [] ->
-        dgettext("dashboard_meeting_form", "Video call: integration no longer available")
+        dgettext("dashboard_meeting_locations", "Video call: integration no longer available")
 
       [integration] ->
         [integration.name, integration.provider_account_email]
@@ -262,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
         |> Enum.join(" · ")
 
       integrations ->
-        dgettext("dashboard_meeting_form", "The booker picks: %{providers}",
+        dgettext("dashboard_meeting_locations", "The booker picks: %{providers}",
           providers: Enum.map_join(integrations, ", ", & &1.name)
         )
     end
@@ -272,28 +272,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     # `venues` is the library, already in the organiser's order.
     case Enum.filter(venues, &(&1.id in ids)) do
       [] ->
-        dgettext("dashboard_meeting_form", "Address arranged after booking")
+        dgettext("dashboard_meeting_locations", "Address arranged after booking")
 
       [venue] ->
         Venues.display(venue)
 
       several ->
-        dgettext("dashboard_meeting_form", "The booker picks: %{providers}",
+        dgettext("dashboard_meeting_locations", "The booker picks: %{providers}",
           providers: Enum.map_join(several, ", ", & &1.name)
         )
     end
   end
 
   defp summary(%LocationOption{kind: "phone", collect_from_guest: true}, _integrations, _venues),
-    do: dgettext("dashboard_meeting_form", "Phone call: the booker gives their number")
+    do: dgettext("dashboard_meeting_locations", "Phone call: the booker gives their number")
 
   defp summary(%LocationOption{details: details}, _integrations, _venues)
        when is_binary(details) and details != "",
        do: details
 
   defp summary(%LocationOption{kind: "phone"}, _integrations, _venues),
-    do: dgettext("dashboard_meeting_form", "Phone call")
+    do: dgettext("dashboard_meeting_locations", "Phone call")
 
   defp summary(_location, _integrations, _venues),
-    do: dgettext("dashboard_meeting_form", "No details")
+    do: dgettext("dashboard_meeting_locations", "No details")
 end

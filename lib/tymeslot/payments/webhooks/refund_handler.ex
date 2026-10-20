@@ -4,11 +4,13 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   CRITICAL: a full refund must end the subscription it paid for, or the user
   keeps Pro access and is billed again. This handler decides whether a refund
-  revokes access and hands that decision, with the refunded charge's invoice
-  and subscription where known, to the configured payment-event handler,
-  which is the one place access is revoked (cancelling the subscription at
-  Stripe as well as locally). A handler failure fails the delivery, so
-  Stripe redelivers the refund. The handler itself then tells the user.
+  revokes access and hands that decision, with the invoice the refunded
+  charge paid and the subscription that invoice billed (read from Stripe
+  when not recorded here), to the configured payment-event handler, which is
+  the one place access is revoked (cancelling the subscription at Stripe as
+  well as locally). A handler failure, or a Stripe lookup failure, fails the
+  delivery, so Stripe redelivers the refund. The handler itself then tells
+  the user.
 
   ## Partial Refund Handling
 
@@ -33,6 +35,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Payments.Behaviours.WebhookHandler
+  alias Tymeslot.Payments.ChargeInvoice
+  alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.SubscriptionInvoices
@@ -80,27 +84,9 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       stripe_event_id: event["id"]
     )
 
-    invoice_id = charge["invoice"]
-    subscription_id = SubscriptionInvoices.subscription_id_for_invoice(invoice_id)
-
-    # Hand the refund to the configured payment-event handler first: if it
-    # fails, nothing below has run yet and Stripe redelivers the event. The
-    # subscription the charge paid for, when its invoice is known, lets the
-    # handler revoke that subscription rather than whichever one the
-    # customer holds now.
-    case PubSub.hand_off_payment_event(:charge_refunded, %{
-           event_id: event["id"],
-           charge_id: charge_id,
-           customer_id: customer_id,
-           invoice_id: invoice_id,
-           subscription_id: subscription_id,
-           total_refunded: total_refunded,
-           charge_amount: charge_amount,
-           refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
-           should_revoke: should_revoke
-         }) do
-      :ok ->
-        handle_refunded_locally(charge, %{
+    case paid_for(charge, should_revoke) do
+      {:ok, %{invoice_id: invoice_id, subscription_id: subscription_id}} ->
+        hand_off_refund(event, charge, %{
           charge_id: charge_id,
           customer_id: customer_id,
           invoice_id: invoice_id,
@@ -111,7 +97,50 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         })
 
       {:error, reason} ->
-        {:error, :retry_later, {:hand_off_failed, reason}}
+        {:error, :retry_later, reason}
+    end
+  end
+
+  # The invoice the refunded charge paid and the subscription it billed. A
+  # refund that revokes access needs the subscription for certain, so it is
+  # read from Stripe whenever the charge or the recorded invoices do not
+  # say: an invoice recorded before invoices were kept here, or a charge
+  # rendered at an API version that no longer names its invoice. Without a
+  # subscription manager there is no subscription to revoke, and a refund
+  # below the threshold revokes nothing, so both settle for what is known
+  # locally.
+  defp paid_for(charge, true = _should_revoke) do
+    if Config.subscription_manager(),
+      do: ChargeInvoice.for_charge(charge),
+      else: paid_for(charge, false)
+  end
+
+  defp paid_for(charge, false = _should_revoke) do
+    invoice_id = charge["invoice"]
+
+    {:ok,
+     %{
+       invoice_id: invoice_id,
+       subscription_id: SubscriptionInvoices.subscription_id_for_invoice(invoice_id)
+     }}
+  end
+
+  defp hand_off_refund(event, charge, refund) do
+    # Hand the refund to the configured payment-event handler first: if it
+    # fails, nothing below has run yet and Stripe redelivers the event. The
+    # subscription the charge paid for lets the handler revoke that
+    # subscription rather than whichever one the customer holds now.
+    payment_event =
+      refund
+      |> Map.put(:event_id, event["id"])
+      |> Map.put(
+        :refund_percentage,
+        calculate_refund_percentage(refund.total_refunded, refund.charge_amount)
+      )
+
+    case PubSub.hand_off_payment_event(:charge_refunded, payment_event) do
+      :ok -> handle_refunded_locally(charge, refund)
+      {:error, reason} -> {:error, :retry_later, {:hand_off_failed, reason}}
     end
   end
 
@@ -186,19 +215,18 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   # Whether the refunded charge paid for the subscription the customer holds
-  # now, and that subscription is still live. A charge with no invoice
-  # paid for no subscription; one whose invoice names a different
-  # subscription paid for an earlier one. An invoice no subscription is
-  # recorded for is taken to be the current subscription's.
+  # now, and that subscription is still live. A charge whose invoice billed
+  # no subscription (or that paid no invoice) refunds none; one whose
+  # invoice billed a different subscription paid for an earlier one, and
+  # the customer keeps the subscription they hold now.
   # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec refunds_current_subscription?(map(), map()) :: boolean()
-  def refunds_current_subscription?(%{invoice_id: nil}, _subscription), do: false
+  def refunds_current_subscription?(%{subscription_id: nil}, _subscription), do: false
 
   def refunds_current_subscription?(%{subscription_id: subscription_id}, subscription) do
     Map.get(subscription, :status) in @live_subscription_statuses and
-      (is_nil(subscription_id) or
-         subscription_id == Map.get(subscription, :stripe_subscription_id))
+      subscription_id == Map.get(subscription, :stripe_subscription_id)
   end
 
   defp handle_refund_updated(_event, refund) do

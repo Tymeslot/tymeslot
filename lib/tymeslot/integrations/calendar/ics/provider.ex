@@ -77,7 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   # `ProviderConfig.display_name/1`, so this is the string the picker card and
   # the connected-integration rows actually render.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def display_name, do: dgettext("dashboard_calendar_providers", "Calendar subscription")
+  def display_name, do: dgettext("integrations_calendar", "Calendar subscription")
 
   # Same reasoning as the video `:custom` bucket: this probes an arbitrary
   # user-supplied host rather than one the operator configured, so it draws

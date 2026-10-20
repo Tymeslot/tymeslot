@@ -15,7 +15,13 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   names are prefixed with `event_prefix` so a component that already answers
   to `add_reminder` for something else can namespace them; the names are
   otherwise `add_quick_reminder`, `toggle_custom_reminder`,
-  `update_reminder_input`, `add_reminder` and `remove_reminder`.
+  `update_reminder_input`, `add_reminder`, `remove_reminder` and
+  `commit_custom_reminder`.
+
+  The last comes from the `ReminderCustomRow` hook when focus leaves the open
+  custom row with a value still in it, so a reminder typed but never added is
+  not lost when the host moves on; owners answer it with
+  `ReminderPickerState.commit_pending/2`.
   """
 
   use Phoenix.Component
@@ -131,6 +137,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             type="button"
             phx-click={@event_prefix <> "toggle_custom_reminder"}
             phx-target={@myself}
+            data-discards-custom-reminder
             data-testid="reminder-custom-toggle"
             disabled={@limit_reached?}
             title={limit_title(@limit_reached?, @max_reminders)}
@@ -152,7 +159,13 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
         </div>
 
         <%= if @show_custom_reminder && !@limit_reached? do %>
-          <div class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300">
+          <div
+            id={@event_prefix <> "reminder-custom-row"}
+            phx-hook="ReminderCustomRow"
+            phx-target={@myself}
+            data-commit-event={@event_prefix <> "commit_custom_reminder"}
+            class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300"
+          >
             <div class="flex-1 flex items-center gap-2">
               <input
                 type="number"
