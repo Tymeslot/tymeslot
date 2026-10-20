@@ -206,7 +206,8 @@ defmodule Tymeslot.Bookings.Cancel do
   Returns :ok or {:error, reason}
   """
   @spec validate_cancellation(Meeting.t(), keyword()) ::
-          :ok | {:error, Policy.cancel_refusal() | :group_meeting_not_cancellable}
+          :ok
+          | {:error, Policy.cancel_refusal() | :group_meeting_not_cancellable | :managed_by_host}
   def validate_cancellation(meeting, opts \\ []) do
     with :ok <- Policy.can_cancel_meeting?(meeting),
          :ok <- refuse_group_meeting(meeting, opts) do
