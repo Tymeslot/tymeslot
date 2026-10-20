@@ -51,18 +51,24 @@ defmodule Tymeslot.CalendarGrid.Freshness do
   end
 
   @doc """
-  Asks for a sync of one of the user's active integrations, as Refresh does
-  for all of them. `{:error, :not_found}` for an integration that is not
-  the user's, or not active.
+  Asks for a sync of one of the user's active integrations. `how` is as for
+  `refresh_events/2`: `:requested` for Sync now or Retry, which brings
+  forward even a sync waiting out an error's backoff, or `:opened` for the
+  sync the calendar asks for by itself when it opens on stale events, which
+  leaves such a sync to its backoff and answers `:backing_off`.
+  `{:error, :not_found}` for an integration that is not the user's, or not
+  active.
   """
-  @spec request_sync(integer(), integer()) :: :ok | {:error, term()}
-  def request_sync(user_id, integration_id) do
+  @spec request_sync(integer(), integer(), :requested | :opened) ::
+          :ok | :backing_off | {:error, term()}
+  def request_sync(user_id, integration_id, how \\ :requested) do
     case CalendarIntegrationQueries.get_active_ref(user_id, integration_id) do
       nil ->
         {:error, :not_found}
 
       integration ->
-        case SyncSchedule.request_sync(integration) do
+        case request(integration, how) do
+          {:ok, :backing_off} -> :backing_off
           {:ok, _job} -> :ok
           {:error, reason} -> {:error, reason}
         end

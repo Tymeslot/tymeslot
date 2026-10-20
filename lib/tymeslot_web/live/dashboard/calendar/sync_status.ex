@@ -50,7 +50,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
     assign(socket, failure_counts: Map.take(counts, shown))
   end
 
-  @doc "Asks for a sync of every stale account."
+  @doc """
+  Asks for a sync of every stale account, leaving one whose sync is waiting
+  out an error's backoff to it (`Freshness.request_sync/3`).
+  """
   @spec refresh_stale(socket()) :: socket()
   def refresh_stale(socket) do
     failing = failed_ids(socket.assigns)
@@ -58,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
     socket.assigns.integrations
     |> CalendarGrid.stale_integrations()
     |> Enum.reject(&(&1.needs_reauth or MapSet.member?(failing, &1.id)))
-    |> Enum.reduce(socket, &request(&2, &1.id))
+    |> Enum.reduce(socket, &request(&2, &1.id, :opened))
   end
 
   @doc """
@@ -159,8 +162,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
   defp shown?(socket, integration_id),
     do: Enum.any?(socket.assigns.integrations, &(&1.id == integration_id))
 
-  defp request(socket, integration_id) do
-    case CalendarGrid.request_sync(socket.assigns.current_user.id, integration_id) do
+  defp request(socket, integration_id, how \\ :requested) do
+    case CalendarGrid.request_sync(socket.assigns.current_user.id, integration_id, how) do
       :ok ->
         ref = make_ref()
 
@@ -179,6 +182,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
           syncing_ids: MapSet.put(socket.assigns.syncing_ids, integration_id),
           sync_refs: Map.put(socket.assigns.sync_refs, integration_id, ref)
         )
+
+      :backing_off ->
+        socket
 
       {:error, _reason} ->
         socket

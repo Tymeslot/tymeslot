@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Ecto.Query, only: [from: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
@@ -321,6 +322,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
 
       assert RateLimiter.check(:calendar_refresh, user.id) == :ok
     end
+  end
+
+  test "an account whose sync is waiting out a backoff is left to it on open", %{
+    conn: conn,
+    integration: integration
+  } do
+    {:ok, job} =
+      %{"calendar_integration_id" => integration.id}
+      |> SyncGoogleCalendarWorker.new()
+      |> Oban.insert()
+
+    backoff_until = DateTime.add(DateTime.utc_now(), 240, :second)
+
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+      set: [state: "retryable", scheduled_at: backoff_until, attempt: 1]
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    refute syncing?(lv, integration)
+    assert Repo.get!(Oban.Job, job.id).scheduled_at == backoff_until
   end
 
   test "an account that keeps failing is not synced again on open", %{
