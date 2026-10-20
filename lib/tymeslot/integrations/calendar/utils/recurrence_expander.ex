@@ -16,11 +16,15 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
   require Logger
 
-  # Safety cap: `expand/4` never returns more than this many occurrences of
-  # one event, however wide the range. It counts occurrences inside the range,
-  # not steps from the series' first start, so a series that has run for years
-  # still shows in this week's range.
-  @max_occurrences 500
+  # Safety cap: `expand/4` never returns more occurrences of one event than
+  # the range has dates, counted in whole days plus this many for the dates
+  # it starts and ends on (in the series' own zone, they can be two more). The
+  # rules stepped here are daily or coarser, and every date takes the first
+  # start's one wall-clock time, so a rule makes at most one start per date:
+  # the cap binds only on a rule this module misreads, and warns when it
+  # does. It counts occurrences inside the range, not steps from the series'
+  # first start, so a series that has run for years still shows in full.
+  @spare_dates 2
 
   # Runaway guard: `expand/4` stops, with a warning, after this many periods
   # (days, weeks, months or years of the rule's FREQ) whatever they yield, so
@@ -91,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   `DateTime` in the series' own zone for a timed one, so the count steps on
   its wall clock across a DST change.
 
-  Unlike `expand/4`, the count is not capped at #{@max_occurrences}
+  Unlike `expand/4`, the count is not capped by the range
   occurrences and steps through every one from `first`: `boundary` bounds it,
   and so does the rule's own `COUNT`, so a split far into a long series still
   takes the right number off. The count is only right for a rule
@@ -145,7 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
   # `:capped` (for `expand/4`) fast-forwards to the range where it can, and
   # bounds the periods stepped by `@max_steps` and the occurrences returned by
-  # `@max_occurrences`. `:uncapped` (for `count_before/3`) steps every
+  # the range's dates (`@spare_dates`). `:uncapped` (for `count_before/3`) steps every
   # occurrence from the first start, bounded only by the rule's own end and
   # `range_end`, so the count it makes is exact.
   defp generate_occurrences(event, %RRule{} = parsed, range_start, range_end, exdates, limits) do
@@ -162,7 +166,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     start_dt
     |> occurrence_starts(rule, range_start_dt, range_end_dt, limits)
     |> Stream.reject(&excluded?(&1, exdates_dt))
-    |> take_at_most(if limits == :capped, do: @max_occurrences)
+    |> within_occurrence_cap(limits, range_start_dt, range_end_dt)
     |> Enum.map(&build_occurrence(event, &1, duration, all_day?))
   end
 
@@ -424,6 +428,29 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   defp step_datetime(%DateTime{} = datetime), do: datetime
   defp step_datetime(%Date{} = date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
   defp step_datetime(nil), do: nil
+
+  # Passes on at most one occurrence per date of the range, and warns when
+  # the rule makes more: the series is then cut short.
+  defp within_occurrence_cap(occurrences, :uncapped, _range_start, _range_end), do: occurrences
+
+  defp within_occurrence_cap(occurrences, :capped, range_start, range_end) do
+    cap = max(DateTime.diff(range_end, range_start, :day), 0) + @spare_dates
+
+    occurrences
+    |> Stream.with_index()
+    |> Stream.transform(nil, fn
+      {_occurrence, ^cap}, acc ->
+        Logger.warning(
+          "Recurrence expansion stopped after #{cap} occurrences; " <>
+            "the series misses its later occurrences"
+        )
+
+        {:halt, acc}
+
+      {occurrence, _index}, acc ->
+        {[occurrence], acc}
+    end)
+  end
 
   defp take_at_most(occurrences, nil), do: occurrences
   defp take_at_most(occurrences, most), do: Stream.take(occurrences, most)

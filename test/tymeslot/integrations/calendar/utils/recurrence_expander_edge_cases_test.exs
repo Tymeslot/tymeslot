@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Test.LogCapture
 
   describe "expand/4 with EXDATE exclusions" do
@@ -179,7 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
     test "all-day series honours a DATE-form UNTIL instead of running unbounded" do
       # The recurrence editor emits a bare-date UNTIL for all-day events. If the
       # expander can't parse it, the series is treated as endless and paints
-      # occurrences past its intended end (capped only by @max_occurrences).
+      # occurrences past its intended end (bounded only by the range).
       event = %{
         uid: "allday-until",
         summary: "All-day standup",
@@ -505,14 +506,36 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
       assert occurrences == []
     end
 
-    test "the cap bounds the occurrences inside the range, counted from its start" do
+    test "a daily series fills a range of several years, however long it has run" do
       occurrences =
         "FREQ=DAILY"
         |> old_series(~D[2023-10-02])
         |> RecurrenceExpander.expand(~U[2026-01-01 00:00:00Z], ~U[2030-12-31 23:59:59Z])
 
-      assert length(occurrences) == 500
+      assert length(occurrences) == Date.diff(~D[2030-12-31], ~D[2026-01-01]) + 1
       assert hd(dates(occurrences)) == ~D[2026-01-01]
+      assert List.last(dates(occurrences)) == ~D[2030-12-31]
+    end
+
+    # The sync expands every series over its whole window, 730 days. A cap of
+    # 500 occurrences, counted from the window's start, cut a daily series
+    # without an end off about 134 days ahead, with nothing said.
+    test "the sync caches a daily series without an end to the end of its window" do
+      {window_start, window_end} = Sync.window()
+      first = window_start |> DateTime.to_date() |> Date.add(-30)
+
+      {:ok, events} =
+        "FREQ=DAILY"
+        |> old_series(first)
+        |> List.wrap()
+        |> ICalNormaliser.normalise_events(
+          %{calendar_integration_id: 1, provider_calendar_id: "/cal/", synced_at: window_start},
+          :caldav
+        )
+
+      last_start = events |> Enum.map(& &1.start_at) |> Enum.max(DateTime)
+      assert DateTime.diff(window_end, last_start, :hour) < 24
+      assert length(events) > 700
     end
 
     test "a rule that never moves forward is unreadable, so its event shows once" do

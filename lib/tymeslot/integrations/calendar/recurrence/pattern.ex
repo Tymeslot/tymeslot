@@ -52,7 +52,9 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.Pattern do
   }
 
   # How far ahead two rules are compared, by frequency: enough periods to
-  # tell any two patterns here apart, within `RecurrenceExpander`'s cap.
+  # tell any two patterns here apart. Both rules are expanded over the same
+  # range, so `RecurrenceExpander`'s cap, sized from the range, applies to
+  # both alike.
   # Six years hold every month length and every weekday a date can fall on
   # in a month (a fifth weekday, a leap day) more than once.
   @horizon_days %{daily: 366, weekly: 2 * 366, monthly: 6 * 366, yearly: 60 * 366}
