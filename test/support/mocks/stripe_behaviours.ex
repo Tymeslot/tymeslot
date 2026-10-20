@@ -40,4 +40,9 @@ defmodule Tymeslot.Mocks.StripeBehaviours do
     @moduledoc "Behaviour for Stripe InvoicePayment operations"
     @callback list(map(), list()) :: {:ok, map()} | {:error, any()}
   end
+
+  defmodule StripeRefundBehaviour do
+    @moduledoc "Behaviour for Stripe Refund operations"
+    @callback create(map(), list()) :: {:ok, map()} | {:error, any()}
+  end
 end

@@ -175,6 +175,49 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert_received {:refund_email, ^user_id, 5_000, "eur", false}
     end
 
+    test "a refund the app already announced revokes without a second email" do
+      {user, customer_id} = linked_subscription()
+
+      charge =
+        customer_id
+        |> refunded_charge(10_000, 10_000)
+        |> Map.put("refunds", %{
+          "data" => [
+            %{"amount" => 10_000, "created" => 1, "metadata" => %{"customer_notified" => "true"}}
+          ]
+        })
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      assert_received %{event: :charge_refunded, data: %{should_revoke: true}}
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      refute_received {:refund_email, ^user_id, _amount, _currency, _revoked}
+    end
+
+    test "an earlier announced refund does not silence a later one" do
+      {user, customer_id} = linked_subscription()
+
+      charge =
+        customer_id
+        |> refunded_charge(10_000, 10_000)
+        |> Map.put("refunds", %{
+          "data" => [
+            %{"amount" => 4_000, "created" => 1, "metadata" => %{"customer_notified" => "true"}},
+            %{"amount" => 6_000, "created" => 2, "metadata" => %{}}
+          ]
+        })
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
+    end
+
     test "refund without a linked subscription is logged without user-facing side effects" do
       # No matching subscription exists in the DB
       charge = refunded_charge("cus_orphan", 10_000, 10_000)

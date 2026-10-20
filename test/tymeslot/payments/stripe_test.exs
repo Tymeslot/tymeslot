@@ -193,6 +193,27 @@ defmodule Tymeslot.Payments.StripeTest do
     end
   end
 
+  describe "create_refund/2" do
+    setup do
+      Application.put_env(:tymeslot, :stripe_refund_mod, StripeRefundMock)
+      on_exit(fn -> Application.delete_env(:tymeslot, :stripe_refund_mod) end)
+    end
+
+    test "refunds on the platform account under the caller's idempotency key" do
+      params = %{charge: "ch_1", metadata: %{"customer_notified" => "true"}}
+
+      expect(StripeRefundMock, :create, fn ^params, opts ->
+        assert opts[:api_key] == "sk_test_fake"
+        assert opts[:idempotency_key] == "refund-key-1"
+        refute Keyword.has_key?(opts, :connect_account)
+        {:ok, %{id: "re_1", status: "succeeded"}}
+      end)
+
+      assert {:ok, %{id: "re_1"}} =
+               Stripe.create_refund(params, idempotency_key: "refund-key-1")
+    end
+  end
+
   describe "update_subscription_automatic_tax/2" do
     test "sets automatic tax to the given value" do
       expect(StripeSubscriptionMock, :update, fn "sub_123", params, opts ->

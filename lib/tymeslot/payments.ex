@@ -51,6 +51,15 @@ defmodule Tymeslot.Payments do
   end
 
   @doc """
+  The payments a user has made for platform subscriptions, oldest first, as
+  `%{subscription_id, paid_at}`. See `SubscriptionInvoices.payments/1`.
+  """
+  @spec list_subscription_payments(pos_integer()) :: [
+          %{subscription_id: String.t() | nil, paid_at: DateTime.t()}
+        ]
+  def list_subscription_payments(user_id), do: SubscriptionInvoices.payments(user_id)
+
+  @doc """
   Lists a user's platform subscription invoices, newest first.
 
   Each entry carries the Stripe-hosted invoice page and PDF, so callers can
