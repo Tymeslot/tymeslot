@@ -536,12 +536,16 @@ defmodule Tymeslot.Meetings do
     as: :find_linked_meeting
 
   @doc """
-  Returns the meetings linked to the given integration that share any of
-  `identifiers`, keyed by every identifier each matched meeting carries.
+  Returns the meetings linked to the given integration that share any of `identifiers`,
+  keyed by every identifier each carries (`drawn_for: user_id`: that organiser's drawn ones).
   """
-  defdelegate list_meetings_by_calendar_identifiers(calendar_integration_id, identifiers),
-    to: MeetingCalendarQueries,
-    as: :list_by_calendar_identifiers
+  defdelegate list_meetings_by_calendar_identifiers(
+                calendar_integration_id,
+                identifiers,
+                opts \\ []
+              ),
+              to: MeetingCalendarQueries,
+              as: :list_by_calendar_identifiers
 
   @doc """
   `find_meeting_by_calendar_event/3` for many events in one query: the

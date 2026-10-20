@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Repo
 
   # Bound from the module that owns the column's vocabulary, as
@@ -26,6 +27,42 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
 
   @default_search_limit 50
   @default_around_limit 20
+
+  # The key a series' occurrences share, mirroring `Occurrence.series_address/1`:
+  # an OAuth occurrence names its master (`recurring_event_id`), a master its
+  # own id; a CalDAV-family member is part of the resource its href names;
+  # anything else stands alone.
+  defmacrop series_key(e, resource, oauth) do
+    quote do
+      fragment(
+        """
+        CASE
+          WHEN ? = ANY(?) AND COALESCE(?, '') <> '' THEN 'm:' || ?
+          WHEN ? = ANY(?) AND COALESCE(?, '') <> '' AND COALESCE(?, '') <> '' THEN 'm:' || ?
+          WHEN ? = ANY(?) AND (COALESCE(?, '') <> '' OR COALESCE(?, '') <> '')
+               AND COALESCE(?, '') <> '' THEN 'r:' || ?
+          ELSE 'row:' || ?::text
+        END
+        """,
+        unquote(e).provider,
+        unquote(oauth),
+        unquote(e).recurring_event_id,
+        unquote(e).recurring_event_id,
+        unquote(e).provider,
+        unquote(oauth),
+        unquote(e).recurrence_rule,
+        unquote(e).provider_event_id,
+        unquote(e).provider_event_id,
+        unquote(e).provider,
+        unquote(resource),
+        unquote(e).recurring_event_id,
+        unquote(e).recurrence_rule,
+        unquote(e).provider_event_id,
+        unquote(e).provider_event_id,
+        unquote(e).id
+      )
+    end
+  end
 
   @doc """
   Searches a user's cached calendar events by a free-text term.
@@ -103,34 +140,91 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
           )
 
         %{
-          upcoming:
-            drawn
-            |> where(
-              [e, _i],
-              coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)) >=
-                type(^from_utc, :utc_datetime_usec)
-            )
-            |> order_by([e, _i],
-              asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
-              asc: e.id
-            )
-            |> limit(^limit)
-            |> Repo.all(),
-          past:
-            drawn
-            |> where(
-              [e, _i],
-              coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)) <
-                type(^from_utc, :utc_datetime_usec)
-            )
-            |> order_by([e, _i],
-              desc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
-              desc: e.id
-            )
-            |> limit(^limit)
-            |> Repo.all()
+          upcoming: nearest_per_series(drawn, :upcoming, from_utc, limit),
+          past: nearest_per_series(drawn, :past, from_utc, limit)
         }
     end
+  end
+
+  # One row per repeating series (the row nearest `from_utc` on that side),
+  # taken before the limit so a daily series cannot fill the page and crowd
+  # out other matches.
+  defp nearest_per_series(drawn, :upcoming, from_utc, limit) do
+    {resource, oauth} = series_providers()
+
+    ranked =
+      drawn
+      |> where(
+        [e, _i],
+        coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)) >=
+          type(^from_utc, :utc_datetime_usec)
+      )
+      |> select([e, _i], %{
+        id: e.id,
+        rn:
+          over(row_number(),
+            partition_by: [
+              e.calendar_integration_id,
+              series_key(e, type(^resource, {:array, :string}), type(^oauth, {:array, :string}))
+            ],
+            order_by: [
+              asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
+              asc: e.id
+            ]
+          )
+      })
+
+    ProviderCalendarEventSchema
+    |> join(:inner, [e], r in subquery(ranked), on: r.id == e.id and r.rn == 1)
+    |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)), asc: e.id)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  defp nearest_per_series(drawn, :past, from_utc, limit) do
+    {resource, oauth} = series_providers()
+
+    ranked =
+      drawn
+      |> where(
+        [e, _i],
+        coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)) <
+          type(^from_utc, :utc_datetime_usec)
+      )
+      |> select([e, _i], %{
+        id: e.id,
+        rn:
+          over(row_number(),
+            partition_by: [
+              e.calendar_integration_id,
+              series_key(e, type(^resource, {:array, :string}), type(^oauth, {:array, :string}))
+            ],
+            order_by: [
+              desc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
+              desc: e.id
+            ]
+          )
+      })
+
+    ProviderCalendarEventSchema
+    |> join(:inner, [e], r in subquery(ranked), on: r.id == e.id and r.rn == 1)
+    |> order_by([e],
+      desc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
+      desc: e.id
+    )
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  # The providers each family of series addressing applies to, as stored
+  # strings: `{resource family (CalDAV and debug), OAuth family}`.
+  defp series_providers do
+    oauth =
+      for p <- ProviderConfig.all_providers_with_dev(),
+          ProviderConfig.oauth_provider?(p),
+          do: Atom.to_string(p)
+
+    {ProviderConfig.caldav_based_provider_strings() ++ ["debug"], oauth}
   end
 
   # The term, scope and visibility clauses both searches share.

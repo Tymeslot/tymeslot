@@ -24,9 +24,9 @@ defmodule Tymeslot.CalendarGrid.EventSearch do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingState
 
   @min_length 2
+  @max_length 100
   @default_limits %{events: 8, bookings: 5}
   # Calendar rows fetched per side for each event shown: a series' other
   # occurrences and rows in hidden calendars are dropped after the query.
@@ -57,7 +57,7 @@ defmodule Tymeslot.CalendarGrid.EventSearch do
   @spec search(integer(), String.t(), [map()], EffectiveVisibility.t(), keyword()) ::
           %{events: [hit()], bookings: [hit()]}
   def search(user_id, term, integrations, %EffectiveVisibility{} = visibility, opts) do
-    trimmed = String.trim(to_string(term))
+    trimmed = term |> to_string() |> String.trim() |> String.slice(0, @max_length)
 
     if String.length(trimmed) < @min_length do
       %{events: [], bookings: []}
@@ -105,7 +105,9 @@ defmodule Tymeslot.CalendarGrid.EventSearch do
   end
 
   # Row id => the booking that row is the calendar copy of, for bookings the
-  # grid draws in its place.
+  # grid draws in its place (a live slot, or a request that expired
+  # unanswered; a cancelled booking's copy, should one linger, is drawn as
+  # itself, which the identifier query's `drawn_for` leaves out).
   defp linked_bookings(rows, user_id) do
     rows
     |> Enum.group_by(& &1.calendar_integration_id)
@@ -113,28 +115,19 @@ defmodule Tymeslot.CalendarGrid.EventSearch do
       by_identifier =
         Meetings.list_meetings_by_calendar_identifiers(
           integration_id,
-          Enum.flat_map(group, &Meetings.calendar_event_identifiers/1)
+          Enum.flat_map(group, &Meetings.calendar_event_identifiers/1),
+          drawn_for: user_id
         )
 
       Enum.flat_map(group, fn row ->
         meeting =
           Enum.find_value(Meetings.calendar_event_identifiers(row), &Map.get(by_identifier, &1))
 
-        if drawn?(meeting, user_id), do: [{row.id, meeting}], else: []
+        if meeting, do: [{row.id, meeting}], else: []
       end)
     end)
     |> Map.new()
   end
-
-  # The grid draws a booking whose slot holds (and so has a calendar copy)
-  # or a request that expired unanswered; a cancelled booking's copy, should
-  # one linger, is drawn as itself.
-  defp drawn?(%{organizer_user_id: user_id} = meeting, user_id),
-    do:
-      MeetingState.expects_calendar_event?(meeting) or
-        (MeetingState.expired?(meeting) and not is_nil(meeting.approval_requested_at))
-
-  defp drawn?(_meeting, _user_id), do: false
 
   defp series_key(row) do
     case Occurrence.series_address(row) do

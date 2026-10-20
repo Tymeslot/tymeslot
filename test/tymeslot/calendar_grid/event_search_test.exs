@@ -190,6 +190,73 @@ defmodule Tymeslot.CalendarGrid.EventSearchTest do
     assert titles(search(user, integration, "review", visibility).events) == ["Design review"]
   end
 
+  test "while a set is active, an account outside it is left out", %{
+    user: user,
+    integration: integration
+  } do
+    other =
+      insert(:calendar_integration,
+        user: user,
+        provider: "google",
+        is_active: true,
+        calendar_list: [%{"id" => "work", "name" => "Work", "selected" => true}]
+      )
+
+    event(integration, "Design review", ~U[2026-10-15 09:00:00Z])
+    event(other, "Other review", ~U[2026-10-15 10:00:00Z])
+
+    {:ok, _set} =
+      CalendarSets.create(user.id, "Work", [
+        %{integration_id: integration.id, calendar_id: "work"}
+      ])
+
+    {:ok, _active} = CalendarSets.activate(user.id, 1)
+
+    result =
+      CalendarGrid.search_calendar(
+        user.id,
+        "review",
+        [integration, other],
+        EffectiveVisibility.for_user(user.id),
+        now: @now
+      )
+
+    assert titles(result.events) == ["Design review"]
+  end
+
+  test "a daily series does not crowd out other matches", %{user: user, integration: integration} do
+    for days <- 1..30 do
+      event(integration, "Daily sync", DateTime.add(@now, days, :day),
+        recurring_event_id: "daily-sync",
+        provider_event_id: "daily-sync_#{days}"
+      )
+    end
+
+    event(integration, "Quarterly sync", DateTime.add(@now, 35, :day))
+
+    result = search(user, integration, "sync").events
+
+    assert titles(result) == ["Daily sync", "Quarterly sync"]
+    assert [%{series: true, start: start}, _quarterly] = result
+    assert DateTime.compare(start, DateTime.add(@now, 1, :day)) == :eq
+  end
+
+  test "a daily series that has ended does not crowd out other past matches", %{
+    user: user,
+    integration: integration
+  } do
+    for days <- 1..30 do
+      event(integration, "Daily sync", DateTime.add(@now, -days, :day),
+        recurring_event_id: "daily-sync",
+        provider_event_id: "daily-sync_#{days}"
+      )
+    end
+
+    event(integration, "Quarterly sync", DateTime.add(@now, -35, :day))
+
+    assert titles(search(user, integration, "sync").events) == ["Daily sync", "Quarterly sync"]
+  end
+
   test "a booking is found by its guest's name and email", %{
     user: user,
     integration: integration
@@ -299,6 +366,97 @@ defmodule Tymeslot.CalendarGrid.EventSearchTest do
 
     assert [%{id: id, kind: :event}] = search(user, integration, "cancelled intro").events
     assert id == "event-#{row.id}"
+  end
+
+  test "a booking's LIKE metacharacters match literally", %{user: user, integration: integration} do
+    kept = booking(user, attendee_name: "a_b Guest")
+
+    booking(user,
+      attendee_name: "axb Guest",
+      start_time: ~U[2026-10-17 13:00:00Z],
+      end_time: ~U[2026-10-17 14:00:00Z]
+    )
+
+    assert [%{id: id}] = search(user, integration, "a_b").bookings
+    assert id == "booking-#{kept.id}"
+  end
+
+  test "a backslash in the term matches literally and a trailing one does not error", %{
+    user: user,
+    integration: integration
+  } do
+    row = event(integration, "Share C:\\x drive", ~U[2026-10-15 09:00:00Z])
+    event(integration, "Share C:x drive", ~U[2026-10-15 10:00:00Z])
+    meeting = booking(user, attendee_name: "Eve C:\\x")
+
+    booking(user,
+      attendee_name: "Eve C:x",
+      start_time: ~U[2026-10-17 13:00:00Z],
+      end_time: ~U[2026-10-17 14:00:00Z]
+    )
+
+    result = search(user, integration, "c:\\x")
+
+    assert [%{id: event_id}] = result.events
+    assert event_id == "event-#{row.id}"
+    assert [%{id: booking_id}] = result.bookings
+    assert booking_id == "booking-#{meeting.id}"
+
+    assert %{events: [], bookings: []} = search(user, integration, "drive\\")
+  end
+
+  test "a long term is cut to 100 characters", %{user: user, integration: integration} do
+    event(integration, String.duplicate("a", 100), ~U[2026-10-15 09:00:00Z])
+
+    assert [_hit] = search(user, integration, String.duplicate("a", 150)).events
+  end
+
+  test "a copy of a booking awaiting payment is the booking", %{
+    user: user,
+    integration: integration
+  } do
+    meeting =
+      booking(user,
+        attendee_name: "Pay Later",
+        status: "awaiting_payment",
+        calendar_integration_id: integration.id,
+        provider_event_id: "google-evt-4"
+      )
+
+    event(integration, "Paid intro", ~U[2026-10-16 13:00:00Z], provider_event_id: "google-evt-4")
+
+    result = search(user, integration, "paid intro")
+
+    assert result.events == []
+    assert [%{id: id}] = result.bookings
+    assert id == "booking-#{meeting.id}"
+  end
+
+  test "a cancelled booking sharing an identifier does not take a live booking's place", %{
+    user: user,
+    integration: integration
+  } do
+    live =
+      booking(user,
+        attendee_name: "Live Guest",
+        calendar_integration_id: integration.id,
+        provider_event_id: "google-evt-5"
+      )
+
+    booking(user,
+      attendee_name: "Gone Guest",
+      status: "cancelled",
+      calendar_integration_id: integration.id,
+      provider_event_id: "google-evt-5"
+    )
+
+    event(integration, "Shared slot", ~U[2026-10-16 13:00:00Z], provider_event_id: "google-evt-5")
+
+    result = search(user, integration, "shared slot")
+
+    assert result.events == []
+    assert [%{id: id}] = result.bookings
+    assert id == "booking-#{live.id}"
   end
 
   test "LIKE metacharacters in the term match literally", %{user: user, integration: integration} do

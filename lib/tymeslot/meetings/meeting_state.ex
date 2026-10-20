@@ -111,6 +111,19 @@ defmodule Tymeslot.Meetings.MeetingState do
   end
 
   @doc """
+  Composes onto `query` a filter keeping the meetings the redesigned calendar
+  draws: those whose slot is live (`where_slot_live/1`) and the requests that
+  expired unanswered (`where_expired_request/1`).
+  """
+  @spec where_drawn(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_drawn(query) do
+    live = query |> where_slot_live() |> select([m], m.id)
+    expired = query |> where_expired_request() |> select([m], m.id)
+
+    where(query, [m], m.id in subquery(live) or m.id in subquery(expired))
+  end
+
+  @doc """
   Query-side counterpart of `expects_calendar_event?/1`: composes onto `query`
   a filter matching only meetings that should have a provider event on the
   organiser's calendar right now. A write that follows the calendar puts it

@@ -372,22 +372,17 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     end
   end
 
-  # The organiser's matching bookings in either state the calendar draws:
-  # `MeetingState` owns both rules, so they are composed rather than restated.
+  # The organiser's matching bookings in either state the calendar draws
+  # (`MeetingState.where_drawn/1` owns the rule).
   defp drawn_matching(organizer_user_id, pattern) do
-    matching =
-      Meeting
-      |> for_organizer(organizer_user_id)
-      |> where(
-        [m],
-        ilike(m.title, ^pattern) or ilike(m.attendee_name, ^pattern) or
-          ilike(m.attendee_email, ^pattern) or ilike(m.meeting_type, ^pattern)
-      )
-
-    live = matching |> MeetingState.where_slot_live() |> select([m], m.id)
-    expired = matching |> MeetingState.where_expired_request() |> select([m], m.id)
-
-    where(matching, [m], m.id in subquery(live) or m.id in subquery(expired))
+    Meeting
+    |> for_organizer(organizer_user_id)
+    |> where(
+      [m],
+      ilike(m.title, ^pattern) or ilike(m.attendee_name, ^pattern) or
+        ilike(m.attendee_email, ^pattern) or ilike(m.meeting_type, ^pattern)
+    )
+    |> MeetingState.where_drawn()
   end
 
   # Escapes LIKE/ILIKE wildcard metacharacters so a typed term is matched
