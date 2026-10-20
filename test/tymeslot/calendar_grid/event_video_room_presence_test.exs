@@ -29,6 +29,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.CalDAVAccountStub
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
@@ -40,6 +41,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   @colleague "bob@example.com"
 
   setup :verify_on_exit!
+
+  # The provider read runs for real, behind the `:calendar_module` seam the
+  # domain reaches it through.
+  setup do
+    stub(Tymeslot.CalendarMock, :fetch_event, &Operations.fetch_event/2)
+    :ok
+  end
 
   setup do
     user = insert(:user)

@@ -204,6 +204,25 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   @doc """
+  Fetches one event of a calendar integration straight from its provider,
+  bypassing the sync cache. `event_ref` carries the event's `:uid`, and its
+  `:provider_event_id` and `:calendar_id` where known.
+
+  Answers `{:ok, events}` once a writable calendar of the account has it,
+  `{:error, :not_found}` only when none does (a cancelled event counts as
+  none), `{:error, :unsupported}` when the provider cannot fetch a single
+  event, and `{:error, :no_calendar_integration}` for an integration that is
+  not the user's or no longer active. See
+  `Tymeslot.Integrations.Calendar.Runtime.EventOperations.fetch_event/2`.
+  """
+  @spec fetch_event(map(), {integration_id(), user_id()}) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(event_ref, {integration_id, user_id} = context)
+      when is_integer(integration_id) and is_integer(user_id) do
+    behaviour_module().fetch_event(event_ref, context)
+  end
+
+  @doc """
   Delete an event with optional target integration, meeting context, or user_id.
 
   `opts` reach the provider unchanged; pass `provider_event_id:` when the
