@@ -156,11 +156,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   # otherwise it starts on the organiser's default calendar. A sheet or
   # dropdown that offered the entry gives way.
   defp open(%{assigns: %{ics_import: %{} = state}} = socket),
-    do: assign(socket, ics_import: %{state | open: true}, open_menu: nil)
+    do: assign(socket, ics_import: %{state | open: true}, open_menu: nil, preview: nil)
 
   defp open(socket) do
     assign(socket,
       open_menu: nil,
+      preview: nil,
       ics_import: %{
         open: true,
         stage: :choose,

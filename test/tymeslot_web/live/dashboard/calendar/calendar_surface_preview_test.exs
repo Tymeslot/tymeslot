@@ -183,6 +183,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePreviewTest do
     assert_push_event(lv, "calendar:preview-closed", %{})
   end
 
+  for menu <- ~w(shortcuts calendars date_sheet) do
+    test "opening the #{menu} modal closes the preview behind it", %{
+      conn: conn,
+      integration: integration
+    } do
+      review = event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open(lv, "event-#{review.id}")
+      assert has_element?(lv, "#calendar-preview")
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:toggle_menu", %{"menu" => unquote(menu)})
+
+      refute has_element?(lv, "#calendar-preview")
+    end
+  end
+
+  test "opening the import modal closes the preview behind it", %{
+    conn: conn,
+    integration: integration
+  } do
+    review = event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{review.id}")
+
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ics_open", %{})
+
+    assert has_element?(lv, "#calendar-import")
+    refute has_element?(lv, "#calendar-preview")
+  end
+
   test "a click elsewhere closes the preview without taking focus", %{
     conn: conn,
     integration: integration

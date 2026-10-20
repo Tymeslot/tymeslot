@@ -26,6 +26,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
     "shortcuts" => :shortcuts
   }
 
+  # The menus that open as modals or sheets over the grid.
+  @modal_menus [:shortcuts, :calendars, :date_sheet]
+
   # The menus that show the mini month.
   @month_menus [:date, :date_sheet]
 
@@ -37,7 +40,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
     wanted = Map.get(@menus, menu)
     open = if socket.assigns.open_menu == wanted, do: nil, else: wanted
 
-    {:noreply, socket |> assign(:open_menu, open) |> follow_period(open) |> mark_return(params)}
+    {:noreply,
+     socket
+     |> assign(:open_menu, open)
+     |> close_preview_for(open)
+     |> follow_period(open)
+     |> mark_return(params)}
   end
 
   def handle("calendar:close_menu", _params, socket),
@@ -45,6 +53,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceMenus do
 
   def handle("calendar:mini_shift", %{"dir" => dir}, socket),
     do: {:noreply, shift_mini_cursor(socket, dir)}
+
+  # A modal opened over the preview would share its Escape key, so the preview
+  # gives way, as opening the preview closes any menu.
+  defp close_preview_for(socket, menu) when menu in @modal_menus,
+    do: assign(socket, :preview, nil)
+
+  defp close_preview_for(socket, _menu), do: socket
 
   @doc """
   Notes whether the menu or modal being opened came from the display options
