@@ -8,37 +8,16 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
+  import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3]
 
-  alias Tymeslot.CalendarGrid.Changes
-  alias Tymeslot.Clock
+  alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarEditMessages
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
-  alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.CalendarRouting
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
 
-  @doc "Advances the clock-tick timer and pushes the current time to the calendar grid."
-  @spec handle_tick(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_tick(socket) do
-    if CalendarRouting.grid_on_screen?(socket) do
-      Process.send_after(self(), :tick, 60_000)
-
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        current_time: Clock.utc_now()
-      )
-    end
-
-    {:noreply, socket}
-  end
-
-  @doc "Notifies the calendar grid that upstream events have changed."
+  @doc "Notifies the calendar on screen that upstream events have changed."
   @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
@@ -74,28 +53,11 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, socket}
   end
 
-  @doc "Flashes a confirmation after calendar sync."
-  @spec handle_calendar_sync_flash(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_calendar_sync_flash(socket) do
-    {:noreply,
-     put_flash(socket, :info, dgettext("dashboard_calendar_events", "Calendars refreshed"))}
-  end
-
-  @doc "Tells the calendar grid to refresh its event data."
-  @spec handle_reset_calendar_sync(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_reset_calendar_sync(socket) do
-    CalendarRouting.refresh(socket, :refresh_events)
-
-    {:noreply, socket}
-  end
-
   @doc """
   Handles the result of an event update: on failure, keeps the edit when it
-  was queued to sync later and reverts it otherwise. Either way the grid is
-  told the write has answered, so the next write to the same event can start
-  (see `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`).
+  was queued to sync later and reverts it otherwise. Either way the calendar
+  is told the write has answered, so the next write to the same event can
+  start (see `TymeslotWeb.Dashboard.Calendar.Writes`).
   """
   @spec handle_event_update_result(
           {:ok, keyword()} | {:error, keyword()},
@@ -223,16 +185,16 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   defp update_failed_message(:rule_not_supported_by_outlook),
-    do: EditWorkflow.rule_not_supported_by_outlook_message()
+    do: CalendarEditMessages.rule_not_supported_by_outlook_message()
 
   defp update_failed_message(:day_missing_in_some_months),
-    do: EditWorkflow.month_end_refused_message()
+    do: CalendarEditMessages.month_end_refused_message()
 
-  defp update_failed_message(:not_organiser), do: EditWorkflow.not_organiser_message()
+  defp update_failed_message(:not_organiser), do: CalendarEditMessages.not_organiser_message()
 
   defp update_failed_message(reason)
        when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring],
-       do: EditWorkflow.unmatched_series_message()
+       do: CalendarEditMessages.unmatched_series_message()
 
   defp update_failed_message(_reason),
     do: dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
@@ -316,86 +278,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       else: put_flash(socket, level, message)
   end
 
-  @doc "Spawns a supervised task to create a calendar event."
-  @spec handle_execute_create_event(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_execute_create_event(payload, socket) do
-    lv_pid = self()
-
-    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:create_event_result, Changes.create_event(payload.user_id, payload)})
-    end)
-
-    {:noreply, socket}
-  end
-
-  @doc "Delegates the create-event result to `EventCrud`."
-  @spec handle_create_event_result(any(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_create_event_result(result, socket) do
-    EventCrud.handle_create_result(result, socket)
-  end
-
-  @doc "Spawns a supervised task to create an ad-hoc meeting."
-  @spec handle_execute_create_ad_hoc_meeting(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_execute_create_ad_hoc_meeting(params, socket) do
-    lv_pid = self()
-
-    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:create_ad_hoc_meeting_result, EventCrud.run_create_ad_hoc_meeting(params)})
-    end)
-
-    {:noreply, socket}
-  end
-
-  @doc "Handles the result of an ad-hoc meeting creation."
-  @spec handle_create_ad_hoc_meeting_result(
-          {:ok, any()} | {:error, term()},
-          Phoenix.LiveView.Socket.t()
-        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_create_ad_hoc_meeting_result({:ok, _result}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :ad_hoc_meeting_created
-    )
-
-    {:noreply,
-     put_flash(
-       socket,
-       :info,
-       dgettext("dashboard_calendar_events", "Meeting created and invitation sent")
-     )}
-  end
-
-  def handle_create_ad_hoc_meeting_result({:error, reason}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :ad_hoc_meeting_failed
-    )
-
-    {:noreply, put_flash(socket, :error, ad_hoc_failed_message(reason))}
-  end
-
-  # The reason is a domain term, never copy: an atom such as `:time_conflict`
-  # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
-  # atoms `BookingErrorMessage` renders, and anything it does not recognise
-  # falls back to a generic sentence there.
-  defp ad_hoc_failed_message(:time_conflict) do
-    dgettext(
-      "dashboard_calendar_events",
-      "You already have a meeting at this time. Please choose a different time."
-    )
-  end
-
-  defp ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
-
   @doc """
   Handles the result of changing an event's video room: shows the new link,
   or puts the previous choice back and says why nothing changed.
 
-  The change is handed to the grid component as the pair of events it was,
-  because only the component owns the "notify attendees?" prompt. The prompt
+  The change is handed to the calendar as the pair of events it was,
+  because only the calendar owns the "notify attendees?" prompt. The prompt
   is offered from here rather than when the buttons were clicked so that a
   rejected calendar write never tells attendees about a link that was
   discarded.
@@ -420,7 +308,10 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     )
 
     {:noreply,
-     result_flash(socket, {:info, EditWorkflow.video_changed_message(updated_event.video_link)})}
+     result_flash(
+       socket,
+       {:info, CalendarEditMessages.video_changed_message(updated_event.video_link)}
+     )}
   end
 
   def handle_event_video_result({:error, payload}, socket) do
@@ -465,48 +356,61 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       dgettext("dashboard_calendar_events", "Could not change the video link - changes reverted")
 
   @doc """
-  Deletes the event `payload` names, in the scope it names, in the background
-  through `Tymeslot.CalendarGrid.Changes.delete_event/3`, reporting back with
-  `{:delete_event_result, result}`.
-
-  Every way the grid confirms a delete (with or without notifying the
-  attendees) ends here, so the seat lock is checked here once more, against
-  the database: an event a group meeting with live seats sits on is never
-  deleted from the grid, however its delete was confirmed
-  (`Shared.check_seat_lock/2`).
+  Creates a Tymeslot meeting with guests in the background, through
+  `Tymeslot.CalendarGrid.EventCreation.run_create_ad_hoc_meeting/1`, and
+  reports back with `{:create_ad_hoc_meeting_result, result}`. The calendar
+  that offers meeting mode sends `{:execute_create_ad_hoc_meeting, params}`.
   """
-  @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
+  @spec handle_execute_create_ad_hoc_meeting(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_execute_delete_event(payload, socket) do
-    case Shared.check_seat_lock(socket, payload) do
-      :ok ->
-        start_delete(payload, socket)
+  def handle_execute_create_ad_hoc_meeting(params, socket) do
+    lv_pid = self()
 
-      {:error, :group_booking} ->
-        send_update(CalendarGridComponent, id: "calendar", action: :event_delete_failed)
-        {:noreply, put_flash(socket, :warning, Shared.seat_lock_message())}
-    end
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+      send(
+        lv_pid,
+        {:create_ad_hoc_meeting_result, EventCreation.run_create_ad_hoc_meeting(params)}
+      )
+    end)
+
+    {:noreply, socket}
   end
 
-  defp start_delete(payload, socket) do
-    socket
-    |> EditWorkflow.run_async(
-      :delete_event_result,
-      fn ->
-        Changes.delete_event(payload.user_id, payload, payload.scope,
-          notify_attendees: payload.notify_on_delete
-        )
-      end,
-      {:error, %{reason: :crashed, retry: :not_queued}}
+  @doc """
+  Handles the result of a meeting's creation: the organiser is told how it
+  went, and the calendar on screen hears `:ad_hoc_meeting_created` or
+  `:ad_hoc_meeting_failed` so it can close or reopen its form.
+  """
+  @spec handle_create_ad_hoc_meeting_result(
+          {:ok, any()} | {:error, term()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_create_ad_hoc_meeting_result({:ok, _result}, socket) do
+    CalendarRouting.to_mounted(socket, action: :ad_hoc_meeting_created)
+
+    {:noreply,
+     put_flash(
+       socket,
+       :info,
+       dgettext("dashboard_calendar_events", "Meeting created and invitation sent")
+     )}
+  end
+
+  def handle_create_ad_hoc_meeting_result({:error, reason}, socket) do
+    CalendarRouting.to_mounted(socket, action: :ad_hoc_meeting_failed)
+    {:noreply, put_flash(socket, :error, ad_hoc_failed_message(reason))}
+  end
+
+  # The reason is a domain term, never copy: an atom such as `:time_conflict`
+  # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
+  # atoms `BookingErrorMessage` renders, and anything it does not recognise
+  # falls back to a generic sentence there.
+  defp ad_hoc_failed_message(:time_conflict) do
+    dgettext(
+      "dashboard_calendar_events",
+      "You already have a meeting at this time. Please choose a different time."
     )
-    |> assign(:pending_delete, Map.take(payload, [:notify_on_delete, :scope]))
-    |> then(&{:noreply, &1})
   end
 
-  @doc "Delegates the delete-event result to `EventCrud`."
-  @spec handle_delete_event_result(any(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_delete_event_result(result, socket) do
-    EventCrud.handle_delete_result(result, socket)
-  end
+  defp ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
 end

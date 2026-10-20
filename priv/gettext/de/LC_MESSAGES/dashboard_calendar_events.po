@@ -106,8 +106,8 @@ msgstr "Teilnehmer entfernt und benachrichtigt."
 msgid "Attendees will be notified of pending changes."
 msgstr "Teilnehmer werden über ausstehende Änderungen benachrichtigt."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/parent_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
 msgstr "Kalender aktualisiert"
@@ -629,12 +629,12 @@ msgstr "Ereignis in den neuen Kalender verschoben."
 msgid "The video provider did not return a meeting link, so the video link was not changed."
 msgstr "Der Videoanbieter hat keinen Meeting-Link zurückgegeben, daher wurde der Videolink nicht geändert."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Video link removed."
 msgstr "Videolink entfernt."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Video room created."
 msgstr "Meetingraum erstellt."

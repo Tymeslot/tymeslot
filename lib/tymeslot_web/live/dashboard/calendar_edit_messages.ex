@@ -361,4 +361,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
       "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
     )
   end
+
+  @doc "The message shown once an event's video room has been changed."
+  @spec video_changed_message(String.t() | nil) :: String.t()
+  def video_changed_message(nil),
+    do: dgettext("dashboard_calendar_events", "Video link removed.")
+
+  def video_changed_message(_url),
+    do: dgettext("dashboard_calendar_events", "Video room created.")
 end

@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
+  alias TymeslotWeb.Dashboard.CalendarMessages
 
   @write_timeout 5_000
 
@@ -134,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
     test "the clock tick is not sent, and write results go to the new surface" do
       new_surface = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
 
-      CalendarEventHandlers.handle_tick(new_surface)
+      CalendarMessages.handle_info(:tick, new_surface)
       refute_received {:phoenix, :send_update, _update}
       refute_received :tick
 
@@ -149,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSwitchTest do
 
       CalendarEventHandlers.handle_calendar_events_updated(new_surface)
       CalendarEventHandlers.handle_calendar_sync_complete(new_surface, 1)
-      CalendarEventHandlers.handle_reset_calendar_sync(new_surface)
+      CalendarMessages.handle_info(:reset_calendar_sync, new_surface)
 
       for action <- [:events_updated, :integration_synced, :refresh_events] do
         assert_received {:phoenix, :send_update,

@@ -42,6 +42,14 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
                         %{action: :delete_scheduled, token: 7, scope: :single}}}
     end
 
+    test "a guest's RSVP goes to the calendar on screen" do
+      assert CalendarMessages.handle_info({:guest_rsvp_updated, "m1"}, @new_surface) ==
+               {:noreply, @new_surface}
+
+      assert_received {:phoenix, :send_update,
+                       {{CalendarSurface, "calendar"}, %{action: :refresh_guest_summaries}}}
+    end
+
     test "a message that is not the calendar's is left to the LiveView" do
       assert CalendarMessages.handle_info({:poll_updated, 1}, @new_surface) == :unhandled
       refute_received {:phoenix, :send_update, _update}

@@ -198,13 +198,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   def change_event_video_async(socket, event, video_integration_id),
     do: EventWrites.change_video(socket, event, video_integration_id)
 
-  @doc "The message shown once an event's video room has been changed."
+  @doc "See `TymeslotWeb.Dashboard.CalendarEditMessages.video_changed_message/1`."
   @spec video_changed_message(String.t() | nil) :: String.t()
-  def video_changed_message(nil),
-    do: dgettext("dashboard_calendar_events", "Video link removed.")
-
-  def video_changed_message(_url),
-    do: dgettext("dashboard_calendar_events", "Video room created.")
+  defdelegate video_changed_message(url), to: CalendarEditMessages
 
   @doc """
   Moves `event` to `integration` (on `calendar_id`, or its default calendar

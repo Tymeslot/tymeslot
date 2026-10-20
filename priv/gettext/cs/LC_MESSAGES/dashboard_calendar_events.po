@@ -110,8 +110,8 @@ msgstr "Účastník byl odebrán a informován."
 msgid "Attendees will be notified of pending changes."
 msgstr "Účastníci budou o čekajících změnách informováni."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/parent_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
 msgstr "Kalendáře byly obnoveny"
@@ -635,12 +635,12 @@ msgstr "Událost byla přesunuta do nového kalendáře."
 msgid "The video provider did not return a meeting link, so the video link was not changed."
 msgstr "Poskytovatel videa nevrátil odkaz na schůzku, takže odkaz na videoschůzku nebyl změněn."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Video link removed."
 msgstr "Odkaz na videoschůzku byl odebrán."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Video room created."
 msgstr "Místnost pro videoschůzku byla vytvořena."

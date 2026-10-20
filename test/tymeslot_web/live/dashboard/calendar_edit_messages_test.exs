@@ -39,4 +39,15 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessagesTest do
       assert CalendarEditMessages.create_failure_reason(:forbidden) == "Please try again."
     end
   end
+
+  describe "video_changed_message/1" do
+    test "says the room was created when the event has a link" do
+      assert CalendarEditMessages.video_changed_message("https://v.example.com/r") ==
+               "Video room created."
+    end
+
+    test "says the link was removed when it has none" do
+      assert CalendarEditMessages.video_changed_message(nil) == "Video link removed."
+    end
+  end
 end

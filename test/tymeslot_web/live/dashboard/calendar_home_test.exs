@@ -155,6 +155,34 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
 
       refute strip_html(render(lv)) =~ "Dentist"
     end
+
+    test "drops an event from the strip once a scheduled delete has run", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      start_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          summary: "Dentist",
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 1800, :second),
+          all_day: false
+        )
+
+      {:ok, lv, html} = live(conn, ~p"/dashboard")
+      assert strip_html(html) =~ "Dentist"
+
+      # The delete job removes the cached row before it broadcasts how it ended
+      # (`Tymeslot.CalendarGrid.ScheduledDelete`).
+      {:ok, :deleted} = ProviderCalendarEventQueries.delete_by_uid(integration.id, event.uid)
+      send(lv.pid, {:calendar_delete_result, user.id, 1, :deleted})
+      :sys.get_state(lv.pid)
+
+      refute strip_html(render(lv)) =~ "Dentist"
+    end
   end
 
   describe "timezone in the calendar header" do
