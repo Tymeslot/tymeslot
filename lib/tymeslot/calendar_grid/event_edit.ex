@@ -99,6 +99,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   @type retry_policy :: :queue_recoverable | :never_queue
 
   @doc """
+  The cache fields an edit may change: the keys `changes` may carry.
+  """
+  @spec editable_fields() :: [atom()]
+  def editable_fields, do: @editable_fields
+
+  @doc """
   Applies `changes` to `event`, writes the whole updated event to the
   provider, and records the edit on the cached row.
 
