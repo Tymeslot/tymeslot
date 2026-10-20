@@ -1,0 +1,106 @@
+/**
+ * Tests for the command bar's own rows (calendar/commands.js): the command
+ * registry and how a query matches it, the "Go to" row for a typed date and
+ * the "Add" row for a typed event. Today is Wednesday 14 October 2026.
+ */
+import { describe, expect, test } from "vitest";
+import { addRow, commandRows, dateRow, matchScore } from "../../calendar/commands.js";
+import { commandSettings, commandStrings } from "./command_fixtures.js";
+
+const opts = { today: "2026-10-14", calendars: [], strings: commandStrings, timeFormat: "24h" };
+const rows = (query, extra = {}) => commandRows(query, { settings: commandSettings, strings: commandStrings, phone: false, ...extra });
+const labels = (list) => list.map((row) => row.label);
+
+describe("matchScore", () => {
+  test("a prefix beats a word start, which beats anywhere", () => {
+    expect(matchScore("Week", "we")).toBe(3);
+    expect(matchScore("Show week numbers", "week")).toBe(2);
+    expect(matchScore("Keyboard shortcuts", "cut")).toBe(1);
+    expect(matchScore("Month", "week")).toBe(0);
+  });
+
+  test("case and accents are ignored", () => {
+    expect(matchScore("Réunion", "reu")).toBe(3);
+    expect(matchScore("Agenda", "AGE")).toBe(3);
+  });
+});
+
+describe("commandRows", () => {
+  test("before anything is typed: Today, New event, the views, the sets, then Keyboard shortcuts", () => {
+    expect(labels(rows(""))).toEqual(["Today", "New event", "Day", "3 days", "Week", "Month", "Agenda", "Switch to Work", "Switch to Personal", "Keyboard shortcuts"]);
+  });
+
+  test("a set's row shows its digit and applies it", () => {
+    const [work] = rows("work");
+    expect(work).toEqual({ id: "set-1", label: "Switch to Work", keys: "1", run: { type: "push", event: "calendar:apply_set", params: { position: 1 } } });
+  });
+
+  test("leaving the set is offered on 0 only while a set is active", () => {
+    expect(labels(rows("leave the"))).not.toContain("Leave the calendar set");
+    const settings = { ...commandSettings, active_set: 2 };
+    const [leave] = rows("leave the", { settings });
+    expect(leave).toEqual({ id: "set-0", label: "Leave the calendar set", keys: "0", run: { type: "push", event: "calendar:apply_set", params: { position: 0 } } });
+  });
+
+  test("display toggles name the choice they switch to", () => {
+    expect(rows("density")[0]).toMatchObject({ label: "Use compact density", run: { type: "push", event: "calendar:set_density", params: { option: "compact" } } });
+    const compact = { ...commandSettings, density: "compact", time_format: "12h", week_start: "sunday", show_weekends: false, fold_night: false, show_week_numbers: true, desktop_reminders: true };
+    expect(rows("density", { settings: compact })[0].label).toBe("Use comfortable density");
+    expect(rows("clock", { settings: compact })[0]).toMatchObject({ label: "Use the 24-hour clock", run: { params: { option: "24h" } } });
+    expect(rows("start weeks", { settings: compact })[0]).toMatchObject({ label: "Start weeks on Monday", run: { params: { option: "monday" } } });
+    expect(labels(rows("weekends", { settings: compact }))).toEqual(["Show weekends in week view"]);
+    expect(labels(rows("early hours", { settings: compact }))).toEqual(["Fold early hours"]);
+    expect(labels(rows("week numbers", { settings: compact }))).toEqual(["Hide week numbers"]);
+    expect(labels(rows("notifications", { settings: compact }))).toEqual(["Turn off desktop notifications"]);
+  });
+
+  test("focus mode goes to the dashboard, and is not offered on a phone", () => {
+    expect(rows("focus")[0]).toMatchObject({ label: "Focus mode", keys: "F", run: { type: "push_view", event: "calendar:toggle_focus", params: {} } });
+    expect(rows("focus", { settings: { ...commandSettings, focus: true } })[0].label).toBe("Leave focus mode");
+    expect(labels(rows("focus", { phone: true }))).toEqual([]);
+  });
+
+  test("prefix matches come first, and at most six commands follow a query", () => {
+    expect(rows("w")[0].label).toBe("Week");
+    expect(rows("e").length).toBe(6);
+  });
+
+  test("the old calendar is one command away", () => {
+    expect(rows("old calendar")[0]).toMatchObject({ run: { type: "push_view", event: "calendar:switch_surface", params: { enabled: false } } });
+  });
+});
+
+describe("dateRow", () => {
+  test("a typed date goes there", () => {
+    expect(dateRow("20 oct", opts)).toEqual({ id: "goto", label: "Go to Tue 20 Oct", date: "2026-10-20" });
+    expect(dateRow("tomorrow", opts)).toMatchObject({ date: "2026-10-15", label: "Go to Thu 15 Oct" });
+  });
+
+  test("a date in another year names it", () => {
+    expect(dateRow("20 oct 2027", opts)).toMatchObject({ date: "2027-10-20", label: "Go to Wed 20 Oct 2027" });
+  });
+
+  test("a line with a title, or with no date, is not a date", () => {
+    expect(dateRow("lunch tomorrow", opts)).toBeNull();
+    expect(dateRow("planning", opts)).toBeNull();
+  });
+});
+
+describe("addRow", () => {
+  test("a line with a time goes first and says when", () => {
+    expect(addRow("tomorrow 10:00 Dentist", opts)).toEqual({ id: "add", label: "Add “Dentist”", hint: "Thu 15 Oct, 10:00", text: "tomorrow 10:00 Dentist", first: true });
+  });
+
+  test("a date and a title go first too", () => {
+    expect(addRow("friday team lunch", opts)).toMatchObject({ first: true, label: "Add “Team lunch”" });
+  });
+
+  test("a bare title goes last, with no time to show", () => {
+    expect(addRow("Dentist", opts)).toMatchObject({ first: false, hint: null, text: "Dentist" });
+  });
+
+  test("one character, or no title, adds nothing", () => {
+    expect(addRow("a", opts)).toBeNull();
+    expect(addRow("tomorrow 10:00", opts)).toBeNull();
+  });
+});

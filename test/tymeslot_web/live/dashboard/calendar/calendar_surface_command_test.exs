@@ -222,4 +222,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCommandTest do
       assert socket.assigns.command == command
     end
   end
+
+  test "the canvas carries the command bar's copy", %{conn: conn} do
+    {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+
+    assert html =~ "Switch to %{name}"
+    assert html =~ "Use compact density"
+    assert html =~ "Go to %{date}"
+  end
 end

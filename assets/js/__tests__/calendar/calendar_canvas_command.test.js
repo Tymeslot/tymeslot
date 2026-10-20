@@ -8,8 +8,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { pushes, unmountAll } from "./canvas_harness.js";
-import { mountWithBar, result } from "./command_fixtures.js";
+import { mockViewport, pushes, unmountAll } from "./canvas_harness.js";
+import { commandSettings, commandStrings, mountWithBar, result } from "./command_fixtures.js";
 
 const cssDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../css");
 
@@ -227,8 +227,12 @@ describe("rows", () => {
   });
 
   test("keys with focus outside the bar send it back to the input, and aria-expanded follows the rows", () => {
-    const { input, results } = mountWithBar();
+    const { hook, input, results } = mountWithBar();
     open();
+    // The hook's own rows are there from the start; with none at all it reads "false".
+    expect(input.getAttribute("aria-expanded")).toBe("true");
+    hook.clearInstant();
+    hook.syncActive();
     expect(input.getAttribute("aria-expanded")).toBe("false");
     results.innerHTML = result("event-1", "2026-10-21");
     press(input, "ArrowDown");
@@ -290,4 +294,95 @@ test("the stylesheet keeps the bar closed until data-open, above sheets and belo
   expect(css).toMatch(/\.cal-command\s*\{[^}]*z-index:\s*var\(--cal-z-command\)/);
   expect(css).toMatch(/height:\s*calc\(100dvh - var\(--cal-kb-inset, 0px\)\)/);
   expect(variables).toMatch(/--cal-z-command:\s*80;/);
+});
+
+describe("the hook's own rows", () => {
+  const typeIn = (input, text) => {
+    input.value = text;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const mount = () => {
+    const mounted = mountWithBar();
+    mounted.hook.strings = { ...mounted.hook.strings, ...commandStrings };
+    mounted.hook.settings = { ...mounted.hook.settings, ...commandSettings };
+    press(document.body, "k", { ctrlKey: true });
+    return mounted;
+  };
+  const rowLabels = (hook) => hook.commandRows().map((row) => row.querySelector(".cal-command-row-title")?.textContent ?? row.textContent);
+
+  test("opening offers Today, New event, the views, the sets and the shortcuts, each with its key", () => {
+    const { hook, bar } = mount();
+    expect(rowLabels(hook)).toEqual(["Today", "New event", "Day", "3 days", "Week", "Month", "Agenda", "Switch to Work", "Switch to Personal", "Keyboard shortcuts"]);
+    expect(bar.querySelector('[data-command-row="view-week"] kbd').textContent).toBe("W");
+  });
+
+  test("a typed date comes first, and a bare title's Add row comes last, after the search rows", () => {
+    const { hook, input, results } = mount();
+    typeIn(input, "20 oct");
+    expect(rowLabels(hook)[0]).toBe("Go to Tue 20 Oct");
+
+    results.innerHTML = result("event-1", "2026-10-21");
+    typeIn(input, "Dentist");
+    const rows = hook.commandRows();
+    expect(rows.at(-2).id).toBe("calendar-command-row-event-1");
+    expect(rows.at(-1).dataset.commandRow).toBe("add");
+  });
+
+  test("Enter on the date row goes there in the current view and leaves focus on the grid", () => {
+    const { hook, el, input } = mount();
+    typeIn(input, "20 oct");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "week", date: "2026-10-20" }]);
+    expect(el.contains(document.activeElement) || document.activeElement === el).toBe(true);
+  });
+
+  test("Add opens quick create filled in from the line, so one more Enter saves it", () => {
+    const { hook, input } = mount();
+    typeIn(input, "tomorrow 10:00 Dentist");
+    expect(hook.commandRows()[0].dataset.commandRow).toBe("add");
+
+    press(input, "Enter");
+
+    expect(document.getElementById("calendar-command").hasAttribute("data-open")).toBe(false);
+    expect(hook.quick).not.toBeNull();
+    expect(hook.quickField().value).toBe("tomorrow 10:00 Dentist");
+    expect(hook.draft.title).toBe("Dentist");
+    expect(document.activeElement).toBe(hook.quickField());
+  });
+
+  test("a display command pushes its change to the surface", () => {
+    const { hook, input } = mount();
+    typeIn(input, "compact");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:set_density")).toEqual([{ option: "compact" }]);
+  });
+
+  test("a set command applies the set", () => {
+    const { hook, input } = mount();
+    typeIn(input, "work");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:apply_set")).toEqual([{ position: 1 }]);
+  });
+
+  test("focus mode is pushed to the dashboard, not the surface", () => {
+    const { hook, input } = mount();
+    typeIn(input, "focus");
+    press(input, "Enter");
+    expect(hook.pushEvent).toHaveBeenCalledWith("calendar:toggle_focus", {});
+    expect(pushes(hook, "calendar:toggle_focus")).toEqual([]);
+  });
+
+  test("on a phone focus mode is not offered", () => {
+    mockViewport(true);
+    const { hook, input } = mount();
+    typeIn(input, "focus");
+    expect(rowLabels(hook)).not.toContain("Focus mode");
+  });
+
+  test("a view command switches the view on the current date", () => {
+    const { hook, input } = mount();
+    typeIn(input, "month");
+    press(input, "Enter");
+    expect(pushes(hook, "calendar:goto")).toEqual([{ view: "month", date: "2026-10-14" }]);
+  });
 });

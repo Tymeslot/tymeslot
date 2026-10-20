@@ -23,9 +23,18 @@
  * `aria-selected` and named by the input's `aria-activedescendant`, which a
  * MutationObserver puts back whenever a LiveView patch takes them off.
  *
- * A server row goes to its date in the current view.
+ * The hook's own rows (calendar/commands.js) are drawn on every keystroke:
+ * a typed date, "Add …", the matching commands. A command runs here
+ * (views, Today, next and previous through `gotoPeriod`; New event; the
+ * bookable layer; pushes to the surface or, for focus mode and the old
+ * calendar, to DashboardLive). "Add …" opens quick create filled in from the
+ * line. A server row goes to its date in the current view.
  */
+import { addRow, commandRows, dateRow } from "../../calendar/commands.js";
+import { applyText } from "../../calendar/draft.js";
+import { escapeHtml } from "../../calendar/render.js";
 import { CORE_MODAL_OPEN, isCommandKey, plainKeyAllowed } from "../../calendar/shortcuts.js";
+import { MINUTES_PER_DAY, isoFromDay, shiftPeriod } from "../../calendar/time.js";
 
 const OPTION = '[role="option"]';
 const ROWS = `#calendar-command-instant ${OPTION}, #calendar-command-results ${OPTION}, #calendar-command-after ${OPTION}`;
@@ -34,6 +43,17 @@ const STEPS = { ArrowDown: 1, ArrowUp: -1 };
 
 // A core modal (<.modal>) is open: its overlay is shown (Task 3's marker).
 const coreModalOpen = () => document.querySelector(CORE_MODAL_OPEN) !== null;
+
+// One of the hook's own rows; `index` maps its command id back to the row.
+function instantHtml(row, index) {
+  index.set(row.id, row);
+  const hint = row.hint ? `<span class="cal-command-row-meta">${escapeHtml(row.hint)}</span>` : "";
+  const keys = row.keys ? `<kbd>${escapeHtml(row.keys)}</kbd>` : "";
+  return (
+    `<button type="button" role="option" tabindex="-1" id="calendar-command-row-c${index.size}" class="cal-command-row" data-command-row="${escapeHtml(row.id)}">` +
+    `<span class="cal-command-row-main"><span class="cal-command-row-title">${escapeHtml(row.label)}</span>${hint}</span>${keys}</button>`
+  );
+}
 
 export const CommandMixin = {
   mountCommand() {
@@ -177,9 +197,23 @@ export const CommandMixin = {
     }
   },
 
-  // The hook's own rows (commands, a typed date, "Add …"): none yet.
-  renderInstant() {
+  // The hook's own rows, in the bar's order: a typed date, "Add …" when the
+  // line says when, the matching commands; after the server's rows, "Add …"
+  // when it did not go first.
+  renderInstant(query) {
     this.clearInstant();
+    this.instantRows = new Map();
+    if (!this.settings || !this.clock) return;
+    const opts = { ...this.parseOptions(), strings: this.strings, timeFormat: this.settings.time_format };
+    const add = addRow(query, opts);
+    const commands = commandRows(query, { settings: this.settings, strings: this.strings, phone: Boolean(this.phone) });
+    this.fillGroup("calendar-command-instant", [dateRow(query, opts), add?.first ? add : null, ...commands].filter(Boolean));
+    this.fillGroup("calendar-command-after", add && !add.first ? [add] : []);
+  },
+
+  fillGroup(id, rows) {
+    const group = document.getElementById(id);
+    if (group) group.innerHTML = rows.map((row) => instantHtml(row, this.instantRows)).join("");
   },
 
   moveActive(step) {
@@ -231,8 +265,62 @@ export const CommandMixin = {
   },
 
   runRow(row) {
-    if (!row?.hasAttribute("data-command-result")) return;
-    this.closeCommand();
-    this.gotoPeriod(this.view, row.dataset.date);
+    if (!row) return undefined;
+    if (row.hasAttribute("data-command-result")) {
+      this.closeCommand();
+      return this.gotoPeriod(this.view, row.dataset.date);
+    }
+    const command = this.instantRows?.get(row.dataset.commandRow);
+    return command ? this.runCommand(command) : undefined;
+  },
+
+  runCommand(command) {
+    if (command.id === "goto") return this.leaveForGrid(() => this.gotoPeriod(this.view, command.date));
+    if (command.id === "add") return this.addFromLine(command.text);
+    const { run } = command;
+    const from = this.pending ?? { view: this.view, date: this.date };
+    switch (run.type) {
+      case "view":
+        return this.leaveForGrid(() => this.gotoPeriod(run.view, from.date));
+      case "today":
+        return this.leaveForGrid(() => this.gotoPeriod(from.view, isoFromDay(Math.floor(this.nowMinute() / MINUTES_PER_DAY))));
+      case "step":
+        return this.leaveForGrid(() => this.gotoPeriod(from.view, shiftPeriod(from.view, from.date, run.step)));
+      case "create":
+        this.closeCommand({ restoreFocus: false });
+        return this.quickCreateNext();
+      case "bookable":
+        this.closeCommand();
+        return this.toggleBookable();
+      case "push":
+        this.closeCommand();
+        return this.pushEventTo(this.el, run.event, run.params);
+      case "push_view":
+        this.closeCommand();
+        return this.pushEvent(run.event, run.params);
+      case "help":
+        this.closeCommand();
+        return this.pushEventTo(this.el, "calendar:toggle_menu", { menu: "shortcuts" });
+      default:
+        return this.closeCommand();
+    }
+  },
+
+  // A row that moves the grid leaves focus on the grid, not where it was.
+  leaveForGrid(move) {
+    this.closeCommand({ restoreFocus: false });
+    move();
+    this.restoreQuickFocus(null);
+  },
+
+  // Quick create at the next free time, read from the typed line: one more
+  // Enter saves it.
+  addFromLine(text) {
+    this.closeCommand({ restoreFocus: false });
+    this.quickCreateNext();
+    if (!this.quick || !this.draft) return;
+    this.quickField().value = text;
+    this.updateDraft(applyText(this.draft, text, this.parseOptions()));
+    this.quickFocus();
   },
 };
