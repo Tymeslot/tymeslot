@@ -122,7 +122,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
         job_id,
         "reschedule",
         meeting.id,
-        fn -> service.send_reschedule_email_to_organizer(content.organizer_email, content) end,
+        fn -> organizer_copy(meeting, service, content) end,
         fn -> attendee_copy(meeting, service, content) end
       )
 
@@ -131,6 +131,13 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
     # Every copy was attempted; a failure that a retry can fix outweighs a
     # rejected address, so a suppressed attendee never stops a guest's retry.
     DeliveryOutcome.combine("reschedule", [meeting_id: meeting.id], [participants, guests])
+  end
+
+  defp organizer_copy(meeting, service, content) do
+    service.send_reschedule_email_to_organizer(
+      content.organizer_email,
+      AppointmentBuilder.organizer_copy(content, meeting)
+    )
   end
 
   # A meeting the host manages (confirmed from a poll) has no booker: the

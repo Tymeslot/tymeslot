@@ -142,10 +142,21 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   def format_organizer_note(_appointment_details, _locale), do: ""
 
   @doc """
-  Formats attendee information for text body.
+  Formats attendee information for text body, or the guests of a meeting the
+  host manages (`:host_managed`), which nobody booked.
   """
   @spec format_attendee_info(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
           String.t()
+  def format_attendee_info(%{host_managed: true} = appointment_details, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      """
+
+      #{dgettext("emails", "GUESTS:")}
+      #{Enum.map_join(appointment_details.guest_emails, "\n", &"- #{&1}")}
+      """
+    end)
+  end
+
   def format_attendee_info(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       info = [

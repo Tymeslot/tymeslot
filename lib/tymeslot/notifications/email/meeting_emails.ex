@@ -209,7 +209,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
         fn ->
           service.send_cancellation_email_to_organizer(
             appointment_details.organizer_email,
-            appointment_details
+            AppointmentBuilder.organizer_copy(appointment_details, meeting)
           )
         end,
         fn ->
@@ -269,7 +269,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
           with {:ok, _result} <-
                  email_service.send_appointment_confirmation_to_organizer(
                    appointment_details.organizer_email,
-                   appointment_details
+                   AppointmentBuilder.organizer_copy(appointment_details, meeting)
                  ),
                {:ok, _meeting} <- MeetingDeliveryQueries.mark_email_sent(meeting, :organizer) do
             {:ok, :sent}
@@ -394,7 +394,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
       if need_organizer? do
         email_service.send_appointment_reminder_to_organizer(
           appointment_details.organizer_email,
-          appointment_details
+          AppointmentBuilder.organizer_copy(appointment_details, meeting)
         )
       else
         {:ok, :skipped}

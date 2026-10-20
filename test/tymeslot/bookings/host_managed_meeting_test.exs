@@ -46,9 +46,21 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     %{user: user, meeting: meeting, guests: guests}
   end
 
+  # The host's copy is about the meeting and its guests: nobody booked it
+  # (`AppointmentBuilder.organizer_copy/2`).
+  defp assert_host_copy(details, meeting) do
+    assert details.host_managed
+    assert details.attendee_name == meeting.title
+    assert details.attendee_email == nil
+    assert details.guest_emails == ["ada@example.com", "bob@example.com"]
+    assert details.cancel_url == nil
+    assert details.reschedule_url == nil
+  end
+
   describe "emails" do
     test "the confirmation goes to the host and every guest, never as a booking", ctx do
-      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, details ->
+        assert_host_copy(details, ctx.meeting)
         {:ok, "sent"}
       end)
 
@@ -72,7 +84,8 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
         set: [confirmation_sent_at: DateTime.utc_now(:second)]
       )
 
-      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, details ->
+        assert_host_copy(details, ctx.meeting)
         {:ok, "sent"}
       end)
 
@@ -94,7 +107,8 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
         )
       )
 
-      expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, _details ->
+      expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, details ->
+        assert_host_copy(details, ctx.meeting)
         {:ok, "sent"}
       end)
 
@@ -137,6 +151,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
       expect(EmailServiceMock, :send_reschedule_email_to_organizer, fn _email, details ->
         assert DateTime.compare(details.original_start_time, ctx.meeting.start_time) == :eq
+        assert_host_copy(details, ctx.meeting)
         {:ok, "sent"}
       end)
 
