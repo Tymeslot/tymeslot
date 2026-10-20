@@ -44,6 +44,9 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   ## Options
 
     * `:exdates` - list of `DateTime` values to exclude (cancelled occurrences)
+    * `:max_occurrences` - the most occurrences to return, below the cap the
+      range sets (one per date); a caller comparing rules passes it to bound
+      the work. A series cut short by either is warned about.
 
   """
   @spec expand(map(), DateTime.t() | Date.t(), DateTime.t() | Date.t(), keyword()) :: [map()]
@@ -62,7 +65,8 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     case RRule.parse(rrule) do
       {:ok, rule} ->
         warn_unsupported(rule, rrule)
-        generate_occurrences(event, rule, range_start, range_end, exdates, :capped)
+        limits = {:capped, Keyword.get(opts, :max_occurrences)}
+        generate_occurrences(event, rule, range_start, range_end, exdates, limits)
 
       :error ->
         # Fail-open: return the original event rather than silently dropping it
@@ -147,9 +151,9 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
   # --- Private: Occurrence generation ---
 
-  # `:capped` (for `expand/4`) fast-forwards to the range where it can, and
-  # bounds the periods stepped by `@max_steps` and the occurrences returned by
-  # the range's dates (`@spare_dates`). `:uncapped` (for `count_before/3`) steps every
+  # `{:capped, most}` (for `expand/4`) fast-forwards to the range where it
+  # can, and bounds the periods stepped by `@max_steps` and the occurrences
+  # returned by the range's dates (`@spare_dates`) or `most`, if lower. `:uncapped` (for `count_before/3`) steps every
   # occurrence from the first start, bounded only by the rule's own end and
   # `range_end`, so the count it makes is exact.
   defp generate_occurrences(event, %RRule{} = parsed, range_start, range_end, exdates, limits) do
@@ -194,7 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
     {skip, max_periods} =
       case limits do
-        :capped -> {periods_to_skip(first_period, rule, range_start_dt), @max_steps}
+        {:capped, _most} -> {periods_to_skip(first_period, rule, range_start_dt), @max_steps}
         :uncapped -> {0, nil}
       end
 
@@ -429,12 +433,13 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   defp step_datetime(%Date{} = date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
   defp step_datetime(nil), do: nil
 
-  # Passes on at most one occurrence per date of the range, and warns when
-  # the rule makes more: the series is then cut short.
+  # Passes on at most one occurrence per date of the range, or the caller's
+  # `:max_occurrences` when that is lower, and warns when the rule makes
+  # more: the series is then cut short.
   defp within_occurrence_cap(occurrences, :uncapped, _range_start, _range_end), do: occurrences
 
-  defp within_occurrence_cap(occurrences, :capped, range_start, range_end) do
-    cap = max(DateTime.diff(range_end, range_start, :day), 0) + @spare_dates
+  defp within_occurrence_cap(occurrences, {:capped, most}, range_start, range_end) do
+    cap = at_most(max(DateTime.diff(range_end, range_start, :day), 0) + @spare_dates, most)
 
     occurrences
     |> Stream.with_index()
@@ -451,6 +456,9 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
         {[occurrence], acc}
     end)
   end
+
+  defp at_most(cap, nil), do: cap
+  defp at_most(cap, most), do: min(cap, most)
 
   defp take_at_most(occurrences, nil), do: occurrences
   defp take_at_most(occurrences, most), do: Stream.take(occurrences, most)
