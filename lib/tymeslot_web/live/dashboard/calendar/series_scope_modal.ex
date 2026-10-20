@@ -104,7 +104,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.SeriesScopeModal do
 
   defp question(%{kind: :delete, title: title}),
     do:
-      dgettext("dashboard_calendar_recurrence", "“%{title}” repeats. Which events should be deleted?",
+      dgettext(
+        "dashboard_calendar_recurrence",
+        "“%{title}” repeats. Which events should be deleted?",
         title: title
       )
 end
