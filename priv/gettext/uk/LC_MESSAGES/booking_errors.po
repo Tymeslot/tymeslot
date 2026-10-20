@@ -230,3 +230,8 @@ msgstr "У вас уже є місце на цей час. Перевірте л
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Бронювати можна щонайбільше на %{days} дн. наперед"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The reminders for this meeting are not valid"
+msgstr "Нагадування для цієї зустрічі недійсні"
