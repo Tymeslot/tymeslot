@@ -168,7 +168,8 @@ defmodule Tymeslot.Polls.Voting do
     |> Map.new()
   end
 
-  defp handle_insert({:ok, participant}), do: EmailScheduler.schedule_poll_participant_link(participant)
+  defp handle_insert({:ok, participant}),
+    do: EmailScheduler.schedule_poll_participant_link(participant)
 
   # On the unique-constraint race a concurrent request for the same address
   # inserted first, and its link is already on the way. Any other changeset
