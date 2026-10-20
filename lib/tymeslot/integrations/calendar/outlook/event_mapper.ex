@@ -49,6 +49,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   end
 
   @doc """
+  Marks `body` as Tymeslot's unless `event_data` says the event belongs to
+  someone else (`created_by_tymeslot: false`, which the calendar grid sends
+  for an event it did not create). Anything that does not say so is a
+  booking or an event Tymeslot is creating, and is marked: a booking whose
+  mark was dropped would be read back by the next sync as an external event.
+  """
+  @spec put_provenance(map(), map()) :: map()
+  def put_provenance(body, %{created_by_tymeslot: false}), do: body
+  def put_provenance(body, _event_data), do: add_tymeslot_fingerprint(body)
+
+  @doc """
   Adds the Tymeslot fingerprint extended property to a Graph API event body,
   so that events created by Tymeslot can be identified later during sync.
   """
