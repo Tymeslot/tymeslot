@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
@@ -29,16 +28,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   @event [:tymeslot, :dashboard, :meetings, :reschedule, :confirm]
 
   @doc """
-  Opens the way to a new time for the host's meeting `params["id"]`, if it
-  can be rescheduled: the dialog asking its attendee, or, for a meeting
+  Opens the way to a new time for the host's meeting `params["id"]`, if
+  `policy` allows one: the dialog asking its attendee, or, for a meeting
   confirmed from a poll, which has nobody to ask, the host's own move
   (`HostMoveModal`, through `:host_move_meeting`). A refusal is flashed.
   """
-  @spec show(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def show(socket, params) do
+  @spec show(Phoenix.LiveView.Socket.t(), map(), (MeetingSchema.t() -> :ok | {:error, term()})) ::
+          Phoenix.LiveView.Socket.t()
+  def show(socket, params, policy) do
     user_id = socket.assigns.current_user.id
 
-    case ModalMeeting.fetch(user_id, params, &Policy.can_reschedule_meeting?/1) do
+    case ModalMeeting.fetch(user_id, params, policy) do
       {:ok, meeting} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :reschedule, :open],
