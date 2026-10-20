@@ -423,21 +423,17 @@
   background-size: 1rem;
 }
 
-
 /* Focus mode on the new calendar (CalendarFocus): from the lg breakpoint,
    where the menu is a column beside the content, the menu and the row's
-   gutter go. Below it the menu is already a drawer, so nothing changes. */
+   gutter go, and with them the Up next and onboarding strips. Below it the
+   menu is already a drawer and the strips stay, so nothing changes. */
 @media (width >= 64rem) {
-  #dashboard-root[data-calendar-focus] #dashboard-sidebar {
+  #dashboard-root[data-calendar-focus] #dashboard-sidebar,
+  #dashboard-root[data-calendar-focus] #calendar-strips > * {
     display: none;
   }
 
   #dashboard-root[data-calendar-focus] .dashboard-main-row {
     gap: 0;
-  }
-
-  /* The Up next and onboarding strips go too; below lg they stay. */
-  #dashboard-root[data-calendar-focus] #calendar-strips > * {
-    display: none;
   }
 }
