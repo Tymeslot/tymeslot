@@ -437,7 +437,7 @@ msgstr "Użyj wygodnej gęstości"
 #: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Use compact density"
-msgstr "Użyj zwartej gęstości"
+msgstr "Użyj kompaktowej gęstości"
 
 #: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format

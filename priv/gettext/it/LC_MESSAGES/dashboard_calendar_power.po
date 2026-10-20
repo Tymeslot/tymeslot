@@ -218,7 +218,7 @@ msgstr "Rinomina o elimina %{name}"
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #, elixir-autogen, elixir-format
 msgid "Save the calendars you show as a set, then press its number to switch to it."
-msgstr "Salva i calendari che mostri come gruppo, poi premi il suo numero per passare a esso."
+msgstr "Salva i calendari che mostri come gruppo, poi premi il suo numero per attivarlo."
 
 #: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex

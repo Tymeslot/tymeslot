@@ -425,17 +425,17 @@ msgstr "Desktop-Benachrichtigungen einschalten"
 #: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Unfold early hours"
-msgstr "Frühe Stunden einblenden"
+msgstr "Frühe Stunden ausklappen"
 
 #: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Use comfortable density"
-msgstr "Komfortable Dichte verwenden"
+msgstr "Komfortable Anzeigedichte verwenden"
 
 #: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Use compact density"
-msgstr "Kompakte Dichte verwenden"
+msgstr "Kompakte Anzeigedichte verwenden"
 
 #: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
