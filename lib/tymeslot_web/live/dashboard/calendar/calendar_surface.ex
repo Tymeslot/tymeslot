@@ -1,8 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @moduledoc """
-  The redesigned calendar at `/dashboard/calendar`, rendered instead of
-  `CalendarGridComponent` while the organiser's `redesign_enabled` switch is
-  on (see `ComponentDispatch.component_for_action/3`).
+  The calendar at `/dashboard/calendar` (see
+  `ComponentDispatch.component_for_action/2`).
 
   Rendering is split: this component owns the chrome (toolbar, rail,
   preview, display options) and every server round trip; the

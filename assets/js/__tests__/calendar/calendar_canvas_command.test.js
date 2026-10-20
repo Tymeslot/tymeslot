@@ -439,7 +439,7 @@ describe("the hook's own rows", () => {
     expect(pushes(hook, "calendar:goto")).toHaveLength(1);
   });
 
-  test("Import opens the importer, help the shortcuts, Back the old calendar", () => {
+  test("Import opens the importer, help the shortcuts", () => {
     const { hook, input } = mount();
     typeIn(input, "import");
     press(input, "Enter");
@@ -449,11 +449,6 @@ describe("the hook's own rows", () => {
     typeIn(hook.commandField(), "keyboard");
     press(hook.commandField(), "Enter");
     expect(pushes(hook, "calendar:toggle_menu")).toEqual([{ menu: "shortcuts" }]);
-
-    press(document.body, "k", { ctrlKey: true });
-    typeIn(hook.commandField(), "old calendar");
-    press(hook.commandField(), "Enter");
-    expect(hook.pushEvent).toHaveBeenCalledWith("calendar:switch_surface", { enabled: false });
   });
 
   test("Leave the calendar set, while one is active", () => {

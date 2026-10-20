@@ -78,16 +78,15 @@ defmodule TymeslotWeb.DashboardLive do
 
     # `:agenda` defaults nil so the calendar's Up-next strip can be guarded on
     # the dead render, before `AgendaRefresh.load/1` has run.
-    # `:calendar_redesign` and `:calendar_focus` wait for the calendar's first
-    # open, which loads both once per process.
+    # `:calendar_focus` waits for the calendar's first open, which loads it
+    # once per process (nil until then).
     # `viewport_fit: :cover` lets the root layout write the dashboard's
     # viewport meta (under the notch, resized by the on-screen keyboard).
     {:ok,
      assign(socket,
        first_dashboard_visit: first_visit?,
        agenda: nil,
-       calendar_redesign: nil,
-       calendar_focus: false,
+       calendar_focus: nil,
        viewport_fit: :cover
      )}
   end
@@ -158,7 +157,7 @@ defmodule TymeslotWeb.DashboardLive do
         socket
       end
 
-    socket = if action == :calendar, do: assign_calendar_redesign(socket), else: socket
+    socket = if action == :calendar, do: assign_calendar_focus(socket), else: socket
 
     socket =
       socket
@@ -175,36 +174,17 @@ defmodule TymeslotWeb.DashboardLive do
     AgendaRefresh.reschedule(socket)
   end
 
-  # Which calendar surface the organiser chose and whether focus mode is on,
-  # read once per process (the dead render too, so the page never flashes the
-  # other surface or the menu): later changes go through
-  # `handle_event("calendar:switch_surface", ...)` and
-  # `handle_event("calendar:toggle_focus", ...)`, which keep these current.
-  defp assign_calendar_redesign(
-         %{assigns: %{calendar_redesign: nil, current_user: %{id: user_id}}} = socket
+  # Whether focus mode is on, read once per process (the dead render too, so
+  # the menu never flashes): later changes go through
+  # `handle_event("calendar:toggle_focus", ...)`, which keeps it current.
+  defp assign_calendar_focus(
+         %{assigns: %{calendar_focus: nil, current_user: %{id: user_id}}} = socket
        ) do
     preferences = CalendarGrid.get_or_create_preferences(user_id)
-
-    assign(socket,
-      calendar_redesign: preferences.redesign_enabled,
-      calendar_focus: preferences.focus_mode
-    )
+    assign(socket, :calendar_focus, preferences.focus_mode)
   end
 
-  defp assign_calendar_redesign(socket), do: socket
-
-  # Swapping surfaces either way unmounts one calendar while this process
-  # lives on, exactly as leaving the calendar does, so any writes it still
-  # has queued go to its guardian the same way, and the calendar mounted
-  # next takes them back (see `handle_dashboard_params/2`).
-  defp switch_calendar_surface(socket, enabled) do
-    WriteGuardian.detach()
-
-    assign(socket,
-      calendar_redesign: enabled,
-      calendar_left: Map.get(socket.assigns, :calendar_left, 0) + 1
-    )
-  end
+  defp assign_calendar_focus(socket), do: socket
 
   @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -215,8 +195,7 @@ defmodule TymeslotWeb.DashboardLive do
         :component_module,
         ComponentDispatch.component_for_action(
           assigns.live_action,
-          assigns[:dashboard_action_components],
-          calendar_redesign: assigns[:calendar_redesign] == true
+          assigns[:dashboard_action_components]
         )
       )
       |> assign(:component_props, ComponentDispatch.props_for_action(assigns))
@@ -235,7 +214,7 @@ defmodule TymeslotWeb.DashboardLive do
       automations_allowed={@automations_allowed}
       analytics_allowed={@analytics_allowed}
       full_width={@live_action == :calendar}
-      compact_nav={@live_action == :calendar and @calendar_redesign == true}
+      compact_nav={@live_action == :calendar}
       focus={@calendar_focus_active}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
@@ -253,7 +232,7 @@ defmodule TymeslotWeb.DashboardLive do
         <%= if @live_action == :calendar do %>
           <%!-- Always rendered, so a strip appearing never changes the siblings
                of the grid's wrapper (morphdom would rebuild it and detach the
-               surface). The new calendar leaves Up next to its agenda tab on
+               surface). The calendar leaves Up next to its agenda tab on
                phones. --%>
           <div id="calendar-strips" class="shrink-0">
             <div
@@ -270,7 +249,7 @@ defmodule TymeslotWeb.DashboardLive do
             <div
               :if={@agenda && @agenda.next}
               id="calendar-up-next"
-              class={@calendar_redesign == true && "max-sm:hidden"}
+              class="max-sm:hidden"
             >
               <CalendarUpNextStrip.up_next_strip
                 entry={@agenda.next}
@@ -493,32 +472,6 @@ defmodule TymeslotWeb.DashboardLive do
       {:error, _changeset} -> {:noreply, socket}
     end
   end
-
-  # Both calendar surfaces offer the switch; it lands here because the
-  # component that rendered the control is the one being replaced.
-  def handle_event("calendar:switch_surface", %{"enabled" => enabled}, socket)
-      when is_boolean(enabled) do
-    case CalendarGrid.save_preferences(socket.assigns.current_user.id, %{
-           redesign_enabled: enabled
-         }) do
-      {:ok, _preferences} ->
-        {:noreply,
-         socket
-         |> switch_calendar_surface(enabled)
-         |> AgendaRefresh.load()
-         |> AgendaRefresh.reschedule()}
-
-      {:error, _changeset} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           dgettext("dashboard_calendar", "Couldn't switch calendars. Please try again.")
-         )}
-    end
-  end
-
-  def handle_event("calendar:switch_surface", _params, socket), do: {:noreply, socket}
 
   def handle_event("calendar:toggle_focus", _params, socket),
     do: {:noreply, CalendarFocus.toggle(socket)}

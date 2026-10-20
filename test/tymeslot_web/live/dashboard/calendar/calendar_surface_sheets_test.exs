@@ -57,7 +57,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       assert has_element?(lv, "#{sheet} #calendar-sheet-layers")
       assert has_element?(lv, "#{sheet} #calendar-sheet-density-comfortable[aria-pressed='true']")
       assert has_element?(lv, "#{sheet} #calendar-sheet-fold-night[role='switch']")
-      assert has_element?(lv, "#{sheet} #calendar-sheet-back-to-old")
     end
 
     test "a calendar hidden there leaves the grid at once and the sheet stays open",

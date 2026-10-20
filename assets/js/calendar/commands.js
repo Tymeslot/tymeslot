@@ -9,9 +9,9 @@
  * A command is `{id, label, keys, keywords?, run, wideOnly?, notPhone?}`: `label` is a key in
  * `strings`, or, for a toggle that names the choice it switches to, a
  * function of the settings returning one; `run` likewise. `run.type` is
- * what the hook does: view, create, bookable, push (to the surface),
- * push_view (to DashboardLive) or key (the power key table: T, J, K, F, ?
- * and the digits, so a command does what its key does).
+ * what the hook does: view, create, bookable, push (to the surface) or key
+ * (the power key table: T, J, K, F, ? and the digits, so a command does what
+ * its key does).
  */
 import { parseQuick } from "./parse.js";
 import { dateLabel, interpolate } from "./render.js";
@@ -59,7 +59,6 @@ export const COMMANDS = [
   toggle("fold", (s) => Boolean(s.fold_night), ["command_unfold", "command_fold"], "calendar:toggle_fold_night"),
   toggle("reminders", (s) => Boolean(s.desktop_reminders), ["command_reminders_off", "command_reminders_on"], "calendar:toggle_desktop_reminders", undefined, ["reminders", "notifications"]),
   { id: "import", label: "command_import", keys: null, run: push("calendar:ics_open") },
-  { id: "old-calendar", label: "command_old_calendar", keys: null, run: { type: "push_view", event: "calendar:switch_surface", params: { enabled: false } } },
 ];
 
 const fold = (text) =>

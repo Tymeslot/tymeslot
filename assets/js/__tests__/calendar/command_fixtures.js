@@ -75,7 +75,6 @@ export const commandStrings = {
   command_reminders_on: "Turn on desktop notifications",
   command_reminders_off: "Turn off desktop notifications",
   command_import: "Import an .ics file",
-  command_old_calendar: "Back to the old calendar",
   command_set: "Switch to %{name}",
   command_leave_set: "Leave the calendar set",
   command_goto: "Go to %{date}",

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Repo.Migrations.AddCalendarRedesignToCalendarPreferences do
+defmodule Tymeslot.Repo.Migrations.AddCalendarDisplayPreferences do
   use Ecto.Migration
 
   # excellent_migrations:safety-assured-for-this-file column_added_with_default
@@ -7,14 +7,11 @@ defmodule Tymeslot.Repo.Migrations.AddCalendarRedesignToCalendarPreferences do
   # single instance and migrates with the app stopped, so the brief catalogue
   # lock blocks no traffic.
 
-  # The redesigned calendar's per-user choices. `redesign_enabled` picks the
-  # calendar surface (false keeps every existing user on the old grid until
-  # they opt in); `density` and `fold_night` shape the new grid; `focus_mode`
-  # is stored now and gets its control in a later release. Existing rows take
+  # The calendar's per-user display choices: `density` and `fold_night`
+  # shape the grid; `focus_mode` hides the dashboard menu. Existing rows take
   # the defaults, so no backfill is needed and NOT NULL holds from the start.
   def change do
     alter table(:calendar_preferences) do
-      add(:redesign_enabled, :boolean, null: false, default: false)
       add(:density, :string, null: false, default: "comfortable")
       add(:fold_night, :boolean, null: false, default: true)
       add(:focus_mode, :boolean, null: false, default: false)

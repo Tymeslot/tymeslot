@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.CalendarSurfaceHelpers do
   @moduledoc """
-  An organiser for the redesigned calendar's LiveView tests: switched on to
-  the new surface (unless told otherwise), clock on 24 hours, zone London,
+  An organiser for the calendar's LiveView tests: clock on 24 hours, zone London,
   with one Google account holding a "Work" and a "Family" calendar.
 
   The clock is frozen at 08:00 UTC on Wednesday 14 October 2026 (09:00 in
@@ -29,8 +28,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   def now, do: @now
 
   @doc """
-  Signs in a new organiser. Options: `redesign_enabled` (default `true`),
-  `timezone` (default `"Europe/London"`), `preferences` (a keyword list
+  Signs in a new organiser. Options: `timezone` (default `"Europe/London"`), `preferences` (a keyword list
   merged into the stored calendar preferences).
   """
   @spec owner(Conn.t(), keyword()) :: %{conn: Conn.t(), user: map(), integration: map()}
@@ -43,7 +41,7 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
 
     preferences =
       Map.merge(
-        %{redesign_enabled: Keyword.get(opts, :redesign_enabled, true), time_format: "24h"},
+        %{time_format: "24h"},
         Map.new(Keyword.get(opts, :preferences, []))
       )
 

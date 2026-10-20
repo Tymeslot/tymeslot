@@ -609,12 +609,6 @@ msgstr ""
 "Sie Delete, um das Ereignis zu löschen, und Ctrl Z (Cmd Z auf einem Mac), um"
 " die Aktion rückgängig zu machen."
 
-#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
-#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
-#, elixir-autogen, elixir-format
-msgid "Back to the old calendar"
-msgstr "Zurück zum alten Kalender"
-
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Before %{time}: %{count}"
@@ -673,13 +667,6 @@ msgstr ""
 msgid "Couldn't save that change. Please try again."
 msgstr ""
 "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/live/dashboard_live.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't switch calendars. Please try again."
-msgstr ""
-"Die Kalenderansicht konnte nicht gewechselt werden. Bitte versuchen Sie es "
-"erneut."
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format

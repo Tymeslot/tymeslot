@@ -606,12 +606,6 @@ msgstr ""
 "fléchées modifie sa durée, Enter valide et Escape annule. Appuyez sur Delete"
 " pour supprimer l’événement et sur Ctrl Z (Cmd Z sur Mac) pour annuler."
 
-#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
-#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
-#, elixir-autogen, elixir-format
-msgid "Back to the old calendar"
-msgstr "Revenir à l’ancien calendrier"
-
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Before %{time}: %{count}"
@@ -668,11 +662,6 @@ msgstr "Impossible de supprimer l’événement. Veuillez réessayer."
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
 msgstr "Impossible d’enregistrer cette modification. Veuillez réessayer."
-
-#: lib/tymeslot_web/live/dashboard_live.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't switch calendars. Please try again."
-msgstr "Impossible de changer de calendrier. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format

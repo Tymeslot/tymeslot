@@ -299,9 +299,6 @@ export const CommandMixin = {
       case "push":
         this.closeCommand();
         return this.pushEventTo(this.el, run.event, run.params);
-      case "push_view":
-        this.closeCommand();
-        return this.pushEvent(run.event, run.params);
       default:
         return this.closeCommand();
     }

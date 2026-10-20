@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceJourneyTest do
   @moduledoc """
-  The organiser's journey through the new calendar in this release: switch
-  it on from the old calendar, read the week, step to the next week with the
-  URL following, hide a calendar and see the filter chip that says so.
+  The organiser's journey through the calendar: read the week, step to the
+  next week with the URL following, hide a calendar and see the filter chip
+  that says so.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -15,17 +15,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceJourneyTest do
 
   defp titles(events), do: Enum.map(events, & &1.title)
 
-  test "switch on, read the week, step forward, hide a calendar and bring it back", %{conn: conn} do
-    %{conn: conn, integration: integration} = owner(conn, redesign_enabled: false)
+  test "read the week, step forward, hide a calendar and bring it back", %{conn: conn} do
+    %{conn: conn, integration: integration} = owner(conn)
     event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
     event(integration, "family", "School run", ~U[2026-10-15 07:30:00Z])
     event(integration, "family", "Swimming", ~U[2026-10-22 16:00:00Z])
 
-    # On the old calendar, open its settings and switch.
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    assert has_element?(lv, "#calendar-grid")
-    lv |> element("button[phx-click='toggle_settings']") |> render_click()
-    lv |> element("#calendar-try-new") |> render_click()
     assert has_element?(lv, "#calendar-surface")
 
     # The canvas asks for its data and gets this week, from both calendars.
@@ -56,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceJourneyTest do
     assert "Swimming" in titles(restored)
     refute has_element?(lv, "#calendar-filter-chip")
 
-    # A reload of the URL lands on the same week, on the new calendar.
+    # A reload of the URL lands on the same week.
     {:ok, reloaded, _html} = live(conn, ~p"/dashboard/calendar?view=week&date=2026-10-21")
     assert has_element?(reloaded, "#calendar-surface")
     assert has_element?(reloaded, "#calendar-view-week[aria-pressed='true']")

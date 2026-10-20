@@ -16,7 +16,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
           show_week_numbers: boolean(),
           show_weekends: boolean(),
           desktop_reminders_enabled: boolean(),
-          redesign_enabled: boolean(),
           density: String.t(),
           fold_night: boolean(),
           focus_mode: boolean(),
@@ -38,10 +37,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :show_week_numbers, :boolean, default: false
     field :show_weekends, :boolean, default: true
     field :desktop_reminders_enabled, :boolean, default: false
-    # The redesigned calendar: which surface `/dashboard/calendar` renders,
-    # how its grid is drawn, and whether focus mode hides the dashboard menu
-    # (`TymeslotWeb.Dashboard.CalendarFocus`).
-    field :redesign_enabled, :boolean, default: false
+    # How the calendar's grid is drawn, and whether focus mode hides the
+    # dashboard menu (`TymeslotWeb.Dashboard.CalendarFocus`).
     field :density, :string, default: "comfortable"
     field :fold_night, :boolean, default: true
     field :focus_mode, :boolean, default: false
@@ -79,7 +76,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     :show_week_numbers,
     :show_weekends,
     :desktop_reminders_enabled,
-    :redesign_enabled,
     :density,
     :fold_night,
     :focus_mode,

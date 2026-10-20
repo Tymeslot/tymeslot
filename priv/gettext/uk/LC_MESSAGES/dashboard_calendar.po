@@ -615,12 +615,6 @@ msgstr ""
 "стрілками змінює тривалість, Enter підтверджує, а Escape скасовує. Натисніть"
 " Delete, щоб видалити подію, і Ctrl Z (Cmd Z на Mac), щоб скасувати дію."
 
-#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
-#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
-#, elixir-autogen, elixir-format
-msgid "Back to the old calendar"
-msgstr "Повернутися до старого календаря"
-
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Before %{time}: %{count}"
@@ -677,11 +671,6 @@ msgstr "Не вдалося видалити подію. Спробуйте ще
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
 msgstr "Не вдалося зберегти зміну. Спробуйте ще раз."
-
-#: lib/tymeslot_web/live/dashboard_live.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't switch calendars. Please try again."
-msgstr "Не вдалося перемкнути календар. Спробуйте ще раз."
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format

@@ -15,9 +15,24 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarMessages
 
-  @new_surface %{assigns: %{live_action: :calendar, calendar_redesign: true}}
+  @new_surface %{assigns: %{live_action: :calendar}}
 
   describe "handle_info/2" do
+    test "the old calendar's messages are left to the LiveView" do
+      for message <- [
+            :tick,
+            :calendar_sync_flash,
+            :reset_calendar_sync,
+            {:create_event_result, {:ok, %{}}},
+            {:delete_event_result, {:ok, %{}}},
+            {:execute_delete_event, %{}}
+          ] do
+        assert CalendarMessages.handle_info(message, @new_surface) == :unhandled
+      end
+
+      refute_received {:phoenix, :send_update, _update}
+    end
+
     test "a create's result goes to the new surface with its draft" do
       result = {:error, %{reason: :timeout, retry: :not_queued}}
 

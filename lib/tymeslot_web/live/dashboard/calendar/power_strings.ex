@@ -47,7 +47,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerStrings do
       command_reminders_off:
         dgettext("dashboard_calendar_power", "Turn off desktop notifications"),
       command_import: dgettext("dashboard_calendar_power", "Import an .ics file"),
-      command_old_calendar: dgettext("dashboard_calendar", "Back to the old calendar"),
       command_set: dgettext("dashboard_calendar_power", "Switch to %{name}", name: "%{name}"),
       command_leave_set: dgettext("dashboard_calendar_power", "Leave the calendar set"),
       command_goto: dgettext("dashboard_calendar_power", "Go to %{date}", date: "%{date}"),

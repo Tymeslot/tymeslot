@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingsManagementComponent
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
-  alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Dashboard.DashboardOverviewComponent
   alias TymeslotWeb.Dashboard.IntegrationsHubComponent
@@ -42,46 +41,28 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   Resolves the LiveComponent module for the given action. Extension actions
   fall through to the registered `:dashboard_action_components` map, and an
   unknown action defaults to `DashboardOverviewComponent`.
-
-  `opts` carries per-user choices that change which component a section
-  renders: `calendar_redesign: true` renders the redesigned calendar.
   """
-  @spec component_for_action(atom(), map() | nil, keyword()) :: module()
-  def component_for_action(action, components, opts \\ [])
-  def component_for_action(:overview, _components, _opts), do: DashboardOverviewComponent
-  def component_for_action(:settings, _components, _opts), do: ProfileSettingsComponent
-  def component_for_action(:availability, _components, _opts), do: ScheduleSettingsComponent
-  def component_for_action(:meeting_settings, _components, _opts), do: ServiceSettingsComponent
-  def component_for_action(:locations, _components, _opts), do: LocationsComponent
+  @spec component_for_action(atom(), map() | nil) :: module()
+  def component_for_action(:overview, _components), do: DashboardOverviewComponent
+  def component_for_action(:settings, _components), do: ProfileSettingsComponent
+  def component_for_action(:availability, _components), do: ScheduleSettingsComponent
+  def component_for_action(:meeting_settings, _components), do: ServiceSettingsComponent
+  def component_for_action(:locations, _components), do: LocationsComponent
+  def component_for_action(:calendar, _components), do: CalendarSurface
+  def component_for_action(:calendar_integration, _components), do: CalendarSettingsComponent
+  def component_for_action(:video_integration, _components), do: VideoSettingsComponent
+  def component_for_action(:integrations, _components), do: IntegrationsHubComponent
+  def component_for_action(:automation, _components), do: AutomationSettingsComponent
+  def component_for_action(:theme, _components), do: ThemeSettingsComponent
+  def component_for_action(:theme_customization, _components), do: ThemeSettingsComponent
+  def component_for_action(:meetings, _components), do: BookingsManagementComponent
+  def component_for_action(:polls, _components), do: PollsComponent
+  def component_for_action(:embed, _components), do: EmbedSettingsComponent
+  def component_for_action(:payments, _components), do: PaymentsSettingsComponent
 
-  def component_for_action(:calendar, _components, opts),
-    do: calendar_component(Keyword.get(opts, :calendar_redesign, false))
-
-  def component_for_action(:calendar_integration, _components, _opts),
-    do: CalendarSettingsComponent
-
-  def component_for_action(:video_integration, _components, _opts), do: VideoSettingsComponent
-  def component_for_action(:integrations, _components, _opts), do: IntegrationsHubComponent
-  def component_for_action(:automation, _components, _opts), do: AutomationSettingsComponent
-  def component_for_action(:theme, _components, _opts), do: ThemeSettingsComponent
-  def component_for_action(:theme_customization, _components, _opts), do: ThemeSettingsComponent
-  def component_for_action(:meetings, _components, _opts), do: BookingsManagementComponent
-  def component_for_action(:polls, _components, _opts), do: PollsComponent
-  def component_for_action(:embed, _components, _opts), do: EmbedSettingsComponent
-  def component_for_action(:payments, _components, _opts), do: PaymentsSettingsComponent
-
-  def component_for_action(action, components, _opts) do
+  def component_for_action(action, components) do
     Map.get(components || %{}, action, DashboardOverviewComponent)
   end
-
-  @doc """
-  The component the calendar section renders: the redesigned surface when the
-  organiser's switch is on, the old grid otherwise. Parent-to-component
-  updates for the calendar go to this module.
-  """
-  @spec calendar_component(boolean()) :: module()
-  def calendar_component(true), do: CalendarSurface
-  def calendar_component(_redesign?), do: CalendarGridComponent
 
   @doc """
   Returns a map of assign overrides for the given action. Only actions that

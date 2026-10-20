@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWritesTest do
 
   describe "routing a write's answer" do
     test "reaches the new surface on the calendar page" do
-      socket = %{assigns: %{live_action: :calendar, calendar_redesign: true}}
+      socket = %{assigns: %{live_action: :calendar}}
 
       CalendarEventHandlers.handle_event_update_result(
         {:ok, write: {"uid", 1}, updated_event: %{id: "e"}},
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWritesTest do
     end
 
     test "is not sent off the calendar page" do
-      socket = %{assigns: %{live_action: :overview, calendar_redesign: true}}
+      socket = %{assigns: %{live_action: :overview}}
 
       CalendarEventHandlers.handle_event_update_result(
         {:ok, write: {"uid", 1}, updated_event: %{id: "e"}},

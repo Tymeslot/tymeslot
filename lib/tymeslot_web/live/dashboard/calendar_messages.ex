@@ -7,10 +7,8 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   Each message goes to the module that acts on it, mostly
   `TymeslotWeb.Dashboard.CalendarEventHandlers`,
   `TymeslotWeb.Dashboard.CalendarRouting` and, for an `.ics` import,
-  `TymeslotWeb.Dashboard.IcsImportRunner`. Anything else is offered to the
-  old grid's own handlers (`TymeslotWeb.Dashboard.CalendarGrid.ParentMessages`).
-  Meeting mode's round trip and guest RSVPs are the calendar's, whichever
-  surface shows it.
+  `TymeslotWeb.Dashboard.IcsImportRunner`. Meeting mode's round trip and
+  guest RSVPs are the calendar's too.
   `handle_info/2` answers what a LiveView's `handle_info/2` would, or
   `:unhandled` for a message that is not the calendar's, so `DashboardLive`
   keeps one clause for the whole calendar.
@@ -26,7 +24,6 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   alias TymeslotWeb.Dashboard.AgendaRefresh
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
-  alias TymeslotWeb.Dashboard.CalendarGrid.ParentMessages
   alias TymeslotWeb.Dashboard.CalendarRouting
   alias TymeslotWeb.Dashboard.IcsImportRunner
 
@@ -79,8 +76,8 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
 
   # A create the new surface started (`Tymeslot.CalendarGrid.WriteTask`)
   # finished: its draft is settled on the surface if it is still on screen,
-  # and otherwise (the organiser left the calendar or switched to the old
-  # one) the outcome is flashed here, so it is never lost.
+  # and otherwise (the organiser left the calendar) the outcome is flashed
+  # here, so it is never lost.
   def handle_info({:calendar_create_result, {draft_id, title}, result}, socket) do
     socket =
       case CalendarRouting.create_settled(socket, draft_id, title, result) do
@@ -125,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   def handle_info({:ics_import_result, result}, socket),
     do: IcsImportRunner.result(result, socket)
 
-  def handle_info(message, socket), do: ParentMessages.handle_info(message, socket)
+  def handle_info(_message, _socket), do: :unhandled
 
   defp rebuild_agenda({:noreply, socket}), do: {:noreply, AgendaRefresh.refresh(socket)}
 end

@@ -49,7 +49,6 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
 
     {:ok, _prefs} =
       CalendarPreferencesQueries.upsert(user.id, %{
-        redesign_enabled: true,
         time_format: "24h",
         default_view: "week"
       })

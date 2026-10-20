@@ -187,7 +187,11 @@ defmodule TymeslotWeb.ZeroLengthFeedEventJourneyTest do
       |> ProviderCalendarEventQueries.list_for_range(moment, DateTime.add(moment, 1, :hour))
       |> Enum.filter(&(&1.uid == "moment@example.com"))
 
-    assert has_element?(lv, "[id^='event-#{cached.id}-']")
+    # The calendar draws its events in the browser: the first window comes
+    # back as the reply to the canvas's `calendar:ready`.
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+    assert_reply(lv, %{events: events})
+    assert Enum.any?(events, &(&1.id == "event-#{cached.id}"))
   end
 
   test "the slot running across the entry is offered and can be booked", %{

@@ -605,12 +605,6 @@ msgstr ""
 "conferma ed Escape annulla. Premi Delete per eliminare l'evento e Ctrl Z "
 "(Cmd Z su Mac) per annullare."
 
-#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
-#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
-#, elixir-autogen, elixir-format
-msgid "Back to the old calendar"
-msgstr "Torna al vecchio calendario"
-
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Before %{time}: %{count}"
@@ -667,11 +661,6 @@ msgstr "Impossibile eliminare l'evento. Riprova."
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
 msgstr "Impossibile salvare la modifica. Riprova."
-
-#: lib/tymeslot_web/live/dashboard_live.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't switch calendars. Please try again."
-msgstr "Impossibile cambiare calendario. Riprova."
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format

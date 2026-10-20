@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
   @moduledoc """
-  The redesigned calendar's shell: which surface the switch renders, the
+  The calendar's shell: the surface it renders, the
   one-row toolbar, the URL state, and the event payload the canvas hook
   draws from.
   """
@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
 
   setup %{conn: conn}, do: owner(conn)
 
-  test "an organiser with the switch on gets the new surface, not the old grid", %{conn: conn} do
+  test "the calendar page renders the surface", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
     assert has_element?(lv, "#calendar-surface")

@@ -612,12 +612,6 @@ msgstr ""
 "šipkami mění její délku, Enter potvrdí a Escape zruší. Klávesou Delete "
 "událost smažete a klávesami Ctrl Z (na Macu Cmd Z) akci vrátíte zpět."
 
-#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
-#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
-#, elixir-autogen, elixir-format
-msgid "Back to the old calendar"
-msgstr "Zpět ke starému kalendáři"
-
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Before %{time}: %{count}"
@@ -674,11 +668,6 @@ msgstr "Událost se nepodařilo smazat. Zkuste to prosím znovu."
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
 msgstr "Změnu se nepodařilo uložit. Zkuste to prosím znovu."
-
-#: lib/tymeslot_web/live/dashboard_live.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't switch calendars. Please try again."
-msgstr "Kalendář se nepodařilo přepnout. Zkuste to prosím znovu."
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #, elixir-autogen, elixir-format

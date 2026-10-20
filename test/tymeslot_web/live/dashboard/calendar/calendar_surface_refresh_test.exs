@@ -79,16 +79,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
     assert has_element?(lv, "#calendar-rail [data-calendar-id='travel']")
   end
 
-  test "the timer fallback reloads the events too", %{conn: conn, integration: integration} do
-    lv = mounted(conn)
-    event(integration, "work", "Found by the fallback", ~U[2026-10-15 09:00:00Z])
-
-    send(lv.pid, :reset_calendar_sync)
-
-    assert_push_event(lv, "calendar:events", %{reset: true, events: events}, @window)
-    assert Enum.any?(events, &(&1.title == "Found by the fallback"))
-  end
-
   test "a burst of refreshes is answered with one push", %{
     conn: conn,
     user: user,
@@ -99,7 +89,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
 
     send(lv.pid, {:calendar_events_updated, user.id, []})
     send(lv.pid, {:calendar_sync_complete, user.id, integration.id})
-    send(lv.pid, :reset_calendar_sync)
 
     assert_push_event(lv, "calendar:events", %{reset: true}, @window)
     refute_push_event(lv, "calendar:events", %{}, @window)

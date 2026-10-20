@@ -1,13 +1,13 @@
 defmodule TymeslotWeb.Dashboard.CalendarFocus do
   @moduledoc """
-  Focus mode for the new calendar: the dashboard menu goes, so the calendar
+  Focus mode for the calendar: the dashboard menu goes, so the calendar
   takes the screen. The choice is the organiser's `focus_mode` preference,
-  which `DashboardLive` reads with the surface switch and keeps in
-  `calendar_focus`; the layout lives in `DashboardLive`, so the calendar's
+  which `DashboardLive` reads on the calendar's first open and keeps
+  in `calendar_focus`; the layout lives in `DashboardLive`, so the calendar's
   toggles (toolbar, display options, F) are handled there, not in the
   calendar component.
 
-  Focus applies only on the new calendar and gives way while the product
+  Focus applies only on the calendar and gives way while the product
   tour runs, because the tour points at the menu. Below 1024px the menu is
   already a drawer, so the stylesheet hides it from `lg` only.
   """
@@ -40,12 +40,12 @@ defmodule TymeslotWeb.Dashboard.CalendarFocus do
   end
 
   @doc """
-  Whether the page is in focus mode now: on the new calendar, with focus
-  chosen and no tour running.
+  Whether the page is in focus mode now: on the calendar, with focus chosen
+  and no tour running.
   """
   @spec active?(map()) :: boolean()
   def active?(assigns) do
-    assigns[:live_action] == :calendar and assigns[:calendar_redesign] == true and
-      assigns[:calendar_focus] == true and assigns[:tour_active] != true
+    assigns[:live_action] == :calendar and assigns[:calendar_focus] == true and
+      assigns[:tour_active] != true
   end
 end

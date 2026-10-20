@@ -86,8 +86,9 @@ describe("commandRows", () => {
     expect(rows("img", { settings })[0].label).toBe("Switch to <img src=x onerror=alert(1)>");
   });
 
-  test("the old calendar is one command away", () => {
-    expect(rows("old calendar")[0]).toMatchObject({ run: { type: "push_view", event: "calendar:switch_surface", params: { enabled: false } } });
+  test("no command leads to the old calendar", () => {
+    expect(rows("old calendar").filter((row) => row.run?.event === "calendar:switch_surface")).toEqual([]);
+    expect(rows("back to the old")).toEqual([]);
   });
 });
 

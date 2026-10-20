@@ -578,12 +578,6 @@ msgstr ""
 msgid "Arrow keys move between events. Press C to add an event at the next free time. Press Enter to open the focused event, E to edit it, and M to move it: arrow keys then shift it, Shift with the arrow keys changes its length, Enter confirms and Escape cancels. Press Delete to delete the event and Ctrl Z (Cmd Z on a Mac) to undo."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
-#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
-#, elixir-autogen, elixir-format
-msgid "Back to the old calendar"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Before %{time}: %{count}"
@@ -639,11 +633,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/visibility.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that change. Please try again."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard_live.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't switch calendars. Please try again."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex

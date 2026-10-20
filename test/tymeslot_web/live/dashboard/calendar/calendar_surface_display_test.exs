@@ -112,9 +112,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
     assert toolbar == sheet
 
     assert Enum.all?(
-             ~w(density-comfortable density-compact fold-night back-to-old),
+             ~w(density-comfortable density-compact fold-night import-ics shortcuts-button),
              &(&1 in toolbar)
            )
+  end
+
+  test "neither display options nor the Calendars sheet offer the old calendar", %{conn: conn} do
+    %{conn: conn} = owner(conn)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    open_display_options(lv)
+    lv |> element("#calendar-phone-calendars") |> render_click()
+
+    refute has_element?(lv, "#calendar-back-to-old")
+    refute has_element?(lv, "#calendar-sheet-back-to-old")
+    refute render(lv) =~ "Back to the old calendar"
   end
 
   test "the toolbar's display options scroll within the window", %{conn: conn} do
@@ -325,8 +337,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
         assert Enum.reject(row_classes, &(&1 =~ "max-sm:min-h-11")) == []
         assert Enum.reject(row_classes, &(&1 =~ "pointer-coarse:min-h-11")) == []
 
-        back = Floki.find(rows, "##{prefix}-back-to-old")
-        assert class_of(back) =~ "max-sm:min-h-11"
+        import_button = Floki.find(rows, "##{prefix}-import-ics")
+        assert class_of(import_button) =~ "max-sm:min-h-11"
       end
     end
   end

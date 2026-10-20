@@ -28,10 +28,11 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
   end
 
   describe "calendar as the landing page" do
-    test "/dashboard renders the calendar grid with the Calendar item active", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+    test "/dashboard renders the new calendar with the Calendar item active", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/dashboard")
 
-      assert html =~ "calendar-grid"
+      assert has_element?(lv, "#calendar-surface")
+      refute html =~ "calendar-grid"
 
       assert [{"a", attrs, _children}] =
                html
@@ -40,6 +41,12 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
 
       assert {"class", class} = List.keyfind(attrs, "class", 0)
       assert class =~ "dashboard-nav-link--active"
+    end
+
+    test "the calendar has the compact top bar for every organiser", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#dashboard-top-nav[data-compact='true'] nav.brand-nav-compact")
     end
 
     test "the calendar keeps the standard sidebar rather than a rail", %{conn: conn} do
@@ -121,39 +128,6 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 
       refute html =~ "data-testid=\"up-next-strip\""
-    end
-
-    test "drops an event from the strip as soon as it is deleted", %{conn: conn, user: user} do
-      # The strip runs its own query rather than reading the grid's events, so a
-      # deletion that empties the grid used to leave the strip advertising the
-      # event until the next 60s agenda tick.
-      integration = insert(:calendar_integration, user: user, is_active: true)
-      start_at = DateTime.add(DateTime.utc_now(), 3600, :second)
-
-      event =
-        insert(:provider_calendar_event,
-          calendar_integration: integration,
-          summary: "Dentist",
-          start_at: start_at,
-          end_at: DateTime.add(start_at, 1800, :second),
-          all_day: false
-        )
-
-      {:ok, lv, html} = live(conn, ~p"/dashboard")
-      assert strip_html(html) =~ "Dentist"
-
-      # The delete itself removes the cached row before reporting back.
-      {:ok, :deleted} = ProviderCalendarEventQueries.delete_by_uid(integration.id, event.uid)
-
-      send(
-        lv.pid,
-        {:delete_event_result,
-         {:ok, %{uid: event.uid, integration_id: integration.id, linked_meeting: :none}}}
-      )
-
-      :sys.get_state(lv.pid)
-
-      refute strip_html(render(lv)) =~ "Dentist"
     end
 
     test "drops an event from the strip once a scheduled delete has run", %{

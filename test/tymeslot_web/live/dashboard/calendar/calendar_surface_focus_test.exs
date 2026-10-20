@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFocusTest do
   Focus mode on the new calendar: the toolbar control, the display options
   switch and F (`calendar:toggle_focus`) hide the dashboard menu and the
   strips above the grid; the choice is saved and on the first paint; and it
-  applies only to the new calendar, only while no product tour runs.
+  applies only to the calendar, only while no product tour runs.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -132,20 +132,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFocusTest do
     render_hook(lv, "tour:skip", %{})
 
     assert has_element?(lv, "#calendar-focus-toggle[aria-pressed='true']")
-  end
-
-  test "the old calendar ignores a stored focus mode until the organiser switches", %{
-    conn: conn
-  } do
-    %{conn: conn} = organiser(conn, redesign_enabled: false, preferences: [focus_mode: true])
-    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-    refute has_element?(lv, "#dashboard-root[data-calendar-focus]")
-    refute has_element?(lv, "#calendar-focus-toggle")
-
-    render_hook(lv, "calendar:switch_surface", %{"enabled" => true})
-
-    assert has_element?(lv, "#dashboard-root[data-calendar-focus='true']")
   end
 
   test "other dashboard pages keep the menu; the calendar takes focus mode back", %{

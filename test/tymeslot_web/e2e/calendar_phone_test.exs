@@ -31,12 +31,12 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     :ok
   end
 
-  # An organiser on the new calendar with one writable Google calendar.
+  # An organiser with one writable Google calendar.
   defp organiser(session) do
     {session, user} = log_in_via_browser(session)
 
     {:ok, _prefs} =
-      CalendarPreferencesQueries.upsert(user.id, %{redesign_enabled: true, time_format: "24h"})
+      CalendarPreferencesQueries.upsert(user.id, %{time_format: "24h"})
 
     integration =
       insert(:calendar_integration,

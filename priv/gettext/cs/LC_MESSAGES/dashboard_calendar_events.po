@@ -112,7 +112,6 @@ msgid "Attendees will be notified of pending changes."
 msgstr "Účastníci budou o čekajících změnách informováni."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/parent_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
 msgstr "Kalendáře byly obnoveny"

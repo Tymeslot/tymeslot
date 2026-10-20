@@ -36,7 +36,7 @@ defmodule TymeslotWeb.DashboardGuestRsvpTest do
 
     meeting_id = meeting.id
     assert_receive {:trace, _pid, :receive, {:guest_rsvp_updated, ^meeting_id}}
-    # The refresh it triggers leaves the grid standing.
-    assert has_element?(lv, "#calendar-grid")
+    # The refresh it triggers leaves the calendar standing.
+    assert has_element?(lv, "#calendar-surface")
   end
 end

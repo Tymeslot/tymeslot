@@ -124,16 +124,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         >
           {dgettext("dashboard_calendar", "Keyboard shortcuts")}
         </.action_button>
-        <%!-- No phx-target: DashboardLive swaps the component. --%>
-        <.action_button
-          id={"#{@id_prefix}-back-to-old"}
-          variant={:ghost}
-          size={:sm}
-          class="max-sm:min-h-11 pointer-coarse:min-h-11"
-          phx-click={JS.push("calendar:switch_surface", value: %{enabled: false})}
-        >
-          {dgettext("dashboard_calendar", "Back to the old calendar")}
-        </.action_button>
       </div>
     </div>
     """
