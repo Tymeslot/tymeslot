@@ -27,10 +27,6 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
 
   @max_name 255
 
-  # `Guests.max_guests/0` is a constant: the guests a meeting invites. The
-  # guest it is with is one more.
-  @max_people Guests.max_guests() + 1
-
   @reminders [
     {"30_minutes", %{value: 30, unit: "minutes"}},
     {"1_hours", %{value: 1, unit: "hours"}},
@@ -45,7 +41,9 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
 
   @doc "How many people a meeting can be with: its guest and the guests it invites."
   @spec max_guests() :: pos_integer()
-  def max_guests, do: @max_people
+  # The guests a meeting invites, and the guest it is with. Read at run time
+  # so this module does not compile against `Guests`.
+  def max_guests, do: Guests.max_guests() + 1
 
   @doc """
   The meeting `create` describes, with the string-keyed `fields` the panel
@@ -57,13 +55,10 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
   def build(%CreateParams{all_day: true}, _fields, _user_id), do: {:error, :all_day, :timed_only}
   def build(%CreateParams{guests: []}, _fields, _user_id), do: {:error, :guests, :none}
 
-  def build(%CreateParams{guests: guests}, _fields, _user_id)
-      when length(guests) > @max_people,
-      do: {:error, :guests, :too_many}
-
-  def build(%CreateParams{guests: [guest | others]} = create, fields, user_id)
+  def build(%CreateParams{guests: [guest | others] = guests} = create, fields, user_id)
       when is_map(fields) do
-    with {:ok, name} <- guest_name(fields["guest_name"]),
+    with :ok <- people(guests),
+         {:ok, name} <- guest_name(fields["guest_name"]),
          {:ok, locale} <- locale(fields["locale"]),
          {:ok, note} <- note(create.description),
          {:ok, reminders} <- reminders(fields["reminders"]) do
@@ -94,6 +89,10 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, :rate_limited, message}
     end
+  end
+
+  defp people(guests) do
+    if length(guests) > max_guests(), do: {:error, :guests, :too_many}, else: :ok
   end
 
   defp guest_name(value) when is_binary(value) do

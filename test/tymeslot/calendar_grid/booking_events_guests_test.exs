@@ -84,8 +84,10 @@ defmodule Tymeslot.CalendarGrid.BookingEventsGuestsTest do
     staying = insert(:participant, meeting: meeting)
     leaving = insert(:participant, meeting: meeting, cancelled_at: DateTime.utc_now(:second))
 
-    {:ok, [_]} = Guests.create_for_participant(meeting.id, staying.id, ["stays@example.com"])
-    {:ok, [_]} = Guests.create_for_participant(meeting.id, leaving.id, ["leaves@example.com"])
+    {:ok, [_stays]} = Guests.create_for_participant(meeting.id, staying.id, ["stays@example.com"])
+
+    {:ok, [_leaves]} =
+      Guests.create_for_participant(meeting.id, leaving.id, ["leaves@example.com"])
 
     [booking] =
       CalendarGrid.list_booking_events_for_range(
