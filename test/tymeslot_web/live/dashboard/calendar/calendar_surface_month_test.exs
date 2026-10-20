@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMonthTest do
 
       assert has_element?(
                lv,
-               "#calendar-toolbar [role='group'][class~='ml-auto'] #calendar-view-agenda"
+               "#calendar-toolbar #calendar-toolbar-end[class~='ml-auto'] [role='group'] #calendar-view-agenda"
              )
     end
 
