@@ -227,6 +227,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   can still be reported once the reconciliation has cancelled it. Nothing is
   reconciled when the delete fails.
 
+  An event the calendar no longer has is not a failed delete: it is already
+  off the calendar, removed by another client or a sync race, and its booking
+  is reconciled exactly as a successful delete's would be, the result marked
+  `already_gone: true`. Only the delete's own `:not_found` counts. The
+  request addresses the event, so its 404 is the event's (`ApiResponse`
+  names a bare 404 by its path); a calendar that is gone from the integration
+  never reaches the provider, and fails as `:no_calendar_integration`.
+
   Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
   `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
   A delete of one occurrence (the `occurrence:` option of `delete_event/3`)
@@ -271,6 +279,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   defp deleted(:ok), do: {:ok, %{}}
   defp deleted({:ok, %{document: document}}), do: {:ok, %{document: document}}
+  defp deleted({:error, :not_found}), do: {:ok, %{already_gone: true}}
   defp deleted(error), do: error
 
   # The event is already off the calendar by the time this runs, so a raise
