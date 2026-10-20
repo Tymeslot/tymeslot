@@ -44,6 +44,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTimezoneTest do
     assert_patch(lv, ~p"/dashboard/settings")
   end
 
+  test "the rail keeps the zone in view as it scrolls, and the span leaves the tooltip to the link",
+       %{conn: conn} do
+    %{conn: conn} = owner(conn, timezone: "Europe/Kyiv")
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    assert has_element?(
+             lv,
+             "#calendar-rail-timezone[class~='sticky'][class~='bottom-0'][class~='mt-auto']"
+           )
+
+    refute has_element?(lv, "#calendar-rail-timezone [data-testid='timezone-display'][title]")
+  end
+
   test "a profile with no zone shows the host default the calendar is read in", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn)
     user.id |> Profiles.get_profile() |> Changeset.change(timezone: nil) |> Repo.update!()
@@ -71,5 +84,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTimezoneTest do
 
     assert zone(lv, "calendar-sheet-timezone") == "Kyiv, Ukraine"
     assert has_element?(lv, "#calendar-sheet-display #calendar-sheet-timezone[class~='min-h-11']")
+
+    lv |> element("#calendar-sheet-timezone") |> render_click()
+    assert_patch(lv, ~p"/dashboard/settings")
   end
 end

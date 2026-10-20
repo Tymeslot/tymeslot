@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   (see `RailSets`): saved groups of calendars, each applied by its digit.
   At its foot, the organiser's time zone (`ZoneLink`), which every time is
   shown in.
-
   Below 768px the rail is hidden; its calendars and layers open in the
   Calendars sheet (`CalendarsSheet`), from the toolbar or the phone header,
   and B still works.
@@ -79,7 +78,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         target={@target}
       />
       <RailLayers.layers bookable={@bookable} target={@target} />
-      <ZoneLink.zone_link id="calendar-rail-timezone" timezone={@timezone} class="mt-auto" />
+      <ZoneLink.zone_link
+        id="calendar-rail-timezone"
+        timezone={@timezone}
+        class="sticky bottom-0 -mx-3 -mb-3 mt-auto border-t border-tymeslot-200 bg-white px-4"
+      />
     </aside>
     """
   end

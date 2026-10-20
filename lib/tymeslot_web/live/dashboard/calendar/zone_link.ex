@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.ZoneLink do
   link to the profile settings where the zone is changed. Its accessible
   name and tooltip say what the zone is for ("Times shown in Kyiv,
   Ukraine"). The rail shows it at its foot and the Calendars sheet beside
-  the display options, so the toolbar spends no width on it.
+  the display options, so the toolbar spends no width on it. With the rail closed on a desktop the
+  zone is not shown (a deliberate decision of the calendar plan).
   """
 
   use TymeslotWeb, :html
@@ -41,11 +42,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.ZoneLink do
       title={@label}
       aria-label={@label}
       class={[
-        "flex min-h-11 items-center rounded-token-md px-1 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 md:min-h-8",
+        "flex min-h-11 items-center rounded-token-md hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 md:min-h-8",
         @class
       ]}
     >
-      <AvailabilityHelpers.timezone_display timezone_display={@display} country_code={@country_code} />
+      <AvailabilityHelpers.timezone_display
+        timezone_display={@display}
+        country_code={@country_code}
+        title={false}
+      />
     </.link>
     """
   end

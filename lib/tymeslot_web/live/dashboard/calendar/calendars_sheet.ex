@@ -12,8 +12,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   all, since the phone header has no room for the toolbar's filter chip.
   The display options (`DisplayOptions`, the toolbar's own) sit at its
   foot, since a phone has no toolbar, with the time zone every time is
-  shown in (`ZoneLink`), which the rail shows on a desktop. Every control sends the event the
-  rail's or the toolbar's does, so the grid behind changes at once and the
+  shown in (`ZoneLink`), which the rail shows on a desktop. Every control
+  sends the event the rail's or the toolbar's does, so the grid behind changes at once and the
   sheet stays open.
   """
 
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
             time_format={@time_format}
             target={@target}
           />
-          <ZoneLink.zone_link id="calendar-sheet-timezone" timezone={@timezone} />
+          <ZoneLink.zone_link id="calendar-sheet-timezone" timezone={@timezone} class="px-1" />
         </section>
       </div>
     </.modal>
