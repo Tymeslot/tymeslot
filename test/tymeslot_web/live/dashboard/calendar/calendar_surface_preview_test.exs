@@ -394,7 +394,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePreviewTest do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     open(lv, "event-#{crowd.id}")
 
-    assert has_element?(lv, "#calendar-preview", "Guest 5 and 2 more")
+    assert has_element?(lv, "#calendar-preview-guests li", "Guest 5")
+    assert has_element?(lv, "#calendar-preview-guests", "2 more guests")
     refute has_element?(lv, "#calendar-preview", "Guest 6")
   end
 

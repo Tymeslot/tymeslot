@@ -458,3 +458,16 @@ msgstr "Надіслати як зустріч Tymeslot"
 #, elixir-autogen, elixir-format
 msgid "The note to the guest is too long. Keep it under 2,000 characters."
 msgstr "Примітка для гостя занадто довга. Використайте менше 2000 символів."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more guest"
+msgid_plural "%{count} more guests"
+msgstr[0] "ще %{count} гість"
+msgstr[1] "ще %{count} гості"
+msgstr[2] "ще %{count} гостей"
+
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
+#, elixir-autogen, elixir-format
+msgid "Maybe"
+msgstr "Можливо"

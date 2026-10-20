@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @moduledoc """
   The preview that opens when an event on the grid is clicked:
-  which calendar it sits in, when it is (with how far away), where, who,
+  which calendar it sits in, when it is (with how far away), where, who and how each has answered (`PreviewGuests`),
   whether guests can book over it, and whether it is still waiting to sync.
 
   Rendered by LiveView rather than by the hook from payload data: it needs
@@ -26,17 +26,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventBlocking
   alias Tymeslot.CalendarGrid.EventPayload
+  alias Tymeslot.CalendarGrid.GuestReplies
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.BookingPreview
+  alias TymeslotWeb.Dashboard.Calendar.PreviewGuests
   alias TymeslotWeb.Dashboard.Calendar.TreatAs
   alias TymeslotWeb.Helpers.LocaleFormat
-
-  @guest_limit 5
 
   @doc "What `build/2` needs from the surface's assigns."
   @spec context(map()) :: map()
@@ -67,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       relative: relative(event, context.now),
       repeats: EventPayload.recurring?(event),
       location: present(Map.get(event, :location)),
-      guests: guests(event),
+      guests: GuestReplies.of_event(event),
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
       sync_note: sync_note(event, integration),
@@ -136,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
         <.row :if={@preview.location} icon="hero-map-pin">
           <span class="break-words">{@preview.location}</span>
         </.row>
-        <.row :if={@preview.guests != []} icon="hero-user-group">{guest_text(@preview.guests)}</.row>
+        <PreviewGuests.guests :if={@preview.guests != []} guests={@preview.guests} />
         <.row :if={@preview.availability} icon="hero-shield-check">
           <div :if={@preview.free_busy == :editable} class="flex flex-wrap items-center gap-2">
             <div
@@ -326,37 +325,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           "in %{count} day",
           "in %{count} days",
           round(minutes / 1440)
-        )
-  end
-
-  defp guests(%{kind: :booking, participants: [_first | _rest] = participants}),
-    do: Enum.map(participants, &(present(&1.name) || &1.email))
-
-  defp guests(%{kind: :booking} = booking),
-    do: Enum.reject([present(booking.attendee_name) || booking.attendee_email], &is_nil/1)
-
-  defp guests(event) do
-    event
-    |> Map.get(:attendees, [])
-    |> List.wrap()
-    |> Enum.map(&Attendee.normalise/1)
-    |> Enum.map(&(present(&1.display_name) || &1.email))
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp guest_text(guests) do
-    {shown, rest} = Enum.split(guests, @guest_limit)
-    names = Enum.join(shown, ", ")
-
-    if rest == [],
-      do: names,
-      else:
-        dngettext(
-          "dashboard_calendar",
-          "%{names} and %{count} more",
-          "%{names} and %{count} more",
-          length(rest),
-          names: names
         )
   end
 

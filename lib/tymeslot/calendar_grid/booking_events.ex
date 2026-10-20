@@ -45,6 +45,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     |> meetings(start_dt, end_dt, Keyword.get(opts, :include_expired, false))
     |> drop_mirrored(cached_events, Keyword.get(opts, :keep_mirrored, false))
     |> Meetings.with_live_participants()
+    |> Meetings.with_live_guests()
     |> Enum.map(&to_event(&1, now))
   end
 
@@ -84,6 +85,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       meeting_type: presence(meeting.meeting_type),
       approval_deadline_at: meeting.approval_deadline_at,
       participants: participants(meeting),
+      guests:
+        Enum.map(meeting.guests, &%{name: presence(&1.name), email: &1.email, status: &1.status}),
       capacity: meeting.capacity,
       seats_taken: seats_taken(meeting),
       status: meeting.status,

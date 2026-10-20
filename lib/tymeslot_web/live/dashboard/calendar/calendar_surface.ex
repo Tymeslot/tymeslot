@@ -84,8 +84,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   @power_async PowerEvents.async_keys()
 
   # The parent's refresh messages (see `CalendarEventHandlers`): a sync
-  # finished, events changed elsewhere, or a refresh fell back on its timer.
-  @refresh_actions [:events_updated, :integration_synced, :refresh_events]
+  # finished, events changed elsewhere, a refresh fell back on its timer, or
+  # a guest answered an invitation (a booking's guests load with the events).
+  @refresh_actions [
+    :events_updated,
+    :integration_synced,
+    :refresh_events,
+    :refresh_guest_summaries
+  ]
 
   # What each prompt can send; the module that acts on it parses it again.
   @timing_scopes ~w(this_only following all)
@@ -271,7 +277,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   defp unchanged_video(socket, ref, :unchanged), do: PanelVideo.unchanged(socket, ref)
   defp unchanged_video(socket, _ref, _outcome), do: socket
 
-  defp scope(:events_updated), do: :events
+  defp scope(action) when action in [:events_updated, :refresh_guest_summaries], do: :events
   defp scope(_action), do: :full
 
   defp widest(:full, _scope), do: :full

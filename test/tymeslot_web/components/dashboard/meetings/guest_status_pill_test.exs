@@ -43,4 +43,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPillTest do
       assert class =~ "bg-amber-100"
     end
   end
+
+  # Only a calendar reports this answer; Tymeslot's RSVP page offers yes or no.
+  test "a tentative guest may come, in blue" do
+    {label, class} = render_status("tentative")
+
+    assert label == "Maybe"
+    assert class =~ "bg-blue-100"
+  end
 end

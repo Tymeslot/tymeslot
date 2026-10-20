@@ -11,11 +11,13 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
 
+#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr "%{accepted} invités présents sur %{total}"
 
+#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
@@ -551,13 +553,6 @@ msgstr "%{first} – %{last}"
 #, elixir-autogen, elixir-format
 msgid "%{from} to %{to}"
 msgstr "Du %{from} au %{to}"
-
-#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
-#, elixir-autogen, elixir-format
-msgid "%{names} and %{count} more"
-msgid_plural "%{names} and %{count} more"
-msgstr[0] "%{names} et %{count} autre personne"
-msgstr[1] "%{names} et %{count} autres personnes"
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
 #, elixir-autogen, elixir-format

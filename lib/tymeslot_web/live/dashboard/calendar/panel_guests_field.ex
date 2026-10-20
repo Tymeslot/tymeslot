@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   @moduledoc """
-  The side panel's Guests row: a chip per guest with a remove button, and
+  The side panel's Guests row: a row per guest with their answer (`GuestReplies`, `GuestStatusPill`) and a remove button, and
   an email field with Invite. In the edit mode (`guests_row/1`) both act at
   once, emailing the guest concerned (`PanelGuests`); in the new-event mode
   (`draft_guests/1`) they only change the draft, and nobody is emailed until
@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.GuestReplies
+  alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
 
   attr :guests, :list, required: true, doc: "normalised attendees"
@@ -22,17 +24,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
 
   @spec guests_row(map()) :: Phoenix.LiveView.Rendered.t()
   def guests_row(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :rows,
+        Enum.map(assigns.guests, &{&1, GuestReplies.reply(&1.response_status)})
+      )
+
     ~H"""
     <section id="calendar-panel-guests" class="space-y-2">
       <h3 class="label mb-0">
         {dgettext("dashboard_calendar_editing", "Guests")}
       </h3>
-      <ul :if={@guests != []} class="flex flex-wrap gap-1.5">
+      <ul :if={@guests != []} id="calendar-panel-guest-list" class="space-y-1">
         <li
-          :for={guest <- @guests}
-          class="inline-flex max-w-full items-center gap-1 rounded-token-full bg-tymeslot-100 py-0.5 pl-2.5 pr-1 text-token-sm text-tymeslot-800"
+          :for={{guest, reply} <- @rows}
+          class="flex min-h-11 items-center gap-2 text-token-sm text-tymeslot-800 sm:min-h-8"
         >
-          <span class="truncate">{guest.display_name || guest.email}</span>
+          <span class="min-w-0 flex-1 truncate">{guest.display_name || guest.email}</span>
+          <GuestStatusPill.guest_status_pill :if={reply} status={reply} />
           <button
             :if={@organiser}
             type="button"

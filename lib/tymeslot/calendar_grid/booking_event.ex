@@ -27,6 +27,11 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
   carried in `participants` (empty for a one-to-one booking), with its
   `capacity` and the `seats_taken` (participants plus their guests) beside
   them. A one-to-one booking keeps a capacity of 1 and no seat count.
+
+  `guests` are the people invited to the meeting through Tymeslot whose
+  invitation still stands, each with the answer they gave (`status`:
+  `"pending"`, `"accepted"` or `"declined"`), read by the preview
+  (`Tymeslot.CalendarGrid.GuestReplies`).
   """
 
   @enforce_keys [:id, :meeting_id, :summary, :start_at, :end_at]
@@ -45,6 +50,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
     :meeting_type,
     :approval_deadline_at,
     participants: [],
+    guests: [],
     capacity: 1,
     seats_taken: 0,
     all_day: false,
@@ -75,6 +81,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
           meeting_type: String.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
           participants: [%{name: String.t() | nil, email: String.t()}],
+          guests: [%{name: String.t() | nil, email: String.t(), status: String.t()}],
           capacity: pos_integer(),
           seats_taken: non_neg_integer(),
           all_day: false,

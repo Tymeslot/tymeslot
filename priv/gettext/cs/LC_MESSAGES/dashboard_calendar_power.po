@@ -458,3 +458,16 @@ msgstr "Odeslat jako schůzku Tymeslot"
 #, elixir-autogen, elixir-format
 msgid "The note to the guest is too long. Keep it under 2,000 characters."
 msgstr "Poznámka pro hosta je příliš dlouhá. Použijte nejvýše 2 000 znaků."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more guest"
+msgid_plural "%{count} more guests"
+msgstr[0] "%{count} další host"
+msgstr[1] "%{count} další hosté"
+msgstr[2] "%{count} dalších hostů"
+
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
+#, elixir-autogen, elixir-format
+msgid "Maybe"
+msgstr "Možná"

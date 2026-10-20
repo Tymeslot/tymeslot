@@ -293,6 +293,15 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
       Repo.preload(meeting_or_meetings, [participants: live_participants_preload()], force: true)
 
   @doc """
+  `meeting` (or each of a list of meetings) with the guests whose
+  invitation still stands loaded into `:guests`, oldest first: on a group
+  meeting, a guest whose participant cancelled is left out.
+  """
+  @spec preload_live_guests(Meeting.t() | [Meeting.t()]) :: Meeting.t() | [Meeting.t()]
+  def preload_live_guests(meeting_or_meetings),
+    do: Repo.preload(meeting_or_meetings, [guests: live_guests_preload()], force: true)
+
+  @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`
   window, ordered by start time.
 
