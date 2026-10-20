@@ -212,6 +212,15 @@ defmodule Tymeslot.Payments.StripeTest do
       assert {:ok, %{id: "re_1"}} =
                Stripe.create_refund(params, idempotency_key: "refund-key-1")
     end
+
+    test "lists a charge's refunds with Stripe's filters" do
+      expect(StripeRefundMock, :list, fn %{charge: "ch_1", limit: 1}, opts ->
+        assert opts[:api_key] == "sk_test_fake"
+        {:ok, %{data: [%{id: "re_1"}], has_more: false}}
+      end)
+
+      assert {:ok, %{data: [%{id: "re_1"}]}} = Stripe.list_refunds(%{charge: "ch_1", limit: 1})
+    end
   end
 
   describe "update_subscription_automatic_tax/2" do

@@ -215,10 +215,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
         # Send email notification to user, quoting the amount of THIS
         # refund rather than the cumulative total across the charge.
-        unless customer_notified?(charge) do
-          latest_refund_amount = calculate_latest_refund_amount(charge)
-          send_refund_email(subscription, latest_refund_amount, revoked, charge)
-        end
+        notify_unless_announced(subscription, charge, revoked)
 
         {:ok, :refund_processed}
     end
@@ -295,14 +292,45 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     MapKeys.get(charge, :amount) || 0
   end
 
-  # Whether the charge's latest refund is one the app already told the
-  # customer about (see the moduledoc).
-  defp customer_notified?(charge) do
-    case latest_refund(charge) do
-      nil -> false
-      refund -> MapKeys.get(MapKeys.get(refund, :metadata) || %{}, :customer_notified) == "true"
+  # Sends the refund email unless the app already announced this refund
+  # (see the moduledoc). A webhook charge carries its refunds only at older
+  # API versions, so when they are missing the latest one is read from
+  # Stripe. If that read fails the email goes out: a repeated notice is the
+  # lesser harm next to a refund nobody is told about.
+  defp notify_unless_announced(subscription, charge, revoked) do
+    case latest_refund_from_stripe(charge) do
+      %{} = refund ->
+        unless customer_notified?(refund) do
+          amount = MapKeys.get(refund, :amount) || calculate_total_refunded(charge)
+          send_refund_email(subscription, amount, revoked, charge)
+        end
+
+      nil ->
+        send_refund_email(subscription, calculate_latest_refund_amount(charge), revoked, charge)
     end
   end
+
+  defp latest_refund_from_stripe(charge) do
+    with nil <- latest_refund(charge),
+         {:ok, %{data: [refund | _older]}} <-
+           Config.stripe_provider().list_refunds(%{charge: charge["id"], limit: 1}) do
+      refund
+    else
+      %{} = refund ->
+        refund
+
+      other ->
+        Logger.info("Latest refund not readable; sending the refund email",
+          charge_id: charge["id"],
+          reason: inspect(other)
+        )
+
+        nil
+    end
+  end
+
+  defp customer_notified?(refund),
+    do: MapKeys.get(MapKeys.get(refund, :metadata) || %{}, :customer_notified) == "true"
 
   defp latest_refund(charge),
     do: Enum.max_by(get_refunds(charge), &(MapKeys.get(&1, :created) || 0), fn -> nil end)

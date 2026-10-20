@@ -240,6 +240,18 @@ defmodule Tymeslot.Payments.Stripe do
   end
 
   @doc """
+  Lists refunds on the platform account, newest first, with Stripe's own
+  filters (`charge`, `payment_intent`, `limit`, `starting_after`).
+  """
+  @impl StripeProvider
+  @spec list_refunds(map()) :: stripe_result()
+  def list_refunds(params) when is_map(params) do
+    Logger.info("Listing Stripe refunds", params: LogFormat.reason(params))
+
+    with {:ok, opts} <- api_key_opts(), do: refund_mod().list(params, opts)
+  end
+
+  @doc """
   Turns Stripe Tax's automatic calculation on or off for a subscription, from
   its next invoice on.
 
