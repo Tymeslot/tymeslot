@@ -108,10 +108,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
   describe "a change to a whole series while another tab writes one occurrence" do
     @series_busy "A change to this series is still saving. Please make this change once it has saved."
 
-    setup %{conn: conn, integration: integration, standup: standup} do
-      # `standup` is a plain event; the series is two other occurrences.
-      _ = standup
-
+    setup %{conn: conn, integration: integration} do
       first =
         event(integration, "work", "Retro", ~U[2026-10-15 09:00:00Z], 30,
           recurring_event_id: "retro-series",
