@@ -160,11 +160,12 @@ export const CommandMixin = {
   openCommand() {
     const bar = this.commandBar();
     if (!bar || this.commandOpen()) return;
+    // First, so focus inside a "+N" list has moved to its anchor before it is kept.
+    this.closeList();
     const active = document.activeElement;
     this.commandReturn = this.quick ? this.quick.returnTo : active && active !== document.body ? active : null;
     if (this.quick) this.cancelQuickCreate({ restoreFocus: false });
     if (this.moving) this.cancelMove({ announce: false });
-    this.closeList();
     // Rows a closed bar still holds (a late answer to a debounced query) go.
     if (bar.querySelector(`#calendar-command-results ${OPTION}`)) this.pushEventTo(this.el, "calendar:command_query", { q: "" });
     this.liveSocket.execJS(bar, bar.dataset.show);

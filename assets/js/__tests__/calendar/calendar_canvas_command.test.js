@@ -8,7 +8,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mockViewport, pushes, unmountAll } from "./canvas_harness.js";
+import { block, mockViewport, pushes, unmountAll } from "./canvas_harness.js";
 import { commandSettings, commandStrings, mountWithBar, result } from "./command_fixtures.js";
 
 const cssDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../css");
@@ -87,6 +87,17 @@ describe("opening and closing", () => {
     expect(document.activeElement).toBe(field);
     expect(later).not.toHaveBeenCalled();
     expect(hook.liveSocket.execJS).toHaveBeenLastCalledWith(bar, "hide");
+  });
+
+  test("opened from a +N list, it closes the list and hands focus back to the list's anchor", () => {
+    const { el, hook, input } = mountWithBar();
+    hook.showList([hook.cache.events.get("event-1")], block(el, "event-1"), "Events at this time");
+    press(document.activeElement, "k", { ctrlKey: true });
+    expect(el.querySelector(".cal-list")).toBeNull();
+
+    press(input, "Escape");
+
+    expect(document.activeElement.dataset.eventId).toBe("event-1");
   });
 
   test("with nothing focused before, closing focuses the toolbar's search button", () => {
