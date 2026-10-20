@@ -413,7 +413,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp calculate_end_time(%Date{} = start_time, nil), do: {Date.add(start_time, 1), false}
 
   defp calculate_end_time(%DateTime{} = start_time, duration_str) do
-    # Parse ISO 8601 duration (simplified - only handles basic cases)
     case Duration.parse(duration_str) do
       {:ok, seconds} -> {DateTime.add(start_time, seconds, :second), false}
       {:error, _reason} -> {DateTime.add(start_time, 3600, :second), true}
@@ -422,7 +421,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp calculate_end_time(%Date{} = start_time, duration_str) do
     # For all-day events with duration, we calculate the number of days.
-    # RFC 5545 durations like PT1H30M or P1D
     case Duration.parse(duration_str) do
       {:ok, seconds} ->
         # Convert seconds to days, rounding up to at least 1 day
