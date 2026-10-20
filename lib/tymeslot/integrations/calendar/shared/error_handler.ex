@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
         )
 
       String.contains?(error, ["timeout", "timed out"]) ->
-        sanitize_error_message(:timeout, nil)
+        sanitize_error_message(:timeout, provider)
 
       String.contains?(error, ["SSL", "TLS", "certificate"]) ->
         dgettext(
