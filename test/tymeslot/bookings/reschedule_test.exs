@@ -9,12 +9,14 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Bookings.RescheduleRequest
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.EmailHandlers
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   import Tymeslot.AvailabilityTestHelpers
@@ -61,6 +63,23 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert updated_meeting.id == meeting.id
       # The new start time should be different from the original
       refute DateTime.compare(updated_meeting.start_time, meeting.start_time) == :eq
+    end
+
+    test "a reschedule clears an external-change flag" do
+      %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
+
+      meeting
+      |> Changeset.change(
+        calendar_sync_status: "externally_modified",
+        calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
+      )
+      |> Repo.update!()
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
+
+      assert updated_meeting.calendar_sync_status == nil
+      assert updated_meeting.calendar_sync_status_dismissed_at == nil
     end
 
     test "updates meeting times correctly" do

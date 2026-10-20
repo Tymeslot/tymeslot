@@ -686,3 +686,8 @@ msgstr "Перевірте налаштування відео/аудіо, як�
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (before Stripe processing fees)"
 msgstr "Ви отримали: %{amount} (до вирахування комісії Stripe за обробку платежу)"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Цю зустріч було перенесено у вашому календарі."

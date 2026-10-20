@@ -351,13 +351,15 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   The job also carries the time `meeting` moved to and the status the move
   left it in, so a notice overtaken by a later move, a cancellation or a
   pending reschedule request is dropped rather than sent with times it never
-  announced.
+  announced. `moved_by: :host` in `opts` marks a move the host made in their
+  own calendar, which the organiser's copy then says.
   """
   @spec schedule_reschedule_emails(
           %{id: term(), start_time: DateTime.t(), status: String.t()},
-          map() | nil
+          map() | nil,
+          keyword()
         ) :: :ok | {:error, term()}
-  def schedule_reschedule_emails(meeting, original) do
+  def schedule_reschedule_emails(meeting, original, opts \\ []) do
     %{
       "action" => "send_reschedule_emails",
       "meeting_id" => meeting.id,
@@ -365,10 +367,14 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       "status" => meeting.status
     }
     |> maybe_put_original(original)
+    |> maybe_put_moved_by(Keyword.get(opts, :moved_by))
     |> EmailWorker.new(queue: :emails, priority: 0)
     |> Helpers.insert(meeting_id: meeting.id)
     |> Helpers.ok()
   end
+
+  defp maybe_put_moved_by(args, :host), do: Map.put(args, "moved_by", "host")
+  defp maybe_put_moved_by(args, nil), do: args
 
   defp maybe_put_original(args, nil), do: args
 
