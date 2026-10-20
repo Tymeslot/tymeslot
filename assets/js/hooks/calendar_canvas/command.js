@@ -28,11 +28,12 @@
  * (views, Today, next and previous through `gotoPeriod`; New event; the
  * bookable layer; pushes to the surface or, for focus mode and the old
  * calendar, to DashboardLive). "Add …" opens quick create filled in from the
- * line. A server row goes to its date in the current view.
+ * line. A server row reveals its event (reveal.js); the preview then takes focus.
  */
 import { addRow, commandRows, dateRow } from "../../calendar/commands.js";
 import { applyText } from "../../calendar/draft.js";
 import { escapeHtml } from "../../calendar/render.js";
+import { revealRequest } from "../../calendar/reveal.js";
 import { POWER_KEYS, WIDE } from "./power_keys.js";
 import { CORE_MODAL_OPEN, isCommandKey, plainKeyAllowed } from "../../calendar/shortcuts.js";
 
@@ -268,8 +269,8 @@ export const CommandMixin = {
   runRow(row) {
     if (!row) return undefined;
     if (row.hasAttribute("data-command-result")) {
-      this.closeCommand();
-      return this.gotoPeriod(this.view, row.dataset.date);
+      this.closeCommand({ restoreFocus: false });
+      return this.revealEvent(revealRequest(row.dataset));
     }
     const command = this.instantRows?.get(row.dataset.commandRow);
     return command ? this.runCommand(command) : undefined;

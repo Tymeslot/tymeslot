@@ -60,6 +60,7 @@ import { GesturesMixin } from "./calendar_canvas/gestures.js";
 import { KeysMixin } from "./calendar_canvas/keys.js";
 import { ListMixin } from "./calendar_canvas/list.js";
 import { OpeningMixin } from "./calendar_canvas/opening.js";
+import { RevealMixin } from "./calendar_canvas/reveal.js";
 import { PowerKeysMixin } from "./calendar_canvas/power_keys.js";
 import { TouchDragMixin } from "./calendar_canvas/touch_drag.js";
 import { ViewportMixin } from "./calendar_canvas/viewport.js";
@@ -114,6 +115,7 @@ export const CalendarCanvas = {
   ...ListMixin,
   ...PowerKeysMixin,
   ...CommandMixin,
+  ...RevealMixin,
 
   mounted() {
     this.strings = JSON.parse(this.el.dataset.strings || "{}");
@@ -148,6 +150,7 @@ export const CalendarCanvas = {
     this.mountGestures();
     this.mountPowerKeys();
     this.mountCommand();
+    this.mountReveal();
 
     this.handleEvent("calendar:events", (payload) => this.receive(payload));
     this.handleEvent("calendar:period", (period) => this.follow(period));
@@ -196,6 +199,7 @@ export const CalendarCanvas = {
     this.destroyGestures();
     this.destroyPowerKeys();
     this.destroyCommand();
+    this.destroyReveal();
     const style = document.documentElement.style;
     for (const name of ["--cal-pop-x", "--cal-pop-y", "--cal-pop-h"]) style.removeProperty(name);
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);

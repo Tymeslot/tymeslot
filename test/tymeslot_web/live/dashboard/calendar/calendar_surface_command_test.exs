@@ -229,5 +229,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCommandTest do
     assert html =~ "Switch to %{name}"
     assert html =~ "Use compact density"
     assert html =~ "Go to %{date}"
+    assert html =~ "in view any more."
   end
 end

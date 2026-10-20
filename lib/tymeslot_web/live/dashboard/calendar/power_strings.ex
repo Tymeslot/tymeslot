@@ -51,7 +51,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerStrings do
       command_set: dgettext("dashboard_calendar_power", "Switch to %{name}", name: "%{name}"),
       command_leave_set: dgettext("dashboard_calendar_power", "Leave the calendar set"),
       command_goto: dgettext("dashboard_calendar_power", "Go to %{date}", date: "%{date}"),
-      command_add: dgettext("dashboard_calendar_power", "Add “%{title}”", title: "%{title}")
+      command_add: dgettext("dashboard_calendar_power", "Add “%{title}”", title: "%{title}"),
+      reveal_missed: dgettext("dashboard_calendar_power", "That event isn't in view any more.")
     }
   end
 end

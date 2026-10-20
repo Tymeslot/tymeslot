@@ -200,7 +200,7 @@ describe("rows", () => {
     expect(document.getElementById("calendar-command-row-event-1").getAttribute("aria-selected")).toBe("true");
   });
 
-  test("Enter with no active row runs the first: the bar closes and the grid goes to the row's date", () => {
+  test("Enter with no active row runs the first: the bar closes and the reveal goes to the row's date", () => {
     const { hook, input, results } = mountWithBar();
     open();
     results.innerHTML = result("event-1", "2026-10-21");

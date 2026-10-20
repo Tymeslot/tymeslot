@@ -5,7 +5,7 @@
  * the time grid for day, three days and week (render.js), the month grid
  * (render_month.js) or the agenda list (render_agenda.js), all from the
  * same cache; `viewSkeleton` stands in while a view's days load, and
- * `afterView` runs after each draw.
+ * `afterView` runs after each draw (and lets a search reveal look for its event).
  *
  * Month: a click on an event opens its preview (the hook's own
  * `[data-event-id]` handling); a click elsewhere in a day opens that day in
@@ -141,6 +141,7 @@ export const ViewsMixin = {
     if (list) list.scrollTop = this.viewScrollTop;
     this.applyMonthFocus();
     this.watchAgendaEnd();
+    this.afterReveal();
   },
 
   // One month day is the tab stop: the one the arrows last reached when it
