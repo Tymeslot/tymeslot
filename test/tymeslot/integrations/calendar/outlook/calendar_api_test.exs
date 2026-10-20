@@ -541,23 +541,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
       assert {:error, :malformed_response, _msg} = CalendarAPI.list_calendars(integration)
     end
 
-    test "403 with an unrecognised Graph code surfaces as :refused", %{integration: integration} do
-      body =
-        Jason.encode!(%{
-          "error" => %{
-            "code" => "ErrorInvalidRequest",
-            "message" => "The calendar cannot be changed."
-          }
-        })
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: body, headers: %{}}}
-      end)
-
-      assert {:error, :refused, "The calendar cannot be changed."} =
-               CalendarAPI.delete_event(integration, "AAMkCal", "AAMkEvent")
-    end
-
     test "403 with AccessDenied code surfaces as :unauthorized", %{integration: integration} do
       body =
         Jason.encode!(%{

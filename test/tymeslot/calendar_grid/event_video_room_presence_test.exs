@@ -42,14 +42,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
 
   setup :verify_on_exit!
 
-  # The provider read runs for real, behind the `:calendar_module` seam the
-  # domain reaches it through.
   setup do
+    # The provider read runs for real, behind the `:calendar_module` seam.
     stub(Tymeslot.CalendarMock, :fetch_event, &Operations.fetch_event/2)
-    :ok
-  end
-
-  setup do
     user = insert(:user)
     talk_host = "talk-#{System.unique_integer([:positive])}.example.com"
     answer_requests(%{})
