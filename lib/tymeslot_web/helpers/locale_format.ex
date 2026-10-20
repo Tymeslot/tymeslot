@@ -297,6 +297,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   # Portuguese and Spanish link month and year with "de" ("setembro de 2026").
   defp month_with_year(month, year, locale) when locale in ["pt", "es"],
     do: "#{month} de #{year}"
+
   defp month_with_year(month, year, _locale), do: "#{month} #{year}"
 
   @doc """
@@ -429,6 +430,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   defp with_year(day_month, year, locale) when locale in ["pt", "es"],
     do: "#{day_month} de #{year}"
+
   defp with_year(day_month, year, _other_locale), do: "#{day_month} #{year}"
 
   # French, Italian and Czech run the weekday straight into the date; the
