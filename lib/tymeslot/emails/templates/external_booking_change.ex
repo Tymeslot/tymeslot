@@ -348,7 +348,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     else
       dgettext(
         "emails_booking_changes",
-        "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
+        "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. To move the booking to the new time, open it in your dashboard and choose <strong>Move booking</strong>: Tymeslot then reschedules its reminders and emails the attendee the new time. If <strong>Move booking</strong> is not offered there, send the attendee a reschedule request from your dashboard instead."
       )
     end
   end
@@ -414,10 +414,9 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
         "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
       )
     else
-      dgettext(
-        "emails_booking_changes",
-        "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-      )
+      # Only the copy's own <strong> tags are removed: strip_tags/1 would
+      # entity-encode apostrophes, which plain text does not decode.
+      meeting |> modified_explanation_html() |> String.replace(~r{</?strong>}, "")
     end
   end
 
