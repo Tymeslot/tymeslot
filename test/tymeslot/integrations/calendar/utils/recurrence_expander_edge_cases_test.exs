@@ -564,6 +564,20 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
       assert expanded == events
     end
 
+    test "a series cut short by the caller's cap says so" do
+      LogCapture.attach(level: :warning)
+
+      occurrences =
+        "FREQ=DAILY"
+        |> old_series(~D[2023-10-02])
+        |> RecurrenceExpander.expand(@week_start, @week_end, max_occurrences: 3)
+
+      assert length(occurrences) == 3
+      assert hd(dates(occurrences)) == DateTime.to_date(@week_start)
+
+      LogCapture.await_log("Recurrence expansion stopped after 3 occurrences")
+    end
+
     test "a series that runs out of step budget before the range says so" do
       # COUNT stops the series being moved forward to the range, so its
       # periods are stepped one by one from 1700; the budget runs out in the
