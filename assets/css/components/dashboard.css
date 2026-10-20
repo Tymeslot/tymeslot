@@ -414,26 +414,26 @@
    on .input, so the shared component keeps one shape everywhere else. */
 .day-hours-inline .input {
   @apply w-auto rounded-token-xl py-1 text-sm;
-  /* The shared select style reserves pr-10 for the chevron it paints as a
-     background image. Tightening the padding here has to move the chevron with
-     it, or the time runs underneath the arrow. */
+  /* The shared select reserves pr-10 for its background-image chevron:
+     tighter padding must move the chevron too, or the time runs under it. */
   padding-left: 0.5rem;
   padding-right: 1.625rem;
   background-position: right 0.5rem center;
   background-size: 1rem;
 }
 
-/* Focus mode on the new calendar (CalendarFocus): from the lg breakpoint,
-   where the menu is a column beside the content, the menu and the row's
-   gutter go, and with them the Up next and onboarding strips. Below it the
-   menu is already a drawer and the strips stay, so nothing changes. */
+/* Focus mode on the new calendar (CalendarFocus), from lg up where the menu
+   is a column: the menu, the row's gutter and the strips go. */
 @media (width >= 64rem) {
-  #dashboard-root[data-calendar-focus] #dashboard-sidebar,
-  #dashboard-root[data-calendar-focus] #calendar-strips > * {
+  #dashboard-root[data-calendar-focus] #dashboard-sidebar {
     display: none;
   }
 
   #dashboard-root[data-calendar-focus] .dashboard-main-row {
     gap: 0;
+  }
+
+  #dashboard-root[data-calendar-focus] #calendar-strips > * {
+    display: none;
   }
 }
