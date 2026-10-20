@@ -240,6 +240,85 @@ defmodule Tymeslot.Polls.ConfirmTest do
     end
   end
 
+  describe "confirm/3 on a poll the host answered too" do
+    # The host's entry is matched by address, whatever its case.
+    defp host_entry(user, poll, slot, inserted_at) do
+      host =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Host",
+          email: String.upcase(user.email),
+          inserted_at: inserted_at
+        )
+
+      insert(:poll_vote, participant: host, time_slot: slot, response: :yes)
+      host
+    end
+
+    test "makes the first available participant besides the host the attendee",
+         %{user: user, poll: poll, slot: slot} do
+      t0 = DateTime.utc_now() |> DateTime.add(-120, :second) |> DateTime.truncate(:second)
+      host_entry(user, poll, slot, t0)
+
+      bob =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Bob",
+          email: "bob@example.com",
+          inserted_at: DateTime.add(t0, 60, :second)
+        )
+
+      insert(:poll_vote, participant: bob, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.attendee_email == "bob@example.com"
+      assert meeting.organizer_user_id == user.id
+    end
+
+    test "does not invite the host to their own meeting as a guest",
+         %{user: user, poll: poll, slot: slot} do
+      t0 = DateTime.utc_now() |> DateTime.add(-120, :second) |> DateTime.truncate(:second)
+
+      alice =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Alice",
+          email: "alice@example.com",
+          inserted_at: t0
+        )
+
+      insert(:poll_vote, participant: alice, time_slot: slot, response: :yes)
+      host_entry(user, poll, slot, DateTime.add(t0, 60, :second))
+
+      carol =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Carol",
+          email: "carol@example.com",
+          inserted_at: DateTime.add(t0, 120, :second)
+        )
+
+      insert(:poll_vote, participant: carol, time_slot: slot, response: :no)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.attendee_email == "alice@example.com"
+
+      guest_emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
+      assert guest_emails == ["carol@example.com"]
+    end
+
+    test "returns :no_participants when only the host answered, and mints nothing",
+         %{user: user, poll: poll, slot: slot} do
+      host_entry(user, poll, slot, DateTime.utc_now(:second))
+
+      assert {:error, :no_participants} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert Repo.aggregate(MeetingSchema, :count) == 0
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      assert reloaded.status == :open
+    end
+  end
+
   describe "confirm/3 against the host's time off" do
     # The host lives in Berlin, so every period below is wall-clock there and
     # a slot's UTC instant lands on a different day near midnight.

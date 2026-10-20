@@ -8,6 +8,10 @@ defmodule Tymeslot.Polls.Confirm do
   first participant available for the slot becomes the attendee; everyone else
   rides along as a guest. On success the poll transitions to `:confirmed` and
   subscribers are notified.
+
+  A host may take part in their own poll, to give their own answers next to
+  everyone else's. That entry is left out of the meeting: the host is its
+  organiser, so they are neither its attendee nor one of its guests.
   """
 
   alias Tymeslot.Availability
@@ -40,7 +44,8 @@ defmodule Tymeslot.Polls.Confirm do
 
   Returns `{:ok, meeting}` on success, or `{:error, reason}` when the poll is
   missing, not open, the slot is invalid or past, the slot falls inside the
-  host's time off (`:time_off`), there are no participants, the slot is already
+  host's time off (`:time_off`), there are no participants besides the host
+  (`:no_participants`), the slot is already
   taken for the host, or the underlying booking fails.
 
   Time off is checked here rather than in `Bookings.CreateAdHoc`, which also
@@ -77,8 +82,9 @@ defmodule Tymeslot.Polls.Confirm do
          :ok <- ensure_open(poll),
          {:ok, slot} <- resolve_slot(poll, slot_id),
          :ok <- ensure_outside_time_off(poll, slot),
-         {:ok, primary} <- resolve_primary(poll, slot),
-         {:ok, meeting, pending} <- create_meeting(poll, slot, primary),
+         invitees = invitees(poll),
+         {:ok, primary} <- resolve_primary(invitees, slot),
+         {:ok, meeting, pending} <- create_meeting(poll, slot, primary, invitees),
          {:ok, _poll} <-
            PollQueries.update(PollSchema.confirm_changeset(poll, confirm_attrs(meeting))) do
       EmailScheduler.cancel_poll_deadline_jobs(poll.id)
@@ -131,11 +137,20 @@ defmodule Tymeslot.Polls.Confirm do
     end
   end
 
-  defp resolve_primary(%PollSchema{participants: []}, _slot), do: {:error, :no_participants}
-
-  defp resolve_primary(%PollSchema{participants: participants}, slot) do
-    {:ok, pick_primary(participants, slot.id)}
+  # The participants the meeting is for: everyone but the host's own entry,
+  # matched by address as `Bookings.CreateAdHoc` matches a self-booking.
+  defp invitees(%PollSchema{participants: participants} = poll) do
+    host_email = normalise_email(Repo.preload(poll, :user).user.email)
+    Enum.reject(participants, &(normalise_email(&1.email) == host_email))
   end
+
+  defp normalise_email(email) when is_binary(email),
+    do: email |> String.trim() |> String.downcase()
+
+  defp normalise_email(_email), do: nil
+
+  defp resolve_primary([], _slot), do: {:error, :no_participants}
+  defp resolve_primary(invitees, slot), do: {:ok, pick_primary(invitees, slot.id)}
 
   defp pick_primary(participants, slot_id) do
     Enum.find(participants, List.first(participants), &available_for?(&1, slot_id))
@@ -173,7 +188,7 @@ defmodule Tymeslot.Polls.Confirm do
     end
   end
 
-  defp create_meeting(poll, slot, primary) do
+  defp create_meeting(poll, slot, primary, invitees) do
     {calendar_integration_id, video_integration_id} = integration_ids(poll)
 
     %{
@@ -186,7 +201,7 @@ defmodule Tymeslot.Polls.Confirm do
       attendee_timezone: primary.timezone || poll.timezone,
       calendar_integration_id: calendar_integration_id,
       video_integration_id: video_integration_id,
-      guest_emails: guest_emails(poll.participants, primary),
+      guest_emails: guest_emails(invitees, primary),
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.
       organizer_note: organizer_note(poll.description)

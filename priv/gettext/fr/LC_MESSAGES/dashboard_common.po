@@ -742,3 +742,13 @@ msgstr "%{date}, %{time}"
 #, elixir-autogen, elixir-format
 msgid "Cancel this poll"
 msgstr "Annuler ce sondage"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody but you has joined this poll yet, so there is nobody to invite."
+msgstr "Personne d'autre que vous n'a encore rejoint ce sondage, il n'y a donc personne à inviter."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time has already begun."
+msgstr "Ce créneau a déjà commencé."

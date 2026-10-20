@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
@@ -30,6 +31,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias TymeslotWeb.Dashboard.Polls.{CancelPollModal, PollForm, PollList, PollResults}
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+
+  require Logger
 
   @task_supervisor Tymeslot.TaskSupervisor
   @health_timeout 6_000
@@ -215,7 +218,32 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       {:error, :not_open} ->
         {:noreply, poll_no_longer_open(socket)}
 
-      {:error, _reason} ->
+      {:error, :slot_in_past} ->
+        {:noreply,
+         put_slot_error(
+           socket,
+           slot_id,
+           dgettext("dashboard_common", "This time has already begun.")
+         )}
+
+      # The host's own entry is not counted (`Confirm`), so a poll only they
+      # answered has nobody to invite.
+      {:error, :no_participants} ->
+        Flash.error(
+          dgettext(
+            "dashboard_common",
+            "Nobody but you has joined this poll yet, so there is nobody to invite."
+          )
+        )
+
+        {:noreply, socket}
+
+      {:error, reason} ->
+        Logger.warning("Poll confirmation failed",
+          poll_id: poll_id,
+          reason: LogFormat.reason(reason)
+        )
+
         Flash.error(dgettext("dashboard_common", "Couldn't confirm this time. Please try again."))
         {:noreply, socket}
     end
