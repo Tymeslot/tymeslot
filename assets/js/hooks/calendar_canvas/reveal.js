@@ -11,14 +11,18 @@
  * looks for the event once its days are drawn (calendar/reveal.js): an
  * event drawn as itself opens from its block; one behind a "+N" chip opens
  * from that chip's list, so focus goes back to the chip when the preview
- * closes (`open`'s `returnTo`). A period still pending is no reason to wait:
- * the hook's `calendar:goto` reaches the server before its `calendar:open`.
+ * closes (`open`'s `returnTo`). The reveal is armed only after `gotoPeriod`
+ * has pushed `calendar:goto`, so `calendar:open` never reaches the server
+ * first; the search runs on a microtask, once the draw and its scroll are
+ * done. It ends silently when the organiser moves on (another period,
+ * preview or quick create).
  * Six seconds without finding it, the hook gives up with its notice.
  */
 import { needsNight, revealTarget } from "../../calendar/reveal.js";
-import { isTimeGrid } from "../../calendar/time.js";
+import { isTimeGrid, periodDays } from "../../calendar/time.js";
 
 const REVEAL_MS = 6000;
+const REVEAL_NOTICE = "reveal-missed";
 
 export const RevealMixin = {
   mountReveal() {
@@ -33,29 +37,48 @@ export const RevealMixin = {
   revealEvent({ ids, date, startMin = null, allDay = false }) {
     if (!ids?.length || !date || !this.settings) return;
     this.endReveal();
-    this.reveal = { ids, until: Date.now() + REVEAL_MS };
-    if (needsNight(startMin, allDay, this.settings, this.nightOpen)) this.nightOpen = true;
-    if (isTimeGrid(this.viewFor(this.view)) && !allDay && startMin != null) {
+    const timeGrid = isTimeGrid(this.viewFor(this.view));
+    if (timeGrid && needsNight(startMin, allDay, this.settings, this.nightOpen)) this.nightOpen = true;
+    if (timeGrid && !allDay && startMin != null) {
       this.scrollTarget = startMin;
       this.scrollDate = date;
       this.scrollTop = null;
     }
-    this.revealTimer = setTimeout(() => this.afterReveal(), REVEAL_MS);
     this.gotoPeriod(this.view, date);
-    // The same days needed no navigation: draw them again for the night and
-    // the scroll; the draw looks for the event.
+    // The same days needed no navigation: draw them again for the night and the scroll.
     if (!this.pending) this.render();
+    const reveal = { ids, date, opened: this.lastOpened };
+    this.reveal = reveal;
+    this.revealTimer = setTimeout(() => this.tryReveal(reveal, true), REVEAL_MS);
+    this.afterReveal();
   },
 
+  // Called after every draw (views.js `afterView`) and once armed: the search
+  // waits for the draw to finish, so the scroll is applied.
   afterReveal() {
     const reveal = this.reveal;
-    if (!reveal) return undefined;
-    if (Date.now() >= reveal.until) return this.revealMissed();
-    if (!this.settings || this.drag || this.createDrag) return undefined;
-    const target = revealTarget(this.el, reveal.ids, this.cache);
-    if (!target) return undefined;
-    this.endReveal();
-    return this.openRevealed(target);
+    if (!reveal || reveal.queued) return;
+    reveal.queued = true;
+    queueMicrotask(() => {
+      reveal.queued = false;
+      this.tryReveal(reveal, false);
+    });
+  },
+
+  tryReveal(reveal, final) {
+    if (this.reveal !== reveal) return;
+    if (this.quick || this.lastOpened !== reveal.opened) return this.endReveal();
+    if (this.settings && !this.pending && !this.revealDrawn(reveal.date)) return this.endReveal();
+    const target = this.settings && !this.drag && !this.createDrag ? revealTarget(this.el, reveal.ids, this.cache) : null;
+    if (target?.node.isConnected) {
+      this.endReveal();
+      return this.openRevealed(target);
+    }
+    return final ? this.revealMissed() : undefined;
+  },
+
+  revealDrawn(date) {
+    return periodDays(this.view, this.date, this.settings.week_start, this.settings.show_weekends).includes(date);
   },
 
   openRevealed({ kind, node, id }) {
@@ -69,11 +92,10 @@ export const RevealMixin = {
     return item ? this.open(id, item) : this.revealMissed();
   },
 
+  // The notice is a role="alert", which announces it.
   revealMissed() {
     this.endReveal();
-    const text = this.strings.reveal_missed;
-    this.announce(text);
-    this.showNotice(text, "reveal");
+    this.showNotice(this.strings.reveal_missed, REVEAL_NOTICE);
     // Only when focus has nowhere to be: a late miss never pulls it from where the organiser went.
     if (document.activeElement === document.body) this.restoreQuickFocus(null);
   },
