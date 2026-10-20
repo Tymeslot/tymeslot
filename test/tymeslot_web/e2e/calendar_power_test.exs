@@ -127,7 +127,7 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
         )
       )
       |> send_keys([:enter])
-      |> refute_has(css("#calendar-command[data-open]"))
+      |> assert_has(css("#calendar-command[data-open]", count: 0))
       # The week moved there, the event is still folded, and its preview is open.
       |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-more"))
       |> refute_has(css(".cal-col[data-day='#{iso}'] .cal-ev", text: "Quarterly sync"))
@@ -138,14 +138,14 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
     session =
       session
       |> send_keys([:escape])
-      |> refute_has(css("#calendar-preview"))
+      |> assert_has(css("#calendar-preview", count: 0))
       # Add by typing: the "Add" row goes first because the line has a time.
       |> ctrl_k()
       |> assert_has(css("#calendar-command[data-open]"))
       |> fill_in(css("#calendar-command-input"), with: "tomorrow 10:00 Dentist")
       |> assert_has(css("#calendar-command-instant [data-command-row='add']", text: "Dentist"))
       |> send_keys([:enter])
-      |> refute_has(css("#calendar-command[data-open]"))
+      |> assert_has(css("#calendar-command[data-open]", count: 0))
       |> assert_has(css("#calendar-quick-create"))
       |> send_keys([:enter])
       |> assert_has(css("#calendar-toast", text: "Added"))
@@ -177,21 +177,21 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
     |> assert_has(css("#calendar-rail-set-1[aria-pressed='true']"))
     # 0 leaves it; nothing else was hidden, so the chip goes.
     |> send_keys(["0"])
-    |> refute_has(css("#calendar-filter-chip"))
+    |> assert_has(css("#calendar-filter-chip", count: 0))
     |> assert_has(css("#calendar-rail-set-0[aria-pressed='true']"))
     # F hides the dashboard menu; the toolbar's control brings it back.
     |> assert_has(css("#dashboard-sidebar"))
     |> send_keys(["f"])
     |> assert_has(css("#dashboard-root[data-calendar-focus]"))
-    |> refute_has(css("#dashboard-sidebar"))
+    |> assert_has(css("#dashboard-sidebar", count: 0))
     |> click(css("#calendar-focus-toggle[aria-pressed='true']"))
-    |> refute_has(css("#dashboard-root[data-calendar-focus]"))
+    |> assert_has(css("#dashboard-root[data-calendar-focus]", count: 0))
     |> assert_has(css("#dashboard-sidebar"))
     # ? opens the shortcut help; Esc closes it.
     |> blur()
     |> send_keys(["?"])
     |> assert_has(css("#calendar-shortcuts", text: "Search and commands (Cmd K on a Mac)"))
     |> send_keys([:escape])
-    |> refute_has(css("#calendar-shortcuts"))
+    |> assert_has(css("#calendar-shortcuts", count: 0))
   end
 end

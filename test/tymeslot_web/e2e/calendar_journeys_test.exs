@@ -5,7 +5,8 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
   an event to the next day moves it and the toast's Undo puts it back; the
   side panel renames an event; a click on an all-day bar opens its preview;
   quick create opens a closed Saturday for booking and Undo closes it
-  again; a booking request opens to Accept, which confirms it.
+  again; a booking request opens to Accept, which confirms it; the side
+  panel makes a Tymeslot meeting with a guest.
 
   Only a browser runs the hook's pointer handling, the toast's Undo button
   and the preview's buttons together. Drags are synthetic pointer events
@@ -164,27 +165,6 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     )
   end
 
-  # The bookable layer reloads off the process after the toast (a reload
-  # waits for the availability change message, then loads), which under
-  # load can take longer than Wallaby's default wait, so this polls longer.
-  defp bands_gone(session, iso) do
-    eventually(
-      fn ->
-        execute_script(
-          session,
-          "return document.querySelectorAll(`.cal-col[data-day=\"${arguments[0]}\"] .cal-bookable`).length",
-          [iso],
-          fn count -> send(self(), {:bands, count}) end
-        )
-
-        assert_received {:bands, 0}
-      end,
-      timeout: 20_000
-    )
-
-    session
-  end
-
   feature "a drag over an empty slot opens quick create, and Save adds the event", %{
     session: session
   } do
@@ -234,7 +214,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> click(css("#calendar-undo"))
     |> assert_has(css("#calendar-toast", text: "Moved back to"))
     |> assert_has(css(".cal-col[data-day='#{tue}'] .cal-ev", text: "Roadmap review"))
-    |> refute_has(css(".cal-col[data-day='#{wed}'] .cal-ev", text: "Roadmap review"))
+    |> assert_has(css(".cal-col[data-day='#{wed}'] .cal-ev", text: "Roadmap review", count: 0))
 
     assert_receive {:updated, ^uid}, 5_000
 
@@ -309,7 +289,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-bookable", minimum: 1))
     |> click(css("#calendar-undo"))
     |> assert_has(css("#calendar-toast", text: "put back."))
-    |> bands_gone(iso)
+    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-bookable", count: 0))
   end
 
   feature "a booking request opens to Accept, which confirms it", %{session: session} do
@@ -356,7 +336,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> click(css("#calendar-preview-accept"))
     |> assert_has(css("#app-flash-group", text: "Booking confirmed. The invitee has been told."))
     |> assert_has(css("#calendar-preview-cancel"))
-    |> refute_has(css("#calendar-preview-accept"))
+    |> assert_has(css("#calendar-preview-accept", count: 0))
 
     eventually(fn -> assert Repo.get!(MeetingSchema, held.id).status == "confirmed" end,
       timeout: 5_000
@@ -380,6 +360,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> fill_in(css("#calendar-panel-meeting-guest-name"), with: "Ada Lovelace")
     |> click(css("#calendar-panel-create"))
     |> assert_has(css("#app-flash-group", text: "Meeting created and invitation sent"))
+    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-ev", text: "Kick-off"))
 
     eventually(
       fn ->

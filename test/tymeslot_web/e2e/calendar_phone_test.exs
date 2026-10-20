@@ -138,7 +138,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> assert_has(css("#calendar-preview", text: "Dentist"))
     |> assert_bottom_sheet("#calendar-preview")
     |> send_keys([:escape])
-    |> refute_has(css("#calendar-preview"))
+    |> assert_has(css("#calendar-preview", count: 0))
     # Month: the selected day's agenda lists it under the grid.
     |> click(css("#calendar-tab-month"))
     |> assert_has(css("#calendar-tab-month[aria-current='page']"))
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> assert_no_horizontal_overflow("new calendar, Month view at 390px")
     # Select the next day, so the event's day is an ordinary cell: it has dots.
     |> click(css("button[data-month-day='#{next}']"))
-    |> refute_has(css("#calendar-canvas [data-event-id]", text: "Dentist"))
+    |> assert_has(css("#calendar-canvas [data-event-id]", text: "Dentist", count: 0))
     |> assert_marked(iso, after_next)
     |> click(css("button[data-month-day='#{iso}']"))
     |> assert_has(css("#calendar-canvas [data-event-id]", text: "Dentist"))
