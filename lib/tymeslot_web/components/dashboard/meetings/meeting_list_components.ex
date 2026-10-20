@@ -90,6 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
   attr :answering_request, :any, default: nil
+  attr :move_offers, :map, default: %{}
   attr :target, :any, required: true
   attr :meetings_stream, :any, required: true
 
@@ -111,6 +112,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             cancelling_meeting={@cancelling_meeting}
             sending_reschedule={@sending_reschedule}
             answering_request={@answering_request}
+            move_offer={@move_offers[meeting.id]}
             target={@target}
           />
         </div>

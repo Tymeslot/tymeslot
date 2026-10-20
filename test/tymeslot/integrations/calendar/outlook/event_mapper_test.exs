@@ -154,6 +154,20 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
     end
   end
 
+  describe "put_provenance/2" do
+    test "marks an event whose owner is not stated as Tymeslot's" do
+      result = EventMapper.put_provenance(%{"subject" => "Booking"}, %{summary: "Booking"})
+
+      assert [%{"value" => "tymeslot"}] = result["singleValueExtendedProperties"]
+    end
+
+    test "leaves an event someone else made unmarked" do
+      body = %{"subject" => "Renamed"}
+
+      assert EventMapper.put_provenance(body, %{created_by_tymeslot: false}) == body
+    end
+  end
+
   # Outlook only supports a single lead-time reminder per event
   # (`reminderMinutesBeforeStart` + `isReminderOn`), so only the first reminder
   # round-trips; method is not representable on Graph.
