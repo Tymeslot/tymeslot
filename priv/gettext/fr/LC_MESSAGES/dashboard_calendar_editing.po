@@ -388,6 +388,7 @@ msgstr "Déplacement de la série vers %{calendar}…"
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_tabs.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "New event"
 msgstr "Nouvel événement"

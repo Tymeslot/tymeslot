@@ -24,6 +24,7 @@ msgstr[0] ", %{count} host odmítl"
 msgstr[1] ", %{count} hosté odmítli"
 msgstr[2] ", %{count} hostů odmítlo"
 
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} event"
@@ -86,6 +87,7 @@ msgid "3 Days"
 msgstr "3 dny"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
@@ -125,6 +127,7 @@ msgid "Connect a calendar"
 msgstr "Připojit kalendář"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -133,6 +136,7 @@ msgid "Day"
 msgstr "Den"
 
 #: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -140,6 +144,7 @@ msgid "Keyboard shortcuts"
 msgstr "Klávesové zkratky"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -153,6 +158,7 @@ msgstr "Měsíc"
 msgid "My Calendars"
 msgstr "Moje kalendáře"
 
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -184,6 +190,7 @@ msgstr "V následujících 30 dnech nemáte nic naplánováno. Události, kter�
 msgid "Now"
 msgstr "Nyní"
 
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -232,6 +239,7 @@ msgstr "Synchronizace kalendářů%{progress}…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/date_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
@@ -246,6 +254,7 @@ msgid "Toggle calendars"
 msgstr "Zobrazit nebo skrýt kalendáře"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
@@ -328,6 +337,7 @@ msgstr "Výchozí barva"
 msgid "All"
 msgstr "Vše"
 
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings"
@@ -408,6 +418,7 @@ msgstr[2] "%{count} skrytých kalendářů"
 msgid "%{count} more all-day events on %{date}"
 msgstr "Další celodenní události, %{date}: %{count}"
 
+#: lib/tymeslot_web/live/dashboard/calendar/command_search.ex
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{date}, all day"
@@ -443,6 +454,7 @@ msgid "(No title)"
 msgstr "(Bez názvu)"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
 msgid "3 days"
@@ -464,6 +476,7 @@ msgid "Also here: %{titles}"
 msgstr "Také zde: %{titles}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Back to the old calendar"
 msgstr "Zpět ke starému kalendáři"
@@ -490,6 +503,7 @@ msgstr "Kalendář"
 msgid "Choose a date"
 msgstr "Vybrat datum"
 
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
 #: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
 #, elixir-autogen, elixir-format
@@ -540,6 +554,7 @@ msgid "Events at this time"
 msgstr "Události v tomto čase"
 
 #: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Fold early hours"
 msgstr "Sbalit časné hodiny"
@@ -650,6 +665,7 @@ msgstr "Předchozí týden"
 msgid "Read only"
 msgstr "Jen pro čtení"
 
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
 #: lib/tymeslot_web/live/dashboard/calendar/preview.ex
 #, elixir-autogen, elixir-format
 msgid "Repeats"
@@ -662,6 +678,7 @@ msgstr "Uloženo zde, čeká na odeslání do %{account}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/calendars_sheet.ex
 #: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Show all calendars"
 msgstr "Zobrazit všechny kalendáře"
