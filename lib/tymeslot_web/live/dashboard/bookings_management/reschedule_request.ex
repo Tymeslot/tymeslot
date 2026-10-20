@@ -11,11 +11,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Shared.Flash
@@ -27,12 +29,41 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   @event [:tymeslot, :dashboard, :meetings, :reschedule, :confirm]
 
   @doc """
-  Opens the way to a new time for `meeting`: the dialog asking its attendee,
-  or, for a meeting confirmed from a poll, which has nobody to ask, the host's
-  own move (`HostMoveModal`, through `:host_move_meeting`).
+  Opens the way to a new time for the host's meeting `params["id"]`, if it
+  can be rescheduled: the dialog asking its attendee, or, for a meeting
+  confirmed from a poll, which has nobody to ask, the host's own move
+  (`HostMoveModal`, through `:host_move_meeting`). A refusal is flashed.
   """
-  @spec open(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def open(socket, meeting) do
+  @spec show(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def show(socket, params) do
+    user_id = socket.assigns.current_user.id
+
+    case ModalMeeting.fetch(user_id, params, &Policy.can_reschedule_meeting?/1) do
+      {:ok, meeting} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :reschedule, :open],
+          %{},
+          %{user_id: user_id, meeting_id: meeting.id}
+        )
+
+        open(socket, meeting)
+
+      {:error, :policy_blocked, reason} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :reschedule, :blocked],
+          %{},
+          %{user_id: user_id, reason: inspect(reason)}
+        )
+
+        Flash.error(ModalMeeting.refusal_message(reason))
+        socket
+
+      {:error, _not_found_or_invalid, _reason} ->
+        socket
+    end
+  end
+
+  defp open(socket, meeting) do
     if MeetingSchema.managed_by_host?(meeting),
       do: assign(socket, :host_move_meeting, meeting),
       else: ModalHook.show_modal(socket, :reschedule_request, meeting)

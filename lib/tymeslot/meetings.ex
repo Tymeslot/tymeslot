@@ -240,14 +240,8 @@ defmodule Tymeslot.Meetings do
     Reschedule.execute(meeting_uid, new_params, organizer_user_id)
   end
 
-  @doc """
-  Moves a meeting the host manages, one confirmed from a poll, to start at
-  `new_start`. See `Tymeslot.Bookings.HostMove.move/3`.
-  """
-  @spec move_by_host(String.t(), DateTime.t(), integer()) ::
-          {:ok, Ecto.Schema.t()} | {:error, term()}
-  def move_by_host(meeting_uid, new_start, organizer_user_id),
-    do: HostMove.move(meeting_uid, new_start, organizer_user_id)
+  @doc "Moves a meeting the host manages to `new_start`; see `Tymeslot.Bookings.HostMove.move/3`."
+  defdelegate move_by_host(meeting_uid, new_start, organizer_user_id), to: HostMove, as: :move
 
   @doc """
   Cancels the calendar event associated with a meeting asynchronously.

@@ -199,38 +199,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
-  def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket) do
-    case ModalMeeting.fetch(
-           socket.assigns.current_user.id,
-           params,
-           &Policy.can_reschedule_meeting?/1
-         ) do
-      {:ok, meeting} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :open],
-          %{},
-          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id}
-        )
-
-        {:noreply, RescheduleRequest.open(socket, meeting)}
-
-      {:error, :validation_failed, _error} ->
-        {:noreply, socket}
-
-      {:error, :policy_blocked, reason} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :blocked],
-          %{},
-          %{user_id: socket.assigns.current_user.id, reason: inspect(reason)}
-        )
-
-        Flash.error(ModalMeeting.refusal_message(reason))
-        {:noreply, socket}
-
-      {:error, :not_found, _reason} ->
-        {:noreply, socket}
-    end
-  end
+  def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket),
+    do: {:noreply, RescheduleRequest.show(socket, params)}
 
   def handle_event("hide_reschedule_modal", _params, socket) do
     {:noreply, ModalHook.hide_modal(socket, :reschedule_request)}
