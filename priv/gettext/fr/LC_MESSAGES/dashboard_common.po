@@ -475,6 +475,7 @@ msgstr "Ce créneau n'est plus libre"
 msgid "Times must be in the future"
 msgstr "Les créneaux doivent être dans le futur"
 
+#: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"

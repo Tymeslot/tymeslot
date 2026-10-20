@@ -11,6 +11,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   Under the calendars, Layers: the bookable-times switch and the meeting
   type it shows (see `RailLayers`). Under the mini month, calendar sets
   (see `RailSets`): saved groups of calendars, each applied by its digit.
+  At its foot, the organiser's time zone (`ZoneLink`), which every time is
+  shown in.
+
   Below 768px the rail is hidden; its calendars and layers open in the
   Calendars sheet (`CalendarsSheet`), from the toolbar or the phone header,
   and B still works.
@@ -22,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.RailLayers
   alias TymeslotWeb.Dashboard.Calendar.RailSets
+  alias TymeslotWeb.Dashboard.Calendar.ZoneLink
 
   attr :accounts, :list, required: true
   attr :syncing_ids, :any, default: MapSet.new()
@@ -38,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :set_view, :map, required: true, doc: "see `RailSets.view/1`"
   attr :target, :any, required: true
   attr :week_numbers, :boolean, default: false
+  attr :timezone, :string, required: true, doc: "the zone the surface reads times in"
 
   @spec rail(map()) :: Phoenix.LiveView.Rendered.t()
   def rail(assigns) do
@@ -74,6 +79,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         target={@target}
       />
       <RailLayers.layers bookable={@bookable} target={@target} />
+      <ZoneLink.zone_link id="calendar-rail-timezone" timezone={@timezone} class="mt-auto" />
     </aside>
     """
   end

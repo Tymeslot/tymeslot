@@ -11,7 +11,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   While calendars are hidden its first row says how many and shows them
   all, since the phone header has no room for the toolbar's filter chip.
   The display options (`DisplayOptions`, the toolbar's own) sit at its
-  foot, since a phone has no toolbar. Every control sends the event the
+  foot, since a phone has no toolbar, with the time zone every time is
+  shown in (`ZoneLink`), which the rail shows on a desktop. Every control sends the event the
   rail's or the toolbar's does, so the grid behind changes at once and the
   sheet stays open.
   """
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   alias TymeslotWeb.Dashboard.Calendar.Rail
   alias TymeslotWeb.Dashboard.Calendar.RailLayers
   alias TymeslotWeb.Dashboard.Calendar.RailSets
+  alias TymeslotWeb.Dashboard.Calendar.ZoneLink
 
   attr :accounts, :list, required: true
   attr :hidden_count, :integer, required: true
@@ -34,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
+  attr :timezone, :string, required: true, doc: "the zone the surface reads times in"
   attr :target, :any, required: true
 
   @spec calendars_sheet(map()) :: Phoenix.LiveView.Rendered.t()
@@ -104,6 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
             time_format={@time_format}
             target={@target}
           />
+          <ZoneLink.zone_link id="calendar-sheet-timezone" timezone={@timezone} />
         </section>
       </div>
     </.modal>

@@ -479,6 +479,7 @@ msgstr "Цей час більше не вільний"
 msgid "Times must be in the future"
 msgstr "Час має бути в майбутньому"
 
+#: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"

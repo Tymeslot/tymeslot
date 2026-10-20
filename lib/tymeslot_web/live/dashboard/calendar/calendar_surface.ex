@@ -335,6 +335,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           problem_ids={@problem_ids}
           reauth_ids={@reauth_ids}
           bookable={LayerChoices.rail(@preferences, @bookable_types)}
+          timezone={@timezone}
           target={@myself}
         />
         <Canvas.canvas
@@ -376,6 +377,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         bookable={LayerChoices.rail(@preferences, @bookable_types)}
         preferences={@preferences}
         time_format={@time_format}
+        timezone={@timezone}
         target={@myself}
       />
       <DateSheet.date_sheet

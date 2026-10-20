@@ -475,6 +475,7 @@ msgstr "Diese Zeit ist nicht mehr frei"
 msgid "Times must be in the future"
 msgstr "Die Zeiten müssen in der Zukunft liegen"
 
+#: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"
