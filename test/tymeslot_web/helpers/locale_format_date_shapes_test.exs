@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
           {"it", "giovedì 5 febbraio 2026", "giovedì 5 febbraio", "5 feb", "gio 5 feb"},
           {"cs", "čtvrtek 5. února 2026", "čtvrtek 5. února", "5. úno", "čt 5. úno"},
           {"uk", "Четвер, 5 лютого 2026", "Четвер, 5 лютого", "5 лют", "Чт 5 лют"},
-          {"pl", "czwartek, 5 lutego 2026", "czwartek, 5 lutego", "5 lut", "czw. 5 lut"}
+          {"pl", "czwartek, 5 lutego 2026", "czwartek, 5 lutego", "5 lut", "czw. 5 lut"},
+          {"es", "jueves, 5 de febrero de 2026", "jueves, 5 de febrero", "5 de feb",
+           "jue 5 de feb"}
         ] do
       test "#{locale}: orders the date parts the way the language writes them" do
         locale = unquote(locale)
@@ -49,7 +51,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
           {"fr", "5 févr. 2026"},
           {"cs", "5. úno 2026"},
           {"pl", "5 lut 2026"},
-          {"pt", "5 de fev de 2026"}
+          {"pt", "5 de fev de 2026"},
+          {"es", "5 de feb de 2026"}
         ] do
       test "#{locale}: adds the year in the locale's order" do
         assert LocaleFormat.format_short_date_with_year(~D[2026-02-05], unquote(locale)) ==
@@ -67,7 +70,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
           {"de", "Donnerstag, 5. Februar 2026 · 14:30"},
           {"fr", "jeudi 5 février 2026 · 14:30"},
           {"cs", "čtvrtek 5. února 2026 · 14:30"},
-          {"pt", "quinta-feira, 5 de fevereiro de 2026 · 14:30"}
+          {"pt", "quinta-feira, 5 de fevereiro de 2026 · 14:30"},
+          {"es", "jueves, 5 de febrero de 2026 · 14:30"}
         ] do
       test "#{locale}: sets the weekday-led date beside the locale's clock" do
         assert LocaleFormat.format_weekday_datetime(@datetime, unquote(locale)) ==

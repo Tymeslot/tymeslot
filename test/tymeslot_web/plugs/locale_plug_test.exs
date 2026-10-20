@@ -101,12 +101,12 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       conn =
         build_conn()
         |> init_test_session(%{})
-        |> Map.put(:params, %{"locale" => "es"})
+        |> Map.put(:params, %{"locale" => "ja"})
         |> fetch_session()
         |> put_session(:chosen_locale, "de")
         |> LocalePlug.call([])
 
-      # es is a shape-valid but unsupported param — it must not short-circuit
+      # ja is a shape-valid but unsupported param — it must not short-circuit
       # past the valid "de" session locale and be coerced to the default.
       assert conn.assigns.locale == "de"
       assert get_session(conn, :chosen_locale) == "de"
@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       conn =
         build_conn()
         |> init_test_session(%{})
-        |> Map.put(:params, %{"locale" => "es"})
+        |> Map.put(:params, %{"locale" => "ja"})
         |> fetch_session()
         |> LocalePlug.call([])
 

@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     end
 
     test "rejects unsupported locale", %{socket: socket} do
-      updated_socket = LocaleHandler.handle_locale_change(socket, "es")
+      updated_socket = LocaleHandler.handle_locale_change(socket, "ja")
 
       # Should remain unchanged
       assert updated_socket.assigns.locale == "en"
