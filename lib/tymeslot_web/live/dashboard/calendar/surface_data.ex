@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   skeleton.
   """
 
-  import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3, changed?: 2]
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3]
 
   alias Tymeslot.Availability.Bookability
@@ -240,9 +240,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   pushing it to the hook: `calendar:period` when the loaded window holds it,
   otherwise the reloaded window.
 
-  The same period again only closes the date picker. A different day whose
-  window is the one already loaded (another day of the visible week) updates
-  the title and range but needs no query: the hook already holds the events.
+  The same period again only closes the date picker, and only when the URL
+  changed: a parent render for another prop (the clock or focus mode, both
+  switched from the open display options) keeps the menu open. A different
+  day whose window is the one already loaded (another day of the visible
+  week) updates the title and range but needs no query: the hook already
+  holds the events.
   Either way the hook still hears which period the URL settled on
   (`calendar:period`), because it holds a navigation as pending until the
   server confirms it and follows nothing else (not even Back) meanwhile.
@@ -254,7 +257,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
     case target(socket.assigns) do
       {^view, ^date} ->
-        socket |> assign(:open_menu, nil) |> push_period()
+        socket = if changed?(socket, :params), do: assign(socket, :open_menu, nil), else: socket
+        push_period(socket)
 
       _other ->
         socket = apply_params(socket, opts)

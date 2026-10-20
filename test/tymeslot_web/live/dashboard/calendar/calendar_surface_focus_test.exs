@@ -85,6 +85,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFocusTest do
 
     lv |> element("#calendar-focus") |> render_click()
     assert has_element?(lv, "#dashboard-root[data-calendar-focus='true']")
+    # The parent's new layout leaves the panel the switch sits in open.
+    assert has_element?(lv, "#calendar-focus[aria-checked='true']")
 
     # What F sends from the canvas hook: a push to the LiveView, no target.
     render_hook(lv, "calendar:toggle_focus", %{})

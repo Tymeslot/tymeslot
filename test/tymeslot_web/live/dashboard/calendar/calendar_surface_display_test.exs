@@ -200,6 +200,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
       assert has_element?(lv, "#calendar-time-format-12h[aria-pressed='true']")
     end
 
+    # The parent hands the surface the new clock, and that render used to
+    # close whatever menu was open, the display options included.
+    test "switching the clock back and forth keeps the display options open", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_display_options(lv)
+
+      for format <- ~w(12h 24h 12h) do
+        lv |> element("#calendar-time-format-#{format}") |> render_click()
+        assert has_element?(lv, "#calendar-time-format-#{format}[aria-pressed='true']")
+      end
+    end
+
     test "an open preview is rebuilt in the new clock", %{conn: conn} do
       %{conn: conn, integration: integration} = owner(conn)
       review = event(integration, "work", "Design review", ~U[2026-10-14 13:00:00Z])
