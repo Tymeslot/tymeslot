@@ -101,6 +101,11 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_event(integration, graph_resource_id) do
+    # Taken before the fetch, as in `DeltaSync`: the event is stamped with it,
+    # and reconciliation treats a Tymeslot calendar write that finished at or
+    # after it as possibly missing from what was read.
+    read_at = DateTime.utc_now(:microsecond)
+
     result =
       Tokens.with_access_token(integration, &OutlookCalendarAPI.refresh_token/1, fn token ->
         # Check for 404 (deleted event) and 401 BEFORE the circuit breaker so
@@ -125,16 +130,16 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         end
       end)
 
-    handle_sync_result(result, integration, graph_resource_id)
+    handle_sync_result(result, integration, graph_resource_id, read_at)
   end
 
-  defp handle_sync_result(result, integration, graph_resource_id) do
+  defp handle_sync_result(result, integration, graph_resource_id, read_at) do
     case result do
       {:ok, :not_found} ->
         handle_event_deleted(integration, graph_resource_id)
 
       {:ok, event} when is_map(event) ->
-        handle_event_fetched(integration, graph_resource_id, event)
+        handle_event_fetched(integration, graph_resource_id, event, read_at)
 
       {:error, :unauthorized, _message} ->
         Logger.warning("Outlook Calendar sync unauthorised; flagging for reauth",
@@ -199,11 +204,11 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     :ok
   end
 
-  defp handle_event_fetched(integration, graph_resource_id, event) do
+  defp handle_event_fetched(integration, graph_resource_id, event, read_at) do
     context = %{
       calendar_integration_id: integration.id,
       provider_calendar_id: Defaults.booking_calendar_id(integration),
-      synced_at: DateTime.utc_now(:microsecond)
+      synced_at: read_at
     }
 
     case OutlookProvider.normalise_events([event], context) do

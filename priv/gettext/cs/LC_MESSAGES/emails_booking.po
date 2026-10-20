@@ -774,3 +774,8 @@ msgstr "Registrace je uzavřena"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "Seznam je přiložen také jako soubor CSV pro tabulkový procesor."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Přesun této schůzky proběhl ve vašem kalendáři."

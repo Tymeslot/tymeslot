@@ -772,3 +772,8 @@ msgstr "Die Anmeldung ist geschlossen"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "Die Liste hängt zusätzlich als CSV-Datei für eine Tabellenkalkulation an."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Sie haben diesen Termin in Ihrem Kalender verschoben."

@@ -772,3 +772,8 @@ msgstr "As inscrições foram encerradas"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "A lista também vai anexada como arquivo CSV para uma planilha."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Você mudou esta reunião de horário no seu calendário."

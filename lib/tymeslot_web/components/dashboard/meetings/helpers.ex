@@ -92,4 +92,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   @spec format_meeting_time(Ecto.Schema.t(), String.t(), String.t()) :: String.t()
   def format_meeting_time(meeting, timezone, time_format),
     do: DashboardFormat.time_range(meeting.start_time, meeting.end_time, timezone, time_format)
+
+  @doc """
+  A time (anything with `start_time` and `end_time`, such as a calendar-move
+  offer) as one short phrase, date then clock range, formatted exactly as the
+  meeting card formats a meeting's own time.
+  """
+  @spec format_move_time(
+          %{:start_time => DateTime.t(), :end_time => DateTime.t(), optional(atom()) => any()},
+          String.t(),
+          String.t()
+        ) ::
+          String.t()
+  def format_move_time(times, timezone, time_format) do
+    "#{format_meeting_date(times, timezone)}, #{format_meeting_time(times, timezone, time_format)}"
+  end
 end
