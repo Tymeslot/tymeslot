@@ -205,6 +205,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           phx-click="calendar:toggle_focus"
           class="hidden lg:inline-flex"
         />
+        <%!-- The panel can open as low as 15rem from the top (both strips and
+             a wrapped toolbar above it), so its height leaves 16rem. --%>
         <.dropdown
           id="calendar-display-options"
           open={@open_menu == :display}
@@ -216,7 +218,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           panel_label={dgettext("dashboard_calendar", "Display options")}
           aria-label={dgettext("dashboard_calendar", "Display options")}
           trigger_class="icon-button icon-button--neutral icon-button--sm"
-          class="mt-1 max-h-[min(36rem,80dvh)] w-80 overflow-y-auto rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
+          class="mt-1 max-h-[min(36rem,calc(100dvh-16rem))] w-80 overflow-y-auto rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
         >
           <:trigger>
             <.icon name="hero-adjustments-horizontal" class="h-4 w-4" />

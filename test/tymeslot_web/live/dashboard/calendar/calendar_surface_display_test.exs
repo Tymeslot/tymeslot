@@ -52,6 +52,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
     end
   end
 
+  # Opened under both strips and a wrapped toolbar, a panel capped at 80dvh
+  # ran past the bottom of an 800px screen, so its last rows were out of reach.
+  test "the display options panel is never taller than the room below the toolbar", %{
+    conn: conn
+  } do
+    %{conn: conn} = owner(conn)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open_display_options(lv)
+
+    assert has_element?(
+             lv,
+             "#calendar-display-options [class~='max-h-[min(36rem,calc(100dvh-16rem))]'] #calendar-display-rows"
+           )
+  end
+
   test "compact density is saved and sent to the canvas", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn)
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
