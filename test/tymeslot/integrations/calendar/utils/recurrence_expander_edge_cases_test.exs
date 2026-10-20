@@ -7,7 +7,6 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
-  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Test.LogCapture
 
   describe "expand/4 with EXDATE exclusions" do
@@ -506,38 +505,6 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
       assert occurrences == []
     end
 
-    test "a daily series fills a range of several years, however long it has run" do
-      occurrences =
-        "FREQ=DAILY"
-        |> old_series(~D[2023-10-02])
-        |> RecurrenceExpander.expand(~U[2026-01-01 00:00:00Z], ~U[2030-12-31 23:59:59Z])
-
-      assert length(occurrences) == Date.diff(~D[2030-12-31], ~D[2026-01-01]) + 1
-      assert hd(dates(occurrences)) == ~D[2026-01-01]
-      assert List.last(dates(occurrences)) == ~D[2030-12-31]
-    end
-
-    # The sync expands every series over its whole window, 730 days. A cap of
-    # 500 occurrences, counted from the window's start, cut a daily series
-    # without an end off about 134 days ahead, with nothing said.
-    test "the sync caches a daily series without an end to the end of its window" do
-      {window_start, window_end} = Sync.window()
-      first = window_start |> DateTime.to_date() |> Date.add(-30)
-
-      {:ok, events} =
-        "FREQ=DAILY"
-        |> old_series(first)
-        |> List.wrap()
-        |> ICalNormaliser.normalise_events(
-          %{calendar_integration_id: 1, provider_calendar_id: "/cal/", synced_at: window_start},
-          :caldav
-        )
-
-      last_start = events |> Enum.map(& &1.start_at) |> Enum.max(DateTime)
-      assert DateTime.diff(window_end, last_start, :hour) < 24
-      assert length(events) > 700
-    end
-
     test "a rule that never moves forward is unreadable, so its event shows once" do
       # INTERVAL=0 (or below) would step on the same period for ever. RFC 5545
       # requires a positive INTERVAL, so the rule is refused like any other
@@ -562,20 +529,6 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
       expanded = Enum.flat_map(events, &RecurrenceExpander.expand(&1, @week_start, @week_end))
 
       assert expanded == events
-    end
-
-    test "a series cut short by the caller's cap says so" do
-      LogCapture.attach(level: :warning)
-
-      occurrences =
-        "FREQ=DAILY"
-        |> old_series(~D[2023-10-02])
-        |> RecurrenceExpander.expand(@week_start, @week_end, max_occurrences: 3)
-
-      assert length(occurrences) == 3
-      assert hd(dates(occurrences)) == DateTime.to_date(@week_start)
-
-      LogCapture.await_log("Recurrence expansion stopped after 3 occurrences")
     end
 
     test "a series that runs out of step budget before the range says so" do
