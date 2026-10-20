@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   visible range, then the organiser's calendars grouped by account, each with
   a colour checkbox, a lock when Tymeslot cannot write to it, an eye when
   it is shown but does not block bookings ("Doesn't block", spelt out in
-  the Calendars sheet), and its sync status: a spinner while it syncs, a warning while it has a problem
-  (explained in the banner), and Sync now. With no calendar connected it
+  the Calendars sheet), and its sync status: a spinner while it syncs, a
+  warning while it has a problem (explained in the banner), and Sync now. With no calendar connected it
   says that bookings and bookable times still show, and links to connecting
   one.
 
@@ -212,6 +212,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               disabled={account.hidden and not @set_active}
               colour={calendar.colour}
               label={calendar.name}
+              described_by={described_by(@id_prefix, account, calendar)}
               event="calendar:toggle_calendar"
               values={%{"integration-id" => account.id, "calendar-id" => calendar.id}}
               data={[{"data-calendar-id", calendar.id}]}
@@ -220,9 +221,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
             <span class="min-w-0 flex-1 truncate text-token-sm text-tymeslot-700">{calendar.name}</span>
             <%!-- So an event shown here is not taken for a conflict: its
                  calendar is shown but takes no slots. --%>
-            <.not_blocking :if={not calendar.blocks} spell_out={@spell_out} />
+            <.not_blocking
+              :if={not calendar.blocks}
+              id={row_id(@id_prefix, account, calendar, "not-blocking")}
+              spell_out={@spell_out}
+            />
             <.lock
               :if={calendar.read_only and not account.read_only}
+              id={row_id(@id_prefix, account, calendar, "read-only")}
               label={dgettext("dashboard_calendar", "Read only")}
             />
           </li>
@@ -236,6 +242,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :disabled, :boolean, default: false
   attr :colour, :string, required: true, doc: "a colour token from ColourTokens"
   attr :label, :string, required: true
+  attr :described_by, :string, default: nil, doc: "ids of the markers that qualify the label"
   attr :event, :string, required: true
   attr :values, :map, required: true
   attr :data, :list, required: true
@@ -248,6 +255,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
       role="checkbox"
       aria-checked={to_string(@checked)}
       aria-label={@label}
+      aria-describedby={@described_by}
       aria-disabled={@disabled && "true"}
       disabled={@disabled}
       phx-click={!@disabled && @event}
@@ -267,22 +275,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   end
 
   attr :label, :string, required: true
+  attr :id, :string, default: nil, doc: "names the words for a checkbox's `aria-describedby`"
 
   defp lock(assigns) do
     ~H"""
     <span class="shrink-0 text-tymeslot-400" title={@label}>
       <.icon name="hero-lock-closed-mini" class="h-4 w-4" />
-      <span class="sr-only">{@label}</span>
+      <span id={@id} class="sr-only">{@label}</span>
     </span>
     """
   end
 
+  attr :id, :string, required: true
   attr :spell_out, :boolean, required: true
 
   defp not_blocking(assigns) do
     ~H"""
     <span
       :if={@spell_out}
+      id={@id}
       data-not-blocking
       class="shrink-0 rounded-token-sm bg-tymeslot-100 px-1.5 py-0.5 text-token-xs font-semibold text-tymeslot-500"
     >
@@ -295,9 +306,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
       title={dgettext("dashboard_calendar", "Doesn't block")}
     >
       <.icon name="hero-eye-mini" class="h-4 w-4" />
-      <span class="sr-only">{dgettext("dashboard_calendar", "Doesn't block")}</span>
+      <span id={@id} class="sr-only">{dgettext("dashboard_calendar", "Doesn't block")}</span>
     </span>
     """
+  end
+
+  # The ids of the words that qualify a calendar's checkbox, or nil.
+  defp described_by(prefix, account, calendar) do
+    ids =
+      [
+        {not calendar.blocks, "not-blocking"},
+        {calendar.read_only and not account.read_only, "read-only"}
+      ]
+      |> Enum.filter(&elem(&1, 0))
+      |> Enum.map_join(" ", fn {_applies, part} -> row_id(prefix, account, calendar, part) end)
+
+    if ids == "", do: nil, else: ids
+  end
+
+  defp row_id(prefix, account, calendar, part) do
+    safe = String.replace(calendar.id, ~r/[^\w-]/u, "-")
+    item_id(prefix, "calendar-#{account.id}-#{safe}-#{part}")
   end
 
   defp value_attrs(values),

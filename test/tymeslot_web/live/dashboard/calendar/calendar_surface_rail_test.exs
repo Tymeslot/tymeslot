@@ -261,6 +261,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
       refute has_element?(lv, "#{diary} [data-not-blocking]")
     end
 
+    test "the calendar's checkbox is described by the marker; a blocking one is not", %{
+      conn: conn,
+      personal: personal
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      row = ~s|#calendar-account-#{personal.id} li[data-calendar-row="holidays"]|
+      marker_id = "calendar-calendar-#{personal.id}-holidays-not-blocking"
+
+      assert has_element?(lv, ~s|#{row} [role="checkbox"][aria-describedby="#{marker_id}"]|)
+      assert has_element?(lv, "##{marker_id}", "Doesn't block")
+
+      refute has_element?(
+               lv,
+               ~s|#calendar-account-#{personal.id} li[data-calendar-row="diary"] [aria-describedby]|
+             )
+    end
+
     test "the phone's Calendars sheet spells the marker out", %{conn: conn, personal: personal} do
       {:ok, lv, _html} =
         live(put_connect_params(conn, %{"viewport" => "phone"}), ~p"/dashboard/calendar")
@@ -273,6 +290,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
       assert has_element?(lv, "#{holidays} [data-not-blocking]", "Doesn't block")
       refute has_element?(lv, "#{holidays} [data-not-blocking] .sr-only")
       refute has_element?(lv, "#{diary} [data-not-blocking]")
+    end
+  end
+
+  describe "an Exchange mailbox's calendars" do
+    test "the main calendar is unmarked and a folder is marked", %{conn: conn, user: user} do
+      mailbox =
+        insert(:calendar_integration,
+          user: user,
+          name: "Mailbox",
+          provider: "exchange",
+          is_active: true,
+          calendar_list: [
+            %{"id" => "main", "name" => "Calendar", "selected" => true, "primary" => true},
+            %{"id" => "team", "name" => "Team", "selected" => true}
+          ]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      account = "#calendar-account-#{mailbox.id}"
+
+      refute has_element?(lv, ~s|#{account} li[data-calendar-row="main"] [data-not-blocking]|)
+      assert has_element?(lv, ~s|#{account} li[data-calendar-row="team"] [data-not-blocking]|)
     end
   end
 end
