@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Phoenix.LiveView
 
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
+  alias TymeslotWeb.Dashboard.BookingsManagement.CalendarMove
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
@@ -43,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:sending_reschedule, nil)
      |> assign(:answering_request, nil)
      |> assign(:answering_opts, %{})
+     |> assign(:move_offers, %{})
      |> assign(:awaiting_approval_count, 0)
      |> assign(:per_page, 20)
      |> assign(:next_cursor, nil)
@@ -56,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> ModalHook.mount_modal(
        cancel_meeting: false,
        reschedule_request: false,
+       calendar_move: false,
        decline_request: false,
        add_guests: false
      )
@@ -252,6 +255,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  def handle_event("show_calendar_move_modal", params, socket),
+    do: {:noreply, CalendarMove.show(socket, params, &load_meetings/1)}
+
+  def handle_event("hide_calendar_move_modal", _params, socket),
+    do: {:noreply, ModalHook.hide_modal(socket, :calendar_move)}
+
+  def handle_event("confirm_calendar_move", _params, socket),
+    do: {:noreply, CalendarMove.confirm(socket, &load_meetings/1)}
+
   def handle_event("load_more", _params, %{assigns: %{loading_more: true}} = socket) do
     {:noreply, socket}
   end
@@ -290,6 +302,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
          socket
          |> assign(:next_cursor, page.next_cursor)
          |> assign(:has_more, page.has_more)
+         |> assign(
+           :move_offers,
+           Map.merge(socket.assigns.move_offers, Meetings.calendar_move_offers(page.items))
+         )
          |> assign(:loading_more, false)}
 
       {:error, _error} ->
@@ -425,6 +441,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           cancelling_meeting={@cancelling_meeting}
           sending_reschedule={@sending_reschedule}
           answering_request={@answering_request}
+          move_offers={@move_offers}
           target={@myself}
         />
 
@@ -446,6 +463,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         reschedule_request={@reschedule_request_modal_data}
         show_reschedule={@show_reschedule_request_modal || false}
         sending_reschedule={@sending_reschedule}
+        calendar_move={@calendar_move_modal_data}
+        show_calendar_move={@show_calendar_move_modal || false}
         add_guests={@add_guests_modal_data}
         show_add_guests={@show_add_guests_modal || false}
         staged_guests={@staged_guests}
@@ -573,6 +592,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
         socket
         |> LiveView.stream(:meetings, page.items, reset: true)
+        |> assign(:move_offers, Meetings.calendar_move_offers(page.items))
         |> assign(:next_cursor, page.next_cursor)
         |> assign(:has_more, page.has_more)
         |> assign(:loading, false)

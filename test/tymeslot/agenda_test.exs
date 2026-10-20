@@ -137,16 +137,51 @@ defmodule Tymeslot.AgendaTest do
   end
 
   describe "day_agenda/2 deduplication and filtering" do
-    test "drops external events that are our own synced bookings", %{
-      user: user,
-      tomorrow: tomorrow
-    } do
+    # The flag is also set on events the organiser drew on the grid, on another
+    # instance's bookings, and on foreign events an older release stamped while
+    # editing them. All of those are real appointments in the calendar.
+    test "keeps an event marked as Tymeslot's that none of the user's bookings mirrors",
+         %{user: user, tomorrow: tomorrow} do
       external_event(user, at(tomorrow, ~T[12:00:00]),
+        summary: "Drawn on the grid",
+        provider_event_id: "grid-evt",
+        created_by_tymeslot: true
+      )
+
+      assert titles(Agenda.day_agenda(user, "Etc/UTC")) == ["Drawn on the grid"]
+    end
+
+    test "drops the synced copy of a booking held back by a pending reschedule request",
+         %{user: user, tomorrow: tomorrow} do
+      slot = at(tomorrow, ~T[12:00:00])
+
+      booking(user, slot,
+        title: "Voided by reschedule request",
+        provider_event_id: "evt-voided",
+        reschedule_requested_at: DateTime.utc_now()
+      )
+
+      external_event(user, slot,
         summary: "Synced copy",
+        provider_event_id: "evt-voided",
         created_by_tymeslot: true
       )
 
       assert Day.empty?(Agenda.day_agenda(user, "Etc/UTC"))
+    end
+
+    test "keeps an event that only another organiser's booking mirrors",
+         %{user: user, tomorrow: tomorrow} do
+      slot = at(tomorrow, ~T[12:00:00])
+
+      booking(insert(:user), slot,
+        title: "Someone else's booking",
+        provider_event_id: "evt-shared"
+      )
+
+      external_event(user, slot, summary: "In my calendar", provider_event_id: "evt-shared")
+
+      assert titles(Agenda.day_agenda(user, "Etc/UTC")) == ["In my calendar"]
     end
 
     test "drops external events matching a booking's provider_event_id",
