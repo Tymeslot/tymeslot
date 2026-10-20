@@ -41,6 +41,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
     end
   end
 
+  # German labels once pushed Kompakt and Sonntag out of a clipped strip.
+  test "a row of segments can wrap them under its label", %{conn: conn} do
+    %{conn: conn} = owner(conn)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open_display_options(lv)
+
+    for id <- ~w(calendar-density calendar-week-start calendar-time-format) do
+      assert has_element?(lv, "div[class~='flex-wrap'] > ##{id}[class~='ml-auto']")
+    end
+  end
+
   test "compact density is saved and sent to the canvas", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn)
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

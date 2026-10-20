@@ -22,7 +22,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   # at least 44px tall and segments stretch to it. A switch needs nothing
   # here: `.status-toggle::before` already pads it to 44x44 on coarse pointers.
   @row "max-sm:min-h-11 pointer-coarse:min-h-11"
-  @segments "max-sm:[&>button]:min-h-11 max-sm:[&>button]:px-3 pointer-coarse:[&>button]:min-h-11 pointer-coarse:[&>button]:px-3"
+  # A row of segments wraps them under its label rather than clipping them
+  # when a translation is long (German needs about 340px for Density).
+  @segment_row "flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
+  @segments "ml-auto max-sm:[&>button]:min-h-11 max-sm:[&>button]:px-3 pointer-coarse:[&>button]:min-h-11 pointer-coarse:[&>button]:px-3"
 
   attr :id_prefix, :string,
     required: true,
@@ -42,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   def display_options(assigns) do
     ~H"""
     <div id={"#{@id_prefix}-display-rows"} class="space-y-4">
-      <div class={["flex items-center justify-between gap-3", row()]}>
+      <div class={[segment_row(), row()]}>
         <span class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar", "Density")}
         </span>
@@ -138,6 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
 
   defp row, do: @row
   defp segments, do: @segments
+  defp segment_row, do: @segment_row
 
   # Rows 3 to 7: what the week shows and how times read. Weekends and the
   # week start reload the window; the others redraw from the settings (see
@@ -174,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
       event="calendar:toggle_week_numbers"
       target={@target}
     />
-    <div class={["flex items-center justify-between gap-3", row()]}>
+    <div class={[segment_row(), row()]}>
       <span class="text-token-sm font-medium text-tymeslot-700">
         {dgettext("dashboard_calendar_power", "Week starts on")}
       </span>
@@ -192,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         <:option value="sunday" label={@sunday} />
       </.segmented_control>
     </div>
-    <div class={["flex items-center justify-between gap-3", row()]}>
+    <div class={[segment_row(), row()]}>
       <span class="text-token-sm font-medium text-tymeslot-700">
         {dgettext("dashboard_calendar_power", "Clock")}
       </span>
