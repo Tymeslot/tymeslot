@@ -88,4 +88,22 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
              end) == "Private oder lokale Netzwerkadressen sind nicht zulässig"
     end
   end
+
+  # A provider that answered and declined the request is not a connection
+  # failure; telling its owner to check the network sends them the wrong way.
+  describe "a calendar's refusal" do
+    test "says the calendar refused the change, not that the connection failed" do
+      message = ErrorHandler.sanitize_error_message(:refused, :google)
+
+      assert message =~ "Google Calendar refused the change"
+      refute message =~ "Network"
+    end
+
+    test "is worded the same by classify_and_format/3" do
+      assert {_category, message} = ErrorHandler.classify_and_format(:refused, :outlook)
+
+      assert message =~ "refused the change"
+      refute message =~ "Unable to connect"
+    end
+  end
 end

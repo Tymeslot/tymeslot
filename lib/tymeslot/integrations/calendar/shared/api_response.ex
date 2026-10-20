@@ -19,6 +19,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   and a 5xx is `:server_error`. Both are transient; neither is a network
   failure, and a caller that waits out a rate limit needs to tell them apart.
 
+  Any other 4xx (400, 409, 412, 422, ...) is `:refused`: the provider
+  understood the request and declined it, so sending it again changes
+  nothing. A body that will not decode is `:malformed_response`.
+  `:network_error` is kept for a request that never got an answer.
+
   Providers keep what genuinely differs, passing it as `:custom`: Google
   classifies a 403 from `error.errors[].reason`, Graph from `error.code` plus a
   `Retry-After` header.
@@ -82,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   Both providers nest the human-readable text at `error.message` and their
   classification hints as siblings of it, so the decode-and-reach step is
   shared while the classification stays with the provider. A body that will not
-  decode cannot be classified, so it short-circuits to a network error.
+  decode cannot be classified, so it short-circuits to `:malformed_response`.
   """
   @spec with_error_object(binary(), (String.t(), map() -> result())) :: result()
   def with_error_object(body, fun) do
@@ -91,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
         fun.(get_in(decoded, ["error", "message"]) || "Forbidden", decoded)
 
       {:error, _reason} ->
-        {:error, :network_error, "Forbidden (malformed response)"}
+        {:error, :malformed_response, "Forbidden (malformed response)"}
     end
   end
 
@@ -160,7 +165,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
       body: Redactor.redact_and_truncate(body)
     )
 
-    {:error, :network_error, "HTTP #{status} (see logs for details)"}
+    {:error, unrecognised_status_reason(status), "HTTP #{status} (see logs for details)"}
   end
 
   defp default_handle({:error, reason}, _label) do
@@ -181,12 +186,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
     end
   end
 
+  # A 408 is the server giving up on waiting for the request, which a resend
+  # may well get through; every other 4xx here is a refusal of the request
+  # itself. Anything outside 4xx that no clause above recognised (a stray 3xx)
+  # says nothing about the request, so it stays a transport failure.
+  defp unrecognised_status_reason(408), do: :timeout
+  defp unrecognised_status_reason(status) when status in 400..499, do: :refused
+  defp unrecognised_status_reason(_status), do: :network_error
+
   defp decode_body(""), do: {:ok, %{}}
 
   defp decode_body(body) do
     case Jason.decode(body) do
       {:ok, decoded} -> {:ok, decoded}
-      {:error, _reason} -> {:error, :network_error, "Malformed JSON response"}
+      {:error, _reason} -> {:error, :malformed_response, "Malformed JSON response"}
     end
   end
 end

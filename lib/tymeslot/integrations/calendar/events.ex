@@ -37,12 +37,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @no_calendar_errors [:no_calendar_client, :no_calendar_integration]
 
   # A repeat rule the provider has no pattern for, or one it would move onto
-  # days the organiser never chose, is refused the same way every time.
+  # days the organiser never chose, is refused the same way every time, as is
+  # a request the provider declined outright.
   @non_queueable_errors [
                           :unauthorized,
                           :not_found,
                           :meeting_not_found,
                           :rate_limited,
+                          :refused,
                           :rule_not_supported_by_outlook,
                           :day_missing_in_some_months
                         ] ++

@@ -801,3 +801,8 @@ msgstr "O mailbox.org sempre usa este servidor CalDAV, por isso o endereço não
 #, elixir-autogen, elixir-format
 msgid "mailbox.org connection successful"
 msgstr "Conexão com o mailbox.org bem-sucedida"
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} refused the change. The connection is working, but the calendar would not accept this request."
+msgstr "%{provider} recusou a alteração. A conexão está funcionando, mas o calendário não aceitou esta requisição."

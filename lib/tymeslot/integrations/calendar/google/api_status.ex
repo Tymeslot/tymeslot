@@ -4,6 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.ApiStatus do
   envelope (`Shared.ApiResponse`): a 403 carrying its classification in
   `error.errors[].reason`, and a 410 marking a sync token the caller must
   discard. `Google.CalendarAPI` hands every response through `classify/1`.
+
+  A 403 that is neither throttling nor an authorisation failure, such as a
+  write to a calendar the account may only read, is `:refused`, as any other
+  4xx refusal is in the shared envelope.
   """
 
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
@@ -35,7 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.ApiStatus do
       "notacalendaruser" in reason_strings -> {:error, :not_a_calendar_user, error_msg}
       rate_limited?(error_msg, reason_strings) -> {:error, :rate_limited, error_msg}
       unauthorized_forbidden?(error_msg, reason_strings) -> {:error, :unauthorized, error_msg}
-      true -> {:error, :network_error, error_msg}
+      true -> {:error, :refused, error_msg}
     end
   end
 
