@@ -756,3 +756,53 @@ msgstr "Passadas"
 msgctxt "filter tab"
 msgid "Upcoming"
 msgstr "Próximas"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "Booking moved to %{time}"
+msgstr "Agendamento movido para %{time}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move booking"
+msgstr "Mover agendamento"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Move booking to %{time}"
+msgstr "Mover agendamento para %{time}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move booking to the new time"
+msgstr "Mover agendamento para o novo horário"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "This booking can no longer be moved to its calendar time."
+msgstr "Este agendamento não pode mais ser movido para o horário do calendário."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot is still updating your calendar for this booking. Please try again in a moment."
+msgstr "O Tymeslot ainda está atualizando seu calendário para este agendamento. Tente novamente em instantes."
+
+#: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar now has this meeting at %{time}. Tymeslot will move the booking there, reschedule its reminders and email %{attendee_name} and any guests the new time."
+msgstr "Seu calendário agora tem esta reunião em %{time}. O Tymeslot vai mover o agendamento para lá, reprogramar os lembretes e avisar por e-mail %{attendee_name} e os convidados sobre o novo horário."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting has moved again in your calendar. Check the new time and confirm the move."
+msgstr "A reunião foi movida de novo no seu calendário. Confira o novo horário e confirme a mudança."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot could not move this booking. Another booking already starts at that time."
+msgstr "O Tymeslot não conseguiu mover este agendamento. Outro agendamento já começa nesse horário."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot could not move this booking. Please try again."
+msgstr "O Tymeslot não conseguiu mover este agendamento. Tente novamente."

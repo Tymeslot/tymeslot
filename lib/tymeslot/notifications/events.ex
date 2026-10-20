@@ -439,13 +439,17 @@ defmodule Tymeslot.Notifications.Events do
 
   @doc """
   Handles meeting rescheduling event.
+
+  `opts` are passed on to the reschedule emails: `moved_by: :host` marks a
+  move the host made in their own calendar, which the organiser's copy says
+  instead of blaming the attendee.
   """
-  @spec meeting_rescheduled(term(), term()) :: {:ok, term()} | {:error, term()}
-  def meeting_rescheduled(updated_meeting, original_meeting) do
+  @spec meeting_rescheduled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_rescheduled(updated_meeting, original_meeting, opts \\ []) do
     # Send email notifications
     result =
       send_notifications(:meeting_rescheduled, updated_meeting, fn ->
-        Orchestrator.send_reschedule_notifications(updated_meeting, original_meeting)
+        Orchestrator.send_reschedule_notifications(updated_meeting, original_meeting, opts)
       end)
 
     # Reminders were re-pinned to the new time in the reschedule's own

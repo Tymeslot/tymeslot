@@ -1,4 +1,15 @@
 
+[1.28.0]
+* caldav: Keep event reminders when editing a CalDAV event from the calendar
+* calendar: Show agenda events wrongly treated as Tymeslot bookings
+* caldav: Stop queued calendar edits marking other people's events as Tymeslot's
+* calendar: Stop calendar edits marking other people's events as Tymeslot's
+* calendar: Reconcile bookings moved in Outlook while a sync was re-bootstrapping
+* meetings: Don't flag a booking while Tymeslot's own calendar write for it is pending
+* calendar: Reconcile bookings moved in Outlook when the delta sweep sees the change first
+* meetings: Move a flagged booking to the time its calendar event was moved to
+
+
 [1.27.0]
 * [BREAKING] encryption: Refuse to start with an unusable data encryption key: an install whose DATA_ENCRYPTION_KEY is not valid Base64 or decodes to fewer than 32 bytes no longer starts. Such an install could not store or read any credential, so it holds none encrypted under that key: replace the value with one from `openssl rand -base64 48` and restart.
 * calendar: Show a custom-domain organiser once on mailbox.org
