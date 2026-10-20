@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SyncStatus do
 
   @doc """
   Sync now or Retry for one account, named by the button's value. Counted
-  against the `:calendar_refresh` limit Refresh on the old grid uses; opening
+  against the `:calendar_refresh` limit; opening
   the calendar is not (`refresh_stale/1`).
   """
   @spec sync_account(socket(), String.t() | integer()) :: socket()

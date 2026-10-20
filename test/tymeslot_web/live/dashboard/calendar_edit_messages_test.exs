@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Dashboard.CalendarEditMessagesTest do
-  @moduledoc "The copy both calendars show when a change is refused or fails."
+  @moduledoc "The copy the calendar shows when a change is refused or fails."
 
   use ExUnit.Case, async: true
 

@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.ZoneLink do
   @moduledoc """
   The organiser's time zone, which every time on the calendar is shown in:
-  its flag and name, drawn by the component the old calendar's header used
+  its flag and name, drawn by the shared component
   (`TymeslotWeb.Dashboard.Availability.Helpers.timezone_display/1`), as a
   link to the profile settings where the zone is changed. Its accessible
   name and tooltip say what the zone is for ("Times shown in Kyiv,

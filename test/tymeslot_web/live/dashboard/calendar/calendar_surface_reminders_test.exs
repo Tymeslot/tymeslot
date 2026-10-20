@@ -2,8 +2,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRemindersTest do
   @moduledoc """
   Desktop notifications on the calendar: the feed the `DesktopReminders`
   hook fires from (`#calendar-reminder-feed`), built from the calendars the
-  surface shows, and the 60-second loop that keeps it fresh without the
-  clock tick the old calendar had.
+  surface shows, and the 60-second loop that keeps it fresh without a
+  clock tick.
   """
 
   use TymeslotWeb.LiveCase, async: true

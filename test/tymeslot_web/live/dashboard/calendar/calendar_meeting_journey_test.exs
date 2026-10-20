@@ -2,8 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarMeetingJourneyTest do
   @moduledoc """
   A Tymeslot meeting booked from the calendar's side panel reaches its
   guests: the extra guest is invited in the language the organiser chose,
-  with the note, by the organiser. The journey the old calendar's Quick Add
-  meeting covered (`guest_invitation_journey_test.exs`).
+  with the note, by the organiser.
   """
 
   # Not async: the real email service is swapped in for the mock, and Swoosh

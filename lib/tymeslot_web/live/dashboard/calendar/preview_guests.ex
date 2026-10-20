@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PreviewGuests do
     """
   end
 
-  # The old calendar's badge wording, so its translations carry over.
+  # The badge wording, kept so its existing translations carry over.
   defp summary_text(%{accepted: accepted, total: total, declined: declined}) do
     going =
       dgettext("dashboard_calendar", "%{accepted} of %{total} guests going",

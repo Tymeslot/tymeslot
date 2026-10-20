@@ -1,9 +1,8 @@
 defmodule Tymeslot.CalendarGrid.ColourTokens do
   @moduledoc """
-  CSS colour token names for the redesigned calendar's client-drawn grid.
+  CSS colour token names for the calendar's client-drawn grid.
 
-  The old grid paints with Tailwind classes (`bg-calendar-tomato`). The new
-  grid is drawn by JavaScript, which sets `--cal-ev: var(--color-<token>)` on
+  The grid is drawn by JavaScript, which sets `--cal-ev: var(--color-<token>)` on
   each event, so it needs the token rather than the class. The token is the
   class without its `bg-` prefix, which keeps the palette defined once, in
   `Tymeslot.Integrations.Calendar.EventColour` and `base/variables.css`.
@@ -27,8 +26,8 @@ defmodule Tymeslot.CalendarGrid.ColourTokens do
 
   @doc """
   The token for each calendar, keyed by `{integration_id, calendar_id}`: the
-  tokens of `CalendarGrid.calendar_colour_classes/2`, so the old grid and this
-  one paint a calendar alike.
+  tokens of `CalendarGrid.calendar_colour_classes/2`, so the calendar and
+  every other place that paints with the classes agree.
   """
   @spec for_calendars([map()], [map()]) :: %{{integer(), String.t()} => String.t()}
   def for_calendars(integrations, appearances) do

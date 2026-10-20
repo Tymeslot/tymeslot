@@ -22,7 +22,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
 
   `cached_events` is the cached provider events loaded for the same window. A
   booking that has been written back to a connected calendar reappears in the
-  cache as a `created_by_tymeslot` event; for the old grid that copy stays
+  cache as a `created_by_tymeslot` event; under `:dedupe` that copy stays
   the interactive one, so the booking projection is dropped to avoid a
   duplicate block.
 

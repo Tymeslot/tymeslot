@@ -457,8 +457,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   # its removal (the organiser left the calendar and came straight back). It
   # takes back the queue its guardian has been driving since, as a surface
   # mounted afresh does, and reloads what those writes changed. The gate is
-  # the one the old grid uses: `calendar_left` counts departures, and the
-  # surface remembers the count its queue was adopted at.
+  # `calendar_left`, which counts departures; the surface remembers the
+  # count its queue was adopted at.
   defp adopt_if_revived(socket) do
     if socket.assigns[:calendar_left] == socket.assigns.writes_adopted_after,
       do: socket,

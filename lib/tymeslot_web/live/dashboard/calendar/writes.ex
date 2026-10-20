@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.Writes do
   @moduledoc """
   Drives the calendar surface's writes to existing events through
-  `Tymeslot.CalendarGrid.WriteQueue`, the order the old grid writes in, so
-  quick successive changes reach the provider in the order they were made
-  and a late failure can never put an older version back over a newer one.
+  `Tymeslot.CalendarGrid.WriteQueue`, so quick successive changes reach the
+  provider in the order they were made and a late failure can never put an
+  older version back over a newer one.
 
   The queue lives in the `:event_writes` assign and is handed to the
   LiveView's `Tymeslot.CalendarGrid.WriteGuardian` after every change,

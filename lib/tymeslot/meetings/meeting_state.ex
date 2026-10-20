@@ -111,7 +111,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   end
 
   @doc """
-  Composes onto `query` a filter keeping the meetings the redesigned calendar
+  Composes onto `query` a filter keeping the meetings the calendar
   draws: those whose slot is live (`where_slot_live/1`) and the requests that
   expired unanswered (`where_expired_request/1`).
   """

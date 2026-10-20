@@ -3,11 +3,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   The guests of the event the side panel shows, and telling them about the
   panel's changes.
 
-  Inviting and removing email the guest concerned at once, as the old
-  calendar does: an invitation for a new guest, a cancellation for a removed
+  Inviting and removing email the guest concerned at once: an invitation for a new guest, a cancellation for a removed
   one (`Tymeslot.Meetings.AttendeeNotifications`). The guest list is then
-  written through `Writes.update/5`, to the event the panel shows, as the
-  old calendar writes it; neither pushes an undo entry, since the email
+  written through `Writes.update/5`, to the event the panel shows; neither
+  pushes an undo entry, since the email
   cannot be taken back. Removing asks first (`RemoveGuestModal`). An event a
   group meeting with live seats sits on refuses both (`EditGuard.check/3`),
   as does an event someone else organises (`EditGuard.guest_update/3`).

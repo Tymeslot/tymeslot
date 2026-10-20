@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.NewEvent do
   @moduledoc """
-  Creating an event from either calendar, and caching it so both show it at
-  once rather than after the next sync.
+  Creating an event from the calendar, and caching it so it shows at once
+  rather than after the next sync.
 
   `create/2` runs `EventCreation.run_create_event/1` (the provider write, a
   video room, the guests' invitations and the dropped availability all

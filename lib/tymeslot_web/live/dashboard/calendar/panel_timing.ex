@@ -12,8 +12,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
   All-day dates are shown inclusive and stored exclusive (see
   `Tymeslot.CalendarGrid.AllDay`): a changed first day keeps the number of
   days, a changed last day is stored as the day after it. Toggling all day
-  goes through `EventEdit.toggle_all_day/2` in the zone the old calendar
-  uses (`RepeatForm.all_day_timezone/2`).
+  goes through `EventEdit.toggle_all_day/2` in the zone
+  `RepeatForm.all_day_timezone/2` gives.
   """
 
   use TymeslotWeb, :html

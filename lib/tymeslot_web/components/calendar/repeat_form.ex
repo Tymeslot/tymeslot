@@ -2,8 +2,7 @@ defmodule TymeslotWeb.Components.Calendar.RepeatForm do
   @moduledoc """
   Reads the repeat editor's form (`TymeslotWeb.Components.Calendar.RecurrenceEditor`)
   into a rule, and the zone and start a repeat pattern of an event is built
-  in. Shared by both calendars: the old grid's details and create modals,
-  and the new calendar's side panel.
+  in, for the calendar's side panel.
   """
 
   alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent

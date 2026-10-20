@@ -10,11 +10,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
   on the grid (no drag, resize or inline edit) and open a booking detail
   modal instead of the provider-event editor.
 
-  How a booking meets the calendar copy Tymeslot wrote for it depends on
-  the surface (`Tymeslot.CalendarGrid.EventWindow`): the old grid keeps the
-  copy and drops this projection, so there it chiefly represents bookings
-  with no provider-side counterpart; the redesigned calendar keeps this
-  projection and drops the copy, recording in `copy` which calendar the copy
+  The calendar keeps this projection and drops the calendar copy Tymeslot
+  wrote for it (`Tymeslot.CalendarGrid.EventWindow`, `bookings: :prefer`), recording in `copy` which calendar the copy
   sits in (`%{calendar_integration_id, provider_calendar_id, calendar_name}`).
 
   `meeting_type` is the meeting type's name as booked, the second half of

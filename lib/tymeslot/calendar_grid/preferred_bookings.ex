@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.PreferredBookings do
   @moduledoc """
-  The redesigned calendar draws a Tymeslot booking as the booking, never as
+  The calendar draws a Tymeslot booking as the booking, never as
   the calendar copy Tymeslot wrote for it: the booking knows its guest, its
   meeting type and whether it is still a request, and its preview can act on
   it. `merge/4` drops each copy from the calendar events and records on the

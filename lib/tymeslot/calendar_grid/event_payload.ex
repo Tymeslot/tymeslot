@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventPayload do
   @moduledoc """
-  The JSON the redesigned calendar's `CalendarCanvas` hook draws the grid from.
+  The JSON the calendar's `CalendarCanvas` hook draws the grid from.
 
   Times are wall-clock strings in the organiser's zone (`"2026-10-16T09:30"`),
   never instants: the browser may sit in another zone, and the grid must show

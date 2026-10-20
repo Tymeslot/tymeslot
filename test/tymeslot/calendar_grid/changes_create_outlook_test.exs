@@ -2,8 +2,7 @@ defmodule Tymeslot.CalendarGrid.ChangesCreateOutlookTest do
   @moduledoc """
   A repeat rule Outlook has no pattern for fails a create before anything
   is written: no provider call, no video room, nothing cached, and a reason
-  the calendar can name (`:rule_not_supported_by_outlook`). Ported from the
-  old calendar's `EventCreateTest`.
+  the calendar can name (`:rule_not_supported_by_outlook`).
   """
 
   use Tymeslot.DataCase, async: false

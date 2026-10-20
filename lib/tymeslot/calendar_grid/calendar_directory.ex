@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.CalendarDirectory do
   @moduledoc """
-  The calendars the redesigned calendar's rail lists, grouped by the account
+  The calendars the calendar's rail lists, grouped by the account
   (integration) they belong to.
 
   Only calendars marked `selected` in an account's `calendar_list` appear: an

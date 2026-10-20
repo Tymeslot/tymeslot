@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.WorkingHours do
   @moduledoc """
-  The hours the redesigned calendar leaves unshaded on each weekday: the
+  The hours the calendar leaves unshaded on each weekday: the
   organiser's default availability schedule, as `[start, end]` minutes from
   midnight keyed by ISO weekday (1 is Monday), or `nil` for a day off.
 

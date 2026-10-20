@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
   @moduledoc """
   Shows and hides calendars from the surface's rail and the filter chip.
 
-  Two stores, as in the old grid, and both are kept: hiding an account
+  Two stores, and both are kept: hiding an account
   writes `hidden_integration_ids` on the calendar preferences; hiding one
   calendar writes its `calendar_appearances` row through
   `Tymeslot.Integrations.Calendar.Appearance`, which checks the account is
@@ -103,8 +103,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Visibility do
 
   @doc """
   Hides a shown calendar, or shows a hidden one; with a set active, edits
-  the set. Rate limited on the loose visibility budget the old grid uses: a
-  view control, not a settings change.
+  the set. Rate limited on the loose visibility budget: a view control, not a
+  settings change.
   """
   @spec toggle_calendar(socket(), term(), term()) :: socket()
   def toggle_calendar(socket, raw_id, calendar_id)

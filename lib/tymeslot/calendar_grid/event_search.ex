@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventSearch do
   @moduledoc """
-  The redesigned calendar's search, behind its command bar
+  The calendar's search, behind its command bar
   (`Tymeslot.CalendarGrid.search_calendar/5`).
 
   Finds the organiser's cached calendar events and bookings for a typed

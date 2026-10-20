@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.ChangesCreateTest do
   @moduledoc """
-  Creating an event through `Changes.create_event/2`, the one create both
-  calendars call: what reaches the calendar (the place and free/busy
-  included), the cache row both calendars read back before any sync, the
+  Creating an event through `Changes.create_event/2`, the one create the
+  calendar calls: what reaches the calendar (the place and free/busy
+  included), the cache row the calendar reads back before any sync, the
   guests' invitations, and the organiser's availability.
   """
 
@@ -84,7 +84,7 @@ defmodule Tymeslot.CalendarGrid.ChangesCreateTest do
     refute Map.has_key?(event_data, :transparency)
   end
 
-  test "caches the row both calendars read back, with what the provider reported",
+  test "caches the row the calendar reads back, with what the provider reported",
        %{user: user, integration: integration} do
     written(provider_event_id: "g-123", etag: "etag-1")
 

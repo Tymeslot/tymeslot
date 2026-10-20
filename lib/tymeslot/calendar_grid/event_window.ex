@@ -40,11 +40,11 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
   user's bookings.
 
   How a booking and the calendar copy Tymeslot wrote for it meet depends on
-  `bookings:`. `:dedupe` (the default, the old grid's rule) keeps the copy
+  `bookings:`. `:dedupe` (the default) keeps the copy
   and drops the booking, matching against every cached row, not only the
   visible ones: a booking whose synced copy sits on a deselected calendar
-  stays out rather than reappear through its projection. `:prefer` (the
-  redesigned calendar) keeps the booking and drops the copy, recording on
+  stays out rather than reappear through its projection. `:prefer` (what the
+  calendar passes) keeps the booking and drops the copy, recording on
   the booking which calendar the copy is in (`PreferredBookings`).
   `include_expired: true` adds the requests that expired unanswered.
   """

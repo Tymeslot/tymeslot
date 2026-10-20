@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EditGuardTest do
   @moduledoc """
-  Whether an event may be changed from either calendar: the organiser's own
+  Whether an event may be changed from the calendar: the organiser's own
   integration, a calendar that takes writes, and not a Tymeslot booking.
   """
 

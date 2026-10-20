@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceJourneyTest do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     assert has_element?(lv, "#calendar-surface")
 
-    # The canvas asks for its data and gets this week, from both calendars.
+    # The canvas asks for its data and gets this week, from its calendars.
     lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
     assert_reply(lv, %{date: "2026-10-14", events: this_week})
     assert ["Design review", "School run"] -- titles(this_week) == []

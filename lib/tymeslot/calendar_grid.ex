@@ -180,7 +180,7 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   @doc """
-  The redesigned calendar's search: events nearest to now first, a
+  The calendar's search: events nearest to now first, a
   repeating event once, bookings by their guest and in place of their
   calendar copies, calendars the organiser has hidden (or left out of the
   active set) excluded. See `Tymeslot.CalendarGrid.EventSearch.search/5`.
@@ -234,7 +234,7 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc """
   Tailwind classes for an account's calendars, keyed by
-  `{integration_id, provider_calendar_id}`. Both calendar surfaces paint from
+  `{integration_id, provider_calendar_id}`. The calendar paints from
   this map, so one calendar never takes two colours.
 
   A calendar the organiser gave a colour keeps it. An account's first synced

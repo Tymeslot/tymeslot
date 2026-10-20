@@ -33,20 +33,6 @@ export const VideoHoverPreview = {
 };
 
 
-// Keep a click on an element inside a <summary> (an all-day event chip) from
-// toggling the surrounding <details>. It cancels the default action only: the
-// click must still bubble to window, where LiveView dispatches phx-click.
-export const PreventSummaryToggle = {
-  mounted() {
-    this.onClick = (e) => e.preventDefault();
-    this.el.addEventListener('click', this.onClick);
-  },
-  destroyed() {
-    this.el.removeEventListener('click', this.onClick);
-  }
-};
-
-
 // Accessibility for the core <.modal>. The overlay is a display:none/flex
 // toggled <div> (driven either by a server assign or a client-side JS.hide/
 // JS.show command), so we watch the `style` attribute rather than relying on

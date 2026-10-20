@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   No provider moves an event between calendars, so a move is a create on the
   destination and then a delete of the original (`Changes.move_event/3`),
   run in a supervised task whose answer reaches `DashboardLive` as
-  `{:event_move_result, result}`, the message both calendars and the write
+  `{:event_move_result, result}`, the message the calendar and the write
   guardian read. `CalendarEventHandlers.handle_event_move_result/2` routes
   it here as `:event_moved`, `:series_moved`, `:series_move_failed` or a
   `:revert_event` with no write named.
@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   end
 
   # A single event shows on its new calendar at once; a series stays put
-  # until it has moved, as in the old calendar.
+  # until it has moved.
   defp show_moving(socket, _event, _destination, series_to) when is_binary(series_to),
     do: socket
 

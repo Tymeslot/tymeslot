@@ -74,11 +74,6 @@ defmodule Tymeslot.Meetings do
   @doc "Aggregates RSVP counts for a list of guests."
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
 
-  @doc "Returns a `meeting_uid => RSVP summary` map for a user's guest meetings."
-  defdelegate guest_rsvp_summaries_for_user(user_id),
-    to: Tymeslot.Meetings.GuestQueries,
-    as: :rsvp_summaries_for_user
-
   @doc """
   The calendar identities (`calendar_uid`s) of the organiser's group meetings
   with live seats overlapping the UTC window `[from_utc, to_utc)`.
@@ -349,7 +344,7 @@ defmodule Tymeslot.Meetings do
 
   @doc """
   Lists the organiser's booking requests that expired unanswered and overlap
-  the `[from, to)` window, ordered by start time. The redesigned calendar
+  the `[from, to)` window, ordered by start time. The calendar
   draws them, so a request nobody answered does not vanish without a trace.
   """
   @spec list_expired_requests_in_range_for_organizer(pos_integer(), DateTime.t(), DateTime.t()) ::

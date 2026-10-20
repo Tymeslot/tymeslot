@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventMoveReportedTest do
   @moduledoc """
-  `Changes.move_event_reported/4` answers a move in the shape both calendars
+  `Changes.move_event_reported/4` answers a move in the shape the calendar
   and the write guardian read (`{:event_move_result, result}`), and
   `move_crash_report/2` in the shape a crashed move answers in.
   """

@@ -7,11 +7,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
 
   A preset is a canned set of the editor's fields, so a preset and a custom
   pattern become a rule the same way (`RepeatForm.compose_recurrence_rule/2`),
-  anchored where the scope is written from, as the old calendar's
-  `RecurrenceEdit` does: the event's own start for one event, the series'
+  anchored where the scope is written from: the event's own start for one event, the series'
   first start for all of a series, and where the series put this occurrence
   for it and the following ones. What the calendar would refuse is refused
-  here, before anything is written, with the old calendar's words
+  here, before anything is written
   (`CalendarEditMessages.repeat_refusal/1`).
   """
 

@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Components.Calendar.ReminderForm do
   @moduledoc """
-  The reminder lead times the calendars offer, and reading a reminder the
+  The reminder lead times the calendar offers, and reading a reminder the
   reminders editor (`TymeslotWeb.Components.Calendar.RemindersEditor`) or
-  the side panel sends. Shared by both calendars.
+  the side panel sends.
   """
 
   # Allowed reminder lead times (minutes before the event start) offered as

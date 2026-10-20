@@ -1,10 +1,10 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
   @moduledoc """
-  When the calendar mounts in a new LiveView while another of the
-  organiser's LiveViews still has writes for an event (an old one whose
-  connection dropped, or another open tab), its edits of that event wait
-  until the other has finished with it, and then start from the event as
-  those writes left it (see "A grid mounted in another LiveView" in
+  When the calendar mounts in a new LiveView while another of the organiser's
+  LiveViews still has writes for an event (an old one whose connection
+  dropped, or another open tab), its edits of that event wait until the other
+  has finished with it, and then start from the event as those writes left it
+  (see "A grid mounted in another LiveView" in
   `Tymeslot.CalendarGrid.WriteGuardian`).
 
   The calendar mock holds every write until the test releases it.

@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.EditGuard do
   @moduledoc """
-  Whether an event may be changed from the calendar, asked the same way by
-  both calendar surfaces.
+  Whether an event may be changed from the calendar, asked the same way
+  wherever it is changed from.
 
     * `writable/2`: the event sits on one of the organiser's own
       integrations, on a calendar that takes writes, and is not a Tymeslot
@@ -169,7 +169,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
          do: seat_lock(user_id, event)
   end
 
-  @doc "The calendar move rate limit for `user_id`, the old calendar's too."
+  @doc "The calendar move rate limit for `user_id`."
   @spec move_rate_limit(pos_integer()) :: :ok | {:error, :rate_limited, String.t()}
   def move_rate_limit(user_id) do
     case RateLimiter.check(:calendar_event_move, user_id) do

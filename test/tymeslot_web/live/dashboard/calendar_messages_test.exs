@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
   @new_surface %{assigns: %{live_action: :calendar}}
 
   describe "handle_info/2" do
-    test "the old calendar's messages are left to the LiveView" do
+    test "the messages meant for other handlers are left to the LiveView" do
       for message <- [
             :tick,
             :calendar_sync_flash,
