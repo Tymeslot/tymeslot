@@ -19,9 +19,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias Tymeslot.Utils.MapKeys
 
   @duration_defaulted "unreadable DURATION, kept with the default length"
@@ -89,6 +92,18 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     )
 
     InvalidEventReport.record_default(provider, context, raw[:uid], @duration_defaulted)
+  end
+
+  @doc """
+  The reminders the sync caches for the one event a stored document holds,
+  or `:error` when the document does not parse to exactly one event.
+  """
+  @spec document_reminders(String.t()) :: {:ok, [Reminder.t()]} | :error
+  def document_reminders(document) when is_binary(document) do
+    case ICalParser.parse(document) do
+      {:ok, [event]} -> {:ok, map_reminders(event[:valarm])}
+      _other -> :error
+    end
   end
 
   @doc """
@@ -569,46 +584,30 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp map_partstat("tentative"), do: :tentative
   defp map_partstat(_other), do: :needs_action
 
-  defp map_reminders(nil), do: []
-  defp map_reminders(alarms) when is_list(alarms), do: Enum.map(alarms, &map_alarm/1)
-  defp map_reminders(alarm) when is_map(alarm), do: [map_alarm(alarm)]
+  # A reminder is a lead time before the start, so only an alarm whose
+  # TRIGGER is a duration relative to the start, at or before it, maps to
+  # one. An alarm at a fixed time, relative to the end, or after the start is
+  # left out of the cache; the server's copy keeps it, because a write that
+  # does not change reminders leaves the stored VALARMs alone.
+  defp map_reminders(alarms) when is_list(alarms), do: Enum.flat_map(alarms, &map_alarm/1)
   defp map_reminders(_other), do: []
 
-  defp map_alarm(%{"trigger" => trigger}) when is_binary(trigger) do
-    %{method: :popup, minutes_before: parse_trigger_minutes(trigger)}
-  end
+  defp map_alarm(%{trigger: trigger, trigger_related: "START", trigger_value: "DURATION"} = alarm)
+       when is_binary(trigger) do
+    case Duration.parse_signed(trigger) do
+      {:ok, seconds} when seconds <= 0 ->
+        [%{method: alarm_method(alarm[:action]), minutes_before: div(-seconds, 60)}]
 
-  defp map_alarm(%{trigger: trigger}) when is_binary(trigger) do
-    %{method: :popup, minutes_before: parse_trigger_minutes(trigger)}
-  end
-
-  defp map_alarm(_other), do: %{method: :popup, minutes_before: 15}
-
-  # Parses an iCal TRIGGER duration like "-PT15M" or "-PT1H" into minutes.
-  defp parse_trigger_minutes(trigger) do
-    stripped = String.replace(trigger, ~r/^-?PT?/, "")
-
-    cond do
-      String.contains?(stripped, "H") ->
-        case Integer.parse(String.replace(stripped, ~r/H.*/, "")) do
-          {h, _rest} -> h * 60
-          :error -> 15
-        end
-
-      String.contains?(stripped, "M") ->
-        case Integer.parse(String.replace(stripped, "M", "")) do
-          {m, _rest} -> m
-          :error -> 15
-        end
-
-      String.contains?(stripped, "S") ->
-        case Integer.parse(String.replace(stripped, "S", "")) do
-          {s, _rest} -> div(s, 60)
-          :error -> 15
-        end
-
-      true ->
-        15
+      _after_start_or_unreadable ->
+        []
     end
   end
+
+  defp map_alarm(_other), do: []
+
+  defp alarm_method(action) when is_binary(action) do
+    if String.upcase(action) == "EMAIL", do: :email, else: :popup
+  end
+
+  defp alarm_method(_no_action), do: :popup
 end

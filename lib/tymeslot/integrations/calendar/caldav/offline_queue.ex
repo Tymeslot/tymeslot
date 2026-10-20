@@ -90,6 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
@@ -378,17 +379,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     )
   end
 
-  # The sync never reads a CalDAV event's VALARMs, so a row holding the
-  # server's document says `reminders: []` whatever alarms that document has,
-  # and the patcher replaces every VALARM whenever `:reminders` is present.
-  # Such a row's empty list is therefore not a change to replay: leaving the
-  # key out keeps the stored alarms. Reminders a local edit set are replayed,
-  # as is any list on a row with no document, which is rebuilt from the row.
-  # The cost is that an edit removing every reminder is not replayed while
-  # the server's copy is patched; the alarms stay rather than being lost.
-  defp replayed_reminders(%{raw_ical: raw_ical, reminders: []})
-       when is_binary(raw_ical) and raw_ical != "",
-       do: %{}
+  # The patcher rebuilds every VALARM whenever `:reminders` is present, and a
+  # rebuilt alarm loses what a reminder cannot hold (an email alarm's
+  # recipients, ACKNOWLEDGED, X- properties). So a row holding the server's
+  # document replays its reminders only when they differ from the ones that
+  # document holds, which is when a local edit changed them. Its empty list
+  # is never replayed: a row cached before the sync read alarms says `[]`
+  # whatever the document holds. The cost is that an edit removing every
+  # reminder is not replayed while the server's copy is patched; the alarms
+  # stay rather than being lost. A row with no document is rebuilt from the
+  # row, reminders and all.
+  defp replayed_reminders(%{raw_ical: raw_ical, reminders: reminders})
+       when is_binary(raw_ical) and raw_ical != "" do
+    if reminders == [] or ICalNormaliser.document_reminders(raw_ical) == {:ok, reminders},
+      do: %{},
+      else: %{reminders: reminders}
+  end
 
   defp replayed_reminders(event), do: %{reminders: event.reminders}
 

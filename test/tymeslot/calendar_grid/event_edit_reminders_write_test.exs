@@ -7,10 +7,12 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
   pointed back at the runtime modules, so only the HTTP client is mocked and
   the body the provider receives is the thing under test.
 
-  The sync never reads a CalDAV event's VALARMs, so the cached row says
-  `reminders: []` whatever the server holds, and the patcher replaces every
-  VALARM whenever the payload carries `:reminders`. A rename that sent the
-  cached list used to delete every alarm on the organiser's server, silently.
+  The patcher replaces every VALARM whenever the payload carries
+  `:reminders`. A rename that sent the cached list used to delete every alarm
+  on the organiser's server, silently, when the row said `reminders: []` (as
+  every row did before the sync read VALARMs); one that sent the list the
+  sync now reads would rebuild each alarm and lose what a reminder cannot
+  hold. So a CalDAV write carries reminders only when the edit changes them.
   Google and Outlook read their reminders back on sync and treat a missing
   key as a reset, so their writes keep restating the cached list.
   """
@@ -25,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Repo
@@ -200,6 +203,132 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       assert "SUMMARY:Renamed" in lines
       assert contains_block?(lines, @stored_alarm)
       assert Repo.reload!(event).sync_state == "synced"
+    end
+  end
+
+  describe "editing a CalDAV event whose alarms the sync read into reminders" do
+    # Alarms as clients write them, with what a reminder cannot hold: the
+    # recipient of an email alarm, Apple's alarm id and acknowledgement. A
+    # VALARM rebuilt from the cached reminders would lose all of it.
+    @email_alarm [
+      "BEGIN:VALARM",
+      "ACTION:EMAIL",
+      "TRIGGER:-PT30M",
+      "SUMMARY:Board meeting soon",
+      "DESCRIPTION:Bring the slides",
+      "ATTENDEE:mailto:host@example.com",
+      "END:VALARM"
+    ]
+
+    @display_alarm [
+      "BEGIN:VALARM",
+      "X-WR-ALARMUID:5E8A1C2B-0D4F-4E7A-9B1C-2F3D4E5F6A7B",
+      "ACTION:DISPLAY",
+      "TRIGGER:-P1D",
+      "DESCRIPTION:Reminder",
+      "ACKNOWLEDGED:20260909T090000Z",
+      "END:VALARM"
+    ]
+
+    @read_ical """
+    BEGIN:VCALENDAR\r
+    VERSION:2.0\r
+    PRODID:-//Apple Inc.//macOS 15.0//EN\r
+    BEGIN:VEVENT\r
+    UID:read-alarms\r
+    DTSTAMP:20260901T090000Z\r
+    DTSTART:20260910T090000Z\r
+    DTEND:20260910T100000Z\r
+    SUMMARY:Board meeting\r
+    #{Enum.join(@email_alarm, "\r\n")}\r
+    #{Enum.join(@display_alarm, "\r\n")}\r
+    END:VEVENT\r
+    END:VCALENDAR\r
+    """
+
+    @read_reminders [
+      %{method: :email, minutes_before: 30},
+      %{method: :popup, minutes_before: 1440}
+    ]
+
+    setup %{user: user} do
+      # The row as the sync now caches it: the reminders it read from the
+      # document's alarms, beside the document itself.
+      assert ICalNormaliser.document_reminders(@read_ical) == {:ok, @read_reminders}
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          calendar_paths: ["/cal/"]
+        )
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "read-alarms",
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: "/cal/read-alarms.ics",
+          summary: "Board meeting",
+          start_at: ~U[2026-09-10 09:00:00.000000Z],
+          end_at: ~U[2026-09-10 10:00:00.000000Z],
+          all_day: false,
+          timezone: "UTC",
+          reminders: @read_reminders,
+          etag: "\"etag-1\"",
+          raw_ical: @read_ical,
+          sync_state: "synced"
+        )
+
+      %{integration: integration, event: event}
+    end
+
+    test "a rename leaves each alarm exactly as the server wrote it", %{user: user, event: event} do
+      capture_put()
+
+      assert {:ok, _updated} = EventEdit.update_event(user.id, event, %{summary: "Renamed"})
+
+      lines = put_lines()
+      assert "SUMMARY:Renamed" in lines
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @display_alarm)
+    end
+
+    test "a replayed rename leaves each alarm exactly as the server wrote it", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:ok, _updated} = EventEdit.queue_for_retry(user.id, event, %{summary: "Renamed"})
+      capture_put()
+
+      assert :ok = OfflineQueue.flush(integration, @caldav_client)
+
+      lines = put_lines()
+      assert "SUMMARY:Renamed" in lines
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @display_alarm)
+    end
+
+    test "a replayed edit of the reminders writes the new ones", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:ok, _updated} =
+               EventEdit.queue_for_retry(user.id, event, %{
+                 reminders: [%{method: :popup, minutes_before: 10}]
+               })
+
+      capture_put()
+
+      assert :ok = OfflineQueue.flush(integration, @caldav_client)
+
+      lines = put_lines()
+      assert "TRIGGER:-PT10M" in lines
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 1
     end
   end
 

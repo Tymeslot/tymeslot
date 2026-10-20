@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   end
 
   defp parse_event_block(event_block, vtimezones) do
-    lines = LineFolder.unfold_lines(event_block)
+    {lines, subcomponents} = event_block |> LineFolder.unfold_lines() |> split_subcomponents()
 
     # Extract properties
     uid = extract_property(lines, "UID")
@@ -158,6 +158,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         # which `start_time`/`end_time` above read as UTC. Kept so a caller that
         # knows whose wall clock it is can place it there.
         floating: floating?(dtstart),
+        # The event's VALARMs, as written: each alarm's ACTION and TRIGGER,
+        # which the normaliser maps to the reminders it can represent.
+        valarm: extract_alarms(subcomponents),
         transparency: normalize_transp(extract_property(lines, "TRANSP")),
         status: extract_property(lines, "STATUS"),
         class: extract_property(lines, "CLASS"),
@@ -174,6 +177,76 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       nil
     end
   end
+
+  # A VEVENT's subcomponents (its VALARMs, and RFC 9073's PARTICIPANT or
+  # VLOCATION) reuse the event's property names: RFC 5545 §3.6.6 requires a
+  # DESCRIPTION on a DISPLAY alarm. They are lifted out by nesting depth
+  # before any property is matched, so that a property found in what remains
+  # is the event's own, whether it comes before or after the alarm.
+  defp split_subcomponents([event_begin | rest]),
+    do: split_subcomponents(rest, [event_begin], [])
+
+  defp split_subcomponents([], properties, components),
+    do: {Enum.reverse(properties), Enum.reverse(components)}
+
+  defp split_subcomponents([line | rest] = lines, properties, components) do
+    if component_boundary?(line, "BEGIN:") do
+      {component, remaining} = take_component(lines, 0, [])
+      split_subcomponents(remaining, properties, [component | components])
+    else
+      split_subcomponents(rest, [line | properties], components)
+    end
+  end
+
+  # Takes one component, nested ones included, up to its matching END. An
+  # unterminated component runs to the end of the event block.
+  defp take_component([], _depth, acc), do: {Enum.reverse(acc), []}
+
+  defp take_component([line | rest], depth, acc) do
+    depth =
+      cond do
+        component_boundary?(line, "BEGIN:") -> depth + 1
+        component_boundary?(line, "END:") -> depth - 1
+        true -> depth
+      end
+
+    if depth == 0,
+      do: {Enum.reverse([line | acc]), rest},
+      else: take_component(rest, depth, [line | acc])
+  end
+
+  defp component_boundary?(line, marker),
+    do: line |> String.upcase() |> String.starts_with?(marker)
+
+  defp extract_alarms(components) do
+    for [first | _rest] = lines <- components, String.upcase(first) == "BEGIN:VALARM" do
+      trigger = extract_datetime_property(lines, "TRIGGER")
+
+      %{
+        action: extract_property(lines, "ACTION"),
+        trigger: trigger && trigger.value,
+        trigger_related: trigger_param(lines, "RELATED", "START"),
+        trigger_value: trigger_param(lines, "VALUE", "DURATION")
+      }
+    end
+  end
+
+  # RFC 5545 §3.8.6.3: TRIGGER is relative to the start unless RELATED=END,
+  # and a duration unless VALUE=DATE-TIME.
+  defp trigger_param(lines, param, default) do
+    with line when is_binary(line) <- Enum.find(lines, &property_line?(&1, "TRIGGER")),
+         [params | _value] <- String.split(line, ":", parts: 2),
+         [_match, value] <- Regex.run(~r/;#{param}=([^;]+)/i, params) do
+      String.upcase(value)
+    else
+      _absent -> default
+    end
+  end
+
+  defp property_line?(line, property_name),
+    do:
+      String.starts_with?(line, property_name <> ":") or
+        String.starts_with?(line, property_name <> ";")
 
   defp dtstart_timezone(%{timezone: timezone}) when is_binary(timezone), do: timezone
   defp dtstart_timezone(_dtstart), do: nil
@@ -277,10 +350,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_property(lines, property_name) do
     line =
-      Enum.find(lines, fn line ->
-        String.starts_with?(line, property_name <> ":") or
-          String.starts_with?(line, property_name <> ";")
-      end)
+      Enum.find(lines, &property_line?(&1, property_name))
 
     case line do
       nil ->
@@ -296,10 +366,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_datetime_property(lines, property_name) do
     line =
-      Enum.find(lines, fn line ->
-        String.starts_with?(line, property_name <> ":") or
-          String.starts_with?(line, property_name <> ";")
-      end)
+      Enum.find(lines, &property_line?(&1, property_name))
 
     case line do
       nil ->
