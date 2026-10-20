@@ -113,8 +113,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   @spec async(:ics_import_plan, term(), socket()) :: {:noreply, socket()}
   def async(
         :ics_import_plan,
-        {:ok, {file_name, planned}},
-        %{assigns: %{ics_import: %{stage: :reading, file_name: file_name}}} = socket
+        {:ok, {ref, planned}},
+        %{assigns: %{ics_import: %{stage: :reading, read_ref: ref}}} = socket
       ),
       do: {:noreply, apply_plan(socket, planned)}
 
@@ -235,13 +235,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
     case IcsImportFlow.consume(socket) do
       {:ok, file_name, content} ->
         timezone = socket.assigns.timezone
+        # A later file of the same name must not take this one's plan.
+        ref = make_ref()
 
         socket
-        |> update_state(&clear(&1, %{stage: :reading, file_name: file_name}))
+        |> update_state(&clear(&1, %{stage: :reading, file_name: file_name, read_ref: ref}))
         |> cancel_async(:ics_import_plan)
         |> start_async(
           :ics_import_plan,
-          Tasks.with_context(fn -> {file_name, IcsImportFlow.plan(content, timezone)} end)
+          Tasks.with_context(fn -> {ref, IcsImportFlow.plan(content, timezone)} end)
         )
 
       # Nothing finished uploading: leave the socket alone, as the old
