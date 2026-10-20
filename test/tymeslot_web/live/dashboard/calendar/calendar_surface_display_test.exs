@@ -29,6 +29,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
     |> Enum.map(&String.replace_prefix(&1, prefix <> "-", ""))
   end
 
+  # A wrapped toolbar once left the display options alone at the start of the
+  # second row, so their right-aligned panel opened under the dashboard menu.
+  test "the display options wrap with the views as one right-aligned group", %{conn: conn} do
+    %{conn: conn} = owner(conn)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    for id <-
+          ~w(calendar-search calendar-view-week calendar-focus-toggle calendar-display-options) do
+      assert has_element?(lv, "#calendar-toolbar > #calendar-toolbar-end.ml-auto ##{id}")
+    end
+  end
+
   test "compact density is saved and sent to the canvas", %{conn: conn} do
     %{conn: conn, user: user} = owner(conn)
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

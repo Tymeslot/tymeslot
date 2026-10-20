@@ -42,8 +42,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
   def toolbar(assigns) do
     ~H"""
-    <%!-- Five views and the display options need about 920px: narrower, the
-         views wrap to a second row rather than running off the edge. --%>
+    <%!-- The trailing controls need about 500px: narrower, they wrap to a
+         second row as one group, so the display options stay at the right
+         edge and their panel opens over the calendar, not the menu. --%>
     <div
       id="calendar-toolbar"
       class="flex min-h-11 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-tymeslot-200 bg-white px-3 py-1 max-sm:hidden"
@@ -149,86 +150,88 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         </:panel>
       </.dropdown>
       <div class="flex-1"></div>
-      <.icon_button
-        id="calendar-search"
-        icon="hero-magnifying-glass"
-        size={:sm}
-        label={dgettext("dashboard_calendar_power", "Search and commands")}
-        aria-keyshortcuts="Control+K Meta+K"
-        aria-haspopup="dialog"
-        phx-click={JS.dispatch("calendar:command-open", to: "#calendar-canvas")}
-      />
       <FilterChip.filter_chip
         hidden_count={@hidden_count}
         set_name={@set_name}
         rail_open={@rail_open}
         target={@target}
       />
-      <div
-        role="group"
-        aria-label={dgettext("dashboard_calendar", "View")}
-        class="ml-auto inline-flex gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5"
-      >
-        <button
-          :for={view <- Period.views()}
-          type="button"
-          id={"calendar-view-#{view}"}
-          aria-pressed={to_string(view == @view)}
-          phx-click={Navigation.js(view, @date, from: {@view, @date})}
-          class={[
-            "inline-flex items-center whitespace-nowrap rounded-token-md px-3 py-1 text-token-sm font-semibold transition-colors",
-            "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400",
-            if(view == @view,
-              do: "bg-turquoise-700 text-white shadow-sm",
-              else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-tymeslot-900"
-            )
-          ]}
+      <div id="calendar-toolbar-end" class="ml-auto flex items-center gap-2">
+        <.icon_button
+          id="calendar-search"
+          icon="hero-magnifying-glass"
+          size={:sm}
+          label={dgettext("dashboard_calendar_power", "Search and commands")}
+          aria-keyshortcuts="Control+K Meta+K"
+          aria-haspopup="dialog"
+          phx-click={JS.dispatch("calendar:command-open", to: "#calendar-canvas")}
+        />
+        <div
+          role="group"
+          aria-label={dgettext("dashboard_calendar", "View")}
+          class="inline-flex gap-0.5 rounded-token-lg border border-tymeslot-200 bg-white p-0.5"
         >
-          {PeriodLabels.view_label(view)}
-        </button>
+          <button
+            :for={view <- Period.views()}
+            type="button"
+            id={"calendar-view-#{view}"}
+            aria-pressed={to_string(view == @view)}
+            phx-click={Navigation.js(view, @date, from: {@view, @date})}
+            class={[
+              "inline-flex items-center whitespace-nowrap rounded-token-md px-3 py-1 text-token-sm font-semibold transition-colors",
+              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400",
+              if(view == @view,
+                do: "bg-turquoise-700 text-white shadow-sm",
+                else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-tymeslot-900"
+              )
+            ]}
+          >
+            {PeriodLabels.view_label(view)}
+          </button>
+        </div>
+        <%!-- Focus mode changes nothing below 1024px, where the menu is a
+             drawer. No phx-target: DashboardLive owns the layout. --%>
+        <.icon_button
+          id="calendar-focus-toggle"
+          icon={if @calendar_focus, do: "hero-arrows-pointing-in", else: "hero-arrows-pointing-out"}
+          size={:sm}
+          label={
+            if @calendar_focus,
+              do: dgettext("dashboard_calendar_power", "Leave focus mode"),
+              else: dgettext("dashboard_calendar_power", "Focus mode")
+          }
+          aria-pressed={to_string(@calendar_focus)}
+          aria-keyshortcuts="f"
+          phx-click="calendar:toggle_focus"
+          class="hidden lg:inline-flex"
+        />
+        <.dropdown
+          id="calendar-display-options"
+          open={@open_menu == :display}
+          on_toggle="calendar:toggle_menu"
+          on_close="calendar:close_menu"
+          target={@target}
+          trigger_attrs={[{"phx-value-menu", "display"}, {"id", "calendar-display-toggle"}]}
+          role="dialog"
+          panel_label={dgettext("dashboard_calendar", "Display options")}
+          aria-label={dgettext("dashboard_calendar", "Display options")}
+          trigger_class="icon-button icon-button--neutral icon-button--sm"
+          class="mt-1 max-h-[min(36rem,80dvh)] w-80 overflow-y-auto rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
+        >
+          <:trigger>
+            <.icon name="hero-adjustments-horizontal" class="h-4 w-4" />
+          </:trigger>
+          <:panel>
+            <DisplayOptions.display_options
+              id_prefix="calendar"
+              preferences={@preferences}
+              time_format={@time_format}
+              calendar_focus={@calendar_focus}
+              target={@target}
+            />
+          </:panel>
+        </.dropdown>
       </div>
-      <%!-- Focus mode changes nothing below 1024px, where the menu is a
-           drawer. No phx-target: DashboardLive owns the layout. --%>
-      <.icon_button
-        id="calendar-focus-toggle"
-        icon={if @calendar_focus, do: "hero-arrows-pointing-in", else: "hero-arrows-pointing-out"}
-        size={:sm}
-        label={
-          if @calendar_focus,
-            do: dgettext("dashboard_calendar_power", "Leave focus mode"),
-            else: dgettext("dashboard_calendar_power", "Focus mode")
-        }
-        aria-pressed={to_string(@calendar_focus)}
-        aria-keyshortcuts="f"
-        phx-click="calendar:toggle_focus"
-        class="hidden lg:inline-flex"
-      />
-      <.dropdown
-        id="calendar-display-options"
-        open={@open_menu == :display}
-        on_toggle="calendar:toggle_menu"
-        on_close="calendar:close_menu"
-        target={@target}
-        trigger_attrs={[{"phx-value-menu", "display"}, {"id", "calendar-display-toggle"}]}
-        role="dialog"
-        panel_label={dgettext("dashboard_calendar", "Display options")}
-        aria-label={dgettext("dashboard_calendar", "Display options")}
-        trigger_class="icon-button icon-button--neutral icon-button--sm"
-        class="mt-1 max-h-[min(36rem,80dvh)] w-80 overflow-y-auto rounded-token-xl bg-white p-4 shadow-lg ring-1 ring-tymeslot-200"
-      >
-        <:trigger>
-          <.icon name="hero-adjustments-horizontal" class="h-4 w-4" />
-        </:trigger>
-        <:panel>
-          <DisplayOptions.display_options
-            id_prefix="calendar"
-            preferences={@preferences}
-            time_format={@time_format}
-            calendar_focus={@calendar_focus}
-            target={@target}
-          />
-        </:panel>
-      </.dropdown>
     </div>
     """
   end
