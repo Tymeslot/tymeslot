@@ -209,6 +209,15 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
     )
   end
 
+  # A response that would not decode reached Tymeslot, so neither the
+  # network nor the server URL is to blame, which is all `:unknown` could say.
+  def specific_message(:malformed_response, _provider) do
+    dgettext(
+      "integrations_calendar",
+      "The calendar service encountered an error. Please try again later."
+    )
+  end
+
   def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
 
   def specific_message(_error, _provider), do: nil

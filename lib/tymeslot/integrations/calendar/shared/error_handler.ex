@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
         )
 
       String.contains?(error, ["timeout", "timed out"]) ->
-        dgettext("integrations_calendar", "The request timed out. Please try again.")
+        sanitize_error_message(:timeout, nil)
 
       String.contains?(error, ["SSL", "TLS", "certificate"]) ->
         dgettext(
@@ -201,8 +201,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     )
   end
 
+  def sanitize_error_message(:timeout, _provider),
+    do: dgettext("integrations_calendar", "The request timed out. Please try again.")
+
+  # A body that would not decode is the service answering wrongly, not the
+  # network failing to carry it.
   def sanitize_error_message(reason, _provider)
-      when reason in [:server_error, :service_unavailable] do
+      when reason in [:server_error, :service_unavailable, :malformed_response] do
     dgettext(
       "integrations_calendar",
       "The calendar service encountered an error. Please try again later."

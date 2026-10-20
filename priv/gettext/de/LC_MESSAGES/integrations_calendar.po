@@ -607,6 +607,7 @@ msgid "The calendar server took too long to respond. Tymeslot will retry automat
 msgstr "Der Kalenderserver hat zu lange für eine Antwort gebraucht. Tymeslot versucht es automatisch erneut."
 
 #: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar service encountered an error. Please try again later."
 msgstr "Beim Kalenderdienst ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut."
