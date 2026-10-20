@@ -78,7 +78,10 @@ export const CreateMixin = {
     };
     this.quickCreateEvent = () => this.quickCreateNext();
     this.noticeKey = (e) => {
-      if (e.key === "Escape" && this.notice) this.closeNotice();
+      if (e.key !== "Escape" || !this.notice) return;
+      // Whatever is open behind the notice keeps its own Escape for the next press.
+      e.stopPropagation();
+      this.closeNotice();
     };
     // The server answered the create after all: its toast names the result
     // (with Undo where it can), so the doubt the notice voiced is over.

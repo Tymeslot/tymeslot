@@ -374,6 +374,21 @@ test("Escape dismisses the notice", () => {
   expect(notice()).toBeNull();
 });
 
+test("Escape on the notice stops there, so a window-level Escape binding does not also fire", () => {
+  const { hook } = open();
+  type("Lunch");
+  key(field(), "Enter");
+  hook.reconnected();
+  const behind = vi.fn();
+  window.addEventListener("keydown", behind);
+
+  key(document.body, "Escape");
+  window.removeEventListener("keydown", behind);
+
+  expect(notice()).toBeNull();
+  expect(behind).not.toHaveBeenCalled();
+});
+
 test("the notice goes with the hook", () => {
   const { hook } = open();
   type("Lunch");
