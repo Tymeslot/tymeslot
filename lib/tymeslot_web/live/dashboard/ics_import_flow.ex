@@ -6,11 +6,8 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   flashes. The calendar's `Calendar.IcsImport` keeps the stages and the modal
   and calls these; `IcsImportRunner` writes the events.
 
-  The strings keep the `dashboard_calendar_events` domain they were written
-  in, so both calendars share one translation of each. That domain belongs
-  to the old calendar: plan 7, which deletes the old calendar, must move
-  these msgids (and the new surface's import modal's, which reuse them) to
-  a surviving domain before pruning it.
+  Its strings are in `dashboard_calendar_import`, shared with the import
+  modal.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

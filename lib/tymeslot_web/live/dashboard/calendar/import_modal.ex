@@ -2,8 +2,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   @moduledoc """
   The new calendar's import modal, one view per stage of `IcsImport`:
   choose a file, read it, pick a calendar, follow the import, read the
-  result, and the surface's drop zone (the upload form and overlay). Its English is the old calendar's import modal's, kept in that
-  domain (`dashboard_calendar_events`) until plan 7 moves it.
+  result, and the surface's drop zone (the upload form and overlay). Its
+  strings are in `dashboard_calendar_import`, with `IcsImportFlow`'s.
   """
 
   use TymeslotWeb, :html

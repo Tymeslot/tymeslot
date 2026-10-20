@@ -262,9 +262,9 @@ Never `режим` for a calendar view (it means *mode* and is used for other th
 
 ### `+%{count} more`
 
-**`ще %{count}`** in all four catalogues that carry it (`dashboard_home`,
-`dashboard_calendar`, `dashboard_calendar_events`, `marketing_home`). `ще` already means
-"more"; the leading `+` was English-idiom noise.
+**`ще %{count}`** in both catalogues that carry it (`dashboard_home` and
+SaaS's `marketing_home`). `ще` already means "more"; the leading `+` was
+English-idiom noise.
 
 ---
 
