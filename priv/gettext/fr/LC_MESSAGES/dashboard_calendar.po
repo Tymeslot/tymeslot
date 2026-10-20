@@ -401,6 +401,7 @@ msgstr "%{count}/%{capacity} places prises"
 msgid "Participants"
 msgstr "Participants"
 
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Doesn't block"

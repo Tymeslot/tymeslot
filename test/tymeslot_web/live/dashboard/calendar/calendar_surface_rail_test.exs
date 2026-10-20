@@ -225,4 +225,54 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
     assert CalendarPreferencesQueries.get_or_create(user.id).hidden_integration_ids == []
     assert Appearance.hidden_keys(Appearance.list_for_user(user.id)) == MapSet.new()
   end
+
+  describe "a calendar that does not block bookings" do
+    setup %{user: user} do
+      personal =
+        insert(:calendar_integration,
+          user: user,
+          name: "Personal",
+          provider: "google",
+          is_active: true,
+          calendar_list: [
+            %{"id" => "diary", "name" => "Diary", "selected" => true},
+            %{
+              "id" => "holidays",
+              "name" => "Holidays",
+              "selected" => true,
+              "blocks_availability" => false
+            }
+          ]
+        )
+
+      %{personal: personal}
+    end
+
+    test "is marked in the rail, the marker named by its words", %{
+      conn: conn,
+      personal: personal
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      holidays = ~s|#calendar-account-#{personal.id} li[data-calendar-row="holidays"]|
+      diary = ~s|#calendar-account-#{personal.id} li[data-calendar-row="diary"]|
+
+      assert has_element?(lv, ~s|#{holidays} [data-not-blocking][title="Doesn't block"]|)
+      assert has_element?(lv, "#{holidays} [data-not-blocking] .sr-only", "Doesn't block")
+      refute has_element?(lv, "#{diary} [data-not-blocking]")
+    end
+
+    test "the phone's Calendars sheet spells the marker out", %{conn: conn, personal: personal} do
+      {:ok, lv, _html} =
+        live(put_connect_params(conn, %{"viewport" => "phone"}), ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-phone-calendars") |> render_click()
+
+      holidays = ~s|#calendar-sheet-account-#{personal.id} li[data-calendar-row="holidays"]|
+      diary = ~s|#calendar-sheet-account-#{personal.id} li[data-calendar-row="diary"]|
+
+      assert has_element?(lv, "#{holidays} [data-not-blocking]", "Doesn't block")
+      refute has_element?(lv, "#{holidays} [data-not-blocking] .sr-only")
+      refute has_element?(lv, "#{diary} [data-not-blocking]")
+    end
+  end
 end

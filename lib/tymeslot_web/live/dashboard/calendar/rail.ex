@@ -2,8 +2,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   @moduledoc """
   The collapsible left rail of the calendar surface: a mini-month of the
   visible range, then the organiser's calendars grouped by account, each with
-  a colour checkbox, a lock when Tymeslot cannot write to it, and its sync
-  status: a spinner while it syncs, a warning while it has a problem
+  a colour checkbox, a lock when Tymeslot cannot write to it, an eye when
+  it is shown but does not block bookings ("Doesn't block", spelt out in
+  the Calendars sheet), and its sync status: a spinner while it syncs, a warning while it has a problem
   (explained in the banner), and Sync now. With no calendar connected it
   says that bookings and bookable times still show, and links to connecting
   one.
@@ -105,6 +106,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
 
   attr :set_active, :boolean, default: false, doc: "a set is active: ticks edit it"
 
+  attr :spell_out, :boolean,
+    default: false,
+    doc:
+      ~s(spell out "Doesn't block" where there is room; the rail shows its icon, named by the words)
+
   attr :target, :any, required: true
 
   @spec calendar_list(map()) :: Phoenix.LiveView.Rendered.t()
@@ -196,7 +202,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
           aria-labelledby={item_id(@id_prefix, "account-#{account.id}-name")}
           class={["ml-6 space-y-0.5", account.hidden && "opacity-60"]}
         >
-          <li :for={calendar <- account.calendars} class="flex items-center gap-2 py-0.5">
+          <li
+            :for={calendar <- account.calendars}
+            data-calendar-row={calendar.id}
+            class="flex items-center gap-2 py-0.5"
+          >
             <.check
               checked={not calendar.hidden}
               disabled={account.hidden and not @set_active}
@@ -208,6 +218,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               target={@target}
             />
             <span class="min-w-0 flex-1 truncate text-token-sm text-tymeslot-700">{calendar.name}</span>
+            <%!-- So an event shown here is not taken for a conflict: its
+                 calendar is shown but takes no slots. --%>
+            <.not_blocking :if={not calendar.blocks} spell_out={@spell_out} />
             <.lock
               :if={calendar.read_only and not account.read_only}
               label={dgettext("dashboard_calendar", "Read only")}
@@ -260,6 +273,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
     <span class="shrink-0 text-tymeslot-400" title={@label}>
       <.icon name="hero-lock-closed-mini" class="h-4 w-4" />
       <span class="sr-only">{@label}</span>
+    </span>
+    """
+  end
+
+  attr :spell_out, :boolean, required: true
+
+  defp not_blocking(assigns) do
+    ~H"""
+    <span
+      :if={@spell_out}
+      data-not-blocking
+      class="shrink-0 rounded-token-sm bg-tymeslot-100 px-1.5 py-0.5 text-token-xs font-semibold text-tymeslot-500"
+    >
+      {dgettext("dashboard_calendar", "Doesn't block")}
+    </span>
+    <span
+      :if={!@spell_out}
+      data-not-blocking
+      class="shrink-0 text-tymeslot-400"
+      title={dgettext("dashboard_calendar", "Doesn't block")}
+    >
+      <.icon name="hero-eye-mini" class="h-4 w-4" />
+      <span class="sr-only">{dgettext("dashboard_calendar", "Doesn't block")}</span>
     </span>
     """
   end

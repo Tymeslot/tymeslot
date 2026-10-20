@@ -5,8 +5,9 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
 
   Only calendars marked `selected` in an account's `calendar_list` appear: an
   unselected calendar is not synced, so it has no events to show or hide.
-  Each row carries its colour token, whether Tymeslot can write to it, and
-  whether the organiser has hidden it. `hidden_count/1` is the number the
+  Each row carries its colour token, whether Tymeslot can write to it,
+  whether its busy time blocks the booking page (`Blocking.blocks?/2`, which
+  knows an Exchange mailbox's rule), and whether the organiser has hidden it. `hidden_count/1` is the number the
   filter chip shows when the rail is collapsed, so hidden calendars never go
   unnoticed.
 
@@ -18,6 +19,7 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
 
   alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
@@ -26,6 +28,7 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
           name: String.t(),
           colour: String.t(),
           read_only: boolean(),
+          blocks: boolean(),
           hidden: boolean()
         }
 
@@ -49,8 +52,12 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
       provider_read_only = ProviderConfig.read_only?(integration.provider)
       colour = Map.get(integration_tokens, integration.id, ColourTokens.fallback())
 
+      # `Blocking.blocks?/2` reads an Exchange mailbox's whole list (which
+      # calendar is its main one), so it is given the list read as entries.
+      readable = with_entries(integration)
+
       calendars =
-        integration
+        readable
         |> synced_entries()
         |> Enum.map(fn entry ->
           key = {integration.id, entry.id}
@@ -60,6 +67,7 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
             name: entry.name || entry.id,
             colour: Map.get(calendar_tokens, key, colour),
             read_only: provider_read_only or entry.read_only,
+            blocks: Blocking.blocks?(readable, entry),
             hidden: MapSet.member?(hidden_keys, key)
           }
         end)
@@ -102,6 +110,17 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectory do
   end
 
   def synced_entries(_integration), do: []
+
+  defp with_entries(integration),
+    do:
+      Map.put(
+        integration,
+        :calendar_list,
+        integration
+        |> Map.get(:calendar_list)
+        |> List.wrap()
+        |> Enum.map(&CalendarEntry.normalize/1)
+      )
 
   @doc "The key a calendar goes by in the payload and in a create."
   @spec key(integer(), String.t()) :: String.t()

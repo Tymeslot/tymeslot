@@ -141,4 +141,58 @@ defmodule Tymeslot.CalendarGrid.CalendarDirectoryTest do
       assert CalendarDirectory.default_calendar([@feed]) == nil
     end
   end
+
+  describe "whether a calendar blocks bookings" do
+    test "a calendar set to show only does not; one left to block does" do
+      google = %{
+        @google
+        | calendar_list: [
+            %{"id" => "work", "name" => "Work", "selected" => true},
+            %{
+              "id" => "holidays",
+              "name" => "Holidays",
+              "selected" => true,
+              "blocks_availability" => false
+            }
+          ]
+      }
+
+      [account] = CalendarDirectory.accounts([google], %{}, %{}, [], MapSet.new())
+
+      assert Enum.map(account.calendars, &{&1.id, &1.blocks}) ==
+               [{"work", true}, {"holidays", false}]
+    end
+
+    test "an Exchange mailbox blocks through its main calendar alone" do
+      exchange = %{
+        id: 3,
+        name: "Mailbox",
+        provider: "exchange",
+        calendar_list: [
+          %{"id" => "main", "name" => "Calendar", "selected" => true, "primary" => true},
+          %{"id" => "team", "name" => "Team", "selected" => true}
+        ]
+      }
+
+      [account] = CalendarDirectory.accounts([exchange], %{}, %{}, [], MapSet.new())
+
+      assert Enum.map(account.calendars, &{&1.id, &1.blocks}) == [{"main", true}, {"team", false}]
+    end
+
+    test "an Exchange mailbox that lists no main calendar blocks through every folder" do
+      exchange = %{
+        id: 4,
+        name: "Mailbox",
+        provider: "exchange",
+        calendar_list: [
+          %{"id" => "team", "name" => "Team", "selected" => true},
+          %{"id" => "rota", "name" => "Rota", "selected" => true}
+        ]
+      }
+
+      [account] = CalendarDirectory.accounts([exchange], %{}, %{}, [], MapSet.new())
+
+      assert Enum.map(account.calendars, & &1.blocks) == [true, true]
+    end
+  end
 end

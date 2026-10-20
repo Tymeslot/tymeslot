@@ -87,6 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
           problem_ids={@problem_ids}
           reauth_ids={@reauth_ids}
           set_active={not is_nil(@set_view.name)}
+          spell_out
           target={@target}
         />
         <RailLayers.layers id_prefix="calendar-sheet" bookable={@bookable} target={@target} />
