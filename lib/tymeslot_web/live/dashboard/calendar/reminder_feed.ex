@@ -2,8 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ReminderFeed do
   @moduledoc """
   The desktop-notification feed for the new calendar: for the next eight
   days, the timed events that carry a reminder, as the entries the
-  `DesktopReminders` hook fires (`DesktopReminderFeed.build/4`, shared with
-  the old calendar).
+  `DesktopReminders` hook fires (`DesktopReminderFeed.build/4`).
 
   It follows what the surface shows: the hidden accounts and the hidden
   calendar keys in the assigns, which hold the effective visibility (an

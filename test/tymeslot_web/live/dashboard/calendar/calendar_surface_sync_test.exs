@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSyncTest do
   @moduledoc """
-  The new calendar's sync status: stale accounts sync when it opens, a
+  The calendar's sync status: stale accounts sync when it opens, a
   failed or discarded sync ends "Syncing", and the banner explains it only
   once the failure persists (a sync Oban will retry is not news), with the
   changes it holds back; Retry or Sync now asks again.

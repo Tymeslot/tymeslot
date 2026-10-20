@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateEditJourneyTest do
   @moduledoc """
-  The organiser adds events on the new calendar without a form: types one
+  The organiser adds events on the calendar without a form: types one
   into quick create, is told when the server refuses it, opens another in
   the side panel through More options and invites a guest, then edits the
   first from the panel (a title, Free) and takes each change back with Ctrl Z,

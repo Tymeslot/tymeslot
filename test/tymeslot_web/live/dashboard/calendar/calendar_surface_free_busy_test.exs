@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   @moduledoc """
-  The preview's Edit button and Busy/Free toggle on the new calendar: Edit
+  The preview's Edit button and Busy/Free toggle on the calendar: Edit
   opens the side panel, the toggle writes the event's free/busy with a toast
   that says what it means for bookings and can be undone, and bookings and
   their calendar copies explain where their state is set instead.

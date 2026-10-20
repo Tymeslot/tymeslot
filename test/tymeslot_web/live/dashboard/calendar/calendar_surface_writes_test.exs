@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWritesTest do
   @moduledoc """
-  The new calendar drives the write queue: write results reach it through
+  The calendar drives the write queue: write results reach it through
   `CalendarRouting` only while it is on screen, and a surface LiveView
   revives after the organiser left (rather than mounts afresh) takes the
   queue back from its guardian exactly once.
@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWritesTest do
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
 
   describe "routing a write's answer" do
-    test "reaches the new surface on the calendar page" do
+    test "reaches the calendar on the calendar page" do
       socket = %{assigns: %{live_action: :calendar}}
 
       CalendarEventHandlers.handle_event_update_result(

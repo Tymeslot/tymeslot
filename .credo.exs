@@ -124,7 +124,6 @@
                # beside the directory, which `String.contains?` would miss.
                "/tymeslot/analytics",
                "/tymeslot/integrations/health_check",
-               "/tymeslot_web/live/dashboard/calendar_grid/event_handlers/",
                "/tymeslot/free_busy",
                "/tymeslot/timezones/",
                # The directory only: `calendar_grid.ex` itself still reads the

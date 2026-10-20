@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMoveTest do
   @moduledoc """
-  Moving and resizing on the new calendar: the change shows at once, is
+  Moving and resizing on the calendar: the change shows at once, is
   written to the calendar, says what happened, and can be undone; a change
   the calendar would refuse snaps back.
   """

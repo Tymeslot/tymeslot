@@ -2,9 +2,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.CalendarBlockingTest do
   @moduledoc """
   Choosing, per calendar, whether Tymeslot uses it and whether its busy time
   blocks the booking page: the "Manage calendars" modal's controls, the
-  subscription row's, the subscription form's, and the grid panel's marker
-  for a calendar that is shown but does not block. Runs with `async: false`
-  because every choice draws on the shared integration-write rate limiter.
+  subscription row's, the subscription form's, and, in part P's rail tests, the
+  calendar rail's marker for a calendar that is shown but does not block. Runs
+  with `async: false` because every choice draws on the shared
+  integration-write rate limiter.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -18,7 +19,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.CalendarBlockingTest do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Security.RateLimiter
-  alias TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel
 
   setup :verify_on_exit!
   setup :setup_dashboard_user
@@ -205,25 +205,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.CalendarBlockingTest do
       assert has_element?(view, "#calendar-selection-calendar-0", "whole mailbox")
       refute has_element?(view, "#calendar-selection-calendar-0", "main calendar only")
     end
-
-    test "has no folder marked as not blocking on the grid", %{
-      user: user,
-      integration: integration
-    } do
-      {:ok, integration} = Calendar.get_integration(integration.id, user.id)
-
-      html =
-        render_component(&CalendarListPanel.calendar_list_panel/1,
-          integrations: [integration],
-          integration_colors: %{},
-          calendar_colour_keys: %{},
-          hidden_integration_ids: [],
-          hidden_calendar_keys: MapSet.new(),
-          myself: nil
-        )
-
-      refute html =~ "Doesn't block"
-    end
   end
 
   describe "each control's accessible name" do
@@ -371,33 +352,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.CalendarBlockingTest do
 
       view |> element("#calendar-#{integration.id}-feed-busy-true") |> render_click()
       assert %{blocks_availability: true} = entry(integration, user, "subscription")
-    end
-  end
-
-  describe "the grid's calendar panel" do
-    test "marks a shown calendar that does not block", %{user: user} do
-      integration =
-        google(user, [
-          %{id: "work", name: "Work", selected: true},
-          %{id: "holidays", name: "Holidays", selected: true, blocks_availability: false}
-        ])
-
-      {:ok, integration} = Calendar.get_integration(integration.id, user.id)
-
-      html =
-        render_component(&CalendarListPanel.calendar_list_panel/1,
-          integrations: [integration],
-          integration_colors: %{},
-          calendar_colour_keys: %{},
-          hidden_integration_ids: [],
-          hidden_calendar_keys: MapSet.new(),
-          myself: nil
-        )
-
-      [work, holidays] = html |> Floki.parse_fragment!() |> Floki.find("label") |> tl()
-
-      refute Floki.text(work) =~ "Doesn't block"
-      assert Floki.text(holidays) =~ "Doesn't block"
     end
   end
 end

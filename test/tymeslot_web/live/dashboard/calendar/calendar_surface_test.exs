@@ -1,8 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
   @moduledoc """
-  The calendar's shell: the surface it renders, the
-  one-row toolbar, the URL state, and the event payload the canvas hook
-  draws from.
+  The calendar's shell: the surface it renders, the one-row toolbar, the URL
+  state, and the event payload the canvas hook draws from.
   """
 
   use TymeslotWeb.LiveCase, async: true

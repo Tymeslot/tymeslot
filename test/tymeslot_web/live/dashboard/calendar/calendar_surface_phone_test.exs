@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
   @moduledoc """
-  The new calendar on a phone: which view it opens (a week shows as three
+  The calendar on a phone: which view it opens (a week shows as three
   days, without touching the URL or the stored default), how the server
   learns the width (the socket's connect params, the user agent on the
   first render, then the hook), and the shell that keeps the first paint

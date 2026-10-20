@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.E2E.CalendarPowerTest do
   @moduledoc """
-  The new calendar's power layer in a real browser at 1280x800: Ctrl K
+  The calendar's power layer in a real browser at 1280x800: Ctrl K
   searches, and choosing an event that is folded into a "+N" chip two weeks
   ahead moves there and opens its preview; a typed line ("tomorrow 10:00
   Dentist") becomes quick create, filled in, and Enter saves it; 1 applies
@@ -37,7 +37,7 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
     :ok
   end
 
-  # An organiser on the new calendar, zone UTC (so "tomorrow" agrees with
+  # An organiser on the calendar, zone UTC (so "tomorrow" agrees with
   # `Date.utc_today/0`), tour already seen (a running tour suspends focus
   # mode), with a Google account holding "Work" and "Family".
   defp organiser(session) do

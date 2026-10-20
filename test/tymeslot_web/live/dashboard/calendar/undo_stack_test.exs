@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Dashboard.Calendar.UndoStackTest do
-  @moduledoc "The new calendar's undo stack: newest first, bounded, and prunable."
+  @moduledoc "The calendar's undo stack: newest first, bounded, and prunable."
 
   use ExUnit.Case, async: true
 

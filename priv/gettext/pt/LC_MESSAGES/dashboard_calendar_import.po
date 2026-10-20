@@ -12,7 +12,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "1 of them repeats."
 msgid_plural "%{count} of them repeat."
@@ -20,43 +19,36 @@ msgstr[0] "1 deles se repete."
 msgstr[1] "%{count} deles se repetem."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Cancelar"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Choose or drop an .ics file"
 msgstr "Escolha ou arraste um arquivo .ics"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Fechar"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar Tymeslot can write to before importing events."
 msgstr "Conecte um calendário em que o Tymeslot possa gravar antes de importar eventos."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Copy the events of an .ics file into one of your calendars."
 msgstr "Copie os eventos de um arquivo .ics para um dos seus calendários."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Exported from Google Calendar, Outlook, Apple Calendar or any other calendar app."
 msgstr "Exportado do Google Calendar, do Outlook, do Calendário da Apple ou de qualquer outro app de calendário."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Found 1 event."
 msgid_plural "Found %{count} events."
@@ -64,43 +56,36 @@ msgstr[0] "1 evento encontrado."
 msgstr[1] "%{count} eventos encontrados."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Guests are not imported, and nobody is sent an invitation."
 msgstr "Os convidados não são importados, e ninguém recebe convite."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "Importar"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Import events"
 msgstr "Importar eventos"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Import into"
 msgstr "Importar para"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Importing %{done} of %{total} events..."
 msgstr "Importando %{done} de %{total} eventos…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reading the file..."
 msgstr "Lendo o arquivo…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You can close this window; the import carries on."
 msgstr "Você pode fechar esta janela; a importação continua."

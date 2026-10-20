@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.CreateParamsTest do
   @moduledoc """
-  The server's own check of a create the new calendar asks for: every field
+  The server's own check of a create the calendar asks for: every field
   the browser sends is checked again before anything is written, and the
   first that fails is named with its reason.
   """

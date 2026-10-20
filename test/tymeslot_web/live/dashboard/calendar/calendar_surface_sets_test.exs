@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSetsTest do
   @moduledoc """
-  Calendar sets on the new calendar: saving what shows as a set, applying
+  Calendar sets on the calendar: saving what shows as a set, applying
   one by its digit or its rail row, leaving it with 0, the chip and the
   phone's Calendars button naming it, the rail's ticks editing it, renaming
   and deleting, and the organiser's own hidden choices surviving all of it.

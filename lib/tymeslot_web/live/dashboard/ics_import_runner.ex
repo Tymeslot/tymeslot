@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.IcsImportRunner do
   @moduledoc """
-  Writes an `.ics` import for `DashboardLive`, whichever calendar started it.
+  Writes an `.ics` import the calendar started, for `DashboardLive`.
 
   The calendar on screen sends `{:execute_ics_import, payload}` (payload
   `%{user_id, integration_id, calendar_id, plan}`) once the organiser starts

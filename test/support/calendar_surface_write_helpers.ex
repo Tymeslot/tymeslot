@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.CalendarSurfaceWriteHelpers do
   @moduledoc """
-  Drives the new calendar's event writes from a LiveView test: every write
+  Drives the calendar's event writes from a LiveView test: every write
   to the calendar is held until the test answers it, and the side panel's
   steps of editing an event.
 

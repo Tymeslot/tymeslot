@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePowerJourneyTest do
   @moduledoc """
-  The organiser's journeys through the new calendar's power layer: save what
+  The organiser's journeys through the calendar's power layer: save what
   is shown as a calendar set from the rail and switch with the digit keys,
   the set deciding alone what shows while the organiser's own choices come
   back when it is left, with search leaving out what is hidden; change the
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePowerJourneyTest do
       assert_push_event(lv, "calendar:events", %{reset: true, settings: %{show_weekends: false}})
       refute CalendarPreferencesQueries.get_or_create(user.id).show_weekends
 
-      # 3. The strips sit above the new calendar.
+      # 3. The strips sit above the calendar.
       assert has_element?(lv, "[data-testid='up-next-strip']", "Strategy sync")
       assert has_element?(lv, "[data-testid='onboarding-checklist']")
       refute has_element?(lv, "#dashboard-root[data-calendar-focus]")

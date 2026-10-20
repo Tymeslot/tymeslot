@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingsTest do
   @moduledoc """
-  Acting on bookings from the new calendar's preview: Accept and Decline a
+  Acting on bookings from the calendar's preview: Accept and Decline a
   request, Reschedule and Cancel a booking still ahead, and the quiet line
   that replaces them once the moment has passed. The actions run the
   Meetings page's own paths, so the load-bearing tests here are the ones a

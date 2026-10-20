@@ -1,7 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueriesTest do
   @moduledoc """
   Free-text search over the cached calendar events: the old calendar's
-  `search/3` (moved here unchanged) and the new calendar's `search_around/3`,
+  `search/3` (moved here unchanged) and the calendar's `search_around/3`,
   nearest to a moment first.
   """
 

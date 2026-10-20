@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.E2E.CalendarPhoneTest do
   @moduledoc """
-  The new calendar on a phone, in a real browser: the phone header, the tabs
+  The calendar on a phone, in a real browser: the phone header, the tabs
   and the + button show instead of the desktop toolbar, nothing scrolls
   sideways, + opens the quick-create sheet and saves an event, a tap on the
   event opens its preview as a bottom sheet, the Month tab marks the day and

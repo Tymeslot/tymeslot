@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFocusTest do
   @moduledoc """
-  Focus mode on the new calendar: the toolbar control, the display options
+  Focus mode on the calendar: the toolbar control, the display options
   switch and F (`calendar:toggle_focus`) hide the dashboard menu and the
   strips above the grid; the choice is saved and on the first paint; and it
   applies only to the calendar, only while no product tour runs.

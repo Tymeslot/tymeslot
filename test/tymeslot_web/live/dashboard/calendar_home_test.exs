@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
   end
 
   describe "calendar as the landing page" do
-    test "/dashboard renders the new calendar with the Calendar item active", %{conn: conn} do
+    test "/dashboard renders the calendar with the Calendar item active", %{conn: conn} do
       {:ok, lv, html} = live(conn, ~p"/dashboard")
 
       assert has_element?(lv, "#calendar-surface")

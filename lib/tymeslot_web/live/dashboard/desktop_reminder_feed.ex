@@ -17,8 +17,7 @@ defmodule TymeslotWeb.Dashboard.DesktopReminderFeed do
   dropped — the hook only fires reminders crossing its polling window, so stale
   ones would never fire anyway and only bloat the payload.
 
-  Both calendars build their feed here: the old grid
-  (`CalendarGrid.UpdateHandlers`) and the new surface's `Calendar.ReminderFeed`.
+  The calendar's `Calendar.ReminderFeed` builds its feed here.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

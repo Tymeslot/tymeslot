@@ -3,9 +3,8 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   The half of the calendar's `.ics` import that does not depend on which
   calendar runs it: the upload's name and options, reading the uploaded
   file, planning it, its summary, and every message the import shows or
-  flashes. The old calendar (`CalendarGrid.EventHandlers.IcsImport`) and the
-  new surface (`Calendar.IcsImport`) each keep their own stages and modal and
-  call these; `IcsImportRunner` writes the events for either.
+  flashes. The calendar's `Calendar.IcsImport` keeps the stages and the modal
+  and calls these; `IcsImportRunner` writes the events.
 
   The strings keep the `dashboard_calendar_events` domain they were written
   in, so both calendars share one translation of each. That domain belongs

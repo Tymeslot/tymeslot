@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceShortcutsTest do
   @moduledoc """
-  The new calendar's shortcut help: opened by ?, by display options in the
+  The calendar's shortcut help: opened by ?, by display options in the
   toolbar and in the Calendars sheet, closed like any surface menu, and the
   screen-reader hints that point at it and spell the keys out.
   """

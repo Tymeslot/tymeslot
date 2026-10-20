@@ -4,10 +4,8 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
   events the organiser's calendar selection keeps, plus their Tymeslot
   bookings, less what they have hidden.
 
-  Both calendar surfaces load through here (the old grid through
-  `TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading`, the redesigned one
-  through `TymeslotWeb.Dashboard.Calendar.SurfaceData`), so the two cannot
-  disagree on what a week holds.
+  The calendar loads through here
+  (`TymeslotWeb.Dashboard.Calendar.SurfaceData`).
   """
 
   alias Tymeslot.CalendarGrid

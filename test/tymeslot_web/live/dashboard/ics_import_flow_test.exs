@@ -1,11 +1,9 @@
 defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
   @moduledoc """
-  The surface-neutral half of the calendar's `.ics` import, called by both
-  calendars: the upload it registers, the plan and summary of a file, and
-  what each refusal and each outcome says. Reading an uploaded file
-  (`consume/1`) needs a live upload and is covered end to end by the old
-  calendar's `ics_import_liveview_test.exs` (and by the new surface's import
-  test from Task 8).
+  The calendar's `.ics` import flow: the upload it registers, the plan and
+  summary of a file, and what each refusal and each outcome says. Reading an
+  uploaded file (`consume/1`) needs a live upload and is covered end to end by
+  `calendar_surface_import_test.exs`.
   """
 
   use ExUnit.Case, async: true

@@ -378,7 +378,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSyncTest do
     end
   end
 
-  # What addresses an event for a delete, as the new calendar stores it with
+  # What addresses an event for a delete, as the calendar stores it with
   # a scheduled delete (`Tymeslot.CalendarGrid.ScheduledDelete`).
   defp address(event) do
     Map.take(event, [

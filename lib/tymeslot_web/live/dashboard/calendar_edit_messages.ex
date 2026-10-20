@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
   @moduledoc """
-  What both calendar surfaces tell the organiser when a change is refused
+  What the calendar tells the organiser when a change is refused
   (`Tymeslot.CalendarGrid.EditGuard`), when a delete or a create fails, and when
-  changes made while a whole series was saving were dropped. One copy, so
-  the two calendars can never word the same refusal differently.
+  changes made while a whole series was saving were dropped, so every part
+  of the calendar words the same refusal alike.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

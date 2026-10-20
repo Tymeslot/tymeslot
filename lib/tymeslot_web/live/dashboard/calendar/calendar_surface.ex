@@ -216,8 +216,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def update(%{action: :ad_hoc_meeting_failed}, socket), do: {:ok, PanelMeeting.failed(socket)}
 
-  # Messages for the old grid (a move between calendars) reach whichever
-  # calendar is on screen; this one has nothing to do with them.
+  # An action this surface has no clause for is ignored.
   def update(%{action: _other}, socket), do: {:ok, socket}
 
   def update(assigns, socket),

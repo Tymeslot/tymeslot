@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceNoCalendarTest do
   @moduledoc """
-  The new calendar with no calendar connected: the rail says what still
+  The calendar with no calendar connected: the rail says what still
   shows (bookings and bookable times) and offers to connect one; with a
   calendar connected it offers nothing.
   """

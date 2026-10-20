@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTimezoneTest do
   @moduledoc """
-  The organiser's time zone on the new calendar: the rail's foot on a
+  The organiser's time zone on the calendar: the rail's foot on a
   desktop and the Calendars sheet on a phone name the zone every time is
   shown in, as the old calendar's header did, and lead to where it is set.
   The toolbar, already wrapping at 1280px with the sidebar, gives it no

@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest do
   @moduledoc """
-  Quick successive edits of one event on the new calendar reach the calendar
+  Quick successive edits of one event on the calendar reach the calendar
   one at a time, in the order the organiser made them, and a failure takes
   back only its own change; edits of different events are not held up by
   each other. Writes still waiting when the calendar goes (the connection

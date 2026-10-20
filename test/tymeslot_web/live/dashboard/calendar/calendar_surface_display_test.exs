@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
   @moduledoc """
-  The new calendar's display options, drawn once (`DisplayOptions`) for the
+  The calendar's display options, drawn once (`DisplayOptions`) for the
   toolbar and the Calendars sheet: density, the folded night, weekends, week
   numbers, the week start, the clock and desktop notifications.
   """

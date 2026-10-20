@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventSearchTest do
   @moduledoc """
-  `CalendarGrid.search_calendar/5`, the new calendar's search: nearest to
+  `CalendarGrid.search_calendar/5`, the calendar's search: nearest to
   now first, a repeating event once, hidden calendars and calendars outside
   the active set left out, bookings found by their guest and in place of
   their calendar copies, and the typed term matched literally.

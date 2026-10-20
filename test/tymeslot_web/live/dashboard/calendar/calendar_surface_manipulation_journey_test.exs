@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceManipulationJourneyTest do
   @moduledoc """
-  The organiser changes their week on the new calendar: moves an event to
+  The organiser changes their week on the calendar: moves an event to
   another day, stretches it, takes the stretch back with Ctrl Z, deletes
   another event and changes their mind, then deletes it for good. A repeating
   event is moved for one occurrence only, and that too is taken back. Every

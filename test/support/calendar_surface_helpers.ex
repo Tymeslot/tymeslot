@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.CalendarSurfaceHelpers do
   @moduledoc """
-  An organiser for the calendar's LiveView tests: clock on 24 hours, zone London,
-  with one Google account holding a "Work" and a "Family" calendar.
+  An organiser for the calendar's LiveView tests: clock on 24 hours, zone
+  London, with one Google account holding a "Work" and a "Family" calendar.
 
   The clock is frozen at 08:00 UTC on Wednesday 14 October 2026 (09:00 in
   London), so "this week" is 12 to 18 October in every test that does not
@@ -28,8 +28,8 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   def now, do: @now
 
   @doc """
-  Signs in a new organiser. Options: `timezone` (default `"Europe/London"`), `preferences` (a keyword list
-  merged into the stored calendar preferences).
+  Signs in a new organiser. Options: `timezone` (default `"Europe/London"`),
+  `preferences` (a keyword list merged into the stored calendar preferences).
   """
   @spec owner(Conn.t(), keyword()) :: %{conn: Conn.t(), user: map(), integration: map()}
   def owner(conn, opts \\ []) do

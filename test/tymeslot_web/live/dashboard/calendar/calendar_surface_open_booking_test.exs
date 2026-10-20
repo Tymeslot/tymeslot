@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
   @moduledoc """
-  Quick create's "Open for booking" on the new calendar: the settings name
+  Quick create's "Open for booking" on the calendar: the settings name
   the meeting types that can be opened, a slot opens just this once (a date
   override) or every week (the weekday's hours), the toast names the hours
   that result, and Undo puts the old ones back. Refusals answer in the reply

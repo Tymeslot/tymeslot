@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
   end
 
   describe "a scheduled delete's result" do
-    test "reaches the new calendar, which brings a refused delete back", %{conn: conn} do
+    test "reaches the calendar, which brings a refused delete back", %{conn: conn} do
       %{conn: conn, user: user, integration: integration} = owner(conn)
       dentist = event(integration, "work", "Dentist", ~U[2026-10-15 14:00:00Z])
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
   end
 
   describe "a create's result" do
-    test "reaches the new surface on the calendar page" do
+    test "reaches the calendar on the calendar page" do
       socket = %{assigns: %{live_action: :calendar}}
 
       assert CalendarRouting.create_settled(socket, "d3", "Lunch", {:error, :timeout}) == :ok
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
   describe "a create's result, in the dashboard" do
     @failed {:error, %{reason: :forbidden, retry: :not_queued}}
 
-    test "reaches the new calendar, which drops a failed draft", %{conn: conn} do
+    test "reaches the calendar, which drops a failed draft", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       settled(lv)
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
       assert html =~ "add “Lunch”. Please try again."
     end
 
-    test "reaches the new calendar, which reloads to show a created event",
+    test "reaches the calendar, which reloads to show a created event",
          %{conn: conn} do
       %{conn: conn, integration: integration} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

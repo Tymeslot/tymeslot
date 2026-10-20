@@ -3,13 +3,12 @@ defmodule TymeslotWeb.Dashboard.AgendaRefresh do
   Which dashboard sections show the day's agenda, and the timer that keeps
   it current while one is open.
 
-  The agenda feeds the overview and the Up next strip above either calendar.
+  The agenda feeds the overview and the Up next strip above the calendar.
 
-  Unlike the calendar grid's query-free `:tick` (which only re-sends
-  `current_time`), the `:agenda_tick` this schedules makes `DashboardLive`
-  re-run `Agenda.day_agenda/2` from the database every 60s, to advance the
-  now line, drop entries that have ended, and pick up bookings or calendar
-  events created since the last load.
+  The `:agenda_tick` this schedules makes `DashboardLive` re-run
+  `Agenda.day_agenda/2` from the database every 60s, to advance the now line,
+  drop entries that have ended, and pick up bookings or calendar events
+  created since the last load.
   """
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
@@ -28,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.AgendaRefresh do
 
   @doc """
   Loads the data the current section shows: the day's agenda on the
-  overview and on either calendar, nothing elsewhere.
+  overview and on the calendar, nothing elsewhere.
   """
   @spec load(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def load(socket) do

@@ -14,8 +14,8 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs do
     * `:own` (default): focusable as a button; Enter and Space click it through
       the dashboard's `data-keyboard-click` listener (`assets/js/keyboard_click.js`).
     * `:hook`: focusable as a button, inside a surface whose hook already turns
-      Enter and Space on a `role="button"` into a click (the calendar grid's
-      `CalendarDrag`); a second handler there would open it twice.
+      Enter and Space on a `role="button"` into a click (the calendar's
+      `CalendarCanvas`); a second handler there would open it twice.
     * `:none`: the click only, for a real `<button>` or a surface with its own
       keyboard route.
   """

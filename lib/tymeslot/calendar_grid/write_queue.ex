@@ -547,7 +547,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     Enum.reduce(held, acc, fn {event, write}, acc -> submit(acc, event, write) end)
   end
 
-  # See "Telling the attendees" in `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
+  # An accepted write made with notify asks for the attendees to be told, in the
+  # scope it was written in.
   defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, {:ok, updated}),
     do: emit(acc, {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)})
 

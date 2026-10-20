@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceStripsTest do
     )
   end
 
-  test "the new calendar shows the next booking above the grid, hidden on phones", %{
+  test "the calendar shows the next booking above the grid, hidden on phones", %{
     conn: conn
   } do
     %{conn: conn, user: user} = owner(conn)
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceStripsTest do
     refute has_element?(lv, "#calendar-up-next")
   end
 
-  test "the setup checklist shows above the new calendar, with the tour's anchor", %{
+  test "the setup checklist shows above the calendar, with the tour's anchor", %{
     conn: conn
   } do
     %{conn: conn} = owner(conn)

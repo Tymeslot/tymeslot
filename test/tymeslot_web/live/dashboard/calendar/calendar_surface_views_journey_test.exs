@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceViewsJourneyTest do
   @moduledoc """
   The organiser's journeys through the month and agenda views and the phone
-  layout of the new calendar: read a month, step to the next, open a day;
+  layout of the calendar: read a month, step to the next, open a day;
   read the agenda and scroll it four weeks at a time to its end, with hidden
   calendars staying hidden; open the calendar on a phone, where a week shows
   as 3 days without the URL or the stored default changing, and move with

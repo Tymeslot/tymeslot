@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
   @moduledoc """
-  The server-rendered sheets of the new calendar: the Calendars sheet (the
+  The server-rendered sheets of the calendar: the Calendars sheet (the
   rail's calendars and layers, and the display options, where the rail is
   hidden) and the date sheet (a month to pick a day from, opened from the
   phone header's title). It also pins what the server renders for the hook's

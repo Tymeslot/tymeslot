@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
   @moduledoc """
-  Importing an `.ics` file on the new calendar, end to end: a file dropped
+  Importing an `.ics` file on the calendar, end to end: a file dropped
   on the calendar or chosen from display options is read and summarised,
   importing it writes its events to the chosen calendar, and the outcome is
-  reported. Mirrors the old calendar's `IcsImportLiveviewTest`.
+  reported.
   """
 
   use TymeslotWeb.LiveCase, async: false

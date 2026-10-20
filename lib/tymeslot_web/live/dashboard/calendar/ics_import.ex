@@ -21,9 +21,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   again, and its end is toasted whether the modal shows or not.
 
   One import per organiser at a time: a file arriving while one runs (from
-  this surface, another tab, or the old calendar) is turned away. The
+  this surface or another tab) is turned away. The
   upload options, the summary and every message come from
-  `IcsImportFlow`, which the old calendar shares.
+  `IcsImportFlow`.
   """
 
   use TymeslotWeb, :html

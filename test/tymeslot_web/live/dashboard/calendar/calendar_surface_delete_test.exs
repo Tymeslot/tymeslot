@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
   @moduledoc """
-  Deleting on the new calendar: an event nobody is told about goes at once
+  Deleting on the calendar: an event nobody is told about goes at once
   with Undo; one whose guests or booking would be told asks first; a
   repeating one asks for this event or all of them; and the grid follows the
   delete once it has run.

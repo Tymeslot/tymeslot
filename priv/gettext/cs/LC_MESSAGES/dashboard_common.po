@@ -46,7 +46,6 @@ msgstr "Dostupnost"
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
 #: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalendář"

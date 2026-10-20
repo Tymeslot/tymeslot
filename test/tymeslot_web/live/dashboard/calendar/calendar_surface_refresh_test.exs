@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRefreshTest do
   @moduledoc """
-  The new calendar keeps up with changes made elsewhere: a sync that brings
+  The calendar keeps up with changes made elsewhere: a sync that brings
   new events, an event deleted at the provider, or a calendar added to an
   account, redraws the grid and the rail without a reload.
   """

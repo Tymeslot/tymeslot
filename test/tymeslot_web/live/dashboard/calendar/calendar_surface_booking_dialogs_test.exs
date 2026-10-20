@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   @moduledoc """
-  The journeys through the new calendar's booking dialogs, beyond the
+  The journeys through the calendar's booking dialogs, beyond the
   actions themselves (`CalendarSurfaceBookingsTest`): opening Cancel,
   Decline or Reschedule tells nobody, confirming queues the guest's email,
   a dialog confirmed after another tab answered first says so, a refused

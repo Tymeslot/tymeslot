@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
   @moduledoc """
-  Saving a quick-create draft on the new calendar: the server checks what
+  Saving a quick-create draft on the calendar: the server checks what
   the hook sends and answers in the reply, the draft is drawn as saving
   until the calendar answers, the toast names the result, and a create
   nobody was invited to can be undone. A create with guests invites them

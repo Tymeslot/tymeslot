@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CompactChromeTest do
 
   import TymeslotWeb.CalendarSurfaceHelpers
 
-  test "the new calendar has a compact top bar", %{conn: conn} do
+  test "the calendar has a compact top bar", %{conn: conn} do
     %{conn: conn} = owner(conn)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

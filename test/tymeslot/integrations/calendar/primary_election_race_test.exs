@@ -7,7 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryElectionRaceTest do
   Each side parks once it has decided: the create after reading the stored
   primary's row, the delete as it writes the profile. Both take the primary
   lock first, so whichever holds it decides and commits before the other
-  reads anything, and the new calendar ends up the primary either way.
+  reads anything, and the calendar ends up the primary either way.
   Without one shared lock both decide at once: the create sees the old
   primary still standing, the delete elects from a list without the
   uncommitted new row, and the user is left with no primary at all.

@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
   @moduledoc """
-  A Tymeslot meeting the new calendar's side panel books: the drafted event
+  A Tymeslot meeting the calendar's side panel books: the drafted event
   as `CreateParams` cast it, plus the guest's name, the language and the
   reminder emails, turned into what `EventCreation.run_create_ad_hoc_meeting/1`
   takes, or refused with the field that failed. Also the budget each

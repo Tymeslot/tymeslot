@@ -53,8 +53,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   # same thing next time.
   @transient [:timeout, :network_error, :server_error, :service_unavailable]
 
-  # What addresses an event for `EventDeletion` (see
-  # `NotificationFlows.build_delete_payload/4` in the old grid).
+  # What addresses an event for `EventDeletion`.
   @address_fields [
     :uid,
     :provider,

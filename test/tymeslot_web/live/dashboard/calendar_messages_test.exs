@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
       refute_received {:phoenix, :send_update, _update}
     end
 
-    test "a create's result goes to the new surface with its draft" do
+    test "a create's result goes to the calendar with its draft" do
       result = {:error, %{reason: :timeout, retry: :not_queued}}
 
       assert CalendarMessages.handle_info(
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
                         %{action: :create_settled, draft: "d3", title: "Lunch", result: ^result}}}
     end
 
-    test "a delete scheduled in another tab still reaches the new surface" do
+    test "a delete scheduled in another tab still reaches the calendar" do
       message = {:calendar_delete_scheduled, 1, 7, %{id: "event-1"}, :single}
 
       assert CalendarMessages.handle_info(message, @new_surface) == {:noreply, @new_surface}
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessagesTest do
   end
 
   describe "in the dashboard" do
-    test "a create's result and a stray message leave the new calendar running", %{conn: conn} do
+    test "a create's result and a stray message leave the calendar running", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 

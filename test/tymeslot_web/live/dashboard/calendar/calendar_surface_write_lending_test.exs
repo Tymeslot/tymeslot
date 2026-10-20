@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
   @moduledoc """
-  When the new calendar mounts in a new LiveView while another of the
+  When the calendar mounts in a new LiveView while another of the
   organiser's LiveViews still has writes for an event (an old one whose
   connection dropped, or another open tab), its edits of that event wait
   until the other has finished with it, and then start from the event as
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
     Map.put(context, :standup, standup)
   end
 
-  # The old LiveView's guardian is still writing its queue; the new calendar
+  # The old LiveView's guardian is still writing its queue; the calendar
   # waits for the event until it has finished, so an edit made there runs
   # after the older ones rather than racing them to the calendar.
   test "a new edit of the event waits behind the older ones still saving", %{
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteLendingTest do
     lv = open_event(conn, standup)
     rename(lv, "Third title")
 
-    # The new calendar's guardian now drives its queue.
+    # The calendar's guardian now drives its queue.
     kill(lv)
     refute_receive {:write_started, _pid, _uid, _payload}, 200
 

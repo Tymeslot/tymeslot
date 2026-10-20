@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
   @moduledoc """
-  The new calendar's rail: calendars grouped by account with colour
+  The calendar's rail: calendars grouped by account with colour
   checkboxes and a lock on calendars Tymeslot cannot write to, and the rule
   that filters never hide silently: with the rail collapsed, hidden calendars
   show as a removable chip in the toolbar.
