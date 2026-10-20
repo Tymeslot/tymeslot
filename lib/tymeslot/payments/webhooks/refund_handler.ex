@@ -24,6 +24,14 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
       config :tymeslot, :refund_revocation_threshold_percent, 90
 
+  ## Refunds the app has already announced
+
+  A refund the app issued itself, and told the customer about as it did,
+  carries `"customer_notified" => "true"` in its Stripe metadata. The
+  handler still revokes and alerts as for any refund, but sends no refund
+  email of its own, which would repeat the app's message and could
+  contradict it.
+
   Events handled:
   - charge.refunded: Refund has been issued
   - charge.refund.updated: Refund status changed
@@ -34,6 +42,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.ChargeInvoice
   alias Tymeslot.Payments.Config
@@ -72,7 +81,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     # Check if refund exceeds threshold before revoking access. Computed up
     # front (it depends only on the charge, not on a local subscription
     # lookup) so the broadcast below can carry the decision instead of
-    # leaving the SaaS consumer to re-derive — or skip — it.
+    # leaving the configured payment-event handler to re-derive (or skip) it.
     should_revoke = should_revoke_access?(total_refunded, charge_amount)
 
     Logger.info("Refund received",
@@ -207,8 +216,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
         # Send email notification to user, quoting the amount of THIS
         # refund rather than the cumulative total across the charge.
-        latest_refund_amount = calculate_latest_refund_amount(charge)
-        send_refund_email(subscription, latest_refund_amount, revoked, charge)
+        notify_unless_announced(subscription, charge, revoked)
 
         {:ok, :refund_processed}
     end
@@ -271,10 +279,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec calculate_latest_refund_amount(map()) :: non_neg_integer()
   def calculate_latest_refund_amount(charge) do
-    latest_refund =
-      Enum.max_by(get_refunds(charge), &(MapKeys.get(&1, :created) || 0), fn -> nil end)
-
-    case latest_refund do
+    case latest_refund(charge) do
       nil -> calculate_total_refunded(charge)
       refund -> MapKeys.get(refund, :amount) || calculate_total_refunded(charge)
     end
@@ -287,6 +292,49 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   def get_charge_amount(charge) do
     MapKeys.get(charge, :amount) || 0
   end
+
+  # Sends the refund email unless the app already announced this refund
+  # (see the moduledoc). A webhook charge carries its refunds only at older
+  # API versions, so when they are missing the latest one is read from
+  # Stripe. If that read fails the email goes out: a repeated notice is the
+  # lesser harm next to a refund nobody is told about.
+  defp notify_unless_announced(subscription, charge, revoked) do
+    case latest_refund_from_stripe(charge) do
+      %{} = refund ->
+        unless customer_notified?(refund) do
+          amount = MapKeys.get(refund, :amount) || calculate_total_refunded(charge)
+          send_refund_email(subscription, amount, revoked, charge)
+        end
+
+      nil ->
+        send_refund_email(subscription, calculate_latest_refund_amount(charge), revoked, charge)
+    end
+  end
+
+  defp latest_refund_from_stripe(charge) do
+    with nil <- latest_refund(charge),
+         {:ok, %{data: [refund | _older]}} <-
+           Config.stripe_provider().list_refunds(%{charge: charge["id"], limit: 1}) do
+      refund
+    else
+      %{} = refund ->
+        refund
+
+      other ->
+        Logger.info("Latest refund not readable; sending the refund email",
+          charge_id: charge["id"],
+          reason: LogFormat.reason(other)
+        )
+
+        nil
+    end
+  end
+
+  defp customer_notified?(refund),
+    do: MapKeys.get(MapKeys.get(refund, :metadata) || %{}, :customer_notified) == "true"
+
+  defp latest_refund(charge),
+    do: Enum.max_by(get_refunds(charge), &(MapKeys.get(&1, :created) || 0), fn -> nil end)
 
   # The list of individual refunds sits one level below the charge, under
   # "refunds"/"data" (or their atom-keyed equivalents).
