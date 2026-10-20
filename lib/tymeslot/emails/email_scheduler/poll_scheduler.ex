@@ -15,8 +15,8 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Jobs
-  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Workers.EmailWorker
 
   require Logger

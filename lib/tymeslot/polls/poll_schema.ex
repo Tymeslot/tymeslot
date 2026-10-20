@@ -8,8 +8,8 @@ defmodule Tymeslot.Polls.PollSchema do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Polls.{PollParticipantSchema, PollTimeSlotSchema}
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
