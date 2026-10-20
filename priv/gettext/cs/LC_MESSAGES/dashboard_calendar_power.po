@@ -448,3 +448,8 @@ msgstr "Použít 12hodinový formát času"
 #, elixir-autogen, elixir-format
 msgid "Use the 24-hour clock"
 msgstr "Použít 24hodinový formát času"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Send as a Tymeslot meeting"
+msgstr "Odeslat jako schůzku Tymeslot"

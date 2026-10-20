@@ -13,7 +13,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   the header. Nothing is written while the state is open. Create casts the
   form again and runs the create path every create takes
   (`Creation.start/3`); the draft then belongs to the pending create, and
-  once that answers the panel edits the new event.
+  once that answers the panel edits the new event. With a guest and "Send as a
+  Tymeslot meeting" ticked, Create books a Tymeslot meeting instead
+  (`PanelMeeting`).
 
   Duplicate creates a copy of the panel's event at the same time the next
   day through the same path, without its guests (nobody is emailed) or its
@@ -32,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias Tymeslot.CalendarGrid.EventVideo
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Transfer
@@ -67,6 +70,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         "free" => truthy?(params["free"]),
         "guests" => guests
       })
+      |> Map.merge(PanelMeeting.defaults(socket.assigns.current_user))
 
     {draft, status} = cast(socket, form, nil)
     status = if status == :idle, do: guests_status, else: status
@@ -111,6 +115,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     updated =
       form
       |> Map.merge(form_fields(params, form))
+      |> Map.merge(PanelMeeting.fields(params))
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
 
@@ -291,9 +296,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   # (`pending_creates`), so the panel stops drawing its own.
   defp create(%{assigns: %{panel: %{mode: :new, status: status} = panel}} = socket)
        when status != :saving do
-    if Map.has_key?(socket.assigns.pending_creates, panel.draft_id),
-      do: socket,
-      else: start_create(socket, panel)
+    cond do
+      Map.has_key?(socket.assigns.pending_creates, panel.draft_id) -> socket
+      PanelMeeting.on?(panel.form) -> PanelMeeting.create(socket, panel)
+      true -> start_create(socket, panel)
+    end
   end
 
   defp create(socket), do: socket
@@ -317,6 +324,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     end
   end
 
+  @doc """
+  The New event form cast as a create (`CreateParams.cast/4`), an untitled
+  draft named "New event" first. `PanelMeeting` casts a meeting's draft
+  through it, so the two never disagree on the event's fields.
+  """
+  @spec cast_form(socket(), map()) :: {:ok, CreateParams.t()} | {:error, atom(), atom()}
+  def cast_form(socket, form), do: cast_params(socket, form)
+
   # The draft the payload draws: the form as the domain casts it, or the
   # last accepted one with the reason in the header.
   defp cast(socket, form, previous) do
@@ -331,8 +346,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   defp cast_params(socket, form) do
     %{current_user: user, integrations: integrations, timezone: timezone} = socket.assigns
 
+    # The form's "reminders" are a meeting's reminder emails (`PanelMeeting`),
+    # not the event's own reminders, which this form never edits.
     params =
       form
+      |> Map.delete("reminders")
       |> Map.put("title", untitled(form["title"]))
       |> Map.reject(fn {key, value} -> key == "video_integration_id" and value in [nil, ""] end)
 

@@ -446,3 +446,8 @@ msgstr "Utiliser l’horloge 12 heures"
 #, elixir-autogen, elixir-format
 msgid "Use the 24-hour clock"
 msgstr "Utiliser l’horloge 24 heures"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Send as a Tymeslot meeting"
+msgstr "Envoyer comme réunion Tymeslot"

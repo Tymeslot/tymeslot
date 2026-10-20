@@ -54,6 +54,7 @@ msgstr[1] "ще %{count}"
 msgstr[2] "ще %{count}"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 day before"
 msgstr "За 1 день"
@@ -540,11 +541,13 @@ msgstr "Ваш календар потрібно перепідключити. �
 msgid "A valid guest email is required"
 msgstr "Потрібна дійсна електронна адреса гостя"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Ada Lovelace"
 msgstr "Ада Лавлейс"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Books the slot, emails the guest an invitation, and adds it to your calendar."
@@ -560,16 +563,19 @@ msgstr "Подія"
 msgid "Guest email"
 msgstr "Ел. пошта гостя"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name"
 msgstr "Ім’я гостя"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name is required"
 msgstr "Ім’я гостя є обов’язковим"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
@@ -863,16 +869,19 @@ msgstr "Подію видалено, але учасників не вдалос
 msgid "Add a note"
 msgstr "Додати примітку"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "An agenda, or anything to bring or prepare"
 msgstr "Порядок денний або що взяти чи підготувати"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Included in the invitation and on the calendar entry."
 msgstr "Додається до запрошення та запису в календарі."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Note to the guest"
@@ -888,6 +897,7 @@ msgstr "Видалити примітку"
 msgid "Each one is invited by email and can accept or decline."
 msgstr "Кожен отримає запрошення електронною поштою та зможе прийняти або відхилити його."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Language of the invitation"
@@ -898,6 +908,7 @@ msgstr "Мова запрошення"
 msgid "More guests (optional)"
 msgstr "Інші гості (необов'язково)"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
@@ -923,11 +934,13 @@ msgstr "%{email} не є дійсною адресою електронної п
 msgid "No more guests can be added to this meeting."
 msgstr "До цієї зустрічі більше не можна додати гостей."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Забагато нових зустрічей. Будь ласка, зачекайте."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."

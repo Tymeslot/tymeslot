@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelEvents
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
@@ -209,6 +210,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   def update(%{action: action} = message, socket) when action in @power_updates,
     do: {:ok, PowerEvents.update(message, socket)}
+
+  # Meeting mode's answer, through the dashboard (see `PanelMeeting`); the
+  # booking it made shows after the reload.
+  def update(%{action: :ad_hoc_meeting_created}, socket),
+    do: {:ok, socket |> PanelMeeting.created() |> schedule_reload(:events_updated)}
+
+  def update(%{action: :ad_hoc_meeting_failed}, socket), do: {:ok, PanelMeeting.failed(socket)}
 
   # Messages for the old grid (a move between calendars) reach whichever
   # calendar is on screen; this one has nothing to do with them.

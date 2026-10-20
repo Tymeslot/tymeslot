@@ -50,6 +50,7 @@ msgstr[0] "Mais %{count}"
 msgstr[1] "Mais %{count}"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 day before"
 msgstr "1 dia antes"
@@ -533,11 +534,13 @@ msgstr "Seu calendário precisa ser reconectado. Reconecte pela página de Integ
 msgid "A valid guest email is required"
 msgstr "É preciso um e-mail de convidado válido"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Ada Lovelace"
 msgstr "Ada Lovelace"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Books the slot, emails the guest an invitation, and adds it to your calendar."
@@ -553,16 +556,19 @@ msgstr "Evento"
 msgid "Guest email"
 msgstr "E-mail do convidado"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name"
 msgstr "Nome do convidado"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name is required"
 msgstr "O nome do convidado é obrigatório"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
@@ -853,16 +859,19 @@ msgstr "Evento excluído, mas não foi possível avisar os participantes."
 msgid "Add a note"
 msgstr "Adicionar uma nota"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "An agenda, or anything to bring or prepare"
 msgstr "Uma pauta, ou algo para trazer ou preparar"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Included in the invitation and on the calendar entry."
 msgstr "Incluída no convite e no evento do calendário."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Note to the guest"
@@ -878,6 +887,7 @@ msgstr "Remover nota"
 msgid "Each one is invited by email and can accept or decline."
 msgstr "Cada pessoa recebe um convite por e-mail e pode aceitar ou recusar."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Language of the invitation"
@@ -888,6 +898,7 @@ msgstr "Idioma do convite"
 msgid "More guests (optional)"
 msgstr "Mais convidados (opcional)"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
@@ -913,11 +924,13 @@ msgstr "%{email} não é um endereço de e-mail válido."
 msgid "No more guests can be added to this meeting."
 msgstr "Não é possível adicionar mais convidados a esta reunião."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Muitas reuniões novas. Aguarde um momento."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."

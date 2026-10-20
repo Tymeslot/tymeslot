@@ -5,13 +5,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   adds a guest or creates the event (`panel:draft_submit`, by `intent`).
   The Create button names what it will do: "Create and invite" when the
   draft has guests, who are emailed once it is created.
+
+  With a guest, the form offers to send the draft as a Tymeslot meeting
+  (`PanelMeetingFields`, `PanelMeeting`). A meeting has times, is busy and
+  has no place of its own, so All day, Show as and Place give way to the
+  meeting's fields while it is ticked, and Notes becomes the note to the
+  guests.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeetingFields
   alias TymeslotWeb.Dashboard.Calendar.PanelVideoField
 
   attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
@@ -23,7 +32,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
   def new_form(assigns) do
-    assigns = assign(assigns, :shown_end, shown_end(assigns.values))
+    assigns =
+      assign(assigns,
+        shown_end: shown_end(assigns.values),
+        meeting: PanelMeeting.on?(assigns.values)
+      )
 
     ~H"""
     <form
@@ -42,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         data-panel-focus="true"
       />
       <.input
+        :if={!@meeting}
         type="checkbox"
         id="calendar-panel-new-all-day"
         name="all_day"
@@ -69,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         />
       </div>
       <PanelCalendarField.calendar_field choices={@calendar_choices} value={@values["calendar"]} />
-      <div>
+      <div :if={!@meeting}>
         <.input
           type="select"
           id="calendar-panel-new-free"
@@ -88,6 +102,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         </p>
       </div>
       <.input
+        :if={!@meeting}
         id="calendar-panel-new-location"
         name="location"
         value={@values["location"]}
@@ -102,13 +117,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         form_key={@guest_form_key}
         surface={@surface}
       />
-      <.input
-        type="textarea"
-        id="calendar-panel-new-description"
-        name="description"
-        value={@values["description"]}
-        label={dgettext("dashboard_calendar_editing", "Notes")}
-      />
+      <PanelMeetingFields.meeting_fields values={@values} />
+      <div>
+        <.input
+          type="textarea"
+          id="calendar-panel-new-description"
+          name="description"
+          value={@values["description"]}
+          label={notes_label(@meeting)}
+          placeholder={notes_placeholder(@meeting)}
+          maxlength={@meeting && MeetingSchema.organizer_note_max_length()}
+        />
+        <p :if={@meeting} class="mt-1 text-token-xs text-tymeslot-500">
+          {dgettext(
+            "dashboard_calendar_events",
+            "Included in the invitation and on the calendar entry."
+          )}
+        </p>
+      </div>
       <div class="flex justify-end gap-2 border-t border-tymeslot-100 pt-3">
         <.action_button
           id="calendar-panel-new-cancel"
@@ -135,6 +161,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
     </form>
     """
   end
+
+  defp notes_label(true), do: dgettext("dashboard_calendar_events", "Note to the guest")
+  defp notes_label(false), do: dgettext("dashboard_calendar_editing", "Notes")
+
+  defp notes_placeholder(true),
+    do: dgettext("dashboard_calendar_events", "An agenda, or anything to bring or prepare")
+
+  defp notes_placeholder(false), do: nil
 
   # The all-day form shows the last day; the draft holds the exclusive end.
   defp shown_end(%{"all_day" => true, "end" => last}) when is_binary(last) do

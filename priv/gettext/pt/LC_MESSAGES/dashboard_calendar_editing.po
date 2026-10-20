@@ -696,6 +696,7 @@ msgid "Video call"
 msgstr "Chamada de vídeo"
 
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #, elixir-autogen, elixir-format
 msgid "You can invite at most %{count} guests at once."
 msgstr "Você pode convidar no máximo %{count} pessoas de uma vez."
