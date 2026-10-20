@@ -206,7 +206,8 @@ config :tymeslot,
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{},
   # LiveComponents an overlay renders above the dashboard overview, each given
-  # `current_user`; one with nothing to say renders an empty element.
+  # `current_user`. Each owns its spacing; one with nothing to say renders an
+  # empty element, which leaves no gap.
   dashboard_notice_components: [],
   # Gettext {backend, domain} used to localise extension sidebar labels. An
   # extension owns its labels' translations in its own catalogue, so SaaS
