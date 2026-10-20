@@ -13,8 +13,12 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
   @moduletag :queries
 
   alias Ecto.Changeset
+  alias Ecto.UUID
+  alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.EmailWorker
 
   @worker "Tymeslot.Workers.SomeMaintenanceWorker"
 
@@ -88,6 +92,114 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
     end
   end
 
+  describe "pending_meeting_job?/2" do
+    test "is true for a queued calendar job of the meeting" do
+      meeting_id = UUID.generate()
+      {:ok, :scheduled} = CalendarJobs.schedule_job(%{id: meeting_id}, "update")
+
+      assert ObanJobQueries.pending_meeting_job?(CalendarEventWorker, meeting_id)
+    end
+
+    test "is false once that job has completed" do
+      meeting_id = UUID.generate()
+      {:ok, :scheduled} = CalendarJobs.schedule_job(%{id: meeting_id}, "update")
+      Repo.update_all(Oban.Job, set: [state: "completed"])
+
+      refute ObanJobQueries.pending_meeting_job?(CalendarEventWorker, meeting_id)
+    end
+
+    test "is false for another meeting's job" do
+      {:ok, :scheduled} = CalendarJobs.schedule_job(%{id: UUID.generate()}, "update")
+
+      refute ObanJobQueries.pending_meeting_job?(CalendarEventWorker, UUID.generate())
+    end
+
+    test "is false for another worker's job" do
+      meeting_id = UUID.generate()
+
+      Oban.insert!(
+        EmailWorker.new(%{
+          "meeting_id" => meeting_id,
+          "action" => "send_reminder_emails",
+          "reminder_value" => 24,
+          "reminder_unit" => "hours"
+        })
+      )
+
+      refute ObanJobQueries.pending_meeting_job?(CalendarEventWorker, meeting_id)
+    end
+  end
+
+  describe "pending_meeting_job?/2 across states" do
+    test "is true in every incomplete state and false in every terminal one" do
+      for state <- ~w(available scheduled executing retryable suspended) do
+        meeting_id = UUID.generate()
+        insert_calendar_job(meeting_id, %{state: state})
+
+        assert ObanJobQueries.pending_meeting_job?(CalendarEventWorker, meeting_id), state
+      end
+
+      for state <- ~w(completed discarded cancelled) do
+        meeting_id = UUID.generate()
+        insert_calendar_job(meeting_id, %{state: state})
+
+        refute ObanJobQueries.pending_meeting_job?(CalendarEventWorker, meeting_id), state
+      end
+    end
+  end
+
+  describe "meeting_job_since?/3" do
+    setup do
+      %{since: DateTime.utc_now(), meeting_id: UUID.generate()}
+    end
+
+    test "is true for a job still pending", %{since: since, meeting_id: meeting_id} do
+      insert_calendar_job(meeting_id, %{state: "retryable"})
+
+      assert ObanJobQueries.meeting_job_since?(CalendarEventWorker, meeting_id, since)
+    end
+
+    test "is true for a job completed at or after the instant",
+         %{since: since, meeting_id: meeting_id} do
+      insert_calendar_job(meeting_id, %{
+        state: "completed",
+        completed_at: DateTime.add(since, 1, :second)
+      })
+
+      assert ObanJobQueries.meeting_job_since?(CalendarEventWorker, meeting_id, since)
+    end
+
+    test "is false for a job completed before the instant",
+         %{since: since, meeting_id: meeting_id} do
+      insert_calendar_job(meeting_id, %{
+        state: "completed",
+        completed_at: DateTime.add(since, -1, :second)
+      })
+
+      refute ObanJobQueries.meeting_job_since?(CalendarEventWorker, meeting_id, since)
+    end
+
+    # Neither wrote anything to the calendar, so neither can make what was
+    # read stale.
+    test "is false for a job discarded or cancelled after the instant",
+         %{since: since, meeting_id: meeting_id} do
+      after_since = DateTime.add(since, 1, :second)
+      insert_calendar_job(meeting_id, %{state: "discarded", discarded_at: after_since})
+      insert_calendar_job(meeting_id, %{state: "cancelled", cancelled_at: after_since})
+
+      refute ObanJobQueries.meeting_job_since?(CalendarEventWorker, meeting_id, since)
+    end
+
+    test "is false for another meeting's job", %{since: since, meeting_id: meeting_id} do
+      insert_calendar_job(UUID.generate(), %{
+        state: "completed",
+        completed_at: DateTime.add(since, 1, :second)
+      })
+
+      refute ObanJobQueries.meeting_job_since?(CalendarEventWorker, meeting_id, since)
+    end
+  end
+
   describe "update_job_to_discarded/2" do
     test "discards a job still executing and appends the error" do
       job = insert_job(%{state: "executing", errors: [%{"error" => "earlier"}]})
@@ -110,6 +222,19 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
 
       assert %{state: "completed", errors: []} = Repo.reload!(stale)
     end
+  end
+
+  defp insert_calendar_job(meeting_id, attrs) do
+    insert_job(
+      Map.merge(
+        %{
+          worker: "Tymeslot.Workers.CalendarEventWorker",
+          queue: "calendar_events",
+          args: %{"action" => "update", "meeting_id" => meeting_id}
+        },
+        attrs
+      )
+    )
   end
 
   defp insert_job(attrs) do
