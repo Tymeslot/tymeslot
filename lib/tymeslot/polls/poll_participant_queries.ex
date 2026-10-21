@@ -153,6 +153,17 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     |> Repo.delete_all()
   end
 
+  @doc """
+  Deletes every unconfirmed participant of `poll_id`, expired or not: the
+  people who asked for a voting link and have not voted with it.
+  """
+  @spec delete_unconfirmed_for_poll(Ecto.UUID.t()) :: {non_neg_integer(), nil}
+  def delete_unconfirmed_for_poll(poll_id) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and is_nil(p.confirmed_at))
+    |> Repo.delete_all()
+  end
+
   @doc "Whether the host has invited anyone to `poll_id` by address."
   @spec any_invited?(Ecto.UUID.t()) :: boolean()
   def any_invited?(poll_id) do

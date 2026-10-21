@@ -1,7 +1,10 @@
 defmodule Tymeslot.Polls.Editing do
   @moduledoc """
-  Changes a host makes to an open poll: its details, deadline and reminders,
-  and new candidate times.
+  Changes a host makes to an open poll: its details, who can vote, deadline
+  and reminders, and new candidate times.
+
+  Making a poll invite-only withdraws the link requests nobody has voted
+  with yet; everyone confirmed stays.
 
   Everything is written in one transaction that holds the poll's row, so a
   confirmation racing an edit sees either all of it or none. After the
@@ -24,7 +27,15 @@ defmodule Tymeslot.Polls.Editing do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries, PollTimeSlotSchema}
+
+  alias Tymeslot.Polls.{
+    PollParticipantQueries,
+    PollQueries,
+    PollSchema,
+    PollTimeSlotQueries,
+    PollTimeSlotSchema
+  }
+
   alias Tymeslot.Repo
 
   @type reason ::
@@ -59,11 +70,25 @@ defmodule Tymeslot.Polls.Editing do
          :ok <- check_meeting_type(attrs, user_id),
          changeset = PollSchema.details_changeset(poll, attrs),
          {:ok, updated} <- PollQueries.update(changeset),
+         :ok <- withdraw_requests(updated, changeset),
          {:ok, added} <- add_slots(updated, new_starts) do
       {updated, changeset, added}
     else
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  # Switching to invite-only withdraws the requests waiting on the poll: the
+  # people who asked for a link but never voted with it came in by the door
+  # the host has just shut. Everyone confirmed stays, whether invited or not.
+  # Inside the poll's row lock, so the switch and the withdrawal land
+  # together. Switching back deletes nothing and just takes requests again.
+  defp withdraw_requests(poll, changeset) do
+    if Changeset.get_change(changeset, :invite_only) == true do
+      {_count, _rows} = PollParticipantQueries.delete_unconfirmed_for_poll(poll.id)
+    end
+
+    :ok
   end
 
   defp lock(id, user_id) do

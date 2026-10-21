@@ -152,6 +152,60 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
     end
   end
 
+  describe "update_details/4 switching who can vote" do
+    setup do
+      user = insert(:user)
+      poll = insert(:poll, user: user, invite_only: false)
+      insert(:poll_time_slot, poll: poll)
+
+      pending = insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
+      voter = insert(:poll_participant, poll: poll, confirmed_at: now(), voted_at: now())
+
+      invitee =
+        insert(:poll_participant, poll: poll, confirmed_at: now(), invited_at: now())
+
+      %{user: user, poll: poll, pending: pending, voter: voter, invitee: invitee}
+    end
+
+    test "to invite-only removes pending link requests and keeps everyone confirmed", ctx do
+      assert {:ok, updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"invite_only" => true})
+
+      assert updated.invite_only
+      assert Repo.get(PollParticipantSchema, ctx.pending.id) == nil
+      assert Repo.get(PollParticipantSchema, ctx.voter.id)
+      assert Repo.get(PollParticipantSchema, ctx.invitee.id)
+    end
+
+    test "an edit that leaves the poll open keeps pending requests", ctx do
+      assert {:ok, _updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"title" => "Renamed"})
+
+      assert Repo.get(PollParticipantSchema, ctx.pending.id)
+    end
+
+    test "back to anyone with the link takes requests again", ctx do
+      {:ok, _closed} = Polls.update_details(ctx.poll.id, ctx.user.id, %{"invite_only" => true})
+      {:ok, reopened} = Polls.update_details(ctx.poll.id, ctx.user.id, %{"invite_only" => false})
+
+      refute reopened.invite_only
+
+      assert {:ok, :sent} =
+               Voting.request_link(reopened, %{name: "Ada", email: "ada@example.com"})
+
+      assert PollParticipantQueries.get_by_poll_and_email(ctx.poll.id, "ada@example.com")
+    end
+
+    test "does not reach pending requests on another poll", ctx do
+      other = insert(:poll)
+      elsewhere = insert(:poll_participant, poll: other, confirmed_at: nil, link_sent_at: now())
+
+      {:ok, _updated} = Polls.update_details(ctx.poll.id, ctx.user.id, %{"invite_only" => true})
+
+      assert Repo.get(PollParticipantSchema, elsewhere.id)
+    end
+  end
+
   defp poll_attrs(extra) do
     Map.merge(
       %{

@@ -126,7 +126,8 @@ defmodule Tymeslot.Polls do
 
   @doc """
   Updates the user's open poll: its title and description, whether the host
-  is emailed about new votes, the voting deadline and the reminders before it,
+  is emailed about new votes, who can vote (making it invite-only withdraws
+  pending link requests), the voting deadline and the reminders before it,
   and adds a candidate time at each of `new_starts`. Existing times are never
   changed. See `Tymeslot.Polls.Editing`.
 
