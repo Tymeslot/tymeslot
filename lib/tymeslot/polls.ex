@@ -409,7 +409,7 @@ defmodule Tymeslot.Polls do
 
     case transaction do
       {:ok, {poll, invitations}} ->
-        :ok = EmailScheduler.schedule_poll_deadline_jobs(poll)
+        :ok = EmailScheduler.schedule_poll_deadline_nudge(poll)
         :ok = Invitations.send_invitations(invitations.invited)
         {:ok, PollQueries.get_for_user(poll.id, user_id)}
 

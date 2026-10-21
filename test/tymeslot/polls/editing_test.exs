@@ -47,6 +47,7 @@ defmodule Tymeslot.Polls.EditingTest do
           timezone: "Etc/UTC",
           deadline_at: deadline,
           reminder_config: [%{"value" => 3, "unit" => "days"}, %{"value" => 1, "unit" => "days"}],
+          invitees: [%{email: "ada@example.com", name: nil}],
           slots: [%{start_time: in_days(14)}]
         })
 
@@ -62,6 +63,7 @@ defmodule Tymeslot.Polls.EditingTest do
           timezone: "Etc/UTC",
           deadline_at: in_days(10),
           reminder_config: [],
+          invitees: [%{email: "ada@example.com", name: nil}],
           slots: [%{start_time: in_days(14)}]
         })
 
@@ -80,7 +82,9 @@ defmodule Tymeslot.Polls.EditingTest do
 
   describe "update_details/4 with a new deadline" do
     test "replaces the pending reminders and deadline nudge for the new deadline", ctx do
-      PollScheduler.schedule_deadline_jobs(ctx.poll)
+      insert_invitee(ctx.poll)
+      PollScheduler.schedule_reminders(ctx.poll)
+      PollScheduler.schedule_deadline_nudge(ctx.poll)
       new_deadline = in_days(8)
 
       assert {:ok, updated} =
@@ -108,7 +112,9 @@ defmodule Tymeslot.Polls.EditingTest do
     end
 
     test "cleared, leaves voting open with nothing scheduled", ctx do
-      PollScheduler.schedule_deadline_jobs(ctx.poll)
+      insert_invitee(ctx.poll)
+      PollScheduler.schedule_reminders(ctx.poll)
+      PollScheduler.schedule_deadline_nudge(ctx.poll)
 
       assert {:ok, updated} =
                Polls.update_details(ctx.poll.id, ctx.user.id, %{"deadline_at" => nil})
@@ -285,6 +291,19 @@ defmodule Tymeslot.Polls.EditingTest do
 
       assert {:error, :not_found} = Polls.delete_poll(ctx.poll.id, insert(:user).id)
     end
+  end
+
+  # Someone the host invited who has not voted: who the reminders are for.
+  defp insert_invitee(poll, attrs \\ []) do
+    now = DateTime.utc_now(:second)
+
+    insert(
+      :poll_participant,
+      Keyword.merge(
+        [poll: poll, invited_at: now, confirmed_at: now, link_sent_at: now, voted_at: nil],
+        attrs
+      )
+    )
   end
 
   defp in_days(days), do: DateTime.add(DateTime.utc_now(:second), days, :day)

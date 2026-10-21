@@ -7,7 +7,8 @@ defmodule Tymeslot.Polls.Invitations do
   participant with their own voting link, emailed to them with the poll's
   candidate times. An invitee is confirmed from the start: the host vouches
   for the address, so unlike someone asking for a link on the voting page
-  they count at once, and they get the deadline reminder like everyone else.
+  they count at once, and the poll's deadline reminders are for them:
+  inviting the first people schedules those reminders.
   With invitees the poll knows who "everyone" is, so the host is told once all
   of them have voted (see `Tymeslot.Polls.Voting`).
   Someone invited without a name gives it the first time they vote.
@@ -111,8 +112,14 @@ defmodule Tymeslot.Polls.Invitations do
     %{allowed: allowed, limited: limited} =
       reserve!(poll, Enum.map(to_confirm, &elem(&1, 1).email) ++ Enum.map(new, & &1.email))
 
+    invited = write_allowed(poll, to_confirm, new, MapSet.new(allowed))
+
+    # Invitees are who the reminders are for. Jobs are unique per deadline
+    # and lead time, so a poll that has them already gains none.
+    if invited != [], do: :ok = EmailScheduler.schedule_poll_reminders(poll)
+
     %{
-      invited: write_allowed(poll, to_confirm, new, MapSet.new(allowed)),
+      invited: invited,
       skipped: Enum.map(skipped, & &1.email),
       rate_limited: limited
     }

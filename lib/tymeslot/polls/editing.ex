@@ -11,8 +11,9 @@ defmodule Tymeslot.Polls.Editing do
   commit:
 
     * a changed deadline or reminders replace the pending reminder and
-      deadline jobs (`EmailScheduler.reschedule_poll_deadline_jobs/1`). A deadline
-      set again after it passed reopens voting.
+      deadline jobs (`EmailScheduler.reschedule_poll_deadline_jobs/2`),
+      reminders only while the poll has invitees. A deadline set again
+      after it passed reopens voting.
     * new times are announced to everyone who has already voted, who would
       otherwise not know there is more to answer. Whoever has not voted yet
       sees them when they open their link.
@@ -160,7 +161,10 @@ defmodule Tymeslot.Polls.Editing do
   defp after_commit(poll, changeset, added) do
     if Changeset.changed?(changeset, :deadline_at) or
          Changeset.changed?(changeset, :reminder_config) do
-      EmailScheduler.reschedule_poll_deadline_jobs(poll)
+      EmailScheduler.reschedule_poll_deadline_jobs(
+        poll,
+        PollParticipantQueries.any_invited?(poll.id)
+      )
     end
 
     if added != [], do: EmailScheduler.schedule_poll_new_times(poll, added)

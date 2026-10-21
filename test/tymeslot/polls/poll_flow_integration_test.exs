@@ -143,8 +143,9 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       [slot1, slot2, slot3] = poll.time_slots
 
-      # Both deadline jobs are scheduled at creation.
-      assert_enqueued(
+      # Shared only by its link, the poll has nobody to remind: whoever
+      # counts has voted. The host's deadline nudge is scheduled.
+      refute_enqueued(
         worker: EmailWorker,
         args: %{"action" => "send_poll_deadline_reminders", "poll_id" => poll.id}
       )

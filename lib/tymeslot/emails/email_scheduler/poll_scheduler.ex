@@ -3,10 +3,14 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   Schedules poll emails via Oban: participants' voting links and receipts,
   deadline reminders and host nudges.
 
-  Two jobs bracket a poll with a deadline: a reminder to unvoted participants 24
-  hours before it closes, and a nudge to the host once it has passed. A separate
-  immediate nudge fires the moment every participant has voted. Cancelling or
-  confirming a poll deletes any of these that are still pending.
+  Two kinds of job bracket a poll with a deadline: reminders, at the lead
+  times the host chose, to invitees who have not voted, and a nudge to the
+  host once the deadline has passed. Reminders are scheduled only while the
+  poll has invitees: on a poll shared only by its link, everyone who counts
+  has voted already, since saving responses is what confirms them, so there
+  is nobody to remind. A separate immediate nudge fires the moment every
+  participant has voted. Cancelling or confirming a poll deletes any of
+  these that are still pending.
 
   A participant's link and receipt jobs carry only the participant's id: the
   link holds their token, which job args must not keep in the clear, so the
@@ -28,40 +32,69 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   @vote_digest_delay_seconds 15 * 60
 
   @doc """
-  Schedules a poll's reminders (`PollSchema.reminders/1`) and the
-  deadline-passed host nudge.
+  Schedules a poll's reminders (`PollSchema.reminders/1`), for a poll that
+  has invitees.
 
-  A reminder whose send time has already passed is skipped. A poll without a
-  deadline schedules nothing. Each job carries the deadline it was scheduled
-  for and is unique for it, so a job sent for an earlier deadline neither
+  A reminder whose send time has already passed is skipped, and a poll
+  without a deadline schedules none. Each job carries the deadline it was
+  scheduled for and is unique for it, so scheduling again for the same
+  deadline adds nothing, and a job sent for an earlier deadline neither
   blocks one for a new deadline nor goes out against it.
   """
-  @spec schedule_deadline_jobs(map()) :: :ok
-  def schedule_deadline_jobs(%{deadline_at: nil}), do: :ok
+  @spec schedule_reminders(map()) :: :ok
+  def schedule_reminders(%{deadline_at: nil}), do: :ok
 
-  def schedule_deadline_jobs(poll) do
+  def schedule_reminders(poll) do
     poll |> PollSchema.reminders() |> Enum.each(&maybe_schedule_reminder(poll, &1))
-    schedule_deadline_nudge(poll)
-    :ok
+  end
+
+  @doc """
+  Schedules the nudge telling the host their poll's deadline has passed.
+  A poll without a deadline schedules none.
+  """
+  @spec schedule_deadline_nudge(map()) :: :ok
+  def schedule_deadline_nudge(%{deadline_at: nil}), do: :ok
+
+  def schedule_deadline_nudge(poll) do
+    insert_job(
+      %{
+        "action" => "send_poll_host_nudge",
+        "poll_id" => poll.id,
+        "variant" => "deadline_passed",
+        "deadline_at" => deadline_arg(poll.deadline_at)
+      },
+      scheduled_at: poll.deadline_at,
+      unique: unique_opts([:action, :poll_id, :variant, :deadline_at])
+    )
   end
 
   @doc """
   Replaces a poll's pending reminders and deadline-passed nudge after its
-  deadline or reminders changed. The vote updates and the "everyone has voted"
-  nudge are left as they are.
+  deadline or reminders changed. The reminders are scheduled again only when
+  `invited?`, that is, when the poll has invitees. The vote updates and the
+  "everyone has voted" nudge are left as they are.
   """
-  @spec reschedule_deadline_jobs(map()) :: :ok
-  def reschedule_deadline_jobs(poll) do
-    Jobs.delete_poll_jobs_matching(poll.id, EmailWorker, %{
-      "action" => "send_poll_deadline_reminders"
-    })
+  @spec reschedule_deadline_jobs(map(), boolean()) :: :ok
+  def reschedule_deadline_jobs(poll, invited?) do
+    :ok = cancel_reminders(poll.id)
 
     Jobs.delete_poll_jobs_matching(poll.id, EmailWorker, %{
       "action" => "send_poll_host_nudge",
       "variant" => "deadline_passed"
     })
 
-    schedule_deadline_jobs(poll)
+    if invited?, do: schedule_reminders(poll)
+    schedule_deadline_nudge(poll)
+  end
+
+  @doc "Deletes a poll's pending reminders, once it has no invitees left to remind."
+  @spec cancel_reminders(Ecto.UUID.t()) :: :ok
+  def cancel_reminders(poll_id) do
+    Jobs.delete_poll_jobs_matching(poll_id, EmailWorker, %{
+      "action" => "send_poll_deadline_reminders"
+    })
+
+    :ok
   end
 
   @doc "The deadline as job args carry it, to tell a stale job from a current one."
@@ -204,22 +237,10 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
     end
   end
 
-  defp schedule_deadline_nudge(poll) do
-    insert_job(
-      %{
-        "action" => "send_poll_host_nudge",
-        "poll_id" => poll.id,
-        "variant" => "deadline_passed",
-        "deadline_at" => deadline_arg(poll.deadline_at)
-      },
-      scheduled_at: poll.deadline_at,
-      unique: unique_opts([:action, :poll_id, :variant, :deadline_at])
-    )
-  end
-
-  # Best-effort: callers schedule these after their own commit, and a poll
-  # without its reminder or nudge still works, so a failure is logged by
-  # `Helpers.insert/2` and not returned.
+  # Best-effort: a poll without its reminder or nudge still works, so a
+  # failure is logged by `Helpers.insert/2` and not returned. A caller that
+  # schedules inside its own transaction still loses that transaction to a
+  # failed insert, since Postgres aborts it, and so rolls back as a whole.
   defp insert_job(args, opts) do
     opts = opts |> Keyword.put(:queue, :emails) |> Keyword.put(:priority, 2)
 

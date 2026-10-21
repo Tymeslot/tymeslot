@@ -42,15 +42,29 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
 
   describe "deadline reminders" do
     test "go out for the deadline they were scheduled for", ctx do
-      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      insert_invitee(ctx.poll, email: "ada@example.com")
 
       assert :ok = perform_job(EmailWorker, reminder_args(ctx.poll, ctx.deadline))
 
       assert_receive {:email, %{to: [{_name, "ada@example.com"}]}}, 1000
     end
 
+    test "a reminder queued before jobs carried their deadline still goes out", ctx do
+      insert_invitee(ctx.poll, email: "ada@example.com")
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_deadline_reminders",
+                 "poll_id" => ctx.poll.id,
+                 "reminder_value" => 1,
+                 "reminder_unit" => "days"
+               })
+
+      assert_receive {:email, %{to: [{_name, "ada@example.com"}]}}, 1000
+    end
+
     test "are dropped once the host moved the deadline", ctx do
-      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      insert_invitee(ctx.poll, email: "ada@example.com")
       moved = DateTime.add(ctx.deadline, 1, :day)
       Repo.update!(Changeset.change(ctx.poll, deadline_at: moved))
 
@@ -100,7 +114,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
 
   describe "send_poll_cancelled" do
     test "tells every participant that the poll will not go ahead", ctx do
-      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      insert_invitee(ctx.poll, email: "ada@example.com")
       insert(:poll_participant, poll: ctx.poll, email: "grace@example.com")
 
       assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
@@ -120,7 +134,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
     end
 
     test "invites a reply only when the reply reaches the host", ctx do
-      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      insert_invitee(ctx.poll, email: "ada@example.com")
       assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
 
       assert :ok =
@@ -162,6 +176,19 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
                  "poll_id" => ctx.poll.id
                })
     end
+  end
+
+  # Someone the host invited who has not voted: who the reminders are for.
+  defp insert_invitee(poll, attrs) do
+    now = DateTime.utc_now(:second)
+
+    insert(
+      :poll_participant,
+      Keyword.merge(
+        [poll: poll, invited_at: now, confirmed_at: now, link_sent_at: now, voted_at: nil],
+        attrs
+      )
+    )
   end
 
   defp reminder_args(poll, deadline) do

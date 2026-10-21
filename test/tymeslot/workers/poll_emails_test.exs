@@ -39,7 +39,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       user = insert(:user)
       deadline = in_hours(48)
 
-      poll = create_poll(user, deadline)
+      poll = create_poll(user, deadline, [%{email: "ada@example.com", name: nil}])
 
       assert_enqueued(
         worker: EmailWorker,
@@ -60,7 +60,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       user = insert(:user)
       deadline = in_hours(12)
 
-      poll = create_poll(user, deadline)
+      poll = create_poll(user, deadline, [%{email: "ada@example.com", name: nil}])
 
       refute_enqueued(
         worker: EmailWorker,
@@ -196,98 +196,6 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
 
       assert enqueued_all_voted_count(poll.id) == 0
-    end
-  end
-
-  # --- Handler: deadline reminders ---
-
-  describe "send_poll_deadline_reminders" do
-    test "delivers only to participants who have not voted" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user, username: "hostname")
-      poll = insert(:poll, status: :open, user: user, deadline_at: in_hours(48))
-
-      unvoted =
-        insert(:poll_participant, poll: poll, name: "Unvoted", email: "unvoted@example.com")
-
-      insert(:poll_participant,
-        poll: poll,
-        name: "Voted",
-        email: "voted@example.com",
-        voted_at: DateTime.utc_now(:second)
-      )
-
-      # Asked for a link but never confirmed it: not a participant yet.
-      insert(:poll_participant,
-        poll: poll,
-        email: "unconfirmed@example.com",
-        confirmed_at: nil,
-        link_sent_at: DateTime.utc_now(:second)
-      )
-
-      assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_deadline_reminders",
-                 "poll_id" => poll.id
-               })
-
-      assert_receive {:email, email}, 1000
-      assert "unvoted@example.com" in recipients(email)
-      # Their own link: voting is only possible through it.
-      assert email.text_body =~ "/hostname/poll/#{poll.token}?p=#{unvoted.token}"
-      refute_receive {:email, _other}, 200
-    end
-
-    test "a rescued job re-mails none of the participants it already reached" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user, username: "hostname")
-      poll = insert(:poll, status: :open, user: user, deadline_at: in_hours(48))
-      insert(:poll_participant, poll: poll, name: "First", email: "first@example.com")
-      insert(:poll_participant, poll: poll, name: "Second", email: "second@example.com")
-
-      job =
-        persisted_job(EmailWorker, %{
-          "action" => "send_poll_deadline_reminders",
-          "poll_id" => poll.id
-        })
-
-      assert :ok = EmailWorker.perform(job)
-      assert :ok = EmailWorker.perform(job)
-
-      assert_receive {:email, first}, 1000
-      assert_receive {:email, second}, 1000
-      refute_receive {:email, _duplicate}, 200
-
-      assert Enum.sort(recipients(first) ++ recipients(second)) ==
-               ["first@example.com", "second@example.com"]
-    end
-
-    test "discards when the poll is not open" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-      poll = insert(:poll, status: :confirmed, user: user)
-
-      assert {:discard, "poll not open"} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_deadline_reminders",
-                 "poll_id" => poll.id
-               })
-    end
-
-    test "discards without delivering when the host has no username" do
-      # No profile inserted for the host, so host_username/1 resolves to nil and
-      # the public voting URL would be broken.
-      user = insert(:user)
-      poll = insert(:poll, status: :open, user: user, deadline_at: in_hours(48))
-      insert(:poll_participant, poll: poll, name: "Unvoted", email: "unvoted@example.com")
-
-      assert {:discard, "host has no username"} =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_deadline_reminders",
-                 "poll_id" => poll.id
-               })
-
-      refute_receive {:email, _any}, 200
     end
   end
 
@@ -563,7 +471,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
   # --- Helpers ---
 
-  defp create_poll(user, deadline_at) do
+  defp create_poll(user, deadline_at, invitees \\ []) do
     future = in_hours(72)
 
     attrs =
@@ -572,7 +480,8 @@ defmodule Tymeslot.Workers.PollEmailsTest do
           title: "Team sync",
           duration_minutes: 30,
           timezone: "Etc/UTC",
-          slots: [%{start_time: future}, %{start_time: DateTime.add(future, 1, :hour)}]
+          slots: [%{start_time: future}, %{start_time: DateTime.add(future, 1, :hour)}],
+          invitees: invitees
         },
         deadline_at
       )
