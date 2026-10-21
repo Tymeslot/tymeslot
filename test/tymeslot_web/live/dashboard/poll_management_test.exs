@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
   alias Tymeslot.Repo
@@ -132,6 +133,36 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> render_submit()
 
       assert Repo.get!(PollSchema, poll.id).meeting_type_id == meeting_type.id
+    end
+
+    test "keeps a meeting type switched off since the poll went out", %{
+      conn: conn,
+      user: user,
+      poll: poll
+    } do
+      switched_off = insert(:meeting_type, user: user, name: "Old office hours", is_active: false)
+      Repo.update!(Changeset.change(poll, meeting_type_id: switched_off.id))
+
+      Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _id, _from, _to ->
+        {:ok, []}
+      end)
+
+      view = open_editor(conn, poll)
+
+      assert has_element?(
+               view,
+               "select[name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
+             )
+
+      assert has_element?(view, "[data-testid='poll-kept-meeting-type']", "Old office hours")
+
+      view
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Renamed"}})
+      |> render_submit()
+
+      saved = Repo.get!(PollSchema, poll.id)
+      assert saved.title == "Renamed"
+      assert saved.meeting_type_id == switched_off.id
     end
 
     test "keeps the editor open and explains a deadline in the past", %{conn: conn, poll: poll} do

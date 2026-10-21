@@ -211,6 +211,33 @@ defmodule Tymeslot.Polls.EditingTest do
       assert cleared.meeting_type_id == nil
     end
 
+    test "keeps a type switched off since, when the edit leaves it alone", ctx do
+      switched_off = insert(:meeting_type, user: ctx.user, is_active: false)
+      Repo.update!(Changeset.change(ctx.poll, meeting_type_id: switched_off.id))
+
+      assert {:ok, updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{
+                 "title" => "Renamed",
+                 "meeting_type_id" => switched_off.id
+               })
+
+      assert updated.title == "Renamed"
+      assert updated.meeting_type_id == switched_off.id
+    end
+
+    test "keeps a type that has started taking payment, when the edit leaves it alone", ctx do
+      paid = insert(:meeting_type, user: ctx.user, payment_required: true)
+      Repo.update!(Changeset.change(ctx.poll, meeting_type_id: paid.id))
+
+      assert {:ok, updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{
+                 "title" => "Renamed",
+                 "meeting_type_id" => to_string(paid.id)
+               })
+
+      assert updated.meeting_type_id == paid.id
+    end
+
     test "refuses another host's type and a paid one", ctx do
       foreign = insert(:meeting_type, user: insert(:user))
       paid = insert(:meeting_type, user: ctx.user, payment_required: true)

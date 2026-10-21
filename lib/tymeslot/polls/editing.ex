@@ -29,7 +29,7 @@ defmodule Tymeslot.Polls.Editing do
   times, and the type's schedule plays no part in confirming one of them.
   """
 
-  alias Ecto.Changeset
+  alias Ecto.{Changeset, Type}
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
@@ -73,7 +73,7 @@ defmodule Tymeslot.Polls.Editing do
 
   defp write(id, user_id, attrs, new_starts) do
     with {:ok, poll} <- lock(id, user_id),
-         :ok <- check_meeting_type(attrs, user_id),
+         :ok <- check_meeting_type(poll, attrs, user_id),
          changeset = PollSchema.details_changeset(poll, attrs),
          {:ok, updated} <- PollQueries.update(changeset),
          :ok <- withdraw_requests(updated, changeset),
@@ -106,19 +106,26 @@ defmodule Tymeslot.Polls.Editing do
     end
   end
 
-  # The same rule creating a poll applies: the host's own type, and not a
-  # paid one, since confirming a poll takes no payment.
-  defp check_meeting_type(attrs, user_id) do
+  # A type the edit sets is held to the rule creating a poll applies: the
+  # host's own, and not a paid one, since confirming a poll takes no
+  # payment. The type the poll already has passes as it is, even once it
+  # has been switched off or has started taking payment, so an edit that
+  # leaves it alone never fails on it.
+  defp check_meeting_type(%PollSchema{meeting_type_id: current}, attrs, user_id) do
     case Map.get(attrs, "meeting_type_id", Map.get(attrs, :meeting_type_id)) do
-      nil ->
-        :ok
+      nil -> :ok
+      raw -> check_new_meeting_type(Type.cast(:id, raw), current, user_id)
+    end
+  end
 
-      id ->
-        case MeetingTypes.get_meeting_type(id, user_id) do
-          nil -> {:error, :meeting_type_not_found}
-          %{payment_required: true} -> {:error, :payment_required_type}
-          _meeting_type -> :ok
-        end
+  defp check_new_meeting_type({:ok, current}, current, _user_id), do: :ok
+  defp check_new_meeting_type(:error, _current, _user_id), do: {:error, :meeting_type_not_found}
+
+  defp check_new_meeting_type({:ok, id}, _current, user_id) do
+    case MeetingTypes.get_meeting_type(id, user_id) do
+      nil -> {:error, :meeting_type_not_found}
+      %{payment_required: true} -> {:error, :payment_required_type}
+      _meeting_type -> :ok
     end
   end
 

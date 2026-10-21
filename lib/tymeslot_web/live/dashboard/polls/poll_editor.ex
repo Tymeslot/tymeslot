@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
   alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollAccess, PollReminders, PollsComponent}
@@ -47,6 +48,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       access: PollAccess.value(poll.invite_only),
       unconfirmed_count: 0,
       meeting_type_id: poll.meeting_type_id,
+      kept_meeting_type:
+        kept_meeting_type(poll, socket.assigns.meeting_types, socket.assigns.user_id),
       new_times: [],
       time_counter: 0,
       reminder_picker: PollReminders.new(PollSchema.reminders(poll)),
@@ -108,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           label={dgettext("dashboard_polls", "Meeting type (optional)")}
           value={@meeting_type_id}
           prompt={dgettext("dashboard_polls", "No meeting type")}
-          options={Enum.map(@meeting_types, &{&1.name, &1.id})}
+          options={meeting_type_options(@meeting_types, @kept_meeting_type)}
           errors={error_list(@errors, :meeting_type_id)}
         >
           <:description>
@@ -116,6 +119,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               "dashboard_polls",
               "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
             )}
+            <span
+              :if={kept_selected?(@kept_meeting_type, @meeting_type_id)}
+              class="mt-1 block"
+              data-testid="poll-kept-meeting-type"
+            >
+              {dgettext(
+                "dashboard_polls",
+                "%{name} is switched off or takes payment, so new polls can't use it. This poll keeps it until you choose another.",
+                name: @kept_meeting_type.name
+              )}
+            </span>
           </:description>
         </.input>
 
@@ -311,15 +325,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   def handle_event("save", %{"poll" => params}, socket) do
     %{poll: poll, user_id: user_id} = socket.assigns
 
-    attrs = %{
-      "title" => Map.get(params, "title"),
-      "description" => Map.get(params, "description"),
-      "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
-      "invite_only" => PollAccess.invite_only?(Map.get(params, "access", socket.assigns.access)),
-      "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
-      "meeting_type_id" => parse_id(Map.get(params, "meeting_type_id")),
-      "reminder_config" => PollReminders.to_config(socket.assigns.reminder_picker)
-    }
+    attrs = save_attrs(params, socket.assigns)
 
     new_starts =
       params
@@ -344,6 +350,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     end
   end
 
+  defp save_attrs(params, %{poll: poll} = assigns) do
+    Map.merge(
+      %{
+        "title" => Map.get(params, "title"),
+        "description" => Map.get(params, "description"),
+        "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
+        "invite_only" => PollAccess.invite_only?(Map.get(params, "access", assigns.access)),
+        "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
+        "reminder_config" => PollReminders.to_config(assigns.reminder_picker)
+      },
+      meeting_type_change(params, poll)
+    )
+  end
+
   defp parse_id(value) when value in [nil, ""], do: nil
 
   defp parse_id(value) when is_binary(value) do
@@ -354,6 +374,41 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   defp parse_id(value), do: value
+
+  # Only a type the host changed is sent: the domain checks a type being
+  # set, and the poll's own may no longer pass that check.
+  defp meeting_type_change(params, %{meeting_type_id: current}) do
+    with {:ok, raw} <- Map.fetch(params, "meeting_type_id"),
+         id when id != current <- parse_id(raw) do
+      %{"meeting_type_id" => id}
+    else
+      _unchanged -> %{}
+    end
+  end
+
+  # The type the poll already has, when the types a poll may take leave it
+  # out because it has been switched off or has started taking payment.
+  # Kept selectable, so that saving the poll's other details does not clear it.
+  defp kept_meeting_type(%{meeting_type_id: nil}, _meeting_types, _user_id), do: nil
+
+  defp kept_meeting_type(%{meeting_type_id: id}, meeting_types, user_id) do
+    if Enum.any?(meeting_types, &(&1.id == id)),
+      do: nil,
+      else: MeetingTypes.get_meeting_type(id, user_id)
+  end
+
+  defp meeting_type_options(meeting_types, nil), do: Enum.map(meeting_types, &{&1.name, &1.id})
+
+  defp meeting_type_options(meeting_types, kept) do
+    meeting_type_options(meeting_types, nil) ++
+      [
+        {dgettext("dashboard_polls", "%{name} (unavailable for new polls)", name: kept.name),
+         kept.id}
+      ]
+  end
+
+  defp kept_selected?(nil, _meeting_type_id), do: false
+  defp kept_selected?(kept, meeting_type_id), do: kept.id == meeting_type_id
 
   defp merge_times(times, values) do
     Enum.map(times, fn %{key: key} = time ->

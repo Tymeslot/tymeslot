@@ -662,3 +662,13 @@ msgstr[1] "No momento, você ainda pode convidar até %{count} pessoas."
 #, elixir-autogen, elixir-format
 msgid "You can't invite anyone else right now. Please try again later."
 msgstr "No momento, você não pode convidar mais ninguém. Tente novamente mais tarde."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (unavailable for new polls)"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is switched off or takes payment, so new polls can't use it. This poll keeps it until you choose another."
+msgstr ""
