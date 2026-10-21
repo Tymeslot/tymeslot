@@ -110,8 +110,8 @@ defmodule Tymeslot.Validation.Constraints do
 
   @doc """
   How many guests a meeting type may let one booking bring, when its host
-  limits them: at least one (no guests at all is the guests switch), at most
-  the overall limit every booking has (`Tymeslot.Meetings.Guests.max_guests/0`).
+  limits them: at least one (no guests at all is the guests switch). Its end
+  is the overall limit every booking has, `Tymeslot.Meetings.Guests.max_guests/0`.
   """
   @spec guests_per_booking_range() :: Range.t()
   def guests_per_booking_range, do: 1..10

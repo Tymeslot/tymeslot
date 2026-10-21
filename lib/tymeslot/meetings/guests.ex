@@ -33,10 +33,11 @@ defmodule Tymeslot.Meetings.Guests do
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias Tymeslot.Validation.Constraints
 
   @pubsub Tymeslot.PubSub
 
-  @max_guests 10
+  @max_guests Constraints.guests_per_booking_range().last
 
   @typedoc "Aggregate RSVP counts for a meeting's guest list."
   @type summary :: GuestSchema.summary()
