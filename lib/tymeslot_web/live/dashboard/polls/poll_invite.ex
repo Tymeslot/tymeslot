@@ -29,9 +29,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
         name={@name}
         label={dgettext("dashboard_polls", "Invite by email (optional)")}
         value={@value}
-        placeholder={
-          dgettext("dashboard_polls", "ada@example.com, Grace Hopper <grace@example.com>")
-        }
+        placeholder={dgettext("dashboard_polls", "ada@example.com, Grace Hopper <grace@example.com>")}
         errors={@errors}
       />
       <p class="text-token-xs text-tymeslot-500 mt-1">
