@@ -170,17 +170,21 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
-  describe "attendees_added/2" do
+  describe "attendees_added/3" do
     test "returns {:ok, :noop} for an empty list" do
       event = insert(:provider_calendar_event)
-      assert {:ok, :noop} = AttendeeNotifications.attendees_added(event, [])
+      assert {:ok, :noop} = AttendeeNotifications.attendees_added(event, [], owner_id(event))
     end
 
     test "sends one invitation per newly-added attendee" do
       event = insert(:provider_calendar_event)
 
       assert {:ok, :sent} =
-               AttendeeNotifications.attendees_added(event, [%{email: "new@x.com"}])
+               AttendeeNotifications.attendees_added(
+                 event,
+                 [%{email: "new@x.com"}],
+                 owner_id(event)
+               )
 
       assert_enqueued(
         worker: EmailWorker,
@@ -189,17 +193,45 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
-  describe "attendees_removed/2" do
+  describe "attendees_added/3 and attendees_removed/3 on someone else's event" do
+    setup do
+      %{event: insert(:provider_calendar_event, organiser: %{"email" => "other@x.com"})}
+    end
+
+    test "invite nobody", %{event: event} do
+      assert {:ok, :not_organiser} =
+               AttendeeNotifications.attendees_added(
+                 event,
+                 [%{email: "new@x.com"}],
+                 owner_id(event)
+               )
+
+      assert {:ok, :not_organiser} =
+               AttendeeNotifications.attendees_removed(
+                 event,
+                 [%{email: "gone@x.com"}],
+                 owner_id(event)
+               )
+
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
+
+  describe "attendees_removed/3" do
     test "returns {:ok, :noop} for an empty list" do
       event = insert(:provider_calendar_event)
-      assert {:ok, :noop} = AttendeeNotifications.attendees_removed(event, [])
+      assert {:ok, :noop} = AttendeeNotifications.attendees_removed(event, [], owner_id(event))
     end
 
     test "sends a cancel message per removed attendee" do
       event = insert(:provider_calendar_event, ical_sequence: 2)
 
       assert {:ok, :sent} =
-               AttendeeNotifications.attendees_removed(event, [%{email: "gone@x.com"}])
+               AttendeeNotifications.attendees_removed(
+                 event,
+                 [%{email: "gone@x.com"}],
+                 owner_id(event)
+               )
 
       assert_enqueued(
         worker: EmailWorker,
@@ -400,4 +432,6 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       refute AttendeeNotifications.pending?(event)
     end
   end
+
+  defp owner_id(event), do: event.calendar_integration.user_id
 end

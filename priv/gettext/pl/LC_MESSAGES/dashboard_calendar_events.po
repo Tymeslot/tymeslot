@@ -976,3 +976,13 @@ msgstr "Ta seria zmieniła się w trakcie edycji i od tego wydarzenia nic z niej
 #, elixir-autogen, elixir-format
 msgid "This series changed while you were editing it, so the events left in it can no longer be counted. Nothing was saved. Refresh the calendar and try again."
 msgstr "Ta seria zmieniła się w trakcie edycji, więc nie można już policzyć pozostałych wydarzeń. Niczego nie zapisano. Odśwież kalendarz i spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added. They were not invited, as you don't organise this event."
+msgstr "Uczestnik dodany. Nie wysłano zaproszenia, ponieważ nie jesteś organizatorem tego wydarzenia."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed. They were not notified, as you don't organise this event."
+msgstr "Uczestnik usunięty. Nie wysłano powiadomienia, ponieważ nie jesteś organizatorem tego wydarzenia."
