@@ -599,40 +599,40 @@ msgstr "Son calendrier et son service vidéo sont utilisés pour la réunion lor
 #, elixir-autogen, elixir-format
 msgid "%{count} person who asked for a voting link but hasn't voted with it yet will be removed."
 msgid_plural "%{count} people who asked for a voting link but haven't voted with it yet will be removed."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} personne qui a demandé un lien de vote mais n'a pas encore voté avec sera retirée."
+msgstr[1] "%{count} personnes qui ont demandé un lien de vote mais n'ont pas encore voté avec seront retirées."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Anyone with the link"
-msgstr ""
+msgstr "Toute personne disposant du lien"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Anyone you share the poll's link with can ask for a personal voting link by email."
-msgstr ""
+msgstr "Toute personne avec qui vous partagez le lien du sondage peut demander un lien de vote personnel par e-mail."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody can vote until you invite someone. You can also invite people after creating the poll."
-msgstr ""
+msgstr "Personne ne peut voter avant que vous ayez invité quelqu'un. Vous pouvez aussi inviter des personnes après avoir créé le sondage."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Only invited people"
-msgstr ""
+msgstr "Sur invitation"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Only people I invite"
-msgstr ""
+msgstr "Uniquement les personnes que j'invite"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Only the people you invite by email can vote. Anyone else who opens the link is told the poll is by invitation."
-msgstr ""
+msgstr "Seules les personnes que vous invitez par e-mail peuvent voter. Toute autre personne qui ouvre le lien est informée que le sondage est sur invitation."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Who can vote"
-msgstr ""
+msgstr "Qui peut voter"

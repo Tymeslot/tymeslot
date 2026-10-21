@@ -209,4 +209,4 @@ msgstr "Bitte geben Sie Ihren Namen ein."
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only. Use the personal link from your email to vote."
-msgstr ""
+msgstr "An dieser Umfrage können nur eingeladene Personen teilnehmen. Nutzen Sie zum Abstimmen den persönlichen Link aus Ihrer E-Mail."

@@ -209,4 +209,4 @@ msgstr "Informe seu nome."
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only. Use the personal link from your email to vote."
-msgstr ""
+msgstr "Esta enquete é só para convidados. Para votar, use o link pessoal que você recebeu por e-mail."

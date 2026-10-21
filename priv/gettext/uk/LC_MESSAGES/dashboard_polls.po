@@ -608,41 +608,41 @@ msgstr "Його календар і відеосервіс використов
 #, elixir-autogen, elixir-format
 msgid "%{count} person who asked for a voting link but hasn't voted with it yet will be removed."
 msgid_plural "%{count} people who asked for a voting link but haven't voted with it yet will be removed."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Буде видалено %{count} особу, яка запросила посилання для голосування, але ще не проголосувала ним."
+msgstr[1] "Буде видалено %{count} особи, які запросили посилання для голосування, але ще не проголосували ним."
+msgstr[2] "Буде видалено %{count} осіб, які запросили посилання для голосування, але ще не проголосували ним."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Anyone with the link"
-msgstr ""
+msgstr "Усі, хто має посилання"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Anyone you share the poll's link with can ask for a personal voting link by email."
-msgstr ""
+msgstr "Будь-хто, з ким ви поділитеся посиланням на опитування, може запросити електронною поштою особисте посилання для голосування."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody can vote until you invite someone. You can also invite people after creating the poll."
-msgstr ""
+msgstr "Ніхто не зможе проголосувати, доки ви когось не запросите. Запросити людей можна й після створення опитування."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Only invited people"
-msgstr ""
+msgstr "Лише запрошені"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Only people I invite"
-msgstr ""
+msgstr "Лише ті, кого я запрошу"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Only the people you invite by email can vote. Anyone else who opens the link is told the poll is by invitation."
-msgstr ""
+msgstr "Голосувати можуть лише ті, кого ви запросите електронною поштою. Усі інші, хто відкриє посилання, побачать, що опитування доступне лише за запрошеннями."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Who can vote"
-msgstr ""
+msgstr "Хто може голосувати"

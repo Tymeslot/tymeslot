@@ -209,4 +209,4 @@ msgstr "Введіть своє ім'я."
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only. Use the personal link from your email to vote."
-msgstr ""
+msgstr "Це опитування лише за запрошеннями. Щоб проголосувати, скористайтеся особистим посиланням із листа."
