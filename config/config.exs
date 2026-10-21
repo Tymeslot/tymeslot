@@ -585,6 +585,7 @@ config :tymeslot, :payment_rate_limits,
 # Poll email rate limits, counted per address emailed (see
 # Tymeslot.Polls.EmailLimits). A deployment overrides any key in its own
 # config, e.g. `config :tymeslot, :poll_email_limits, per_recipient_day: 20`.
+# Read at compile time: set it in build config, never in config/runtime.exs.
 config :tymeslot, :poll_email_limits,
   # Addresses one host may invite, across all their polls
   invitations_per_host_hour: 100,

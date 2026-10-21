@@ -92,10 +92,10 @@ defmodule Tymeslot.Security.RateLimiter do
 
         {:deny, remaining} ->
           if Keyword.get(entry, :log, true) do
-            Logger.warning("Rate limit exceeded",
-              operation: entry[:operation],
-              requested: count,
-              remaining: remaining
+            Logger.warning(
+              "Rate limit exceeded",
+              [operation: entry[:operation], requested: count, remaining: remaining] ++
+                user_metadata(entry[:scope], key)
             )
           end
 
@@ -103,6 +103,10 @@ defmodule Tymeslot.Security.RateLimiter do
       end
     end
   end
+
+  # Only a user id is logged; an address or source never is.
+  defp user_metadata(:user, user_id), do: [user_id: user_id]
+  defp user_metadata(_scope, _key), do: []
 
   @doc """
   How many more units the named limit allows `key` right now, in its
@@ -116,7 +120,9 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   # Every window the entry charges, as `RateLimit.take/3` takes them. The
-  # keys are the ones `check/2` charges, so both draw on one budget.
+  # keys are the ones `check/2` builds, so a limit must be charged by one
+  # pair only: `check/2` (`hit/3`) or `consume/3` (`take/3`). Mixing them on
+  # one bucket would count a refused `check/2` hit against later takes.
   defp buckets(entry, key) do
     with {:ok, suffix, _identifier} <- scope_key(entry[:scope], key, entry[:operation]) do
       {:ok, windows("#{entry[:prefix]}:#{suffix}", entry)}

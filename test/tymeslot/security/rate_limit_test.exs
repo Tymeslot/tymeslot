@@ -194,6 +194,18 @@ defmodule Tymeslot.Security.RateLimitTest do
       assert RateLimit.get(key, 60_000) == 3
     end
 
+    test "a refused take leaves every bucket as it was", %{key: key, t0: t0} do
+      other = key <> ":day"
+      buckets = [{key, 60_000, 5}, {other, 86_400_000, 2}]
+      :ok = RateLimit.take(buckets, 1, t0)
+      rows_before = {RateLimit.entries(key), RateLimit.entries(other)}
+
+      assert RateLimit.take(buckets, 2, t0) == {:deny, 1}
+
+      assert RateLimit.available(buckets, t0) == 1
+      assert {RateLimit.entries(key), RateLimit.entries(other)} == rows_before
+    end
+
     test "one full bucket refuses for all of them, naming the tightest room", %{
       key: key,
       t0: t0

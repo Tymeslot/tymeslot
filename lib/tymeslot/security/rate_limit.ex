@@ -115,26 +115,36 @@ defmodule Tymeslot.Security.RateLimit do
 
   def take([_first | _rest] = buckets, count, now) when is_integer(count) and count > 0 do
     guarded(:ok, fn ->
-      rows =
-        for {key, window_ms, _limit} <- buckets, _hit <- 1..count//1 do
-          {key, seq(), now, now + window_ms * 1000}
-        end
-
       Enum.each(buckets, fn {key, _window_ms, _limit} ->
         :ets.select_delete(@table, expired(key, now))
       end)
 
-      :ets.insert(@table, rows)
-
+      # Rows go in only when the take appears to fit, so a plain refusal
+      # writes and deletes nothing. The check after the insert still catches
+      # a take that raced this one into the same room.
       case buckets |> Enum.map(&room(&1, now)) |> Enum.min() do
-        room when room >= 0 ->
-          :ok
-
-        room ->
-          Enum.each(rows, &:ets.delete_object(@table, &1))
-          {:deny, max(room + count, 0)}
+        min_room when min_room < count -> {:deny, max(min_room, 0)}
+        _fits -> insert_and_settle(buckets, count, now)
       end
     end)
+  end
+
+  defp insert_and_settle(buckets, count, now) do
+    rows =
+      for {key, window_ms, _limit} <- buckets, _hit <- 1..count//1 do
+        {key, seq(), now, now + window_ms * 1000}
+      end
+
+    :ets.insert(@table, rows)
+
+    case buckets |> Enum.map(&room(&1, now)) |> Enum.min() do
+      room when room >= 0 ->
+        :ok
+
+      room ->
+        Enum.each(rows, &:ets.delete_object(@table, &1))
+        {:deny, max(room + count, 0)}
+    end
   end
 
   @doc """
