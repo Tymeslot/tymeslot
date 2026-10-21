@@ -528,7 +528,7 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
       assert %{exclusions_dropped: 1} = IcsImport.run(outlook_target, plan)
     end
 
-    test "counts refused month-end series as failed without stopping the import", ctx do
+    test "counts refused month-end series among the refused rules, not the failures", ctx do
       series =
         for n <- 1..6 do
           timed("m#{n}@x", "Close #{n}", "20260131T090000Z", "20260131T100000Z", [
@@ -544,8 +544,15 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
         data, _context -> {:ok, CreatedEvent.new(data.uid)}
       end)
 
-      assert %{created: 1, failed: 6, month_end_refused: 6, halted: nil} =
-               IcsImport.run(ctx.target, plan)
+      # Six in a row would halt the import as `:unavailable` were they failures.
+      assert %{
+               created: 1,
+               failed: 0,
+               failed_titles: [],
+               rules_refused: 6,
+               month_end_refused: 6,
+               halted: nil
+             } = IcsImport.run(ctx.target, plan)
     end
   end
 

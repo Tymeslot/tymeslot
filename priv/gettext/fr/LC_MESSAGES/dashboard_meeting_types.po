@@ -335,3 +335,13 @@ msgstr "Supprimer le type de réunion"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Modifier %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered"
+msgstr "Non proposé"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Ce type de réunion n'est pas proposé aux invités tant que les paiements ne sont pas reconnectés. Les réservations existantes ne sont pas concernées."
