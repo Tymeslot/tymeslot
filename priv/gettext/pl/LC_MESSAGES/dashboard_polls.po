@@ -599,3 +599,46 @@ msgstr "Ankieta „%{title}” zostanie usunięta wraz z terminami i wszystkimi 
 #, elixir-autogen, elixir-format
 msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
 msgstr "Jego kalendarz i usługa wideo zostaną użyte dla spotkania po zatwierdzeniu terminu. Terminy i tytuł ankiety pozostają bez zmian."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person who asked for a voting link but hasn't voted with it yet will be removed."
+msgid_plural "%{count} people who asked for a voting link but haven't voted with it yet will be removed."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
+#, elixir-autogen, elixir-format
+msgid "Anyone with the link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
+#, elixir-autogen, elixir-format
+msgid "Anyone you share the poll's link with can ask for a personal voting link by email."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody can vote until you invite someone. You can also invite people after creating the poll."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
+#, elixir-autogen, elixir-format
+msgid "Only invited people"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
+#, elixir-autogen, elixir-format
+msgid "Only people I invite"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
+#, elixir-autogen, elixir-format
+msgid "Only the people you invite by email can vote. Anyone else who opens the link is told the poll is by invitation."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
+#, elixir-autogen, elixir-format
+msgid "Who can vote"
+msgstr ""

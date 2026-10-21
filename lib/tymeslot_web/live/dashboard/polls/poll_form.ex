@@ -11,6 +11,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   The host may list people to invite by email (see `PollInvite`); they are
   invited with the poll and emailed once it is saved.
 
+  "Who can vote" starts as anyone with the link and follows the invitee field
+  until the host chooses: listing anyone presets it to invited people only
+  (`Tymeslot.Polls.default_invite_only?/1`, the rule `create_poll/2` applies).
+
   On submit it converts the local datetime values to UTC and calls
   `Tymeslot.Polls.create_poll/2`. Success flashes via the parent LiveView and
   asks the parent `PollsComponent` to refresh and close the form; failures map
@@ -25,7 +29,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollInvite, PollReminders, PollsComponent}
+
+  alias TymeslotWeb.Dashboard.Polls.{
+    LocalTime,
+    PollAccess,
+    PollInvite,
+    PollReminders,
+    PollsComponent
+  }
+
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -43,6 +55,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        notify_on_vote: true,
        reminder_picker: PollReminders.new([%{value: 1, unit: "days"}]),
        invitees: "",
+       access: "anyone",
+       access_chosen?: false,
        slots: [],
        slot_counter: 0,
        time_off_keys: MapSet.new(),
@@ -234,6 +248,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             value={@invitees}
             errors={error_list(@errors, :invitees)}
           />
+          <PollAccess.access_input
+            id={"poll-access-#{@id}"}
+            name="poll[access]"
+            value={@access}
+            hint={access_hint(@access, @invitees)}
+          />
 
           <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
         </form>
@@ -268,6 +288,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   def handle_event("form_change", %{"poll" => params}, socket) do
     meeting_type_id = Map.get(params, "meeting_type_id", socket.assigns.meeting_type_id)
     duration = resolve_duration(params, meeting_type_id, socket)
+    {access, access_chosen?} = resolve_access(params, socket)
 
     {:noreply,
      socket
@@ -279,6 +300,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
        notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
        invitees: Map.get(params, "invitees", socket.assigns.invitees),
+       access: access,
+       access_chosen?: access_chosen?,
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
        slots: merge_slot_values(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
@@ -390,6 +413,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
       reminder_config: PollReminders.to_config(socket.assigns.reminder_picker),
+      invite_only: params |> resolve_access(socket) |> elem(0) |> PollAccess.invite_only?(),
       slots: build_slots(Map.get(params, "slots", %{}), timezone)
     }
   end
@@ -440,6 +464,46 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       :error -> nil
     end
   end
+
+  # --- Who can vote ---
+
+  # The host's choice, or until they make one, the default for the invitees
+  # typed so far. The form always sends whichever radio is checked, so a
+  # submitted value counts as a choice only when it differs from the one on
+  # screen.
+  defp resolve_access(params, socket) do
+    %{access: shown, access_chosen?: chosen?} = socket.assigns
+
+    case Map.get(params, "access") do
+      value when value in ["anyone", "invited"] and value != shown ->
+        {value, true}
+
+      _same when chosen? ->
+        {shown, true}
+
+      _same ->
+        {default_access(Map.get(params, "invitees", socket.assigns.invitees)), false}
+    end
+  end
+
+  # An unreadable list is still a list of people the host means to invite.
+  defp default_access(invitees_text) do
+    case Invitations.parse(invitees_text) do
+      {:ok, invitees} -> PollAccess.value(Polls.default_invite_only?(invitees))
+      {:error, _reason} -> PollAccess.value(true)
+    end
+  end
+
+  defp access_hint("invited", invitees) do
+    if String.trim(invitees || "") == "" do
+      dgettext(
+        "dashboard_polls",
+        "Nobody can vote until you invite someone. You can also invite people after creating the poll."
+      )
+    end
+  end
+
+  defp access_hint(_access, _invitees), do: nil
 
   # --- Misc ---
 

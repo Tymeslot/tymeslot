@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   LiveComponent for editing an open poll from its results panel.
 
   Covers what can change while people vote (see `Tymeslot.Polls.Editing`):
-  the title and description, whether the host is emailed about new votes, the
+  the title and description, whether the host is emailed about new votes, who
+  can vote (switching to invited people only withdraws pending link requests,
+  which the editor warns about with the count it is given), the
   voting deadline (moved, removed, or set again to reopen voting), the
   reminders before it, and new candidate times. Everything is saved at once.
   The participant list beside it removes someone straight away.
@@ -19,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   alias Ecto.Changeset
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
-  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollReminders, PollsComponent}
+  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollAccess, PollReminders, PollsComponent}
   alias TymeslotWeb.Live.Shared.Flash
 
   @reminder_events PollReminders.events()
@@ -42,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       description: poll.description || "",
       deadline: LocalTime.to_input(poll.deadline_at, poll.timezone),
       notify_on_vote: poll.notify_on_vote,
+      access: PollAccess.value(poll.invite_only),
       meeting_type_id: poll.meeting_type_id,
       new_times: [],
       time_counter: 0,
@@ -114,6 +117,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
             )}
           </:description>
         </.input>
+
+        <PollAccess.access_input
+          id={"poll-access-#{@poll.id}"}
+          name="poll[access]"
+          value={@access}
+          hint={withdraw_hint(@poll, @access, assigns[:unconfirmed_count] || 0)}
+        />
 
         <div class="space-y-2" data-testid="poll-new-times">
           <p class="text-token-sm font-medium text-tymeslot-700">
@@ -255,6 +265,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
        description: Map.get(params, "description", socket.assigns.description),
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
        notify_on_vote: Map.get(params, "notify_on_vote", "false") == "true",
+       access: Map.get(params, "access", socket.assigns.access),
        meeting_type_id: parse_id(Map.get(params, "meeting_type_id")),
        new_times: merge_times(socket.assigns.new_times, Map.get(params, "new_times", %{}))
      )}
@@ -299,6 +310,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       "title" => Map.get(params, "title"),
       "description" => Map.get(params, "description"),
       "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
+      "invite_only" => PollAccess.invite_only?(Map.get(params, "access", socket.assigns.access)),
       "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
       "meeting_type_id" => parse_id(Map.get(params, "meeting_type_id")),
       "reminder_config" => PollReminders.to_config(socket.assigns.reminder_picker)
@@ -347,6 +359,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_polls", "voted")
   defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_polls", "invited")
   defp status_label(_participant), do: dgettext("dashboard_polls", "not voted yet")
+
+  # Warns before the switch that withdraws the requests waiting on the poll.
+  defp withdraw_hint(%{invite_only: false}, "invited", count) when count > 0 do
+    dngettext(
+      "dashboard_polls",
+      "%{count} person who asked for a voting link but hasn't voted with it yet will be removed.",
+      "%{count} people who asked for a voting link but haven't voted with it yet will be removed.",
+      count
+    )
+  end
+
+  defp withdraw_hint(_poll, _access, _count), do: nil
 
   defp errors_for(:too_many_slots),
     do: %{

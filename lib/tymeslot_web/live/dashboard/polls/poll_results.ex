@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Dashboard.Polls.PollAccess
   alias TymeslotWeb.Dashboard.Polls.PollEditor
   alias TymeslotWeb.Dashboard.Polls.PollInvite
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
@@ -79,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         module={PollEditor}
         id={"poll-editor-#{@poll.id}"}
         poll={@poll}
+        unconfirmed_count={@unconfirmed_count}
         meeting_types={@meeting_types}
         user_id={@user_id}
         parent_id={@parent_id}
@@ -94,16 +96,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
                 property of the poll rather than a sentence about it. The full
                 phrasing stays on the label, which keeps the already-translated
                 string and gives the badge an accessible reading. --%>
-          <Feedback.pill
-            icon="hero-globe-alt-mini"
-            class="mt-1"
-            aria-label={
-              dgettext("dashboard_polls", "Times shown in %{timezone}", timezone: @poll.timezone)
-            }
-            data-testid="poll-timezone-badge"
-          >
-            {@poll.timezone}
-          </Feedback.pill>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
+            <Feedback.pill
+              icon="hero-globe-alt-mini"
+              aria-label={
+                dgettext("dashboard_polls", "Times shown in %{timezone}", timezone: @poll.timezone)
+              }
+              data-testid="poll-timezone-badge"
+            >
+              {@poll.timezone}
+            </Feedback.pill>
+            <PollAccess.access_pill poll={@poll} />
+          </div>
 
           <%!-- The host's own description. Shown here because the panel is
                 where they check what they asked their guests, and it is the
