@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
-  attr :link_requested_for, :string, default: nil
+  attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
 
   @doc """
   Renders the whole voting page body, choosing the right view from poll state.
@@ -79,8 +79,8 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           </div>
         <% :register -> %>
           <.deadline_banner poll={@poll} />
-          <%= if @link_requested_for do %>
-            <.link_sent email={@link_requested_for} />
+          <%= if @link_request do %>
+            <.link_sent outcome={@link_request} />
           <% else %>
             <.identity_form />
           <% end %>
@@ -88,9 +88,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <% :vote -> %>
           <.deadline_banner poll={@poll} />
           <p class="poll-voting-greeting" data-testid="poll-participant-name">
-            {dgettext("booking_polls", "Voting as %{name}",
-              name: PollParticipantSchema.display_name(@participant)
-            )}
+            {greeting(@participant)}
           </p>
           <p class="poll-voting-notice" data-testid="poll-link-notice">
             <%= if @participant.confirmed_at do %>
@@ -134,25 +132,20 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     """
   end
 
-  attr :email, :string, required: true
+  attr :outcome, :atom, required: true, values: [:sent, :resent, :throttled]
 
   @doc """
-  Shown in place of the form once a voting link was requested. Reads the same
-  whether the address was new to the poll or already on it.
+  Shown in place of the form once a voting link was requested. Says whether
+  the address was new to the poll or already on it, and never repeats the
+  address itself: the public page shows no addresses.
   """
   @spec link_sent(map()) :: Phoenix.LiveView.Rendered.t()
   def link_sent(assigns) do
     ~H"""
-    <div class="poll-link-sent" role="status" data-testid="poll-link-sent">
+    <div class="poll-link-sent" role="status" data-testid="poll-link-sent" data-outcome={@outcome}>
       <.icon name="hero-envelope" class="poll-link-sent-icon" />
-      <p class="poll-voting-notice">
-        {dgettext(
-          "booking_polls",
-          "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there.",
-          email: @email
-        )}
-      </p>
-      <p class="poll-voting-notice">
+      <p class="poll-voting-notice">{link_sent_message(@outcome)}</p>
+      <p :if={@outcome != :throttled} class="poll-voting-notice">
         {dgettext(
           "booking_polls",
           "Nothing there after a few minutes? Check your spam folder."
@@ -161,6 +154,27 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     </div>
     """
   end
+
+  defp link_sent_message(:sent),
+    do:
+      dgettext(
+        "booking_polls",
+        "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
+      )
+
+  defp link_sent_message(:resent),
+    do:
+      dgettext(
+        "booking_polls",
+        "This address is already on the poll; we've sent its voting link again."
+      )
+
+  defp link_sent_message(:throttled),
+    do:
+      dgettext(
+        "booking_polls",
+        "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
+      )
 
   @doc """
   Renders the name + email form that asks for a personal voting link.
@@ -420,6 +434,15 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   defp voting_view(_assigns), do: :vote
 
   # --- Data helpers ---
+
+  # Someone invited by address alone has no name yet; the page greets them
+  # without one rather than show their address.
+  defp greeting(participant) do
+    case PollParticipantSchema.public_name(participant) do
+      nil -> dgettext("booking_polls", "You're voting with your personal link.")
+      name -> dgettext("booking_polls", "Voting as %{name}", name: name)
+    end
+  end
 
   # A time is new to someone who has voted but not on it: the host added it
   # after they last answered.

@@ -36,7 +36,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   @doc """
   Assigns the poll, its tallies, voting-open flag, the resolved participant,
-  and whether a link was just requested on this page.
+  and the outcome of a link request made on this page (`link_request`, nil
+  until one is made).
 
   The participant is resolved from the `"p"` param (a participant token) only
   when that participant belongs to this poll; a token from another poll is
@@ -52,7 +53,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       tallies: Polls.tallies(poll),
       voting_open: Polls.voting_open?(poll),
       participant: Voting.get_participant(poll, params["p"]),
-      link_requested_for: nil
+      link_request: nil
     )
   end
 
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       })
 
       with_rate_limit(socket, :poll_register, fn socket ->
-        {:noreply, link_sent(socket, params["email"])}
+        {:noreply, assign(socket, link_request: :sent)}
       end)
     else
       register_participant(socket, params)
@@ -138,14 +139,9 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       |> Map.put("locale", socket.assigns[:locale])
 
     case Voting.request_link(socket.assigns.poll, attrs) do
-      :ok -> {:noreply, link_sent(socket, params["email"])}
+      :ok -> {:noreply, assign(socket, link_request: :sent)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, register_error_message(reason))}
     end
-  end
-
-  # The same answer whether the address was new to the poll or already on it.
-  defp link_sent(socket, email) do
-    assign(socket, link_requested_for: email |> to_string() |> String.trim())
   end
 
   @doc """

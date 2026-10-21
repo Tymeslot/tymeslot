@@ -61,7 +61,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         meeting_kept: assigns[:meeting_kept] || false,
         meeting_uid: assigns[:meeting_uid],
         organizer_profile: assigns[:organizer_profile],
-        participant: assigns[:participant]
+        participant: assigns[:participant],
+        link_request: assigns[:link_request]
       )
 
     ~H"""
@@ -97,6 +98,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       tallies={@tallies}
       voting_open={@voting_open}
       participant={@participant}
+      link_request={@link_request}
     />
     """
   end

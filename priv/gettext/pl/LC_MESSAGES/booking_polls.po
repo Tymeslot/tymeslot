@@ -166,11 +166,6 @@ msgstr "Ta ankieta otrzymuje teraz bardzo dużo zgłoszeń. Spróbuj ponownie p�
 msgid "This voting link is no longer valid. Please ask for a new one on the poll's page."
 msgstr "Ten link do głosowania jest już nieważny. Poproś o nowy na stronie ankiety."
 
-#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
-#, elixir-autogen, elixir-format
-msgid "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there."
-msgstr "Wysłaliśmy osobisty link do głosowania na adres %{email}. Otwórz go, aby zagłosować; odpowiedzi będą liczone po zapisaniu ich tam."
-
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your name, then save your responses again."
@@ -180,3 +175,23 @@ msgstr "Podaj imię, a potem zapisz odpowiedzi jeszcze raz."
 #, elixir-autogen, elixir-format
 msgid "New"
 msgstr "Nowy"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
+msgstr "Ten adres jest już w ankiecie, a jego link do głosowania został wysłany kilka minut temu. Sprawdź tę skrzynkę, także folder ze spamem."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This address is already on the poll; we've sent its voting link again."
+msgstr "Ten adres jest już w ankiecie; wysłaliśmy jego link do głosowania ponownie."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
+msgstr "Wysłaliśmy osobisty link do głosowania na podany adres. Otwórz go, aby zagłosować; Twoje odpowiedzi będą liczone po ich zapisaniu w tym miejscu."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "You're voting with your personal link."
+msgstr "Głosujesz za pomocą swojego osobistego linku."

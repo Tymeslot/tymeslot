@@ -132,10 +132,23 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   def email_recipient(%__MODULE__{email: email}), do: email
 
-  @doc "The participant's name, or their address while they have none."
+  @doc """
+  The participant's name, or their address while they have none.
+
+  For the host and for emails only. The public voting page must never show an
+  address; it uses `public_name/1`.
+  """
   @spec display_name(%__MODULE__{}) :: String.t()
   def display_name(%__MODULE__{name: name}) when is_binary(name) and name != "", do: name
   def display_name(%__MODULE__{email: email}), do: email
+
+  @doc """
+  The participant's name as the public voting page may show it, or nil while
+  they have none. Never their address.
+  """
+  @spec public_name(%__MODULE__{}) :: String.t() | nil
+  def public_name(%__MODULE__{name: name}) when is_binary(name) and name != "", do: name
+  def public_name(%__MODULE__{}), do: nil
 
   @doc "How long an unconfirmed participant's link stays valid after it was last sent."
   @spec unconfirmed_ttl_seconds() :: pos_integer()
