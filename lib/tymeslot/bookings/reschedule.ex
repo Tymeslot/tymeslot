@@ -50,6 +50,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.MeetingTypes
@@ -120,6 +121,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
     with {:ok, original_meeting} <- fetch_meeting(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
+         :ok <- refuse_host_managed(original_meeting),
          meeting_type <-
            fetch_meeting_type(
              original_meeting.meeting_type_id,
@@ -129,19 +131,35 @@ defmodule Tymeslot.Bookings.Reschedule do
          config <- Schedules.booking_config(original_meeting.organizer_user_id, meeting_type),
          {:ok, new_times} <-
            Validation.prepare_new_times(new_params, original_meeting, meeting_type, config),
-         :ok <- verify_calendar_free(original_meeting, new_times, config),
-         {:ok, {updated_meeting, pending}} <-
-           apply_time_update_and_schedule_job(
-             original_meeting,
-             new_times,
-             meeting_type,
-             RescheduleLocation.attributes(original_meeting, meeting_type, new_params)
-           ) do
-      after_commit(updated_meeting, original_meeting, pending)
-      {:ok, updated_meeting}
+         :ok <- verify_calendar_free(original_meeting, new_times, config) do
+      apply_new_time(
+        original_meeting,
+        new_times,
+        meeting_type,
+        RescheduleLocation.attributes(original_meeting, meeting_type, new_params)
+      )
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
       error -> error
+    end
+  end
+
+  @doc """
+  Writes `new_times` to `original`, a meeting the caller has already found
+  movable, and sets off what a committed move does: fresh availability, the
+  video room and calendar entry moved, reminders pinned to the new time and
+  the reschedule emails. The step a booker's reschedule (`execute/3`) and a
+  host's move (`Tymeslot.Bookings.HostMove`) share; the meeting is checked
+  again under its lock, and another meeting at the new time refuses it
+  (`:slot_taken`).
+  """
+  @spec apply_new_time(MeetingSchema.t(), map(), map() | nil, map()) ::
+          {:ok, MeetingSchema.t()} | {:error, Errors.classified_error()}
+  def apply_new_time(original, new_times, meeting_type, location_attrs) do
+    with {:ok, {updated, pending}} <-
+           apply_time_update_and_schedule_job(original, new_times, meeting_type, location_attrs) do
+      after_commit(updated, original, pending)
+      {:ok, updated}
     end
   end
 
@@ -473,6 +491,13 @@ defmodule Tymeslot.Bookings.Reschedule do
     with :ok <- Policy.can_reschedule_meeting?(meeting) do
       refuse_group_meeting(meeting)
     end
+  end
+
+  # A meeting confirmed from a poll has no booker to move it: the host does
+  # (`Tymeslot.Bookings.HostMove`). Its flag never changes, so the check
+  # needs no repeating under the meeting's lock.
+  defp refuse_host_managed(meeting) do
+    if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
   end
 
   # A group slot is shared, so moving the meeting row would move everybody on

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.ClientIP
@@ -36,7 +37,11 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   @spec validate_and_load_meeting(String.t(), atom(), integer()) ::
           {:ok, map()}
           | {:error,
-             Policy.cancel_refusal() | Policy.reschedule_refusal() | :group_meeting | :not_found}
+             Policy.cancel_refusal()
+             | Policy.reschedule_refusal()
+             | :group_meeting
+             | :managed_by_host
+             | :not_found}
   def validate_and_load_meeting(meeting_uid, action, organizer_user_id) do
     case Meetings.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id) do
       {:ok, meeting} ->
@@ -56,14 +61,32 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     )
   end
 
+  @doc """
+  What a visitor is told when they open the cancel or reschedule page of a
+  meeting the host manages, one confirmed from a poll.
+  """
+  @spec managed_by_host_message() :: String.t()
+  def managed_by_host_message do
+    dgettext(
+      "booking_manage",
+      "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+    )
+  end
+
   # Validates whether the given action is permitted for the meeting.
   @spec validate_meeting_action(map(), atom()) ::
           :ok
-          | {:error, Policy.cancel_refusal() | Policy.reschedule_refusal() | :group_meeting}
+          | {:error,
+             Policy.cancel_refusal()
+             | Policy.reschedule_refusal()
+             | :group_meeting
+             | :managed_by_host}
   defp validate_meeting_action(meeting, action) when action in [:cancel, :reschedule] do
-    if Meetings.group?(meeting),
-      do: {:error, :group_meeting},
-      else: permitted(meeting, action)
+    cond do
+      Meetings.group?(meeting) -> {:error, :group_meeting}
+      MeetingSchema.managed_by_host?(meeting) -> {:error, :managed_by_host}
+      true -> permitted(meeting, action)
+    end
   end
 
   defp validate_meeting_action(_unused_meeting, :cancel_confirmed) do
@@ -142,6 +165,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
 
   # A refusal reason is a code that must never reach the visitor as it stands.
   defp cancel_error_message(:group_meeting_not_cancellable), do: group_meeting_message()
+  defp cancel_error_message(:managed_by_host), do: managed_by_host_message()
 
   # The page was loaded while the meeting was live, and someone else (the
   # host, or this attendee in another tab) cancelled it since.

@@ -1,7 +1,8 @@
 defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   @moduledoc """
   Attendee blocks for organiser-facing meeting emails — the contact information
-  table and the optional attendee-message callout.
+  table, the optional attendee-message callout, and, for a meeting nobody
+  booked, the list of its guests.
 
   Both components take an explicit intent so colouring (link, tint, rail)
   matches the surrounding stage band.
@@ -51,6 +52,42 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
           #{attendee_optional_row(dgettext("emails", "Phone"), attendee[:phone])}
           #{attendee_optional_row(dgettext("emails", "Company"), attendee[:company])}
           #{attendee_optional_row(dgettext("emails", "Timezone"), attendee[:timezone])}
+        </mj-table>
+      </mj-column>
+    </mj-section>
+    """
+  end
+
+  @doc """
+  Who the organiser's copy is about: the attendee, or, for a meeting the
+  host manages (`:host_managed`, see
+  `Tymeslot.Emails.AppointmentBuilder.organizer_copy/2`), its guests, since
+  nobody booked it.
+  """
+  @spec counterpart_section(Tokens.intent(), map()) :: String.t()
+  def counterpart_section(intent, %{host_managed: true} = details),
+    do: guests_section(intent, details.guest_emails)
+
+  def counterpart_section(intent, details),
+    do:
+      attendee_info_section(intent, %{name: details.attendee_name, email: details.attendee_email})
+
+  defp guests_section(intent, emails) do
+    """
+    <mj-section padding="8px 0 20px 0">
+      <mj-column>
+        <mj-text
+          font-size="11px"
+          font-weight="700"
+          color="#{Styles.ink_muted()}"
+          letter-spacing="0.14em"
+          text-transform="uppercase"
+          padding="0 0 12px 0"
+        >
+          #{dgettext("emails", "Guests")}
+        </mj-text>
+        <mj-table #{Styles.table_attributes()} css-class="responsive-table">
+          #{Enum.map_join(emails, "", &attendee_email_row(intent, Sanitise.sanitize_for_email(&1)))}
         </mj-table>
       </mj-column>
     </mj-section>

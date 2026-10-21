@@ -557,7 +557,9 @@ msgstr "Hallo %{guest} - der Termin, zu dem %{organizer} Sie eingeladen hat, wur
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Der Termin, zu dem %{organizer} Sie eingeladen hat, wurde auf eine neue Zeit verschoben."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
 msgstr "Im Dashboard öffnen"
@@ -691,3 +693,33 @@ msgstr "Sie haben erhalten: %{amount} (vor Abzug der Stripe-Bearbeitungsgebühre
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting in your calendar."
 msgstr "Sie haben diesen Termin in Ihrem Kalender verschoben."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed"
+msgstr "Umfrage bestätigt"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed: %{title} - %{date}"
+msgstr "Umfrage bestätigt: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting."
+msgstr "Sie haben diesen Termin verschoben."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your guests have been notified of the new time."
+msgstr "Ihre Gäste wurden über die neue Zeit informiert."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your poll is confirmed, and everyone on it is invited."
+msgstr "Ihre Umfrage ist bestätigt, und alle Teilnehmenden sind eingeladen."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "⏰ %{title} in %{time_until}"
+msgstr "⏰ %{title} in %{time_until}"

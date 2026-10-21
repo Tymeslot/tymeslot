@@ -9,7 +9,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{Cancel, CancelSeat, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, CancelSeat, HostMove, Reschedule, RescheduleRequest}
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   alias Tymeslot.Meetings.{
@@ -97,7 +97,7 @@ defmodule Tymeslot.Meetings do
   defdelegate group?(meeting), to: MeetingSchema
 
   @doc "The video link the organiser joins `meeting` with, or `nil` without video."
-  defdelegate organizer_join_url(meeting), to: MeetingSchema
+  defdelegate organizer_join_url(meeting), to: Tymeslot.Meetings.JoinUrl
 
   @doc """
   `meeting` (or each of a list of meetings) with its live participants
@@ -239,6 +239,9 @@ defmodule Tymeslot.Meetings do
   def reschedule_meeting(meeting_uid, new_params, organizer_user_id) do
     Reschedule.execute(meeting_uid, new_params, organizer_user_id)
   end
+
+  @doc "Moves a meeting the host manages to `new_start`; see `Tymeslot.Bookings.HostMove.move/3`."
+  defdelegate move_by_host(meeting_uid, new_start, organizer_user_id), to: HostMove, as: :move
 
   @doc """
   Cancels the calendar event associated with a meeting asynchronously.

@@ -704,6 +704,61 @@ msgstr "Saiu deste horário"
 msgid "Cancel meeting"
 msgstr "Cancelar reunião"
 
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Currently: %{date}, %{time}"
+msgstr "Atualmente: %{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the new date and time."
+msgstr "Informe a nova data e hora."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "It was arranged by a poll, so you choose its new time. Everyone invited is sent the new time with an updated calendar entry and asked again whether they can come."
+msgstr "Ela foi marcada por uma enquete, então é você quem escolhe o novo horário. Todos os convidados recebem o novo horário com o evento da agenda atualizado e são perguntados de novo se podem ir."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting moved. Everyone invited has been told."
+msgstr "Reunião remarcada. Todos os convidados foram avisados."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move meeting"
+msgstr "Remarcar reunião"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move this meeting"
+msgstr "Remarcar esta reunião"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New start (%{timezone})"
+msgstr "Novo início (%{timezone})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be moved. Please try again."
+msgstr "Não foi possível remarcar a reunião. Tente novamente."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The new time must be in the future."
+msgstr "O novo horário precisa estar no futuro."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting at that time."
+msgstr "Você já tem uma reunião nesse horário."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Poll"
+msgstr "Enquete"
+
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "This booking was already cancelled, so no refund was issued."

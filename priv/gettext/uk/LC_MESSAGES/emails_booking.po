@@ -557,7 +557,9 @@ msgstr "Вітаю, %{guest}! Зустріч, на яку вас запроси�
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Зустріч, на яку вас запросив(ла) %{organizer}, перенесено на новий час."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
 msgstr "Відкрити в панелі керування"
@@ -691,3 +693,33 @@ msgstr "Ви отримали: %{amount} (до вирахування коміс
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting in your calendar."
 msgstr "Цю зустріч було перенесено у вашому календарі."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed"
+msgstr "Опитування підтверджено"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed: %{title} - %{date}"
+msgstr "Опитування підтверджено: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting."
+msgstr "Ви перенесли цю зустріч."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your guests have been notified of the new time."
+msgstr "Ваших гостей повідомлено про новий час."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your poll is confirmed, and everyone on it is invited."
+msgstr "Ваше опитування підтверджено, і всіх його учасників запрошено."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "⏰ %{title} in %{time_until}"
+msgstr "⏰ %{title} через %{time_until}"

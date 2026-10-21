@@ -70,10 +70,11 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert DateTime.compare(meeting.end_time, slot.end_time) == :eq
       assert meeting.organizer_user_id == user.id
 
-      # Alice becomes a guest on the minted meeting.
+      # The host manages the meeting: everyone is a guest, Bob included, and
+      # nobody holds a booking they could move or cancel for the rest.
+      assert meeting.managed_by_host
       guest_emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
-      assert "alice@example.com" in guest_emails
-      refute "bob@example.com" in guest_emails
+      assert Enum.sort(guest_emails) == ["alice@example.com", "bob@example.com"]
 
       # The poll is now confirmed and points at the meeting.
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
@@ -120,7 +121,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.attendee_email == "ada@example.com"
 
       guest_emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
-      assert guest_emails == ["bob@example.com"]
+      assert Enum.sort(guest_emails) == ["ada@example.com", "bob@example.com"]
     end
 
     test "falls back to the timezone of the poll when the primary has none",

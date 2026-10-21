@@ -200,15 +200,19 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       # The host confirms the winning slot.
       assert {:ok, meeting} = Confirm.confirm(poll.id, slot1.id, user.id)
 
-      # The meeting carries the right timing and the first available voter as the
-      # primary attendee; the other voter rides along as a guest.
+      # The meeting carries the right timing and the first available voter in
+      # its attendee fields, which a calendar entry needs.
       assert meeting.start_time == slot1.start_time
       assert meeting.end_time == slot1.end_time
       assert meeting.organizer_user_id == user.id
       assert meeting.attendee_email == "ada@example.com"
 
-      assert [guest] = Guests.list_for_meeting(meeting.id)
-      assert guest.email == "bob@example.com"
+      # Everyone who answered is a guest, Ada included: the host manages the
+      # meeting, so nobody holds a booking to move or cancel for the rest.
+      assert meeting.managed_by_host
+
+      assert meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email) |> Enum.sort() ==
+               ["ada@example.com", "bob@example.com"]
 
       # The calendar-event job is enqueued for the newly minted meeting.
       assert_enqueued(

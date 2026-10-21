@@ -849,6 +849,11 @@ msgstr "Füllt sich"
 msgid "Plenty left"
 msgstr "Viele frei"
 
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
+msgstr "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben. Wenn Ihnen die neue Zeit nicht passt, antworten Sie auf Ihre Einladung."
+
 #: lib/tymeslot_web/themes/core/error_boundary.ex
 #, elixir-autogen, elixir-format
 msgid "This page could not be updated. Please try again."

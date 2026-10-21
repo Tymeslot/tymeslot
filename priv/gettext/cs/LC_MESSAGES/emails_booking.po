@@ -557,7 +557,9 @@ msgstr "Dobrý den, %{guest}, schůzka, na kterou vás zve %{organizer}, byla p�
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Schůzka, na kterou vás zve %{organizer}, byla přesunuta na nový čas."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
 msgstr "Otevřít v přehledu"
@@ -691,3 +693,33 @@ msgstr "Obdrželi jste: %{amount} (před odečtením poplatků Stripe za zpracov
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting in your calendar."
 msgstr "Přesun této schůzky proběhl ve vašem kalendáři."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed"
+msgstr "Anketa potvrzena"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed: %{title} - %{date}"
+msgstr "Anketa potvrzena: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting."
+msgstr "Tuto schůzku jste přesunuli."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your guests have been notified of the new time."
+msgstr "Vaši hosté byli informováni o novém termínu."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your poll is confirmed, and everyone on it is invited."
+msgstr "Vaše anketa je potvrzena a všichni její účastníci jsou pozváni."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "⏰ %{title} in %{time_until}"
+msgstr "⏰ %{title} za %{time_until}"

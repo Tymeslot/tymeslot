@@ -302,6 +302,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # A meeting confirmed from a poll: it has no booker. Everyone who answered
+    # the poll is a guest, the person in the attendee fields included (they
+    # are there because a calendar entry needs one), and only the host moves
+    # or cancels it. See `managed_by_host?/1`.
+    field(:managed_by_host, :boolean, default: false)
+
     # Snapshot of the meeting type's show_as_free setting at booking time —
     # drives TRANSP/transparency on the calendar event written to the host.
     field(:show_as_free, :boolean, default: false)
@@ -418,7 +424,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :utm_term,
     :referrer_host,
     :tracking_params,
-    :visitor_hash
+    :visitor_hash,
+    :managed_by_host
   ]
 
   @group_required_fields [
@@ -628,22 +635,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   def group?(%__MODULE__{capacity: capacity}), do: capacity > 1
 
   @doc """
-  The link the organiser joins the video call with: their own (host) room link
-  where the provider issued one, else the shared meeting link; `nil` for a
-  meeting without video.
+  Whether only the host manages the meeting: one confirmed from a poll. Its
+  attendee is a guest like everyone else, so they are sent no booking emails
+  and the public cancel and reschedule pages refuse it; the host moves it
+  from the dashboard instead (`Tymeslot.Bookings.HostMove.move/3`).
   """
-  @spec organizer_join_url(t()) :: String.t() | nil
-  def organizer_join_url(%__MODULE__{} = meeting),
-    do: present_url(meeting.organizer_video_url) || present_url(meeting.meeting_url)
-
-  defp present_url(url) when is_binary(url) do
-    case String.trim(url) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp present_url(_url), do: nil
+  @spec managed_by_host?(map()) :: boolean()
+  def managed_by_host?(%{managed_by_host: true}), do: true
+  def managed_by_host?(_meeting), do: false
 
   defp supported_locale_codes, do: Locales.supported_codes()
 end
