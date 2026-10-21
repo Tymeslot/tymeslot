@@ -125,11 +125,10 @@ defmodule Tymeslot.Polls.PollSchema do
 
   Covers the title, the description, whether the host is told about new votes,
   who can vote (`invite_only`), the voting deadline, the reminders before it,
-  and the meeting type whose
-  calendar and video the confirmed meeting uses (checked by
-  `Tymeslot.Polls.Editing`, which knows the host). A deadline may be moved,
-  removed, or set again after it passed, which reopens voting, but never into
-  the past. The candidate times, duration and timezone stay as they are:
+  and the meeting type whose calendar and video the confirmed meeting uses
+  (checked by `Tymeslot.Polls.Editing`, which knows the host). A deadline may
+  be moved, removed, or set again after it passed, which reopens voting, but
+  never into the past. The candidate times, duration and timezone stay as they are:
   guests voted against the slots they were shown, so changing those under an
   in-flight poll would silently invalidate votes already cast. Times can only
   be added (`Tymeslot.Polls.Editing`).
