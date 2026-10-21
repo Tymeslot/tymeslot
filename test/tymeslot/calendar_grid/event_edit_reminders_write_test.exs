@@ -332,6 +332,123 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
     end
   end
 
+  describe "replaying an edit of a CalDAV series with an edited occurrence" do
+    # A series' resource holds the master and one VEVENT per occurrence edited
+    # on its own, and the row stores the whole resource. The override carries
+    # an alarm of its own, so the document as a whole has no single list of
+    # reminders; only the master's alarms are the ones a patch replaces.
+    #
+    # The master repeats by RDATE, which the sync does not model, so its row
+    # reads as a single event and the queue replays it (a row the sync knows
+    # to be a series is refused before any replay).
+    @override_alarm [
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "TRIGGER;RELATED=END:PT5M",
+      "DESCRIPTION:Wrap up",
+      "END:VALARM"
+    ]
+
+    @series_ical """
+    BEGIN:VCALENDAR\r
+    VERSION:2.0\r
+    PRODID:-//Apple Inc.//macOS 15.0//EN\r
+    BEGIN:VEVENT\r
+    UID:weekly-board\r
+    DTSTAMP:20260901T090000Z\r
+    DTSTART:20260910T090000Z\r
+    DTEND:20260910T100000Z\r
+    RDATE:20260917T090000Z,20260924T090000Z\r
+    SUMMARY:Board meeting\r
+    #{Enum.join(@email_alarm, "\r\n")}\r
+    #{Enum.join(@display_alarm, "\r\n")}\r
+    END:VEVENT\r
+    BEGIN:VEVENT\r
+    UID:weekly-board\r
+    RECURRENCE-ID:20260917T090000Z\r
+    DTSTAMP:20260901T090000Z\r
+    DTSTART:20260917T110000Z\r
+    DTEND:20260917T120000Z\r
+    SUMMARY:Board meeting (moved)\r
+    #{Enum.join(@override_alarm, "\r\n")}\r
+    END:VEVENT\r
+    END:VCALENDAR\r
+    """
+
+    setup %{user: user} do
+      # The master's reminders, which the sync caches on the series' row.
+      assert ICalNormaliser.document_reminders(@series_ical) == {:ok, @read_reminders}
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          calendar_paths: ["/cal/"]
+        )
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "weekly-board",
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: "/cal/weekly-board.ics",
+          summary: "Board meeting",
+          start_at: ~U[2026-09-10 09:00:00.000000Z],
+          end_at: ~U[2026-09-10 10:00:00.000000Z],
+          all_day: false,
+          timezone: "UTC",
+          reminders: @read_reminders,
+          etag: "\"etag-1\"",
+          raw_ical: @series_ical,
+          sync_state: "synced"
+        )
+
+      %{integration: integration, event: event}
+    end
+
+    test "a replayed rename leaves every alarm exactly as the server wrote it", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:ok, _updated} = EventEdit.queue_for_retry(user.id, event, %{summary: "Renamed"})
+      capture_put()
+
+      assert :ok = OfflineQueue.flush(integration, @caldav_client)
+
+      lines = put_lines()
+      assert "SUMMARY:Renamed" in lines
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @override_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 3
+    end
+
+    test "a replayed edit of the reminders rewrites the master's alarms alone", %{
+      user: user,
+      integration: integration,
+      event: event
+    } do
+      assert {:ok, _updated} =
+               EventEdit.queue_for_retry(user.id, event, %{
+                 reminders: [%{method: :popup, minutes_before: 10}]
+               })
+
+      capture_put()
+
+      assert :ok = OfflineQueue.flush(integration, @caldav_client)
+
+      lines = put_lines()
+      assert "TRIGGER:-PT10M" in lines
+      refute contains_block?(lines, @email_alarm)
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @override_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 2
+    end
+  end
+
   describe "editing a synced Google event with reminder overrides" do
     setup %{user: user} do
       swap_env(:google_calendar_api_module, GoogleAPI)

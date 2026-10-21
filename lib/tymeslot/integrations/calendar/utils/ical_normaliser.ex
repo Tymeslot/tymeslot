@@ -95,13 +95,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   end
 
   @doc """
-  The reminders the sync caches for the one event a stored document holds,
-  or `:error` when the document does not parse to exactly one event.
+  The reminders the sync caches for the master event of a stored document,
+  or `:error` when the document does not parse to exactly one master.
+
+  The master is the one VEVENT without a `RECURRENCE-ID`: a recurring
+  series' resource also holds a VEVENT per edited occurrence, and those carry
+  alarms of their own. It is the VEVENT `ICalBuilder.Patcher` edits, so its
+  alarms are the ones a patch would replace.
   """
   @spec document_reminders(String.t()) :: {:ok, [Reminder.t()]} | :error
   def document_reminders(document) when is_binary(document) do
-    case ICalParser.parse(document) do
-      {:ok, [event]} -> {:ok, map_reminders(event[:valarm])}
+    with {:ok, events} <- ICalParser.parse(document),
+         [master] <- Enum.reject(events, &override?/1) do
+      {:ok, map_reminders(master[:valarm])}
+    else
       _other -> :error
     end
   end
