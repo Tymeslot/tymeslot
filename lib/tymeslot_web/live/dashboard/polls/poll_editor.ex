@@ -342,6 +342,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   def handle_event("save", %{"poll" => params}, socket) do
+    case PollReminders.commit_pending(socket.assigns.reminder_picker) do
+      {:ok, picker} -> save(assign(socket, :reminder_picker, picker), params)
+      {:error, rejected} -> {:noreply, assign(socket, :reminder_picker, rejected)}
+    end
+  end
+
+  defp save(socket, params) do
     %{poll: poll, user_id: user_id} = socket.assigns
 
     attrs = save_attrs(params, socket.assigns)

@@ -340,6 +340,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("create_poll", %{"poll" => params}, socket) do
+    case PollReminders.commit_pending(socket.assigns.reminder_picker) do
+      {:ok, picker} -> create(assign(socket, :reminder_picker, picker), params)
+      {:error, rejected} -> {:noreply, assign(socket, :reminder_picker, rejected)}
+    end
+  end
+
+  defp create(socket, params) do
     with {:ok, invitees} <- parse_invitees(params),
          {:ok, poll} <-
            Polls.create_poll(

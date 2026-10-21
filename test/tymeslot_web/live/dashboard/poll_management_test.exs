@@ -60,6 +60,41 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
                %{value: 3, unit: "days"}
              ]
     end
+
+    test "saves a custom reminder typed but never added", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => "ada@example.com"}})
+      |> render_change()
+
+      view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
+
+      view
+      |> element("[data-testid='poll-reminders-form']")
+      |> render_change(%{"reminder" => %{"value" => "2", "unit" => "days"}})
+
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+      deadline = Date.utc_today() |> Date.add(5) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "Offsite",
+          "duration" => "30",
+          "timezone" => "Europe/Berlin",
+          "deadline" => "#{deadline}T12:00",
+          "invitees" => "ada@example.com",
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      })
+      |> render_submit()
+
+      assert [poll] = Polls.list_polls(user.id)
+      assert %{value: 2, unit: "days"} in PollSchema.reminders(poll)
+    end
   end
 
   describe "editing an open poll" do
@@ -253,6 +288,57 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert html =~ "Couldn&#39;t save this poll. Please try again."
     end
+
+    test "saves a custom reminder typed but never added", %{conn: conn, user: user, poll: poll} do
+      insert_invitee(poll)
+      view = open_editor(conn, poll)
+
+      view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
+
+      view
+      |> element("#poll-edit-reminders-#{poll.id}")
+      |> render_change(%{"reminder" => %{"value" => "2", "unit" => "days"}})
+
+      view
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+      |> render_submit()
+
+      {:ok, updated} = Polls.get_poll_for_host(poll.id, user.id)
+      assert %{value: 2, unit: "days"} in PollSchema.reminders(updated)
+    end
+
+    test "keeps the editor open when the typed reminder is not valid", %{conn: conn, poll: poll} do
+      insert_invitee(poll)
+      view = open_editor(conn, poll)
+
+      view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
+
+      view
+      |> element("#poll-edit-reminders-#{poll.id}")
+      |> render_change(%{"reminder" => %{"value" => "0", "unit" => "days"}})
+
+      view
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Renamed"}})
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-details-form']")
+      assert Repo.get!(PollSchema, poll.id).title == "Offsite"
+    end
+
+    test "adds the typed reminder when focus leaves the custom row", %{conn: conn, poll: poll} do
+      insert_invitee(poll)
+      view = open_editor(conn, poll)
+
+      view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
+
+      view
+      |> element("#poll_reminder-custom-row")
+      |> render_hook("poll_commit_custom_reminder", %{
+        "reminder" => %{"value" => "4", "unit" => "days"}
+      })
+
+      assert has_element?(view, "[data-testid='poll-reminders-form']", "4 days before")
+    end
   end
 
   describe "deleting a poll" do
@@ -293,6 +379,18 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
     view
     |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
     |> render_click()
+  end
+
+  defp insert_invitee(poll) do
+    now = DateTime.utc_now(:second)
+
+    insert(:poll_participant,
+      poll: poll,
+      invited_at: now,
+      confirmed_at: now,
+      link_sent_at: now,
+      voted_at: nil
+    )
   end
 
   defp in_days(days), do: DateTime.add(DateTime.utc_now(:second), days, :day)
