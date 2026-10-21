@@ -179,14 +179,79 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(view, "[data-testid='poll-details-form']")
     end
 
-    test "takes someone off the poll", %{conn: conn, poll: poll} do
+    test "takes someone off the poll after a confirmation", %{conn: conn, poll: poll} do
       participant = insert(:poll_participant, poll: poll, name: "Joker")
       view = open_editor(conn, poll)
 
       view |> element("[data-testid='poll-remove-participant']") |> render_click()
 
+      assert has_element?(view, "#remove-participant-modal-#{poll.id}", "Joker")
+      assert Repo.get(PollParticipantSchema, participant.id)
+
+      view
+      |> element(
+        "#remove-participant-modal-#{poll.id} [data-testid='confirm-remove-participant']"
+      )
+      |> render_click()
+
       assert Repo.get(PollParticipantSchema, participant.id) == nil
       refute render(view) =~ "Joker"
+    end
+
+    test "keeps someone when the host thinks better of it", %{conn: conn, poll: poll} do
+      participant = insert(:poll_participant, poll: poll, name: "Joker")
+      view = open_editor(conn, poll)
+
+      view |> element("[data-testid='poll-remove-participant']") |> render_click()
+
+      view
+      |> element("#remove-participant-modal-#{poll.id} button", "Keep")
+      |> render_click()
+
+      refute has_element?(view, "#remove-participant-modal-#{poll.id}")
+      assert Repo.get(PollParticipantSchema, participant.id)
+    end
+
+    test "says so when the person is already off the poll", %{conn: conn, poll: poll} do
+      participant = insert(:poll_participant, poll: poll, name: "Joker")
+      view = open_editor(conn, poll)
+
+      view |> element("[data-testid='poll-remove-participant']") |> render_click()
+      Repo.delete!(participant)
+
+      view
+      |> element(
+        "#remove-participant-modal-#{poll.id} [data-testid='confirm-remove-participant']"
+      )
+      |> render_click()
+
+      html = render(view)
+      assert html =~ "They are no longer on this poll."
+      refute html =~ "This poll is no longer open."
+    end
+
+    test "ignores a removal for someone not on the poll", %{conn: conn, poll: poll} do
+      insert(:poll_participant, poll: poll, name: "Joker")
+      view = open_editor(conn, poll)
+
+      view
+      |> element("[data-testid='poll-remove-participant']")
+      |> render_click(%{"id" => "not-a-uuid"})
+
+      refute has_element?(view, "#remove-participant-modal-#{poll.id}")
+      assert has_element?(view, "[data-testid='poll-details-form']")
+    end
+
+    test "shows an error the editor cannot place on a field", %{conn: conn, poll: poll} do
+      view = open_editor(conn, poll)
+      Repo.delete!(poll)
+
+      html =
+        view
+        |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Renamed"}})
+        |> render_submit()
+
+      assert html =~ "Couldn&#39;t save this poll. Please try again."
     end
   end
 

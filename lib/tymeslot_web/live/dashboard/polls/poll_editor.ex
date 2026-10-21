@@ -22,7 +22,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
-  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollAccess, PollReminders, PollsComponent}
+
+  alias TymeslotWeb.Dashboard.Polls.{
+    LocalTime,
+    PollAccess,
+    PollReminders,
+    PollsComponent,
+    RemoveParticipantModal
+  }
+
   alias TymeslotWeb.Live.Shared.Flash
 
   @reminder_events PollReminders.events()
@@ -53,6 +61,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       new_times: [],
       time_counter: 0,
       reminder_picker: PollReminders.new(PollSchema.reminders(poll)),
+      removing: nil,
       errors: %{}
     )
   end
@@ -185,6 +194,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           value={@notify_on_vote}
           label={dgettext("dashboard_polls", "Email me about new votes")}
         />
+        <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
       </form>
 
       <PollReminders.reminders_form
@@ -195,6 +205,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       <p :for={error <- error_list(@errors, :reminder_config)} class="form-error">{error}</p>
 
       <.participants poll={@poll} myself={@myself} />
+
+      <RemoveParticipantModal.remove_participant_modal
+        id={"remove-participant-modal-#{@poll.id}"}
+        participant={@removing}
+        myself={@myself}
+      />
 
       <div class="flex justify-end gap-2">
         <.action_button
@@ -245,16 +261,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           <.icon_button
             icon="hero-user-minus"
             label={dgettext("dashboard_polls", "Remove from the poll")}
-            phx-click="remove_participant"
+            phx-click="request_remove_participant"
             phx-value-id={participant.id}
             phx-target={@myself}
-            data-confirm={
-              dgettext(
-                "dashboard_polls",
-                "Remove %{name} and their responses from this poll? They are not told.",
-                name: PollParticipantSchema.display_name(participant)
-              )
-            }
             data-testid="poll-remove-participant"
           />
         </li>
@@ -307,19 +316,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
      assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
   end
 
-  def handle_event("remove_participant", %{"id" => participant_id}, socket) do
-    %{poll: poll, user_id: user_id} = socket.assigns
+  # The modal names someone from the poll the editor shows. An id from the
+  # client that is not among its participants opens nothing.
+  def handle_event("request_remove_participant", %{"id" => participant_id}, socket) do
+    removing = Enum.find(socket.assigns.poll.participants, &(&1.id == participant_id))
+    {:noreply, assign(socket, :removing, removing)}
+  end
 
-    case Polls.remove_participant(poll.id, user_id, participant_id) do
-      :ok ->
-        Flash.info(dgettext("dashboard_polls", "Removed from the poll"))
+  def handle_event("close_remove_participant_modal", _params, socket),
+    do: {:noreply, assign(socket, :removing, nil)}
 
-      {:error, _reason} ->
-        Flash.error(dgettext("dashboard_polls", "This poll is no longer open."))
+  def handle_event("remove_participant", _params, %{assigns: %{removing: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("remove_participant", _params, socket) do
+    %{poll: poll, user_id: user_id, removing: participant} = socket.assigns
+
+    case Polls.remove_participant(poll.id, user_id, participant.id) do
+      :ok -> Flash.info(dgettext("dashboard_polls", "Removed from the poll"))
+      {:error, reason} -> Flash.error(removal_error(reason))
     end
 
     send_update(PollsComponent, id: socket.assigns.parent_id, poll_updated: poll.id)
-    {:noreply, socket}
+    {:noreply, assign(socket, :removing, nil)}
   end
 
   def handle_event("save", %{"poll" => params}, socket) do
@@ -415,6 +434,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       %{time | value: Map.get(values, Integer.to_string(key), time.value)}
     end)
   end
+
+  defp removal_error(:not_found),
+    do: dgettext("dashboard_polls", "They are no longer on this poll.")
+
+  defp removal_error(_reason), do: dgettext("dashboard_polls", "This poll is no longer open.")
 
   defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_polls", "voted")
   defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_polls", "invited")

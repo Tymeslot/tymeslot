@@ -540,12 +540,13 @@ msgstr "Nowy termin"
 msgid "Poll deleted"
 msgstr "Ankieta usunięta"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Remove %{name} and their responses from this poll? They are not told."
 msgstr "Usunąć %{name} wraz z odpowiedziami z tej ankiety? Ta osoba nie zostanie powiadomiona."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Remove from the poll"
 msgstr "Usuń z ankiety"
@@ -680,4 +681,19 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} is switched off or takes payment, so new polls can't use it. This poll keeps it until you choose another."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Keep"
+msgstr "Zachowaj ankietę"
+
+#: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove"
+msgstr "Usuń termin"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "They are no longer on this poll."
 msgstr ""
