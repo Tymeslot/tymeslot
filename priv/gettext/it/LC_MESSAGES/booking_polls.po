@@ -214,4 +214,4 @@ msgstr "Questo sondaggio è solo su invito. Per votare, usa il link personale ch
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
-msgstr ""
+msgstr "Troppe email inviate di recente a questo indirizzo. Riprova più tardi."

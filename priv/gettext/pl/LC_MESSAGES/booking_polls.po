@@ -214,4 +214,4 @@ msgstr "Ta ankieta jest tylko dla zaproszonych osób. Aby zagłosować, użyj os
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
-msgstr ""
+msgstr "Na ten adres wysłano ostatnio zbyt wiele e-maili. Spróbuj ponownie później."

@@ -641,24 +641,24 @@ msgstr "Chi può votare"
 #, elixir-autogen, elixir-format
 msgid "%{count} address has had too many emails recently and was not invited."
 msgid_plural "%{count} addresses have had too many emails recently and were not invited."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} indirizzo ha ricevuto troppe email di recente e non è stato invitato."
+msgstr[1] "%{count} indirizzi hanno ricevuto troppe email di recente e non sono stati invitati."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "Poll created. %{count} address has had too many emails recently and was not invited."
 msgid_plural "Poll created. %{count} addresses have had too many emails recently and were not invited."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Sondaggio creato. %{count} indirizzo ha ricevuto troppe email di recente e non è stato invitato."
+msgstr[1] "Sondaggio creato. %{count} indirizzi hanno ricevuto troppe email di recente e non sono stati invitati."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "You can invite up to %{count} more person right now."
 msgid_plural "You can invite up to %{count} more people right now."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Al momento puoi invitare ancora al massimo %{count} persona."
+msgstr[1] "Al momento puoi invitare ancora al massimo %{count} persone."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "You can't invite anyone else right now. Please try again later."
-msgstr ""
+msgstr "Al momento non puoi invitare altre persone. Riprova più tardi."

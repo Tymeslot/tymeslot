@@ -214,4 +214,4 @@ msgstr "Це опитування лише за запрошеннями. Щоб
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
-msgstr ""
+msgstr "На цю адресу нещодавно надіслано забагато листів. Спробуйте пізніше."

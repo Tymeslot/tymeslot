@@ -214,4 +214,4 @@ msgstr "Ce sondage est réservé aux personnes invitées. Pour voter, utilisez l
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
-msgstr ""
+msgstr "Trop d'e-mails ont été envoyés récemment à cette adresse. Veuillez réessayer plus tard."
