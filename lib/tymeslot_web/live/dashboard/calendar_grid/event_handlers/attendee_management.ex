@@ -39,14 +39,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
           updated_event = %{event | attendees: new_attendees}
           updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
-          {:ok, _result} =
-            AttendeeNotifications.attendees_added(event, [new_attendee])
+          {:ok, outcome} =
+            AttendeeNotifications.attendees_added(
+              event,
+              [new_attendee],
+              socket.assigns.current_user.id
+            )
 
-          send(
-            self(),
-            {:flash,
-             {:info, dgettext("dashboard_calendar_events", "Attendee added and invited.")}}
-          )
+          send(self(), {:flash, {:info, added_message(outcome)}})
 
           socket =
             socket
@@ -81,6 +81,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   defp comparable_email(%{email: email}) when is_binary(email), do: String.downcase(email)
   defp comparable_email(_missing), do: nil
 
+  # An event the user only attends is changed on their calendar alone; its
+  # organiser is the one to tell the guests.
+  defp added_message(:not_organiser),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Attendee added. They were not invited, as you don't organise this event."
+      )
+
+  defp added_message(_sent),
+    do: dgettext("dashboard_calendar_events", "Attendee added and invited.")
+
+  defp removed_message(:not_organiser),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Attendee removed. They were not notified, as you don't organise this event."
+      )
+
+  defp removed_message(_sent),
+    do: dgettext("dashboard_calendar_events", "Attendee removed and notified.")
+
   defp apply_remove_attendee(socket, event, email) do
     {removed, new_attendees} = Enum.split_with(attendees_of(event), &(&1.email == email))
 
@@ -88,12 +110,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
     updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
     if removed != [] do
-      {:ok, _result} = AttendeeNotifications.attendees_removed(event, removed)
+      {:ok, outcome} =
+        AttendeeNotifications.attendees_removed(
+          event,
+          removed,
+          socket.assigns.current_user.id
+        )
 
-      send(
-        self(),
-        {:flash, {:info, dgettext("dashboard_calendar_events", "Attendee removed and notified.")}}
-      )
+      send(self(), {:flash, {:info, removed_message(outcome)}})
     end
 
     socket

@@ -21,8 +21,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       following occurrence of a series or of all of them, sent at once from
       the event as it was and as the edit left it, since such a write drops
       the cached rows the debounced job would read.
-    * `attendees_added/2` / `attendees_removed/2` — immediate send path for
-      membership-only changes (method `:request` or `:cancel` respectively).
+    * `attendees_added/3` / `attendees_removed/3` — immediate send path for
+      membership-only changes (method `:request` or `:cancel` respectively),
+      from the organiser the caller names: a cached provider event read for
+      the grid carries neither the organiser nor its integration. Sends
+      nothing, returning `{:ok, :not_organiser}`, for an event the user only
+      attends.
     * `event_deleted/3` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
       nobody to notify, and `{:ok, :not_organiser}` for an event the user
@@ -167,26 +171,31 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     }
   end
 
-  @spec attendees_added(event, [attendee]) :: {:ok, :sent | :noop}
-  def attendees_added(_event, []), do: {:ok, :noop}
+  @spec attendees_added(event, [attendee], pos_integer()) ::
+          {:ok, :sent | :noop | :not_organiser}
+  def attendees_added(_event, [], _owner_user_id), do: {:ok, :noop}
 
-  def attendees_added(event, new_attendees) when is_list(new_attendees) do
-    {method, sequence} =
-      IcalMethod.for(:attendees_added, current_sequence: current_sequence(event))
+  def attendees_added(event, new_attendees, owner_user_id) when is_list(new_attendees),
+    do: notify_membership(event, new_attendees, owner_user_id, :attendees_added)
 
-    send_immediate(event, new_attendees, method, sequence)
-    {:ok, :sent}
-  end
+  @spec attendees_removed(event, [attendee], pos_integer()) ::
+          {:ok, :sent | :noop | :not_organiser}
+  def attendees_removed(_event, [], _owner_user_id), do: {:ok, :noop}
 
-  @spec attendees_removed(event, [attendee]) :: {:ok, :sent | :noop}
-  def attendees_removed(_event, []), do: {:ok, :noop}
+  def attendees_removed(event, removed_attendees, owner_user_id)
+      when is_list(removed_attendees),
+      do: notify_membership(event, removed_attendees, owner_user_id, :attendees_removed)
 
-  def attendees_removed(event, removed_attendees) when is_list(removed_attendees) do
-    {method, sequence} =
-      IcalMethod.for(:attendees_removed, current_sequence: current_sequence(event))
-
-    send_immediate(event, removed_attendees, method, sequence)
-    {:ok, :sent}
+  # A guest may change their own copy of someone else's event, but inviting or
+  # cancelling for its attendees is the organiser's to do, as on delete.
+  defp notify_membership(event, attendees, owner_user_id, change) do
+    if Recipients.organised_by?(event, owner_user_id) do
+      {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
+      send_immediate(event, attendees, method, sequence, %{user_id: owner_user_id})
+      {:ok, :sent}
+    else
+      {:ok, :not_organiser}
+    end
   end
 
   @doc """
