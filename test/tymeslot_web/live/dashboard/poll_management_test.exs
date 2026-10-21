@@ -61,6 +61,59 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
     end
   end
 
+  # The custom row adds a typed value when focus leaves it (the
+  # `ReminderCustomRow` hook). A poll's picker that did not answer the hook's
+  # event crashed the page and lost everything typed into the poll.
+  describe "a custom reminder typed and left" do
+    defp type_custom_reminder(view) do
+      view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
+
+      view
+      |> element("[data-testid='poll-reminders-form']")
+      |> render_change(%{"reminder" => %{"value" => "30", "unit" => "minutes"}})
+
+      view
+      |> element("#poll_reminder-custom-row")
+      |> render_hook("poll_commit_custom_reminder", %{
+        "reminder" => %{"value" => "30", "unit" => "minutes"}
+      })
+    end
+
+    test "is added in the create form, keeping what was typed", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+
+      view
+      |> element("form[phx-submit='create_poll']")
+      |> render_change(%{"poll" => %{"title" => "Board meeting"}})
+
+      type_custom_reminder(view)
+
+      assert has_element?(view, "[data-testid='poll-reminders-form']", "30 minutes before")
+      assert has_element?(view, "input[name='poll[title]'][value='Board meeting']")
+    end
+
+    test "is added in the editor of an open poll", %{conn: conn, user: user} do
+      poll =
+        insert(:poll,
+          user: user,
+          status: :open,
+          title: "Offsite",
+          timezone: "Etc/UTC",
+          meeting_type_id: nil,
+          deadline_at: in_days(3)
+        )
+
+      insert(:poll_time_slot, poll: poll, start_time: in_days(7), position: 0)
+
+      view = open_editor(conn, poll)
+      type_custom_reminder(view)
+
+      assert has_element?(view, "[data-testid='poll-reminders-form']", "30 minutes before")
+      assert has_element?(view, "[data-testid='poll-details-form']")
+    end
+  end
+
   describe "editing an open poll" do
     setup %{user: user} do
       poll =
