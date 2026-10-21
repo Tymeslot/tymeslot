@@ -196,6 +196,14 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
          |> reload_tallies()
          |> put_flash(:info, saved_message(participant))}
 
+      # The link died while the page was open (it expired, or the host
+      # removed them): the page goes back to what the bare link shows.
+      {:error, :unknown_participant} ->
+        {:noreply,
+         socket
+         |> assign(participant: nil)
+         |> put_flash(:error, cast_error_message(:unknown_participant))}
+
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, cast_error_message(reason))}
     end

@@ -15,7 +15,8 @@ defmodule Tymeslot.Polls.VotingRaceTest do
   import Tymeslot.Test.RaceConductor, only: [race: 1, unboxed: 1]
 
   alias Ecto.Adapters.SQL
-  alias Tymeslot.Polls.{PollParticipantSchema, Voting}
+  alias Tymeslot.Polls
+  alias Tymeslot.Polls.{PollParticipantSchema, PollVoteSchema, Voting}
   alias Tymeslot.Repo
   alias Tymeslot.Test.RaceConductor
 
@@ -80,6 +81,108 @@ defmodule Tymeslot.Polls.VotingRaceTest do
 
     assert [%{email: "ada@example.com"}] = participants
     assert [_one_link] = link_jobs
+  end
+
+  test "a voter removed between opening their link and saving is told the link is gone", %{
+    poll: poll
+  } do
+    {participant, slot, loaded} =
+      unboxed(fn ->
+        slot = insert(:poll_time_slot, poll: poll)
+        participant = insert(:poll_participant, poll: poll, name: "Grace")
+        {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
+        {participant, slot, loaded}
+      end)
+
+    parent = self()
+
+    hold = fn _arg ->
+      send(parent, {:parked, self()})
+
+      receive do
+        :release -> {:ok, :released}
+      end
+    end
+
+    voter =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(hold, &token_lookup?/1)
+          Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+        end)
+      end)
+
+    # The voter has resolved their link; the host removes them before the
+    # votes are written.
+    assert_receive {:parked, voter_pid}, 5_000
+
+    assert :ok =
+             unboxed(fn -> Polls.remove_participant(poll.id, poll.user_id, participant.id) end)
+
+    send(voter_pid, :release)
+
+    assert {:error, :unknown_participant} = Task.await(voter)
+  end
+
+  test "a host removing a voter waits for the votes being saved, then takes them with the voter",
+       %{
+         poll: poll
+       } do
+    {participant, slot, loaded} =
+      unboxed(fn ->
+        slot = insert(:poll_time_slot, poll: poll)
+        participant = insert(:poll_participant, poll: poll, name: "Grace")
+        {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
+        {participant, slot, loaded}
+      end)
+
+    parent = self()
+
+    hold = fn _arg ->
+      send(parent, {:parked, self()})
+
+      receive do
+        :release -> {:ok, :released}
+      end
+    end
+
+    voter =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(hold, RaceConductor.lock_of("poll_participants"))
+          Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+        end)
+      end)
+
+    # The voter holds the participant's row and has not yet written votes.
+    assert_receive {:parked, voter_pid}, 5_000
+
+    removal =
+      Task.async(fn ->
+        unboxed(fn -> Polls.remove_participant(poll.id, poll.user_id, participant.id) end)
+      end)
+
+    # The removal queues behind the voter's lock.
+    assert Task.yield(removal, 500) == nil
+
+    send(voter_pid, :release)
+
+    assert {:ok, %PollParticipantSchema{}} = Task.await(voter)
+    assert :ok = Task.await(removal)
+
+    {participants, votes} =
+      unboxed(fn ->
+        {Repo.all(from(p in PollParticipantSchema, where: p.poll_id == ^poll.id)),
+         Repo.all(from(v in PollVoteSchema, where: v.poll_participant_id == ^participant.id))}
+      end)
+
+    assert participants == []
+    assert votes == []
+  end
+
+  # The token lookup `cast_votes/4` starts with.
+  defp token_lookup?(metadata) do
+    metadata[:source] == "poll_participants" and metadata[:query] =~ ~s("token_hash" = )
   end
 
   # The lookup of the address on the poll: both contenders park right after

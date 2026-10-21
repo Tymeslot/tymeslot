@@ -345,26 +345,37 @@ defmodule Tymeslot.Polls.Voting do
   defp persist(poll, participant, vote_maps, name) do
     transaction =
       Repo.transaction(fn ->
-        with :ok <- ensure_room(poll, participant),
-             {:ok, named} <- ensure_named(participant, name) do
+        with {:ok, locked} <- lock_participant(poll, participant),
+             :ok <- ensure_room(poll, locked),
+             {:ok, named} <- ensure_named(locked, name) do
           PollVoteQueries.upsert_votes(vote_maps)
           {:ok, stamped} = stamp_voted(named)
-          stamped
+          {locked, stamped}
         else
           {:error, reason} -> Repo.rollback(reason)
         end
       end)
 
     case transaction do
-      {:ok, stamped} ->
+      {:ok, {locked, stamped}} ->
         Polls.broadcast_update(poll.id)
-        maybe_send_receipt(participant, stamped)
+        maybe_send_receipt(locked, stamped)
         maybe_update_host(poll)
         maybe_notify_all_voted(poll)
         {:ok, stamped}
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  # Holds the participant's row until the votes are in, so a host removing
+  # them or the retention worker pruning them waits instead of pulling the
+  # row out from under the vote insert. Gone already, they are told so.
+  defp lock_participant(poll, participant) do
+    case PollParticipantQueries.lock_live(poll.id, participant.id) do
+      nil -> {:error, :unknown_participant}
+      locked -> {:ok, locked}
     end
   end
 

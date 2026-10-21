@@ -56,6 +56,21 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     |> Repo.one()
   end
 
+  @doc """
+  Locks the participant `id` of `poll_id` until the caller's transaction
+  ends, unless they are gone or are unconfirmed with an expired link.
+  Returns them with votes preloaded, or nil.
+  """
+  @spec lock_live(Ecto.UUID.t(), Ecto.UUID.t()) :: PollParticipantSchema.t() | nil
+  def lock_live(poll_id, id) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and p.id == ^id)
+    |> where_live()
+    |> lock("FOR UPDATE")
+    |> preload(:votes)
+    |> Repo.one()
+  end
+
   @doc "Fetches a participant by id with their poll, its slots and its host preloaded, for email sending."
   @spec get_with_poll(Ecto.UUID.t()) :: PollParticipantSchema.t() | nil
   def get_with_poll(id) do

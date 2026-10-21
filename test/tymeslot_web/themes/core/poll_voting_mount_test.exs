@@ -143,6 +143,30 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       %{view: view, poll: poll, slot: slot, profile: profile}
     end
 
+    test "a voter whose link died while the page was open is sent back to the request form", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{grace.token}")
+
+      # Deleted directly, so no broadcast reloads the page first.
+      Repo.delete!(Repo.get!(PollParticipantSchema, grace.id))
+
+      html =
+        view
+        |> form("form[data-testid='poll-vote-form']", %{"votes" => %{slot.id => "yes"}})
+        |> render_submit()
+
+      assert html =~ "no longer valid"
+      assert has_element?(view, "form[data-testid='poll-register-form']")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
+    end
+
     test "asking for a link creates an unconfirmed participant and never shows the link", %{
       view: view,
       poll: poll
