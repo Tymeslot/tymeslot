@@ -61,8 +61,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponseTest do
              handle(status(200, "<html>proxy</html>"))
   end
 
-  test "an error body that will not decode is :malformed_response" do
-    assert {:error, :malformed_response, _msg} =
+  test "an error body that will not decode is a refusal" do
+    assert {:error, :refused, _msg} =
              ApiResponse.with_error_object("<html>", fn _msg, _decoded -> :unreachable end)
   end
 

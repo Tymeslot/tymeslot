@@ -21,8 +21,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
 
   Any other 4xx (400, 409, 412, 422, ...) is `:refused`: the provider
   understood the request and declined it, so sending it again changes
-  nothing. A body that will not decode is `:malformed_response`.
-  `:network_error` is kept for a request that never got an answer.
+  nothing, and that holds for a 403 whose body will not decode too. A success
+  body that will not decode is `:malformed_response`, which, like a 5xx, is
+  transient. `:network_error` is kept for a request that never got an answer.
 
   Providers keep what genuinely differs, passing it as `:custom`: Google
   classifies a 403 from `error.errors[].reason`, Graph from `error.code` plus a
@@ -87,7 +88,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   Both providers nest the human-readable text at `error.message` and their
   classification hints as siblings of it, so the decode-and-reach step is
   shared while the classification stays with the provider. A body that will not
-  decode cannot be classified, so it short-circuits to `:malformed_response`.
+  decode cannot be classified, so it short-circuits to `:refused`: the status
+  is still a 4xx, a statement about the request rather than the provider's
+  health, and an unreadable 403 counted as `:malformed_response` would let
+  one account's refusal open the breaker every account shares.
   """
   @spec with_error_object(binary(), (String.t(), map() -> result())) :: result()
   def with_error_object(body, fun) do
@@ -96,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
         fun.(get_in(decoded, ["error", "message"]) || "Forbidden", decoded)
 
       {:error, _reason} ->
-        {:error, :malformed_response, "Forbidden (malformed response)"}
+        {:error, :refused, "Forbidden (malformed response)"}
     end
   end
 

@@ -533,12 +533,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
       assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
     end
 
-    test "403 with empty body surfaces as :malformed_response", %{integration: integration} do
+    test "403 with empty body surfaces as :refused", %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 403, body: "", headers: %{}}}
       end)
 
-      assert {:error, :malformed_response, _msg} = CalendarAPI.list_calendars(integration)
+      assert {:error, :refused, _msg} = CalendarAPI.list_calendars(integration)
     end
 
     test "403 with AccessDenied code surfaces as :unauthorized", %{integration: integration} do
