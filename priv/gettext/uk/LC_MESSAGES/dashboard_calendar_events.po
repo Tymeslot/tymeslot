@@ -991,3 +991,13 @@ msgstr "Учасника додано. Запрошення не надісла�
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They were not notified, as you don't organise this event."
 msgstr "Учасника видалено. Сповіщення не надіслано, оскільки ви не є організатором цієї події."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added, but their invitation could not be sent."
+msgstr "Учасника додано, але не вдалося надіслати запрошення."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed, but they could not be notified."
+msgstr "Учасника видалено, але не вдалося його сповістити."

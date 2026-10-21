@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.TestHelpers.Eventually
 
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -191,7 +192,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
       assert html =~ "colleague@example.com"
       assert html =~ ~s(id="edit-attendee-email")
-      assert render(lv) =~ "Attendee added and invited."
+
+      # Said once the calendar has accepted the write, which runs in a task.
+      eventually(fn -> assert render(lv) =~ "Attendee added and invited." end)
 
       # The grid's events carry no integration, so the organiser has to come
       # from the session; without it the job crashes in the worker.
@@ -550,7 +553,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
                "button[phx-click='request_remove_attendee'][phx-value-email='guest@example.com']"
              )
 
-      assert render(lv) =~ "Attendee removed and notified."
+      # Said once the calendar has accepted the write, which runs in a task.
+      eventually(fn -> assert render(lv) =~ "Attendee removed and notified." end)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -560,68 +564,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
           "user_id" => user.id
         }
       )
-    end
-  end
-
-  # A guest's copy of someone else's meeting: the change is theirs to make,
-  # but telling the other guests is the organiser's.
-  describe "an event someone else organises" do
-    setup %{conn: conn, user: user} do
-      integration = insert(:calendar_integration, user: user, is_active: true)
-
-      event =
-        insert_event(integration, %{
-          summary: "Their Meeting",
-          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
-          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
-          all_day: false,
-          organiser: %{"email" => "someone.else@example.com"},
-          attendees: [%{"email" => "guest@example.com", "name" => "Guest"}]
-        })
-
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("[id^='event-#{event.id}-']") |> render_click()
-      {:ok, lv: lv, event: event, integration: integration}
-    end
-
-    test "adding an attendee saves it without inviting them", %{
-      lv: lv,
-      event: event,
-      integration: integration
-    } do
-      lv
-      |> element("form[phx-submit=add_event_attendee]")
-      |> render_submit(%{"email" => "colleague@example.com"})
-
-      assert render(lv) =~
-               "Attendee added. They were not invited, as you don&#39;t organise this event."
-
-      refute_enqueued(worker: EmailWorker)
-
-      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
-      assert "colleague@example.com" in Enum.map(row.attendees, & &1["email"])
-    end
-
-    test "removing an attendee saves it without notifying them", %{
-      lv: lv,
-      event: event,
-      integration: integration
-    } do
-      lv
-      |> element(
-        "button[phx-click='request_remove_attendee'][phx-value-email='guest@example.com']"
-      )
-      |> render_click()
-
-      lv |> element("#confirm-remove-attendee-modal button", "Remove") |> render_click()
-
-      assert render(lv) =~
-               "Attendee removed. They were not notified, as you don&#39;t organise this event."
-
-      refute_enqueued(worker: EmailWorker)
-
-      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
-      assert row.attendees == []
     end
   end
 

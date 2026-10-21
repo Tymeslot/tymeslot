@@ -986,3 +986,13 @@ msgstr "Uczestnik dodany. Nie wysłano zaproszenia, ponieważ nie jesteś organi
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They were not notified, as you don't organise this event."
 msgstr "Uczestnik usunięty. Nie wysłano powiadomienia, ponieważ nie jesteś organizatorem tego wydarzenia."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added, but their invitation could not be sent."
+msgstr "Uczestnik dodany, ale nie udało się wysłać zaproszenia."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed, but they could not be notified."
+msgstr "Uczestnik usunięty, ale nie udało się go powiadomić."

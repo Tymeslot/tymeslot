@@ -981,3 +981,13 @@ msgstr "Teilnehmer hinzugefügt. Es wurde keine Einladung versendet, da Sie dies
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They were not notified, as you don't organise this event."
 msgstr "Teilnehmer entfernt. Es wurde keine Benachrichtigung versendet, da Sie dieses Ereignis nicht organisieren."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added, but their invitation could not be sent."
+msgstr "Teilnehmer hinzugefügt, aber die Einladung konnte nicht versendet werden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed, but they could not be notified."
+msgstr "Teilnehmer entfernt, aber die Benachrichtigung konnte nicht versendet werden."

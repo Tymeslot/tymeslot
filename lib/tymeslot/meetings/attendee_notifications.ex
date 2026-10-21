@@ -26,7 +26,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       from the organiser the caller names: a cached provider event read for
       the grid carries neither the organiser nor its integration. Sends
       nothing, returning `{:ok, :not_organiser}`, for an event the user only
-      attends.
+      attends, and `{:error, reason}` when an email could not be scheduled.
+    * `membership_changed/3` — the same, worked out from the event before
+      and after a write that changed who attends: called once the calendar
+      has accepted that write, never before.
     * `event_deleted/3` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
       nobody to notify, and `{:ok, :not_organiser}` for an event the user
@@ -171,15 +174,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     }
   end
 
-  @spec attendees_added(event, [attendee], pos_integer()) ::
-          {:ok, :sent | :noop | :not_organiser}
+  @type membership_result :: {:ok, :sent | :noop | :not_organiser} | {:error, term}
+
+  @spec attendees_added(event, [attendee], pos_integer()) :: membership_result
   def attendees_added(_event, [], _owner_user_id), do: {:ok, :noop}
 
   def attendees_added(event, new_attendees, owner_user_id) when is_list(new_attendees),
     do: notify_membership(event, new_attendees, owner_user_id, :attendees_added)
 
-  @spec attendees_removed(event, [attendee], pos_integer()) ::
-          {:ok, :sent | :noop | :not_organiser}
+  @spec attendees_removed(event, [attendee], pos_integer()) :: membership_result
   def attendees_removed(_event, [], _owner_user_id), do: {:ok, :noop}
 
   def attendees_removed(event, removed_attendees, owner_user_id)
@@ -191,11 +194,57 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   defp notify_membership(event, attendees, owner_user_id, change) do
     if Recipients.organised_by?(event, owner_user_id) do
       {method, sequence} = IcalMethod.for(change, current_sequence: current_sequence(event))
-      send_immediate(event, attendees, method, sequence, %{user_id: owner_user_id})
-      {:ok, :sent}
+
+      case send_immediate(event, attendees, method, sequence, %{user_id: owner_user_id}) do
+        :ok -> {:ok, :sent}
+        {:error, reason} -> {:error, reason}
+      end
     else
       {:ok, :not_organiser}
     end
+  end
+
+  @doc """
+  Tells the attendees a write added or removed: an invitation to every
+  address `updated_event` lists that `original_event` did not, and a
+  cancellation to every address `original_event` listed that
+  `updated_event` does not, both from the organiser `owner_user_id` (see
+  `attendees_added/3`). Addresses are compared trimmed and lower-cased.
+
+  Call it only once the calendar has accepted the write, with the event as
+  the write found it and as it left it: an invitation to an event the guest
+  was never put on, or a cancellation while they are still on it, cannot be
+  taken back. Working the change out from the two, rather than from the
+  edit that was asked for, also tells a guest added by an earlier edit whose
+  own write failed, when a later write carried them on.
+  """
+  @spec membership_changed(event, event, pos_integer()) :: %{
+          added: membership_result,
+          removed: membership_result
+        }
+  def membership_changed(original_event, updated_event, owner_user_id) do
+    before = attendee_list(original_event)
+    now = attendee_list(updated_event)
+
+    %{
+      added: attendees_added(updated_event, missing_from(now, before), owner_user_id),
+      removed: attendees_removed(updated_event, missing_from(before, now), owner_user_id)
+    }
+  end
+
+  defp attendee_list(event),
+    do: Enum.map(Map.get(event, :attendees) || [], &Attendee.normalise/1)
+
+  # The attendees of `list` whose address `other` does not carry, once each.
+  defp missing_from(list, other) do
+    present = MapSet.new(other, &Recipients.email/1)
+
+    list
+    |> Enum.reject(fn attendee ->
+      email = Recipients.email(attendee)
+      is_nil(email) or MapSet.member?(present, email)
+    end)
+    |> Enum.uniq_by(&Recipients.email/1)
   end
 
   @doc """

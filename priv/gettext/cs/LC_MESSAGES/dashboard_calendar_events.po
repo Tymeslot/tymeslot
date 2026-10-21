@@ -990,3 +990,13 @@ msgstr "Účastník byl přidán. Pozvánka nebyla odeslána, protože nejste or
 #, elixir-autogen, elixir-format
 msgid "Attendee removed. They were not notified, as you don't organise this event."
 msgstr "Účastník byl odebrán. Oznámení nebylo odesláno, protože nejste organizátorem této události."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added, but their invitation could not be sent."
+msgstr "Účastník byl přidán, ale pozvánku se nepodařilo odeslat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed, but they could not be notified."
+msgstr "Účastník byl odebrán, ale nepodařilo se ho informovat."
