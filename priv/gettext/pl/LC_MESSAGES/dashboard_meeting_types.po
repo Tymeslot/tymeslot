@@ -334,3 +334,13 @@ msgstr "Usuń typ spotkania"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Edytuj %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered"
+msgstr "Niedostępny"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Ten typ spotkania nie jest dostępny dla gości, dopóki nie połączysz ponownie płatności. Istniejące rezerwacje pozostają bez zmian."

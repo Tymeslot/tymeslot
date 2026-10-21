@@ -5,6 +5,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   An event a group meeting with live seats sits on takes no attendee
   changes here (`Shared.check_seat_lock/2`): who attends is who holds a
   seat, managed from the meeting.
+
+  An attendee added or removed is shown at once and written in the
+  background; the guest is invited, or told they are off the event, only
+  once the calendar has accepted the write (`membership_written/3`, see
+  "Telling the attendees" in `CalendarGrid.EventWrites`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -34,29 +39,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
              :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_seat_lock(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          new_attendee = Attendee.new(email: email)
-          new_attendees = attendees ++ [new_attendee]
-          updated_event = %{event | attendees: new_attendees}
-          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
-
-          {:ok, _result} =
-            AttendeeNotifications.attendees_added(event, [new_attendee])
-
-          send(
-            self(),
-            {:flash,
-             {:info, dgettext("dashboard_calendar_events", "Attendee added and invited.")}}
-          )
-
-          socket =
-            socket
-            |> assign(:selected_event, updated_event)
-            |> assign(:events, updated_events)
-            |> assign(:attendee_input, "")
-            |> Helpers.precompute_derived()
-            |> EditWorkflow.update_event_async(event, %{attendees: new_attendees})
-
-          {:noreply, socket}
+          {:noreply, add_attendee(socket, event, attendees, email)}
         else
           {:error, reason} = error when reason in [:unauthorized, :read_only, :group_booking] ->
             Shared.flash_guard_error(socket, error)
@@ -70,6 +53,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
     end
   end
 
+  defp add_attendee(socket, event, attendees, email) do
+    new_attendee = Attendee.new(email: email)
+    new_attendees = attendees ++ [new_attendee]
+    updated_event = %{event | attendees: new_attendees}
+    updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
+
+    socket
+    |> assign(:selected_event, updated_event)
+    |> assign(:events, updated_events)
+    |> assign(:attendee_input, "")
+    |> Helpers.precompute_derived()
+    |> EditWorkflow.update_event_async(event, %{attendees: new_attendees}, notify: :membership)
+  end
+
+  @doc """
+  Invites the attendees a write accepted by the calendar added to the
+  event and tells the ones it removed (`AttendeeNotifications.membership_changed/3`),
+  from `original_event`, the event as the write found it, and
+  `updated_event`, as it left it, then tells the organiser what was sent.
+  """
+  @spec membership_written(Phoenix.LiveView.Socket.t(), map(), map()) ::
+          Phoenix.LiveView.Socket.t()
+  def membership_written(socket, original_event, updated_event) do
+    %{added: added, removed: removed} =
+      AttendeeNotifications.membership_changed(
+        original_event,
+        updated_event,
+        socket.assigns.current_user.id
+      )
+
+    Enum.each([added_flash(added), removed_flash(removed)], &flash/1)
+    socket
+  end
+
+  defp flash(nil), do: :ok
+  defp flash(message), do: send(self(), {:flash, message})
+
   # The cached list comes back from JSONB string-keyed, and may predate the
   # canonical shape. Reading it into that shape here means the list written
   # back by an add or a remove is canonical throughout.
@@ -81,27 +101,63 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   defp comparable_email(%{email: email}) when is_binary(email), do: String.downcase(email)
   defp comparable_email(_missing), do: nil
 
+  # An event the user only attends is changed on their calendar alone; its
+  # organiser is the one to tell the guests. A write that added nobody, or
+  # removed nobody, has nothing to say about it.
+  defp added_flash({:ok, :noop}), do: nil
+
+  defp added_flash({:ok, :not_organiser}),
+    do:
+      {:info,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee added. They were not invited, as you don't organise this event."
+       )}
+
+  defp added_flash({:ok, :sent}),
+    do: {:info, dgettext("dashboard_calendar_events", "Attendee added and invited.")}
+
+  defp added_flash({:error, _reason}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee added, but their invitation could not be sent."
+       )}
+
+  defp removed_flash({:ok, :noop}), do: nil
+
+  defp removed_flash({:ok, :not_organiser}),
+    do:
+      {:info,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee removed. They were not notified, as you don't organise this event."
+       )}
+
+  defp removed_flash({:ok, :sent}),
+    do: {:info, dgettext("dashboard_calendar_events", "Attendee removed and notified.")}
+
+  defp removed_flash({:error, _reason}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee removed, but they could not be notified."
+       )}
+
   defp apply_remove_attendee(socket, event, email) do
-    {removed, new_attendees} = Enum.split_with(attendees_of(event), &(&1.email == email))
+    new_attendees = Enum.reject(attendees_of(event), &(&1.email == email))
 
     updated_event = %{event | attendees: new_attendees}
     updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
-
-    if removed != [] do
-      {:ok, _result} = AttendeeNotifications.attendees_removed(event, removed)
-
-      send(
-        self(),
-        {:flash, {:info, dgettext("dashboard_calendar_events", "Attendee removed and notified.")}}
-      )
-    end
 
     socket
     |> assign(:selected_event, updated_event)
     |> assign(:events, updated_events)
     |> assign(:confirm_remove_attendee, nil)
     |> Helpers.precompute_derived()
-    |> EditWorkflow.update_event_async(event, %{attendees: new_attendees})
+    |> EditWorkflow.update_event_async(event, %{attendees: new_attendees}, notify: :membership)
   end
 
   @spec handle_request_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::

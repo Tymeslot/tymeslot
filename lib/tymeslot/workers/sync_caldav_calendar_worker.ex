@@ -238,8 +238,11 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # `:method_not_allowed`) is the server
   # refusing the request itself: the remaining attempts re-send the same bytes
   # for the same refusal, then page an operator about a server-side condition
-  # no operator action can fix. `Http` has already logged the status and the
-  # server's own explanation, and the health check surfaces the integration.
+  # no operator action can fix. A 3xx lands here too: the redirect is never
+  # followed, and a provider in maintenance (Framagenda pointing every DAV path
+  # at its status page) answers it on every attempt. `Http` has already logged
+  # the status and the server's own explanation, and the health check surfaces
+  # the integration.
   defp handle_sync_result({:error, reason} = result, _integration) do
     if CalDAVErrors.terminal_error?(reason) do
       {:discard, "CalDAV server refused the sync request: #{refusal(reason)}"}
