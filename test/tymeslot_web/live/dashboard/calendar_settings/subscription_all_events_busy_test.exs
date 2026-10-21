@@ -149,6 +149,61 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionAllEventsBusyTest d
       assert Repo.reload!(integration).all_events_busy
     end
 
+    # On a feed set to Don't block nothing in the feed blocks, so the toggle
+    # has nothing to act on: it stays visible with its stored state, inert.
+    test "is disabled on a feed set to Don't block, keeping its stored state", %{
+      conn: conn,
+      integration: integration
+    } do
+      integration
+      |> Changeset.change(
+        all_events_busy: true,
+        calendar_list: [
+          %{
+            id: "subscription",
+            name: "Subscribed calendar",
+            selected: true,
+            blocks_availability: false
+          }
+        ]
+      )
+      |> Repo.update!()
+
+      view = open_calendars(conn)
+      toggle = "[data-testid='all-events-busy-toggle'][phx-value-id='#{integration.id}']"
+
+      assert has_element?(view, "#{toggle}[disabled][aria-pressed='true']")
+      assert has_element?(view, "#{toggle}[title^='Turn on Block to use this']")
+
+      # The event the disabled button cannot send, forged at the component.
+      view
+      |> with_target("#calendar-settings-panel")
+      |> render_click("toggle_all_events_busy", %{"id" => to_string(integration.id)})
+
+      assert Repo.reload!(integration).all_events_busy
+    end
+
+    test "is enabled on a feed set to Block", %{conn: conn, integration: integration} do
+      integration
+      |> Changeset.change(
+        calendar_list: [
+          %{
+            id: "subscription",
+            name: "Subscribed calendar",
+            selected: true,
+            blocks_availability: true
+          }
+        ]
+      )
+      |> Repo.update!()
+
+      view = open_calendars(conn)
+      toggle = "[data-testid='all-events-busy-toggle'][phx-value-id='#{integration.id}']"
+
+      assert has_element?(view, toggle)
+      refute has_element?(view, "#{toggle}[disabled]")
+    end
+
     test "is not offered on a calendar that is not a subscription", %{conn: conn, user: user} do
       caldav = insert(:calendar_integration, user: user, provider: "caldav", is_active: true)
       view = open_calendars(conn)

@@ -60,6 +60,14 @@ defmodule Tymeslot.Payments.SubscriptionInvoices do
   end
 
   @doc """
+  The payments a user has made for subscriptions, oldest first: each paid
+  invoice that took money (a trial's zero invoice is not a payment), with
+  the subscription it billed and when it was paid.
+  """
+  @spec payments(pos_integer()) :: [%{subscription_id: String.t() | nil, paid_at: DateTime.t()}]
+  def payments(user_id), do: SubscriptionInvoiceQueries.payments_for_user(user_id)
+
+  @doc """
   Captures (inserts or merges) the invoice document described by `event`.
 
   Resolves the owning user via `CustomerLookup.find_user_id/1`, the same

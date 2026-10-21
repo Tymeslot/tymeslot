@@ -108,6 +108,11 @@ defmodule Tymeslot.Dev.Calendar do
     :ok
   end
 
+  # The stub holds no provider to ask, so a read straight from one is the
+  # answer a provider without single-event fetches gives.
+  @impl CalendarBehaviour
+  def fetch_event(_event_ref, _context), do: {:error, :unsupported}
+
   @impl CalendarBehaviour
   def get_booking_integration_info(_context), do: {:error, :no_integration}
 

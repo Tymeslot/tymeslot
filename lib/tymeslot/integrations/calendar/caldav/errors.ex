@@ -153,7 +153,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
 
   A 4xx the request cannot talk its way out of qualifies: the server understood
   the request and refused it, so replaying it costs another round trip for a
-  guaranteed identical answer. Retryable conditions (timeouts, 5xx, rate
+  guaranteed identical answer. So does a 3xx, since the redirect is not
+  followed. Retryable conditions (timeouts, 5xx, rate
   limits) and the failures with their own handling (`:unauthorized` flags the
   integration for reconnection, `:not_found` removes the calendar path) are
   deliberately not terminal here — each has a caller that already knows what to
@@ -169,7 +170,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   # The body outgrew its byte budget: the server answered, and a retry minutes
   # later downloads the same oversized answer again.
   def terminal_error?(:response_too_large), do: true
-  def terminal_error?({:unexpected_status, status}) when status in 400..499, do: true
+  # A redirect is never followed (every CalDAV request is SSRF-guarded with
+  # `redirect: false`), so a retry gets the same 3xx back. In practice it is a
+  # provider in maintenance sending all traffic to its status page, which the
+  # next scheduled sync picks up once the redirect is lifted.
+  def terminal_error?({:unexpected_status, status}) when status in 300..499, do: true
   def terminal_error?(_other), do: false
 
   @doc """

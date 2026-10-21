@@ -137,6 +137,25 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
   end
 
   @doc """
+  The payments a user has made for subscriptions: every paid invoice that
+  took money, oldest first, as `%{subscription_id, paid_at}`.
+  """
+  @spec payments_for_user(pos_integer()) :: [
+          %{subscription_id: String.t() | nil, paid_at: DateTime.t()}
+        ]
+  def payments_for_user(user_id) do
+    Repo.all(
+      from(pi in SubscriptionInvoice,
+        where:
+          pi.user_id == ^user_id and pi.status == :paid and pi.amount_cents > 0 and
+            not is_nil(pi.paid_at),
+        order_by: [asc: pi.paid_at, asc: pi.id],
+        select: %{subscription_id: pi.subscription_id, paid_at: pi.paid_at}
+      )
+    )
+  end
+
+  @doc """
   Nilifies `user_id` and stamps `host_deleted_at` on every invoice captured
   for a host being deleted.
 
