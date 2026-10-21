@@ -413,7 +413,7 @@ defmodule Tymeslot.Polls.Voting do
         Polls.broadcast_update(poll.id)
         maybe_send_receipt(locked, stamped)
         maybe_update_host(poll)
-        maybe_notify_all_voted(poll)
+        notify_host_if_all_voted(poll)
         {:ok, stamped}
 
       {:error, reason} ->
@@ -485,13 +485,18 @@ defmodule Tymeslot.Polls.Voting do
 
   defp maybe_update_host(_poll), do: :ok
 
-  # Once everyone has voted, nudge the host to pick a time. Only a poll the
-  # host invited people to knows who everyone is: on a poll shared only by
-  # link, "everyone" would be whoever happened to ask for a link so far, often
-  # just the first voter. The check runs against the database rather than the
-  # (now stale) in-memory poll, since the just-cast vote stamped voted_at
-  # inside the transaction above.
-  defp maybe_notify_all_voted(poll) do
+  @doc """
+  Schedules the host's "everyone has voted" nudge once nobody on `poll`
+  owes a vote any more. Only a poll the host invited people to knows who
+  everyone is: on a poll shared only by its link, "everyone" would be
+  whoever happened to ask for a link so far, often just the first voter.
+
+  Reads the database rather than `poll`, so it sees the write that prompted
+  it: a vote just saved, or someone the host just took off the poll. The
+  nudge is keyed to go out once per poll.
+  """
+  @spec notify_host_if_all_voted(PollSchema.t()) :: :ok
+  def notify_host_if_all_voted(poll) do
     if all_participants_voted?(poll) do
       EmailScheduler.schedule_poll_all_voted_nudge(poll)
     end

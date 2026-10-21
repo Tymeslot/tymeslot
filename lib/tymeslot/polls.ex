@@ -6,6 +6,7 @@ defmodule Tymeslot.Polls do
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
+  alias Ecto.UUID
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.MeetingTypes
@@ -18,7 +19,8 @@ defmodule Tymeslot.Polls do
     PollQueries,
     PollSchema,
     PollTimeSlotQueries,
-    PollTimeSlotSchema
+    PollTimeSlotSchema,
+    Voting
   }
 
   alias Tymeslot.Repo
@@ -146,25 +148,25 @@ defmodule Tymeslot.Polls do
   @doc """
   Removes a participant from the user's open poll, with their responses, for
   someone the host does not want counted: a joke entry, or someone who has
-  dropped out. Nobody is emailed.
+  dropped out. Nobody is emailed about it.
+
+  Written under the poll's row lock, like cancelling and editing, so a
+  removal never lands on a poll confirmed in the meantime. Once the last
+  invitee is gone the poll's reminders are cancelled, with nobody left to
+  remind. If everyone still on the poll has voted, the host is nudged to
+  pick a time, as the last vote would have done.
+
+  An id that is not a participant of this poll, including one that is not a
+  UUID at all, is `{:error, :not_found}`.
   """
-  @spec remove_participant(Ecto.UUID.t(), integer(), Ecto.UUID.t()) ::
+  @spec remove_participant(Ecto.UUID.t(), integer(), String.t()) ::
           :ok | {:error, :not_found | :not_open}
   def remove_participant(id, user_id, participant_id) do
-    with_poll(id, user_id, fn
-      %{status: :open} = poll ->
-        case PollParticipantQueries.delete_from_poll(poll.id, participant_id) do
-          {1, _rows} ->
-            broadcast_update(poll.id)
-            :ok
-
-          {0, _rows} ->
-            {:error, :not_found}
-        end
-
-      _closed ->
-        {:error, :not_open}
-    end)
+    with {:ok, participant_id} <- cast_participant_id(participant_id),
+         {:ok, _poll} <-
+           with_open_poll_locked(id, user_id, &delete_participant(&1, participant_id)) do
+      :ok
+    end
   end
 
   @doc """
@@ -457,6 +459,35 @@ defmodule Tymeslot.Polls do
     with {:ok, updated} <- result do
       broadcast_update(updated.id)
       {:ok, updated}
+    end
+  end
+
+  defp cast_participant_id(participant_id) do
+    case UUID.cast(participant_id) do
+      {:ok, uuid} -> {:ok, uuid}
+      :error -> {:error, :not_found}
+    end
+  end
+
+  defp delete_participant(poll, participant_id) do
+    case PollParticipantQueries.delete_from_poll(poll.id, participant_id) do
+      {1, _rows} ->
+        :ok = after_participant_removed(poll)
+        {:ok, poll}
+
+      {0, _rows} ->
+        {:error, :not_found}
+    end
+  end
+
+  # In the removal's transaction, so both checks already read the poll
+  # without the participant. The all-voted nudge needs invitees, and only
+  # invitees are reminded, so a poll keeps one or the other in play.
+  defp after_participant_removed(poll) do
+    if PollParticipantQueries.any_invited?(poll.id) do
+      Voting.notify_host_if_all_voted(poll)
+    else
+      EmailScheduler.cancel_poll_reminders(poll.id)
     end
   end
 

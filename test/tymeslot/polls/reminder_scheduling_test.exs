@@ -15,6 +15,8 @@ defmodule Tymeslot.Polls.ReminderSchedulingTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Polls
+  alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
   setup do
@@ -84,6 +86,35 @@ defmodule Tymeslot.Polls.ReminderSchedulingTest do
       assert DateTime.compare(nudge_at, moved) == :eq
     end
   end
+
+  describe "taking someone off the poll" do
+    test "cancels the reminders once the last invitee is gone", ctx do
+      poll = create_poll_for(ctx, [%{email: "ada@example.com", name: nil}])
+      ada = participant(poll, "ada@example.com")
+
+      assert :ok = Polls.remove_participant(poll.id, ctx.user.id, ada.id)
+
+      assert reminder_times(poll.id) == []
+      assert [_nudge] = deadline_nudges(poll.id)
+    end
+
+    test "keeps the reminders while another invitee remains", ctx do
+      poll =
+        create_poll_for(ctx, [
+          %{email: "ada@example.com", name: nil},
+          %{email: "grace@example.com", name: nil}
+        ])
+
+      ada = participant(poll, "ada@example.com")
+
+      assert :ok = Polls.remove_participant(poll.id, ctx.user.id, ada.id)
+
+      assert reminder_times(poll.id) == [DateTime.add(ctx.deadline, -1, :day)]
+    end
+  end
+
+  defp participant(poll, email),
+    do: Repo.get_by!(PollParticipantSchema, poll_id: poll.id, email: email)
 
   defp create_poll_for(ctx, invitees) do
     {:ok, poll} =

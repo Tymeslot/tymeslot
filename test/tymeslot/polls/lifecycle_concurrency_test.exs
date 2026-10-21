@@ -27,12 +27,13 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
+  alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Repo
   alias Tymeslot.Test.RaceConductor
 
   setup do
-    {user, poll, slot} =
+    {user, poll, slot, participant} =
       unboxed(fn ->
         user = insert(:user)
         insert(:profile, user: user)
@@ -52,7 +53,7 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
         participant = insert(:poll_participant, poll: poll)
         insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
 
-        {user, poll, slot}
+        {user, poll, slot, participant}
       end)
 
     on_exit(fn ->
@@ -76,7 +77,7 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
 
     RaceConductor.attach_parking()
 
-    %{user: user, poll: poll, slot: slot}
+    %{user: user, poll: poll, slot: slot, participant: participant}
   end
 
   test "of a cancel and a confirmation racing, exactly one takes effect", ctx do
@@ -153,6 +154,35 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
     assert pending_deadline_jobs(ctx.poll) == []
   end
 
+  # Remove-first, the confirmation finds nobody to meet. Confirm-first, the
+  # removal finds the poll closed. Reading without the lock, the removal
+  # parks having seen the poll open, the confirmation mints a meeting with
+  # the participant on it, and the removal then deletes them from a
+  # confirmed poll.
+  test "of a participant removal and a confirmation racing, exactly one takes effect", ctx do
+    [confirmed, removed] =
+      race([
+        fn hold -> confirm(ctx, hold) end,
+        fn hold ->
+          locked(hold, fn ->
+            Polls.remove_participant(ctx.poll.id, ctx.user.id, ctx.participant.id)
+          end)
+        end
+      ])
+
+    case {confirmed, removed} do
+      {{:ok, %MeetingSchema{}}, {:error, :not_open}} ->
+        assert committed_participant(ctx.participant)
+
+      {{:error, :no_participants}, :ok} ->
+        assert committed_poll(ctx.poll).status == :open
+        refute committed_participant(ctx.participant)
+
+      both ->
+        flunk("expected exactly one write to take effect, got #{inspect(both)}")
+    end
+  end
+
   # The loser waits on the winner's row lock, then finds the poll no longer
   # open; whichever got there first, the committed poll is the winner's.
   defp assert_one_winner([confirmed, cancelled], ctx) do
@@ -204,6 +234,9 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
       )
     end)
   end
+
+  defp committed_participant(participant),
+    do: unboxed(fn -> Repo.get(PollParticipantSchema, participant.id) end)
 
   defp committed_poll(poll), do: unboxed(fn -> Repo.get!(PollSchema, poll.id) end)
 

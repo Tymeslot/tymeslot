@@ -264,6 +264,39 @@ defmodule Tymeslot.Polls.EditingTest do
       assert Polls.tallies(poll)[ctx.slot.id].yes == 0
     end
 
+    test "takes an id that is not a UUID as no participant of the poll", ctx do
+      assert {:error, :not_found} =
+               Polls.remove_participant(ctx.poll.id, ctx.user.id, "not-a-uuid")
+    end
+
+    test "nudges the host once everyone left has voted", ctx do
+      insert_invitee(ctx.poll, voted_at: DateTime.utc_now(:second))
+      owing = insert_invitee(ctx.poll)
+
+      assert :ok = Polls.remove_participant(ctx.poll.id, ctx.user.id, owing.id)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_poll_host_nudge",
+          "poll_id" => ctx.poll.id,
+          "variant" => "all_voted"
+        }
+      )
+    end
+
+    test "does not nudge the host while someone left still owes a vote", ctx do
+      voted = insert_invitee(ctx.poll, voted_at: DateTime.utc_now(:second))
+      insert_invitee(ctx.poll)
+
+      assert :ok = Polls.remove_participant(ctx.poll.id, ctx.user.id, voted.id)
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_poll_host_nudge", "variant" => "all_voted"}
+      )
+    end
+
     test "does not reach a participant of another poll", ctx do
       stranger = insert(:poll_participant)
 
