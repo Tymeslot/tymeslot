@@ -117,6 +117,17 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     count == 1
   end
 
+  @doc """
+  Replaces `details` on the participant `id` while they are unconfirmed. A
+  confirmed participant is left untouched, even one confirmed a moment ago.
+  """
+  @spec update_unconfirmed_details(Ecto.UUID.t(), keyword()) :: {non_neg_integer(), nil}
+  def update_unconfirmed_details(id, details) do
+    PollParticipantSchema
+    |> where([p], p.id == ^id and is_nil(p.confirmed_at))
+    |> Repo.update_all(set: Keyword.put(details, :updated_at, DateTime.utc_now(:second)))
+  end
+
   @doc "Deletes the participant `participant_id` of `poll_id`, with their votes."
   @spec delete_from_poll(Ecto.UUID.t(), Ecto.UUID.t()) :: {non_neg_integer(), nil}
   def delete_from_poll(poll_id, participant_id) do

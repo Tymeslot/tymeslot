@@ -610,7 +610,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   defp recipients(email), do: Enum.map(email.to, fn {_name, address} -> address end)
 
   defp request(poll, attrs) do
-    :ok = Voting.request_link(poll, attrs)
+    {:ok, _outcome} = Voting.request_link(poll, attrs)
     PollParticipantQueries.get_by_poll_and_email(poll.id, attrs.email)
   end
 

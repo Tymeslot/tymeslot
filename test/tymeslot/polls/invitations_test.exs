@@ -99,7 +99,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
     end
 
     test "confirms and invites someone who asked for a link but never voted", %{poll: poll} do
-      :ok = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
+      {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
 
       assert {:ok, %{invited: [ada], skipped: []}} =
                Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])

@@ -96,7 +96,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   # Asks for a link and returns the participant it created, as following the
   # emailed link would resolve them.
   defp request(poll, attrs) do
-    assert :ok = Voting.request_link(poll, attrs)
+    assert {:ok, _outcome} = Voting.request_link(poll, attrs)
     Repo.get_by!(PollParticipantSchema, poll_id: poll.id, email: attrs.email)
   end
 

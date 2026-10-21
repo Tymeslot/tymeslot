@@ -31,26 +31,46 @@ defmodule Tymeslot.Polls.Voting do
   # someone's inbox.
   @resend_interval_seconds 10 * 60
 
+  @typedoc """
+  What a link request did: sent a new participant their link (`:sent`), sent
+  a known address its link again (`:resent`), or held back a known address's
+  link that went out moments ago (`:throttled`).
+  """
+  @type request_outcome :: :sent | :resent | :throttled
+
   @doc """
   Emails a personal voting link to the address in `attrs` (`name`, `email`,
   optional `timezone` and `locale`; string or atom keys).
 
-  An address new to the poll becomes an unconfirmed participant. An address
-  already on it, confirmed or not, gets its existing link again, at most once
-  per #{div(@resend_interval_seconds, 60)} minutes; its name is left as it
-  was. Both return `:ok`, so the answer never tells a visitor whether an
-  address takes part.
+  The whole request is checked first, by the rules a new participant must
+  meet, whether or not the address is already on the poll. Then:
 
-  Returns `{:error, :voting_closed}` once voting has closed, or while the
-  poll's host is pending account deletion, `{:error, :poll_full}` when the
-  participant cap is reached, and `{:error, :too_many_requests}` when too many
-  links are out unconfirmed.
+    * an address new to the poll becomes an unconfirmed participant and is
+      sent its link: `{:ok, :sent}`;
+    * an address already on the poll is sent its existing link again,
+      `{:ok, :resent}`, or nothing if it went out within the last
+      #{div(@resend_interval_seconds, 60)} minutes, `{:ok, :throttled}`.
+      An unconfirmed participant takes the request's name, timezone and
+      locale; a confirmed one keeps their own.
+
+  The outcome tells the visitor whether the address was already on the poll.
+  That is deliberate: the page says so rather than pretend otherwise.
+
+  Returns `{:error, changeset}` for an invalid request, `{:error,
+  :voting_closed}` once voting has closed or while the poll's host is pending
+  account deletion, and, for an address new to the poll, `{:error,
+  :poll_full}` at the participant cap and `{:error, :too_many_requests}` when
+  too many links are out unconfirmed.
   """
   @spec request_link(PollSchema.t(), map()) ::
-          :ok | {:error, :voting_closed | :poll_full | :too_many_requests | Ecto.Changeset.t()}
+          {:ok, request_outcome()}
+          | {:error, :voting_closed | :poll_full | :too_many_requests | Ecto.Changeset.t()}
   def request_link(poll, attrs) do
-    with :ok <- ensure_open(poll) do
-      request_open(poll, attrs)
+    # Every refusal is one clause here, run before anything is written or
+    # sent, so a new check (who may ask, how often) is one more clause.
+    with :ok <- ensure_open(poll),
+         {:ok, request} <- validate_request(poll, attrs) do
+      route_request(poll, request)
     end
   end
 
@@ -117,20 +137,48 @@ defmodule Tymeslot.Polls.Voting do
 
   # --- Link request helpers ---
 
-  defp request_open(poll, attrs) do
-    email = normalise_email(attrs)
+  # The request is checked in full before the address is looked up, so a
+  # known address cannot slip a name past the rules a new one must meet.
+  defp validate_request(poll, attrs) do
+    changeset =
+      PollParticipantSchema.creation_changeset(
+        %PollParticipantSchema{},
+        participant_attrs(poll, attrs)
+      )
 
-    case find_existing(poll, email) do
-      %PollParticipantSchema{} = existing -> resend_link(existing)
-      nil -> insert_participant(poll, attrs, email)
+    if changeset.valid?, do: {:ok, changeset}, else: {:error, changeset}
+  end
+
+  defp route_request(poll, request) do
+    case PollParticipantQueries.get_by_poll_and_email(poll.id, request_email(request)) do
+      nil -> insert_participant(poll, request)
+      %PollParticipantSchema{} = existing -> refresh_and_resend(poll, existing, request)
     end
   end
 
-  # A missing address fails the changeset; looking it up would raise first.
-  defp find_existing(_poll, nil), do: nil
+  # An unconfirmed participant's details are whatever the latest request
+  # gave. The update is conditional, so a confirmed participant's are never
+  # touched, even by a request racing the confirmation.
+  defp refresh_and_resend(poll, participant, request) do
+    PollParticipantQueries.update_unconfirmed_details(
+      participant.id,
+      PollParticipantSchema.request_details(request)
+    )
 
-  defp find_existing(poll, email),
-    do: PollParticipantQueries.get_by_poll_and_email(poll.id, email)
+    case resend_link(participant) do
+      {:ok, :throttled} -> confirm_still_known(poll, request)
+      resent -> resent
+    end
+  end
+
+  # An expired unconfirmed row can be pruned between the lookup and the
+  # claim, which then touches nothing; the address is new again.
+  defp confirm_still_known(poll, request) do
+    case PollParticipantQueries.get_by_poll_and_email(poll.id, request_email(request)) do
+      nil -> insert_participant(poll, request)
+      %PollParticipantSchema{} -> {:ok, :throttled}
+    end
+  end
 
   # The send is claimed by a conditional update, so two requests racing for
   # the same address send one email between them.
@@ -140,15 +188,16 @@ defmodule Tymeslot.Polls.Voting do
 
     if PollParticipantQueries.claim_link_send(participant.id, now, resend_before) do
       EmailScheduler.schedule_poll_participant_link(participant)
+      {:ok, :resent}
     else
-      :ok
+      {:ok, :throttled}
     end
   end
 
   # Both caps are best-effort soft limits: this is a check-then-insert, so
   # concurrent requests with distinct emails could overshoot them slightly.
   # That is acceptable here, so no advisory lock is taken.
-  defp insert_participant(poll, attrs, email) do
+  defp insert_participant(poll, request) do
     cond do
       PollParticipantQueries.count_confirmed(poll.id) >= PollSchema.max_participants() ->
         {:error, :poll_full}
@@ -158,19 +207,18 @@ defmodule Tymeslot.Polls.Voting do
         {:error, :too_many_requests}
 
       true ->
-        %PollParticipantSchema{}
-        |> PollParticipantSchema.creation_changeset(participant_attrs(poll, attrs, email))
+        request
         |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())
         |> PollParticipantQueries.insert()
-        |> handle_insert()
+        |> handle_insert(poll, request)
     end
   end
 
-  defp participant_attrs(poll, attrs, email) do
+  defp participant_attrs(poll, attrs) do
     %{
       poll_id: poll.id,
       name: fetch(attrs, :name),
-      email: email,
+      email: fetch(attrs, :email),
       timezone: fetch(attrs, :timezone),
       locale: fetch(attrs, :locale)
     }
@@ -178,14 +226,22 @@ defmodule Tymeslot.Polls.Voting do
     |> Map.new()
   end
 
-  defp handle_insert({:ok, participant}),
-    do: EmailScheduler.schedule_poll_participant_link(participant)
+  defp handle_insert({:ok, participant}, _poll, _request) do
+    EmailScheduler.schedule_poll_participant_link(participant)
+    {:ok, :sent}
+  end
 
   # On the unique-constraint race a concurrent request for the same address
-  # inserted first, and its link is already on the way. Any other changeset
-  # error is a genuine failure.
-  defp handle_insert({:error, changeset}) do
-    if unique_email_violation?(changeset), do: :ok, else: {:error, changeset}
+  # inserted first, so this one turns out to be a request for a known
+  # address. Any other changeset error is a genuine failure.
+  defp handle_insert({:error, changeset}, poll, request) do
+    with true <- unique_email_violation?(changeset),
+         %PollParticipantSchema{} = existing <-
+           PollParticipantQueries.get_by_poll_and_email(poll.id, request_email(request)) do
+      refresh_and_resend(poll, existing, request)
+    else
+      _not_a_known_address -> {:error, changeset}
+    end
   end
 
   defp unique_email_violation?(changeset) do
@@ -194,12 +250,8 @@ defmodule Tymeslot.Polls.Voting do
     end)
   end
 
-  defp normalise_email(attrs) do
-    case fetch(attrs, :email) do
-      email when is_binary(email) -> email |> String.trim() |> String.downcase()
-      _other -> nil
-    end
-  end
+  # `creation_changeset/2` has trimmed and lowercased it already.
+  defp request_email(request), do: Ecto.Changeset.get_field(request, :email)
 
   defp fetch(attrs, key), do: Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
 

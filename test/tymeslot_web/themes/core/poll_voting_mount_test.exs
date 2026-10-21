@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       refute has_element?(view, "form[data-testid='poll-vote-form']")
     end
 
-    test "an address already on the poll gets the same answer and nobody's link", %{
+    test "an address already on the poll is told so and gets nobody's link", %{
       view: view,
       poll: poll
     } do
@@ -181,9 +181,61 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
 
       refute html =~ ada.token
       refute html =~ "Ada Lovelace"
-      assert has_element?(view, "[data-testid='poll-link-sent']")
       refute html =~ "ada@example.com"
+
+      assert has_element?(
+               view,
+               "[data-testid='poll-link-sent']",
+               "sent its voting link again"
+             )
+
       refute has_element?(view, "form[data-testid='poll-vote-form']")
+    end
+
+    test "a known address whose link went out minutes ago is told to check that inbox", %{
+      view: view,
+      poll: poll
+    } do
+      insert(:poll_participant,
+        poll: poll,
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        confirmed_at: nil,
+        link_sent_at: DateTime.utc_now(:second)
+      )
+
+      view
+      |> form("form[data-testid='poll-register-form']", %{
+        "name" => "Ada Lovelace",
+        "email" => "ada@example.com"
+      })
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-link-sent']", "sent a few minutes ago")
+    end
+
+    test "a visitor giving someone else's address cannot change that person's responses", %{
+      view: view,
+      poll: poll,
+      slot: slot
+    } do
+      ada = insert(:poll_participant, poll: poll, name: "Ada Lovelace", email: "ada@example.com")
+      insert(:poll_vote, participant: ada, time_slot: slot, response: :yes)
+
+      view
+      |> form("form[data-testid='poll-register-form']", %{
+        "name" => "Mallory",
+        "email" => "ada@example.com"
+      })
+      |> render_submit()
+
+      html = render_submit(view, "cast_votes", %{"votes" => %{slot.id => "no"}})
+
+      assert html =~ "personal voting link"
+
+      ada = PollParticipantSchema |> Repo.get!(ada.id) |> Repo.preload(:votes)
+      assert [%{response: :yes}] = ada.votes
+      assert ada.name == "Ada Lovelace"
     end
 
     test "the emailed link opens the vote form, and saving through it confirms the participant",

@@ -16,7 +16,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   It is **emailed**, never shown on the page, so whoever holds it owns the
   address; the first responses saved through it confirm the participant (see
   `Tymeslot.Polls.Voting`). Asking again for the same address sends the same
-  link again, which is how a voter who lost it gets back in.
+  link again, which is how a voter who lost it gets back in; the page says the
+  address was already on the poll.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -139,7 +140,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       |> Map.put("locale", socket.assigns[:locale])
 
     case Voting.request_link(socket.assigns.poll, attrs) do
-      :ok -> {:noreply, assign(socket, link_request: :sent)}
+      {:ok, outcome} -> {:noreply, assign(socket, link_request: outcome)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, register_error_message(reason))}
     end
   end

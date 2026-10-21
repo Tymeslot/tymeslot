@@ -80,6 +80,24 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   end
 
   @doc """
+  The details a valid link request gives (`creation_changeset/2`) that replace
+  an unconfirmed participant's: the name, and the timezone and locale when
+  they were valid, since `creation_changeset/2` drops unknown ones.
+  """
+  @spec request_details(Ecto.Changeset.t()) :: keyword()
+  def request_details(%Ecto.Changeset{changes: changes, params: params} = changeset) do
+    details = changes |> Map.take([:name, :timezone]) |> Keyword.new()
+
+    # The struct defaults the locale to "en", so a request for "en" records no
+    # change; a supplied locale that survived validation is read from the field.
+    locale = get_field(changeset, :locale)
+
+    if is_binary(locale) and Map.get(params, "locale") == locale,
+      do: Keyword.put(details, :locale, locale),
+      else: details
+  end
+
+  @doc """
   Builds a participant the host invited by address, with the name they gave
   if any. Confirmed at once, since the host vouches for the address; the
   caller stamps `link_sent_at` as the invitation goes out.
