@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3]
 
   alias Tymeslot.CalendarGrid.EventCreation
-  alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.CalendarGrid.WriteTask
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Dashboard.CalendarRouting
@@ -358,20 +358,19 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc """
   Creates a Tymeslot meeting with guests in the background, through
   `Tymeslot.CalendarGrid.EventCreation.run_create_ad_hoc_meeting/1`, and
-  reports back with `{:create_ad_hoc_meeting_result, result}`. The calendar
+  reports back with `{:create_ad_hoc_meeting_result, result}`, which is
+  `{:error, :crashed}` if the create raises (`WriteTask`). The calendar
   that offers meeting mode sends `{:execute_create_ad_hoc_meeting, params}`.
   """
   @spec handle_execute_create_ad_hoc_meeting(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_create_ad_hoc_meeting(params, socket) do
-    lv_pid = self()
-
-    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(
-        lv_pid,
-        {:create_ad_hoc_meeting_result, EventCreation.run_create_ad_hoc_meeting(params)}
+    :ok =
+      WriteTask.start(
+        :create_ad_hoc_meeting_result,
+        fn -> EventCreation.run_create_ad_hoc_meeting(params) end,
+        {:error, :crashed}
       )
-    end)
 
     {:noreply, socket}
   end

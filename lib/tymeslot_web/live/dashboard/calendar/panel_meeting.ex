@@ -17,7 +17,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   (`{:execute_create_ad_hoc_meeting, params}`, answered by
   `TymeslotWeb.Dashboard.CalendarEventHandlers`), which flashes the outcome
   and tells the surface: `created/1` closes the panel, `failed/1` offers
-  Create again beside the flash that says why.
+  Create again beside the flash that says why. The draft stays the panel's
+  while the meeting saves, so a panel closed meanwhile takes it off the grid
+  (`PanelState`); the reload after the booking shows the meeting if it was
+  made.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

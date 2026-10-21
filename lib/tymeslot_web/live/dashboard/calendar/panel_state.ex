@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   Closes the panel and hands focus back to its event. A series question
   the panel was waiting on goes with it; nothing was written for it. A New
   event panel's draft is dropped from the grid (`calendar:draft-cleared`,
-  then the payload); one whose create is already saving is the create's.
+  then the payload); one a plain create is already saving is the create's.
   """
   @spec close(socket()) :: socket()
   def close(%{assigns: %{panel: %{event_id: id}}} = socket) do
@@ -140,12 +140,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   # Leaving a New event panel takes its draft off the hook's grid at once (the
   # hook holds it even when the domain refused it), and the payload that
-  # follows no longer carries it. A create already saving is the create's.
+  # follows no longer carries it. A plain create that is saving owns the
+  # draft: `PanelNew` hands it to `pending_creates` and clears the panel's
+  # `draft`. A meeting being saved keeps its draft in the panel, as nothing
+  # else draws it, so leaving drops it like any other; the reload after the
+  # booking shows the meeting if it was made.
   defp without_draft(
-         %{assigns: %{panel: %{mode: :new, status: status, draft_id: id}}} = socket,
+         %{assigns: %{panel: %{mode: :new, status: :saving, draft: nil}}} = socket,
          leave
-       )
-       when status != :saving do
+       ),
+       do: leave.(socket)
+
+  defp without_draft(%{assigns: %{panel: %{mode: :new, draft_id: id}}} = socket, leave) do
     socket
     |> push_event("calendar:draft-cleared", %{draft: id})
     |> leave.()

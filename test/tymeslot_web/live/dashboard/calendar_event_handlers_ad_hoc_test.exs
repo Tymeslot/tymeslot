@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
 
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   @moduletag :calendar
   @moduletag :meetings
 
@@ -47,5 +49,27 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
     message = Flash.get(updated.assigns.flash, :error)
     assert is_binary(message) and message != ""
     refute message =~ "some_unknown_reason"
+  end
+
+  test "a create that raises still answers, with a generic failure for the organiser" do
+    # Every field `CreateAdHoc` reads is missing, so the create raises.
+    log =
+      capture_log(fn ->
+        assert {:noreply, _socket} =
+                 CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(%{}, off_calendar())
+
+        assert_receive {:create_ad_hoc_meeting_result, {:error, :crashed}}, 5_000
+      end)
+
+    assert log =~ "Calendar grid task crashed"
+
+    assert {:noreply, updated} =
+             CalendarEventHandlers.handle_create_ad_hoc_meeting_result(
+               {:error, :crashed},
+               off_calendar()
+             )
+
+    assert Flash.get(updated.assigns.flash, :error) ==
+             "Failed to create appointment. Please try again."
   end
 end

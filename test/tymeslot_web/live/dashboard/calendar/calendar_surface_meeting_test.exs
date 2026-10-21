@@ -19,9 +19,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -357,6 +359,110 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
     assert has_element?(lv, "#calendar-panel-meeting-fields")
     assert has_element?(lv, "#calendar-panel-create:not([disabled])")
+  end
+
+  # Holds the organiser's schedule lock from a connection of its own, so a
+  # booking started meanwhile waits on it until `release/1`: the panel stays
+  # saving for as long as the test needs.
+  defp hold_schedule(user_id) do
+    test_pid = self()
+
+    holder =
+      spawn_link(fn ->
+        :ok = Sandbox.checkout(Repo)
+
+        Repo.transaction(fn ->
+          MeetingConflictQueries.lock_organizer_schedule(user_id)
+          send(test_pid, :schedule_held)
+
+          receive do
+            :release -> :ok
+          end
+        end)
+      end)
+
+    assert_receive :schedule_held
+    holder
+  end
+
+  defp release(holder), do: send(holder, :release)
+
+  # Every payload the hook was sent since the last call, as event lists.
+  defp drain_events(%{proxy: {ref, _topic, _pid}} = lv, acc \\ []) do
+    receive do
+      {^ref, {:push_event, "calendar:events", %{events: events}}} ->
+        drain_events(lv, [events | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  defp draft_drawn?(events), do: Enum.any?(events, &(&1.id == "draft-d1"))
+
+  describe "closed while the meeting is being booked" do
+    test "a refused booking leaves no draft behind on the grid", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      insert(:meeting,
+        organizer_user: user,
+        start_time: ~U[2026-10-15 12:00:00Z],
+        end_time: ~U[2026-10-15 13:00:00Z],
+        status: "confirmed"
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration)
+      as_meeting(lv)
+      holder = hold_schedule(user.id)
+
+      create_meeting(lv)
+      assert has_element?(lv, "#calendar-panel-create[disabled]")
+      drain_events(lv)
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      refute has_element?(lv, "#calendar-panel")
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      assert [events] = drain_events(lv)
+      refute draft_drawn?(events)
+
+      release(holder)
+
+      eventually(fn -> render(lv) =~ "You already have a meeting at this time." end,
+        timeout: @task_timeout
+      )
+
+      refute Enum.any?(drain_events(lv), &draft_drawn?/1)
+    end
+
+    test "a booked meeting replaces the draft once the calendar reloads", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration)
+      as_meeting(lv)
+      holder = hold_schedule(user.id)
+
+      create_meeting(lv)
+      assert has_element?(lv, "#calendar-panel-create[disabled]")
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      drain_events(lv)
+      release(holder)
+
+      eventually(fn -> render(lv) =~ "Meeting created and invitation sent" end,
+        timeout: @task_timeout
+      )
+
+      meeting = Repo.one!(MeetingSchema)
+      assert_push_event(lv, "calendar:events", %{reset: true, events: events})
+      assert Enum.any?(events, &(&1.id == "booking-#{meeting.id}"))
+      refute draft_drawn?(events)
+    end
   end
 
   test "with its last guest removed the draft is an event again, written to the calendar", %{
