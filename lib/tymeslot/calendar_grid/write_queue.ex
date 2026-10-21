@@ -16,11 +16,14 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     * `{:notify, notify, updated_event, scope}`: ask the organiser whether to
       tell the event's attendees, once a write made with `notify` was
       accepted in `scope`;
+    * `{:membership_changed, original_event, updated_event}`: tell the
+      attendees a write made with `:membership` added or removed, once
+      accepted, from the event as it found it and left it;
     * `{:dropped, :series_write | :series_move, count}`: tell the organiser
       that `count` changes were not applied.
 
-  Only `:start` reaches the provider; the others are for the screen, and a
-  driver with no screen ignores them.
+  Only `:start` reaches the provider. It and `:membership_changed` are made
+  by every driver; the others are for the screen, ignored without one.
 
   ## One write in flight per event
 
@@ -153,6 +156,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
           | {:show, map()}
           | :reload
           | {:notify, map(), map(), atom()}
+          | {:membership_changed, map(), map()}
           | {:dropped, :series_write | :series_move, pos_integer()}
 
   @type t :: %__MODULE__{chains: map(), holds: map(), elsewhere: map()}
@@ -181,10 +185,11 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   @doc """
   Queues a write of `changes` to `event` through
   `Tymeslot.CalendarGrid.update_event/4`. `notify`, when given, is
-  `%{original: event, saved_message: message}`: once the write is accepted
-  the queue asks the driver to tell the attendees (`{:notify, ...}`).
+  `%{original: event, saved_message: message}`, or `:membership` for a
+  change of who attends: once the write is accepted the queue asks the
+  driver to tell the attendees (`{:notify, ...}`, `{:membership_changed, ...}`).
   """
-  @spec update(t(), map(), map(), keyword(), map() | nil) :: {t(), [effect()]}
+  @spec update(t(), map(), map(), keyword(), map() | :membership | nil) :: {t(), [effect()]}
   def update(queue, event, changes, opts, notify \\ nil),
     do:
       run(
@@ -208,8 +213,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   @spec settle(t(), ref(), outcome()) :: {t(), [effect()]}
   def settle(queue, {key, _seq} = ref, outcome) do
     case queue.chains do
-      %{^key => %{in_flight: %{ref: ^ref} = write} = chain} ->
-        run(queue, &(&1 |> advance(key, chain, outcome) |> notified(write, outcome)))
+      %{^key => %{in_flight: %{ref: ^ref} = write, confirmed: before} = chain} ->
+        run(queue, &(&1 |> advance(key, chain, outcome) |> notified(write, before, outcome)))
 
       _stale ->
         {queue, []}
@@ -544,10 +549,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   end
 
   # See "Telling the attendees" in `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
-  defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, {:ok, updated}),
+  defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, _before, {:ok, updated}),
     do: emit(acc, {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)})
 
-  defp notified(acc, _write, _outcome), do: acc
+  defp notified(acc, %{kind: :update, notify: :membership}, before, {:ok, updated}),
+    do: emit(acc, {:membership_changed, before, updated})
+
+  defp notified(acc, _write, _before, _outcome), do: acc
 
   defp advance(acc, key, chain, outcome) do
     cond do

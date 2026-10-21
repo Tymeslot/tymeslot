@@ -19,6 +19,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.PaymentAccess
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -224,7 +225,10 @@ defmodule Tymeslot.MeetingTypes do
   A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
   inactive one is: it takes no new bookings, so the page must not offer it. So
   is a fixed-date type with no session left to sign up for
-  (`Tymeslot.MeetingTypes.FixedDates.reject_unbookable/1`).
+  (`Tymeslot.MeetingTypes.FixedDates.reject_unbookable/1`), and so is a paid
+  type while its host is not accepting payments
+  (`Tymeslot.MeetingTypes.PaymentAccess`), since its booking could never be
+  submitted.
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
@@ -232,6 +236,7 @@ defmodule Tymeslot.MeetingTypes do
     |> MeetingTypeQueries.list_public_meeting_types()
     |> GroupAccess.reject_paused()
     |> FixedDates.reject_unbookable()
+    |> PaymentAccess.reject_unsellable()
   end
 
   @doc """

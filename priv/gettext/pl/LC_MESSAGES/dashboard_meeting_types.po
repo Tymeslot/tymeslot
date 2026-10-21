@@ -341,6 +341,11 @@ msgid "Next date: %{date}"
 msgstr "Następny termin: %{date}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "Not offered"
+msgstr "Niedostępny"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "No open dates"
 msgstr "Brak otwartych terminów"
@@ -349,3 +354,8 @@ msgstr "Brak otwartych terminów"
 #, elixir-autogen, elixir-format
 msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
 msgstr "Nie pojawi się na stronie rezerwacji, dopóki żaden z terminów nie będzie otwarty na zapisy. Zaplanuj termin albo przesuń koniec zapisów."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Ten typ spotkania nie jest dostępny dla gości, dopóki nie połączysz ponownie płatności. Istniejące rezerwacje pozostają bez zmian."

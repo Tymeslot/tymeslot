@@ -28,6 +28,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   the write dropped. Only a grid on screen asks: with the LiveView gone,
   the guardian finishes the write and asks nobody.
 
+  A write made with `notify: :membership` (an attendee added or removed,
+  see `EventHandlers.AttendeeManagement`) asks nobody: once the provider has
+  accepted it, the guests it added are invited and the ones it removed are
+  told, and the organiser is told which. A write that failed tells nobody,
+  so no guest is invited to an event they are not on, or told they are off
+  one they are still on. These emails are owed whoever drives the queue,
+  so the guardian sends them too once the LiveView is gone.
+
   ## Surviving the LiveView
 
   A write waiting in the queue lives only in this process. So the queue is
@@ -58,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @doc """
@@ -223,6 +232,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
       scope
     )
   end
+
+  defp run_effect({:membership_changed, original, updated}, socket),
+    do: AttendeeManagement.membership_written(socket, original, updated)
 
   defp run_effect({:dropped, reason, count}, socket) do
     send(self(), {:flash, {:warning, dropped_message(reason, count)}})

@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -358,7 +357,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
           <.guests_section
             allow_guests={@allow_guests}
-            max_guests={Guests.max_guests()}
+            guest_limit={@guest_limit}
+            group_bookings_enabled={@group_bookings_enabled}
+            form_errors={@form_errors}
             myself={@myself}
           />
 

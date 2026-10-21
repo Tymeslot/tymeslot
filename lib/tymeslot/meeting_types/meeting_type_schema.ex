@@ -37,6 +37,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           fixed_dates: boolean(),
           show_seat_availability: boolean(),
           last_spots_threshold: pos_integer() | nil,
+          max_guests_per_booking: pos_integer() | nil,
           requires_approval: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
@@ -76,6 +77,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:fixed_dates, :boolean, default: false)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
+    # Guests one booking may bring; nil is the overall limit (`Guests.limit_for/1`).
+    field(:max_guests_per_booking, :integer)
 
     # Bookings on this meeting type are held until the host approves them,
     # rather than confirmed on submission. `approval_window_hours` nil means
@@ -187,6 +190,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :fixed_dates,
       :show_seat_availability,
       :last_spots_threshold,
+      :max_guests_per_booking,
       :requires_approval,
       :approval_window_hours,
       :is_archived,
@@ -237,6 +241,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_number(:max_participants, Constraints.max_participants_opts())
     |> validate_number(:last_spots_threshold, Constraints.last_spots_threshold_opts())
+    |> validate_number(:max_guests_per_booking, Constraints.guests_per_booking_opts())
     |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
   end
 
