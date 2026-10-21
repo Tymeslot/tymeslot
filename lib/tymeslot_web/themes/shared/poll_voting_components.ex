@@ -10,9 +10,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   The single entry point is `poll_content/1`, which decides which sub-view to
   render from the poll's status, the voting-open flag, and whether the page was
   opened through a participant's personal link. The sub-views
-  (`identity_form/1`, `link_sent/1`, `slot_grid/1`, `poll_closed/1`,
-  `deadline_banner/1`) are public so themes may compose them directly if they
-  need a different arrangement.
+  (`identity_form/1`, `link_sent/1`, `invitation_only/1`, `slot_grid/1`,
+  `poll_closed/1`, `deadline_banner/1`) are public so themes may compose them
+  directly if they need a different arrangement.
   """
 
   use Phoenix.Component
@@ -77,6 +77,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
               editable={false}
             />
           </div>
+        <% :invite_only -> %>
+          <.deadline_banner poll={@poll} />
+          <.invitation_only />
         <% :register -> %>
           <.deadline_banner poll={@poll} />
           <%= if @link_request do %>
@@ -149,6 +152,25 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         {dgettext(
           "booking_polls",
           "Nothing there after a few minutes? Check your spam folder."
+        )}
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
+  Shown on an invite-only poll to anyone without a personal link: there is
+  no form to ask for one, and the tallies are for the people invited.
+  """
+  @spec invitation_only(map()) :: Phoenix.LiveView.Rendered.t()
+  def invitation_only(assigns) do
+    ~H"""
+    <div class="poll-invite-only" role="status" data-testid="poll-invite-only">
+      <.icon name="hero-envelope" class="poll-invite-only-icon" />
+      <p class="poll-voting-notice">
+        {dgettext(
+          "booking_polls",
+          "This poll is by invitation only. Use the personal link from your email to vote."
         )}
       </p>
     </div>
@@ -430,6 +452,14 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   defp voting_view(%{poll: %{status: :cancelled}}), do: :closed
   defp voting_view(%{poll: %{status: :confirmed}}), do: :closed
   defp voting_view(%{voting_open: false}), do: :voting_ended
+  # Only a confirmed personal link votes on an invite-only poll. A pending
+  # request's link (one that slipped in as the host switched) cannot confirm
+  # (`Tymeslot.Polls.Voting.cast_votes/4`), so it gets the notice too.
+  defp voting_view(%{poll: %{invite_only: true}, participant: nil}), do: :invite_only
+
+  defp voting_view(%{poll: %{invite_only: true}, participant: %{confirmed_at: nil}}),
+    do: :invite_only
+
   defp voting_view(%{participant: nil}), do: :register
   defp voting_view(_assigns), do: :vote
 

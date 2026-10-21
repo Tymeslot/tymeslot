@@ -18,6 +18,10 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   `Tymeslot.Polls.Voting`). Asking again for the same address sends the same
   link again, which is how a voter who lost it gets back in; the page says the
   address was already on the poll.
+
+  On an invite-only poll the bare link asks nobody for an address: it says
+  the poll is by invitation and the personal link from the invitation email
+  is the only way in. A request sent to it anyway is refused by the domain.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -202,12 +206,17 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         {:noreply,
          socket
          |> assign(participant: nil)
-         |> put_flash(:error, cast_error_message(:unknown_participant))}
+         |> put_flash(:error, cast_error_message(explain(:unknown_participant, poll)))}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, cast_error_message(reason))}
     end
   end
+
+  # A link that stopped working cannot be replaced from an invite-only poll's
+  # page, so the voter is pointed at their email instead.
+  defp explain(:unknown_participant, %{invite_only: true}), do: :invite_only
+  defp explain(reason, _poll), do: reason
 
   defp saved_message(%{voted_at: nil}),
     do:
@@ -245,11 +254,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     do: dgettext("booking_polls", "Voting has closed for this poll.")
 
   defp register_error_message(:invite_only),
-    do:
-      dgettext(
-        "booking_polls",
-        "This poll is by invitation only. Please use the link from your invitation email."
-      )
+    do: invite_only_message()
 
   defp register_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
@@ -275,11 +280,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       )
 
   defp cast_error_message(:invite_only),
-    do:
-      dgettext(
-        "booking_polls",
-        "This poll is by invitation only. Please use the link from your invitation email."
-      )
+    do: invite_only_message()
 
   defp cast_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
@@ -326,4 +327,11 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     do: dgettext("booking_polls", "Please enter your email address.")
 
   defp field_message(_field, _error, _blank_name_message), do: nil
+
+  defp invite_only_message,
+    do:
+      dgettext(
+        "booking_polls",
+        "This poll is by invitation only. Use the personal link from your email to vote."
+      )
 end

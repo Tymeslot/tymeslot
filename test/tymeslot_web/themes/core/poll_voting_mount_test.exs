@@ -499,6 +499,88 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
     end
   end
 
+  describe "invite-only polls" do
+    for theme <- ThemeTestMatrix.all() do
+      test "the bare link says it is by invitation and offers no form in the #{theme.slug} theme",
+           %{conn: conn} do
+        %{user: user, profile: profile} =
+          seed_booking_account(unquote(theme.id), "invite-#{unquote(theme.slug)}", "Etc/UTC")
+
+        poll = insert(:poll, user: user, title: "Board meeting", invite_only: true)
+        insert(:poll_time_slot, poll: poll)
+
+        {:ok, view, _html} = live(conn, poll_path(profile.username, poll.token))
+
+        assert has_element?(view, "[data-testid='poll-title']", "Board meeting")
+        assert has_element?(view, "[data-testid='poll-invite-only']", "by invitation only")
+        refute has_element?(view, "form[data-testid='poll-register-form']")
+        refute has_element?(view, "[data-testid='poll-slot-grid']")
+      end
+    end
+
+    setup %{conn: conn} do
+      %{user: user, profile: profile} = seed_booking_account("1", "invite-only-host", "Etc/UTC")
+      poll = insert(:poll, user: user, invite_only: true)
+      slot = insert(:poll_time_slot, poll: poll)
+      %{conn: conn, poll: poll, slot: slot, profile: profile}
+    end
+
+    test "an invitee's personal link opens the vote form and saves", ctx do
+      now = DateTime.utc_now(:second)
+
+      invitee =
+        insert(:poll_participant,
+          poll: ctx.poll,
+          name: "Grace",
+          confirmed_at: now,
+          invited_at: now
+        )
+
+      {:ok, view, _html} =
+        live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token) <> "?p=#{invitee.token}")
+
+      refute has_element?(view, "[data-testid='poll-invite-only']")
+
+      view
+      |> form("form[data-testid='poll-vote-form']", %{"votes" => %{ctx.slot.id => "yes"}})
+      |> render_submit()
+
+      assert %DateTime{} = Repo.get!(PollParticipantSchema, invitee.id).voted_at
+    end
+
+    test "a crafted link request is refused and writes nothing", ctx do
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token))
+
+      html =
+        render_hook(view, "register_participant", %{
+          "name" => "Mallory",
+          "email" => "mallory@example.com"
+        })
+
+      # The refusal's flash wording is pinned in `poll_voting_test.exs`; here
+      # the point is that the page stays as it was and nothing is written.
+      assert html =~ "by invitation only"
+
+      refute Repo.get_by(PollParticipantSchema,
+               poll_id: ctx.poll.id,
+               email: "mallory@example.com"
+             )
+    end
+
+    test "a page left open loses its form when the host makes the poll invite-only", ctx do
+      open = insert(:poll, user: ctx.poll.user, invite_only: false)
+      insert(:poll_time_slot, poll: open)
+
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, open.token))
+      assert has_element?(view, "form[data-testid='poll-register-form']")
+
+      {:ok, _poll} = Polls.update_details(open.id, open.user_id, %{"invite_only" => true})
+
+      assert render(view) =~ "by invitation only"
+      refute has_element?(view, "form[data-testid='poll-register-form']")
+    end
+  end
+
   describe "registration bot checks" do
     setup %{conn: conn} do
       enable_booking_recaptcha()
