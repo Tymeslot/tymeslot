@@ -535,3 +535,8 @@ msgstr "Semaine"
 #, elixir-autogen, elixir-format
 msgid "Week numbers"
 msgstr "Numéros de semaine"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
+msgstr "Choisissez « Bloquer » pour utiliser cette option : pour un calendrier qui ne bloque pas les périodes occupées, elle n’a aucun effet"

@@ -21,7 +21,12 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   ## Parameters
   - `params` - Map containing meeting type form parameters
-  - `opts` - Options including metadata for logging
+  - `opts` - Options including metadata for logging, and
+    `:stored_duration`, the duration in minutes of the meeting type being
+    edited. A duration off the step that the type already holds is accepted
+    when it is submitted unchanged, so a type stored before the step rule (or
+    by another path) can still be saved without changing its length. The
+    changeset applies the step on the same terms.
 
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
@@ -29,6 +34,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   @spec validate_meeting_type_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def validate_meeting_type_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
+    stored_duration = Keyword.get(opts, :stored_duration)
 
     validations =
       [
@@ -42,7 +48,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         {:reminder_config, params["reminder_config"]}
       ] ++ max_participants_validation(params)
 
-    case run_validations(validations, metadata) do
+    case run_validations(validations, metadata, stored_duration: stored_duration) do
       {:ok, sanitized_params} ->
         log_validation_result("success", metadata)
         {:ok, sanitized_params}
@@ -70,7 +76,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   """
   @spec validate_field(atom(), any(), map()) :: {:ok, any()} | {:error, map()}
   def validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
-  def validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
+
+  def validate_field(:duration, value, metadata),
+    do: validate_field(:duration, value, metadata, [])
 
   def validate_field(:slot_interval, value, metadata),
     do: validate_meeting_slot_interval(value, metadata)
@@ -103,12 +111,26 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_field(_other_field, _value, _metadata),
     do: {:error, %{base: dgettext("dashboard_meeting_form", "Invalid field")}}
 
+  @doc """
+  Single-field validation with the options `validate_meeting_type_form/2`
+  takes, so instant feedback applies the rule saving does.
+
+  `:stored_duration` is the duration of the meeting type being edited: a
+  duration off the step is accepted when it is that one (see
+  `validate_meeting_type_form/2`). Other fields ignore the options.
+  """
+  @spec validate_field(atom(), any(), map(), keyword()) :: {:ok, any()} | {:error, map()}
+  def validate_field(:duration, value, metadata, opts),
+    do: validate_meeting_duration(value, metadata, Keyword.get(opts, :stored_duration))
+
+  def validate_field(field, value, metadata, _opts), do: validate_field(field, value, metadata)
+
   # --- Private helpers ---
 
-  defp run_validations(validations, metadata) do
+  defp run_validations(validations, metadata, opts) do
     {sanitized_acc, error_acc} =
       Enum.reduce(validations, {%{}, %{}}, fn {field, value}, {s_acc, e_acc} ->
-        case validate_field(field, value, metadata) do
+        case validate_field(field, value, metadata, opts) do
           {:ok, sanitized} ->
             {Map.put(s_acc, Atom.to_string(field), sanitized), e_acc}
 
@@ -222,33 +244,34 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     {:error, %{name: dgettext("dashboard_meeting_form", "Meeting name must be text")}}
   end
 
-  defp validate_meeting_duration(nil, _metadata),
+  defp validate_meeting_duration(nil, _metadata, _stored_duration),
     do: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}}
 
-  defp validate_meeting_duration("", _metadata),
+  defp validate_meeting_duration("", _metadata, _stored_duration),
     do: {:error, %{duration: dgettext("dashboard_meeting_form", "Duration is required")}}
 
-  defp validate_meeting_duration(duration_str, metadata) when is_binary(duration_str) do
+  defp validate_meeting_duration(duration_str, metadata, stored_duration)
+       when is_binary(duration_str) do
     case UniversalSanitizer.sanitize_and_validate(duration_str,
            allow_html: false,
            metadata: metadata
          ) do
       {:ok, sanitized_duration} ->
-        validate_duration_value(sanitized_duration)
+        validate_duration_value(sanitized_duration, stored_duration)
 
       {:error, error} ->
         {:error, %{duration: error}}
     end
   end
 
-  defp validate_meeting_duration(_invalid, _metadata) do
+  defp validate_meeting_duration(_invalid, _metadata, _stored_duration) do
     {:error, %{duration: dgettext("dashboard_meeting_form", "Duration must be a number")}}
   end
 
-  defp validate_duration_value(sanitized_duration) do
+  defp validate_duration_value(sanitized_duration, stored_duration) do
     case Integer.parse(sanitized_duration) do
       {duration, ""} ->
-        validate_duration_constraints(duration)
+        validate_duration_constraints(duration, stored_duration)
 
       _invalid ->
         {:error,
@@ -259,7 +282,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_duration_constraints(duration) when duration < @min_duration do
+  defp validate_duration_constraints(duration, _stored) when duration < @min_duration do
     {:error,
      %{
        duration:
@@ -269,7 +292,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
      }}
   end
 
-  defp validate_duration_constraints(duration) when duration > @max_duration do
+  defp validate_duration_constraints(duration, _stored) when duration > @max_duration do
     {:error,
      %{
        duration:
@@ -279,8 +302,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
      }}
   end
 
-  defp validate_duration_constraints(duration)
-       when rem(duration, unquote(Constraints.duration_step_minutes())) != 0 do
+  defp validate_duration_constraints(duration, stored)
+       when rem(duration, unquote(Constraints.duration_step_minutes())) != 0 and
+              duration != stored do
     {:error,
      %{
        duration:
@@ -290,7 +314,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
      }}
   end
 
-  defp validate_duration_constraints(duration) do
+  defp validate_duration_constraints(duration, _stored) do
     {:ok, to_string(duration)}
   end
 

@@ -21,14 +21,6 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
 
-  # What a booking keeps of a room that is gone: nothing.
-  @cleared_room %{
-    video_room_id: nil,
-    video_room_enabled: false,
-    organizer_video_url: nil,
-    attendee_video_url: nil
-  }
-
   @doc """
   Writes `video_room_attrs` onto `meeting` under the row lock, then schedules
   the calendar update that carries the join link into the calendar event.
@@ -232,7 +224,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   step for a room the provider no longer has.
   """
   @spec clear(MeetingSchema.t()) :: {:ok, MeetingSchema.t()} | {:error, Ecto.Changeset.t()}
-  def clear(%MeetingSchema{} = meeting), do: MeetingQueries.update_meeting(meeting, @cleared_room)
+  def clear(%MeetingSchema{} = meeting), do: MeetingQueries.clear_video_room(meeting)
 
   @doc """
   Lets go of a room the provider no longer has: clears it off `meeting`, so

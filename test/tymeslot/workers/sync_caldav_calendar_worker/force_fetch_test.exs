@@ -89,6 +89,70 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       assert %DateTime{} = reloaded.last_external_sync_at
     end
 
+    # The sync used to read no VALARMs, so a row cached before it did says
+    # `reminders: []`, and a delta sync never sends an event that has not
+    # changed. The daily forced full fetch (`FallbackSyncSweepWorker`) is what
+    # gives such a row its reminders: it rewrites every row it reads.
+    test "gives a row cached before alarms were read the reminders its alarms make" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 1,
+          calendar_paths: [path1()],
+          caldav_sync_tokens: %{path1() => "old-token"}
+        )
+
+      ical = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:-//Test//Test//EN
+      BEGIN:VEVENT
+      UID:with-alarm@test
+      DTSTART:20261215T100000Z
+      DTEND:20261215T110000Z
+      SUMMARY:Review
+      BEGIN:VALARM
+      ACTION:DISPLAY
+      TRIGGER:-PT30M
+      DESCRIPTION:Reminder
+      END:VALARM
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      row =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "caldav",
+          provider_calendar_id: path1(),
+          provider_event_id: "#{path1()}with-alarm.ics",
+          uid: "with-alarm@test",
+          summary: "Review",
+          start_at: ~U[2026-12-15 10:00:00.000000Z],
+          end_at: ~U[2026-12-15 11:00:00.000000Z],
+          all_day: false,
+          reminders: [],
+          etag: "\"test-etag\"",
+          raw_ical: ical,
+          sync_state: "synced"
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, caldav_report_xml("#{path1()}with-alarm.ics", ical))
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "force_full_fetch" => true
+               })
+
+      assert [%{"method" => "popup", "minutes_before" => 30}] = Repo.reload!(row).reminders
+    end
+
     test "on fetch failure, leaves sync token and last_full_sync_at unchanged" do
       integration =
         insert(:calendar_integration,

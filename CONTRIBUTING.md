@@ -112,9 +112,7 @@ For testing authentication and calendar integrations:
 
 Configure OAuth credentials in your environment for full functionality testing.
 
-For detailed setup instructions including required redirect URIs and API permissions, see:
-- [Docker OAuth Setup Guide](README-Docker.md#oauth-provider-setup)
-- [Cloudron OAuth Setup Guide](README-Cloudron.md#oauth-provider-setup)
+For detailed setup instructions including required redirect URIs and API permissions, see the [OAuth setup guide](README-Docker.md#oauth-provider-setup).
 
 ## 📏 Code Standards
 

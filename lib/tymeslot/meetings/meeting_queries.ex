@@ -325,6 +325,32 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.update()
   end
 
+  # What a booking keeps of a room that is gone: nothing.
+  @cleared_room %{
+    video_room_id: nil,
+    video_room_enabled: false,
+    organizer_video_url: nil,
+    attendee_video_url: nil
+  }
+
+  @doc """
+  Clears a meeting's video room (its id and join links), writing nothing else.
+
+  Narrower than `update_meeting/2` for the same reason as
+  `update_meeting_status/2`. Rooms are cleared by system jobs (the video sync
+  sweep, an integration's disconnect) on meetings of any age, including a
+  one-to-one meeting whose invitee data was erased (`Tymeslot.InviteeData`),
+  which no longer carries the attendee fields `Meeting.changeset/2` demands.
+  Through that changeset the clear would fail and leave a dead room id that
+  the scans keep finding.
+  """
+  @spec clear_video_room(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def clear_video_room(%Meeting{} = meeting) do
+    meeting
+    |> Changeset.change(@cleared_room)
+    |> Repo.update()
+  end
+
   @doc """
   Updates a meeting's status transition fields only (`status`,
   `cancelled_at`, `cancellation_reason`, `approval_requested_at`,

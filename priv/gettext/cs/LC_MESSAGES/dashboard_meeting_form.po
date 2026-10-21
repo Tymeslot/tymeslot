@@ -801,6 +801,21 @@ msgstr[2] "Počet se zobrazí, jakmile zbývá %{count} míst nebo méně."
 msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
 msgstr "Termíny se označují zeleně, oranžově nebo červeně a popiskem „Hodně míst“, „Plní se“ nebo „Téměř plno“."
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Guests per booking"
+msgstr "Hostů na rezervaci"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Limit the guests per booking"
+msgstr "Omezit počet hostů na rezervaci"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each guest takes one of the time's seats, as the booker does."
+msgstr "Každý host obsadí jedno z míst termínu, stejně jako ten, kdo rezervuje."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Monday, as set in Calendar Settings."
@@ -810,3 +825,11 @@ msgstr "Týdny začínají v pondělí, jak je nastaveno v Nastavení kalendář
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Týdny začínají v neděli, jak je nastaveno v Nastavení kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guest."
+msgid_plural "Without a limit, each booking may bring up to %{count} guests."
+msgstr[0] "Bez omezení může každá rezervace přivést až %{count} hosta."
+msgstr[1] "Bez omezení může každá rezervace přivést až %{count} hosty."
+msgstr[2] "Bez omezení může každá rezervace přivést až %{count} hostů."

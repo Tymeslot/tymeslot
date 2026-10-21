@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
      |> assign(:group_bookings_allowed, true)
+     |> assign(:payments_accepted, true)
      |> assign(:show_slug_modal, false)
      |> assign(:slug_modal_type, nil)
      |> assign(:slug_draft, "")
@@ -70,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:venues, data.venues)
       |> assign(:calendar_integrations, data.calendar_integrations)
       |> assign(:payment_currency, price_currency(data.meeting_types, user_id))
+      |> assign(:payments_accepted, payments_accepted?(data.meeting_types, user_id))
 
     {:ok, socket}
   end
@@ -97,6 +99,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     else
       MeetingPayments.account_currency(nil)
     end
+  end
+
+  # Whether the host's paid meeting types can be sold, for the card warning
+  # that the booking page leaves them out. Asked only when one is paid.
+  defp payments_accepted?(meeting_types, user_id) do
+    not Enum.any?(meeting_types, & &1.payment_required) or
+      MeetingPayments.accepting_payments?(user_id)
   end
 
   @impl Phoenix.LiveComponent

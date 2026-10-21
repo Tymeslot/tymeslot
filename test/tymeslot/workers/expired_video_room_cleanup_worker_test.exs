@@ -24,6 +24,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.ObanCron
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
@@ -32,6 +33,13 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   @day 86_400
 
   setup :verify_on_exit!
+
+  # The provider read runs for real, behind the `:calendar_module` seam the
+  # domain reaches it through.
+  setup do
+    stub(Tymeslot.CalendarMock, :fetch_event, &Operations.fetch_event/2)
+    :ok
+  end
 
   setup do
     with_config(:tymeslot, :video_room_retention_days, 7)
