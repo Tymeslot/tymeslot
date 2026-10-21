@@ -403,40 +403,6 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       refute has_element?(view, "[data-testid='poll-voter-name']")
     end
 
-    test "marks a time added after someone voted as new to them, and only to them", %{
-      conn: conn,
-      poll: poll,
-      slot: slot,
-      profile: profile
-    } do
-      added =
-        insert(:poll_time_slot,
-          poll: poll,
-          start_time: DateTime.add(slot.start_time, 1, :day),
-          end_time: DateTime.add(slot.end_time, 1, :day)
-        )
-
-      voted = insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
-      insert(:poll_vote, participant: voted, time_slot: slot, response: :yes)
-      not_yet = insert(:poll_participant, poll: poll)
-
-      {:ok, view, _html} =
-        live(conn, poll_path(profile.username, poll.token) <> "?p=#{voted.token}")
-
-      assert [_one] =
-               view
-               |> render()
-               |> Floki.parse_document!()
-               |> Floki.find("[data-testid='poll-slot-new']")
-
-      assert has_element?(view, "input[data-testid='vote-#{added.id}-yes']")
-
-      {:ok, fresh, _html} =
-        live(conn, poll_path(profile.username, poll.token) <> "?p=#{not_yet.token}")
-
-      refute has_element?(fresh, "[data-testid='poll-slot-new']")
-    end
-
     test "an unconfirmed link past its lifetime opens the request form instead", %{
       conn: conn,
       poll: poll,

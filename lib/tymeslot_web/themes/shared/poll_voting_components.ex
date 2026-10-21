@@ -480,10 +480,13 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     end
   end
 
-  # A time is new to someone who has voted but not on it: the host added it
-  # after they last answered.
-  defp new_to?(%{voted_at: %DateTime{}}, current_votes, slot),
-    do: not Map.has_key?(current_votes, slot.id)
+  # A time is new to someone who has voted when the host added it after they
+  # last saved their responses and they have not answered it since. A time
+  # they left unanswered when they voted was there to answer, so it is not new.
+  defp new_to?(%{voted_at: %DateTime{} = voted_at}, current_votes, slot) do
+    not Map.has_key?(current_votes, slot.id) and
+      DateTime.compare(slot.inserted_at, voted_at) == :gt
+  end
 
   defp new_to?(_participant, _current_votes, _slot), do: false
 
