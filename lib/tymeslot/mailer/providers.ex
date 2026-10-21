@@ -58,9 +58,10 @@ defmodule Tymeslot.Mailer.Providers do
   `Tymeslot.Emails.Shared.MjmlEmail.base_email/1`.
 
     * `:transactional` — confirmations, security alerts, receipts. No opens.
-    * `:lifecycle` — onboarding and billing nudges, where open rates are
-      genuinely useful. Opens on.
-    * `:marketing` — bulk newsletters and announcements. Opens on.
+    * `:lifecycle` — onboarding and billing nudges: service mail the
+      recipient has not consented to have measured. No opens.
+    * `:marketing` — bulk newsletters and announcements, which the caller
+      sends only to recipients who consented to receive them. Opens on.
 
   No category turns click tracking on: links are never rewritten through a
   provider's redirect domain, whatever the category or provider.
@@ -283,7 +284,10 @@ defmodule Tymeslot.Mailer.Providers do
   Translates a tracking category into the provider options the configured
   adapter understands.
 
-  The category decides open tracking only. Click tracking is switched off
+  The category decides open tracking only, and only `:marketing` turns it on:
+  an open pixel reads from the recipient's device, so it is reserved for mail
+  whose sender collected consent first. Service mail stays unmeasured, the
+  default every self-hosted instance inherits. Click tracking is switched off
   for every category and provider, explicitly rather than by omission, so a
   dashboard-level default at the provider cannot rewrite our links into its
   redirect domain. Campaign attribution belongs in UTM parameters on links to
@@ -327,9 +331,8 @@ defmodule Tymeslot.Mailer.Providers do
 
   def tracking_options(_adapter, _category), do: []
 
-  defp opens?(:transactional), do: false
-  defp opens?(:lifecycle), do: true
   defp opens?(:marketing), do: true
+  defp opens?(category) when category in [:transactional, :lifecycle], do: false
 
   defp stream(:marketing), do: "broadcast"
   defp stream(category) when category in [:transactional, :lifecycle], do: "outbound"

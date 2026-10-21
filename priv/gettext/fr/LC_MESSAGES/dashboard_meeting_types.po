@@ -392,6 +392,11 @@ msgid "Next date: %{date}"
 msgstr "Prochaine date : %{date}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "Not offered"
+msgstr "Non proposé"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "No open dates"
 msgstr "Aucune date ouverte"
@@ -400,3 +405,8 @@ msgstr "Aucune date ouverte"
 #, elixir-autogen, elixir-format
 msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
 msgstr "N’apparaît pas sur votre page de réservation tant qu’aucune de ses dates n’est ouverte aux inscriptions. Planifiez une date ou déplacez une clôture des inscriptions."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Ce type de réunion n'est pas proposé aux invités tant que les paiements ne sont pas reconnectés. Les réservations existantes ne sont pas concernées."

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.TestHelpers.Eventually
 
   alias Ecto.Changeset
   alias Plug.Test
@@ -494,7 +495,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         |> render_hook("add_event_attendee", %{"email" => "new-invite@example.com"})
 
       assert html =~ "new-invite@example.com"
-      assert render(lv) =~ "Attendee added and invited."
+
+      # Said once the calendar has accepted the write, which runs in a task.
+      eventually(fn -> assert render(lv) =~ "Attendee added and invited." end)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -527,7 +530,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       |> element("#calendar-grid")
       |> render_hook("confirm_remove_attendee", %{})
 
-      assert render(lv) =~ "Attendee removed and notified."
+      # Said once the calendar has accepted the write, which runs in a task.
+      eventually(fn -> assert render(lv) =~ "Attendee removed and notified." end)
 
       # The removal has to reach the provider as the shortened list: the guest
       # is told the meeting is off, so leaving her on the server's copy would

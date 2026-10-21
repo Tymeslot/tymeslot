@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.TestHelpers.Eventually
 
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -191,6 +192,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
       assert html =~ "colleague@example.com"
       assert html =~ ~s(id="edit-attendee-email")
+
+      # Said once the calendar has accepted the write, which runs in a task.
+      eventually(fn -> assert render(lv) =~ "Attendee added and invited." end)
+
+      # The grid's events carry no integration, so the organiser has to come
+      # from the session; without it the job crashes in the worker.
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "colleague@example.com",
+          "user_id" => user.id
+        }
+      )
     end
 
     test "shows a synced attendee by the name their calendar gave them", %{
@@ -528,7 +543,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       assert [%{"email" => "guest@example.com"}] = row.attendees
     end
 
-    test "Remove closes the prompt, drops the attendee and notifies them", %{lv: lv} do
+    test "Remove closes the prompt, drops the attendee and notifies them", %{lv: lv, user: user} do
       lv |> element("#confirm-remove-attendee-modal button", "Remove") |> render_click()
 
       refute has_element?(lv, "#confirm-remove-attendee-modal")
@@ -538,11 +553,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
                "button[phx-click='request_remove_attendee'][phx-value-email='guest@example.com']"
              )
 
-      assert render(lv) =~ "Attendee removed and notified."
+      # Said once the calendar has accepted the write, which runs in a task.
+      eventually(fn -> assert render(lv) =~ "Attendee removed and notified." end)
 
       assert_enqueued(
         worker: EmailWorker,
-        args: %{"action" => "send_calendar_invitation", "attendee_email" => "guest@example.com"}
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "guest@example.com",
+          "user_id" => user.id
+        }
       )
     end
   end

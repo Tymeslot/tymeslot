@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     |> maybe_put_payment(assigns)
     |> maybe_put_max_participants(assigns)
     |> put_fixed_dates(assigns)
+    |> Map.put("max_guests_per_booking", to_param(Map.get(assigns, :guest_limit)))
   end
 
   @doc """
@@ -105,7 +106,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   end
 
   defp save(params, metadata, editing_type, current_user) do
-    case InputValidation.validate_meeting_type_form(params, metadata: metadata) do
+    case InputValidation.validate_meeting_type_form(params,
+           metadata: metadata,
+           stored_duration: editing_type && editing_type.duration_minutes
+         ) do
       {:ok, sanitized_params} ->
         ui_state = build_ui_state(params, sanitized_params)
         validated_params = SanitizeMerge.merge(params, sanitized_params)
