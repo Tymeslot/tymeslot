@@ -229,8 +229,6 @@ defmodule Tymeslot.Meetings do
   @doc """
   Reschedules an existing meeting.
 
-  Delegates to Bookings.Reschedule module.
-
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
   """
@@ -240,25 +238,14 @@ defmodule Tymeslot.Meetings do
     Reschedule.execute(meeting_uid, new_params, organizer_user_id)
   end
 
-  @doc """
-  Cancels the calendar event associated with a meeting asynchronously.
-
-  Schedules calendar event deletion through an Oban worker. Does not fail the
-  broader cancellation workflow if scheduling fails.
-  """
+  @doc "Deletes a meeting's calendar event through an Oban worker; scheduling failures are not fatal."
   defdelegate cancel_calendar_event(meeting), to: CalendarEvents
 
   # =====================================
   # Video Room Integration Functions
   # =====================================
 
-  @doc """
-  Adds a secure video room to an existing meeting.
-
-  This is a high-level operation that ensures the meeting exists and the video
-  room is successfully attached. It handles logging and error translation
-  for the web layer.
-  """
+  @doc "Adds a secure video room to an existing meeting, logging and translating errors for the web."
   @spec add_video_room_to_meeting(String.t()) :: {:ok, MeetingSchema.t()} | {:error, term()}
   def add_video_room_to_meeting(meeting_id) do
     Logger.info("Request to add video room to meeting", meeting_id: meeting_id)
@@ -343,11 +330,7 @@ defmodule Tymeslot.Meetings do
     to: MeetingListQueries,
     as: :list_for_organizer_in_range
 
-  @doc """
-  Lists the organiser's booking requests that expired unanswered and overlap
-  the `[from, to)` window, ordered by start time. The calendar draws them,
-  so a request nobody answered does not vanish without a trace.
-  """
+  @doc "The organiser's expired, unanswered booking requests overlapping `[from, to)`, by start."
   @spec list_expired_requests_in_range_for_organizer(pos_integer(), DateTime.t(), DateTime.t()) ::
           [MeetingSchema.t()]
   defdelegate list_expired_requests_in_range_for_organizer(organizer_user_id, from, to),
@@ -437,15 +420,8 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
-  Fetches a meeting by UID only if the given `organizer_user_id` owns it.
-
-  Returns `{:ok, meeting}` when a matching meeting is found.
-  Returns `{:error, :not_found}` when no meeting exists with that UID, or when
-  the meeting exists but belongs to a different organizer.
-
-  Use this instead of `Tymeslot.Meetings.MeetingQueries.get_meeting_by_uid/1` on
-  any user-facing route that accepts a meeting UID from the URL, to prevent
-  IDOR attacks.
+  Fetches a meeting by UID only if `organizer_user_id` owns it, else `{:error, :not_found}`.
+  Use it on any route that takes a meeting UID from the URL, to prevent IDOR attacks.
   """
   @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
@@ -551,12 +527,8 @@ defmodule Tymeslot.Meetings do
   defdelegate record_seen_calendar_end(meeting, end_time), to: ExternalCalendarChanges
 
   @doc """
-  Clears an `"externally_modified"` flag on a meeting whose provider event
-  agrees with it again.
-
-  The counterpart of `apply_external_calendar_change/4` with a `:modified`
-  signal: detection is stateless, so a sync pass that finds the two sides in
-  agreement is the only thing that can retire a flag an earlier pass raised.
+  Clears an `"externally_modified"` flag once a sync pass finds the provider event agreeing
+  again; detection is stateless, so only such a pass can retire the flag.
   """
   defdelegate resolve_external_calendar_change(meeting),
     to: ExternalCalendarChanges,
