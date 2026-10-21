@@ -809,11 +809,6 @@ msgstr "Gäste pro Buchung begrenzen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guests."
-msgstr "Ohne Begrenzung darf jede Buchung bis zu %{count} Gäste mitbringen."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Jeder Gast belegt einen der Plätze des Termins, genau wie die buchende Person."
 
@@ -826,3 +821,10 @@ msgstr "Wochen beginnen am Montag, wie in den Kalendereinstellungen festgelegt."
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Wochen beginnen am Sonntag, wie in den Kalendereinstellungen festgelegt."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guest."
+msgid_plural "Without a limit, each booking may bring up to %{count} guests."
+msgstr[0] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gast mitbringen."
+msgstr[1] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gäste mitbringen."
