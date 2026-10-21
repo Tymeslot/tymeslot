@@ -174,6 +174,11 @@ defmodule Tymeslot.Polls do
   times, participants and votes, to tidy the list. The meeting a confirmed
   poll minted stays. An open poll has to be cancelled first, so nothing
   people are still voting on disappears.
+
+  Jobs still pending for the poll are left to run. The cancellation email
+  carries what it needs and still reaches every participant. Anything else
+  was already deleted when the poll was confirmed or cancelled, or finds
+  the poll gone and is discarded.
   """
   @spec delete_poll(Ecto.UUID.t(), integer()) :: :ok | {:error, :not_found | :still_open}
   def delete_poll(id, user_id) do
@@ -182,7 +187,6 @@ defmodule Tymeslot.Polls do
         {:error, :still_open}
 
       poll ->
-        :ok = EmailScheduler.cancel_poll_deadline_jobs(poll.id)
         {:ok, _deleted} = PollQueries.delete(poll)
         broadcast_update(poll.id)
         :ok

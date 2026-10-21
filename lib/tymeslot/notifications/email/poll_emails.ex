@@ -11,6 +11,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
   require Logger
 
+  alias Tymeslot.Auth
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Emails.Templates.PollCancelled
@@ -22,6 +23,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   alias Tymeslot.Emails.Templates.PollVoteDigest
   alias Tymeslot.Emails.Templates.PollVoteReceipt
   alias Tymeslot.Polls.PollParticipantQueries
+  alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Polls.PollQueries
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Profiles.ProfileSchema
@@ -36,6 +38,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   @stale_deadline "poll deadline changed"
   # An unconfirmed participant pruned before their email went out.
   @participant_gone "poll participant not found"
+  # The host's account was deleted before the cancellation went out.
+  @host_gone "poll host not found"
 
   @doc """
   Whether `reason`, from a discard this module returned, is an expected end
@@ -44,7 +48,15 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   """
   @spec expected_discard?(term()) :: boolean()
   def expected_discard?(reason),
-    do: reason in [@no_username, @poll_gone, @poll_closed, @participant_gone, @stale_deadline]
+    do:
+      reason in [
+        @no_username,
+        @poll_gone,
+        @poll_closed,
+        @participant_gone,
+        @host_gone,
+        @stale_deadline
+      ]
 
   @doc "Emails a participant their personal voting link."
   @spec handle_participant_link(%{String.t() => term()}) ::
@@ -235,21 +247,42 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     end)
   end
 
-  @doc "Tells every participant of a cancelled poll that it will not go ahead."
+  @doc """
+  Tells every participant of a cancelled poll that it will not go ahead.
+
+  Sent from what the job carries (`PollScheduler.schedule_cancellation/1`),
+  so it goes out even when the host deleted the poll straight after
+  cancelling it. A job queued before jobs carried that reads the poll
+  instead, and is discarded once the poll is gone.
+  """
   @spec handle_cancelled(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:discard, String.t()}
+  def handle_cancelled(
+        %{"recipients" => recipients, "user_id" => user_id, "title" => title} = args,
+        job_id
+      ) do
+    case Auth.get_user_with_profile(user_id) do
+      {:ok, host} ->
+        poll = %PollSchema{id: args["poll_id"], title: title, user: host}
+        Enum.each(recipients, &deliver_cancellation(poll, recipient(&1), job_id))
+
+      {:error, :not_found} ->
+        Logger.info("Skipping poll cancellation emails: the host no longer exists",
+          poll_id: args["poll_id"]
+        )
+
+        {:discard, @host_gone}
+    end
+  end
+
   def handle_cancelled(%{"poll_id" => poll_id}, job_id) do
     case PollQueries.get_with_host(poll_id) do
       %{status: :cancelled} = poll ->
-        Enum.each(poll.participants, fn participant ->
-          DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
-            poll |> PollCancelled.render(participant) |> Delivery.deliver()
-          end)
-        end)
+        Enum.each(poll.participants, &deliver_cancellation(poll, &1, job_id))
 
       # Deleted straight after it was cancelled, before this ran.
       nil ->
-        Logger.info("Skipping poll cancellation emails — poll no longer exists",
+        Logger.info("Skipping poll cancellation emails: the poll no longer exists",
           poll_id: poll_id
         )
 
@@ -259,6 +292,21 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       _poll ->
         {:discard, @poll_closed}
     end
+  end
+
+  defp deliver_cancellation(poll, participant, job_id) do
+    DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
+      poll |> PollCancelled.render(participant) |> Delivery.deliver()
+    end)
+  end
+
+  defp recipient(args) do
+    %PollParticipantSchema{
+      id: args["id"],
+      name: args["name"],
+      email: args["email"],
+      locale: args["locale"]
+    }
   end
 
   # Who voted after the host's last update and up to `cutoff`, in the order

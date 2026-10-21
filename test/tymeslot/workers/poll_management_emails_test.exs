@@ -16,6 +16,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
   alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Emails.Shared.MjmlEmail
+  alias Tymeslot.Jobs
   alias Tymeslot.Polls
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
@@ -120,10 +121,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
       assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
 
       assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_cancelled",
-                 "poll_id" => ctx.poll.id
-               })
+               perform_job(EmailWorker, cancellation_args(ctx.poll))
 
       assert_receive {:email, first}, 1000
       assert_receive {:email, second}, 1000
@@ -138,10 +136,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
       assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
 
       assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_cancelled",
-                 "poll_id" => ctx.poll.id
-               })
+               perform_job(EmailWorker, cancellation_args(ctx.poll))
 
       assert_receive {:email, email}, 1000
       assert {_name, host_email} = email.reply_to
@@ -156,17 +151,35 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
       assert {:ok, _cancelled} = Polls.cancel_poll(other.id, ctx.user.id)
 
       assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_cancelled",
-                 "poll_id" => other.id
-               })
+               perform_job(EmailWorker, cancellation_args(other))
 
       assert_receive {:email, quiet}, 1000
       assert quiet.reply_to == nil
       refute quiet.text_body =~ "reply"
     end
 
-    test "is dropped for a poll deleted before it ran", ctx do
+    test "still reaches every participant of a poll deleted straight after", ctx do
+      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      insert(:poll_participant, poll: ctx.poll, email: "grace@example.com")
+
+      assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
+      args = cancellation_args(ctx.poll)
+      assert :ok = Polls.delete_poll(ctx.poll.id, ctx.user.id)
+
+      assert args == cancellation_args(ctx.poll)
+      assert :ok = perform_job(EmailWorker, args)
+
+      assert_receive {:email, first}, 1000
+      assert_receive {:email, second}, 1000
+      assert first.subject =~ "Team sync"
+      assert first.from |> elem(1) |> is_binary()
+
+      assert Enum.sort(Enum.flat_map([first, second], &Enum.map(&1.to, fn {_n, a} -> a end))) ==
+               ["ada@example.com", "grace@example.com"]
+    end
+
+    test "a job queued before cancellations carried their recipients is dropped once the poll is gone",
+         ctx do
       assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
       assert :ok = Polls.delete_poll(ctx.poll.id, ctx.user.id)
 
@@ -176,6 +189,39 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
                  "poll_id" => ctx.poll.id
                })
     end
+
+    test "is dropped for a host whose account has gone since", ctx do
+      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
+      args = Map.put(cancellation_args(ctx.poll), "user_id", ctx.user.id + 1_000_000)
+
+      assert {:discard, "poll host not found"} = perform_job(EmailWorker, args)
+      refute_receive {:email, _any}, 200
+    end
+
+    test "is cleared with the rest of the host's jobs when their account is deleted", ctx do
+      insert(:poll_participant, poll: ctx.poll, email: "ada@example.com")
+      assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
+
+      Jobs.delete_pending_account_jobs(ctx.user.id, [])
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_poll_cancelled", "poll_id" => ctx.poll.id}
+      )
+    end
+  end
+
+  # The cancellation job `cancel_poll/2` really enqueued, as the worker
+  # would receive it.
+  defp cancellation_args(poll) do
+    assert [%{args: args}] =
+             all_enqueued(
+               worker: EmailWorker,
+               args: %{"action" => "send_poll_cancelled", "poll_id" => poll.id}
+             )
+
+    args
   end
 
   # Someone the host invited who has not voted: who the reminders are for.

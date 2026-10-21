@@ -192,11 +192,23 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   @doc """
   Tells every participant that the poll was cancelled. Scheduled after
   `cancel_deadline_jobs/1`, which would otherwise delete it.
+
+  The job carries what the email needs: the poll's title, its host, and each
+  participant's name, address and language. The host may then delete the
+  poll straight after cancelling it, and the participants are still told.
+  Its `user_id` also lets an account deletion clear it with the rest of the
+  host's jobs.
   """
   @spec schedule_cancellation(map()) :: :ok
   def schedule_cancellation(poll) do
     insert_job(
-      %{"action" => "send_poll_cancelled", "poll_id" => poll.id},
+      %{
+        "action" => "send_poll_cancelled",
+        "poll_id" => poll.id,
+        "user_id" => poll.user_id,
+        "title" => poll.title,
+        "recipients" => Enum.map(poll.participants, &cancellation_recipient/1)
+      },
       unique: unique_opts([:action, :poll_id])
     )
   end
@@ -215,6 +227,15 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   end
 
   # --- Private helpers ---
+
+  defp cancellation_recipient(participant) do
+    %{
+      "id" => participant.id,
+      "name" => participant.name,
+      "email" => participant.email,
+      "locale" => participant.locale
+    }
+  end
 
   defp maybe_schedule_reminder(poll, %{value: value, unit: unit}) do
     lead_seconds = Reminders.reminder_interval_seconds(value, unit)
