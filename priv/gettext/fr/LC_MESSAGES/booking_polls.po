@@ -210,3 +210,8 @@ msgstr "Veuillez saisir votre nom."
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only. Use the personal link from your email to vote."
 msgstr "Ce sondage est réservé aux personnes invitées. Pour voter, utilisez le lien personnel reçu par e-mail."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Too many emails to this address recently; try again later."
+msgstr ""

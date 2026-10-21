@@ -341,12 +341,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   @impl Phoenix.LiveComponent
   def handle_event("create_poll", %{"poll" => params}, socket) do
     with {:ok, invitees} <- parse_invitees(params),
-         {:ok, _poll} <-
+         {:ok, poll} <-
            Polls.create_poll(
              socket.assigns.current_user.id,
              Map.put(build_attrs(params, socket), :invitees, invitees)
            ) do
-      Flash.info(dgettext("dashboard_polls", "Poll created"))
+      Flash.info(PollInvite.created_message(Invitations.uninvited(poll, invitees)))
       send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
       {:noreply, socket}
     else
@@ -543,6 +543,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
+
+  defp errors_for({:rate_limited, _remaining} = reason),
+    do: %{invitees: [PollInvite.error_message(reason)]}
 
   defp errors_for(:no_slots),
     do: %{slots: [dgettext("dashboard_polls", "Add at least one candidate time")]}

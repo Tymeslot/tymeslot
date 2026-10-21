@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
 
   @doc "What an invitation did, for the flash."
   @spec invited_message(Invitations.result()) :: String.t()
-  def invited_message(%{invited: invited, skipped: skipped}) do
+  def invited_message(%{invited: invited, skipped: skipped, rate_limited: rate_limited}) do
     sent =
       dngettext(
         "dashboard_polls",
@@ -103,21 +103,50 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
         length(invited)
       )
 
-    case skipped do
-      [] ->
-        sent
-
-      _skipped ->
-        sent <>
-          " " <>
-          dngettext(
-            "dashboard_polls",
-            "%{count} address was already on the poll.",
-            "%{count} addresses were already on the poll.",
-            length(skipped)
-          )
-    end
+    Enum.join([sent | notes(skipped, rate_limited)], " ")
   end
+
+  @doc """
+  The flash for a poll just created, naming any invitee left out for having
+  had too many emails lately.
+  """
+  @spec created_message([String.t()]) :: String.t()
+  def created_message([]), do: dgettext("dashboard_polls", "Poll created")
+
+  def created_message(rate_limited),
+    do:
+      dngettext(
+        "dashboard_polls",
+        "Poll created. %{count} address has had too many emails recently and was not invited.",
+        "Poll created. %{count} addresses have had too many emails recently and were not invited.",
+        length(rate_limited)
+      )
+
+  defp notes(skipped, rate_limited) do
+    Enum.reject([skipped_note(skipped), rate_limited_note(rate_limited)], &is_nil/1)
+  end
+
+  defp skipped_note([]), do: nil
+
+  defp skipped_note(skipped),
+    do:
+      dngettext(
+        "dashboard_polls",
+        "%{count} address was already on the poll.",
+        "%{count} addresses were already on the poll.",
+        length(skipped)
+      )
+
+  defp rate_limited_note([]), do: nil
+
+  defp rate_limited_note(rate_limited),
+    do:
+      dngettext(
+        "dashboard_polls",
+        "%{count} address has had too many emails recently and was not invited.",
+        "%{count} addresses have had too many emails recently and were not invited.",
+        length(rate_limited)
+      )
 
   @doc "Why an invitation failed, for the address field."
   @spec error_message(term()) :: String.t()
@@ -131,6 +160,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
     do:
       dgettext("dashboard_polls", "A poll can have up to %{max} participants.",
         max: PollSchema.max_participants()
+      )
+
+  def error_message({:rate_limited, 0}),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "You can't invite anyone else right now. Please try again later."
+      )
+
+  def error_message({:rate_limited, remaining}),
+    do:
+      dngettext(
+        "dashboard_polls",
+        "You can invite up to %{count} more person right now.",
+        "You can invite up to %{count} more people right now.",
+        remaining
       )
 
   def error_message(:no_invitees),

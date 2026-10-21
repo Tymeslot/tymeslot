@@ -214,7 +214,7 @@ msgstr "I tipi di riunione a pagamento non possono essere usati per i sondaggi"
 msgid "Poll cancelled"
 msgstr "Sondaggio annullato"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "Poll created"
 msgstr "Sondaggio creato"
@@ -636,3 +636,29 @@ msgstr "Possono votare solo le persone che inviti via email. Chiunque altro apra
 #, elixir-autogen, elixir-format
 msgid "Who can vote"
 msgstr "Chi può votare"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} address has had too many emails recently and was not invited."
+msgid_plural "%{count} addresses have had too many emails recently and were not invited."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Poll created. %{count} address has had too many emails recently and was not invited."
+msgid_plural "Poll created. %{count} addresses have had too many emails recently and were not invited."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "You can invite up to %{count} more person right now."
+msgid_plural "You can invite up to %{count} more people right now."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "You can't invite anyone else right now. Please try again later."
+msgstr ""
