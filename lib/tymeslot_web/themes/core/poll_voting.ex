@@ -35,8 +35,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
-  alias TymeslotWeb.Themes.Shared.PollVotingComponents
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Themes.Shared.PollVotingComponents
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
