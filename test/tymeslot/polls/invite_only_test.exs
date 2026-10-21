@@ -14,8 +14,9 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.{PollParticipantQueries, PollParticipantSchema, PollSchema, Voting}
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
 
   describe "the stored flag" do
     test "a poll is open to link requests unless made invite-only" do
@@ -68,6 +69,89 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
     end
   end
 
+  describe "request_link/2 on an invite-only poll" do
+    test "refuses a new address, writing nothing and sending nothing" do
+      poll = insert(:poll, invite_only: true)
+
+      assert {:error, :invite_only} =
+               Voting.request_link(poll, %{name: "Mallory", email: "mallory@example.com"})
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "mallory@example.com") == nil
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "refuses an invited address too, without sending its link again" do
+      poll = insert(:poll, invite_only: true)
+      sent_at = DateTime.add(now(), -1, :hour)
+
+      invitee =
+        insert(:poll_participant,
+          poll: poll,
+          email: "grace@example.com",
+          confirmed_at: now(),
+          invited_at: now(),
+          link_sent_at: sent_at
+        )
+
+      assert {:error, :invite_only} =
+               Voting.request_link(poll, %{name: "Grace", email: "grace@example.com"})
+
+      assert Repo.get!(PollParticipantSchema, invitee.id).link_sent_at == sent_at
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "is checked before anything else, even on a poll that has closed" do
+      poll = insert(:poll, invite_only: true, status: :cancelled)
+
+      assert {:error, :invite_only} =
+               Voting.request_link(poll, %{name: "Mallory", email: "mallory@example.com"})
+    end
+
+    test "holds for a page loaded before the host switched the poll" do
+      stale = insert(:poll, invite_only: false)
+      {:ok, _poll} = Polls.update_details(stale.id, stale.user_id, %{"invite_only" => true})
+
+      assert {:error, :invite_only} =
+               Voting.request_link(stale, %{name: "Mallory", email: "mallory@example.com"})
+
+      assert PollParticipantQueries.count_unconfirmed(stale.id) == 0
+    end
+  end
+
+  describe "cast_votes/4 on an invite-only poll" do
+    setup do
+      poll = insert(:poll, invite_only: true)
+      slot = insert(:poll_time_slot, poll: poll)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+      %{poll: poll, slot: slot}
+    end
+
+    test "an invited participant votes through their link", %{poll: poll, slot: slot} do
+      invitee = insert(:poll_participant, poll: poll, confirmed_at: now(), invited_at: now())
+
+      assert {:ok, voted} = Voting.cast_votes(poll, invitee.token, %{slot.id => "yes"})
+      assert %DateTime{} = voted.voted_at
+    end
+
+    test "someone confirmed before the switch keeps voting", %{poll: poll, slot: slot} do
+      earlier = insert(:poll_participant, poll: poll, confirmed_at: now(), voted_at: now())
+
+      assert {:ok, _voted} = Voting.cast_votes(poll, earlier.token, %{slot.id => "no"})
+    end
+
+    test "a link request left from before the switch cannot confirm", %{poll: poll, slot: slot} do
+      pending =
+        insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
+
+      assert {:error, :invite_only} = Voting.cast_votes(poll, pending.token, %{slot.id => "yes"})
+
+      reloaded = Repo.get!(PollParticipantSchema, pending.id)
+      assert reloaded.confirmed_at == nil
+      assert reloaded.voted_at == nil
+      assert Polls.tallies(elem(Polls.get_poll_for_voting(poll.token), 1))[slot.id].yes == 0
+    end
+  end
+
   defp poll_attrs(extra) do
     Map.merge(
       %{
@@ -79,6 +163,8 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
       Map.new(extra)
     )
   end
+
+  defp now, do: DateTime.utc_now(:second)
 
   defp in_days(days),
     do: DateTime.utc_now() |> DateTime.add(days, :day) |> DateTime.truncate(:second)

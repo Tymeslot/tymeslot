@@ -19,6 +19,7 @@ defmodule Tymeslot.Polls.Voting do
   alias Tymeslot.Polls.{
     PollParticipantQueries,
     PollParticipantSchema,
+    PollQueries,
     PollSchema,
     PollVoteQueries
   }
@@ -60,19 +61,23 @@ defmodule Tymeslot.Polls.Voting do
   The outcome tells the visitor whether the address was already on the poll.
   That is deliberate: the page says so rather than pretend otherwise.
 
-  Returns `{:error, changeset}` for an invalid request, `{:error,
-  :voting_closed}` once voting has closed or while the poll's host is pending
+  Returns `{:error, :invite_only}` when only the people the host invited can
+  vote, checked before anything else, so nothing is written or sent and no
+  existing link is sent again; `{:error, changeset}` for an invalid request,
+  `{:error, :voting_closed}` once voting has closed or while the poll's host is pending
   account deletion, and, for a new address or one whose pending link has
   expired, `{:error, :poll_full}` at the participant cap and `{:error, :too_many_requests}` when
   too many links are out unconfirmed.
   """
   @spec request_link(PollSchema.t(), map()) ::
           {:ok, request_outcome()}
-          | {:error, :voting_closed | :poll_full | :too_many_requests | Changeset.t()}
+          | {:error,
+             :invite_only | :voting_closed | :poll_full | :too_many_requests | Changeset.t()}
   def request_link(poll, attrs) do
     # Every refusal is one clause here, run before anything is written or
     # sent, so a new check (who may ask, how often) is one more clause.
-    with :ok <- ensure_open(poll),
+    with :ok <- ensure_requests_accepted(poll),
+         :ok <- ensure_open(poll),
          {:ok, request} <- validate_request(poll, attrs) do
       route_request(poll, request)
     end
@@ -98,10 +103,14 @@ defmodule Tymeslot.Polls.Voting do
   responses, as the `:name` option; without a valid one nothing is saved and
   the name changeset is returned.
 
+  On an invite-only poll an unconfirmed participant, a link request that
+  slipped in as the host switched the poll, cannot confirm:
+  `{:error, :invite_only}`, and nothing is saved.
+
   Returns `{:error, :voting_closed}` (also while the poll's host is pending
   account deletion), `{:error, :unknown_participant}`, `{:error, :invalid_slot}`,
-  `{:error, :invalid_response}`, `{:error, :poll_full}` or `{:error, changeset}`
-  on the respective failure.
+  `{:error, :invalid_response}`, `{:error, :poll_full}`, `{:error, :invite_only}`
+  or `{:error, changeset}` on the respective failure.
   """
   @spec cast_votes(
           PollSchema.t(),
@@ -116,6 +125,7 @@ defmodule Tymeslot.Polls.Voting do
              | :invalid_slot
              | :invalid_response
              | :poll_full
+             | :invite_only
              | Changeset.t()}
   def cast_votes(poll, participant_token, votes_map, opts \\ []) do
     with :ok <- ensure_open(poll),
@@ -140,6 +150,13 @@ defmodule Tymeslot.Polls.Voting do
   def get_participant(%PollSchema{}, _token), do: nil
 
   # --- Link request helpers ---
+
+  # An invite-only poll asks nobody for their address: its people are the
+  # ones the host invited, each holding their link. Read fresh, so a page
+  # loaded before the host switched cannot get a request in.
+  defp ensure_requests_accepted(%PollSchema{id: poll_id}) do
+    if PollQueries.invite_only?(poll_id), do: {:error, :invite_only}, else: :ok
+  end
 
   # The request is checked in full before the address is looked up, so a
   # known address cannot slip a name past the rules a new one must meet.
@@ -347,6 +364,7 @@ defmodule Tymeslot.Polls.Voting do
     transaction =
       Repo.transaction(fn ->
         with {:ok, locked} <- lock_participant(poll, participant),
+             :ok <- ensure_admitted(poll, locked),
              :ok <- ensure_room(poll, locked),
              {:ok, named} <- ensure_named(locked, name) do
           PollVoteQueries.upsert_votes(vote_maps)
@@ -378,6 +396,16 @@ defmodule Tymeslot.Polls.Voting do
       nil -> {:error, :unknown_participant}
       locked -> {:ok, locked}
     end
+  end
+
+  # Confirming lets someone in. On an invite-only poll only the host does
+  # that, so a pending request (one inserted just as the host switched the
+  # poll, after the switch withdrew the others) cannot confirm itself. Read
+  # inside the transaction, fresh.
+  defp ensure_admitted(_poll, %PollParticipantSchema{confirmed_at: %DateTime{}}), do: :ok
+
+  defp ensure_admitted(poll, _unconfirmed) do
+    if PollQueries.invite_only?(poll.id), do: {:error, :invite_only}, else: :ok
   end
 
   # Confirming adds the participant to the count the cap is about. Best-effort

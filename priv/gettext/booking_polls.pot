@@ -205,3 +205,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Please enter your name."
 msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only. Please use the link from your invitation email."
+msgstr ""

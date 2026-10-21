@@ -90,6 +90,17 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.aggregate(:count)
   end
 
+  @doc """
+  Whether `poll_id` takes votes only from people its host invited, read from
+  the database rather than from a struct that may predate the host's switch.
+  """
+  @spec invite_only?(Ecto.UUID.t()) :: boolean()
+  def invite_only?(poll_id) do
+    PollSchema
+    |> where([p], p.id == ^poll_id and p.invite_only)
+    |> Repo.exists?()
+  end
+
   @spec insert(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def insert(changeset), do: Repo.insert(changeset)
 

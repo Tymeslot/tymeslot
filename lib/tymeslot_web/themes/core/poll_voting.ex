@@ -244,6 +244,13 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   defp register_error_message(:voting_closed),
     do: dgettext("booking_polls", "Voting has closed for this poll.")
 
+  defp register_error_message(:invite_only),
+    do:
+      dgettext(
+        "booking_polls",
+        "This poll is by invitation only. Please use the link from your invitation email."
+      )
+
   defp register_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
 
@@ -265,6 +272,13 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       changeset_message(
         changeset,
         dgettext("booking_polls", "Please enter your name, then save your responses again.")
+      )
+
+  defp cast_error_message(:invite_only),
+    do:
+      dgettext(
+        "booking_polls",
+        "This poll is by invitation only. Please use the link from your invitation email."
       )
 
   defp cast_error_message(:poll_full),
