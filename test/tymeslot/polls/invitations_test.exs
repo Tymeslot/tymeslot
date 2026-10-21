@@ -114,6 +114,34 @@ defmodule Tymeslot.Polls.InvitationsTest do
       )
     end
 
+    test "the host's name for someone wins over the one they gave when asking", %{poll: poll} do
+      {:ok, :sent} = Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
+
+      assert {:ok, %{invited: [ada], skipped: []}} =
+               Invitations.invite(poll, [%{email: "ada@example.com", name: "Ada Lovelace"}])
+
+      assert ada.name == "Ada Lovelace"
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").name ==
+               "Ada Lovelace"
+
+      assert {:ok, _} = Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").name ==
+               "Ada Lovelace"
+    end
+
+    test "a host's name the rules refuse invites nobody and changes nothing", %{poll: poll} do
+      {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
+
+      assert {:error, %Ecto.Changeset{}} =
+               Invitations.invite(poll, [%{email: "ada@example.com", name: "Ada%"}])
+
+      unchanged = PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com")
+      assert unchanged.name == "Ada"
+      assert unchanged.confirmed_at == nil
+    end
+
     test "invites nobody when the invitees would overfill the poll", %{poll: poll} do
       insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
       {:ok, entries} = Invitations.parse("ada@example.com, grace@example.com")

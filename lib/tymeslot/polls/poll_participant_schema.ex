@@ -188,11 +188,31 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   defp put_confirmed_at(changeset, nil, at), do: put_change(changeset, :confirmed_at, at)
   defp put_confirmed_at(changeset, _confirmed_at, _at), do: changeset
 
-  @doc "Confirms and marks invited a participant who asked for a link before the host invited them."
-  @spec invited_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
-  def invited_changeset(participant, now) do
+  @doc """
+  Confirms and marks invited a participant who asked for a link before the
+  host invited them. The name the host typed, when they gave one, replaces
+  the one the participant gave when asking.
+  """
+  @spec invited_changeset(%__MODULE__{}, String.t() | nil, DateTime.t()) :: Ecto.Changeset.t()
+  def invited_changeset(participant, host_name, now) do
     now = DateTime.truncate(now, :second)
-    change(participant, confirmed_at: now, invited_at: now)
+
+    participant
+    |> change(confirmed_at: now, invited_at: now)
+    |> put_host_name(host_name)
+  end
+
+  defp put_host_name(changeset, nil), do: changeset
+
+  # Forced so the host's name is written even when it equals the stored one:
+  # a concurrent request could have rewritten the name since it was read.
+  defp put_host_name(changeset, name) do
+    trimmed = String.trim(name)
+
+    changeset
+    |> cast(%{name: trimmed}, [:name])
+    |> validate_name()
+    |> force_change(:name, trimmed)
   end
 
   @doc "Stamps `link_sent_at` on a participant or on a changeset building one."

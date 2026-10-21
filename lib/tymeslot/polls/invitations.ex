@@ -13,7 +13,8 @@ defmodule Tymeslot.Polls.Invitations do
   Someone invited without a name gives it the first time they vote.
 
   Someone already confirmed on the poll is skipped. Someone who asked for a
-  link but has not voted with it yet is confirmed and invited.
+  link but has not voted with it yet is confirmed and invited, under the name
+  the host typed if they typed one.
   """
 
   alias Tymeslot.Emails.EmailScheduler
@@ -151,15 +152,17 @@ defmodule Tymeslot.Polls.Invitations do
     Enum.reduce(Enum.reverse(entries), {[], [], []}, fn entry, {skipped, to_confirm, new} ->
       case Map.get(existing, entry.email) do
         nil -> {skipped, to_confirm, [entry | new]}
-        %{confirmed_at: nil} = participant -> {skipped, [participant | to_confirm], new}
+        %{confirmed_at: nil} = participant -> {skipped, [{participant, entry} | to_confirm], new}
         _confirmed -> {[entry | skipped], to_confirm, new}
       end
     end)
   end
 
-  defp confirm(participant, now) do
+  # The host knows who they are inviting: a name they typed wins over the one
+  # the person gave when asking for a link.
+  defp confirm({participant, entry}, now) do
     participant
-    |> PollParticipantSchema.invited_changeset(now)
+    |> PollParticipantSchema.invited_changeset(entry.name, now)
     |> PollParticipantSchema.link_sent_changeset(now)
   end
 
