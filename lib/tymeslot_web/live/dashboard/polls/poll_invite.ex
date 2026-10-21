@@ -27,16 +27,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
       <Forms.input
         type="textarea"
         name={@name}
-        label={dgettext("dashboard_common", "Invite by email (optional)")}
+        label={dgettext("dashboard_polls", "Invite by email (optional)")}
         value={@value}
         placeholder={
-          dgettext("dashboard_common", "ada@example.com, Grace Hopper <grace@example.com>")
+          dgettext("dashboard_polls", "ada@example.com, Grace Hopper <grace@example.com>")
         }
         errors={@errors}
       />
       <p class="text-token-xs text-tymeslot-500 mt-1">
         {dgettext(
-          "dashboard_common",
+          "dashboard_polls",
           "One address per line or separated by commas. Each person gets an email with their own voting link."
         )}
       </p>
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
       <.invitees_input name="invite[emails]" value={@value} errors={List.wrap(@error)} />
       <div class="flex justify-end">
         <Buttons.action_button type="submit" size={:sm} icon="hero-envelope">
-          {dgettext("dashboard_common", "Send invitations")}
+          {dgettext("dashboard_polls", "Send invitations")}
         </Buttons.action_button>
       </div>
     </form>
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
 
     ~H"""
     <p :if={@names != []} class="text-token-xs text-tymeslot-500" data-testid="poll-waiting-for">
-      {dgettext("dashboard_common", "Waiting for: %{names}", names: Enum.join(@names, ", "))}
+      {dgettext("dashboard_polls", "Waiting for: %{names}", names: Enum.join(@names, ", "))}
     </p>
     """
   end
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
   def invited_message(%{invited: invited, skipped: skipped}) do
     sent =
       dngettext(
-        "dashboard_common",
+        "dashboard_polls",
         "Invitation sent to %{count} person.",
         "Invitations sent to %{count} people.",
         length(invited)
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
         sent <>
           " " <>
           dngettext(
-            "dashboard_common",
+            "dashboard_polls",
             "%{count} address was already on the poll.",
             "%{count} addresses were already on the poll.",
             length(skipped)
@@ -125,21 +125,21 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
   @spec error_message(term()) :: String.t()
   def error_message({:invalid_addresses, entries}),
     do:
-      dgettext("dashboard_common", "Not valid email addresses: %{entries}",
+      dgettext("dashboard_polls", "Not valid email addresses: %{entries}",
         entries: Enum.join(entries, ", ")
       )
 
   def error_message(reason) when reason in [:too_many_invitees, :poll_full],
     do:
-      dgettext("dashboard_common", "A poll can have up to %{max} participants.",
+      dgettext("dashboard_polls", "A poll can have up to %{max} participants.",
         max: PollSchema.max_participants()
       )
 
   def error_message(:no_invitees),
-    do: dgettext("dashboard_common", "Enter at least one email address.")
+    do: dgettext("dashboard_polls", "Enter at least one email address.")
 
-  def error_message(:not_open), do: dgettext("dashboard_common", "This poll is no longer open.")
+  def error_message(:not_open), do: dgettext("dashboard_polls", "This poll is no longer open.")
 
   def error_message(_reason),
-    do: dgettext("dashboard_common", "Couldn't send the invitations. Please try again.")
+    do: dgettext("dashboard_polls", "Couldn't send the invitations. Please try again.")
 end

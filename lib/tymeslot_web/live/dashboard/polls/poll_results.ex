@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             icon="hero-globe-alt-mini"
             class="mt-1"
             aria-label={
-              dgettext("dashboard_common", "Times shown in %{timezone}", timezone: @poll.timezone)
+              dgettext("dashboard_polls", "Times shown in %{timezone}", timezone: @poll.timezone)
             }
             data-testid="poll-timezone-badge"
           >
@@ -131,14 +131,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           <Buttons.icon_button
             :if={@open?}
             icon="hero-pencil-square"
-            label={dgettext("dashboard_common", "Edit poll")}
+            label={dgettext("dashboard_polls", "Edit poll")}
             phx-click="edit_poll_details"
             phx-target={@myself}
             data-testid="poll-edit-details"
           />
           <Buttons.icon_button
             icon="hero-x-mark"
-            label={dgettext("dashboard_common", "Close results")}
+            label={dgettext("dashboard_polls", "Close results")}
             phx-click="deselect_poll"
             phx-target={@myself}
           />
@@ -152,12 +152,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         class="flex items-center gap-2 text-token-xs text-tymeslot-500"
       >
         <Icons.icon name="hero-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-        {dgettext("dashboard_common", "Checking your calendar for conflicts…")}
+        {dgettext("dashboard_polls", "Checking your calendar for conflicts…")}
       </p>
 
       <p class="text-token-sm text-tymeslot-600" data-testid="poll-respondent-count">
         {dngettext(
-          "dashboard_common",
+          "dashboard_polls",
           "%{count} guest has voted so far.",
           "%{count} guests have voted so far.",
           @voted_count
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         data-testid="poll-unconfirmed-count"
       >
         {dngettext(
-          "dashboard_common",
+          "dashboard_polls",
           "%{count} more person asked for a voting link but hasn't voted with it yet.",
           "%{count} more people asked for a voting link but haven't voted with it yet.",
           @unconfirmed_count
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           phx-target={@myself}
           data-testid="poll-delete"
         >
-          {dgettext("dashboard_common", "Delete poll")}
+          {dgettext("dashboard_polls", "Delete poll")}
         </Buttons.action_button>
       </div>
 
@@ -234,7 +234,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           phx-click="request_cancel_poll"
           phx-target={@myself}
         >
-          {dgettext("dashboard_common", "Cancel poll")}
+          {dgettext("dashboard_polls", "Cancel poll")}
         </Buttons.action_button>
       </div>
     </Containers.card>
@@ -251,11 +251,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     <div class="rounded-token-lg bg-blue-50 border border-blue-100 px-4 py-3 text-token-sm text-blue-800 flex items-center gap-2 flex-wrap">
       <Icons.icon name="hero-check-circle-solid" class="w-5 h-5 text-blue-500 shrink-0" />
       <span>{dgettext(
-        "dashboard_common",
+        "dashboard_polls",
         "This poll is confirmed. The winning time is highlighted below."
       )}</span>
       <.link navigate={@meetings_path} class="font-medium text-blue-700 underline hover:text-blue-900">
-        {dgettext("dashboard_common", "View meeting")}
+        {dgettext("dashboard_polls", "View meeting")}
       </.link>
     </div>
     """
@@ -265,7 +265,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     ~H"""
     <div class="rounded-token-lg bg-tymeslot-100 border border-tymeslot-200 px-4 py-3 text-token-sm text-tymeslot-600 flex items-center gap-2">
       <Icons.icon name="hero-x-circle-solid" class="w-5 h-5 text-tymeslot-400 shrink-0" />
-      <span>{dgettext("dashboard_common", "This poll was cancelled. Voting is closed.")}</span>
+      <span>{dgettext("dashboard_polls", "This poll was cancelled. Voting is closed.")}</span>
     </div>
     """
   end
@@ -275,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     <div class="rounded-token-lg bg-turquoise-50 border border-turquoise-100 px-4 py-3 text-token-sm text-turquoise-800 flex items-center gap-2">
       <Icons.icon name="hero-hand-raised" class="w-5 h-5 text-turquoise-500 shrink-0" />
       <span>{dgettext(
-        "dashboard_common",
+        "dashboard_polls",
         "Voting is open. Confirm a time once your guests have voted."
       )}</span>
     </div>
@@ -321,7 +321,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             tone={:info}
             icon="hero-check-circle-mini"
           >
-            {dgettext("dashboard_common", "Winner")}
+            {dgettext("dashboard_polls", "Winner")}
           </Feedback.pill>
           <Feedback.pill
             :if={@leader?}
@@ -329,15 +329,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             icon="hero-arrow-trending-up-mini"
             data-testid="poll-slot-leader"
           >
-            {dgettext("dashboard_common", "Most votes")}
+            {dgettext("dashboard_polls", "Most votes")}
           </Feedback.pill>
           <Feedback.pill
             :if={@health == :conflict}
             tone={:warning}
             icon="hero-exclamation-triangle-mini"
-            title={dgettext("dashboard_common", "This time clashes with an event on your calendar")}
+            title={dgettext("dashboard_polls", "This time clashes with an event on your calendar")}
           >
-            {dgettext("dashboard_common", "Calendar conflict")}
+            {dgettext("dashboard_polls", "Calendar conflict")}
           </Feedback.pill>
         </div>
 
@@ -352,7 +352,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           phx-target={@myself}
           phx-disable-with={dgettext("common", "Processing...")}
         >
-          {dgettext("dashboard_common", "Confirm this time")}
+          {dgettext("dashboard_polls", "Confirm this time")}
         </Buttons.action_button>
       </div>
 
@@ -383,9 +383,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           class="w-4 h-4"
         />
         <%= if @expanded? do %>
-          {dgettext("dashboard_common", "Hide who voted")}
+          {dgettext("dashboard_polls", "Hide who voted")}
         <% else %>
-          {dgettext("dashboard_common", "Who voted")}
+          {dgettext("dashboard_polls", "Who voted")}
         <% end %>
       </button>
 
@@ -415,7 +415,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   defp response_bar(%{total: 0} = assigns) do
     ~H"""
     <p class="text-token-xs text-tymeslot-400">
-      {dgettext("dashboard_common", "No responses yet.")}
+      {dgettext("dashboard_polls", "No responses yet.")}
     </p>
     """
   end
@@ -549,8 +549,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   defp response_class(:no), do: "text-red-500"
   defp response_class(:none), do: "text-tymeslot-300"
 
-  defp response_label(:yes), do: dgettext("dashboard_common", "Yes")
-  defp response_label(:if_need_be), do: dgettext("dashboard_common", "If need be")
-  defp response_label(:no), do: dgettext("dashboard_common", "No")
-  defp response_label(:none), do: dgettext("dashboard_common", "No answer")
+  defp response_label(:yes), do: dgettext("dashboard_polls", "Yes")
+  defp response_label(:if_need_be), do: dgettext("dashboard_polls", "If need be")
+  defp response_label(:no), do: dgettext("dashboard_polls", "No")
+  defp response_label(:none), do: dgettext("dashboard_polls", "No answer")
 end

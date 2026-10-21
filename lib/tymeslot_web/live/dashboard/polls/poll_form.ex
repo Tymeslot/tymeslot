@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     <div id={"poll-form-#{@id}"}>
       <.card
         icon="hero-plus-circle"
-        title={dgettext("dashboard_common", "New poll")}
+        title={dgettext("dashboard_polls", "New poll")}
         class="space-y-6"
       >
         <form
@@ -83,10 +83,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         >
           <.input
             name="poll[title]"
-            label={dgettext("dashboard_common", "Title")}
+            label={dgettext("dashboard_polls", "Title")}
             value={@title}
             required
-            placeholder={dgettext("dashboard_common", "e.g., Team sync")}
+            placeholder={dgettext("dashboard_polls", "e.g., Team sync")}
             errors={error_list(@errors, :title)}
             icon="hero-hand-raised"
           />
@@ -94,9 +94,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           <.input
             type="textarea"
             name="poll[description]"
-            label={dgettext("dashboard_common", "Description (optional)")}
+            label={dgettext("dashboard_polls", "Description (optional)")}
             value={@description}
-            placeholder={dgettext("dashboard_common", "Add any context for your guests")}
+            placeholder={dgettext("dashboard_polls", "Add any context for your guests")}
             errors={error_list(@errors, :description)}
           />
 
@@ -104,9 +104,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             <.input
               type="select"
               name="poll[meeting_type_id]"
-              label={dgettext("dashboard_common", "Meeting type (optional)")}
+              label={dgettext("dashboard_polls", "Meeting type (optional)")}
               value={@meeting_type_id}
-              prompt={dgettext("dashboard_common", "No meeting type")}
+              prompt={dgettext("dashboard_polls", "No meeting type")}
               options={meeting_type_options(@meeting_types)}
               errors={error_list(@errors, :meeting_type_id)}
             />
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             <div :if={meeting_type_selected?(@meeting_types, @meeting_type_id)}>
               <input type="hidden" name="poll[duration]" value={@duration} />
               <p class="text-token-sm text-tymeslot-600 mt-8">
-                {dgettext("dashboard_common", "Duration: %{minutes} min (from meeting type)",
+                {dgettext("dashboard_polls", "Duration: %{minutes} min (from meeting type)",
                   minutes: @duration
                 )}
               </p>
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
               :if={!meeting_type_selected?(@meeting_types, @meeting_type_id)}
               type="number"
               name="poll[duration]"
-              label={dgettext("dashboard_common", "Duration (minutes)")}
+              label={dgettext("dashboard_polls", "Duration (minutes)")}
               value={@duration}
               min={Constraints.poll_duration_minutes_opts()[:greater_than_or_equal_to]}
               max={Constraints.poll_duration_minutes_opts()[:less_than_or_equal_to]}
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             <.input
               type="select"
               name="poll[timezone]"
-              label={dgettext("dashboard_common", "Timezone")}
+              label={dgettext("dashboard_polls", "Timezone")}
               value={@timezone}
               options={Timezones.all_options()}
               errors={error_list(@errors, :timezone)}
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             <.input
               type="datetime-local"
               name="poll[deadline]"
-              label={dgettext("dashboard_common", "Voting deadline (optional)")}
+              label={dgettext("dashboard_polls", "Voting deadline (optional)")}
               value={@deadline}
               errors={error_list(@errors, :deadline_at)}
             />
@@ -155,11 +155,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <label class="label mb-0">
-                {dgettext("dashboard_common", "Candidate times")}
+                {dgettext("dashboard_polls", "Candidate times")}
               </label>
               <span class="text-token-xs text-tymeslot-500">
                 {dngettext(
-                  "dashboard_common",
+                  "dashboard_polls",
                   "%{count} of %{max} time",
                   "%{count} of %{max} times",
                   length(@slots),
@@ -176,12 +176,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
                     type="datetime-local"
                     name={"poll[slots][#{slot.key}]"}
                     value={slot.value}
-                    aria-label={dgettext("dashboard_common", "Candidate time %{n}", n: index + 1)}
+                    aria-label={dgettext("dashboard_polls", "Candidate time %{n}", n: index + 1)}
                   />
                 </div>
                 <.icon_button
                   icon="hero-x-mark"
-                  label={dgettext("dashboard_common", "Remove time")}
+                  label={dgettext("dashboard_polls", "Remove time")}
                   variant={:danger}
                   phx-click="remove_slot"
                   phx-value-key={slot.key}
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
               >
                 <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 shrink-0" />
                 {dgettext(
-                  "dashboard_common",
+                  "dashboard_polls",
                   "This time falls within your time off, so it can't be confirmed while that stays in place."
                 )}
               </p>
@@ -211,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
               phx-click="add_slot"
               phx-target={@myself}
             >
-              {dgettext("dashboard_common", "Add time")}
+              {dgettext("dashboard_polls", "Add time")}
             </.action_button>
           </div>
 
@@ -220,11 +220,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             id={"poll-notify-on-vote-#{@id}"}
             name="poll[notify_on_vote]"
             value={@notify_on_vote}
-            label={dgettext("dashboard_common", "Email me about new votes")}
+            label={dgettext("dashboard_polls", "Email me about new votes")}
           >
             <:description>
               {dgettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "At most one email every 15 minutes, naming who voted, with the current standings."
               )}
             </:description>
@@ -253,10 +253,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             phx-click="cancel_poll_form"
             phx-target={@parent_myself}
           >
-            {dgettext("dashboard_common", "Cancel")}
+            {dgettext("dashboard_polls", "Cancel")}
           </.action_button>
           <.action_button type="submit" form={"poll-create-form-#{@id}"}>
-            {dgettext("dashboard_common", "Create poll")}
+            {dgettext("dashboard_polls", "Create poll")}
           </.action_button>
         </div>
       </.card>
@@ -323,7 +323,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
              socket.assigns.current_user.id,
              Map.put(build_attrs(params, socket), :invitees, invitees)
            ) do
-      Flash.info(dgettext("dashboard_common", "Poll created"))
+      Flash.info(dgettext("dashboard_polls", "Poll created"))
       send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
       {:noreply, socket}
     else
@@ -481,25 +481,25 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
 
   defp errors_for(:no_slots),
-    do: %{slots: [dgettext("dashboard_common", "Add at least one candidate time")]}
+    do: %{slots: [dgettext("dashboard_polls", "Add at least one candidate time")]}
 
   defp errors_for(:too_many_slots), do: %{slots: [too_many_message()]}
 
   defp errors_for(:slot_in_past),
-    do: %{slots: [dgettext("dashboard_common", "Times must be in the future")]}
+    do: %{slots: [dgettext("dashboard_polls", "Times must be in the future")]}
 
   defp errors_for(:payment_required_type),
     do: %{
       meeting_type_id: [
-        dgettext("dashboard_common", "Paid meeting types can't be used for polls")
+        dgettext("dashboard_polls", "Paid meeting types can't be used for polls")
       ]
     }
 
   defp errors_for(:meeting_type_not_found),
-    do: %{meeting_type_id: [dgettext("dashboard_common", "That meeting type is unavailable")]}
+    do: %{meeting_type_id: [dgettext("dashboard_polls", "That meeting type is unavailable")]}
 
   defp errors_for(%Changeset{} = changeset), do: FormErrors.to_map(changeset)
 
   defp too_many_message,
-    do: dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())
+    do: dgettext("dashboard_polls", "Up to %{max} times", max: PollSchema.max_slots())
 end

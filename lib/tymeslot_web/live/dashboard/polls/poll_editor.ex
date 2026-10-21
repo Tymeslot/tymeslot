@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         <.input
           type="text"
           name="poll[title]"
-          label={dgettext("dashboard_common", "Title")}
+          label={dgettext("dashboard_polls", "Title")}
           value={@title}
           required
           errors={error_list(@errors, :title)}
@@ -76,22 +76,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         <.input
           type="textarea"
           name="poll[description]"
-          label={dgettext("dashboard_common", "Description (optional)")}
+          label={dgettext("dashboard_polls", "Description (optional)")}
           value={@description}
-          placeholder={dgettext("dashboard_common", "Add any context for your guests")}
+          placeholder={dgettext("dashboard_polls", "Add any context for your guests")}
           errors={error_list(@errors, :description)}
         />
 
         <.input
           type="datetime-local"
           name="poll[deadline]"
-          label={dgettext("dashboard_common", "Voting deadline (optional)")}
+          label={dgettext("dashboard_polls", "Voting deadline (optional)")}
           value={@deadline}
           errors={error_list(@errors, :deadline_at)}
         >
           <:description>
             {dgettext(
-              "dashboard_common",
+              "dashboard_polls",
               "Move it, clear it, or set it again after it has passed to reopen voting. Times in %{timezone}.",
               timezone: @poll.timezone
             )}
@@ -101,15 +101,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         <.input
           type="select"
           name="poll[meeting_type_id]"
-          label={dgettext("dashboard_common", "Meeting type (optional)")}
+          label={dgettext("dashboard_polls", "Meeting type (optional)")}
           value={@meeting_type_id}
-          prompt={dgettext("dashboard_common", "No meeting type")}
+          prompt={dgettext("dashboard_polls", "No meeting type")}
           options={Enum.map(@meeting_types, &{&1.name, &1.id})}
           errors={error_list(@errors, :meeting_type_id)}
         >
           <:description>
             {dgettext(
-              "dashboard_common",
+              "dashboard_polls",
               "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
             )}
           </:description>
@@ -117,11 +117,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
         <div class="space-y-2" data-testid="poll-new-times">
           <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_common", "Add times")}
+            {dgettext("dashboard_polls", "Add times")}
           </p>
           <p class="text-token-xs text-tymeslot-500">
             {dgettext(
-              "dashboard_common",
+              "dashboard_polls",
               "Existing times stay as they are. Everyone who has voted is emailed about the new ones."
             )}
           </p>
@@ -131,11 +131,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               name={"poll[new_times][#{time.key}]"}
               value={time.value}
               class="input py-1.5 px-3 text-token-sm"
-              aria-label={dgettext("dashboard_common", "New time")}
+              aria-label={dgettext("dashboard_polls", "New time")}
             />
             <.icon_button
               icon="hero-x-mark"
-              label={dgettext("dashboard_common", "Remove time")}
+              label={dgettext("dashboard_polls", "Remove time")}
               phx-click="remove_time"
               phx-value-key={time.key}
               phx-target={@myself}
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
             phx-click="add_time"
             phx-target={@myself}
           >
-            {dgettext("dashboard_common", "Add time")}
+            {dgettext("dashboard_polls", "Add time")}
           </.action_button>
           <p :for={error <- error_list(@errors, :new_times)} class="form-error">{error}</p>
         </div>
@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           id={"poll-notify-on-vote-#{@poll.id}"}
           name="poll[notify_on_vote]"
           value={@notify_on_vote}
-          label={dgettext("dashboard_common", "Email me about new votes")}
+          label={dgettext("dashboard_polls", "Email me about new votes")}
         />
       </form>
 
@@ -178,10 +178,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           phx-click="cancel_edit_poll_details"
           phx-target={@parent_myself}
         >
-          {dgettext("dashboard_common", "Cancel")}
+          {dgettext("dashboard_polls", "Cancel")}
         </.action_button>
         <.action_button type="submit" size={:sm} form={"poll-details-form-#{@poll.id}"}>
-          {dgettext("dashboard_common", "Save changes")}
+          {dgettext("dashboard_polls", "Save changes")}
         </.action_button>
       </div>
     </div>
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     <details :if={@poll.participants != []} class="text-token-sm" data-testid="poll-participants">
       <summary class="cursor-pointer font-medium text-tymeslot-700">
         {dngettext(
-          "dashboard_common",
+          "dashboard_polls",
           "%{count} participant",
           "%{count} participants",
           length(@poll.participants)
@@ -219,13 +219,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           </div>
           <.icon_button
             icon="hero-user-minus"
-            label={dgettext("dashboard_common", "Remove from the poll")}
+            label={dgettext("dashboard_polls", "Remove from the poll")}
             phx-click="remove_participant"
             phx-value-id={participant.id}
             phx-target={@myself}
             data-confirm={
               dgettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "Remove %{name} and their responses from this poll? They are not told.",
                 name: PollParticipantSchema.display_name(participant)
               )
@@ -282,10 +282,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
     case Polls.remove_participant(poll.id, user_id, participant_id) do
       :ok ->
-        Flash.info(dgettext("dashboard_common", "Removed from the poll"))
+        Flash.info(dgettext("dashboard_polls", "Removed from the poll"))
 
       {:error, _reason} ->
-        Flash.error(dgettext("dashboard_common", "This poll is no longer open."))
+        Flash.error(dgettext("dashboard_polls", "This poll is no longer open."))
     end
 
     send_update(PollsComponent, id: socket.assigns.parent_id, poll_updated: poll.id)
@@ -313,12 +313,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
     case Polls.update_details(poll.id, user_id, attrs, new_starts) do
       {:ok, _poll} ->
-        Flash.info(dgettext("dashboard_common", "Poll updated"))
+        Flash.info(dgettext("dashboard_polls", "Poll updated"))
         send_update(PollsComponent, id: socket.assigns.parent_id, poll_edited: true)
         {:noreply, socket}
 
       {:error, :not_open} ->
-        Flash.warning(dgettext("dashboard_common", "This poll is no longer open."))
+        Flash.warning(dgettext("dashboard_polls", "This poll is no longer open."))
         send_update(PollsComponent, id: socket.assigns.parent_id, poll_edited: true)
         {:noreply, socket}
 
@@ -344,29 +344,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     end)
   end
 
-  defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_common", "voted")
-  defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_common", "invited")
-  defp status_label(_participant), do: dgettext("dashboard_common", "not voted yet")
+  defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_polls", "voted")
+  defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_polls", "invited")
+  defp status_label(_participant), do: dgettext("dashboard_polls", "not voted yet")
 
   defp errors_for(:too_many_slots),
     do: %{
       new_times: [
-        dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())
+        dgettext("dashboard_polls", "Up to %{max} times", max: PollSchema.max_slots())
       ]
     }
 
   defp errors_for(:meeting_type_not_found),
-    do: %{meeting_type_id: [dgettext("dashboard_common", "That meeting type is unavailable")]}
+    do: %{meeting_type_id: [dgettext("dashboard_polls", "That meeting type is unavailable")]}
 
   defp errors_for(:payment_required_type),
     do: %{
       meeting_type_id: [
-        dgettext("dashboard_common", "Paid meeting types can't be used for polls")
+        dgettext("dashboard_polls", "Paid meeting types can't be used for polls")
       ]
     }
 
   defp errors_for(:slot_in_past),
-    do: %{new_times: [dgettext("dashboard_common", "Times must be in the future")]}
+    do: %{new_times: [dgettext("dashboard_polls", "Times must be in the future")]}
 
   defp errors_for(%Changeset{data: %PollSchema{}} = changeset) do
     errors = changeset_errors(changeset)
@@ -374,7 +374,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     if Map.has_key?(errors, :deadline_at),
       do:
         Map.put(errors, :deadline_at, [
-          dgettext("dashboard_common", "The deadline must be in the future")
+          dgettext("dashboard_polls", "The deadline must be in the future")
         ]),
       else: errors
   end
@@ -382,10 +382,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   # A time clashing with one the poll already has fails on the slot's unique
   # index.
   defp errors_for(%Changeset{}),
-    do: %{new_times: [dgettext("dashboard_common", "The poll already has this time")]}
+    do: %{new_times: [dgettext("dashboard_polls", "The poll already has this time")]}
 
   defp errors_for(_reason),
-    do: %{base: [dgettext("dashboard_common", "Couldn't save this poll. Please try again.")]}
+    do: %{base: [dgettext("dashboard_polls", "Couldn't save this poll. Please try again.")]}
 
   defp changeset_errors(changeset) do
     Changeset.traverse_errors(changeset, fn {message, opts} ->

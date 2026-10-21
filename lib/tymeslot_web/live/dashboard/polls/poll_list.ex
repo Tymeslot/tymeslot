@@ -33,10 +33,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       icon="hero-hand-raised"
       size={:lg}
       data-testid="polls-empty"
-      title={dgettext("dashboard_common", "No polls yet")}
+      title={dgettext("dashboard_polls", "No polls yet")}
       description={
         dgettext(
-          "dashboard_common",
+          "dashboard_polls",
           "Create a poll to propose a few times and let your guests vote."
         )
       }
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   def new_poll_button(assigns) do
     ~H"""
     <Buttons.action_button icon="hero-plus" phx-click="new_poll" phx-target={@myself} {@rest}>
-      {dgettext("dashboard_common", "New poll")}
+      {dgettext("dashboard_polls", "New poll")}
     </Buttons.action_button>
     """
   end
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <span class="flex items-center gap-1">
               <Icons.icon name="hero-clock-mini" class="w-3.5 h-3.5" />
               {dngettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "%{count} time option",
                 "%{count} time options",
                 @slot_count,
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <span class="flex items-center gap-1">
               <Icons.icon name="hero-users-mini" class="w-3.5 h-3.5" />
               {dngettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "%{count} participant",
                 "%{count} participants",
                 @participant_count,
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <span class="flex items-center gap-1">
               <Icons.icon name="hero-check-circle-mini" class="w-3.5 h-3.5" />
               {dngettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "%{count} vote",
                 "%{count} votes",
                 @vote_count,
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
           <Buttons.icon_button
             icon="hero-chart-bar"
-            label={dgettext("dashboard_common", "View results")}
+            label={dgettext("dashboard_polls", "View results")}
             phx-click="select_poll"
             phx-value-id={@poll.id}
             phx-target={@myself}
@@ -172,9 +172,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   defp status_tone(:confirmed), do: :info
   defp status_tone(:cancelled), do: :neutral
 
-  defp status_label(:open), do: dgettext("dashboard_common", "Open")
-  defp status_label(:confirmed), do: dgettext("dashboard_common", "Confirmed")
-  defp status_label(:cancelled), do: dgettext("dashboard_common", "Cancelled")
+  defp status_label(:open), do: dgettext("dashboard_polls", "Open")
+  defp status_label(:confirmed), do: dgettext("dashboard_polls", "Confirmed")
+  defp status_label(:cancelled), do: dgettext("dashboard_polls", "Cancelled")
 
   defp total_votes(tallies) do
     Enum.reduce(tallies, 0, fn {_slot_id, counts}, acc ->

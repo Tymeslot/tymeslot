@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
         reminder_confirmation={@state.reminder_confirmation}
         description={
           dgettext(
-            "dashboard_common",
+            "dashboard_polls",
             "Sent before the voting deadline to everyone who has not voted yet. A poll without a deadline sends none."
           )
         }
