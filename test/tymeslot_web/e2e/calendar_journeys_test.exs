@@ -360,7 +360,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> fill_in(css("#calendar-panel-meeting-guest-name"), with: "Ada Lovelace")
     |> click(css("#calendar-panel-create"))
     |> assert_has(css("#app-flash-group", text: "Meeting created and invitation sent"))
-    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-ev", text: "Kick-off"))
+    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-ev:not(.is-draft)", text: "Kick-off"))
 
     eventually(
       fn ->
