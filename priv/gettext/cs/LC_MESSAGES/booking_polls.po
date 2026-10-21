@@ -179,29 +179,29 @@ msgstr "Nové"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
-msgstr "Tato adresa už v anketě je a její odkaz k hlasování byl odeslán před několika minutami. Zkontrolujte prosím tuto schránku, včetně složky se spamem."
+msgstr "Tato adresa už v anketě je a odkaz k hlasování na ni odešel před několika minutami. Zkontrolujte prosím tuto schránku včetně složky se spamem."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll; we've sent its voting link again."
-msgstr "Tato adresa už v anketě je; odeslali jsme její odkaz k hlasování znovu."
+msgstr "Tato adresa už v anketě je, odkaz k hlasování jsme na ni poslali znovu."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
-msgstr "Na zadanou adresu jsme poslali osobní odkaz k hlasování. Otevřete ho a hlasujte; vaše odpovědi se započítají, jakmile je tam uložíte."
+msgstr "Na zadanou adresu jsme poslali osobní odkaz k hlasování. Po jeho otevření můžete hlasovat; odpovědi se započítají, jakmile je tam uložíte."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "You're voting with your personal link."
-msgstr "Hlasujete pomocí svého osobního odkazu."
+msgstr "Hlasujete přes svůj osobní odkaz."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your email address."
-msgstr ""
+msgstr "Zadejte svou e-mailovou adresu."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your name."
-msgstr ""
+msgstr "Zadejte své jméno."

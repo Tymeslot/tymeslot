@@ -179,29 +179,29 @@ msgstr "Novo"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
-msgstr "Este endereço já está na enquete e o link de votação dele foi enviado há poucos minutos. Confira essa caixa de entrada, incluindo a pasta de spam."
+msgstr "Este endereço já está cadastrado na enquete, e o link de votação foi enviado para ele há poucos minutos. Confira essa caixa de entrada, inclusive a pasta de spam."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll; we've sent its voting link again."
-msgstr "Este endereço já está na enquete; enviamos o link de votação dele de novo."
+msgstr "Este endereço já está cadastrado na enquete; reenviamos o link de votação para ele."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
-msgstr "Enviamos um link pessoal de votação para o endereço que você informou. Abra-o para votar; suas respostas contam assim que você as salvar lá."
+msgstr "Enviamos um link pessoal de votação para o endereço informado. Abra-o para votar; suas respostas passam a contar quando você as salvar por lá."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "You're voting with your personal link."
-msgstr "Você está votando com seu link pessoal."
+msgstr "Você está votando pelo seu link pessoal."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your email address."
-msgstr ""
+msgstr "Informe seu e-mail."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your name."
-msgstr ""
+msgstr "Informe seu nome."

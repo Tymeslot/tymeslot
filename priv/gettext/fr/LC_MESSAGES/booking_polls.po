@@ -179,29 +179,29 @@ msgstr "Nouveau"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
-msgstr "Cette adresse figure déjà dans le sondage, et son lien de vote a été envoyé il y a quelques minutes. Veuillez vérifier cette boîte de réception, y compris le dossier des spams."
+msgstr "Cette adresse est déjà inscrite au sondage, et son lien de vote lui a été envoyé il y a quelques minutes. Veuillez vérifier cette boîte de réception, y compris le dossier des spams."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll; we've sent its voting link again."
-msgstr "Cette adresse figure déjà dans le sondage ; nous avons renvoyé son lien de vote."
+msgstr "Cette adresse est déjà inscrite au sondage ; nous lui avons renvoyé son lien de vote."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
-msgstr "Nous avons envoyé un lien de vote personnel à l'adresse que vous avez saisie. Ouvrez-le pour voter ; vos réponses comptent dès que vous les enregistrez à cet endroit."
+msgstr "Nous avons envoyé un lien de vote personnel à l'adresse saisie. Ouvrez-le pour voter ; vos réponses sont prises en compte dès que vous les y enregistrez."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "You're voting with your personal link."
-msgstr "Vous votez avec votre lien personnel."
+msgstr "Vous votez via votre lien personnel."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your email address."
-msgstr ""
+msgstr "Veuillez saisir votre adresse e-mail."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your name."
-msgstr ""
+msgstr "Veuillez saisir votre nom."

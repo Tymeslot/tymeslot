@@ -179,29 +179,29 @@ msgstr "Нове"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
-msgstr "Ця адреса вже є в опитуванні, а її посилання для голосування було надіслано кілька хвилин тому. Перевірте цю поштову скриньку, зокрема папку зі спамом."
+msgstr "Ця адреса вже додана до опитування, а посилання для голосування надіслали на неї кілька хвилин тому. Перевірте цю поштову скриньку, зокрема папку зі спамом."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This address is already on the poll; we've sent its voting link again."
-msgstr "Ця адреса вже є в опитуванні; ми повторно надіслали її посилання для голосування."
+msgstr "Ця адреса вже додана до опитування; ми повторно надіслали на неї посилання для голосування."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
-msgstr "Ми надіслали персональне посилання для голосування на вказану вами адресу. Відкрийте його, щоб проголосувати; ваші відповіді враховуються після того, як ви збережете їх там."
+msgstr "Ми надіслали особисте посилання для голосування на вказану адресу. Відкрийте його, щоб проголосувати; ваші відповіді буде враховано, щойно ви збережете їх там."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "You're voting with your personal link."
-msgstr "Ви голосуєте за своїм персональним посиланням."
+msgstr "Ви голосуєте через своє особисте посилання."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your email address."
-msgstr ""
+msgstr "Введіть свою адресу електронної пошти."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your name."
-msgstr ""
+msgstr "Введіть своє ім'я."
