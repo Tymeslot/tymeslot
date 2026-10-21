@@ -82,6 +82,39 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     session
   end
 
+  # A toast never sits under the + button, and its Undo stays a touch target
+  # inside the toast and the viewport. Boxes are compared in the viewport;
+  # the script returns what is wrong, so an empty list is the pass.
+  defp assert_toast_clear_of_fab(session) do
+    {session, problems} =
+      read(
+        session,
+        """
+        const box = (selector) => {
+          const el = document.querySelector(selector);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { l: r.left, t: r.top, r: r.right, b: r.bottom };
+        };
+        const toast = box("#calendar-toast"), fab = box("#calendar-fab"), undo = box("#calendar-undo");
+        if (!toast || !fab || !undo) return ["the toast, the + button and Undo should all be on screen"];
+        const problems = [];
+        if (toast.r > fab.l && toast.l < fab.r && toast.b > fab.t && toast.t < fab.b)
+          problems.push("the toast overlaps the + button");
+        if (undo.r - undo.l < 44 || undo.b - undo.t < 44) problems.push("Undo is smaller than 44px");
+        if (undo.l < toast.l || undo.r > toast.r || undo.t < toast.t || undo.b > toast.b)
+          problems.push("Undo falls outside the toast");
+        if (toast.l < 0 || toast.r > window.innerWidth) problems.push("the toast runs off the screen");
+        return problems;
+        """,
+        []
+      )
+
+    assert problems == [], Enum.join(problems, "; ")
+
+    session
+  end
+
   # A busy month cell carries dots (`.cal-month-dot`, Task 2); a quiet one none.
   defp assert_marked(session, busy, quiet) do
     {session, [busy_count, quiet_count]} =
@@ -132,6 +165,8 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> fill_in(css("#calendar-qc-field"), with: "Dentist")
     |> click(css("#calendar-quick-create [data-qc-save]"))
     |> assert_has(css("#calendar-toast", text: "Added"))
+    |> assert_has(css("#calendar-undo"))
+    |> assert_toast_clear_of_fab()
     |> assert_has(css(".cal-col .cal-ev", text: "Dentist"))
     # A tap on it opens the preview as a bottom sheet.
     |> click(css(".cal-col .cal-ev", text: "Dentist"))

@@ -45,6 +45,19 @@
     padding-bottom: var(--cal-fab-clear);
   }
 
+  /* The grid's floating note ("Next bookable time ... Show", or the failed
+     load's) sits at the foot of the grid, which is the + button's corner:
+     lifted to the button's top edge it never runs under it. Its Show button
+     is a touch target. */
+  .cal-bookable-note {
+    bottom: var(--cal-fab-clear);
+  }
+
+  .cal-bookable-show {
+    min-height: 2.75rem;
+    padding-inline: 0.5rem;
+  }
+
   /* Above the tab bar and the + button. */
   .cal-toast-region,
   .cal-notice {

@@ -213,6 +213,15 @@ describe("the phone, views and touch stylesheets", () => {
     expect(modalSelectors.filter((s) => !/\.modal-overlay\[style\*="display: flex"\]/.test(s))).toEqual([]);
   });
 
+  test("the grid's floating note is lifted to the + button's top edge and its Show button is a touch target", () => {
+    const phone = rules(component("calendar-phone.css")).filter((r) => r.at.some((a) => a.includes(PHONE)));
+    const note = where(phone, ".cal-bookable-note").find((r) => decl(r.body, "bottom"));
+    const show = where(phone, ".cal-bookable-show").find((r) => decl(r.body, "min-height"));
+
+    expect(note && decl(note.body, "bottom")).toBe("var(--cal-fab-clear)");
+    expect(show && decl(show.body, "min-height")).toBe("2.75rem");
+  });
+
   test("touch: the grid pans vertically, the handle takes every touch, events never call out", () => {
     const touch = rules(component("calendar-touch.css"));
     const sets = (name, prop, wanted) => where(touch, name).some((r) => wanted.test(decl(r.body, prop) || ""));

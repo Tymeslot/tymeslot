@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
           type="button"
           phx-click="calendar:undo"
           phx-target={@target}
-          class="shrink-0 rounded-token-md px-2 py-1 font-semibold text-turquoise-300 hover:text-turquoise-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+          class="min-h-11 min-w-11 shrink-0 rounded-token-md px-2 py-1 font-semibold sm:min-h-0 sm:min-w-0 text-turquoise-300 hover:text-turquoise-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
         >
           {dgettext("dashboard_calendar", "Undo")}
         </button>
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toast do
           phx-click="calendar:dismiss_toast"
           phx-target={@target}
           aria-label={dgettext("dashboard_calendar", "Dismiss")}
-          class="shrink-0 rounded-token-md p-1 text-tymeslot-300 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+          class="min-h-11 min-w-11 shrink-0 max-sm:inline-flex max-sm:items-center max-sm:justify-center rounded-token-md p-1 text-tymeslot-300 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 sm:min-h-0 sm:min-w-0"
         >
           <.icon name="hero-x-mark-mini" class="h-4 w-4" />
         </button>
