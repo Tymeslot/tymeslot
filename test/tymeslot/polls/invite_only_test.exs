@@ -13,6 +13,7 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.Polls
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Repo
 
@@ -31,4 +32,54 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
       assert Changeset.get_change(details, :invite_only) == true
     end
   end
+
+  describe "create_poll/2" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "is invite-only when people are invited with it and the host did not say", %{user: user} do
+      {:ok, poll} =
+        Polls.create_poll(
+          user.id,
+          poll_attrs(invitees: [%{email: "grace@example.com", name: "Grace"}])
+        )
+
+      assert poll.invite_only
+    end
+
+    test "is open to anyone with the link when nobody is invited with it", %{user: user} do
+      {:ok, poll} = Polls.create_poll(user.id, poll_attrs([]))
+
+      refute poll.invite_only
+    end
+
+    test "keeps the host's choice whatever the invitees", %{user: user} do
+      {:ok, open} =
+        Polls.create_poll(
+          user.id,
+          poll_attrs(invite_only: false, invitees: [%{email: "grace@example.com", name: nil}])
+        )
+
+      {:ok, closed} = Polls.create_poll(user.id, poll_attrs(invite_only: true))
+
+      refute open.invite_only
+      assert closed.invite_only
+    end
+  end
+
+  defp poll_attrs(extra) do
+    Map.merge(
+      %{
+        title: "Offsite",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        slots: [%{start_time: in_days(7)}]
+      },
+      Map.new(extra)
+    )
+  end
+
+  defp in_days(days),
+    do: DateTime.utc_now() |> DateTime.add(days, :day) |> DateTime.truncate(:second)
 end

@@ -44,6 +44,10 @@ defmodule Tymeslot.Polls do
   entries from `Tymeslot.Polls.Invitations.parse/1` invited with the poll and
   emailed once it is saved.
 
+  `:invite_only` says whether only those invitees (and anyone invited later)
+  can vote. Without it, the poll is invite-only exactly when it is created
+  with invitees (`default_invite_only?/1`).
+
   When `:meeting_type_id` is given it is loaded scoped to `user_id`; the poll
   snapshots the type's name and duration unless those are given explicitly.
   """
@@ -63,6 +67,14 @@ defmodule Tymeslot.Polls do
       insert_poll(user_id, attrs, slots)
     end
   end
+
+  @doc """
+  Whether a new poll is invite-only when its host has not said: yes once they
+  invite anyone with it. The dashboard presets its choice with this, so the
+  form and `create_poll/2` agree.
+  """
+  @spec default_invite_only?([Invitations.entry()]) :: boolean()
+  def default_invite_only?(invitees) when is_list(invitees), do: invitees != []
 
   @doc """
   The candidate `start_times` that would put a meeting of `duration_minutes`
@@ -292,6 +304,13 @@ defmodule Tymeslot.Polls do
 
   # --- Creation helpers ---
 
+  defp put_default_access(attrs, invitees) do
+    case Map.get(attrs, :invite_only) do
+      nil -> Map.put(attrs, :invite_only, default_invite_only?(invitees))
+      _chosen -> attrs
+    end
+  end
+
   defp apply_meeting_type(_user_id, %{meeting_type_id: nil} = attrs), do: {:ok, attrs}
 
   defp apply_meeting_type(user_id, %{meeting_type_id: meeting_type_id} = attrs) do
@@ -360,7 +379,12 @@ defmodule Tymeslot.Polls do
 
   defp insert_poll(user_id, attrs, slots) do
     {invitees, attrs} = Map.pop(attrs, :invitees, [])
-    poll_attrs = attrs |> Map.put(:user_id, user_id) |> Map.drop([:slots])
+
+    poll_attrs =
+      attrs
+      |> put_default_access(invitees)
+      |> Map.put(:user_id, user_id)
+      |> Map.drop([:slots])
 
     transaction =
       Repo.transaction(fn ->
