@@ -21,18 +21,17 @@ defmodule Tymeslot.Polls.VotingRaceTest do
   alias Tymeslot.Test.RaceConductor
 
   setup do
+    # Jobs are matched by id rather than by participant: a test that removes
+    # a participant would otherwise leave that participant's committed jobs
+    # behind for later modules' `refute_enqueued` to find.
+    %{rows: [[last_job_id]]} =
+      unboxed(fn -> SQL.query!(Repo, "SELECT coalesce(max(id), 0) FROM oban_jobs", []) end)
+
     poll = unboxed(fn -> insert(:poll) end)
 
     on_exit(fn ->
       unboxed(fn ->
-        SQL.query!(
-          Repo,
-          """
-          DELETE FROM oban_jobs WHERE args->>'participant_id' IN
-            (SELECT id::text FROM poll_participants WHERE poll_id = $1)
-          """,
-          [Ecto.UUID.dump!(poll.id)]
-        )
+        SQL.query!(Repo, "DELETE FROM oban_jobs WHERE id > $1", [last_job_id])
 
         SQL.query!(Repo, "DELETE FROM users WHERE id = $1", [poll.user_id])
       end)

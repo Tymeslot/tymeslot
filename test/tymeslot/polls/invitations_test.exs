@@ -125,7 +125,8 @@ defmodule Tymeslot.Polls.InvitationsTest do
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").name ==
                "Ada Lovelace"
 
-      assert {:ok, _} = Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
+      assert {:ok, _outcome} =
+               Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
 
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").name ==
                "Ada Lovelace"

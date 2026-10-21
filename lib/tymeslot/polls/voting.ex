@@ -11,6 +11,7 @@ defmodule Tymeslot.Polls.Voting do
   rather than trusting client-supplied ids.
   """
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Polls
@@ -67,7 +68,7 @@ defmodule Tymeslot.Polls.Voting do
   """
   @spec request_link(PollSchema.t(), map()) ::
           {:ok, request_outcome()}
-          | {:error, :voting_closed | :poll_full | :too_many_requests | Ecto.Changeset.t()}
+          | {:error, :voting_closed | :poll_full | :too_many_requests | Changeset.t()}
   def request_link(poll, attrs) do
     # Every refusal is one clause here, run before anything is written or
     # sent, so a new check (who may ask, how often) is one more clause.
@@ -115,7 +116,7 @@ defmodule Tymeslot.Polls.Voting do
              | :invalid_slot
              | :invalid_response
              | :poll_full
-             | Ecto.Changeset.t()}
+             | Changeset.t()}
   def cast_votes(poll, participant_token, votes_map, opts \\ []) do
     with :ok <- ensure_open(poll),
          {:ok, participant} <- resolve_participant(poll, participant_token) do
@@ -270,7 +271,7 @@ defmodule Tymeslot.Polls.Voting do
   end
 
   # `creation_changeset/2` has trimmed and lowercased it already.
-  defp request_email(request), do: Ecto.Changeset.get_field(request, :email)
+  defp request_email(request), do: Changeset.get_field(request, :email)
 
   defp fetch(attrs, key), do: Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
 
