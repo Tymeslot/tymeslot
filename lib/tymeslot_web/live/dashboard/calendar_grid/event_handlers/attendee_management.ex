@@ -34,29 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
              :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_seat_lock(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          new_attendee = Attendee.new(email: email)
-          new_attendees = attendees ++ [new_attendee]
-          updated_event = %{event | attendees: new_attendees}
-          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
-
-          {:ok, outcome} =
-            AttendeeNotifications.attendees_added(
-              event,
-              [new_attendee],
-              socket.assigns.current_user.id
-            )
-
-          send(self(), {:flash, {:info, added_message(outcome)}})
-
-          socket =
-            socket
-            |> assign(:selected_event, updated_event)
-            |> assign(:events, updated_events)
-            |> assign(:attendee_input, "")
-            |> Helpers.precompute_derived()
-            |> EditWorkflow.update_event_async(event, %{attendees: new_attendees})
-
-          {:noreply, socket}
+          {:noreply, add_attendee(socket, event, attendees, email)}
         else
           {:error, reason} = error when reason in [:unauthorized, :read_only, :group_booking] ->
             Shared.flash_guard_error(socket, error)
@@ -68,6 +46,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
             {:noreply, socket}
         end
     end
+  end
+
+  defp add_attendee(socket, event, attendees, email) do
+    new_attendee = Attendee.new(email: email)
+    new_attendees = attendees ++ [new_attendee]
+    updated_event = %{event | attendees: new_attendees}
+    updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
+
+    {:ok, outcome} =
+      AttendeeNotifications.attendees_added(event, [new_attendee], socket.assigns.current_user.id)
+
+    send(self(), {:flash, {:info, added_message(outcome)}})
+
+    socket
+    |> assign(:selected_event, updated_event)
+    |> assign(:events, updated_events)
+    |> assign(:attendee_input, "")
+    |> Helpers.precompute_derived()
+    |> EditWorkflow.update_event_async(event, %{attendees: new_attendees})
   end
 
   # The cached list comes back from JSONB string-keyed, and may predate the
