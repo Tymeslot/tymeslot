@@ -1,12 +1,15 @@
 defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
   @moduledoc """
-  The reminder picker as the poll create form and the poll editor use it:
-  reminders go out before the voting deadline to invited people who have not voted, so the picker is shown only where there are some,
-  so the one-click choices are days rather than minutes.
+  The reminder picker as the poll create form and the poll editor use it.
+  Reminders go out before the voting deadline to invited people who have
+  not voted, so the picker is shown only where there are some, and its
+  one-click choices are days rather than minutes.
 
   The owning LiveComponent keeps a `ReminderPickerState` and routes the
-  picker's events (`events/0`) through `apply_event/3`. Before saving the poll it runs `commit_pending/1`, so a lead time typed into the custom row but never added is not lost. The picker sits in a
-  form of its own, so it must be rendered outside the poll's main form.
+  picker's events (`events/0`) through `apply_event/3`. Before saving the
+  poll it runs `commit_pending/1`, so a lead time typed into the custom row
+  but never added is not lost. The picker sits in a form of its own, so it
+  must be rendered outside the poll's main form.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
