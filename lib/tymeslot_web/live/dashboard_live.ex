@@ -222,6 +222,17 @@ defmodule TymeslotWeb.DashboardLive do
         step_index={@tour_step_index}
         total_steps={@tour_total_steps}
       />
+      <%!-- Notices an overlay adds to the overview (`:dashboard_notice_components`).
+           No wrapper: a notice with nothing to say must leave no gap, so each
+           one owns its own spacing. --%>
+      <%= if @live_action == :overview do %>
+        <.live_component
+          :for={module <- @dashboard_notice_components}
+          module={module}
+          id={"dashboard-notice-#{inspect(module)}"}
+          current_user={@current_user}
+        />
+      <% end %>
       <%!-- Content --%>
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>

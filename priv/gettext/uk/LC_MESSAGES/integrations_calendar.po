@@ -607,6 +607,7 @@ msgid "The calendar server took too long to respond. Tymeslot will retry automat
 msgstr "Сервер календаря відповідав надто довго. Tymeslot повторить спробу автоматично."
 
 #: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar service encountered an error. Please try again later."
 msgstr "У службі календаря сталася помилка. Спробуйте пізніше."
@@ -801,3 +802,8 @@ msgstr "mailbox.org завжди використовує цей сервер Ca
 #, elixir-autogen, elixir-format
 msgid "mailbox.org connection successful"
 msgstr "Підключення до mailbox.org успішне"
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} refused the change. The connection is working, but the calendar would not accept this request."
+msgstr "%{provider}: зміну відхилено. Підключення працює, але календар не прийняв цей запит."

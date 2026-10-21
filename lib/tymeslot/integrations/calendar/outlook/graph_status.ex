@@ -3,7 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
   The Graph answers `Outlook.CalendarAPI` classifies apart from the shared
   response envelope (`Shared.ApiResponse`): a 403 carrying its
   classification in `error.code`. A throttling 403 may carry a `Retry-After`
-  the caller should honour, as a 429 does.
+  the caller should honour, as a 429 does. One that is neither throttling nor
+  a permission failure is `:refused`, as any other 4xx refusal is in the
+  shared envelope.
   """
 
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
@@ -29,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
     cond do
       throttled_or_quota?(m, c) -> :rate_limited
       permission_denied?(m, c) -> :unauthorized
-      true -> :network_error
+      true -> :refused
     end
   end
 
@@ -51,5 +53,5 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
     do: {:error, :rate_limited, ApiResponse.rate_limited_message(resp, msg)}
 
   defp handle_403_reason(:unauthorized, msg, _resp), do: {:error, :unauthorized, msg}
-  defp handle_403_reason(_other_reason, msg, _resp), do: {:error, :network_error, msg}
+  defp handle_403_reason(:refused, msg, _resp), do: {:error, :refused, msg}
 end

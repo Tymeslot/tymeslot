@@ -176,6 +176,13 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   @type following_note :: :unmatched_changes_reset
 
   @doc """
+  The fields of a series member an edit writes as they are, beside its
+  timing and repeat rule, in the vocabulary the cache and the payload share.
+  """
+  @spec override_fields() :: [atom()]
+  def override_fields, do: @override_fields
+
+  @doc """
   What an edit of `event` and every following occurrence by `changes` will
   not carry (`t:following_note/0`), in the order the organiser should read
   them. Reads the cached row, as `EventEdit.update_event/4` does.

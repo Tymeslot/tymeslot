@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
-    <div class="space-y-12">
+    <div id="calendar-settings-panel" class="space-y-12">
       <%!-- The hub's tab names the panel, so it carries no title of its own.
            With nothing connected, the empty state below carries the action. --%>
       <div :if={@integrations != []} class="flex justify-end">

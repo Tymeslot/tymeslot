@@ -173,7 +173,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   defp put_ical(client, calendar_path, uid, ical_data, opts) do
     with_events_breaker(client, opts, fn ->
       url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
-      put_opts = Keyword.merge([operation: :create], Keyword.take(opts, [:timeout]))
+
+      put_opts =
+        Keyword.merge([operation: :create], Keyword.take(opts, [:timeout])) ++
+          Scheduling.write_opts(client)
 
       case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
         {:ok, %Req.Response{status: status, headers: headers}} when status in [200, 201, 204] ->
@@ -439,7 +442,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   def delete_calendar_event(client, calendar_path, uid, opts) do
     with_events_breaker(client, opts, fn ->
       with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
-        delete_opts = Keyword.take(opts, [:timeout])
+        delete_opts = Keyword.take(opts, [:timeout]) ++ Scheduling.write_opts(client)
 
         case Http.delete_event(url, client.username, client.password, delete_opts) do
           {:ok, %Req.Response{}} -> :ok

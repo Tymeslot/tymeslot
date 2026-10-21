@@ -41,7 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   @transport_error_results %{
     caldav: {:error, :timeout},
     nextcloud: {:error, :timeout},
-    radicale: {:error, "An unexpected error occurred. Please try again."}
+    radicale: {:error, "The request timed out. Please try again."}
   }
 
   # The private-address refusal reads the same from every provider, whatever

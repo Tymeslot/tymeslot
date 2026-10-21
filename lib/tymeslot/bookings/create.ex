@@ -453,7 +453,11 @@ defmodule Tymeslot.Bookings.Create do
     if Policy.guests_allowed?(booking_data) do
       booking_data
       |> Map.get(:shared_availability_guests, [])
-      |> SharedAvailability.merge_guest_emails(Map.get(booking_data, :guest_emails, []))
+      |> SharedAvailability.merge_guest_emails(
+        booking_data
+        |> Map.get(:guest_emails, [])
+        |> Enum.take(Guests.limit_for(Map.get(booking_data, :meeting_type)))
+      )
       |> Guests.sanitize_emails(meeting.attendee_email)
       |> then(&Guests.create_for_meeting(meeting.id, &1, :booker))
     else

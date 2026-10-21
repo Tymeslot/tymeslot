@@ -7,6 +7,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Workers.EmailWorker
 
   describe "sanitize_emails/2" do
@@ -42,6 +43,27 @@ defmodule Tymeslot.Meetings.GuestsTest do
 
     test "tolerates non-list input" do
       assert Guests.sanitize_emails(nil, "host@example.com") == []
+    end
+  end
+
+  describe "limit_for/1" do
+    test "is the meeting type's own limit, or the overall one without it" do
+      assert Guests.limit_for(%{max_guests_per_booking: 2}) == 2
+      assert Guests.limit_for(%{max_guests_per_booking: nil}) == Guests.max_guests()
+      assert Guests.limit_for(nil) == Guests.max_guests()
+      assert Guests.limit_for(%{max_guests_per_booking: 50}) == Guests.max_guests()
+    end
+
+    test "is refused outside its range by the meeting type" do
+      for limit <- [0, Guests.max_guests() + 1] do
+        changeset =
+          MeetingTypeSchema.changeset(
+            %MeetingTypeSchema{},
+            %{name: "Talk", duration_minutes: 30, user_id: 1, max_guests_per_booking: limit}
+          )
+
+        assert changeset.errors[:max_guests_per_booking]
+      end
     end
   end
 

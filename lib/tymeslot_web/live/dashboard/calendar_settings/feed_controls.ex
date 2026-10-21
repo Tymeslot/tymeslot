@@ -6,6 +6,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.FeedControls do
   chosen here. Every subscription gets the busy toggle; the blocking choice
   needs the feed's calendar entry, which a subscription without a calendar
   list lacks.
+
+  On a feed set to Don't block the toggle has nothing to act on, so it is
+  shown disabled, still pressed or not as stored, until the feed blocks
+  again. A subscription with no blocking choice blocks as it always did, and
+  its toggle stays live.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -20,6 +25,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.FeedControls do
 
   @spec feed_controls(map()) :: Phoenix.LiveView.Rendered.t()
   def feed_controls(assigns) do
+    assigns = assign(assigns, :busy_inert?, match?(%{blocks_availability: false}, assigns.feed))
+
     ~H"""
     <.segmented_control
       :if={@feed}
@@ -49,12 +56,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.FeedControls do
       phx-target={@myself}
       class={Helpers.tile_class(:neutral)}
       aria-pressed={to_string(@integration.all_events_busy)}
+      disabled={@busy_inert?}
       data-testid="all-events-busy-toggle"
       title={
-        dgettext(
-          "dashboard_calendar_settings",
-          "Block the time of every event in this feed, also those it marks as free"
-        )
+        if @busy_inert?,
+          do:
+            dgettext(
+              "dashboard_calendar_settings",
+              "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
+            ),
+          else:
+            dgettext(
+              "dashboard_calendar_settings",
+              "Block the time of every event in this feed, also those it marks as free"
+            )
       }
     >
       <.icon
