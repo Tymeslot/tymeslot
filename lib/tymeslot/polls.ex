@@ -195,8 +195,12 @@ defmodule Tymeslot.Polls do
 
   @doc """
   Invites `entries` (from `Tymeslot.Polls.Invitations.parse/1`) to the user's
-  open poll and emails each new invitee their link. See
-  `Tymeslot.Polls.Invitations.invite/2`.
+  open poll and emails each new invitee their link once the invitations have
+  committed. See `Tymeslot.Polls.Invitations.insert/2`.
+
+  Written under the poll's row lock, like cancelling and editing, so an
+  invitation never lands on a poll confirmed in the meantime, and the
+  reminders it schedules are for the deadline the poll holds now.
   """
   @spec invite_participants(Ecto.UUID.t(), integer(), [Invitations.entry()]) ::
           {:ok, Invitations.result()}
@@ -207,16 +211,17 @@ defmodule Tymeslot.Polls do
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def invite_participants(id, user_id, entries) do
-    with_poll(id, user_id, fn poll ->
-      case Invitations.invite(poll, entries) do
-        {:ok, result} ->
-          broadcast_update(poll.id)
-          {:ok, result}
-
-        error ->
-          error
-      end
-    end)
+    with {:ok, result} <-
+           with_open_poll_locked(id, user_id, fn poll ->
+             if voting_open?(poll) do
+               {:ok, Invitations.insert(poll, entries)}
+             else
+               {:error, :not_open}
+             end
+           end) do
+      :ok = Invitations.send_invitations(result.invited)
+      {:ok, result}
+    end
   end
 
   @doc """
@@ -453,13 +458,13 @@ defmodule Tymeslot.Polls do
   # poll confirmed after the caller loaded its page is seen as confirmed here
   # and refused, rather than written over. `fun` gets the locked open poll and
   # returns `{:ok, poll}` or `{:error, reason}`; subscribers are told once the
-  # write has committed.
+  # write has committed. `fun`'s value is returned as it is.
   defp with_open_poll_locked(id, user_id, fun) do
     result =
       Repo.transaction(fn ->
         with %PollSchema{status: :open} = poll <- PollQueries.lock_for_user(id, user_id),
              {:ok, updated} <- fun.(poll) do
-          updated
+          {poll.id, updated}
         else
           nil -> Repo.rollback(:not_found)
           %PollSchema{} -> Repo.rollback(:not_open)
@@ -467,8 +472,8 @@ defmodule Tymeslot.Polls do
         end
       end)
 
-    with {:ok, updated} <- result do
-      broadcast_update(updated.id)
+    with {:ok, {poll_id, updated}} <- result do
+      broadcast_update(poll_id)
       {:ok, updated}
     end
   end
