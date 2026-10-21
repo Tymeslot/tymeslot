@@ -21,7 +21,6 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
-  alias Tymeslot.Polls.Invitations
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Repo
@@ -133,7 +132,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
 
       {:ok, %{invited: [alice, bob]}} =
-        Invitations.invite(poll, [
+        Polls.invite_participants(poll.id, poll.user_id, [
           %{name: "Alice", email: "a@example.com"},
           %{name: "Bob", email: "b@example.com"}
         ])
@@ -176,7 +175,9 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       pending = request(poll, %{name: "Bob", email: "b@example.com"})
 
       {:ok, %{invited: [alice]}} =
-        Invitations.invite(poll, [%{name: "Alice", email: "a@example.com"}])
+        Polls.invite_participants(poll.id, poll.user_id, [
+          %{name: "Alice", email: "a@example.com"}
+        ])
 
       {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
       assert enqueued_all_voted_count(poll.id) == 0

@@ -99,7 +99,10 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       leave(:poll_host_invitations, user.id, 1)
       [ada, grace] = [address("ada"), address("grace")]
 
-      assert Invitations.invite(poll, [%{email: ada, name: nil}, %{email: grace, name: nil}]) ==
+      assert Polls.invite_participants(poll.id, poll.user_id, [
+               %{email: ada, name: nil},
+               %{email: grace, name: nil}
+             ]) ==
                {:error, {:rate_limited, 1}}
 
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, ada) == nil
@@ -111,7 +114,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       entries = [%{email: address("ada"), name: nil}, %{email: address("grace"), name: nil}]
 
       assert {:ok, %{invited: [_ada, _grace], rate_limited: []}} =
-               Invitations.invite(poll, entries)
+               Polls.invite_participants(poll.id, poll.user_id, entries)
 
       assert length(invitation_jobs()) == 2
     end
@@ -143,7 +146,10 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       fill(:poll_recipient_email, grace)
 
       assert {:ok, %{invited: [invited], skipped: [], rate_limited: [^grace]}} =
-               Invitations.invite(poll, [%{email: grace, name: nil}, %{email: ada, name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: grace, name: nil},
+                 %{email: ada, name: nil}
+               ])
 
       assert invited.email == ada
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, grace) == nil
@@ -158,7 +164,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       fill(:poll_recipient_email, grace)
 
       assert {:ok, %{invited: [], rate_limited: [^grace]}} =
-               Invitations.invite(poll, [%{email: grace, name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [%{email: grace, name: nil}])
 
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, grace).confirmed_at == nil
     end
@@ -169,7 +175,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       before = RateLimiter.remaining(:poll_host_invitations, user.id)
 
       assert {:ok, %{invited: [], skipped: [^ada]}} =
-               Invitations.invite(poll, [%{email: ada, name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [%{email: ada, name: nil}])
 
       assert RateLimiter.remaining(:poll_host_invitations, user.id) == before
     end
@@ -306,7 +312,11 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       ada = address("ada")
       before = RateLimiter.remaining(:poll_recipient_email, ada)
 
-      {:ok, _result} = Invitations.invite(insert(:poll), [%{email: ada, name: nil}])
+      target = insert(:poll)
+
+      {:ok, _result} =
+        Polls.invite_participants(target.id, target.user_id, [%{email: ada, name: nil}])
+
       assert {:ok, :sent} = Voting.request_link(insert(:poll), %{name: "Ada", email: ada})
 
       assert RateLimiter.remaining(:poll_recipient_email, ada) == before - 2

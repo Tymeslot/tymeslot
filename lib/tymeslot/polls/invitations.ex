@@ -25,7 +25,6 @@ defmodule Tymeslot.Polls.Invitations do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Polls
   alias Tymeslot.Polls.{EmailLimits, PollParticipantQueries, PollParticipantSchema, PollSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
@@ -68,39 +67,15 @@ defmodule Tymeslot.Polls.Invitations do
   def parse(_text), do: {:ok, []}
 
   @doc """
-  Invites `entries` to an open `poll` and emails each new invitee their link.
-
-  All or nothing: returns `{:error, :poll_full}` when the invitees would take
-  the poll past its participant cap, and `{:error, {:rate_limited,
-  remaining}}` when they are more than its host may invite right now
-  (`remaining` is how many they may), and invites nobody.
-  """
-  @spec invite(PollSchema.t(), [entry()]) ::
-          {:ok, result()}
-          | {:error,
-             :not_open
-             | :poll_full
-             | {:rate_limited, non_neg_integer()}
-             | Ecto.Changeset.t()}
-  def invite(%PollSchema{} = poll, entries) do
-    if Polls.voting_open?(poll) do
-      case Repo.transaction(fn -> insert(poll, entries) end) do
-        {:ok, result} ->
-          send_invitations(result.invited)
-          {:ok, result}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
-    else
-      {:error, :not_open}
-    end
-  end
-
-  @doc """
   Writes the invitees for `poll` inside the caller's transaction, rolling it
-  back on failure. The caller sends the invitations with
+  back on failure. `Tymeslot.Polls.invite_participants/3` is the entry point:
+  it holds the poll's row lock around this and sends the invitations with
   `send_invitations/1` once the transaction has committed.
+
+  All or nothing: rolls the transaction back with `:poll_full` when the
+  invitees would take the poll past its participant cap, and with
+  `{:rate_limited, remaining}` when they are more than its host may invite
+  right now (`remaining` is how many they may).
   """
   @spec insert(PollSchema.t(), [entry()]) :: result()
   def insert(_poll, []), do: %{invited: [], skipped: [], rate_limited: []}

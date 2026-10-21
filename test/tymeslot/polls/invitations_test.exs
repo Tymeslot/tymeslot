@@ -61,7 +61,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
     test "adds each invitee as a confirmed participant and emails them", %{poll: poll} do
       {:ok, entries} = Invitations.parse("Grace <grace@example.com>\nada@example.com")
 
-      assert {:ok, %{invited: invited, skipped: []}} = Invitations.invite(poll, entries)
+      assert {:ok, %{invited: invited, skipped: []}} =
+               Polls.invite_participants(poll.id, poll.user_id, entries)
+
       assert length(invited) == 2
 
       grace = PollParticipantQueries.get_by_poll_and_email(poll.id, "grace@example.com")
@@ -93,7 +95,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
       insert(:poll_participant, poll: poll, email: "ada@example.com")
 
       assert {:ok, %{invited: [], skipped: ["ada@example.com"]}} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
 
       assert all_enqueued(worker: EmailWorker) == []
     end
@@ -102,7 +106,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
       {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
 
       assert {:ok, %{invited: [ada], skipped: []}} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
 
       assert %DateTime{} = ada.confirmed_at
       assert %DateTime{} = ada.invited_at
@@ -118,7 +124,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
       {:ok, :sent} = Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
 
       assert {:ok, %{invited: [ada], skipped: []}} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: "Ada Lovelace"}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: "Ada Lovelace"}
+               ])
 
       assert ada.name == "Ada Lovelace"
 
@@ -136,7 +144,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
       {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
 
       assert {:error, %Ecto.Changeset{}} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: "Ada%"}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: "Ada%"}
+               ])
 
       unchanged = PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com")
       assert unchanged.name == "Ada"
@@ -147,7 +157,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
       insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
       {:ok, entries} = Invitations.parse("ada@example.com, grace@example.com")
 
-      assert {:error, :poll_full} = Invitations.invite(poll, entries)
+      assert {:error, :poll_full} = Polls.invite_participants(poll.id, poll.user_id, entries)
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com") == nil
       assert all_enqueued(worker: EmailWorker) == []
     end
@@ -156,7 +166,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
       poll = insert(:poll, status: :cancelled)
 
       assert {:error, :not_open} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
     end
   end
 
