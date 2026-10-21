@@ -168,6 +168,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # Start from existing errors and update only the changed fields
     current_errors = socket.assigns.form_errors || %{}
 
+    # Saving accepts the edited type's own duration even off the step, so
+    # the instant feedback is given the same stored duration.
+    opts = [stored_duration: socket.assigns.type && socket.assigns.type.duration_minutes]
+
     {updated_data, updated_errors} =
       Enum.reduce(changed_fields, {new_data, current_errors}, fn field, {acc_data, acc_errors} ->
         Validation.validate_and_update_field(
@@ -175,7 +179,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           Map.get(params, field),
           metadata,
           acc_data,
-          acc_errors
+          acc_errors,
+          opts
         )
       end)
 

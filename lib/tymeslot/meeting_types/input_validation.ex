@@ -48,7 +48,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         {:reminder_config, params["reminder_config"]}
       ] ++ max_participants_validation(params)
 
-    case run_validations(validations, metadata, stored_duration) do
+    case run_validations(validations, metadata, stored_duration: stored_duration) do
       {:ok, sanitized_params} ->
         log_validation_result("success", metadata)
         {:ok, sanitized_params}
@@ -78,7 +78,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
 
   def validate_field(:duration, value, metadata),
-    do: validate_meeting_duration(value, metadata, nil)
+    do: validate_field(:duration, value, metadata, [])
 
   def validate_field(:slot_interval, value, metadata),
     do: validate_meeting_slot_interval(value, metadata)
@@ -111,12 +111,26 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_field(_other_field, _value, _metadata),
     do: {:error, %{base: dgettext("dashboard_meeting_form", "Invalid field")}}
 
+  @doc """
+  Single-field validation with the options `validate_meeting_type_form/2`
+  takes, so instant feedback applies the rule saving does.
+
+  `:stored_duration` is the duration of the meeting type being edited: a
+  duration off the step is accepted when it is that one (see
+  `validate_meeting_type_form/2`). Other fields ignore the options.
+  """
+  @spec validate_field(atom(), any(), map(), keyword()) :: {:ok, any()} | {:error, map()}
+  def validate_field(:duration, value, metadata, opts),
+    do: validate_meeting_duration(value, metadata, Keyword.get(opts, :stored_duration))
+
+  def validate_field(field, value, metadata, _opts), do: validate_field(field, value, metadata)
+
   # --- Private helpers ---
 
-  defp run_validations(validations, metadata, stored_duration) do
+  defp run_validations(validations, metadata, opts) do
     {sanitized_acc, error_acc} =
       Enum.reduce(validations, {%{}, %{}}, fn {field, value}, {s_acc, e_acc} ->
-        case validate_form_field(field, value, metadata, stored_duration) do
+        case validate_field(field, value, metadata, opts) do
           {:ok, sanitized} ->
             {Map.put(s_acc, Atom.to_string(field), sanitized), e_acc}
 
@@ -131,12 +145,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
       {:error, error_acc}
     end
   end
-
-  defp validate_form_field(:duration, value, metadata, stored_duration),
-    do: validate_meeting_duration(value, metadata, stored_duration)
-
-  defp validate_form_field(field, value, metadata, _stored_duration),
-    do: validate_field(field, value, metadata)
 
   defp log_validation_result(status, metadata, errors \\ nil) do
     event_name = "meeting_type_form_validation_#{status}"

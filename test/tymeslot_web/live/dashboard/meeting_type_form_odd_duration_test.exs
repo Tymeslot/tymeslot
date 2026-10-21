@@ -65,4 +65,25 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormOddDurationTest do
     assert render(view) =~ "Duration must be a multiple of 5 minutes"
     assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).duration_minutes == 7
   end
+
+  # The instant feedback applies the rule saving does: changing the length
+  # away and back to the stored one clears the error rather than leaving a
+  # message about a length saving accepts. A successful autosave resets the
+  # errors by itself, so the name is left invalid to keep every save refused
+  # and the field feedback the only thing on screen.
+  test "changing the length off the step and back to the stored one clears the error",
+       %{conn: conn, user: user, meeting_type: meeting_type} do
+    view = open_edit_form(conn, meeting_type)
+    duration = element(view, ~s|input[name="meeting_type[duration]"]|)
+
+    change(view, %{"name" => ""})
+    render_change(duration, %{"meeting_type" => %{"duration" => "8"}})
+    assert render(view) =~ "Duration must be a multiple of 5 minutes"
+
+    html = render_change(duration, %{"meeting_type" => %{"duration" => "7"}})
+    refute html =~ "Duration must be a multiple of"
+    assert html =~ "Meeting name is required"
+
+    assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).duration_minutes == 7
+  end
 end
