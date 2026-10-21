@@ -179,7 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
     test "all-day series honours a DATE-form UNTIL instead of running unbounded" do
       # The recurrence editor emits a bare-date UNTIL for all-day events. If the
       # expander can't parse it, the series is treated as endless and paints
-      # occurrences past its intended end (capped only by @max_occurrences).
+      # occurrences past its intended end (bounded only by the range).
       event = %{
         uid: "allday-until",
         summary: "All-day standup",
@@ -503,16 +503,6 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderEdgeCasesTest do
         |> RecurrenceExpander.expand(@week_start, @week_end)
 
       assert occurrences == []
-    end
-
-    test "the cap bounds the occurrences inside the range, counted from its start" do
-      occurrences =
-        "FREQ=DAILY"
-        |> old_series(~D[2023-10-02])
-        |> RecurrenceExpander.expand(~U[2026-01-01 00:00:00Z], ~U[2030-12-31 23:59:59Z])
-
-      assert length(occurrences) == 500
-      assert hd(dates(occurrences)) == ~D[2026-01-01]
     end
 
     test "a rule that never moves forward is unreadable, so its event shows once" do

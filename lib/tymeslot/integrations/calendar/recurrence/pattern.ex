@@ -52,10 +52,16 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.Pattern do
   }
 
   # How far ahead two rules are compared, by frequency: enough periods to
-  # tell any two patterns here apart, within `RecurrenceExpander`'s cap.
+  # tell any two patterns here apart.
   # Six years hold every month length and every weekday a date can fall on
   # in a month (a fifth weekday, a leap day) more than once.
   @horizon_days %{daily: 366, weekly: 2 * 366, monthly: 6 * 366, yearly: 60 * 366}
+
+  # The most occurrences of each rule a comparison expands: one a day over
+  # every horizon but the yearly one. Only two rules that agree a day at a
+  # time for six years reach it, and both are cut at the same count, so the
+  # comparison stays like for like.
+  @compared_occurrences 6 * 366 + 2
 
   # How many times a series picked to end "after" a number of times repeats
   # before the organiser types one, and so where one picked to end "on" a
@@ -272,11 +278,10 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.Pattern do
       ]
 
       days = horizon_days(candidates, parsed)
-      target = occurrences(rule, start, days)
 
       Enum.find_value(candidates, :custom, fn candidate ->
         built = build(candidate, start_date, [keep: rule] ++ opts)
-        if occurrences(built, start, days) == target, do: {:ok, candidate}
+        if same_occurrences?(built, rule, start, days), do: {:ok, candidate}
       end)
     else
       _not_a_pattern -> :custom
@@ -346,7 +351,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.Pattern do
     with {:ok, rule_a} <- RRule.parse(a),
          {:ok, rule_b} <- RRule.parse(b) do
       days = max(Map.fetch!(@horizon_days, rule_a.freq), Map.fetch!(@horizon_days, rule_b.freq))
-      occurrences(a, start, days) == occurrences(b, start, days)
+      same_occurrences?(a, b, start, days)
     else
       :error -> false
     end
@@ -359,9 +364,25 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.Pattern do
 
   defp horizon_days([], _parsed), do: 0
 
+  # Whether `a` and `b` make the same occurrences over `days`, compared over
+  # each shorter horizon first. Rules that differ are told apart over the
+  # shortest horizon, so a daily rule is never expanded over the sixty years
+  # a yearly one is compared over only to be found different; this runs on
+  # every change in the grid's repeat editor.
+  defp same_occurrences?(a, b, start, days) do
+    @horizon_days
+    |> Map.values()
+    |> Enum.filter(&(&1 < days))
+    |> Enum.sort()
+    |> Enum.concat([days])
+    |> Enum.all?(&(occurrences(a, start, &1) == occurrences(b, start, &1)))
+  end
+
   defp occurrences(rule, start, days) do
     %{start_time: start, end_time: start, recurrence_rule: rule}
-    |> RecurrenceExpander.expand(start, horizon(start, days))
+    |> RecurrenceExpander.expand(start, horizon(start, days),
+      max_occurrences: @compared_occurrences
+    )
     |> Enum.map(& &1.start_time)
   end
 

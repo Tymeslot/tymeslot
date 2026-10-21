@@ -60,10 +60,51 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       end
     end
 
+    test "reads a day part combined with a time part" do
+      assert Duration.parse("P1DT2H") == {:ok, 93_600}
+      assert Duration.parse("P1W2DT3H4M5S") == {:ok, 604_800 + 2 * 86_400 + 3 * 3600 + 4 * 60 + 5}
+    end
+
+    test "reads any letter case and a leading plus" do
+      assert Duration.parse("p1w") == {:ok, 604_800}
+      assert Duration.parse("pt1h30m") == {:ok, 5400}
+      assert Duration.parse("+PT15M") == {:ok, 900}
+    end
+
+    test "refuses a negative duration, which is no length" do
+      assert {:error, _reason} = Duration.parse("-PT1H")
+      assert {:error, _reason} = Duration.parse("-P1D")
+    end
+
+    test "refuses a time marker with no time after it" do
+      assert {:error, _reason} = Duration.parse("PT")
+      assert {:error, _reason} = Duration.parse("P1DT")
+      assert {:error, _reason} = Duration.parse("PT5")
+    end
+
     test "handles unsupported P components gracefully (e.g. months)" do
       # Now returns error for unsupported components because of regex anchors
       assert {:error, _reason} = Duration.parse("P1M")
       assert {:error, _reason} = Duration.parse("P1Y")
+    end
+  end
+
+  describe "Duration.parse_signed/1" do
+    test "reads a negative duration as negative seconds" do
+      assert Duration.parse_signed("-P1D") == {:ok, -86_400}
+      assert Duration.parse_signed("-PT1H30M") == {:ok, -5400}
+      assert Duration.parse_signed("-P1W") == {:ok, -604_800}
+    end
+
+    test "reads an unsigned or plus-signed duration as positive seconds" do
+      assert Duration.parse_signed("PT15M") == {:ok, 900}
+      assert Duration.parse_signed("+PT15M") == {:ok, 900}
+    end
+
+    test "refuses what is not a duration" do
+      assert {:error, _reason} = Duration.parse_signed("-P")
+      assert {:error, _reason} = Duration.parse_signed("--PT1H")
+      assert {:error, _reason} = Duration.parse_signed("-P1M")
     end
   end
 

@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.EventColour
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
   alias Tymeslot.Integrations.Calendar.Recurrence.Pattern
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
       # A name the time-zone database does not know (Outlook's "Customized
       # Time Zone", say) cannot place a date anywhere.
       not Timezones.valid?(zone) -> user_timezone
-      one_off?(event) and TimeZoneComponent.utc_zone?(zone) -> user_timezone
+      one_off?(event) and Calendar.utc_zone?(zone) -> user_timezone
       true -> zone
     end
   end

@@ -133,6 +133,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 currency={@payment_currency}
                 venues={@venues}
                 group_bookings_allowed={@group_bookings_allowed}
+                payments_accepted={@payments_accepted}
                 parent_myself={@myself}
               />
             </div>

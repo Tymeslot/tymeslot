@@ -23,7 +23,7 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
   though an explicit `DATABASE_SSL` always takes precedence over it.
   """
 
-  # Used directly by "cloudron", whose start.sh never exports DATABASE_POOL_SIZE.
+  # Used directly by "cloudron", whose package start.sh never exports DATABASE_POOL_SIZE.
   # "docker" never actually falls back to it: start-docker.sh always exports
   # DATABASE_POOL_SIZE (defaulting to 10) before invoking the release, so this
   # value is dead for that deployment type but kept as the documented default
