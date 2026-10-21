@@ -11,15 +11,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   Most servers honour that. sabre/dav — Nextcloud, Baikal, ownCloud — skips
   scheduling for such an attendee in `ITip\\Broker`, with the rule enabled by
   default; Radicale implements no scheduling at all; Apple co-authored the RFC.
-  Zimbra is the exception on record: it strips the parameter and runs iTIP for
+  Zimbra is the first exception on record: it strips the parameter and runs iTIP for
   any event carrying an `ATTENDEE`, so a single booking reached the attendee
-  three times (issue #41). Issue #123 is the other side of that trade — an
+  three times (issue #41). cPanel's calendar server does the same: an
+  attendee booking with a cPanel-hosted organiser got Tymeslot's email, then
+  an invitation from the organiser's own address without the video link, then
+  an update once the link was written. Issue #123 is the other side of that trade — an
   event with no `ATTENDEE` shows one participant in the organiser's calendar,
   and the organiser's own client can never send an update to whoever booked.
 
-  So attendees are advertised everywhere except Zimbra, which keeps the
-  `CONTACT` fallback (RFC 5545 §3.8.4.2): the same name and address, carried
-  outside the iTIP model.
+  So attendees are advertised everywhere except Zimbra and cPanel, which keep
+  the `CONTACT` fallback (RFC 5545 §3.8.4.2): the same name and address,
+  carried outside the iTIP model. What `CONTACT` costs is confined to the
+  organiser's external client; Tymeslot's own calendar shows the booker either
+  way, and its own emails reach them, so a duplicate invitation to every
+  booker outweighs it.
 
   A Zimbra reached through the generic CalDAV provider counts as Zimbra.
   `ServerDetector` recognises it from the URL alone, which is how the original
@@ -104,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   Returns the attendee mode for `client`.
 
   `:contact` for Zimbra, whether it was connected through the Zimbra provider
-  or through generic CalDAV against a recognisably Zimbra URL;
+  or through generic CalDAV against a recognisably Zimbra URL, and for cPanel;
   `{:organiser_attendee, addresses}` for Open-Xchange (see the moduledoc),
   which asks the server for the account's addresses; `:attendee` for every
   other CalDAV server. Called on the write path only, so the lookup costs a
@@ -117,7 +123,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   @spec attendee_mode(Client.t()) :: mode()
   def attendee_mode(client) when is_map(client) do
     case server(client) do
-      :zimbra -> :contact
+      server when server in [:zimbra, :cpanel] -> :contact
       :open_xchange -> {:organiser_attendee, owner_addresses(client)}
       _other -> :attendee
     end
