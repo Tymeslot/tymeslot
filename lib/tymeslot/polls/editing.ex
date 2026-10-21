@@ -7,8 +7,11 @@ defmodule Tymeslot.Polls.Editing do
   with yet; everyone confirmed stays.
 
   Everything is written in one transaction that holds the poll's row, so a
-  confirmation racing an edit sees either all of it or none. After the
-  commit:
+  confirmation racing an edit sees either all of it or none. The emails the
+  edit sets off are scheduled in that transaction too, since Oban writes its
+  jobs through the same repo. A confirmation waiting on the row then finds
+  those jobs and deletes them with the rest, and an edit that rolls back
+  schedules nothing:
 
     * a changed deadline or reminders replace the pending reminder and
       deadline jobs (`EmailScheduler.reschedule_poll_deadline_jobs/2`),
@@ -17,6 +20,8 @@ defmodule Tymeslot.Polls.Editing do
     * new times are announced to everyone who has already voted, who would
       otherwise not know there is more to answer. Whoever has not voted yet
       sees them when they open their link.
+
+  Subscribers are told once the edit has committed.
 
   Existing times are never changed or removed here: they are what guests
   voted against. A meeting type set here only chooses the calendar and video
@@ -57,8 +62,8 @@ defmodule Tymeslot.Polls.Editing do
           {:ok, PollSchema.t()} | {:error, reason()}
   def update(id, user_id, attrs, new_starts \\ []) do
     case Repo.transaction(fn -> write(id, user_id, attrs, new_starts) end) do
-      {:ok, {poll, changeset, added}} ->
-        after_commit(poll, changeset, added)
+      {:ok, poll} ->
+        Polls.broadcast_update(poll.id)
         {:ok, poll}
 
       {:error, reason} ->
@@ -73,7 +78,8 @@ defmodule Tymeslot.Polls.Editing do
          {:ok, updated} <- PollQueries.update(changeset),
          :ok <- withdraw_requests(updated, changeset),
          {:ok, added} <- add_slots(updated, new_starts) do
-      {updated, changeset, added}
+      :ok = schedule_emails(updated, changeset, added)
+      updated
     else
       {:error, reason} -> Repo.rollback(reason)
     end
@@ -158,17 +164,17 @@ defmodule Tymeslot.Polls.Editing do
   defp reverse_added({:ok, added}), do: {:ok, Enum.reverse(added)}
   defp reverse_added(error), do: error
 
-  defp after_commit(poll, changeset, added) do
+  defp schedule_emails(poll, changeset, added) do
     if Changeset.changed?(changeset, :deadline_at) or
          Changeset.changed?(changeset, :reminder_config) do
-      EmailScheduler.reschedule_poll_deadline_jobs(
-        poll,
-        PollParticipantQueries.any_invited?(poll.id)
-      )
+      :ok =
+        EmailScheduler.reschedule_poll_deadline_jobs(
+          poll,
+          PollParticipantQueries.any_invited?(poll.id)
+        )
     end
 
-    if added != [], do: EmailScheduler.schedule_poll_new_times(poll, added)
-
-    Polls.broadcast_update(poll.id)
+    if added != [], do: :ok = EmailScheduler.schedule_poll_new_times(poll, added)
+    :ok
   end
 end

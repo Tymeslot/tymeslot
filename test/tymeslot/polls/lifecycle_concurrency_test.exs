@@ -113,6 +113,46 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
     end
   end
 
+  # The edit parks at its first write to the job table. Scheduling inside its
+  # transaction, it still holds the poll's row there, so a confirmation
+  # started now waits for the edit to commit and then deletes the jobs the
+  # edit wrote with the rest. Scheduling after its commit, it holds nothing,
+  # the confirmation runs to the end, and the edit's nudge lands on a poll
+  # that is already confirmed.
+  test "an edit's deadline jobs never outlive a confirmation racing it", ctx do
+    test_pid = self()
+    moved = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+    edit =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), &job_write?/1)
+          Polls.update_details(ctx.poll.id, ctx.user.id, %{"deadline_at" => moved})
+        end)
+      end)
+
+    assert_receive {:parked, edit_pid}, 5_000
+
+    confirm =
+      Task.async(fn ->
+        unboxed(fn -> Confirm.confirm(ctx.poll.id, ctx.slot.id, ctx.user.id) end)
+      end)
+
+    progress = RaceConductor.await_finished_or_blocked(confirm)
+    send(edit_pid, :release)
+
+    confirmed =
+      case progress do
+        {:finished, result} -> result
+        :blocked -> Task.await(confirm, 30_000)
+      end
+
+    assert {:ok, %PollSchema{}} = Task.await(edit, 30_000)
+    assert {:ok, %MeetingSchema{}} = confirmed
+    assert committed_poll(ctx.poll).status == :confirmed
+    assert pending_deadline_jobs(ctx.poll) == []
+  end
+
   # The loser waits on the winner's row lock, then finds the poll no longer
   # open; whichever got there first, the committed poll is the winner's.
   defp assert_one_winner([confirmed, cancelled], ctx) do
@@ -146,6 +186,24 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
 
   defp first_poll_read?(metadata),
     do: metadata[:source] == "polls" and metadata[:query] =~ ~r/^SELECT/
+
+  defp job_write?(metadata), do: metadata[:source] == "oban_jobs"
+
+  defp pending_deadline_jobs(poll) do
+    unboxed(fn ->
+      Repo.all(
+        from(j in Oban.Job,
+          where: fragment("?->>'poll_id'", j.args) == ^poll.id,
+          where:
+            fragment("?->>'action'", j.args) in [
+              "send_poll_deadline_reminders",
+              "send_poll_host_nudge"
+            ],
+          where: j.state in ["available", "scheduled", "retryable"]
+        )
+      )
+    end)
+  end
 
   defp committed_poll(poll), do: unboxed(fn -> Repo.get!(PollSchema, poll.id) end)
 
