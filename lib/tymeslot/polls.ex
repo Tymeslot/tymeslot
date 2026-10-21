@@ -42,7 +42,10 @@ defmodule Tymeslot.Polls do
   defaults to `start_time` plus the poll duration). `:description`,
   `:deadline_at`, and `:meeting_type_id` are optional, and so is `:invitees`,
   entries from `Tymeslot.Polls.Invitations.parse/1` invited with the poll and
-  emailed once it is saved.
+  emailed once it is saved. Invitees past the host's poll email allowance
+  refuse the whole poll with `{:error, {:rate_limited, remaining}}`; an invitee
+  over their own limit is left out (see
+  `Tymeslot.Polls.Invitations.uninvited/2`).
 
   `:invite_only` says whether only those invitees (and anyone invited later)
   can vote. Without it, the poll is invite-only exactly when it is created
@@ -60,6 +63,7 @@ defmodule Tymeslot.Polls do
              | :too_many_slots
              | :slot_in_past
              | :poll_full
+             | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def create_poll(user_id, attrs) do
     with {:ok, attrs} <- apply_meeting_type(user_id, attrs),
@@ -190,7 +194,12 @@ defmodule Tymeslot.Polls do
   """
   @spec invite_participants(Ecto.UUID.t(), integer(), [Invitations.entry()]) ::
           {:ok, Invitations.result()}
-          | {:error, :not_found | :not_open | :poll_full | Ecto.Changeset.t()}
+          | {:error,
+             :not_found
+             | :not_open
+             | :poll_full
+             | {:rate_limited, non_neg_integer()}
+             | Ecto.Changeset.t()}
   def invite_participants(id, user_id, entries) do
     with_poll(id, user_id, fn poll ->
       case Invitations.invite(poll, entries) do

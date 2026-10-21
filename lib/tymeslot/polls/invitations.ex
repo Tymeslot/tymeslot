@@ -15,17 +15,26 @@ defmodule Tymeslot.Polls.Invitations do
   Someone already confirmed on the poll is skipped. Someone who asked for a
   link but has not voted with it yet is confirmed and invited, under the name
   the host typed if they typed one.
+
+  Every address emailed counts against the poll email limits
+  (`Tymeslot.Polls.EmailLimits`): a list past the host's allowance invites
+  nobody, and an address that has had too many poll emails lately is left out
+  and reported, like someone already on the poll.
   """
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollParticipantQueries, PollParticipantSchema, PollSchema}
+  alias Tymeslot.Polls.{EmailLimits, PollParticipantQueries, PollParticipantSchema, PollSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
   @type entry :: %{email: String.t(), name: String.t() | nil}
-  @type result :: %{invited: [PollParticipantSchema.t()], skipped: [String.t()]}
+  @type result :: %{
+          invited: [PollParticipantSchema.t()],
+          skipped: [String.t()],
+          rate_limited: [String.t()]
+        }
 
   @separators ~r/[\n\r,;]+/
   @named ~r/^(.*?)\s*<\s*([^<>\s]+)\s*>$/
@@ -61,10 +70,17 @@ defmodule Tymeslot.Polls.Invitations do
   Invites `entries` to an open `poll` and emails each new invitee their link.
 
   All or nothing: returns `{:error, :poll_full}` when the invitees would take
-  the poll past its participant cap, and invites nobody.
+  the poll past its participant cap, and `{:error, {:rate_limited,
+  remaining}}` when they are more than its host may invite right now
+  (`remaining` is how many they may), and invites nobody.
   """
   @spec invite(PollSchema.t(), [entry()]) ::
-          {:ok, result()} | {:error, :not_open | :poll_full | Ecto.Changeset.t()}
+          {:ok, result()}
+          | {:error,
+             :not_open
+             | :poll_full
+             | {:rate_limited, non_neg_integer()}
+             | Ecto.Changeset.t()}
   def invite(%PollSchema{} = poll, entries) do
     if Polls.voting_open?(poll) do
       case Repo.transaction(fn -> insert(poll, entries) end) do
@@ -86,28 +102,56 @@ defmodule Tymeslot.Polls.Invitations do
   `send_invitations/1` once the transaction has committed.
   """
   @spec insert(PollSchema.t(), [entry()]) :: result()
-  def insert(_poll, []), do: %{invited: [], skipped: []}
+  def insert(_poll, []), do: %{invited: [], skipped: [], rate_limited: []}
 
   def insert(%PollSchema{} = poll, entries) do
-    existing =
-      poll.id
-      |> PollParticipantQueries.list_by_poll_and_emails(Enum.map(entries, & &1.email))
-      |> Map.new(&{&1.email, &1})
+    {skipped, to_confirm, new} = split(entries, existing_participants(poll, entries))
+    ensure_room!(poll, length(to_confirm) + length(new))
 
-    {skipped, to_confirm, new} = split(entries, existing)
+    %{allowed: allowed, limited: limited} =
+      reserve!(poll, Enum.map(to_confirm, &elem(&1, 1).email) ++ Enum.map(new, & &1.email))
 
-    if PollParticipantQueries.count_confirmed(poll.id) + length(to_confirm) + length(new) >
-         PollSchema.max_participants() do
-      Repo.rollback(:poll_full)
-    end
+    %{
+      invited: write_allowed(poll, to_confirm, new, MapSet.new(allowed)),
+      skipped: Enum.map(skipped, & &1.email),
+      rate_limited: limited
+    }
+  end
 
+  defp existing_participants(poll, entries) do
+    poll.id
+    |> PollParticipantQueries.list_by_poll_and_emails(Enum.map(entries, & &1.email))
+    |> Map.new(&{&1.email, &1})
+  end
+
+  defp write_allowed(poll, to_confirm, new, allowed) do
     now = DateTime.utc_now()
     defaults = %{poll_id: poll.id, timezone: poll.timezone, locale: host_locale(poll)}
 
-    confirmed = Enum.map(to_confirm, &write(confirm(&1, now)))
-    inserted = Enum.map(new, &write(new_invitee(&1, defaults, now)))
+    confirmed =
+      for {_participant, e} = pair <- to_confirm,
+          e.email in allowed,
+          do: write(confirm(pair, now))
 
-    %{invited: confirmed ++ inserted, skipped: Enum.map(skipped, & &1.email)}
+    inserted = for e <- new, e.email in allowed, do: write(new_invitee(e, defaults, now))
+    confirmed ++ inserted
+  end
+
+  defp ensure_room!(%PollSchema{id: poll_id}, adding) do
+    if PollParticipantQueries.count_confirmed(poll_id) + adding > PollSchema.max_participants() do
+      Repo.rollback(:poll_full)
+    end
+  end
+
+  @doc """
+  The addresses among `entries` that a just-created `poll` (participants
+  preloaded) did not invite. A new poll has nobody on it to skip, so these
+  are the addresses left out for the poll email limits.
+  """
+  @spec uninvited(PollSchema.t(), [entry()]) :: [String.t()]
+  def uninvited(%PollSchema{participants: participants}, entries) do
+    on_poll = MapSet.new(participants, & &1.email)
+    for %{email: email} <- entries, not MapSet.member?(on_poll, email), do: email
   end
 
   @doc "Emails each of `participants` their invitation."
@@ -156,6 +200,16 @@ defmodule Tymeslot.Polls.Invitations do
         _confirmed -> {[entry | skipped], to_confirm, new}
       end
     end)
+  end
+
+  # Charged before anything is written, inside the caller's transaction, so a
+  # list past the host's allowance rolls back whole. The cap check above runs
+  # first, so a full poll spends nothing of the host's budget.
+  defp reserve!(%PollSchema{user_id: user_id}, emails) do
+    case EmailLimits.reserve_invitations(user_id, emails) do
+      {:ok, reservation} -> reservation
+      {:error, reason} -> Repo.rollback(reason)
+    end
   end
 
   # The host knows who they are inviting: a name they typed wins over the one

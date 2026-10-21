@@ -12,8 +12,11 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
   @moduletag :polls
   @moduletag :integration
 
-  alias Tymeslot.Polls.{EmailLimits, PollSchema}
+  alias Ecto.UUID
+  alias Tymeslot.Polls
+  alias Tymeslot.Polls.{EmailLimits, Invitations, PollParticipantQueries, PollSchema, Voting}
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.EmailWorker
 
   defp address(name), do: "#{name}-#{System.unique_integer([:positive])}@example.com"
   defp host_id, do: System.unique_integer([:positive])
@@ -83,6 +86,114 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
     end
   end
 
+  describe "invitations" do
+    setup do
+      user = insert(:user)
+      %{user: user, poll: insert(:poll, user: user)}
+    end
+
+    defp invitation_jobs,
+      do: all_enqueued(worker: EmailWorker, args: %{"action" => "send_poll_invitation"})
+
+    test "a list past the host's allowance invites nobody", %{user: user, poll: poll} do
+      leave(:poll_host_invitations, user.id, 1)
+      [ada, grace] = [address("ada"), address("grace")]
+
+      assert Invitations.invite(poll, [%{email: ada, name: nil}, %{email: grace, name: nil}]) ==
+               {:error, {:rate_limited, 1}}
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, ada) == nil
+      assert invitation_jobs() == []
+    end
+
+    test "a list that fits the allowance exactly goes out", %{user: user, poll: poll} do
+      leave(:poll_host_invitations, user.id, 2)
+      entries = [%{email: address("ada"), name: nil}, %{email: address("grace"), name: nil}]
+
+      assert {:ok, %{invited: [_ada, _grace], rate_limited: []}} =
+               Invitations.invite(poll, entries)
+
+      assert length(invitation_jobs()) == 2
+    end
+
+    test "a new poll whose invitees are past the allowance is not created", %{
+      user: user,
+      poll: poll
+    } do
+      fill(:poll_host_invitations, user.id)
+      start_time = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+      attrs = %{
+        title: "Team sync",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        slots: [%{start_time: start_time}],
+        invitees: [%{email: address("ada"), name: nil}]
+      }
+
+      assert Polls.create_poll(user.id, attrs) == {:error, {:rate_limited, 0}}
+      assert Enum.map(Polls.list_polls(user.id), & &1.title) == [poll.title]
+      assert invitation_jobs() == []
+    end
+
+    test "an address over its own limit is skipped and reported, the rest invited", %{
+      poll: poll
+    } do
+      [ada, grace] = [address("ada"), address("grace")]
+      fill(:poll_recipient_email, grace)
+
+      assert {:ok, %{invited: [invited], skipped: [], rate_limited: [^grace]}} =
+               Invitations.invite(poll, [%{email: grace, name: nil}, %{email: ada, name: nil}])
+
+      assert invited.email == ada
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, grace) == nil
+
+      assert [%{args: %{"participant_id" => id}}] = invitation_jobs()
+      assert id == invited.id
+    end
+
+    test "a link requester over the limit stays unconfirmed", %{poll: poll} do
+      grace = address("grace")
+      assert {:ok, :sent} = Voting.request_link(poll, %{name: "Grace", email: grace})
+      fill(:poll_recipient_email, grace)
+
+      assert {:ok, %{invited: [], rate_limited: [^grace]}} =
+               Invitations.invite(poll, [%{email: grace, name: nil}])
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, grace).confirmed_at == nil
+    end
+
+    test "someone already on the poll costs the host nothing", %{user: user, poll: poll} do
+      ada = address("ada")
+      insert(:poll_participant, poll: poll, email: ada)
+      before = RateLimiter.remaining(:poll_host_invitations, user.id)
+
+      assert {:ok, %{invited: [], skipped: [^ada]}} =
+               Invitations.invite(poll, [%{email: ada, name: nil}])
+
+      assert RateLimiter.remaining(:poll_host_invitations, user.id) == before
+    end
+
+    test "uninvited/2 names the new poll's invitees that were left out", %{user: user} do
+      [ada, grace] = [address("ada"), address("grace")]
+      fill(:poll_recipient_email, grace)
+      start_time = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+      invitees = [%{email: ada, name: nil}, %{email: grace, name: nil}]
+
+      {:ok, poll} =
+        Polls.create_poll(user.id, %{
+          title: "Team sync",
+          duration_minutes: 30,
+          timezone: "Etc/UTC",
+          slots: [%{start_time: start_time}],
+          invitees: invitees
+        })
+
+      assert Enum.map(poll.participants, & &1.email) == [ada]
+      assert Invitations.uninvited(poll, invitees) == [grace]
+    end
+  end
+
   describe "charge_recipient/1" do
     test "counts an address however it was typed" do
       ada = address("ada")
@@ -102,7 +213,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
 
   describe "charge_link_request/1" do
     test "answers :too_many_requests once the poll has taken its share" do
-      poll = %PollSchema{id: Ecto.UUID.generate()}
+      poll = %PollSchema{id: UUID.generate()}
       assert EmailLimits.charge_link_request(poll) == :ok
 
       fill(:poll_link_request, poll.id)
