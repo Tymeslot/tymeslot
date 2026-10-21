@@ -435,19 +435,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
       )
 
   # Why events were not imported: the calendar refused or failed them, or
-  # Outlook has no pattern for how they repeat.
+  # Outlook cannot store how they repeat, a series on a day some months lack
+  # among them.
   defp not_imported_messages(summary) do
     Enum.filter(
       [
         summary.failed > 0 && failed_message(summary),
-        summary.rules_refused > 0 && rules_refused_message(summary.rules_refused)
+        summary.rules_refused > 0 && rules_refused_message(summary)
       ],
       &is_binary/1
     )
   end
 
-  defp rules_refused_message(count),
-    do:
+  defp rules_refused_message(%{rules_refused: count, month_end_refused: month_end}) do
+    message =
       dngettext(
         "dashboard_calendar_import",
         "1 event repeats in a way Outlook can't store, so it was not imported.",
@@ -455,7 +456,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
         count
       )
 
-  defp failed_message(%{failed: failed, failed_titles: titles} = summary) do
+    case month_end do
+      0 -> message
+      refused -> message <> " " <> month_end_refused_message(refused)
+    end
+  end
+
+  defp failed_message(%{failed: failed, failed_titles: titles}) do
     titles = titles |> Enum.reject(&(&1 == "")) |> Enum.join(", ")
 
     message =
@@ -466,12 +473,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.IcsImport do
         failed
       )
 
-    message = if titles == "", do: message, else: "#{message} (#{titles})"
-
-    case summary.month_end_refused do
-      0 -> message
-      refused -> message <> " " <> month_end_refused_message(refused)
-    end
+    if titles == "", do: message, else: "#{message} (#{titles})"
   end
 
   defp month_end_refused_message(count),

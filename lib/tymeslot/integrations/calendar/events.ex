@@ -37,12 +37,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @no_calendar_errors [:no_calendar_client, :no_calendar_integration]
 
   # A repeat rule the provider has no pattern for, or one it would move onto
-  # days the organiser never chose, is refused the same way every time.
+  # days the organiser never chose, is refused the same way every time, as is
+  # a request the provider declined outright.
   @non_queueable_errors [
                           :unauthorized,
                           :not_found,
                           :meeting_not_found,
                           :rate_limited,
+                          :refused,
                           :rule_not_supported_by_outlook,
                           :day_missing_in_some_months
                         ] ++
@@ -202,6 +204,25 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   @doc """
+  Fetches one event of a calendar integration straight from its provider,
+  bypassing the sync cache. `event_ref` carries the event's `:uid`, and its
+  `:provider_event_id` and `:calendar_id` where known.
+
+  Answers `{:ok, events}` once a writable calendar of the account has it,
+  `{:error, :not_found}` only when none does (a cancelled event counts as
+  none), `{:error, :unsupported}` when the provider cannot fetch a single
+  event, and `{:error, :no_calendar_integration}` for an integration that is
+  not the user's or no longer active. See
+  `Tymeslot.Integrations.Calendar.Runtime.EventOperations.fetch_event/2`.
+  """
+  @spec fetch_event(map(), {integration_id(), user_id()}) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(event_ref, {integration_id, user_id} = context)
+      when is_integer(integration_id) and is_integer(user_id) do
+    behaviour_module().fetch_event(event_ref, context)
+  end
+
+  @doc """
   Delete an event with optional target integration, meeting context, or user_id.
 
   `opts` reach the provider unchanged; pass `provider_event_id:` when the
@@ -226,6 +247,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   The linked meeting is looked up before the delete, so its attendee email
   can still be reported once the reconciliation has cancelled it. Nothing is
   reconciled when the delete fails.
+
+  An event the calendar no longer has is not a failed delete: it is already
+  off the calendar, removed by another client or a sync race, and its booking
+  is reconciled exactly as a successful delete's would be, the result marked
+  `already_gone: true`. Only the delete's own `:not_found` counts. The
+  request addresses the event, so its 404 is the event's (`ApiResponse`
+  names a bare 404 by its path); a calendar that is gone from the integration
+  never reaches the provider, and fails as `:no_calendar_integration`.
 
   Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
   `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
@@ -271,6 +300,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   defp deleted(:ok), do: {:ok, %{}}
   defp deleted({:ok, %{document: document}}), do: {:ok, %{document: document}}
+  defp deleted({:error, :not_found}), do: {:ok, %{already_gone: true}}
   defp deleted(error), do: error
 
   # The event is already off the calendar by the time this runs, so a raise

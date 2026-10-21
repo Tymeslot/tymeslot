@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   """
 
   alias Tymeslot.Infrastructure.Retry
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, ConflictResolution, Http}
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, ConflictResolution, Http, Scheduling}
 
   require Logger
 
@@ -88,7 +88,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
           :ok | {:error, Base.error_reason()}
   def put(client, url, ical_data, etag, policy, opts) do
     base_put_opts =
-      if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
+      if(etag, do: [operation: :update, if_match: etag], else: [operation: :update]) ++
+        Scheduling.write_opts(client)
 
     # The time left is read on every attempt, so a retry gets only what the
     # first attempt left of the deadline.
@@ -195,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConditionalWrite do
   defp force_put(client, url, ical_data, opts) do
     result =
       within_deadline(opts, Keyword.get(opts, :timeout, @write_timeout_ms), fn timeout ->
-        put_opts = [operation: :force_update, timeout: timeout]
+        put_opts = [operation: :force_update, timeout: timeout] ++ Scheduling.write_opts(client)
         Http.put_event(url, client.username, client.password, ical_data, put_opts)
       end)
 

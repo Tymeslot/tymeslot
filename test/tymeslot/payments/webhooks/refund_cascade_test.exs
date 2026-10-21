@@ -48,6 +48,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     Application.put_env(:tymeslot, :subscription_manager, SubscriptionManagerMock)
     stub_lookups_over_transactions()
 
+    # Current API versions send charge.refunded without the charge's refunds,
+    # so the handler reads the latest one from Stripe. By default there is
+    # none to read, and the email quotes the charge's refunded total.
+    stub(StripeMock, :list_refunds, fn _params -> {:ok, %{data: [], has_more: false}} end)
+
     on_exit(fn ->
       restore(:subscription_manager, original_manager)
       restore(:payment_event_handler, original_handler)
@@ -78,6 +83,15 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     }
 
   defp with_object(event, object), do: Map.put(event, "data", %{"object" => object})
+
+  # The event as Stripe sends it for one refund among several: the charge as
+  # it stood once this refund was made, and what it had refunded before.
+  defp for_refund(event, charge, previously_refunded) do
+    Map.put(event, "data", %{
+      "object" => charge,
+      "previous_attributes" => %{"amount_refunded" => previously_refunded}
+    })
+  end
 
   defp restore(key, nil), do: Application.delete_env(:tymeslot, key)
   defp restore(key, value), do: Application.put_env(:tymeslot, key, value)
@@ -173,6 +187,166 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       # The notice goes out from a job.
       Oban.drain_queue(queue: :emails)
       assert_received {:refund_email, ^user_id, 5_000, "eur", false}
+    end
+
+    test "a refund the app already announced revokes without a second email" do
+      {user, customer_id} = linked_subscription()
+      # As Stripe sends it at current API versions: no refunds on the charge.
+      charge = refunded_charge(customer_id, 10_000, 10_000)
+      charge_id = charge["id"]
+
+      expect(StripeMock, :list_refunds, fn %{charge: ^charge_id, limit: 100} ->
+        {:ok,
+         %{
+           data: [%{id: "re_1", amount: 10_000, metadata: %{"customer_notified" => "true"}}],
+           has_more: false
+         }}
+      end)
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      assert_received %{event: :charge_refunded, data: %{should_revoke: true}}
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      refute_received {:refund_email, ^user_id, _amount, _currency, _revoked}
+    end
+
+    test "a refund read from Stripe without the flag is emailed with its own amount" do
+      {user, customer_id} = linked_subscription()
+      charge = refunded_charge(customer_id, 10_000, 10_000)
+
+      expect(StripeMock, :list_refunds, fn _params ->
+        {:ok, %{data: [%{id: "re_2", amount: 6_000, metadata: %{}}], has_more: false}}
+      end)
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
+    end
+
+    test "a failed read of the latest refund still sends the refund email" do
+      {user, customer_id} = linked_subscription()
+      charge = refunded_charge(customer_id, 5_000, 10_000)
+
+      expect(StripeMock, :list_refunds, fn _params -> {:error, :timeout} end)
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 5_000, "eur", false}
+    end
+
+    test "an earlier announced refund on the payload does not silence a later one" do
+      {user, customer_id} = linked_subscription()
+
+      charge =
+        customer_id
+        |> refunded_charge(10_000, 10_000)
+        |> Map.put("refunds", %{
+          "data" => [
+            %{"amount" => 4_000, "created" => 1, "metadata" => %{"customer_notified" => "true"}},
+            %{"amount" => 6_000, "created" => 2, "metadata" => %{}}
+          ]
+        })
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
+    end
+
+    # Two refunds on one charge, one the app announced (A, 4,000) and one made
+    # by hand in the Stripe dashboard (B, 6,000), each delivered late, once
+    # both exist at Stripe. The newest refund is the other event's, so each
+    # event is matched to its own refund by the amount it added.
+    test "late events for an announced refund and a later manual one email the manual one once" do
+      {user, customer_id} = linked_subscription()
+      charge_id = "ch_test_#{System.unique_integer([:positive])}"
+
+      stub(StripeMock, :list_refunds, fn %{charge: ^charge_id} ->
+        {:ok,
+         %{
+           data: [
+             %{id: "re_b", amount: 6_000, created: 2, metadata: %{}},
+             %{id: "re_a", amount: 4_000, created: 1, metadata: %{"customer_notified" => "true"}}
+           ],
+           has_more: false
+         }}
+      end)
+
+      for {refunded, previous} <- [{4_000, 0}, {10_000, 4_000}] do
+        charge = Map.put(refunded_charge(customer_id, refunded, 10_000), "id", charge_id)
+
+        assert {:ok, :refund_processed} =
+                 RefundHandler.handle(for_refund(refunded_event(), charge, previous))
+      end
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
+      refute_received {:refund_email, ^user_id, _amount, _currency, _revoked}
+    end
+
+    test "late events for a manual refund and a later announced one email the manual one once" do
+      {user, customer_id} = linked_subscription()
+      charge_id = "ch_test_#{System.unique_integer([:positive])}"
+
+      stub(StripeMock, :list_refunds, fn %{charge: ^charge_id} ->
+        {:ok,
+         %{
+           data: [
+             %{id: "re_a", amount: 4_000, created: 2, metadata: %{"customer_notified" => "true"}},
+             %{id: "re_b", amount: 6_000, created: 1, metadata: %{}}
+           ],
+           has_more: false
+         }}
+      end)
+
+      for {refunded, previous} <- [{6_000, 0}, {10_000, 6_000}] do
+        charge = Map.put(refunded_charge(customer_id, refunded, 10_000), "id", charge_id)
+
+        assert {:ok, :refund_processed} =
+                 RefundHandler.handle(for_refund(refunded_event(), charge, previous))
+      end
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
+      refute_received {:refund_email, ^user_id, _amount, _currency, _revoked}
+    end
+
+    # Two refunds of the same amount, one announced and one not: the event
+    # could be about either, so the customer is told rather than risk silence.
+    test "an event matching an announced and an unannounced refund alike is emailed" do
+      {user, customer_id} = linked_subscription()
+      charge = refunded_charge(customer_id, 10_000, 10_000)
+
+      stub(StripeMock, :list_refunds, fn _params ->
+        {:ok,
+         %{
+           data: [
+             %{id: "re_2", amount: 5_000, created: 2, metadata: %{}},
+             %{id: "re_1", amount: 5_000, created: 1, metadata: %{"customer_notified" => "true"}}
+           ],
+           has_more: false
+         }}
+      end)
+
+      assert {:ok, :refund_processed} =
+               RefundHandler.handle(for_refund(refunded_event(), charge, 5_000))
+
+      Oban.drain_queue(queue: :emails)
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 5_000, "eur", _revoked}
     end
 
     test "refund without a linked subscription is logged without user-facing side effects" do

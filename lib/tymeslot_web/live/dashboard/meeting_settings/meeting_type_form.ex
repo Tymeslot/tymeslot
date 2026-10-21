@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Creation,
     FormView,
     GroupRules,
+    GuestLimit,
     Init,
     SlotIntervalField,
     Validation
@@ -84,6 +85,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        payment_required: false,
        payment_price: "",
        allow_guests: false,
+       guest_limit: nil,
        requires_approval: false,
        approval_window_hours: nil,
        show_as_free: false,
@@ -168,6 +170,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # Start from existing errors and update only the changed fields
     current_errors = socket.assigns.form_errors || %{}
 
+    # Saving accepts the edited type's own duration even off the step, so
+    # the instant feedback is given the same stored duration.
+    opts = [stored_duration: socket.assigns.type && socket.assigns.type.duration_minutes]
+
     {updated_data, updated_errors} =
       Enum.reduce(changed_fields, {new_data, current_errors}, fn field, {acc_data, acc_errors} ->
         Validation.validate_and_update_field(
@@ -175,7 +181,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           Map.get(params, field),
           metadata,
           acc_data,
-          acc_errors
+          acc_errors,
+          opts
         )
       end)
 
@@ -454,6 +461,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:show_seat_availability, !socket.assigns.show_seat_availability)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_guest_limit", _params, socket),
+    do: {:noreply, GuestLimit.toggle(socket)}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("change_guest_limit", params, socket),
+    do: {:noreply, GuestLimit.change(params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_last_spots", _params, socket) do

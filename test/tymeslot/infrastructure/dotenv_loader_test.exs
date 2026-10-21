@@ -365,8 +365,8 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     # The child gets an empty environment, every inherited variable cleared, so
     # nothing the test runner holds can shadow a fixture key and quietly turn a
     # disagreement into a skipped line; then `LANG` is set to `C.UTF-8`, the
-    # locale Dockerfile.cloudron's runtime stage exports and `start.sh` runs
-    # under in production. Leaving the child on the implicit POSIX "C" locale
+    # locale Dockerfile.docker's runtime stage exports and `start-docker.sh`
+    # runs under in production. Leaving the child on the implicit POSIX "C" locale
     # would make bash's `[[:space:]]` byte-oriented for free and hide any
     # divergence that only shows up under the locale that actually ships. The
     # harness needs no PATH; bash is named absolutely and it uses only

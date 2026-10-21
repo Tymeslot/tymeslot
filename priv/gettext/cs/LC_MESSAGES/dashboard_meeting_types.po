@@ -338,3 +338,13 @@ msgstr "Smazat typ schůzky"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Upravit %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered"
+msgstr "Nenabízeno"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Tento typ schůzky se hostům nenabízí, dokud znovu nepřipojíte platby. Stávající rezervace zůstávají beze změny."

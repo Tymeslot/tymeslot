@@ -27,8 +27,8 @@ set -eu  # Exit on error and on undefined variables
 # this script had exported its own default, often an empty string, for every
 # key it knows, and the release's reader leaves a key that is already set alone.
 #
-# The file is parsed, never sourced, by the same reader start.sh uses on
-# Cloudron.
+# The file is parsed, never sourced, by scripts/dotenv-reader.sh, the reader
+# the release's own DotenvLoader is tested against.
 #
 # Which database the container uses, and which role the embedded cluster is
 # created with, stay with the container environment: POSTGRES_USER,

@@ -422,6 +422,81 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
     end
   end
 
+  # Open-Xchange strips `SCHEDULE-AGENT=CLIENT` from the event it stores, so
+  # only `Schedule-Reply: F` keeps a write Tymeslot makes from the stored copy
+  # from mailing the booker beside Tymeslot's own email (issue #151).
+  describe "server-side scheduling (Schedule-Reply: F)" do
+    setup do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn
+        %{method: "PROPFIND"} = conn ->
+          CalDAVTestHelpers.answer_address_lookup(conn, ["user@mailbox.org"])
+
+        %{method: "GET"} = conn ->
+          conn
+          |> Conn.put_resp_header("etag", "\"1\"")
+          |> Conn.send_resp(200, stored_event("user@mailbox.org"))
+
+        %{method: method} = conn when method in ["PUT", "DELETE"] ->
+          send(test_pid, {method, Conn.get_req_header(conn, "schedule-reply")})
+          Conn.send_resp(conn, if(method == "PUT", do: 201, else: 204), "")
+      end)
+
+      :ok
+    end
+
+    test "a create asks the server to mail nobody" do
+      assert {:ok, %CreatedEvent{}} = create_event(client())
+      assert_receive {"PUT", ["F"]}
+    end
+
+    test "an update asks the server to mail nobody" do
+      assert :ok = update_uncached()
+      assert_receive {"PUT", ["F"]}
+    end
+
+    test "a delete asks the server to mail nobody" do
+      assert :ok =
+               Events.delete_calendar_event(client(), @calendar_path, "some-uid",
+                 skip_breaker: true
+               )
+
+      assert_receive {"DELETE", ["F"]}
+    end
+
+    test "a server that keeps SCHEDULE-AGENT gets no Schedule-Reply header" do
+      generic = %{
+        base_url: "https://cal.example.com",
+        username: "you",
+        password: "pass",
+        calendar_paths: ["/dav/cal/"],
+        provider: :caldav
+      }
+
+      assert {:ok, %CreatedEvent{}} = create_event(generic)
+      assert_receive {"PUT", []}
+
+      assert :ok = Events.delete_calendar_event(generic, "/dav/cal/", "x", skip_breaker: true)
+      assert_receive {"DELETE", []}
+    end
+  end
+
+  defp create_event(client) do
+    Events.create_calendar_event(
+      client,
+      hd(client.calendar_paths),
+      %{
+        summary: "Booking",
+        start_time: ~U[2026-05-01 10:00:00Z],
+        end_time: ~U[2026-05-01 10:30:00Z],
+        organizer_email: "organiser@custom-domain.example",
+        attendee_email: "guest@example.com"
+      },
+      skip_breaker: true
+    )
+  end
+
   describe "DELETE with mailbox.org base64 path" do
     test "tolerates 204 success" do
       ReqTest.stub(:tymeslot_http, fn conn ->
