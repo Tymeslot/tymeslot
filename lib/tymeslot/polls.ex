@@ -262,6 +262,13 @@ defmodule Tymeslot.Polls do
     do: PollParticipantQueries.count_unconfirmed(poll_id)
 
   @doc """
+  Whether the host has invited anyone to `poll` by address. Deadline
+  reminders go only to invitees, so only such a poll has any to send.
+  """
+  @spec has_invitees?(PollSchema.t()) :: boolean()
+  def has_invitees?(%PollSchema{id: poll_id}), do: PollParticipantQueries.any_invited?(poll_id)
+
+  @doc """
   Deletes the participants who never confirmed their voting link within its
   lifetime. Run daily by `Tymeslot.Workers.DataRetentionWorker`.
   """

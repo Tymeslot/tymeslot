@@ -38,12 +38,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
+    socket = if socket.assigns[:initialized?], do: socket, else: init(socket, assigns.poll)
 
-    if socket.assigns[:initialized?] do
-      {:ok, socket}
-    else
-      {:ok, init(socket, assigns.poll)}
-    end
+    # Read on every update: someone invited while the host edits brings
+    # the reminders with them.
+    {:ok, assign(socket, :invited?, Polls.has_invitees?(socket.assigns.poll))}
   end
 
   defp init(socket, poll) do
@@ -198,6 +197,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       </form>
 
       <PollReminders.reminders_form
+        :if={@invited?}
         id={"poll-edit-reminders-#{@poll.id}"}
         state={@reminder_picker}
         myself={@myself}

@@ -259,6 +259,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         </form>
 
         <PollReminders.reminders_form
+          :if={invitees_entered?(@invitees)}
           id={"poll-create-reminders-#{@id}"}
           state={@reminder_picker}
           myself={@myself}
@@ -407,6 +408,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   # --- Attribute building ---
+
+  # Reminders reach only invitees, so the picker waits until someone is.
+  defp invitees_entered?(invitees), do: String.trim(invitees || "") != ""
 
   defp build_attrs(params, socket) do
     timezone = Map.get(params, "timezone", socket.assigns.timezone)

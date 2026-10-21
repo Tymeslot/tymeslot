@@ -30,10 +30,22 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
   end
 
   describe "reminders in the create form" do
-    test "start at a day before the deadline and take the presets", %{conn: conn, user: user} do
+    test "appear once someone is invited, a day before the deadline", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       view |> element("button", "New poll") |> render_click()
       view |> element("button", "Add time") |> render_click()
+
+      refute has_element?(view, "[data-testid='poll-reminders-form']")
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => "ada@example.com"}})
+      |> render_change()
+
+      assert has_element?(
+               view,
+               "[data-testid='poll-reminders-form']",
+               "Reminders go to invited people who haven't voted yet."
+             )
 
       assert has_element?(view, "[data-testid='poll-reminders-form']", "1 day before")
       view |> element("[data-testid='reminder-preset-3-days']") |> render_click()
@@ -48,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
           "duration" => "30",
           "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
+          "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
@@ -119,6 +132,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       user: user,
       poll: poll
     } do
+      insert_invitee(poll)
       view = open_editor(conn, poll)
 
       view |> element("[data-testid='reminder-preset-3-days']") |> render_click()
@@ -287,6 +301,22 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
         |> render_submit()
 
       assert html =~ "Couldn&#39;t save this poll. Please try again."
+    end
+
+    test "offers no reminders on a poll nobody was invited to", %{conn: conn, poll: poll} do
+      view = open_editor(conn, poll)
+      refute has_element?(view, "[data-testid='poll-reminders-form']")
+    end
+
+    test "offers reminders once someone is invited", %{conn: conn, poll: poll} do
+      insert_invitee(poll)
+      view = open_editor(conn, poll)
+
+      assert has_element?(
+               view,
+               "[data-testid='poll-reminders-form']",
+               "Reminders go to invited people who haven't voted yet."
+             )
     end
 
     test "saves a custom reminder typed but never added", %{conn: conn, user: user, poll: poll} do

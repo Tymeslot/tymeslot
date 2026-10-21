@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
   @moduledoc """
   The reminder picker as the poll create form and the poll editor use it:
-  reminders go out before the voting deadline to everyone who has not voted,
+  reminders go out before the voting deadline to invited people who have not voted, so the picker is shown only where there are some,
   so the one-click choices are days rather than minutes.
 
   The owning LiveComponent keeps a `ReminderPickerState` and routes the
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
         description={
           dgettext(
             "dashboard_polls",
-            "Sent before the voting deadline to everyone who has not voted yet. A poll without a deadline sends none."
+            "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
           )
         }
         presets={[%{value: 1, unit: "days"}, %{value: 3, unit: "days"}]}

@@ -551,11 +551,6 @@ msgstr "Aus der Umfrage entfernen"
 msgid "Removed from the poll"
 msgstr "Aus der Umfrage entfernt"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Sent before the voting deadline to everyone who has not voted yet. A poll without a deadline sends none."
-msgstr "Wird vor dem Abstimmungsende an alle gesendet, die noch nicht abgestimmt haben. Ohne Frist werden keine verschickt."
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
@@ -687,4 +682,9 @@ msgstr "Zeit entfernen"
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "They are no longer on this poll."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
 msgstr ""
