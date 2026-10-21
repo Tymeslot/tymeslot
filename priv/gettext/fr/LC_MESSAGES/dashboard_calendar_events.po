@@ -971,3 +971,23 @@ msgstr "Cette série a changé pendant que vous la modifiiez, et il n’en reste
 #, elixir-autogen, elixir-format
 msgid "This series changed while you were editing it, so the events left in it can no longer be counted. Nothing was saved. Refresh the calendar and try again."
 msgstr "Cette série a changé pendant que vous la modifiiez, les événements restants ne peuvent donc plus être comptés. Rien n’a été enregistré. Actualisez le calendrier et réessayez."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added. They were not invited, as you don't organise this event."
+msgstr "Participant ajouté. Aucune invitation n’a été envoyée, car vous n’organisez pas cet événement."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed. They were not notified, as you don't organise this event."
+msgstr "Participant supprimé. Aucune notification n’a été envoyée, car vous n’organisez pas cet événement."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added, but their invitation could not be sent."
+msgstr "Participant ajouté, mais son invitation n'a pas pu être envoyée."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed, but they could not be notified."
+msgstr "Participant supprimé, mais il n'a pas pu être notifié."

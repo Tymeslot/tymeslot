@@ -381,7 +381,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
              ]
 
       assert Providers.tracking_options(Swoosh.Adapters.Postmark, :lifecycle) == [
-               track_opens: true,
+               track_opens: false,
                track_links: "None",
                message_stream: "outbound"
              ]
@@ -395,7 +395,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
 
     test "SendGrid receives the category as tracking settings" do
       assert [tracking_settings: settings] =
-               Providers.tracking_options(Swoosh.Adapters.Sendgrid, :lifecycle)
+               Providers.tracking_options(Swoosh.Adapters.Sendgrid, :marketing)
 
       assert settings.open_tracking == %{enable: true}
       assert settings.click_tracking == %{enable: false}
@@ -414,6 +414,35 @@ defmodule Tymeslot.Mailer.ProvidersTest do
     test "AhaSend receives the category as its tracking map" do
       assert [tracking: %{open: false, click: false}] =
                Providers.tracking_options(Swoosh.Adapters.AhaSend, :transactional)
+    end
+
+    test "only marketing email measures opens, whichever provider is configured" do
+      opens =
+        for adapter <- [
+              Swoosh.Adapters.Postmark,
+              Swoosh.Adapters.Sendgrid,
+              Swoosh.Adapters.Mailgun,
+              Swoosh.Adapters.AhaSend
+            ],
+            category <- [:transactional, :lifecycle, :marketing],
+            into: %{} do
+          {{adapter, category}, open_setting(Providers.tracking_options(adapter, category))}
+        end
+
+      assert opens == %{
+               {Swoosh.Adapters.Postmark, :transactional} => :off,
+               {Swoosh.Adapters.Postmark, :lifecycle} => :off,
+               {Swoosh.Adapters.Postmark, :marketing} => :on,
+               {Swoosh.Adapters.Sendgrid, :transactional} => :off,
+               {Swoosh.Adapters.Sendgrid, :lifecycle} => :off,
+               {Swoosh.Adapters.Sendgrid, :marketing} => :on,
+               {Swoosh.Adapters.Mailgun, :transactional} => :off,
+               {Swoosh.Adapters.Mailgun, :lifecycle} => :off,
+               {Swoosh.Adapters.Mailgun, :marketing} => :on,
+               {Swoosh.Adapters.AhaSend, :transactional} => :off,
+               {Swoosh.Adapters.AhaSend, :lifecycle} => :off,
+               {Swoosh.Adapters.AhaSend, :marketing} => :on
+             }
     end
 
     test "transactional email is never tracked, whichever provider is configured" do
@@ -457,6 +486,21 @@ defmodule Tymeslot.Mailer.ProvidersTest do
       assert Providers.tracking_options(Swoosh.Adapters.Test, :lifecycle) == []
     end
   end
+
+  # Reads the open-tracking switch out of each provider's options shape.
+  defp open_setting(track_opens: opens, track_links: _links, message_stream: _stream),
+    do: on_off(opens)
+
+  defp open_setting(tracking_settings: %{open_tracking: %{enable: opens}}), do: on_off(opens)
+
+  defp open_setting(sending_options: %{tracking: tracking, "tracking-opens": opens})
+       when tracking == opens,
+       do: on_off(opens == "yes")
+
+  defp open_setting(tracking: %{open: opens}), do: on_off(opens)
+
+  defp on_off(true), do: :on
+  defp on_off(false), do: :off
 
   # Reads the click-tracking switch out of each provider's options shape,
   # answering :off only for the explicit "never rewrite links" value. An

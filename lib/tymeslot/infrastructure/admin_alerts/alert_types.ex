@@ -40,6 +40,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     payment_event_orphaned: %{category: "Payment", severity: :error},
     dunning_stalled: %{category: "Payment", severity: :error},
     late_payment_refund_failed: %{category: "Payment", severity: :error},
+    subscription_withdrawal_unfinished: %{category: "Payment", severity: :error},
     account_deletion_billing_sync_failed: %{category: "Payment", severity: :error},
     account_deletion_stalled: %{category: "Account", severity: :error},
     account_deletion_held_last_admin: %{category: "Account", severity: :warning},
@@ -231,6 +232,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   # per payment, whatever the reason text says.
   def dedup_key(:late_payment_refund_failed, metadata) do
     "late_payment_refund_failed:#{Map.get(metadata, :booking_payment_id, "unknown")}"
+  end
+
+  # Each unfinished withdrawal is a host owed a refund or a cancellation, so
+  # one alert per withdrawal; two hosts' failures must not collapse into one.
+  def dedup_key(:subscription_withdrawal_unfinished, metadata) do
+    "subscription_withdrawal_unfinished:#{Map.get(metadata, :withdrawal_id, "unknown")}"
   end
 
   # A volume that refuses deletes fails every one of them for the same reason,
@@ -463,6 +470,17 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       "attempt (#{reason_text(metadata)}); the attendee is still owed the money. " <>
       "To settle it, refund the booking from the host's payments settings (or the " <>
       "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
+  end
+
+  def format_message(:subscription_withdrawal_unfinished, metadata) do
+    user_id = Map.get(metadata, :user_id, "unknown")
+    withdrawal_id = Map.get(metadata, :withdrawal_id, "unknown")
+    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
+
+    "Withdrawal #{withdrawal_id} of user #{user_id} (subscription #{stripe_id}) is recorded " <>
+      "but unfinished (#{reason_text(metadata)}); the host may still be owed a refund or a " <>
+      "cancellation. Once the cause is fixed, finish it from a release shell or ask the host " <>
+      "to press Finish my withdrawal"
   end
 
   # One alert per integration and sync run (`Calendar.InvalidEventReport`).

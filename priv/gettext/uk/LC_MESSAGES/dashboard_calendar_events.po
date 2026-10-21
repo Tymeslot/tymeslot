@@ -981,3 +981,23 @@ msgstr "Ця серія змінилася, поки ви її редагува�
 #, elixir-autogen, elixir-format
 msgid "This series changed while you were editing it, so the events left in it can no longer be counted. Nothing was saved. Refresh the calendar and try again."
 msgstr "Ця серія змінилася, поки ви її редагували, тож уже неможливо порахувати, скільки подій у ній залишилося. Нічого не збережено. Оновіть календар і спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added. They were not invited, as you don't organise this event."
+msgstr "Учасника додано. Запрошення не надіслано, оскільки ви не є організатором цієї події."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed. They were not notified, as you don't organise this event."
+msgstr "Учасника видалено. Сповіщення не надіслано, оскільки ви не є організатором цієї події."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added, but their invitation could not be sent."
+msgstr "Учасника додано, але не вдалося надіслати запрошення."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed, but they could not be notified."
+msgstr "Учасника видалено, але не вдалося його сповістити."

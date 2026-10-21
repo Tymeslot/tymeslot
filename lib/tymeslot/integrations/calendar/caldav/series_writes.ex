@@ -189,7 +189,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   end
 
   defp delete_original(client, url, etag, opts) do
-    delete_opts = Keyword.merge(timeout(opts), if_match: etag)
+    delete_opts = Keyword.merge(write_opts(client, opts), if_match: etag)
 
     result =
       with_breaker(client, opts, fn ->
@@ -208,7 +208,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   defp discard_copy(client, created, opts) do
     result =
       with_breaker(client, opts, fn ->
-        Http.delete_event(created.url, client.username, client.password, timeout(opts))
+        Http.delete_event(created.url, client.username, client.password, write_opts(client, opts))
       end)
 
     case result do
@@ -339,7 +339,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   end
 
   defp delete_tail(client, tail_url, opts) do
-    case Http.delete_event(tail_url, client.username, client.password, timeout(opts)) do
+    case Http.delete_event(tail_url, client.username, client.password, write_opts(client, opts)) do
       {:ok, %Req.Response{}} ->
         :ok
 
@@ -355,7 +355,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   defp tail_url(url, uid), do: String.replace(url, ~r{[^/]*$}, "") <> uid <> ".ics"
 
   defp create_tail(client, tail_url, halves, opts) do
-    put_opts = Keyword.merge([operation: :create], timeout(opts))
+    put_opts = Keyword.merge([operation: :create], write_opts(client, opts))
 
     case Http.put_event(tail_url, client.username, client.password, halves.tail, put_opts) do
       {:ok, %Req.Response{status: status}} when status in 200..299 ->
@@ -457,13 +457,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   end
 
   defp delete_resource(client, url, opts) do
-    case Http.delete_event(url, client.username, client.password, timeout(opts)) do
+    case Http.delete_event(url, client.username, client.password, write_opts(client, opts)) do
       {:ok, %Req.Response{}} -> {:ok, %{document: nil}}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp timeout(opts), do: Keyword.take(opts, [:timeout])
+  # Every PUT and DELETE here goes out as `CalDAV.Scheduling` says writes to
+  # the client's server must.
+  defp write_opts(client, opts),
+    do: Keyword.take(opts, [:timeout]) ++ Scheduling.write_opts(client)
 
   defp event_url(client, calendar_path, href),
     do: UrlBuilder.resolve_event_url(client.base_url, calendar_path, nil, href)
