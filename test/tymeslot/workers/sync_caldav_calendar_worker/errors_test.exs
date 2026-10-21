@@ -2,8 +2,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
   @moduledoc """
   Covers the CalDAV sync worker's error handling: provider authentication
   failures (401), missing calendar paths (404), refused requests (415 and 405),
-  sync-token expiry (410), the deletion circuit breaker, and a delta the
-  server answered without any event data.
+  redirects (307), sync-token expiry (410), the deletion circuit breaker, and
+  a delta the server answered without any event data.
   """
 
   use Tymeslot.DataCase, async: false
@@ -323,6 +323,36 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
 
       # The refusal says nothing about the credentials, so it must not push the
       # user through a reconnection they do not need.
+      assert updated.needs_reauth == false
+    end
+
+    test "discards a redirect, which is never followed" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1()]
+        )
+
+      # The shape of a provider in maintenance: every DAV path redirected to
+      # its status page. Each attempt gets the same 307 back.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("location", "https://status.example.org/incidents/1")
+        |> Conn.send_resp(307, "Temporary Redirect")
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "HTTP 307"
+
+      updated =
+        Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
+
       assert updated.needs_reauth == false
     end
 
