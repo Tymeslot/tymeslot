@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
+  alias TymeslotWeb.Themes.Shared.PollVotingComponents
   alias TymeslotWeb.Helpers.ClientIP
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -144,8 +145,11 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       |> Map.put("locale", socket.assigns[:locale])
 
     case Voting.request_link(socket.assigns.poll, attrs) do
-      {:ok, outcome} -> {:noreply, assign(socket, link_request: outcome)}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, register_error_message(reason))}
+      {:ok, outcome} ->
+        {:noreply, assign(socket, link_request: outcome)}
+
+      {:error, reason} ->
+        {:noreply, flash_after_reload(socket, reason, &register_error_message/1)}
     end
   end
 
@@ -209,9 +213,18 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
          |> put_flash(:error, cast_error_message(explain(:unknown_participant, poll)))}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, cast_error_message(reason))}
+        {:noreply, flash_after_reload(socket, reason, &cast_error_message/1)}
     end
   end
+
+  # The poll may have turned invite-only since the page loaded: reloading
+  # first switches the view to the notice straight away.
+  defp flash_after_reload(socket, :invite_only, message_for) do
+    socket |> reload_tallies() |> put_flash(:error, message_for.(:invite_only))
+  end
+
+  defp flash_after_reload(socket, reason, message_for),
+    do: put_flash(socket, :error, message_for.(reason))
 
   # A link that stopped working cannot be replaced from an invite-only poll's
   # page, so the voter is pointed at their email instead.
@@ -233,17 +246,24 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   defp reload_tallies(socket) do
     case Polls.get_poll_for_voting(socket.assigns.poll.token) do
       {:ok, poll} ->
-        assign(socket,
+        socket
+        |> assign(
           poll: poll,
           tallies: Polls.tallies(poll),
           voting_open: Polls.voting_open?(poll),
           participant: reload_participant(poll, socket.assigns[:participant])
         )
+        |> reset_link_request(poll)
 
       {:error, :not_found} ->
         socket
     end
   end
+
+  # An invite-only poll cannot show "link sent": if it opens again later the
+  # page asks for a link afresh.
+  defp reset_link_request(socket, %{invite_only: true}), do: assign(socket, link_request: nil)
+  defp reset_link_request(socket, _poll), do: socket
 
   defp reload_participant(_poll, nil), do: nil
   defp reload_participant(poll, %{token: token}), do: Voting.get_participant(poll, token)
@@ -254,7 +274,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     do: dgettext("booking_polls", "Voting has closed for this poll.")
 
   defp register_error_message(:invite_only),
-    do: invite_only_message()
+    do: PollVotingComponents.invite_only_message()
 
   defp register_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
@@ -280,7 +300,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       )
 
   defp cast_error_message(:invite_only),
-    do: invite_only_message()
+    do: PollVotingComponents.invite_only_message()
 
   defp cast_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
@@ -327,11 +347,4 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     do: dgettext("booking_polls", "Please enter your email address.")
 
   defp field_message(_field, _error, _blank_name_message), do: nil
-
-  defp invite_only_message,
-    do:
-      dgettext(
-        "booking_polls",
-        "This poll is by invitation only. Use the personal link from your email to vote."
-      )
 end

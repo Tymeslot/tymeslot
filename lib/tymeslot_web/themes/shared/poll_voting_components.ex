@@ -168,13 +168,19 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     <div class="poll-invite-only" role="status" data-testid="poll-invite-only">
       <.icon name="hero-envelope" class="poll-invite-only-icon" />
       <p class="poll-voting-notice">
-        {dgettext(
-          "booking_polls",
-          "This poll is by invitation only. Use the personal link from your email to vote."
-        )}
+        {invite_only_message()}
       </p>
     </div>
     """
+  end
+
+  @doc "The notice for an invite-only poll, shared by the page and the flash."
+  @spec invite_only_message() :: String.t()
+  def invite_only_message do
+    dgettext(
+      "booking_polls",
+      "This poll is by invitation only. Use the personal link from your email to vote."
+    )
   end
 
   defp link_sent_message(:sent),

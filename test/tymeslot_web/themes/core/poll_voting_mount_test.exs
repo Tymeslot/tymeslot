@@ -567,6 +567,97 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
              )
     end
 
+    test "an unconfirmed participant's link shows the notice and no vote form", ctx do
+      pending =
+        insert(:poll_participant,
+          poll: ctx.poll,
+          name: "Mallory",
+          confirmed_at: nil,
+          link_sent_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, view, _html} =
+        live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token) <> "?p=#{pending.token}")
+
+      assert has_element?(view, "[data-testid='poll-invite-only']")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
+    end
+
+    test "a link request refused after the poll turned invite-only switches the view", ctx do
+      open = insert(:poll, user: ctx.poll.user, invite_only: false)
+      insert(:poll_time_slot, poll: open)
+
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, open.token))
+
+      # Updated directly, so no broadcast reloads the page first.
+      Repo.update_all(from(p in Tymeslot.Polls.PollSchema, where: p.id == ^open.id),
+        set: [invite_only: true]
+      )
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "Mallory",
+          "email" => "mallory@example.com"
+        })
+
+      assert html =~ "by invitation only"
+      assert has_element?(view, "[data-testid='poll-invite-only']")
+      refute has_element?(view, "form[data-testid='poll-register-form']")
+    end
+
+    test "a vote refused after the poll turned invite-only switches the view", ctx do
+      open = insert(:poll, user: ctx.poll.user, invite_only: false)
+      slot = insert(:poll_time_slot, poll: open)
+
+      pending =
+        insert(:poll_participant,
+          poll: open,
+          name: "Mallory",
+          confirmed_at: nil,
+          link_sent_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, view, _html} =
+        live(ctx.conn, poll_path(ctx.profile.username, open.token) <> "?p=#{pending.token}")
+
+      assert has_element?(view, "form[data-testid='poll-vote-form']")
+
+      Repo.update_all(from(p in Tymeslot.Polls.PollSchema, where: p.id == ^open.id),
+        set: [invite_only: true]
+      )
+
+      view
+      |> form("form[data-testid='poll-vote-form']", %{"votes" => %{slot.id => "yes"}})
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-invite-only']")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
+    end
+
+    test "a page that asked for a link asks afresh after invite-only and back to open", ctx do
+      open = insert(:poll, user: ctx.poll.user, invite_only: false)
+      insert(:poll_time_slot, poll: open)
+
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, open.token))
+
+      view
+      |> form("form[data-testid='poll-register-form']", %{
+        "name" => "Ada Lovelace",
+        "email" => "ada@example.com"
+      })
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-link-sent']")
+
+      {:ok, _poll} = Polls.update_details(open.id, open.user_id, %{"invite_only" => true})
+      assert has_element?(view, "[data-testid='poll-invite-only']")
+
+      {:ok, _poll} = Polls.update_details(open.id, open.user_id, %{"invite_only" => false})
+
+      refute has_element?(view, "[data-testid='poll-link-sent']")
+      assert has_element?(view, "form[data-testid='poll-register-form']")
+    end
+
     test "a page left open loses its form when the host makes the poll invite-only", ctx do
       open = insert(:poll, user: ctx.poll.user, invite_only: false)
       insert(:poll_time_slot, poll: open)

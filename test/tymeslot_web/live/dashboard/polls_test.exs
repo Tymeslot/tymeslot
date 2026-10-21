@@ -424,6 +424,78 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert [%{invite_only: false}] = Polls.list_polls(user.id)
     end
 
+    test "submitting invitees without a preceding change still creates an invite-only poll", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      open_create_form(view)
+      params = create_params(%{"invitees" => "grace@example.com"})
+
+      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_submit()
+
+      assert [%{invite_only: true}] = Polls.list_polls(user.id)
+    end
+
+    test "clearing the invitees flips an unchosen preset back to anyone", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      open_create_form(view)
+      params = create_params(%{"invitees" => "grace@example.com"})
+
+      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      assert has_element?(view, "input[name='poll[access]'][value='invited'][checked]")
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(params, "invitees", "")})
+      |> render_change()
+
+      assert has_element?(view, "input[name='poll[access]'][value='anyone'][checked]")
+    end
+
+    test "clearing the invitees keeps an explicit choice", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      open_create_form(view)
+      params = create_params(%{"invitees" => "grace@example.com", "access" => "invited"})
+
+      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(params, "invitees", "")})
+      |> render_change()
+
+      assert has_element?(view, "input[name='poll[access]'][value='invited'][checked]")
+    end
+
+    test "the withdraw hint counts requests that arrive while the editor is open", %{
+      conn: conn,
+      user: user
+    } do
+      TestMocks.setup_calendar_mocks(events: [])
+      poll = insert(:poll, user: user, status: :open, meeting_type_id: nil, invite_only: false)
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view
+      |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
+      |> render_click()
+
+      view |> element("[data-testid='poll-edit-details']") |> render_click()
+
+      # Inserted after the editor opened; nothing broadcasts a link request.
+      insert(:poll_participant,
+        poll: poll,
+        confirmed_at: nil,
+        link_sent_at: DateTime.utc_now(:second)
+      )
+
+      view
+      |> form("[data-testid='poll-details-form']", poll: %{title: poll.title, access: "invited"})
+      |> render_change()
+
+      assert has_element?(view, "[data-testid='poll-access-hint']", "1 person")
+    end
+
     test "choosing invited people with nobody invited says nobody can vote yet", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       open_create_form(view)

@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   Covers what can change while people vote (see `Tymeslot.Polls.Editing`):
   the title and description, whether the host is emailed about new votes, who
   can vote (switching to invited people only withdraws pending link requests,
-  which the editor warns about with the count it is given), the
+  which the editor warns about with the count it reads when the choice is made), the
   voting deadline (moved, removed, or set again to reopen voting), the
   reminders before it, and new candidate times. Everything is saved at once.
   The participant list beside it removes someone straight away.
@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       deadline: LocalTime.to_input(poll.deadline_at, poll.timezone),
       notify_on_vote: poll.notify_on_vote,
       access: PollAccess.value(poll.invite_only),
+      unconfirmed_count: 0,
       meeting_type_id: poll.meeting_type_id,
       new_times: [],
       time_counter: 0,
@@ -122,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           id={"poll-access-#{@poll.id}"}
           name="poll[access]"
           value={@access}
-          hint={withdraw_hint(@poll, @access, assigns[:unconfirmed_count] || 0)}
+          hint={withdraw_hint(@poll, @access, @unconfirmed_count)}
         />
 
         <div class="space-y-2" data-testid="poll-new-times">
@@ -259,13 +260,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   def handle_event("change", %{"poll" => params}, socket) do
+    access = valid_access(Map.get(params, "access"), socket.assigns.access)
+
     {:noreply,
-     assign(socket,
+     socket
+     |> count_pending_requests(access)
+     |> assign(
        title: Map.get(params, "title", socket.assigns.title),
        description: Map.get(params, "description", socket.assigns.description),
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
        notify_on_vote: Map.get(params, "notify_on_vote", "false") == "true",
-       access: Map.get(params, "access", socket.assigns.access),
+       access: access,
        meeting_type_id: parse_id(Map.get(params, "meeting_type_id")),
        new_times: merge_times(socket.assigns.new_times, Map.get(params, "new_times", %{}))
      )}
@@ -359,6 +364,24 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_polls", "voted")
   defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_polls", "invited")
   defp status_label(_participant), do: dgettext("dashboard_polls", "not voted yet")
+
+  defp valid_access(value, _previous) when value in ["anyone", "invited"], do: value
+  defp valid_access(_value, previous), do: previous
+
+  # Requests can arrive while the editor is open and nothing broadcasts them,
+  # so the count the warning shows is read when the host edits while the choice
+  # is invited people only, not carried over from when the panel loaded.
+  defp count_pending_requests(socket, "invited") do
+    case socket.assigns.poll do
+      %{invite_only: false} = poll ->
+        assign(socket, :unconfirmed_count, Polls.count_unconfirmed(poll))
+
+      _invite_only ->
+        socket
+    end
+  end
+
+  defp count_pending_requests(socket, _access), do: socket
 
   # Warns before the switch that withdraws the requests waiting on the poll.
   defp withdraw_hint(%{invite_only: false}, "invited", count) when count > 0 do

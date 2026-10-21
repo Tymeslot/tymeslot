@@ -91,7 +91,7 @@ html.scheduling-app .poll-identity-form {
   gap: var(--space-md);
 }
 
-/* Shown in place of the form once a voting link was requested */
+/* The link-sent and invitation-only notices, shown in place of the form */
 html.scheduling-app .poll-link-sent,
 html.scheduling-app .poll-invite-only {
   display: flex;

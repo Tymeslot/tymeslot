@@ -80,7 +80,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         module={PollEditor}
         id={"poll-editor-#{@poll.id}"}
         poll={@poll}
-        unconfirmed_count={@unconfirmed_count}
         meeting_types={@meeting_types}
         user_id={@user_id}
         parent_id={@parent_id}

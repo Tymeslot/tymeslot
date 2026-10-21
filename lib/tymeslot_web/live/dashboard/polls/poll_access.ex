@@ -36,56 +36,70 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
   @spec access_input(map()) :: Phoenix.LiveView.Rendered.t()
   def access_input(assigns) do
     ~H"""
-    <fieldset class="space-y-2" data-testid="poll-access">
+    <fieldset
+      class="space-y-2"
+      data-testid="poll-access"
+      aria-describedby={@hint && "#{@id}-hint"}
+    >
       <legend class="label mb-1">{dgettext("dashboard_polls", "Who can vote")}</legend>
 
-      <label class="flex items-start gap-2 text-token-sm" for={"#{@id}-anyone"}>
+      <div class="flex items-start gap-2 text-token-sm">
         <input
           type="radio"
           id={"#{@id}-anyone"}
           name={@name}
           value="anyone"
           checked={@value == "anyone"}
+          aria-describedby={"#{@id}-anyone-description"}
           class="mt-1"
         />
-        <span>
-          <span class="font-medium text-tymeslot-800">
+        <div>
+          <label class="font-medium text-tymeslot-800" for={"#{@id}-anyone"}>
             {dgettext("dashboard_polls", "Anyone with the link")}
-          </span>
-          <span class="block text-token-xs text-tymeslot-500">
+          </label>
+          <span
+            id={"#{@id}-anyone-description"}
+            class="block text-token-xs text-tymeslot-500"
+          >
             {dgettext(
               "dashboard_polls",
               "Anyone you share the poll's link with can ask for a personal voting link by email."
             )}
           </span>
-        </span>
-      </label>
+        </div>
+      </div>
 
-      <label class="flex items-start gap-2 text-token-sm" for={"#{@id}-invited"}>
+      <div class="flex items-start gap-2 text-token-sm">
         <input
           type="radio"
           id={"#{@id}-invited"}
           name={@name}
           value="invited"
           checked={@value == "invited"}
+          aria-describedby={"#{@id}-invited-description"}
           class="mt-1"
         />
-        <span>
-          <span class="font-medium text-tymeslot-800">
+        <div>
+          <label class="font-medium text-tymeslot-800" for={"#{@id}-invited"}>
             {dgettext("dashboard_polls", "Only people I invite")}
-          </span>
-          <span class="block text-token-xs text-tymeslot-500">
+          </label>
+          <span
+            id={"#{@id}-invited-description"}
+            class="block text-token-xs text-tymeslot-500"
+          >
             {dgettext(
               "dashboard_polls",
               "Only the people you invite by email can vote. Anyone else who opens the link is told the poll is by invitation."
             )}
           </span>
-        </span>
-      </label>
+        </div>
+      </div>
 
       <p
         :if={@hint}
-        class="flex items-center gap-1 text-token-xs text-amber-700"
+        id={"#{@id}-hint"}
+        aria-live="polite"
+        class="text-token-xs text-amber-700"
         data-testid="poll-access-hint"
       >
         {@hint}

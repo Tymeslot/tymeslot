@@ -206,7 +206,6 @@ msgstr "Zadejte svou e-mailovou adresu."
 msgid "Please enter your name."
 msgstr "Zadejte své jméno."
 
-#: lib/tymeslot_web/themes/core/poll_voting.ex
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only. Use the personal link from your email to vote."
