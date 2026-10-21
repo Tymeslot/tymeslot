@@ -42,6 +42,11 @@ defmodule Tymeslot.Polls.PollSchema do
     # (`Tymeslot.Emails.EmailScheduler.schedule_poll_vote_digest/1`),
     # and when they last were, so the next update names only who voted since.
     field(:notify_on_vote, :boolean, default: false)
+    # Whether only the people the host invited by email can vote. When set,
+    # the shared link asks nobody for their address
+    # (`Tymeslot.Polls.Voting.request_link/2` refuses), and switching it on
+    # withdraws the requests already waiting (`Tymeslot.Polls.Editing`).
+    field(:invite_only, :boolean, default: false)
     # When participants who have not voted are reminded, as lead times before
     # `deadline_at`. Nil for a poll from before the host could choose: see
     # `reminders/1`.
@@ -100,6 +105,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :deadline_at,
       :timezone,
       :notify_on_vote,
+      :invite_only,
       :reminder_config
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
@@ -118,7 +124,8 @@ defmodule Tymeslot.Polls.PollSchema do
   Changeset for a host editing an open poll.
 
   Covers the title, the description, whether the host is told about new votes,
-  the voting deadline, the reminders before it, and the meeting type whose
+  who can vote (`invite_only`), the voting deadline, the reminders before it,
+  and the meeting type whose
   calendar and video the confirmed meeting uses (checked by
   `Tymeslot.Polls.Editing`, which knows the host). A deadline may be moved,
   removed, or set again after it passed, which reopens voting, but never into
@@ -134,6 +141,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :title,
       :description,
       :notify_on_vote,
+      :invite_only,
       :deadline_at,
       :reminder_config,
       :meeting_type_id
