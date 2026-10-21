@@ -195,3 +195,13 @@ msgstr "Enviamos um link pessoal de votação para o endereço que você informo
 #, elixir-autogen, elixir-format
 msgid "You're voting with your personal link."
 msgstr "Você está votando com seu link pessoal."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your email address."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name."
+msgstr ""

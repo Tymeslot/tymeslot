@@ -143,6 +143,80 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       %{view: view, poll: poll, slot: slot, profile: profile}
     end
 
+    test "a name the rules refuse on a first vote is named in the message", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
+
+      html =
+        view
+        |> form("form[data-testid='poll-vote-form']", %{
+          "name" => "A",
+          "votes" => %{slot.id => "yes"}
+        })
+        |> render_submit()
+
+      assert html =~ "Name is too short (minimum 2 characters)"
+      refute html =~ "Please enter your name"
+      assert Repo.get!(PollParticipantSchema, invitee.id).voted_at == nil
+    end
+
+    test "a missing name on a first vote asks for one", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
+
+      html = render_submit(view, "cast_votes", %{"name" => "", "votes" => %{slot.id => "yes"}})
+
+      assert html =~ "Please enter your name, then save your responses again."
+    end
+
+    test "a link request with a refused name or address says which and why", %{view: view} do
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "A",
+          "email" => "ada@example.com"
+        })
+
+      assert html =~ "Name is too short (minimum 2 characters)"
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "Ada Lovelace",
+          "email" => "not-an-address"
+        })
+
+      assert html =~ "Email format is invalid"
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "",
+          "email" => "ada@example.com"
+        })
+
+      assert html =~ "Please enter your name."
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "Ada Lovelace",
+          "email" => ""
+        })
+
+      assert html =~ "Please enter your email address."
+    end
+
     test "a voter whose link died while the page was open is sent back to the request form", %{
       conn: conn,
       poll: poll,

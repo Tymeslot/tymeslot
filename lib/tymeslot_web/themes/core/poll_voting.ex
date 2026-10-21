@@ -254,14 +254,18 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         "This poll is receiving a lot of requests right now. Please try again later."
       )
 
-  defp register_error_message(_changeset),
-    do: dgettext("booking_polls", "Please check your name and email, then try again.")
+  defp register_error_message(%Ecto.Changeset{} = changeset),
+    do: changeset_message(changeset, dgettext("booking_polls", "Please enter your name."))
 
   defp cast_error_message(:voting_closed),
     do: dgettext("booking_polls", "Voting has closed for this poll.")
 
-  defp cast_error_message(%Ecto.Changeset{}),
-    do: dgettext("booking_polls", "Please enter your name, then save your responses again.")
+  defp cast_error_message(%Ecto.Changeset{} = changeset),
+    do:
+      changeset_message(
+        changeset,
+        dgettext("booking_polls", "Please enter your name, then save your responses again.")
+      )
 
   defp cast_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
@@ -286,4 +290,26 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         "booking_polls",
         "One of your responses wasn't recognised. Please refresh and try again."
       )
+
+  # The name and address rules give translated messages of their own, shown
+  # as they are. Ecto's built-in ones (a missing field, a value of the wrong
+  # type) are not translated, so a missing name or address gets a sentence
+  # written here, and anything else the general one.
+  defp changeset_message(%Ecto.Changeset{errors: errors}, blank_name_message) do
+    Enum.find_value(
+      [:name, :email],
+      dgettext("booking_polls", "Please check your name and email, then try again."),
+      &field_message(&1, Keyword.get(errors, &1), blank_name_message)
+    )
+  end
+
+  defp field_message(_field, {message, []}, _blank_name_message), do: message
+
+  defp field_message(:name, {_message, [validation: :required]}, blank_name_message),
+    do: blank_name_message
+
+  defp field_message(:email, {_message, [validation: :required]}, _blank_name_message),
+    do: dgettext("booking_polls", "Please enter your email address.")
+
+  defp field_message(_field, _error, _blank_name_message), do: nil
 end
