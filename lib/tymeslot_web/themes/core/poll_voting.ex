@@ -286,6 +286,9 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         "This poll is receiving a lot of requests right now. Please try again later."
       )
 
+  defp register_error_message(:recipient_rate_limited),
+    do: dgettext("booking_polls", "Too many emails to this address recently; try again later.")
+
   defp register_error_message(%Ecto.Changeset{} = changeset),
     do: changeset_message(changeset, dgettext("booking_polls", "Please enter your name."))
 

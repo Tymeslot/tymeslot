@@ -9,6 +9,10 @@ defmodule Tymeslot.Polls.Voting do
   participant: from then on they count. Both operations refuse to proceed once
   voting has closed, and vote casting whitelists slot ids against the poll
   rather than trusting client-supplied ids.
+
+  Link emails count against the poll email limits
+  (`Tymeslot.Polls.EmailLimits`): a poll takes so many requests an hour, and an
+  address is sent so many poll emails, across every poll.
   """
 
   alias Ecto.Changeset
@@ -17,6 +21,7 @@ defmodule Tymeslot.Polls.Voting do
   alias Tymeslot.Polls
 
   alias Tymeslot.Polls.{
+    EmailLimits,
     PollParticipantQueries,
     PollParticipantSchema,
     PollQueries,
@@ -67,18 +72,27 @@ defmodule Tymeslot.Polls.Voting do
   `{:error, :voting_closed}` once voting has closed or while the poll's host
   is pending account deletion; and, for a new address or one whose pending
   link has expired, `{:error, :poll_full}` at the participant cap and
-  `{:error, :too_many_requests}` when too many links are out unconfirmed.
+  `{:error, :too_many_requests}` when too many links are out unconfirmed or
+  the poll has taken its share of requests this hour, and
+  `{:error, :recipient_rate_limited}` when the address has had too many poll
+  emails lately.
   """
   @spec request_link(PollSchema.t(), map()) ::
           {:ok, request_outcome()}
           | {:error,
-             :invite_only | :voting_closed | :poll_full | :too_many_requests | Changeset.t()}
+             :invite_only
+             | :voting_closed
+             | :poll_full
+             | :too_many_requests
+             | :recipient_rate_limited
+             | Changeset.t()}
   def request_link(poll, attrs) do
     # Every refusal is one clause here, run before anything is written or
     # sent, so a new check (who may ask, how often) is one more clause.
     with :ok <- ensure_requests_accepted(poll),
          :ok <- ensure_open(poll),
-         {:ok, request} <- validate_request(poll, attrs) do
+         {:ok, request} <- validate_request(poll, attrs),
+         :ok <- EmailLimits.charge_link_request(poll) do
       route_request(poll, request)
     end
   end
@@ -216,14 +230,19 @@ defmodule Tymeslot.Polls.Voting do
   end
 
   # The send is claimed by a conditional update, so two requests racing for
-  # the same address send one email between them.
+  # the same address send one email between them. Only a claimed send is
+  # charged to the address: a repeat inside the window sends nothing. A
+  # refused charge leaves the claim in place, which only holds a retry back
+  # for the resend window, shorter than any wait the limit imposes.
   defp resend_link(participant) do
     now = DateTime.utc_now()
     resend_before = DateTime.add(now, -@resend_interval_seconds, :second)
 
     if PollParticipantQueries.claim_link_send(participant.id, now, resend_before) do
-      EmailScheduler.schedule_poll_participant_link(participant)
-      {:ok, :resent}
+      with :ok <- EmailLimits.charge_recipient(participant.email) do
+        EmailScheduler.schedule_poll_participant_link(participant)
+        {:ok, :resent}
+      end
     else
       {:ok, :throttled}
     end
@@ -242,10 +261,14 @@ defmodule Tymeslot.Polls.Voting do
         {:error, :too_many_requests}
 
       true ->
-        request
-        |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())
-        |> PollParticipantQueries.insert()
-        |> handle_insert(poll, request)
+        # Charged before the row is written, so a refused address leaves no
+        # participant waiting for a link that never comes.
+        with :ok <- EmailLimits.charge_recipient(request_email(request)) do
+          request
+          |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())
+          |> PollParticipantQueries.insert()
+          |> handle_insert(poll, request)
+        end
     end
   end
 

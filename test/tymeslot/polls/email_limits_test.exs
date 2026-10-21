@@ -221,4 +221,83 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       assert EmailLimits.charge_link_request(poll) == {:error, :too_many_requests}
     end
   end
+
+  describe "link requests" do
+    defp link_jobs,
+      do: all_enqueued(worker: EmailWorker, args: %{"action" => "send_poll_participant_link"})
+
+    test "a poll that has taken its share of requests turns the next away" do
+      poll = insert(:poll)
+      fill(:poll_link_request, poll.id)
+      ada = address("ada")
+
+      assert Voting.request_link(poll, %{name: "Ada", email: ada}) ==
+               {:error, :too_many_requests}
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, ada) == nil
+      assert link_jobs() == []
+    end
+
+    test "a new address that has had too many poll emails is not added" do
+      poll = insert(:poll)
+      ada = address("ada")
+      fill(:poll_recipient_email, ada)
+
+      assert Voting.request_link(poll, %{name: "Ada", email: ada}) ==
+               {:error, :recipient_rate_limited}
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, ada) == nil
+      assert link_jobs() == []
+    end
+
+    test "an address on the poll is not sent its link again once it has had its share" do
+      poll = insert(:poll)
+      ada = address("ada")
+
+      insert(:poll_participant,
+        poll: poll,
+        email: ada,
+        confirmed_at: nil,
+        link_sent_at: DateTime.add(DateTime.utc_now(), -11, :minute)
+      )
+
+      fill(:poll_recipient_email, ada)
+
+      assert Voting.request_link(poll, %{name: "Ada", email: ada}) ==
+               {:error, :recipient_rate_limited}
+
+      assert link_jobs() == []
+    end
+
+    test "a repeat inside the resend window sends nothing and costs nothing" do
+      poll = insert(:poll)
+      ada = address("ada")
+      assert {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: ada})
+      after_first = RateLimiter.remaining(:poll_recipient_email, ada)
+
+      assert {:ok, :throttled} = Voting.request_link(poll, %{name: "Ada", email: ada})
+      assert RateLimiter.remaining(:poll_recipient_email, ada) == after_first
+      assert length(link_jobs()) == 1
+    end
+
+    test "invitations and voting links draw on one budget per address" do
+      ada = address("ada")
+      before = RateLimiter.remaining(:poll_recipient_email, ada)
+
+      {:ok, _result} = Invitations.invite(insert(:poll), [%{email: ada, name: nil}])
+      assert {:ok, :sent} = Voting.request_link(insert(:poll), %{name: "Ada", email: ada})
+
+      assert RateLimiter.remaining(:poll_recipient_email, ada) == before - 2
+    end
+
+    test "an invalid address is refused without charging anyone's budget" do
+      poll = insert(:poll)
+      before = RateLimiter.remaining(:poll_recipient_email, "not-an-address")
+
+      assert {:error, %Ecto.Changeset{}} =
+               Voting.request_link(poll, %{name: "Ada", email: "not-an-address"})
+
+      assert RateLimiter.remaining(:poll_recipient_email, "not-an-address") == before
+    end
+  end
 end
