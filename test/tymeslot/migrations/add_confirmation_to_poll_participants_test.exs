@@ -49,7 +49,15 @@ defmodule Tymeslot.Migrations.AddConfirmationToPollParticipantsTest do
   describe "down" do
     test "deletes pending link requests and keeps everyone who counts" do
       poll = insert(:poll)
-      voter = insert(:poll_participant, poll: poll, invited_at: nil, voted_at: @voted)
+
+      voter =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: @voted,
+          invited_at: nil,
+          voted_at: @voted
+        )
+
       invitee = insert(:poll_participant, poll: poll, confirmed_at: @joined, invited_at: @joined)
 
       _pending =
@@ -71,7 +79,10 @@ defmodule Tymeslot.Migrations.AddConfirmationToPollParticipantsTest do
   # Someone on a poll from before confirmation: never invited, since that
   # release had no invitations, and joined well before any vote.
   defp legacy_participant(attrs) do
-    insert(:poll_participant, Keyword.merge([inserted_at: @joined, invited_at: nil], attrs))
+    insert(
+      :poll_participant,
+      Keyword.merge([inserted_at: @joined, confirmed_at: @joined, invited_at: nil], attrs)
+    )
   end
 
   # The schema still names the dropped columns, so after `down/0` the rows are

@@ -165,7 +165,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
 
-      expired =
+      _expired =
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
@@ -180,9 +180,9 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
       assert enqueued_all_voted_count(poll.id) == 0
 
+      # The expired request never voted: the nudge did not wait for it.
       {:ok, _bob_vote} = Voting.cast_votes(poll, pending.token, %{slot.id => :yes})
       assert enqueued_all_voted_count(poll.id) == 1
-      assert expired.voted_at == nil
     end
 
     test "a poll shared only by link never claims everyone has voted" do
