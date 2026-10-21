@@ -17,6 +17,7 @@ defmodule Tymeslot.Meetings do
     CalendarEventLink,
     CalendarEvents,
     CalendarExport,
+    CalendarMove,
     Cancellation,
     ExternalCalendarChanges,
     Guests,
@@ -477,6 +478,32 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
+  The time `meeting` can follow its moved calendar event to, or why it cannot.
+  See `Tymeslot.Meetings.CalendarMove.offer/1`.
+  """
+  @spec calendar_move_offer(MeetingSchema.t()) ::
+          {:ok, CalendarMove.offer()} | {:error, CalendarMove.refusal()}
+  defdelegate calendar_move_offer(meeting), to: CalendarMove, as: :offer
+
+  @doc """
+  The calendar-move offers for the movable meetings among `meetings`, keyed by
+  meeting id. See `Tymeslot.Meetings.CalendarMove.offers/1`.
+  """
+  @spec calendar_move_offers([MeetingSchema.t()]) :: %{String.t() => CalendarMove.offer()}
+  defdelegate calendar_move_offers(meetings), to: CalendarMove, as: :offers
+
+  @doc """
+  Moves the organiser's booking to its calendar event's current time, provided
+  it is still the `confirmed` offer the host agreed to. See
+  `Tymeslot.Meetings.CalendarMove.move/3`.
+  """
+  @spec move_to_calendar_time(String.t(), integer(), CalendarMove.offer()) ::
+          {:ok, MeetingSchema.t()} | {:error, CalendarMove.move_error()}
+  defdelegate move_to_calendar_time(meeting_id, organizer_user_id, confirmed),
+    to: CalendarMove,
+    as: :move
+
+  @doc """
   Applies an externally detected calendar change (`:deleted` or `:modified`)
   to the meeting linked to the given provider event, if any.
 
@@ -484,12 +511,16 @@ defmodule Tymeslot.Meetings do
   detects that a provider event linked to a meeting changed externally.
   Owns all meeting-side consequences: sync-status updates, auto-cancellation
   on external deletion, and host notifications.
+
+  `snapshot_at:` is when the read that saw the change began; see
+  `Tymeslot.Meetings.ExternalCalendarChanges.apply_change/5`.
   """
   defdelegate apply_external_calendar_change(
                 calendar_integration_id,
                 provider_event_id,
                 uid,
-                signal
+                signal,
+                opts \\ []
               ),
               to: ExternalCalendarChanges,
               as: :apply_change
@@ -559,6 +590,13 @@ defmodule Tymeslot.Meetings do
   meeting on `integration_ids` matching one of the provider event ids or uids.
   """
   defdelegate list_calendar_links(integration_ids, provider_event_ids, uids),
+    to: MeetingCalendarQueries
+
+  @doc """
+  Returns the subset of `identifiers` carried by any meeting the organiser
+  `organizer_user_id` organises, in any status and through any integration.
+  """
+  defdelegate organizer_calendar_identifiers(organizer_user_id, identifiers),
     to: MeetingCalendarQueries
 
   @doc """

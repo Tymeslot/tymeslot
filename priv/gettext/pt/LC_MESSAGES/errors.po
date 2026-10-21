@@ -439,7 +439,7 @@ msgstr "deve ser múltiplo de %{step} minutos"
 msgid "Break times overlap with existing break"
 msgstr "Os horários da pausa se sobrepõem a outra pausa que já existe"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe must be connected"
 msgstr "O Stripe precisa estar conectado"
@@ -605,7 +605,7 @@ msgstr "precisa ser um tema válido"
 msgid "must be after start time"
 msgstr "precisa ser depois do horário de início"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "must be at least %{minimum}"
 msgstr "precisa ser de pelo menos %{minimum}"
@@ -780,7 +780,7 @@ msgstr "Este arquivo é grande demais. Envie um arquivo de no máximo %{size} MB
 msgid "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
 msgstr "Este tipo de arquivo não é aceito. Envie uma imagem JPG, PNG, GIF ou WebP."
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Prices cannot be set in your Stripe account's currency"
 msgstr "Não é possível definir preços na moeda da sua conta Stripe"

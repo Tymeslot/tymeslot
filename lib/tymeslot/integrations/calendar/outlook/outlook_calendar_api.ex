@@ -542,6 +542,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   # when its repeat rule has no Graph pattern.
   defp event_body(event_data) do
     with {:ok, body} <- EventMapper.format_event_data(event_data),
-         do: {:ok, EventMapper.add_tymeslot_fingerprint(body)}
+         do: {:ok, EventMapper.put_provenance(body, event_data)}
   end
 end

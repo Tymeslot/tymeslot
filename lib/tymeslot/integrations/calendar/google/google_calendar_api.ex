@@ -102,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     body =
       event_data
       |> EventMapper.format_new_event_data()
-      |> EventMapper.add_tymeslot_fingerprint()
+      |> EventMapper.put_provenance(event_data)
 
     params = write_params(event_data)
     conference_requested? = EventMapper.requires_conference_data_version?(event_data)
@@ -168,7 +168,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     body =
       event_data
       |> EventMapper.format_event_data()
-      |> EventMapper.add_tymeslot_fingerprint()
+      |> EventMapper.carry_unmodelled_fields(event_data)
+      |> EventMapper.put_provenance(event_data)
 
     google_event_id = EventMapper.uuid_to_google_event_id(event_id)
 

@@ -21,10 +21,12 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Validation.Constraints
+  alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.VideoSyncWorker
 
   @type signal :: :deleted | :modified
@@ -42,15 +44,22 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   - `uid` — the iCal UID of the event (may be `nil` for Outlook deleted events)
   - `signal` — `:deleted` or `:modified`
 
+  Options:
+
+  - `snapshot_at:` when the read that saw the change began. A `:modified`
+    signal is dropped when Tymeslot's own write to the event completed at or
+    after that instant, since the event read may predate it. Without it, only
+    a write still pending holds the signal back.
+
   Returns `:ok` when no action was needed (no linked meeting, already
   up-to-date) or when the status change and its side effects succeeded.
   """
-  @spec apply_change(integer(), String.t() | nil, String.t() | nil, signal()) ::
+  @spec apply_change(integer(), String.t() | nil, String.t() | nil, signal(), keyword()) ::
           :ok | {:error, term()}
-  def apply_change(calendar_integration_id, provider_event_id, uid, signal) do
+  def apply_change(calendar_integration_id, provider_event_id, uid, signal, opts \\ []) do
     case find_linked_meeting(calendar_integration_id, provider_event_id, uid) do
       {:ok, meeting} ->
-        apply_change_to_meeting(meeting, signal)
+        apply_status_change(meeting, status_for(signal), signal, opts[:snapshot_at])
 
       {:error, :not_found} ->
         :ok
@@ -68,7 +77,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   """
   @spec apply_change_to_meeting(Meeting.t(), signal()) :: :ok | {:error, term()}
   def apply_change_to_meeting(%Meeting{} = meeting, signal) do
-    apply_status_change(meeting, status_for(signal), signal)
+    apply_status_change(meeting, status_for(signal), signal, nil)
   end
 
   @doc """
@@ -268,8 +277,9 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   # external change.
   #
   # An elapsed slot cannot be acted on at all: see `slot_elapsed?/1`.
-  @spec apply_status_change(Meeting.t(), String.t(), signal()) :: :ok | {:error, term()}
-  defp apply_status_change(meeting, new_status, signal) do
+  @spec apply_status_change(Meeting.t(), String.t(), signal(), DateTime.t() | nil) ::
+          :ok | {:error, term()}
+  defp apply_status_change(meeting, new_status, signal, snapshot_at) do
     cond do
       not MeetingState.expects_calendar_event?(meeting) ->
         ignore(meeting, signal, "meeting has no expected calendar event")
@@ -277,10 +287,41 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
       slot_elapsed?(meeting) ->
         ignore(meeting, signal, "meeting slot has already elapsed")
 
+      # Deletions stay unguarded: a removed event is gone whatever is queued.
+      signal == :modified and own_write_unseen?(meeting, snapshot_at) ->
+        ignore(meeting, signal, "the event read may predate a Tymeslot calendar write")
+
       true ->
         update_calendar_sync_status(meeting, new_status, signal)
     end
   end
+
+  # Whether the event this signal was derived from may not show Tymeslot's own
+  # latest write to it yet, so that comparing it with the meeting would flag
+  # Tymeslot's change as the host's. An attendee reschedule moves the booking
+  # at once and a CalendarEventWorker job updates the calendar a few seconds
+  # later; until then the event still shows the old time, and flagging it
+  # would offer the host a move back to that old time, an undo of the
+  # attendee's reschedule.
+  #
+  # A job still pending is the obvious case. The other is a job that finished
+  # while the event was being read and processed: a sync reads the event, then
+  # pages, refreshes series and writes the cache before it reconciles, and a
+  # job completing in that window is no longer pending when asked, yet its
+  # write may have landed after the read. So a job that completed at or after
+  # the read began counts too. Its write is itself a change the provider
+  # reports, so the next pass compares the event afresh; nothing that diverges
+  # for real is lost.
+  #
+  # The read's start is the only safe anchor. The meeting's `updated_at` moves
+  # on unrelated changes, and comparing the event's last-modified time against
+  # it would hold back a genuine host move for good once anything else touched
+  # the meeting; no column records Tymeslot's last calendar-relevant change.
+  defp own_write_unseen?(meeting, nil),
+    do: Jobs.pending_meeting_job?(CalendarEventWorker, meeting.id)
+
+  defp own_write_unseen?(meeting, %DateTime{} = snapshot_at),
+    do: Jobs.meeting_job_since?(CalendarEventWorker, meeting.id, snapshot_at)
 
   # A meeting whose slot has already elapsed cannot usefully be updated or
   # cancelled, so neither consequence of an external signal has anywhere to

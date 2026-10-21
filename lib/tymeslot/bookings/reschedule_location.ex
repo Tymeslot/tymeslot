@@ -136,6 +136,9 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   handed to a job of its own; whichever job creates the room, the other finds
   it attached and announces with the link.
 
+  `opts` are passed on to the reschedule emails the job sends
+  (`moved_by: :host`, as `Events.meeting_rescheduled/3` takes them).
+
   Returns `:scheduled` when the room's job now owns the announcement, and
   `:not_scheduled` when the caller still has to send it.
 
@@ -143,15 +146,19 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   or not yet paid for, is given its room by the path that confirms it, exactly
   as a new booking is.
   """
-  @spec create_room(Meeting.t(), Meeting.t()) :: :scheduled | :not_scheduled
+  @spec create_room(Meeting.t(), Meeting.t(), keyword()) :: :scheduled | :not_scheduled
+  def create_room(updated, original, opts \\ [])
+
   def create_room(
         %Meeting{status: "confirmed", video_room_id: nil, video_integration_id: id} = updated,
-        %Meeting{} = original
+        %Meeting{} = original,
+        opts
       )
       when is_integer(id) do
     case VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
            updated,
-           original
+           original,
+           opts
          ) do
       :ok ->
         :scheduled
@@ -169,7 +176,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
     end
   end
 
-  def create_room(%Meeting{}, %Meeting{}), do: :not_scheduled
+  def create_room(%Meeting{}, %Meeting{}, _opts), do: :not_scheduled
 
   defp chosen(%Meeting{} = meeting, meeting_type, %{location_option_id: option_id} = params)
        when is_binary(option_id) do

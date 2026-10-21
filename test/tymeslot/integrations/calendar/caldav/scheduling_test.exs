@@ -74,6 +74,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SchedulingTest do
                :contact
     end
 
+    # The reporter's calendar was cPanel's own server, connected through the
+    # generic provider, which mailed the booker on create and again on the
+    # update that added the video link.
+    test "withholds them from cPanel, which also invites anyway" do
+      assert Scheduling.attendee_mode(
+               client(
+                 :caldav,
+                 "https://mail.example.com:2080/calendars/user@example.com/calendar"
+               )
+             ) == :contact
+
+      assert Scheduling.attendee_mode(
+               client(
+                 :caldav,
+                 "https://cpcalendars.example.com/calendars/user@example.com/calendar"
+               )
+             ) == :contact
+    end
+
     test "falls back to advertising when there is no URL to judge" do
       assert Scheduling.attendee_mode(%Client{provider: :caldav, base_url: nil}) == :attendee
     end

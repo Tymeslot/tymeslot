@@ -354,6 +354,65 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         refute has_element?(view, "[data-testid='guest-input']")
       end
     end
+
+    describe "#{theme.name}: guest field — the meeting type's guest limit" do
+      @describetag theme_id: theme.id
+
+      setup %{user: user} do
+        meeting_type =
+          insert(:meeting_type,
+            user: user,
+            duration_minutes: 30,
+            name: "Two Guests Each",
+            is_active: true,
+            allow_guests: true,
+            max_guests_per_booking: 2
+          )
+
+        %{meeting_type: meeting_type}
+      end
+
+      @tag :capture_log
+      test "a booking brings no more guests than the meeting type allows", %{
+        conn: conn,
+        profile: profile
+      } do
+        view = navigate_to_booking_form(conn, profile, nil)
+
+        send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+
+        for email <- ["first@example.com", "second@example.com", "third@example.com"] do
+          send(view.pid, {:step_event, :booking, :add_guest, email})
+        end
+
+        _drain = :sys.get_state(view.pid)
+
+        assert render(view) =~ "You can add up to 2 guests"
+
+        view
+        |> form("form[phx-submit='submit']", %{
+          "booking" => %{
+            "name" => "Limited Booker",
+            "email" => "limited@example.com",
+            "message" => ""
+          }
+        })
+        |> render_submit()
+
+        _drain = :sys.get_state(view.pid)
+
+        assert has_element?(view, "[data-testid='confirmation-heading']")
+        [meeting] = Repo.all_by(MeetingSchema, attendee_email: "limited@example.com")
+
+        guest_emails =
+          meeting.id
+          |> Guests.list_for_meeting()
+          |> Enum.map(& &1.email)
+          |> Enum.sort()
+
+        assert guest_emails == ["first@example.com", "second@example.com"]
+      end
+    end
   end
 
   for theme <- ThemeTestMatrix.all() do

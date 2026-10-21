@@ -159,7 +159,11 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
               # payload, for the adapters that patch it rather than rebuild
               # the event from what the cache models.
               raw_ical: @raw_ical,
-              etag: "\"etag-1\""
+              etag: "\"etag-1\"",
+              # Whose event it is, from the cache row, which decides whether
+              # the write marks it as Tymeslot's, and the raw provider event.
+              created_by_tymeslot: false,
+              provider_metadata: %{}
             },
             payload_changes(changes)
           )

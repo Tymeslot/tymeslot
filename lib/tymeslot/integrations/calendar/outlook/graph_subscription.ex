@@ -55,8 +55,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
           | CalendarAPI.api_error()
   def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
     Tokens.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
+      # Taken before the read; see the note in `DeltaSync.do_fetch_and_apply/2`.
+      read_at = DateTime.utc_now(:microsecond)
+
       with {:ok, {events, delta_link}} <- fetch_initial_delta(token),
-           {:ok, calendar_events} <- normalise_delta_events(events, integration),
+           {:ok, calendar_events} <- normalise_delta_events(events, integration, read_at),
            :ok <-
              SeriesRules.refresh(
                integration.id,
@@ -273,11 +276,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
   defp expires_at(response), do: parse_iso8601_datetime(response["expirationDateTime"])
 
-  defp normalise_delta_events(events, %CalendarIntegrationSchema{} = integration) do
+  defp normalise_delta_events(events, %CalendarIntegrationSchema{} = integration, read_at) do
     context = %{
       calendar_integration_id: integration.id,
       provider_calendar_id: FeedCalendar.id(integration),
-      synced_at: DateTime.utc_now(:microsecond)
+      synced_at: read_at
     }
 
     OutlookProvider.normalise_events(events, context)

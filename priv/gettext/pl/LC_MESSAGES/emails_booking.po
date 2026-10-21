@@ -686,3 +686,8 @@ msgstr "Sprawdź obraz i dźwięk, jeśli spotkanie jest online"
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (before Stripe processing fees)"
 msgstr "Otrzymano: %{amount} (przed odliczeniem opłat Stripe)"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "To spotkanie zostało przeniesione w twoim kalendarzu."

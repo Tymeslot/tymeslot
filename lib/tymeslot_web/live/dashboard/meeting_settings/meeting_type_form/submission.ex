@@ -68,6 +68,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
     |> maybe_put_max_participants(assigns)
+    |> Map.put("max_guests_per_booking", to_param(Map.get(assigns, :guest_limit)))
   end
 
   @doc """

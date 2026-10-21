@@ -340,7 +340,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
   end
 
   describe "update_event/4" do
-    test "PUT body includes extendedProperties and source fingerprint" do
+    test "PUT body of a booking update includes extendedProperties and source fingerprint" do
       user = insert(:user)
 
       integration =
@@ -377,6 +377,38 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
            status: 200,
            body: Jason.encode!(%{"id" => "event-abc"})
          }}
+      end)
+
+      assert {:ok, %{"id" => "event-abc"}} =
+               CalendarAPI.update_event(integration, "primary", "event-abc", event_data)
+    end
+
+    test "PUT body of an event someone else made carries no fingerprint" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Renamed",
+        start_time: DateTime.utc_now(),
+        end_time: DateTime.add(DateTime.utc_now(), 3600),
+        timezone: "UTC",
+        created_by_tymeslot: false
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :put, _url, body, _headers, _opts ->
+        decoded_body = Jason.decode!(body)
+        assert decoded_body["summary"] == "Renamed"
+        refute Map.has_key?(decoded_body, "extendedProperties")
+        refute Map.has_key?(decoded_body, "source")
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "event-abc"})}}
       end)
 
       assert {:ok, %{"id" => "event-abc"}} =

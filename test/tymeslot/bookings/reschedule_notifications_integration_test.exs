@@ -138,6 +138,20 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
       assert delivered[meeting.attendee_email].subject =~ "Rescheduled"
     end
 
+    test "the organiser email says the attendee moved the meeting", %{
+      user: user,
+      meeting: meeting
+    } do
+      new_params = reschedule_params_for(future_datetime(5, :day))
+
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
+
+      organizer = delivered_emails()[meeting.organizer_email]
+
+      assert organizer.text_body =~ "has moved your meeting"
+      refute organizer.text_body =~ "You moved this meeting in your calendar."
+    end
+
     test "both emails state the slot the meeting moved away from", %{
       user: user,
       meeting: meeting

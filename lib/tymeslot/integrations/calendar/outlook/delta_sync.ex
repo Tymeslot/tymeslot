@@ -87,6 +87,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   defp do_fetch_and_apply(integration, delta_link) do
     api_module = Config.outlook_calendar_api_module()
 
+    # Taken before the read, not after it: the events are stamped with it, and
+    # reconciliation treats a Tymeslot calendar write that finished at or after
+    # it as possibly missing from what was read (see
+    # `Tymeslot.Meetings.ExternalCalendarChanges`). Stamped any later, a write
+    # landing while the pages were still being fetched would go unnoticed.
+    read_at = DateTime.utc_now(:microsecond)
+
     result =
       Tokens.with_access_token(integration, &api_module.refresh_token/1, fn token ->
         CalendarCircuitBreaker.call(:outlook, fn ->
@@ -94,21 +101,21 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
         end)
       end)
 
-    handle_fetch_result(result, integration)
+    handle_fetch_result(result, integration, read_at)
   end
 
   defp obsolete_delta_link?(nil), do: false
   defp obsolete_delta_link?(url) when is_binary(url), do: String.contains?(url, "/events/delta")
   defp obsolete_delta_link?(_other), do: false
 
-  defp handle_fetch_result({:ok, {:ok, events, new_delta_link}}, integration) do
-    apply_delta(integration, events, new_delta_link)
+  defp handle_fetch_result({:ok, {:ok, events, new_delta_link}}, integration, read_at) do
+    apply_delta(integration, events, new_delta_link, read_at)
   end
 
   # CalendarCircuitBreaker.call returns {:error, :circuit_open} when the breaker
   # is open, and {:error, reason} for errors returned by the function it wraps.
   # The {:ok, {:error, ...}} shape never occurs — errors are not wrapped in {:ok}.
-  defp handle_fetch_result({:error, :circuit_open}, integration) do
+  defp handle_fetch_result({:error, :circuit_open}, integration, _read_at) do
     Logger.warning("Outlook circuit breaker open during delta sync",
       calendar_integration_id: integration.id
     )
@@ -116,7 +123,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     {:error, :transient}
   end
 
-  defp handle_fetch_result({:error, :delta_link_expired}, integration) do
+  defp handle_fetch_result({:error, :delta_link_expired}, integration, _read_at) do
     Logger.warning("Outlook delta link expired (410); clearing stored link for re-bootstrap",
       calendar_integration_id: integration.id
     )
@@ -128,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   # Graph refused the stored credentials: only the owner can fix that, so it
   # is told apart from every other hard failure and the caller flags the
   # integration for reconnection rather than retrying.
-  defp handle_fetch_result({:error, :unauthorized}, integration) do
+  defp handle_fetch_result({:error, :unauthorized}, integration, _read_at) do
     Logger.warning("Outlook delta fetch unauthorised",
       calendar_integration_id: integration.id
     )
@@ -139,7 +146,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   # The same refusal from the token refresh `Tokens.with_access_token/4`
   # runs first: a revoked refresh token. Retrying cannot bring it back, so it
   # is flagged like the fetch's own 401 rather than retried as a hard failure.
-  defp handle_fetch_result({:error, :unauthorized, _message}, integration) do
+  defp handle_fetch_result({:error, :unauthorized, _message}, integration, _read_at) do
     Logger.warning("Outlook token refresh unauthorised during delta sync",
       calendar_integration_id: integration.id
     )
@@ -147,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     {:error, :unauthorized}
   end
 
-  defp handle_fetch_result({:error, reason} = fetch_error, integration) do
+  defp handle_fetch_result({:error, reason} = fetch_error, integration, _read_at) do
     Logger.warning("Outlook delta fetch failed",
       calendar_integration_id: integration.id,
       error: format_error(fetch_error)
@@ -156,7 +163,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     {:error, ErrorAnalysis.classify_error(reason)}
   end
 
-  defp handle_fetch_result(refresh_error, integration) do
+  defp handle_fetch_result(refresh_error, integration, _read_at) do
     Logger.warning("Outlook token refresh failed",
       calendar_integration_id: integration.id,
       error: format_error(refresh_error)
@@ -169,9 +176,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     {:error, :hard}
   end
 
-  defp apply_delta(integration, events, new_delta_link) do
+  defp apply_delta(integration, events, new_delta_link, read_at) do
     {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
-    calendar_events = build_calendar_events(changed, integration)
+    calendar_events = build_calendar_events(changed, integration, read_at)
     removed_uids = process_removed(removed, integration)
 
     :ok =
@@ -254,11 +261,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     end
   end
 
-  defp build_calendar_events(events, integration) do
+  defp build_calendar_events(events, integration, read_at) do
     context = %{
       calendar_integration_id: integration.id,
       provider_calendar_id: FeedCalendar.id(integration),
-      synced_at: DateTime.utc_now(:microsecond)
+      synced_at: read_at
     }
 
     {:ok, calendar_events} = OutlookProvider.normalise_events(events, context)

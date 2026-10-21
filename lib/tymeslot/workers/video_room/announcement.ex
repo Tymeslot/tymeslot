@@ -15,8 +15,11 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
       them is likewise a no-op in the common case (see
       `Events.announce_video_room_outcome/1`).
 
-    * `{:rescheduled, previous, rescheduled_to}`, a reschedule that moved the
-      meeting onto a video location it has no room for yet. Nothing on the
+    * `{:rescheduled, previous, rescheduled_to, opts}`, a reschedule that
+      moved the meeting onto a video location it has no room for yet. `opts`
+      are the reschedule emails' options, passed on to
+      `Events.meeting_rescheduled/3` (`moved_by: :host` for a move the host
+      made in their own calendar). Nothing on the
       meeting records that a reschedule was announced, and `announced_at` is
       the booking's claim, not this one's, so the job itself has to know when
       it no longer owes the event (see `deliver/3`).
@@ -28,7 +31,9 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   `Events.meeting_rescheduled/2` takes the meeting as it was before the
   reschedule, which a job cannot hold. The reschedule email reads only that
   meeting's times, so those are what the args carry, as ISO 8601 strings, next
-  to the start time the reschedule moved the meeting to.
+  to the start time the reschedule moved the meeting to. `moved_by: :host` is
+  carried as `"moved_by" => "host"`; args without it, as every job enqueued
+  before it existed, announce the reschedule as the attendee's.
   """
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -40,14 +45,26 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   @typedoc "Where the meeting was before a reschedule, as its email reads it."
   @type previous_times :: %{start_time: DateTime.t(), end_time: DateTime.t()}
 
-  @type t :: :none | :created | {:rescheduled, previous_times(), DateTime.t()}
+  @typedoc "The reschedule emails' options (`Events.meeting_rescheduled/3`)."
+  @type reschedule_opts :: [moved_by: :host]
+
+  @type t ::
+          :none
+          | :created
+          | {:rescheduled, previous_times(), DateTime.t(), reschedule_opts()}
 
   @doc """
   The reschedule announcement for a meeting moved from `original` to `updated`.
+  `opts` are passed on to the reschedule emails (`moved_by: :host`).
   """
-  @spec rescheduled(MeetingSchema.t(), MeetingSchema.t()) :: t()
-  def rescheduled(%MeetingSchema{start_time: start_time}, %MeetingSchema{} = original) do
-    {:rescheduled, %{start_time: original.start_time, end_time: original.end_time}, start_time}
+  @spec rescheduled(MeetingSchema.t(), MeetingSchema.t(), reschedule_opts()) :: t()
+  def rescheduled(
+        %MeetingSchema{start_time: start_time},
+        %MeetingSchema{} = original,
+        opts \\ []
+      ) do
+    {:rescheduled, %{start_time: original.start_time, end_time: original.end_time}, start_time,
+     Keyword.take(opts, [:moved_by])}
   end
 
   @doc "The job args that encode `announcement`."
@@ -55,14 +72,20 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   def to_args(:none), do: %{"announce" => false}
   def to_args(:created), do: %{"announce" => true}
 
-  def to_args({:rescheduled, previous, rescheduled_to}) do
-    %{
-      "announce" => "rescheduled",
-      "previous_start_time" => DateTime.to_iso8601(previous.start_time),
-      "previous_end_time" => DateTime.to_iso8601(previous.end_time),
-      "start_time" => DateTime.to_iso8601(rescheduled_to)
-    }
+  def to_args({:rescheduled, previous, rescheduled_to, opts}) do
+    Map.merge(
+      %{
+        "announce" => "rescheduled",
+        "previous_start_time" => DateTime.to_iso8601(previous.start_time),
+        "previous_end_time" => DateTime.to_iso8601(previous.end_time),
+        "start_time" => DateTime.to_iso8601(rescheduled_to)
+      },
+      moved_by_args(opts[:moved_by])
+    )
   end
+
+  defp moved_by_args(:host), do: %{"moved_by" => "host"}
+  defp moved_by_args(nil), do: %{}
 
   @doc """
   The announcement a job's args encode. Args predating the `announce` key, or
@@ -71,17 +94,22 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
   @spec from_args(map()) :: t()
   def from_args(%{"announce" => true}), do: :created
 
-  def from_args(%{
-        "announce" => "rescheduled",
-        "previous_start_time" => previous_start,
-        "previous_end_time" => previous_end,
-        "start_time" => rescheduled_to
-      }) do
+  def from_args(
+        %{
+          "announce" => "rescheduled",
+          "previous_start_time" => previous_start,
+          "previous_end_time" => previous_end,
+          "start_time" => rescheduled_to
+        } = args
+      ) do
     {:rescheduled, %{start_time: parse!(previous_start), end_time: parse!(previous_end)},
-     parse!(rescheduled_to)}
+     parse!(rescheduled_to), moved_by_opts(args["moved_by"])}
   end
 
   def from_args(_args), do: :none
+
+  defp moved_by_opts("host"), do: [moved_by: :host]
+  defp moved_by_opts(_absent), do: []
 
   @doc "Whether the job still owes the attendees an announcement."
   @spec owed?(t()) :: boolean()
@@ -117,15 +145,15 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
          do: {:error, {:announcement_failed, reason}}
   end
 
-  def deliver({:rescheduled, _previous, _rescheduled_to}, meeting, true) do
+  def deliver({:rescheduled, _previous, _rescheduled_to, _opts}, meeting, true) do
     Logger.info("Reschedule already announced without a room, not announcing it again",
       meeting_id: meeting.id
     )
   end
 
-  def deliver({:rescheduled, previous, rescheduled_to}, meeting, false) do
+  def deliver({:rescheduled, previous, rescheduled_to, opts}, meeting, false) do
     if DateTime.compare(meeting.start_time, rescheduled_to) == :eq do
-      announce_reschedule(meeting, previous)
+      announce_reschedule(meeting, previous, opts)
     else
       Logger.info("Meeting rescheduled again before its room existed, leaving it to that one",
         meeting_id: meeting.id
@@ -133,12 +161,12 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
     end
   end
 
-  defp announce_reschedule(meeting, previous) do
+  defp announce_reschedule(meeting, previous, opts) do
     Logger.info("Announcing the reschedule now the meeting's room exists",
       meeting_id: meeting.id
     )
 
-    case Events.meeting_rescheduled(meeting, previous) do
+    case Events.meeting_rescheduled(meeting, previous, opts) do
       {:ok, _result} ->
         :ok
 

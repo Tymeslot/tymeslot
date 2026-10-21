@@ -179,6 +179,9 @@ defmodule Tymeslot.Bookings.Reschedule do
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
     #
+    # An external-change flag, and the host's dismissal of it, described the
+    # old time, so the new time starts without either.
+    #
     # The location lands in the same write as the times, so the calendar job
     # scheduled below already carries it.
     #
@@ -217,7 +220,9 @@ defmodule Tymeslot.Bookings.Reschedule do
         end_time: end_dt,
         reschedule_requested_at: nil,
         reminders_sent: [],
-        reminder_email_sent: false
+        reminder_email_sent: false,
+        calendar_sync_status: nil,
+        calendar_sync_status_dismissed_at: nil
       }
       |> Map.merge(gate_attributes(meeting_type, start_dt, meeting))
       |> Map.merge(VideoRooms.refreshed_join_url_attrs(meeting, start_dt))

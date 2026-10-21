@@ -686,3 +686,8 @@ msgstr "Vyzkoušejte zvuk a video, pokud jde o videohovor"
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (before Stripe processing fees)"
 msgstr "Obdrželi jste: %{amount} (před odečtením poplatků Stripe za zpracování plateb)"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Přesun této schůzky proběhl ve vašem kalendáři."

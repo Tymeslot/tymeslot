@@ -48,6 +48,39 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   end
 
   @doc """
+  Returns the subset of `identifiers` that belong to one of the meetings
+  `organizer_user_id` organises, whatever the meeting's status and whichever
+  integration it was written through.
+
+  For a caller that only needs to know whether an event is one of the
+  organiser's own bookings: the identifiers are distinct enough across
+  namespaces (see `Tymeslot.Meetings.CalendarEventLink`) that no integration
+  scope is needed, and dropping it keeps a booking written through an
+  integration that was since reconnected recognisable. Blank identifiers are
+  dropped.
+  """
+  @spec organizer_calendar_identifiers(integer(), [String.t() | nil]) :: MapSet.t(String.t())
+  def organizer_calendar_identifiers(organizer_user_id, identifiers) when is_list(identifiers) do
+    case Enum.reject(identifiers, &CalendarEventLink.blank_identifier?/1) do
+      [] ->
+        MapSet.new()
+
+      ids ->
+        Meeting
+        |> where(
+          [m],
+          m.organizer_user_id == ^organizer_user_id and
+            (m.provider_event_id in ^ids or m.calendar_uid in ^ids)
+        )
+        |> select([m], [m.provider_event_id, m.calendar_uid])
+        |> Repo.all()
+        |> List.flatten()
+        |> Enum.reject(&CalendarEventLink.blank_identifier?/1)
+        |> MapSet.new()
+    end
+  end
+
+  @doc """
   Returns the meetings linked to `calendar_integration_id` that share any of
   `identifiers`, keyed by **every** identifier each matched meeting carries.
 

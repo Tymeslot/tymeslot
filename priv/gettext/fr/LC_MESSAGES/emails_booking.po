@@ -686,3 +686,8 @@ msgstr "Tester la configuration vidéo/audio si en visioconférence"
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (before Stripe processing fees)"
 msgstr "Vous avez reçu : %{amount} (avant déduction des frais de traitement Stripe)"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Vous avez déplacé ce rendez-vous dans votre calendrier."

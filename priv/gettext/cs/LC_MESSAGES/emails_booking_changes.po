@@ -285,11 +285,6 @@ msgstr "Dobrý den, vaše platba %{amount} vám byla vrácena v plné výši."
 msgid "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
 msgstr "Pokud se schůzka neuskuteční, zrušte ji prosím ve službě Tymeslot, aby byl účastník informován a termín se uvolnil."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-msgstr "Pokud je nový čas konečný, upravte nebo přesuňte rezervaci ve službě Tymeslot, aby účastník dostal aktuální údaje."
-
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "If you added the meeting to your calendar, the attached file removes it there."
@@ -577,11 +572,6 @@ msgstr "Tato schůzka byla <strong>odstraněna z vašeho externího kalendáře
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
-msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-msgstr "Tato schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas. Pokud je nový čas konečný, upravte nebo přesuňte rezervaci ve službě Tymeslot, aby účastník dostal aktuální údaje."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
 msgid "This notification was triggered automatically when a change was detected in your external calendar."
 msgstr "Toto upozornění bylo odesláno automaticky poté, co byla ve vašem externím kalendáři zjištěna změna."
 
@@ -706,3 +696,8 @@ msgstr "s uživatelem %{name}"
 #, elixir-autogen, elixir-format
 msgid "your host"
 msgstr "váš hostitel"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. To move the booking to the new time, open it in your dashboard and choose <strong>Move booking</strong>: Tymeslot then reschedules its reminders and emails the attendee the new time. If <strong>Move booking</strong> is not offered there, send the attendee a reschedule request from your dashboard instead."
+msgstr "Tato schůzka byla <strong>přesunuta ve vašem externím kalendáři</strong>. Služba Tymeslot výše stále zobrazuje původní čas. Chcete-li rezervaci přesunout na nový čas, otevřete ji ve svém přehledu a zvolte <strong>Přesunout rezervaci</strong>: Tymeslot pak přeplánuje své připomínky a pošle účastníkovi e-mailem nový čas. Pokud tam možnost <strong>Přesunout rezervaci</strong> není, pošlete účastníkovi ze svého přehledu žádost o přesunutí."

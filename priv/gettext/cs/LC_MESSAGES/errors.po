@@ -455,7 +455,7 @@ msgstr "musí být násobkem %{step} minut"
 msgid "Break times overlap with existing break"
 msgstr "Časy přestávky se překrývají s existující přestávkou"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe must be connected"
 msgstr "Je nutné připojit Stripe"
@@ -622,7 +622,7 @@ msgstr "musí být platný motiv"
 msgid "must be after start time"
 msgstr "musí být po čase začátku"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "must be at least %{minimum}"
 msgstr "musí být alespoň %{minimum}"
@@ -798,7 +798,7 @@ msgstr "Tento soubor je příliš velký. Nahrajte prosím soubor o velikosti ne
 msgid "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
 msgstr "Tento typ souboru není podporován. Nahrajte prosím obrázek JPG, PNG, GIF nebo WebP."
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Prices cannot be set in your Stripe account's currency"
 msgstr "Ve měně vašeho účtu Stripe nelze nastavovat ceny"

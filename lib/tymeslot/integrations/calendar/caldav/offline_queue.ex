@@ -296,9 +296,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   #
   # A live event is recreated only when a meeting that still expects its
   # calendar event claims the row. The `created_by_tymeslot` flag cannot gate
-  # this: `QueueWiring.tag/3` stamps it on every write it queues, including an
-  # organiser's grid edit of an event Tymeslot never created, so recreating on
-  # the flag would resurrect somebody else's deletion. Resolving against the
+  # this: it is also set on an event the organiser created from the grid, and
+  # on one a sync once read as Tymeslot's, so recreating on the flag would
+  # resurrect a deletion nobody here asked to undo. Resolving against the
   # meeting itself is the rule the grid and the reconciler already use. A
   # create racing another writer comes back `:precondition_failed`, which
   # records a failure and leaves the row queued — the next cycle then finds
@@ -337,44 +337,60 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   defp row_to_event_data(%ProviderCalendarEventSchema{} = row) do
     event = ProviderCalendarEventSchema.to_calendar_event(row)
 
-    %{
-      uid: event.uid,
-      summary: event.summary,
-      description: event.description,
-      location: event.location,
-      start_time: start_time(event),
-      end_time: end_time(event),
-      all_day: event.all_day,
-      timezone: event.timezone,
-      # The zone a queued series is written in: the CalDAV builder reads it
-      # from here and only for a timed series, so a replayed series is not
-      # written in UTC (`ICalBuilder.TimeZoneComponent.series_zone/1`).
-      series_timezone: event.timezone,
-      provider_event_id: event.provider_event_id,
-      # A held request is queued as tentative, and a replay has to say so: the
-      # cache row carries the status but the rebuilt payload used to drop it,
-      # so the VEVENT went back out with no STATUS line and the host's calendar
-      # showed a confirmed booking for a request nobody had answered.
-      status: event.status,
-      transparency: event.transparency,
-      # The row holds the whole event, so the replay sends the whole event. A
-      # rebuild from the narrower set used to replace a recurring series on the
-      # server with a single VEVENT carrying no attendees and no alarms, which
-      # is destructive on the organiser's real calendar for what began as a
-      # transient write failure.
-      attendees: event.attendees,
-      reminders: event.reminders,
-      recurrence_rule: event.recurrence_rule,
-      recurrence_exceptions: event.recurrence_exceptions,
-      visibility: event.visibility,
-      colour: event.colour,
-      # `Events.update_calendar_event/5` patches the stored document when it
-      # has one, so unmodelled properties (PARTSTAT, CATEGORIES, X-) survive
-      # the replay instead of being serialised away.
-      raw_ical: event.raw_ical,
-      etag: event.etag
-    }
+    Map.merge(
+      %{
+        uid: event.uid,
+        summary: event.summary,
+        description: event.description,
+        location: event.location,
+        start_time: start_time(event),
+        end_time: end_time(event),
+        all_day: event.all_day,
+        timezone: event.timezone,
+        # The zone a queued series is written in: the CalDAV builder reads it
+        # from here and only for a timed series, so a replayed series is not
+        # written in UTC (`ICalBuilder.TimeZoneComponent.series_zone/1`).
+        series_timezone: event.timezone,
+        provider_event_id: event.provider_event_id,
+        # A held request is queued as tentative, and a replay has to say so: the
+        # cache row carries the status but the rebuilt payload used to drop it,
+        # so the VEVENT went back out with no STATUS line and the host's calendar
+        # showed a confirmed booking for a request nobody had answered.
+        status: event.status,
+        transparency: event.transparency,
+        # The row holds the whole event, so the replay sends the whole event. A
+        # rebuild from the narrower set used to replace a recurring series on the
+        # server with a single VEVENT carrying no attendees and no alarms, which
+        # is destructive on the organiser's real calendar for what began as a
+        # transient write failure.
+        attendees: event.attendees,
+        recurrence_rule: event.recurrence_rule,
+        recurrence_exceptions: event.recurrence_exceptions,
+        visibility: event.visibility,
+        colour: event.colour,
+        # `Events.update_calendar_event/5` patches the stored document when it
+        # has one, so unmodelled properties (PARTSTAT, CATEGORIES, X-) survive
+        # the replay instead of being serialised away.
+        raw_ical: event.raw_ical,
+        etag: event.etag
+      },
+      replayed_reminders(event)
+    )
   end
+
+  # The sync never reads a CalDAV event's VALARMs, so a row holding the
+  # server's document says `reminders: []` whatever alarms that document has,
+  # and the patcher replaces every VALARM whenever `:reminders` is present.
+  # Such a row's empty list is therefore not a change to replay: leaving the
+  # key out keeps the stored alarms. Reminders a local edit set are replayed,
+  # as is any list on a row with no document, which is rebuilt from the row.
+  # The cost is that an edit removing every reminder is not replayed while
+  # the server's copy is patched; the alarms stay rather than being lost.
+  defp replayed_reminders(%{raw_ical: raw_ical, reminders: []})
+       when is_binary(raw_ical) and raw_ical != "",
+       do: %{}
+
+  defp replayed_reminders(event), do: %{reminders: event.reminders}
 
   # All-day events are modelled with `start_date`/`end_date` only, leaving
   # `start_at`/`end_at` NULL — the 20260408110831 migration dropped those

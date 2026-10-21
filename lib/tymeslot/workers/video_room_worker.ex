@@ -164,17 +164,20 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   `updated` and `original` are the meeting after and before the reschedule.
   `meeting.rescheduled` is raised once the room exists, or without a link if
   creation ultimately fails, and not at all if the meeting is rescheduled again
-  first: that reschedule announces itself.
+  first: that reschedule announces itself. `opts` are passed on to the
+  reschedule emails (`moved_by: :host`, see `Announcement.rescheduled/3`).
   """
   @spec schedule_video_room_creation_with_reschedule_announcement(
           MeetingSchema.t(),
-          MeetingSchema.t()
+          MeetingSchema.t(),
+          Announcement.reschedule_opts()
         ) :: :ok | {:error, String.t()}
   def schedule_video_room_creation_with_reschedule_announcement(
         %MeetingSchema{} = updated,
-        %MeetingSchema{} = original
+        %MeetingSchema{} = original,
+        opts \\ []
       ),
-      do: schedule(updated.id, Announcement.rescheduled(updated, original))
+      do: schedule(updated.id, Announcement.rescheduled(updated, original, opts))
 
   defp schedule(meeting_id, announcement) do
     announcement

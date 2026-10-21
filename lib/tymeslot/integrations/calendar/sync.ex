@@ -436,7 +436,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       meeting ->
         case TimingChange.classify(meeting, cal_event, host_zone) do
           :moved ->
-            reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified)
+            # A Tymeslot write to the event that finished at or after the
+            # event's `synced_at` may be missing from it. The Outlook sweep and
+            # re-bootstrap stamp `synced_at` with when their read began; other
+            # paths stamp it just after the read, leaving only the read itself
+            # uncovered.
+            reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified,
+              snapshot_at: cal_event.synced_at
+            )
 
           {:end_moved, end_time} ->
             Meetings.apply_external_end_change(meeting, end_time)
@@ -589,13 +596,15 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   - `uid` — the iCal UID of the event (may be `nil` for Outlook deleted events)
   - `signal` — `:deleted` or `:modified`
 
+  `opts` are passed through (see `Tymeslot.Meetings.apply_external_calendar_change/5`).
+
   Returns `:ok` when no action was needed (no linked meeting, already up-to-date)
   or when the status was successfully updated.
   """
-  @spec reconcile(integration_id(), String.t() | nil, String.t() | nil, signal()) ::
+  @spec reconcile(integration_id(), String.t() | nil, String.t() | nil, signal(), keyword()) ::
           :ok | {:error, term()}
-  def reconcile(integration_id, provider_event_id, uid, signal) do
-    Meetings.apply_external_calendar_change(integration_id, provider_event_id, uid, signal)
+  def reconcile(integration_id, provider_event_id, uid, signal, opts \\ []) do
+    Meetings.apply_external_calendar_change(integration_id, provider_event_id, uid, signal, opts)
   end
 
   @doc """

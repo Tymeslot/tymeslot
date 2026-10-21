@@ -60,7 +60,10 @@ defmodule Tymeslot.CalendarGrid.ProviderPayload do
          visibility: event.visibility,
          status: writable_status(event.status),
          provider_event_id: event.provider_event_id,
-         calendar_id: calendar_id(event.provider_calendar_id)
+         calendar_id: calendar_id(event.provider_calendar_id),
+         # Whether the adapters mark the event as Tymeslot's: only `false`
+         # leaves it unmarked, so an event someone else made stays theirs.
+         created_by_tymeslot: Map.get(event, :created_by_tymeslot)
        }}
     end
   end

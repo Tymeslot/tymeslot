@@ -185,10 +185,42 @@ defmodule Tymeslot.Workers.VideoRoom.AnnouncementTest do
         |> Jason.decode!()
         |> Announcement.from_args()
 
-      assert {:rescheduled, %{start_time: previous_start, end_time: previous_end}, to} = decoded
+      assert {:rescheduled, %{start_time: previous_start, end_time: previous_end}, to, []} =
+               decoded
+
       assert previous_start == meeting.start_time
       assert previous_end == meeting.end_time
       assert to == moved.start_time
+    end
+
+    test "a host's move reads back as the host's" do
+      meeting = insert(:meeting)
+      moved = %{meeting | start_time: DateTime.add(meeting.start_time, 1, :day)}
+
+      decoded =
+        moved
+        |> Announcement.rescheduled(meeting, moved_by: :host)
+        |> Announcement.to_args()
+        |> Jason.encode!()
+        |> Jason.decode!()
+        |> Announcement.from_args()
+
+      assert {:rescheduled, _previous, _to, [moved_by: :host]} = decoded
+    end
+
+    # Jobs enqueued before `moved_by` was carried have no such key; they
+    # announce the reschedule as the attendee's, as they always did.
+    test "args without moved_by read back as an attendee's reschedule" do
+      meeting = insert(:meeting)
+
+      args = %{
+        "announce" => "rescheduled",
+        "previous_start_time" => DateTime.to_iso8601(meeting.start_time),
+        "previous_end_time" => DateTime.to_iso8601(meeting.end_time),
+        "start_time" => DateTime.to_iso8601(DateTime.add(meeting.start_time, 1, :day))
+      }
+
+      assert {:rescheduled, _previous, _to, []} = Announcement.from_args(args)
     end
   end
 

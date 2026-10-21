@@ -94,6 +94,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     default: MapSet.new(),
     doc: "the ids of the requests whose answer is in flight"
 
+  attr :move_offers, :map, default: %{}
   attr :target, :any, required: true
   attr :meetings_stream, :any, required: true
 
@@ -115,6 +116,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             cancelling_meeting={@cancelling_meeting}
             sending_reschedule={@sending_reschedule}
             answering_request={@answering_request}
+            move_offer={@move_offers[meeting.id]}
             target={@target}
           />
         </div>

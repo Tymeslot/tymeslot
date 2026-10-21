@@ -432,7 +432,7 @@ msgstr ""
 msgid "Break times overlap with existing break"
 msgstr ""
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe must be connected"
 msgstr ""
@@ -598,7 +598,7 @@ msgstr ""
 msgid "must be after start time"
 msgstr ""
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "must be at least %{minimum}"
 msgstr ""
@@ -773,7 +773,7 @@ msgstr ""
 msgid "This file type is not accepted. Please upload a JPG, PNG, GIF or WebP image."
 msgstr ""
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/payment_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Prices cannot be set in your Stripe account's currency"
 msgstr ""

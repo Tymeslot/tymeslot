@@ -15,6 +15,7 @@ defmodule Tymeslot.CalendarGrid.EventEditQueueForRetryTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -105,6 +106,55 @@ defmodule Tymeslot.CalendarGrid.EventEditQueueForRetryTest do
                EventEdit.update_event(user.id, event, %{summary: "Planning, moved"})
 
       assert Repo.reload!(row).sync_state == "locally_modified"
+    end
+  end
+
+  # Queued edits are what an earlier release wrongly claimed: the queue
+  # marked every write it saved as Tymeslot's, so the organiser's edit of
+  # somebody else's event hid it from the agenda for good and won its
+  # replay the force-write over the owner's own changes.
+  describe "whose event a queued edit says it is" do
+    test "an edit queued from the grid's write queue leaves somebody else's event theirs", %{
+      user: user,
+      row: row,
+      event: event
+    } do
+      refute row.created_by_tymeslot
+
+      assert {:ok, _updated} =
+               EventEdit.queue_for_retry(user.id, event, %{summary: "Planning, renamed"})
+
+      stored = Repo.reload!(row)
+      assert stored.sync_state == "locally_modified"
+      assert stored.summary == "Planning, renamed"
+      refute stored.created_by_tymeslot
+    end
+
+    test "an edit queued after the server refused it leaves somebody else's event theirs", %{
+      user: user,
+      row: row,
+      event: event
+    } do
+      server_unavailable()
+
+      assert {:error, %{retry: :queued}} =
+               EventEdit.update_event(user.id, event, %{summary: "Planning, renamed"})
+
+      stored = Repo.reload!(row)
+      assert stored.sync_state == "locally_modified"
+      refute stored.created_by_tymeslot
+    end
+
+    test "an edit queued for Tymeslot's own event keeps it Tymeslot's", %{user: user, row: row} do
+      row = row |> Changeset.change(created_by_tymeslot: true) |> Repo.update!()
+      event = ProviderCalendarEventSchema.to_calendar_event(row)
+
+      assert {:ok, _updated} =
+               EventEdit.queue_for_retry(user.id, event, %{summary: "Planning, renamed"})
+
+      stored = Repo.reload!(row)
+      assert stored.sync_state == "locally_modified"
+      assert stored.created_by_tymeslot
     end
   end
 end

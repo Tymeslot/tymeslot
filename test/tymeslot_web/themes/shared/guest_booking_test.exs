@@ -42,6 +42,33 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
       assert GuestBooking.seat_cap(assigns) == Guests.max_guests()
     end
 
+    test "the meeting type's own guest limit caps a solo booking" do
+      assigns = %{
+        meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{
+          max_participants: 1,
+          max_guests_per_booking: 2
+        }
+      }
+
+      assert GuestBooking.seat_cap(assigns) == 2
+    end
+
+    test "a group booking takes the lower of the type's limit and the seats left" do
+      limited = fn limit, seats_left ->
+        %{
+          meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{
+            max_participants: 20,
+            max_guests_per_booking: limit
+          },
+          selected_time: "09:00",
+          available_slots: [%{time: "09:00", seats_left: seats_left, capacity: 20}]
+        }
+      end
+
+      assert GuestBooking.seat_cap(limited.(2, 15)) == 2
+      assert GuestBooking.seat_cap(limited.(5, 3)) == 2
+    end
+
     test "last seat leaves no room for guests" do
       assert GuestBooking.seat_cap(group_assigns(1)) == 0
     end

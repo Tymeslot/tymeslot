@@ -38,8 +38,8 @@ defmodule Tymeslot.Notifications.EventsTest do
     def schedule_seat_confirmation_emails(_meeting_id, _participant_id),
       do: raise("email pipeline down")
 
-    @spec schedule_reschedule_emails(term(), term()) :: no_return()
-    def schedule_reschedule_emails(_meeting, _original), do: raise("email pipeline down")
+    @spec schedule_reschedule_emails(term(), term(), keyword()) :: no_return()
+    def schedule_reschedule_emails(_meeting, _original, _opts), do: raise("email pipeline down")
 
     @spec cancel_reminder_emails(term()) :: :ok
     def cancel_reminder_emails(_meeting_id), do: :ok

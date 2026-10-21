@@ -165,12 +165,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       sync_attempts: 0,
       sync_last_attempt_at: now,
       sync_last_error: nil,
-      sync_deferred_since: nil,
-      created_by_tymeslot: true
+      sync_deferred_since: nil
     }
+    |> Map.merge(ownership_attrs(meeting, action))
     |> Map.merge(content_attrs(event_data))
     |> Map.merge(timing_attrs(event_data))
   end
+
+  # A meeting's event is a booking, and an event the grid is creating is
+  # Tymeslot's own, so both are marked. Any other grid write is about an
+  # event the cache row already describes, and leaves the row's flag as it
+  # is: marking an organiser's edit of somebody else's event would hide it
+  # from the agenda for good (a sync never clears the flag) and grant its
+  # replay the `:keep_local` force-write over the owner's own changes.
+  defp ownership_attrs(%MeetingSchema{}, _action), do: %{created_by_tymeslot: true}
+  defp ownership_attrs(_grid_target, :create), do: %{created_by_tymeslot: true}
+  defp ownership_attrs(_grid_target, _action), do: %{}
 
   # Carried straight through when present. `status` and `transparency` are
   # converted rather than copied, and are dropped when nil because both columns

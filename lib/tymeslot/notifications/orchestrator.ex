@@ -333,14 +333,15 @@ defmodule Tymeslot.Notifications.Orchestrator do
   (`Tymeslot.Notifications.Email.RescheduleEmails`), like every other
   booking email, so a mail outage delays them rather than losing them, and
   the reschedule does not wait on the mail provider. The job carries the time
-  the booking moved from, which the meeting row no longer holds.
+  the booking moved from, which the meeting row no longer holds, and `opts`
+  (`moved_by: :host` for a move the host made in their own calendar).
   """
-  @spec send_reschedule_notifications(%{atom() => term()}, %{atom() => term()}) ::
+  @spec send_reschedule_notifications(%{atom() => term()}, %{atom() => term()}, keyword()) ::
           {:ok, atom()} | {:error, term()}
-  def send_reschedule_notifications(updated_meeting, original_meeting) do
+  def send_reschedule_notifications(updated_meeting, original_meeting, opts \\ []) do
     with :ok <- Recipients.validate(updated_meeting) do
       GuestNotifications.reset_for_new_time(updated_meeting)
-      schedule_reschedule_job(updated_meeting, original_meeting)
+      schedule_reschedule_job(updated_meeting, original_meeting, opts)
     end
   end
 
@@ -388,8 +389,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
     )
   end
 
-  defp schedule_reschedule_job(meeting, original_meeting) do
-    case get_email_worker_module().schedule_reschedule_emails(meeting, original_meeting) do
+  defp schedule_reschedule_job(meeting, original_meeting, opts \\ []) do
+    case get_email_worker_module().schedule_reschedule_emails(meeting, original_meeting, opts) do
       :ok -> {:ok, :reschedules_scheduled}
       {:error, _reason} = error -> error
     end

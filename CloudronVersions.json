@@ -4304,6 +4304,54 @@
       },
       "publishState": "published",
       "ts": "Mon, 19 Oct 2026 15:08:00 GMT"
+    },
+    "2.0.0": {
+      "creationDate": "Tue, 20 Oct 2026 12:28:41 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Move a booking to the new time when you shift it in your own calendar, plus calendar sync fixes across Outlook and CalDAV. Self-hosters who installed through Cloudron's Install via URL: this is that package's last update; install Tymeslot from the Cloudron App Store as a new app to keep receiving updates.\n* When you move a booked meeting in your own calendar, the dashboard now offers to move the booking to that time, and the attendee is emailed the new time\n* Bookings moved in Outlook were sometimes missed by the sync; they are now picked up and flagged on the dashboard\n* Editing a CalDAV event from the dashboard calendar deleted its reminders on your calendar server; the reminders are now kept\n* Editing someone else's event from the dashboard calendar marked it as a Tymeslot booking; it now stays theirs, and agenda events wrongly hidden as bookings show again\n* Self-hosters on Cloudron: the Install via URL package is retired after this update; install Tymeslot from the Cloudron App Store as a new app",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.28.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "upstreamVersion": "1.28.0",
+        "version": "2.0.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 20 Oct 2026 12:28:41 GMT"
     }
   }
 }
