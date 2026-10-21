@@ -230,3 +230,8 @@ msgstr "V tomto čase už máte místo. Zkontrolujte e-mail s potvrzením rezerv
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Rezervaci nelze vytvořit s předstihem více než %{days} dnů"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The reminders for this meeting are not valid"
+msgstr "Připomínky pro tuto schůzku nejsou platné"

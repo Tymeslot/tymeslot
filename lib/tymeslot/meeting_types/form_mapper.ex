@@ -85,13 +85,14 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp maybe_put_fixed_dates(attrs, _params), do: attrs
 
-  # The booking page's spots display. Only keys the form posted are set, so a
-  # caller that does not render these controls cannot reset them by omission.
-  # The threshold is posted blank when the option is off; the changeset
-  # validates its range.
+  # The booking page's spots display, and the guests one booking may bring.
+  # Only keys the form posted are set, so a caller that does not render these
+  # controls cannot reset them by omission. The threshold and the guest limit
+  # are posted blank when their option is off; the changeset validates their
+  # range.
   defp seat_display(params) do
     params
-    |> Map.take(["show_seat_availability", "last_spots_threshold"])
+    |> Map.take(["show_seat_availability", "last_spots_threshold", "max_guests_per_booking"])
     |> Map.new(&seat_display_attr/1)
   end
 
@@ -100,6 +101,9 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp seat_display_attr({"last_spots_threshold", value}),
     do: {:last_spots_threshold, parse_threshold(value)}
+
+  defp seat_display_attr({"max_guests_per_booking", value}),
+    do: {:max_guests_per_booking, parse_threshold(value)}
 
   defp parse_threshold(value) when is_binary(value) do
     case Integer.parse(value) do

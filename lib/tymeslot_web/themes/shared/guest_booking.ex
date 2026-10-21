@@ -157,16 +157,19 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   defp trim_notice(_before, _kept), do: nil
 
   @doc """
-  Effective guest cap: `min(Guests.max_guests(), seats_left - 1)` for group
-  meeting types with a known selected slot, the flat cap otherwise.
+  Effective guest cap: the meeting type's guest limit (`Guests.limit_for/1`),
+  bounded by `seats_left - 1` for a group meeting type with a known selected
+  slot.
   """
   @spec seat_cap(map()) :: non_neg_integer()
   def seat_cap(assigns) do
+    limit = Guests.limit_for(assigns[:meeting_type])
+
     with true <- MeetingTypes.group_type?(assigns[:meeting_type]),
          %{seats_left: seats_left} when is_integer(seats_left) <- selected_slot(assigns) do
-      max(min(Guests.max_guests(), seats_left - 1), 0)
+      max(min(limit, seats_left - 1), 0)
     else
-      _other -> Guests.max_guests()
+      _other -> limit
     end
   end
 

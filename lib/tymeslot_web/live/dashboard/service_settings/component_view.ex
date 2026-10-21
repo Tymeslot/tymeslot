@@ -141,6 +141,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 next_dates={@next_dates}
                 timezone={(@profile && @profile.timezone) || "Etc/UTC"}
                 time_format={@time_format}
+                payments_accepted={@payments_accepted}
                 parent_myself={@myself}
               />
             </div>

@@ -147,6 +147,53 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIErrorTaxonomyTest do
                CalendarAPI.list_calendars(integration)
     end
 
+    # Google states a refusal of the request itself in a 403 too: a write to a
+    # calendar the account may only read. The calendar answered, so it is not
+    # a network failure, and sending it again changes nothing.
+    test "403 with an unrecognised reason surfaces as :refused", %{integration: integration} do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "message" => "You need to have writer access to this calendar.",
+            "errors" => [%{"reason" => "requiredAccessLevel"}]
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body}}
+      end)
+
+      assert {:error, :refused, "You need to have writer access to this calendar."} =
+               CalendarAPI.delete_event(integration, "shared@example.com", "abc123")
+    end
+
+    test "403 with userRateLimitExceeded reason stays :rate_limited", %{
+      integration: integration
+    } do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "message" => "User Rate Limit Exceeded",
+            "errors" => [%{"reason" => "userRateLimitExceeded"}]
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body}}
+      end)
+
+      assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "a 412 from the Google API surfaces as :refused", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 412, body: ~s({"error":{"message":"Precondition Failed"}})}}
+      end)
+
+      assert {:error, :refused, _msg} =
+               CalendarAPI.delete_event(integration, "primary", "abc123")
+    end
+
     test "a transport timeout surfaces as :network_error", %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:error, %Mint.TransportError{reason: :timeout}}
