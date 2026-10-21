@@ -190,7 +190,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   end
 
   # Not a `@retention_jobs` entry: an unconfirmed participant's lifetime is
-  # their link's, counted in hours from when it was last sent.
+  # their link's, counted in hours from their first request.
   defp prune_unconfirmed_poll_participants do
     {count, _rows} = Polls.prune_unconfirmed_participants()
     Logger.info("Pruned unconfirmed poll participants", deleted_count: count)

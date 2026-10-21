@@ -348,6 +348,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(), -3, :day),
           link_sent_at: DateTime.add(DateTime.utc_now(), -3, :day)
         )
 

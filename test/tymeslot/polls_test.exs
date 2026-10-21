@@ -314,6 +314,7 @@ defmodule Tymeslot.PollsTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(now, -49, :hour),
           link_sent_at: DateTime.add(now, -49, :hour)
         )
 

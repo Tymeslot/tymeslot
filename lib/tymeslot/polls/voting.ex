@@ -47,6 +47,9 @@ defmodule Tymeslot.Polls.Voting do
 
     * an address new to the poll becomes an unconfirmed participant and is
       sent its link: `{:ok, :sent}`;
+    * an unconfirmed address whose pending link has expired is treated as new:
+      the old row is deleted and a new link is sent, `{:ok, :sent}`, with
+      both caps applying;
     * an address already on the poll is sent its existing link again,
       `{:ok, :resent}`, or nothing if it went out within the last
       #{div(@resend_interval_seconds, 60)} minutes, `{:ok, :throttled}`.
@@ -58,8 +61,8 @@ defmodule Tymeslot.Polls.Voting do
 
   Returns `{:error, changeset}` for an invalid request, `{:error,
   :voting_closed}` once voting has closed or while the poll's host is pending
-  account deletion, and, for an address new to the poll, `{:error,
-  :poll_full}` at the participant cap and `{:error, :too_many_requests}` when
+  account deletion, and, for a new address or one whose pending link has
+  expired, `{:error, :poll_full}` at the participant cap and `{:error, :too_many_requests}` when
   too many links are out unconfirmed.
   """
   @spec request_link(PollSchema.t(), map()) ::
@@ -151,8 +154,24 @@ defmodule Tymeslot.Polls.Voting do
 
   defp route_request(poll, request) do
     case PollParticipantQueries.get_by_poll_and_email(poll.id, request_email(request)) do
-      nil -> insert_participant(poll, request)
-      %PollParticipantSchema{} = existing -> refresh_and_resend(poll, existing, request)
+      nil ->
+        insert_participant(poll, request)
+
+      %PollParticipantSchema{confirmed_at: nil} = pending ->
+        restart_if_expired(poll, pending, request)
+
+      %PollParticipantSchema{} = confirmed ->
+        refresh_and_resend(poll, confirmed, request)
+    end
+  end
+
+  # An expired link stays dead: the request starts over as a new one, with a
+  # new link whose lifetime runs from now, and meets the caps like any new
+  # request. Reviving the old row instead would let each resend extend it.
+  defp restart_if_expired(poll, pending, request) do
+    case PollParticipantQueries.delete_if_expired(pending.id) do
+      {1, _rows} -> insert_participant(poll, request)
+      {0, _rows} -> refresh_and_resend(poll, pending, request)
     end
   end
 

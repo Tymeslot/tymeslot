@@ -205,23 +205,89 @@ defmodule Tymeslot.Polls.VotingTest do
       assert id == participant.id
     end
 
-    test "a request for an expired unconfirmed address brings its link back to life" do
+    test "a request for an expired unconfirmed address starts over with a new link" do
       poll = insert(:poll)
 
-      participant =
+      expired =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Old",
+          email: "alice@example.com",
+          confirmed_at: nil,
+          inserted_at: DateTime.add(now(), -49, :hour),
+          link_sent_at: DateTime.add(now(), -1, :hour)
+        )
+
+      assert {:ok, :sent} =
+               Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
+
+      assert Voting.get_participant(poll, expired.token) == nil
+
+      fresh = PollParticipantQueries.get_by_poll_and_email(poll.id, "alice@example.com")
+      assert fresh.id != expired.id
+      assert fresh.name == "Alice"
+      assert Voting.get_participant(poll, fresh.token).id == fresh.id
+
+      assert [%{args: %{"participant_id" => id}}] = link_jobs()
+      assert id == fresh.id
+    end
+
+    test "an expired request starting over is refused when live requests fill the cap" do
+      poll = insert(:poll)
+
+      expired =
         insert(:poll_participant,
           poll: poll,
           email: "alice@example.com",
           confirmed_at: nil,
-          link_sent_at: DateTime.add(DateTime.utc_now(), -3, :day)
+          inserted_at: DateTime.add(now(), -49, :hour),
+          link_sent_at: DateTime.add(now(), -49, :hour)
         )
 
-      assert Voting.get_participant(poll, participant.token) == nil
+      insert_list(PollSchema.max_unconfirmed_participants(), :poll_participant,
+        poll: poll,
+        confirmed_at: nil
+      )
 
-      {:ok, :resent} = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
+      assert {:error, :too_many_requests} =
+               Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
 
-      assert %{id: id} = Voting.get_participant(poll, participant.token)
-      assert id == participant.id
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "alice@example.com") == nil
+      assert Voting.get_participant(poll, expired.token) == nil
+
+      assert PollParticipantQueries.count_unconfirmed(poll.id) ==
+               PollSchema.max_unconfirmed_participants()
+
+      assert link_jobs() == []
+    end
+
+    test "a link sent again recently still expires 48 hours after the first request" do
+      poll = insert(:poll)
+
+      pending =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: nil,
+          inserted_at: DateTime.add(now(), -49, :hour),
+          link_sent_at: now()
+        )
+
+      assert Voting.get_participant(poll, pending.token) == nil
+      assert PollParticipantQueries.count_unconfirmed(poll.id) == 0
+      assert {1, nil} = Polls.prune_unconfirmed_participants()
+    end
+
+    test "requests resent over and over cannot hold the request cap past 48 hours" do
+      poll = insert(:poll)
+
+      insert_list(PollSchema.max_unconfirmed_participants(), :poll_participant,
+        poll: poll,
+        confirmed_at: nil,
+        inserted_at: DateTime.add(now(), -49, :hour),
+        link_sent_at: now()
+      )
+
+      assert {:ok, :sent} = Voting.request_link(poll, %{name: "Real", email: "real@example.com"})
     end
 
     test "returns {:error, :voting_closed} when the poll is not open" do
@@ -276,6 +342,7 @@ defmodule Tymeslot.Polls.VotingTest do
       insert_list(PollSchema.max_unconfirmed_participants(), :poll_participant,
         poll: poll,
         confirmed_at: nil,
+        inserted_at: DateTime.add(now(), -3, :day),
         link_sent_at: DateTime.add(now(), -3, :day)
       )
 
@@ -535,6 +602,7 @@ defmodule Tymeslot.Polls.VotingTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(now(), -49, :hour),
           link_sent_at: DateTime.add(now(), -49, :hour)
         )
 

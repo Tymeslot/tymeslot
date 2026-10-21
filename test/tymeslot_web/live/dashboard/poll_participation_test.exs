@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.PollParticipationTest do
         poll: poll,
         name: "Expired",
         confirmed_at: nil,
+        inserted_at: DateTime.add(now, -3, :day),
         link_sent_at: DateTime.add(now, -3, :day)
       )
 

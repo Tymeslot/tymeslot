@@ -169,6 +169,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -3, :day),
           link_sent_at: DateTime.add(DateTime.utc_now(:second), -3, :day)
         )
 

@@ -4,9 +4,10 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
 
   A participant is confirmed once they have saved responses through the link
   emailed to them, and only confirmed participants count (see
-  `Tymeslot.Polls.PollParticipantSchema`). An unconfirmed one whose link was
-  last sent before `expiry_cutoff/0` has expired: their link no longer
-  resolves and the retention worker deletes the row.
+  `Tymeslot.Polls.PollParticipantSchema`). An unconfirmed one first requested
+  before `expiry_cutoff/0` has expired, however recently the link was sent
+  again: their link no longer resolves and the retention worker deletes the
+  row.
   """
 
   import Ecto.Query
@@ -76,7 +77,7 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
   def count_unconfirmed(poll_id) do
     PollParticipantSchema
     |> where([p], p.poll_id == ^poll_id and is_nil(p.confirmed_at))
-    |> where([p], p.link_sent_at > ^expiry_cutoff())
+    |> where([p], p.inserted_at > ^expiry_cutoff())
     |> Repo.aggregate(:count)
   end
 
@@ -104,7 +105,8 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
   @doc """
   Stamps `link_sent_at` with `now` unless the link was sent after
   `resend_before`. Returns whether it stamped, i.e. whether the caller should
-  send the link.
+  send the link. `link_sent_at` only throttles sends; it never extends a
+  link's lifetime.
   """
   @spec claim_link_send(Ecto.UUID.t(), DateTime.t(), DateTime.t()) :: boolean()
   def claim_link_send(id, %DateTime{} = now, %DateTime{} = resend_before) do
@@ -144,12 +146,22 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     |> Repo.exists?()
   end
 
-  @doc "Deletes unconfirmed participants whose link was last sent before `cutoff`."
+  @doc "Deletes unconfirmed participants first requested at or before `cutoff`."
   @spec delete_expired_unconfirmed(DateTime.t()) :: {non_neg_integer(), nil}
   def delete_expired_unconfirmed(%DateTime{} = cutoff) do
     PollParticipantSchema
-    |> where([p], is_nil(p.confirmed_at))
-    |> where([p], is_nil(p.link_sent_at) or p.link_sent_at <= ^cutoff)
+    |> where([p], is_nil(p.confirmed_at) and p.inserted_at <= ^cutoff)
+    |> Repo.delete_all()
+  end
+
+  @doc """
+  Deletes the participant `id` if they are unconfirmed and their link has
+  expired. Returns how many rows went: 0 for anyone confirmed or still live.
+  """
+  @spec delete_if_expired(Ecto.UUID.t()) :: {non_neg_integer(), nil}
+  def delete_if_expired(id) do
+    PollParticipantSchema
+    |> where([p], p.id == ^id and is_nil(p.confirmed_at) and p.inserted_at <= ^expiry_cutoff())
     |> Repo.delete_all()
   end
 
@@ -161,6 +173,6 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
 
   defp where_live(query) do
     cutoff = expiry_cutoff()
-    where(query, [p], not is_nil(p.confirmed_at) or p.link_sent_at > ^cutoff)
+    where(query, [p], not is_nil(p.confirmed_at) or p.inserted_at > ^cutoff)
   end
 end

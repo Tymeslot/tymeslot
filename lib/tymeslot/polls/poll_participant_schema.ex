@@ -5,8 +5,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   Their personal `?p=` link reaches them only by email, so holding it proves
   they own the address. Until they first save responses through it they are
   unconfirmed: they do not count anywhere (`PollSchema`'s `:participants` leaves
-  them out), and once their link is older than `unconfirmed_ttl_seconds/0`
-  it stops working and the row is pruned.
+  them out), and `unconfirmed_ttl_seconds/0` after their first request, their
+  link stops working and the row is pruned, however often it was sent again.
 
   A participant the host invited by address is confirmed from the start: the
   host vouches for the address, and the invitation carries the link. They may
@@ -30,8 +30,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   @type t :: %__MODULE__{}
 
-  # How long an unconfirmed participant's link stays valid, counted from the
-  # last time it was sent.
+  # How long an unconfirmed participant's link stays valid, counted from
+  # their first request (`inserted_at`). Sending it again never extends it.
   @unconfirmed_ttl_seconds 48 * 60 * 60
 
   schema "poll_participants" do
@@ -48,8 +48,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     # When the participant first saved responses through their emailed link.
     # Nil until then; their responses count only once it is set.
     field(:confirmed_at, :utc_datetime)
-    # When their link was last emailed: throttles repeat requests and starts
-    # the clock on an unconfirmed participant's link.
+    # When their link was last emailed. Throttles repeat requests only; the
+    # unconfirmed link's lifetime runs from `inserted_at`.
     field(:link_sent_at, :utc_datetime)
     # When the host invited them by address; nil for someone who asked for a
     # link on the voting page.
@@ -168,7 +168,7 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   def public_name(%__MODULE__{name: name}) when is_binary(name) and name != "", do: name
   def public_name(%__MODULE__{}), do: nil
 
-  @doc "How long an unconfirmed participant's link stays valid after it was last sent."
+  @doc "How long an unconfirmed participant's link stays valid after their first request."
   @spec unconfirmed_ttl_seconds() :: pos_integer()
   def unconfirmed_ttl_seconds, do: @unconfirmed_ttl_seconds
 
