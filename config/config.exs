@@ -582,6 +582,19 @@ config :tymeslot, :payment_rate_limits,
   # Time window in milliseconds (10 minutes)
   window_ms: 600_000
 
+# Poll email rate limits, counted per address emailed (see
+# Tymeslot.Polls.EmailLimits). A deployment overrides any key in its own
+# config, e.g. `config :tymeslot, :poll_email_limits, per_recipient_day: 20`.
+config :tymeslot, :poll_email_limits,
+  # Addresses one host may invite, across all their polls
+  invitations_per_host_hour: 100,
+  invitations_per_host_day: 300,
+  # Poll emails (invitations and voting links) to one address, across all polls
+  per_recipient_hour: 3,
+  per_recipient_day: 10,
+  # Voting-link requests on one poll, from anyone
+  link_requests_per_poll_hour: 30
+
 # Payment amount bounds in cents to prevent extreme charges
 config :tymeslot, :payment_amount_limits,
   min_cents: 50,

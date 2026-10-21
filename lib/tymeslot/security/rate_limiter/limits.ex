@@ -70,6 +70,17 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
     {"1d", 10, @day}
   ]
 
+  # Poll emails, counted per address emailed (`Tymeslot.Polls.EmailLimits`).
+  @poll_limits Application.compile_env!(:tymeslot, :poll_email_limits)
+  @poll_host_tiers [
+    {"1h", Keyword.fetch!(@poll_limits, :invitations_per_host_hour), @hour},
+    {"1d", Keyword.fetch!(@poll_limits, :invitations_per_host_day), @day}
+  ]
+  @poll_recipient_tiers [
+    {"1h", Keyword.fetch!(@poll_limits, :per_recipient_hour), @hour},
+    {"1d", Keyword.fetch!(@poll_limits, :per_recipient_day), @day}
+  ]
+
   @limits %{
     # Auth
     signup_ip: [
@@ -267,6 +278,26 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
       limit: 10,
       window_ms: @minute,
       operation: "poll vote",
+      log: false
+    ],
+    poll_host_invitations: [
+      prefix: "poll_invitations:user",
+      scope: :user,
+      tiers: @poll_host_tiers,
+      operation: "poll invitation"
+    ],
+    poll_recipient_email: [
+      prefix: "poll_recipient",
+      scope: :email,
+      tiers: @poll_recipient_tiers,
+      operation: "poll email"
+    ],
+    poll_link_request: [
+      prefix: "poll_link_request",
+      scope: :key,
+      limit: Keyword.fetch!(@poll_limits, :link_requests_per_poll_hour),
+      window_ms: @hour,
+      operation: "poll link request",
       log: false
     ],
 
