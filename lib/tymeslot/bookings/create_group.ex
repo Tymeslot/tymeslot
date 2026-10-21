@@ -193,7 +193,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
       booking_data
       |> Map.get(:guest_emails, [])
-      |> Guests.sanitize_emails(form_data["email"])
+      |> Guests.sanitize_emails(form_data["email"], Guests.limit_for(booking_data.meeting_type))
     else
       []
     end

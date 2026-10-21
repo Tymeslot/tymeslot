@@ -833,6 +833,21 @@ msgstr[2] "Liczba pojawia się, gdy zostanie %{count} miejsc lub mniej."
 msgid "Times are marked green, amber or red, labelled \"Plenty left\", \"Filling up\" or \"Almost full\"."
 msgstr "Terminy są oznaczane na zielono, żółto lub czerwono, z etykietami „Dużo miejsc”, „Zapełnia się” lub „Mało miejsc”."
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Guests per booking"
+msgstr "Goście na rezerwację"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Limit the guests per booking"
+msgstr "Ogranicz liczbę gości na rezerwację"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each guest takes one of the time's seats, as the booker does."
+msgstr "Każdy gość zajmuje jedno z miejsc w tym terminie, tak jak osoba rezerwująca."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Monday, as set in Calendar Settings."
@@ -857,3 +872,11 @@ msgstr "Każdy czas trwania można zaproponować tylko raz"
 #, elixir-autogen, elixir-format
 msgid "You can offer at most %{max} durations"
 msgstr "Możesz zaproponować najwyżej %{max} czasów trwania"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guest."
+msgid_plural "Without a limit, each booking may bring up to %{count} guests."
+msgstr[0] "Bez limitu każda rezerwacja może obejmować do %{count} gościa."
+msgstr[1] "Bez limitu każda rezerwacja może obejmować do %{count} gości."
+msgstr[2] "Bez limitu każda rezerwacja może obejmować do %{count} gości."

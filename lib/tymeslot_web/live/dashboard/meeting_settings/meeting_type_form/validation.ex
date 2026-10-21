@@ -3,18 +3,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
 
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
 
-  @doc "Validates a single named field and returns the updated `{data, errors}` tuple."
-  @spec validate_and_update_field(String.t(), any(), map(), map(), map()) :: {map(), map()}
-  def validate_and_update_field("name", value, metadata, acc_data, acc_errors) do
+  @doc """
+  Validates a single named field and returns the updated `{data, errors}`
+  tuple. `opts` are those saving validates with (`:stored_duration`), so the
+  instant feedback and the save agree.
+  """
+  @spec validate_and_update_field(String.t(), any(), map(), map(), map(), keyword()) ::
+          {map(), map()}
+  def validate_and_update_field(field, value, metadata, acc_data, acc_errors, opts \\ [])
+
+  def validate_and_update_field("name", value, metadata, acc_data, acc_errors, _opts) do
     case MeetingSettingsInputValidation.validate_field(:name, value, metadata) do
       {:ok, sanitized} -> {Map.put(acc_data, "name", sanitized), Map.delete(acc_errors, :name)}
       {:error, %{name: msg}} -> {acc_data, Map.put(acc_errors, :name, msg)}
     end
   end
 
-  def validate_and_update_field("duration", value, metadata, acc_data, acc_errors) do
+  def validate_and_update_field("duration", value, metadata, acc_data, acc_errors, opts) do
     {data, errors} =
-      case MeetingSettingsInputValidation.validate_field(:duration, value, metadata) do
+      case MeetingSettingsInputValidation.validate_field(:duration, value, metadata, opts) do
         {:ok, sanitized} ->
           {Map.put(acc_data, "duration", sanitized), Map.delete(acc_errors, :duration)}
 
@@ -27,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
     revalidate_extra_lengths(data, errors, metadata)
   end
 
-  def validate_and_update_field("extra_lengths", value, metadata, acc_data, acc_errors) do
+  def validate_and_update_field("extra_lengths", value, metadata, acc_data, acc_errors, _opts) do
     data =
       Map.put(
         acc_data,
@@ -38,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
     revalidate_extra_lengths(data, acc_errors, metadata)
   end
 
-  def validate_and_update_field("slot_interval", value, metadata, acc_data, acc_errors) do
+  def validate_and_update_field("slot_interval", value, metadata, acc_data, acc_errors, _opts) do
     case MeetingSettingsInputValidation.validate_field(:slot_interval, value, metadata) do
       {:ok, sanitized} ->
         {Map.put(acc_data, "slot_interval", sanitized), Map.delete(acc_errors, :slot_interval)}
@@ -48,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
     end
   end
 
-  def validate_and_update_field("description", value, metadata, acc_data, acc_errors) do
+  def validate_and_update_field("description", value, metadata, acc_data, acc_errors, _opts) do
     case MeetingSettingsInputValidation.validate_field(:description, value, metadata) do
       {:ok, sanitized} ->
         {Map.put(acc_data, "description", sanitized), Map.delete(acc_errors, :description)}
@@ -58,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
     end
   end
 
-  def validate_and_update_field(_other, _value, _metadata, acc_data, acc_errors),
+  def validate_and_update_field(_other, _value, _metadata, acc_data, acc_errors, _opts),
     do: {acc_data, acc_errors}
 
   @doc """

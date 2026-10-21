@@ -340,3 +340,13 @@ msgstr "Termintyp löschen"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "%{name} bearbeiten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered"
+msgstr "Nicht angeboten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Dieser Termintyp wird Gästen nicht angeboten, bis Sie die Zahlungen erneut verbinden. Bestehende Buchungen bleiben bestehen."

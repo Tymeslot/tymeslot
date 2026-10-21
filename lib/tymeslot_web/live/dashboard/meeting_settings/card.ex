@@ -29,6 +29,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     default: true,
     doc: "whether the host may take group bookings; a group type without it is paused"
 
+  attr :payments_accepted, :boolean,
+    default: true,
+    doc: "whether the host can take payments; a paid type without it is not offered to guests"
+
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
     ~H"""
@@ -71,6 +75,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               data-testid="group-type-paused"
             >
               {dgettext("dashboard_meeting_types", "Paused")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={unsellable?(@type, @payments_accepted)}
+              tone={:warning}
+              icon="hero-exclamation-triangle-mini"
+              data-testid="paid-type-unsellable"
+            >
+              {dgettext("dashboard_meeting_types", "Not offered")}
             </Feedback.pill>
           </div>
           <p
@@ -143,6 +155,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             {dgettext(
               "dashboard_meeting_types",
               "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+            )}
+          </p>
+          <p
+            :if={unsellable?(@type, @payments_accepted)}
+            class="mt-1 text-token-xs text-amber-700 leading-relaxed"
+            data-testid="paid-type-unsellable-notice"
+          >
+            {dgettext(
+              "dashboard_meeting_types",
+              "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
             )}
           </p>
         </div>
@@ -244,6 +266,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   # `Tymeslot.MeetingTypes.GroupAccess`).
   defp group_paused?(type, group_bookings_allowed),
     do: not group_bookings_allowed and MeetingTypes.group_type?(type)
+
+  # A paid type whose host cannot take payments right now: the booking page
+  # leaves it out (see `Tymeslot.MeetingTypes.PaymentAccess`), so the host is
+  # told here rather than finding out from a guest.
+  defp unsellable?(type, payments_accepted),
+    do: not payments_accepted and type.payment_required == true
 
   defp paid?(%{payment_required: true, price_cents: cents}) when is_integer(cents), do: true
   defp paid?(_type), do: false

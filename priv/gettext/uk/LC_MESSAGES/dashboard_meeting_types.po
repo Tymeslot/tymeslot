@@ -343,3 +343,13 @@ msgstr "Видалити тип зустрічі"
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Редагувати %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered"
+msgstr "Не пропонується"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
+msgstr "Цей тип зустрічі не пропонується гостям, доки ви знову не підключите прийом оплати. Наявні бронювання залишаються без змін."
