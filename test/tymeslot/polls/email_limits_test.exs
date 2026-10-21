@@ -269,6 +269,28 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       assert link_jobs() == []
     end
 
+    test "a refused resend does not hold the next request back as already sent" do
+      poll = insert(:poll)
+      ada = address("ada")
+
+      insert(:poll_participant,
+        poll: poll,
+        email: ada,
+        confirmed_at: nil,
+        link_sent_at: DateTime.add(DateTime.utc_now(), -11, :minute)
+      )
+
+      fill(:poll_recipient_email, ada)
+
+      assert Voting.request_link(poll, %{name: "Ada", email: ada}) ==
+               {:error, :recipient_rate_limited}
+
+      RateLimiter.clear_all()
+
+      assert Voting.request_link(poll, %{name: "Ada", email: ada}) == {:ok, :resent}
+      assert length(link_jobs()) == 1
+    end
+
     test "a repeat inside the resend window sends nothing and costs nothing" do
       poll = insert(:poll)
       ada = address("ada")

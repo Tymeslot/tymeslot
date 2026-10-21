@@ -232,16 +232,26 @@ defmodule Tymeslot.Polls.Voting do
   # The send is claimed by a conditional update, so two requests racing for
   # the same address send one email between them. Only a claimed send is
   # charged to the address: a repeat inside the window sends nothing. A
-  # refused charge leaves the claim in place, which only holds a retry back
-  # for the resend window, shorter than any wait the limit imposes.
+  # refused charge releases the claim, so the stamp does not make a retry
+  # look like a link sent minutes ago when nothing was sent.
   defp resend_link(participant) do
     now = DateTime.utc_now()
     resend_before = DateTime.add(now, -@resend_interval_seconds, :second)
 
     if PollParticipantQueries.claim_link_send(participant.id, now, resend_before) do
-      with :ok <- EmailLimits.charge_recipient(participant.email) do
-        EmailScheduler.schedule_poll_participant_link(participant)
-        {:ok, :resent}
+      case EmailLimits.charge_recipient(participant.email) do
+        :ok ->
+          EmailScheduler.schedule_poll_participant_link(participant)
+          {:ok, :resent}
+
+        {:error, _reason} = refused ->
+          PollParticipantQueries.release_link_send(
+            participant.id,
+            now,
+            participant.link_sent_at
+          )
+
+          refused
       end
     else
       {:ok, :throttled}
@@ -262,7 +272,9 @@ defmodule Tymeslot.Polls.Voting do
 
       true ->
         # Charged before the row is written, so a refused address leaves no
-        # participant waiting for a link that never comes.
+        # participant waiting for a link that never comes. A write that then
+        # fails or loses the unique-constraint race keeps the charge,
+        # deliberately: it is rare and errs towards sending less.
         with :ok <- EmailLimits.charge_recipient(request_email(request)) do
           request
           |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())

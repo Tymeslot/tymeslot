@@ -135,6 +135,23 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
   end
 
   @doc """
+  Undoes a `claim_link_send/3` that sent nothing: sets `link_sent_at` back to
+  `previous` if it still holds the claim stamped at `claimed_at`. A later
+  claim by another request is left alone.
+  """
+  @spec release_link_send(Ecto.UUID.t(), DateTime.t(), DateTime.t() | nil) :: boolean()
+  def release_link_send(id, %DateTime{} = claimed_at, previous) do
+    claimed_at = DateTime.truncate(claimed_at, :second)
+
+    {count, _rows} =
+      PollParticipantSchema
+      |> where([p], p.id == ^id and p.link_sent_at == ^claimed_at)
+      |> Repo.update_all(set: [link_sent_at: previous])
+
+    count == 1
+  end
+
+  @doc """
   Replaces `details` on the participant `id` while they are unconfirmed. A
   confirmed participant is left untouched, even one confirmed a moment ago.
   """

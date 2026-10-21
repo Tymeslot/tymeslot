@@ -137,6 +137,10 @@ defmodule Tymeslot.Polls.Invitations do
     confirmed ++ inserted
   end
 
+  # Deliberately counts every address being added, including any the
+  # reservation later skips as limited per recipient: the check runs before
+  # the charge so a full poll spends none of the host's budget, and counting
+  # too many only errs towards refusing.
   defp ensure_room!(%PollSchema{id: poll_id}, adding) do
     if PollParticipantQueries.count_confirmed(poll_id) + adding > PollSchema.max_participants() do
       Repo.rollback(:poll_full)
@@ -204,7 +208,9 @@ defmodule Tymeslot.Polls.Invitations do
 
   # Charged before anything is written, inside the caller's transaction, so a
   # list past the host's allowance rolls back whole. The cap check above runs
-  # first, so a full poll spends nothing of the host's budget.
+  # first, so a full poll spends nothing of the host's budget. A later
+  # rollback, or a write that loses a race, keeps the units charged to the
+  # recipients as well as the host's, deliberately: it is rare and errs safe.
   defp reserve!(%PollSchema{user_id: user_id}, emails) do
     case EmailLimits.reserve_invitations(user_id, emails) do
       {:ok, reservation} -> reservation
