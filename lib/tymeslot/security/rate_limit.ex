@@ -10,6 +10,8 @@ defmodule Tymeslot.Security.RateLimit do
   `seq` is a node-wide monotonic integer, so every hit is a row of its own: two
   hits on one bucket in the same microsecond both count, and a burst of
   simultaneous requests from one source cannot exceed the limit.
+  `take/3` charges several hits to several buckets in one step, all or none, for
+  a request refused whole rather than one hit at a time.
 
   Denied hits are recorded as well, deliberately. A source that keeps sending
   past its limit stays refused for as long as it keeps sending, rather than
@@ -89,6 +91,69 @@ defmodule Tymeslot.Security.RateLimit do
       @table |> :ets.select(live(key, now, :"$1")) |> wait_ms(now, limit)
     end)
   end
+
+  @typedoc "A bucket to charge at once with others: its key, window and limit."
+  @type bucket :: {key(), pos_integer(), pos_integer()}
+
+  @doc """
+  Charges `count` hits to every one of `buckets` at once, all or none.
+
+  Answers `:ok` when every bucket, with the hits added, holds no more than its
+  limit. Otherwise nothing is charged and the answer is `{:deny, remaining}`,
+  how many hits would have fitted in the tightest bucket: for a request that
+  sends several emails at once and is refused whole, so the person can be
+  told how many would go through.
+
+  Unlike `hit/3`, a refusal charges nothing, so a retry within `remaining`
+  succeeds. Concurrent takes that would together overfill a bucket may both
+  be refused, never both let through.
+  """
+  @spec take([bucket()], non_neg_integer(), integer()) :: :ok | {:deny, non_neg_integer()}
+  def take(buckets, count, now \\ now())
+
+  def take(_buckets, 0, _now), do: :ok
+
+  def take([_first | _rest] = buckets, count, now) when is_integer(count) and count > 0 do
+    guarded(:ok, fn ->
+      rows =
+        for {key, window_ms, _limit} <- buckets, _hit <- 1..count//1 do
+          {key, seq(), now, now + window_ms * 1000}
+        end
+
+      Enum.each(buckets, fn {key, _window_ms, _limit} ->
+        :ets.select_delete(@table, expired(key, now))
+      end)
+
+      :ets.insert(@table, rows)
+
+      case buckets |> Enum.map(&room(&1, now)) |> Enum.min() do
+        room when room >= 0 ->
+          :ok
+
+        room ->
+          Enum.each(rows, &:ets.delete_object(@table, &1))
+          {:deny, max(room + count, 0)}
+      end
+    end)
+  end
+
+  @doc """
+  How many more hits every one of `buckets` would take right now: the room in
+  the tightest, never below zero. Charges nothing.
+  """
+  @spec available([bucket()], integer()) :: non_neg_integer()
+  def available([_first | _rest] = buckets, now \\ now()) do
+    gap_answer = buckets |> Enum.map(&elem(&1, 2)) |> Enum.min()
+
+    guarded(gap_answer, fn ->
+      buckets |> Enum.map(&room(&1, now)) |> Enum.min() |> max(0)
+    end)
+  end
+
+  # The hits a bucket can still take: negative once it holds more than its
+  # limit (a flood's kept rows, or the hits a take just added).
+  defp room({key, _window_ms, limit}, now),
+    do: limit - :ets.select_count(@table, live(key, now, true))
 
   @doc "Drops every hit `key` holds."
   @spec clear(key()) :: :ok
