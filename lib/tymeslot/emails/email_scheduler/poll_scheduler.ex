@@ -98,7 +98,8 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
 
   @doc """
   Sends an invitee their invitation now. Keyed so it goes out once per
-  participant; someone who loses it asks for their link on the voting page.
+  participant. Someone who loses it can ask for their link again on the voting
+  page, unless the poll is invite-only: that page takes no requests.
   """
   @spec schedule_invitation(map()) :: :ok
   def schedule_invitation(participant) do

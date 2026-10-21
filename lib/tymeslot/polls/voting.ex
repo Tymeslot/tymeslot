@@ -63,11 +63,11 @@ defmodule Tymeslot.Polls.Voting do
 
   Returns `{:error, :invite_only}` when only the people the host invited can
   vote, checked before anything else, so nothing is written or sent and no
-  existing link is sent again; `{:error, changeset}` for an invalid request,
-  `{:error, :voting_closed}` once voting has closed or while the poll's host is pending
-  account deletion, and, for a new address or one whose pending link has
-  expired, `{:error, :poll_full}` at the participant cap and `{:error, :too_many_requests}` when
-  too many links are out unconfirmed.
+  existing link is sent again; `{:error, changeset}` for an invalid request;
+  `{:error, :voting_closed}` once voting has closed or while the poll's host
+  is pending account deletion; and, for a new address or one whose pending
+  link has expired, `{:error, :poll_full}` at the participant cap and
+  `{:error, :too_many_requests}` when too many links are out unconfirmed.
   """
   @spec request_link(PollSchema.t(), map()) ::
           {:ok, request_outcome()}
@@ -154,9 +154,7 @@ defmodule Tymeslot.Polls.Voting do
   # An invite-only poll asks nobody for their address: its people are the
   # ones the host invited, each holding their link. Read fresh, so a page
   # loaded before the host switched cannot get a request in.
-  defp ensure_requests_accepted(%PollSchema{id: poll_id}) do
-    if PollQueries.invite_only?(poll_id), do: {:error, :invite_only}, else: :ok
-  end
+  defp ensure_requests_accepted(%PollSchema{id: poll_id}), do: refuse_if_invite_only(poll_id)
 
   # The request is checked in full before the address is looked up, so a
   # known address cannot slip a name past the rules a new one must meet.
@@ -404,8 +402,10 @@ defmodule Tymeslot.Polls.Voting do
   # inside the transaction, fresh.
   defp ensure_admitted(_poll, %PollParticipantSchema{confirmed_at: %DateTime{}}), do: :ok
 
-  defp ensure_admitted(poll, _unconfirmed) do
-    if PollQueries.invite_only?(poll.id), do: {:error, :invite_only}, else: :ok
+  defp ensure_admitted(poll, _unconfirmed), do: refuse_if_invite_only(poll.id)
+
+  defp refuse_if_invite_only(poll_id) do
+    if PollQueries.invite_only?(poll_id), do: {:error, :invite_only}, else: :ok
   end
 
   # Confirming adds the participant to the count the cap is about. Best-effort
