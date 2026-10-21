@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Creation,
     FormView,
     GroupRules,
+    GuestLimit,
     Init,
     SlotIntervalField,
     Validation
@@ -84,6 +85,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        payment_required: false,
        payment_price: "",
        allow_guests: false,
+       guest_limit: nil,
        requires_approval: false,
        approval_window_hours: nil,
        show_as_free: false,
@@ -454,6 +456,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:show_seat_availability, !socket.assigns.show_seat_availability)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_guest_limit", _params, socket),
+    do: {:noreply, GuestLimit.toggle(socket)}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("change_guest_limit", params, socket),
+    do: {:noreply, GuestLimit.change(params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_last_spots", _params, socket) do
