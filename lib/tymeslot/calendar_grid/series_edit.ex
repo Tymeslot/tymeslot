@@ -116,8 +116,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   are read before anything is written and carried to the new series once
   it is (`Recurrence.SplitExceptions`): each keeps what it had of its own,
   moved with the series, and a cancelled one stays cancelled. Only one
-  whose place a new repeat rule no longer has cannot be carried, which the
-  organiser is told before choosing the scope (`following_notes/2`). A
+  whose place a new repeat rule no longer has cannot be carried. A
   write that fails after the split is logged, and the edit still succeeds.
 
   The series' rows are then deleted and a sync requested, as for an edit of
@@ -171,31 +170,6 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # to make the instance a series of its own. The zone goes with the rule,
   # as `ProviderPayload.put_series_zone/2` adds it only for one.
   @series_only_fields [:recurrence_rule, :recurrence_exceptions, :series_timezone, :timezone]
-
-  @typedoc """
-  Something an edit of this and every following occurrence does not carry,
-  which the organiser is told before choosing that scope:
-
-    * `:unmatched_changes_reset` - occurrences from the edited one on that
-      were changed or cancelled on their own keep that only where the
-      series' new repeat rule still has them (Google and Outlook, for a
-      change of rule; a CalDAV split keeps every override and exclusion).
-  """
-  @type following_note :: :unmatched_changes_reset
-
-  @doc """
-  What an edit of `event` and every following occurrence by `changes` will
-  not carry (`t:following_note/0`), in the order the organiser should read
-  them. Reads the cached row, as `EventEdit.update_event/4` does.
-  """
-  @spec following_notes(map(), map()) :: [following_note()]
-  def following_notes(event, changes) do
-    stored = Occurrence.cached_row(event)
-
-    if Occurrence.series_family(stored) == :provider_ids and rule_changed?(stored, changes),
-      do: [:unmatched_changes_reset],
-      else: []
-  end
 
   @doc """
   How a series member whose provider is in `family` may be edited from the

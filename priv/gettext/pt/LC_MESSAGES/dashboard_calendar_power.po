@@ -454,8 +454,8 @@ msgstr "Enviar como reunião Tymeslot"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #, elixir-autogen, elixir-format
-msgid "The note to the guest is too long. Keep it under 2,000 characters."
-msgstr "A nota para o convidado é demasiado longa. Use menos de 2000 caracteres."
+msgid "The note to the guest is too long. Keep it to 2,000 characters or fewer."
+msgstr "A nota para o convidado é demasiado longa. Use no máximo 2000 caracteres."
 
 #: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
 #, elixir-autogen, elixir-format

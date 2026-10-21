@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
     do:
       dgettext(
         "dashboard_calendar_power",
-        "The note to the guest is too long. Keep it under 2,000 characters."
+        "The note to the guest is too long. Keep it to 2,000 characters or fewer."
       )
 
   # The form offers no way to send the rest; they come from forged input.

@@ -46,18 +46,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Meetings.Guests
 
   @doc """
-  Returns the flash message surfaced to the user when an integration's
-  credentials require reauthentication during event creation.
-  """
-  @spec reauth_flash_message() :: String.t()
-  def reauth_flash_message,
-    do:
-      dgettext(
-        "dashboard_calendar_events",
-        "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
-      )
-
-  @doc """
   Creates a calendar event from a resolved create-form payload.
 
   The payload carries the `:creating` form map, the organiser `:user_id`, the

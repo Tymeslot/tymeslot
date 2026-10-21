@@ -116,11 +116,6 @@ msgstr "Não foi possível atualizar o evento; as alterações foram desfeitas"
 msgid "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
 msgstr "O Google Calendar salvou o evento, mas não devolveu um link do Meet. Tente de novo ou adicione o link manualmente."
 
-#: lib/tymeslot/calendar_grid/event_creation.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
-msgstr "Seu calendário precisa ser reconectado. Reconecte pela página de Integrações."
-
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Ada Lovelace"
@@ -325,11 +320,6 @@ msgstr[1] "A série foi movida, mas %{count} alterações que você fez enquanto
 #, elixir-autogen, elixir-format
 msgid "A change to this series is still saving. Please make this change once it has saved."
 msgstr "Uma alteração nesta série ainda está sendo salva. Faça esta alteração depois que ela for salva."
-
-#: lib/tymeslot_web/components/calendar/series_notes.ex
-#, elixir-autogen, elixir-format
-msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
-msgstr "Os eventos seguintes que foram alterados ou cancelados individualmente só mantêm isso nas datas que o novo padrão ainda inclui."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format

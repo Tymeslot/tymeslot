@@ -201,12 +201,6 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate resolve_timing(event, start_wall, end_wall, timezone), to: Moves, as: :resolve
 
   @doc """
-  Whether the write queue is still writing to the series `event` belongs to.
-  See `SeriesActivity.saving?/2`.
-  """
-  defdelegate series_saving?(queue, event), to: SeriesActivity, as: :saving?
-
-  @doc """
   Whether the write queue is writing to another event of the series `event`
   belongs to. See `SeriesActivity.busy?/2`.
   """

@@ -114,11 +114,6 @@ msgstr "Nie udało się zaktualizować wydarzenia – cofnięto zmiany"
 msgid "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
 msgstr "Google Calendar zapisał wydarzenie, ale nie zwrócił linku do Google Meet – spróbuj ponownie lub dodaj go ręcznie."
 
-#: lib/tymeslot/calendar_grid/event_creation.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
-msgstr "Kalendarz trzeba połączyć ponownie. Zrób to na stronie Integracje."
-
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Ada Lovelace"
@@ -325,11 +320,6 @@ msgstr[2] "Seria została przeniesiona, ale %{count} zmian wprowadzonych podczas
 #, elixir-autogen, elixir-format
 msgid "A change to this series is still saving. Please make this change once it has saved."
 msgstr "Zmiana tej serii jest jeszcze zapisywana. Wprowadź tę zmianę, gdy zapisywanie się zakończy."
-
-#: lib/tymeslot_web/components/calendar/series_notes.ex
-#, elixir-autogen, elixir-format
-msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
-msgstr "Późniejsze wydarzenia, które zmieniono lub odwołano osobno, zachowują tę zmianę tylko w dniach, które nadal obejmuje nowy wzorzec."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format

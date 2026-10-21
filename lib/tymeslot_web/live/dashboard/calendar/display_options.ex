@@ -6,8 +6,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   control sends the same event from either place (`PowerEvents` routes it to
   `DisplayPreferences`), so the two lists cannot drift apart.
 
-  The rows sit above a footer of rare actions. The way back to the old
-  calendar has no `phx-target`: `DashboardLive` swaps the component.
+  The rows sit above a footer of rare actions.
   """
 
   use TymeslotWeb, :html

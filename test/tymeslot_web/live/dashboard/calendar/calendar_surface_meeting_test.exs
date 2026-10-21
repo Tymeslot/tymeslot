@@ -258,7 +258,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert has_element?(
              lv,
              "#calendar-panel [role=status]",
-             "The note to the guest is too long. Keep it under 2,000 characters."
+             "The note to the guest is too long. Keep it to 2,000 characters or fewer."
            )
 
     refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
