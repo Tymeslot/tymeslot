@@ -40,7 +40,7 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       html_body =
         TemplateHelper.compile_system_template(
-          mjml_content(poll, host_name, deadline, voting_url),
+          mjml_content(poll, participant, host_name, deadline, voting_url),
           dgettext("emails_polls", "Your link to vote on %{title}", title: poll.title),
           dgettext("emails_polls", "%{host} is looking for a time for %{title}.",
             host: host_name,
@@ -62,13 +62,13 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(dgettext("emails_polls", "Your link to vote on \"%{title}\"", title: poll.title))
       |> html_body(html_body)
-      |> text_body(build_text_body(poll, host_name, deadline, voting_url))
+      |> text_body(build_text_body(poll, participant, host_name, deadline, voting_url))
     end)
   end
 
-  defp mjml_content(poll, host_name, deadline, voting_url) do
+  defp mjml_content(poll, participant, host_name, deadline, voting_url) do
     """
-    #{Text.centered_text(intro(poll, host_name), padding: "4px 0 12px 0")}
+    #{Text.centered_text(intro(poll, participant, host_name), padding: "4px 0 12px 0")}
 
     #{deadline_block(deadline)}
 
@@ -78,11 +78,23 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
 
     #{Text.system_footer_note(personal_note())}
 
-    #{Text.system_footer_note(ignore_note())}
+    #{Text.system_footer_note(ignore_note(participant))}
     """
   end
 
-  defp intro(poll, host_name) do
+  # Someone who already saved responses is asking for their link again: what
+  # they saved counts already. An invitee is confirmed from the start but has
+  # not voted, so for them the first-time wording is the true one.
+  defp intro(poll, %PollParticipantSchema{voted_at: %DateTime{}}, host_name) do
+    dgettext(
+      "emails_polls",
+      "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time.",
+      title: poll.title,
+      host: host_name
+    )
+  end
+
+  defp intro(poll, _participant, host_name) do
     dgettext(
       "emails_polls",
       "Here is your link to vote on %{title} for %{host}. Your responses count once you save them through it.",
@@ -98,7 +110,14 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
     )
   end
 
-  defp ignore_note do
+  defp ignore_note(%PollParticipantSchema{voted_at: %DateTime{}}) do
+    dgettext(
+      "emails_polls",
+      "Didn't ask for this? Then you can ignore this email. Your saved responses stay as they are."
+    )
+  end
+
+  defp ignore_note(_participant) do
     dgettext(
       "emails_polls",
       "Didn't ask for this? Then you can ignore this email. Nothing is recorded unless the link is used."
@@ -116,18 +135,18 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
     """
   end
 
-  defp build_text_body(poll, host_name, deadline, voting_url) do
+  defp build_text_body(poll, participant, host_name, deadline, voting_url) do
     """
     #{dgettext("emails_polls", "Your link to vote on \"%{title}\"", title: poll.title)}
 
-    #{intro(poll, host_name)}
+    #{intro(poll, participant, host_name)}
     #{deadline_text(deadline)}
     #{dgettext("emails_polls", "Vote here:")}
     #{voting_url}
 
     #{personal_note()}
 
-    #{ignore_note()}
+    #{ignore_note(participant)}
     """
   end
 

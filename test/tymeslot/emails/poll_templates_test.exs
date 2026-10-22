@@ -240,6 +240,39 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       %{poll: poll, participant: participant, url: "https://tymeslot.app/h/poll/t?p=personal-123"}
     end
 
+    test "tells someone yet to save responses that they count once saved", %{
+      poll: poll,
+      participant: participant,
+      url: url
+    } do
+      email = PollParticipantLink.render(poll, participant, url)
+
+      assert email.text_body =~ "Your responses count once you save them through it."
+      assert email.text_body =~ "Nothing is recorded unless the link is used."
+    end
+
+    test "tells someone who already voted that their responses count", %{poll: poll, url: url} do
+      voted_at = DateTime.utc_now(:second)
+
+      voter =
+        insert(:poll_participant,
+          poll: poll,
+          email: "returning@example.com",
+          locale: "en",
+          confirmed_at: voted_at,
+          voted_at: voted_at
+        )
+
+      email = PollParticipantLink.render(poll, voter, url)
+
+      for body <- [email.text_body, email.html_body] do
+        assert body =~ "The responses you saved already count"
+        assert body =~ "Your saved responses stay as they are."
+        refute body =~ "count once you save them"
+        refute body =~ "Nothing is recorded"
+      end
+    end
+
     test "carries the link and the poll title in both bodies", %{
       poll: poll,
       participant: participant,
