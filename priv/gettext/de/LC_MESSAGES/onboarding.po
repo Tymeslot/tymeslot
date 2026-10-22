@@ -176,9 +176,9 @@ msgstr "Machen Sie aus jedem Termintyp eine Gruppensitzung. Legen Sie fest, wie 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Invite people to a poll by email and keep it to the people you invite. Anyone else gets a voting link by email, and you can be emailed as votes arrive, with the standings. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Laden Sie per E-Mail zu einer Umfrage ein und lassen Sie nur Eingeladene zu. Alle anderen erhalten einen Abstimmungslink per E-Mail, und Sie können sich bei neuen Stimmen samt Zwischenstand benachrichtigen lassen. Nach dem Versand können Sie die Frist ändern, Zeiten hinzufügen, eine Einladung erneut senden und Personen entfernen; Erinnerungen erhalten Eingeladene ohne Stimmabgabe. Der bestätigte Termin gehört Ihnen: Alle Teilnehmenden sind Gäste, verschieben oder absagen können ihn nur Sie."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
-msgstr ""
+msgstr "Umfragen, die einladen, bestätigen und Sie auf dem Laufenden halten"

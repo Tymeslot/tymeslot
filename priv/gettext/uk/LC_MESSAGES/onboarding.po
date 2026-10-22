@@ -175,9 +175,9 @@ msgstr "Перетворіть будь-який тип зустрічі на г
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Invite people to a poll by email and keep it to the people you invite. Anyone else gets a voting link by email, and you can be emailed as votes arrive, with the standings. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Запрошуйте людей до опитування електронною поштою й обмежте його лише запрошеними. Усі інші отримують посилання для голосування листом, а ви можете отримувати листи про нові голоси з поточними результатами. Після надсилання можна змінити кінцевий термін, додати варіанти часу, надіслати запрошення ще раз і видалити людей; нагадування надходять запрошеним, які ще не проголосували. Зустріч, підтверджена опитуванням, належить вам: усі її учасники — гості, і лише ви можете перенести чи скасувати її."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
-msgstr ""
+msgstr "Опитування, які запрошують, підтверджують і тримають вас у курсі"

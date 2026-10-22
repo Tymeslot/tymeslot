@@ -175,9 +175,9 @@ msgstr "Změňte libovolný typ schůzky na skupinovou akci. Nastavte, kolik lid
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Invite people to a poll by email and keep it to the people you invite. Anyone else gets a voting link by email, and you can be emailed as votes arrive, with the standings. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Pozvěte lidi do ankety e-mailem a omezte ji jen na pozvané. Kdokoli jiný dostane odkaz k hlasování e-mailem a vy si můžete nechat posílat e-maily o nových hlasech s aktuálním stavem. Po odeslání můžete změnit uzávěrku, přidat termíny, znovu odeslat pozvánku a odebrat lidi; připomínky dostávají pozvaní, kteří ještě nehlasovali. Schůzka, kterou anketa potvrdí, je vaše: všichni na ní jsou hosté a jen vy ji můžete přesunout nebo zrušit."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
-msgstr ""
+msgstr "Ankety, které zvou, potvrzují a drží vás v obraze"

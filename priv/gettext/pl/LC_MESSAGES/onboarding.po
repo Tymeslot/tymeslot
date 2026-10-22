@@ -167,9 +167,9 @@ msgstr "Zamień dowolny typ spotkania w sesję grupową. Ustal, ile osób może 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Invite people to a poll by email and keep it to the people you invite. Anyone else gets a voting link by email, and you can be emailed as votes arrive, with the standings. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Zapraszaj do ankiety e-mailem i ogranicz ją do zaproszonych osób. Pozostali dostają link do głosowania e-mailem, a ty możesz otrzymywać e-maile o nowych głosach z aktualnymi wynikami. Po wysłaniu możesz zmienić koniec głosowania, dodać terminy, ponownie wysłać zaproszenie i usuwać osoby; przypomnienia dostają zaproszeni, którzy jeszcze nie zagłosowali. Spotkanie potwierdzone w ankiecie należy do ciebie: wszyscy jego uczestnicy są gośćmi i tylko ty możesz zmienić jego termin lub je odwołać."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Polls that invite, confirm and keep you posted"
-msgstr ""
+msgstr "Ankiety, które zapraszają, potwierdzają i informują na bieżąco"
