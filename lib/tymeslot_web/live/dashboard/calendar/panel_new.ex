@@ -33,8 +33,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.EventVideo
-  alias TymeslotWeb.Dashboard.Calendar.Creation
   alias Tymeslot.Venues
+  alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
