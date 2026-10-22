@@ -341,9 +341,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("create_poll", %{"poll" => params}, socket) do
-    case PollReminders.commit_pending(socket.assigns.reminder_picker) do
-      {:ok, picker} -> create(assign(socket, :reminder_picker, picker), params)
-      {:error, rejected} -> {:noreply, assign(socket, :reminder_picker, rejected)}
+    # The picker shows only with invitees, so a lead time typed into it
+    # before they were cleared is not the host's intent any more, and an
+    # invalid one must not stop a save through an error nobody can see.
+    if invitees_entered?(Map.get(params, "invitees", socket.assigns.invitees)) do
+      case PollReminders.commit_pending(socket.assigns.reminder_picker) do
+        {:ok, picker} -> create(assign(socket, :reminder_picker, picker), params)
+        {:error, rejected} -> {:noreply, assign(socket, :reminder_picker, rejected)}
+      end
+    else
+      create(socket, params)
     end
   end
 

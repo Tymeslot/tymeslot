@@ -269,9 +269,13 @@ defmodule Tymeslot.Polls do
   @doc """
   Whether the host has invited anyone to `poll` by address. Deadline
   reminders go only to invitees, so only such a poll has any to send.
+
+  Pure over `poll.participants`, which must be preloaded (the poll queries
+  do, and invitees are confirmed from the start, so none is left out).
   """
   @spec has_invitees?(PollSchema.t()) :: boolean()
-  def has_invitees?(%PollSchema{id: poll_id}), do: PollParticipantQueries.any_invited?(poll_id)
+  def has_invitees?(%PollSchema{participants: participants}),
+    do: Enum.any?(participants, &match?(%{invited_at: %DateTime{}}, &1))
 
   @doc """
   Deletes the participants who never confirmed their voting link within its
@@ -453,12 +457,13 @@ defmodule Tymeslot.Polls do
 
   # --- Lifecycle helpers ---
 
-  # A lifecycle write on an open poll (cancel, a details edit) reads the poll
-  # under the row lock confirmation takes (`Tymeslot.Polls.Confirm`), so a
-  # poll confirmed after the caller loaded its page is seen as confirmed here
-  # and refused, rather than written over. `fun` gets the locked open poll and
-  # returns `{:ok, poll}` or `{:error, reason}`; subscribers are told once the
-  # write has committed. `fun`'s value is returned as it is.
+  # A lifecycle write on an open poll (cancel, removing a participant,
+  # inviting) reads the poll under the row lock confirmation takes
+  # (`Tymeslot.Polls.Confirm`), so a poll confirmed after the caller loaded its
+  # page is seen as confirmed here and refused, rather than written over. `fun`
+  # gets the locked open poll and returns `{:ok, value}` or `{:error, reason}`
+  # (which rolls the transaction back); subscribers are told once the write has
+  # committed, and `{:ok, value}` is returned.
   defp with_open_poll_locked(id, user_id, fun) do
     result =
       Repo.transaction(fn ->

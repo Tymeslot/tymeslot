@@ -211,6 +211,16 @@ defmodule Tymeslot.Polls.EditingTest do
       assert cleared.meeting_type_id == nil
     end
 
+    test "an empty id, as a form sends for no type, clears it", ctx do
+      meeting_type = insert(:meeting_type, user: ctx.user)
+      Repo.update!(Changeset.change(ctx.poll, meeting_type_id: meeting_type.id))
+
+      assert {:ok, cleared} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => ""})
+
+      assert cleared.meeting_type_id == nil
+    end
+
     test "keeps a type switched off since, when the edit leaves it alone", ctx do
       switched_off = insert(:meeting_type, user: ctx.user, is_active: false)
       Repo.update!(Changeset.change(ctx.poll, meeting_type_id: switched_off.id))

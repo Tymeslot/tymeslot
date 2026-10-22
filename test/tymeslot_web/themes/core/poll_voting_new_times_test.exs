@@ -50,11 +50,20 @@ defmodule TymeslotWeb.Themes.Core.PollVotingNewTimesTest do
     {:ok, view, _html} =
       live(conn, poll_path(profile.username, poll.token) <> "?p=#{voted.token}")
 
-    assert [_one] =
-             view
-             |> render()
-             |> Floki.parse_document!()
-             |> Floki.find("[data-testid='poll-slot-new']")
+    rows =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find("[data-testid='poll-slot']")
+
+    {added_rows, other_rows} =
+      Enum.split_with(rows, &(Floki.find(&1, "input[data-testid='vote-#{added.id}-yes']") != []))
+
+    # The badge sits on the added time's row and on no other.
+    assert [added_row] = added_rows
+    assert [_badge] = Floki.find(added_row, "[data-testid='poll-slot-new']")
+    assert other_rows != []
+    assert Enum.all?(other_rows, &(Floki.find(&1, "[data-testid='poll-slot-new']") == []))
 
     assert has_element?(view, "input[data-testid='vote-#{added.id}-yes']")
 

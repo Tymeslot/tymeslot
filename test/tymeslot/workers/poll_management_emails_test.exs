@@ -131,6 +131,26 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
                ["ada@example.com", "grace@example.com"]
     end
 
+    test "still emails everyone from a job queued before it carried the host", ctx do
+      insert_invitee(ctx.poll, email: "ada@example.com")
+      insert(:poll_participant, poll: ctx.poll, email: "grace@example.com")
+      assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
+
+      # The shape the job had before it carried the host and the title: the
+      # poll id alone, read from the cancelled poll that still exists.
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_cancelled",
+                 "poll_id" => ctx.poll.id
+               })
+
+      assert_receive {:email, first}, 1000
+      assert_receive {:email, second}, 1000
+
+      assert Enum.sort(Enum.flat_map([first, second], &Enum.map(&1.to, fn {_n, a} -> a end))) ==
+               ["ada@example.com", "grace@example.com"]
+    end
+
     test "invites a reply only when the reply reaches the host", ctx do
       insert_invitee(ctx.poll, email: "ada@example.com")
       assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)

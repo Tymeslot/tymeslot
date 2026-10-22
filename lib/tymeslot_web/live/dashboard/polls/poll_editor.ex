@@ -341,6 +341,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     {:noreply, assign(socket, :removing, nil)}
   end
 
+  def handle_event("save", %{"poll" => params}, %{assigns: %{invited?: false}} = socket),
+    # The picker is hidden without invitees: whatever it holds unsaved must
+    # not stop the save through an error nobody can see.
+    do: save(socket, params)
+
   def handle_event("save", %{"poll" => params}, socket) do
     case PollReminders.commit_pending(socket.assigns.reminder_picker) do
       {:ok, picker} -> save(assign(socket, :reminder_picker, picker), params)
@@ -445,7 +450,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   defp removal_error(:not_found),
     do: dgettext("dashboard_polls", "They are no longer on this poll.")
 
-  defp removal_error(_reason), do: dgettext("dashboard_polls", "This poll is no longer open.")
+  defp removal_error(:not_open), do: dgettext("dashboard_polls", "This poll is no longer open.")
 
   defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_polls", "voted")
   defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_polls", "invited")

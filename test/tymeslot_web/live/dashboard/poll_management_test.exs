@@ -108,6 +108,48 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert [poll] = Polls.list_polls(user.id)
       assert %{value: 2, unit: "days"} in PollSchema.reminders(poll)
     end
+
+    test "a bad custom reminder left in the hidden picker does not block the save", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => "ada@example.com"}})
+      |> render_change()
+
+      view |> element("[data-testid='reminder-custom-toggle']") |> render_click()
+
+      view
+      |> element("[data-testid='poll-reminders-form']")
+      |> render_change(%{"reminder" => %{"value" => "0", "unit" => "days"}})
+
+      # Clearing the invitees hides the picker, with its invalid value still in it.
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"invitees" => ""}})
+      |> render_change()
+
+      refute has_element?(view, "[data-testid='poll-reminders-form']")
+
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "Offsite",
+          "duration" => "30",
+          "timezone" => "Europe/Berlin",
+          "invitees" => "",
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      })
+      |> render_submit()
+
+      assert [%{title: "Offsite"}] = Polls.list_polls(user.id)
+    end
   end
 
   describe "editing an open poll" do

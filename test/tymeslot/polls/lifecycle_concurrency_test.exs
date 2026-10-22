@@ -23,6 +23,7 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
   import Tymeslot.Factory
   import Tymeslot.Test.RaceConductor, only: [race: 1, unboxed: 1]
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
@@ -197,6 +198,13 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
     test_pid = self()
     email = "late-invitee@example.com"
 
+    # With a deadline ahead, an invitation that got through would schedule
+    # deadline reminders for the confirmed poll.
+    unboxed(fn ->
+      deadline = DateTime.utc_now() |> DateTime.add(5, :day) |> DateTime.truncate(:second)
+      ctx.poll |> Changeset.change(deadline_at: deadline) |> Repo.update!()
+    end)
+
     confirm =
       Task.async(fn ->
         unboxed(fn ->
@@ -228,6 +236,7 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
     assert committed_poll(ctx.poll).status == :confirmed
     refute invitee_on_poll?(ctx.poll, email)
     assert invitation_jobs(ctx.poll) == []
+    assert pending_deadline_jobs(ctx.poll) == []
   end
 
   # The loser waits on the winner's row lock, then finds the poll no longer

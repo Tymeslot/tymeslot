@@ -113,7 +113,7 @@ defmodule Tymeslot.Polls.Editing do
   # leaves it alone never fails on it.
   defp check_meeting_type(%PollSchema{meeting_type_id: current}, attrs, user_id) do
     case Map.get(attrs, "meeting_type_id", Map.get(attrs, :meeting_type_id)) do
-      nil -> :ok
+      blank when blank in [nil, ""] -> :ok
       raw -> check_new_meeting_type(Type.cast(:id, raw), current, user_id)
     end
   end
