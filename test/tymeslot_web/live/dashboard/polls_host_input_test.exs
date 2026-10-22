@@ -72,6 +72,36 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
     end
   end
 
+  describe "create form errors" do
+    test "a deadline that has passed is refused on the deadline field", %{conn: conn} do
+      %{user: user} = host([], timezone: "Etc/UTC")
+
+      {:ok, view, _html} = live(log_in(conn, user), ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+      yesterday = Date.utc_today() |> Date.add(-1) |> Date.to_iso8601()
+
+      html =
+        view
+        |> form("form[phx-submit='create_poll']", %{
+          "poll" => %{
+            "title" => "Late poll",
+            "duration" => "30",
+            "timezone" => "Etc/UTC",
+            "deadline" => "#{yesterday}T09:00",
+            "slots" => %{"0" => "#{date}T09:00"}
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "The deadline must be in the future"
+      assert has_element?(view, "input[name='poll[deadline]'][aria-invalid='true']")
+      assert Polls.list_polls(user.id) == []
+    end
+  end
+
   describe "editor errors" do
     test "are shown in the host's language", %{conn: conn} do
       %{user: user} = host(locale: "de")

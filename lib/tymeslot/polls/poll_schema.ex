@@ -114,6 +114,7 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_length(:title, max: 255)
     |> validate_description_length()
     |> validate_reminder_config()
+    |> validate_future_deadline()
     |> put_new_token()
     |> Token.put_hash(:token, :token_hash)
     |> unique_constraint(:token_hash)

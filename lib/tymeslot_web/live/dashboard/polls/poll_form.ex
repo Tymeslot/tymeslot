@@ -608,7 +608,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp errors_for(:meeting_type_not_found),
     do: %{meeting_type_id: [dgettext("dashboard_polls", "That meeting type is unavailable")]}
 
-  defp errors_for(%Changeset{} = changeset), do: FormErrors.to_map(changeset)
+  defp errors_for(%Changeset{} = changeset) do
+    errors = FormErrors.to_map(changeset)
+
+    if Map.has_key?(errors, :deadline_at),
+      do:
+        Map.put(errors, :deadline_at, [
+          dgettext("dashboard_polls", "The deadline must be in the future")
+        ]),
+      else: errors
+  end
 
   defp too_many_message,
     do: dgettext("dashboard_polls", "Up to %{max} times", max: PollSchema.max_slots())

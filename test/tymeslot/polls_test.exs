@@ -186,6 +186,22 @@ defmodule Tymeslot.PollsTest do
       assert {:error, :slot_in_past} = Polls.create_poll(user.id, attrs)
     end
 
+    test "rejects a deadline that has already passed", %{user: user, future: future} do
+      past = DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:second)
+
+      attrs = %{
+        title: "T",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        deadline_at: past,
+        slots: [slot(future)]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} = Polls.create_poll(user.id, attrs)
+      assert %{deadline_at: ["must be in the future"]} = errors_on(changeset)
+      assert Polls.list_polls(user.id) == []
+    end
+
     test "rolls back when two slots share the same start_time", %{user: user, future: future} do
       attrs = %{
         title: "T",
