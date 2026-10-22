@@ -156,6 +156,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
         entries: Enum.join(entries, ", ")
       )
 
+  def error_message({:invalid_names, names}),
+    do:
+      dgettext("dashboard_polls", "These names can't be used: %{names}",
+        names: Enum.join(names, ", ")
+      )
+
   def error_message(reason) when reason in [:too_many_invitees, :poll_full],
     do:
       dgettext("dashboard_polls", "A poll can have up to %{max} participants.",

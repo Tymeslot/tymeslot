@@ -22,6 +22,18 @@ defmodule Tymeslot.Polls.InvitationsTest do
       assert Enum.all?(entries, &is_nil(&1.name))
     end
 
+    test "names every name a participant could not be given" do
+      assert {:error, {:invalid_names, ["A", "Bob%"]}} =
+               Invitations.parse(
+                 "A <a@example.com>\nBob% <bob@example.com>\nGrace <grace@example.com>"
+               )
+    end
+
+    test "reports addresses before names" do
+      assert {:error, {:invalid_addresses, ["nope"]}} =
+               Invitations.parse("A <a@example.com>\nnope")
+    end
+
     test "reads a name given as Name <address>, quoted or not" do
       assert {:ok, [grace, ada]} =
                Invitations.parse("Grace Hopper <Grace@Example.com>\n\"Ada\" <ada@example.com>")

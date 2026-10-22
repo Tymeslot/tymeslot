@@ -152,6 +152,35 @@ defmodule TymeslotWeb.Dashboard.PollParticipationTest do
       assert html =~ "Enter at least one email address."
     end
 
+    test "names the invitee names that can't be used and invites nobody", %{
+      conn: conn,
+      user: user
+    } do
+      %{poll: poll} = open_poll_with_votes(user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      view
+      |> form("form[data-testid='poll-invite-form']", %{
+        "invite" => %{"emails" => "grace@example.com\nA <a@example.com>"}
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "form[data-testid='poll-invite-form'] [data-testid='poll-invitees']",
+               "These names can't be used: A"
+             )
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+
+      refute Enum.any?(
+               reloaded.participants,
+               &(&1.email in ["grace@example.com", "a@example.com"])
+             )
+    end
+
     test "refuses the whole list and says how many more the host can invite", %{
       conn: conn,
       user: user

@@ -739,3 +739,8 @@ msgstr "Invia di nuovo l'invito"
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Resend voting link to %{name}"
 msgstr "Invia di nuovo il link di voto"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "These names can't be used: %{names}"
+msgstr ""

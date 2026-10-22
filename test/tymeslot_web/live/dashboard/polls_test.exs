@@ -203,6 +203,32 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert Polls.list_polls(user.id) == []
     end
 
+    test "names the invitee names that can't be used and creates nothing", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "Launch planning",
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"},
+          "invitees" => "ada@example.com, A <a@example.com>"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-invitees']", "These names can't be used: A")
+      assert Polls.list_polls(user.id) == []
+    end
+
     test "warns about a candidate time inside time off without refusing the poll", %{
       conn: conn,
       user: user,

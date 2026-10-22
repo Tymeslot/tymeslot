@@ -41,6 +41,7 @@ defmodule Tymeslot.Polls.Invitations do
 
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias Tymeslot.Security.FieldValidators.NameValidator
 
   @type entry :: %{email: String.t(), name: String.t() | nil}
   @type result :: %{
@@ -64,12 +65,16 @@ defmodule Tymeslot.Polls.Invitations do
   Reads the host's list of addresses into entries, dropping duplicates.
 
   Returns `{:error, {:invalid_addresses, entries}}` naming each entry that is
-  not a valid address, and `{:error, :too_many_invitees}` for more than a poll
-  can hold.
+  not a valid address, then `{:error, {:invalid_names, names}}` naming each
+  name a participant could not be given, and `{:error, :too_many_invitees}`
+  for more than a poll can hold.
   """
   @spec parse(String.t() | nil) ::
           {:ok, [entry()]}
-          | {:error, {:invalid_addresses, [String.t()]} | :too_many_invitees}
+          | {:error,
+             {:invalid_addresses, [String.t()]}
+             | {:invalid_names, [String.t()]}
+             | :too_many_invitees}
   def parse(text) when is_binary(text) do
     entries =
       text
@@ -79,9 +84,14 @@ defmodule Tymeslot.Polls.Invitations do
 
     parsed = Enum.map(entries, &{&1, parse_entry(&1)})
 
-    case for({raw, entry} <- parsed, not valid?(entry), do: raw) do
-      [] -> unique(Enum.map(parsed, &elem(&1, 1)))
-      invalid -> {:error, {:invalid_addresses, invalid}}
+    with :ok <-
+           refuse(:invalid_addresses, for({raw, entry} <- parsed, not valid?(entry), do: raw)),
+         :ok <-
+           refuse(
+             :invalid_names,
+             Enum.uniq(for {_raw, entry} <- parsed, not valid_name?(entry), do: entry.name)
+           ) do
+      unique(Enum.map(parsed, &elem(&1, 1)))
     end
   end
 
@@ -256,6 +266,14 @@ defmodule Tymeslot.Polls.Invitations do
   end
 
   defp valid?(%{email: email}), do: EmailValidator.validate(email) == :ok
+
+  # The rule the participant's changeset applies, checked here so the host
+  # hears which name is wrong instead of the whole invitation failing.
+  defp valid_name?(%{name: nil}), do: true
+  defp valid_name?(%{name: name}), do: NameValidator.validate(name) == :ok
+
+  defp refuse(_reason, []), do: :ok
+  defp refuse(reason, entries), do: {:error, {reason, entries}}
 
   defp unique(entries) do
     entries = Enum.uniq_by(entries, & &1.email)
