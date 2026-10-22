@@ -88,11 +88,6 @@ msgstr "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr "Nie udało się utworzyć spotkania. Spróbuj ponownie."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
 msgstr "Nie udało się utworzyć spotkania"
 
@@ -240,3 +235,8 @@ msgstr "Przypomnienia dla tego spotkania są nieprawidłowe"
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
 msgstr "Stały termin przesuwa się w typie spotkania, razem ze wszystkimi, którzy go zarezerwowali"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
+msgstr "Nie udało się utworzyć spotkania. Spróbuj ponownie."

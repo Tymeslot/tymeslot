@@ -96,21 +96,21 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
       reason = "Some short custom error"
 
       assert BookingErrorMessage.message(reason) ==
-               "Failed to create appointment. Please try again."
+               "Failed to create meeting. Please try again."
     end
 
     test "falls back to generic copy for a long unmapped binary" do
       reason = String.duplicate("x", 100)
 
       assert BookingErrorMessage.message(reason) ==
-               "Failed to create appointment. Please try again."
+               "Failed to create meeting. Please try again."
     end
   end
 
   describe "message/1 with unknown atoms" do
     test "falls back to generic copy for an unmapped atom" do
       assert BookingErrorMessage.message(:some_unmapped_atom) ==
-               "Failed to create appointment. Please try again."
+               "Failed to create meeting. Please try again."
     end
   end
 end

@@ -690,7 +690,7 @@ msgstr "Tymeslot non è riuscito a inviare questa modifica al server di calendar
 #: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
-msgstr "Tymeslot ha bisogno dell'indirizzo e-mail della casella di posta per leggerne la disponibilità. Ricollega l'integrazione e indicalo."
+msgstr "Tymeslot ha bisogno dell'indirizzo email della casella di posta per leggerne la disponibilità. Ricollega l'integrazione e indicalo."
 
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format

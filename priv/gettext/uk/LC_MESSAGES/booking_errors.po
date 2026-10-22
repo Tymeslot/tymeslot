@@ -88,11 +88,6 @@ msgstr "Час завершення має бути пізніше за час �
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr "Не вдалося створити зустріч. Спробуйте ще раз."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
 msgstr "Не вдалося створити зустріч"
 
@@ -240,3 +235,8 @@ msgstr "Нагадування для цієї зустрічі недійсні
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
 msgstr "Фіксовану дату переносять у її типі зустрічі разом з усіма, хто її забронював"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
+msgstr "Не вдалося створити зустріч. Спробуйте ще раз."

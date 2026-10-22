@@ -235,6 +235,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   defp unrecognised_message do
-    dgettext("booking_errors", "Failed to create appointment. Please try again.")
+    dgettext("booking_errors", "Failed to create meeting. Please try again.")
   end
 end

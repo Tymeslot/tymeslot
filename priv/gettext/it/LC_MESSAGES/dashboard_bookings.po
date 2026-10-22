@@ -790,7 +790,7 @@ msgstr "Tymeslot sta ancora aggiornando il tuo calendario per questa prenotazion
 #: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar now has this meeting at %{time}. Tymeslot will move the booking there, reschedule its reminders and email %{attendee_name} and any guests the new time."
-msgstr "Il tuo calendario ora ha questa riunione a %{time}. Tymeslot sposterà la prenotazione a quell’orario, riprogrammerà i promemoria e avviserà via e-mail %{attendee_name} e gli eventuali ospiti del nuovo orario."
+msgstr "Il tuo calendario ora ha questa riunione a %{time}. Tymeslot sposterà la prenotazione a quell’orario, riprogrammerà i promemoria e avviserà via email %{attendee_name} e gli eventuali ospiti del nuovo orario."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
