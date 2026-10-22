@@ -15,6 +15,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Meetings.{Guests, MeetingSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
@@ -132,6 +133,30 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
       |> render_submit()
 
     assert html =~ "You already have a meeting at that time."
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+  end
+
+  test "the dashboard explains a time inside the host's time off", ctx do
+    away = DateTime.add(ctx.meeting.start_time, 1, :day)
+    day = DateTime.to_date(away)
+    {:ok, _period} = TimeOff.create(ctx.profile.id, %{starts_on: day, ends_on: day})
+
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view
+    |> element("[phx-click='show_reschedule_modal'][phx-value-id='#{ctx.meeting.id}']")
+    |> render_click()
+
+    html =
+      view
+      |> form("[data-testid='host-move-form']", %{"move" => %{"start" => local(away)}})
+      |> render_submit()
+
+    assert html =~
+             "This time falls within your time off. Change or remove the time off to move the meeting there."
+
+    refute html =~ "could not be moved"
     assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
   end
 

@@ -129,6 +129,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   defp error_message(:slot_taken),
     do: dgettext("dashboard_bookings", "You already have a meeting at that time.")
 
+  defp error_message(:time_off),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "This time falls within your time off. Change or remove the time off to move the meeting there."
+      )
+
   defp error_message(_reason),
     do: dgettext("dashboard_bookings", "The meeting could not be moved. Please try again.")
 end

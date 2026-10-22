@@ -851,3 +851,8 @@ msgstr "Tymeslot n’a pas pu déplacer cette réservation. Une autre réservati
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot n’a pas pu déplacer cette réservation. Veuillez réessayer."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
+msgstr ""

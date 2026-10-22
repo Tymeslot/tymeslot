@@ -857,3 +857,8 @@ msgstr "Tymeslot nie mógł przenieść tej rezerwacji. O tej godzinie zaczyna s
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot nie mógł przenieść tej rezerwacji. Spróbuj ponownie."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
+msgstr ""
