@@ -56,5 +56,20 @@ defmodule Tymeslot.Workers.PollInvitationEmailsTest do
       assert email.text_body =~ "Bring the roadmap."
       assert email.text_body =~ "2030"
     end
+
+    test "is not sent while the host's account is about to be deleted" do
+      user = insert(:user, deletion_scheduled_at: DateTime.utc_now(:second))
+      _profile = insert(:profile, user: user, username: "hostname")
+      poll = insert(:poll, status: :open, user: user)
+      invitee = insert(:poll_participant, poll: poll, email: "ada@example.com")
+
+      assert {:discard, "host account pending deletion"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_invitation",
+                 "participant_id" => invitee.id
+               })
+
+      refute_receive {:email, _any}, 200
+    end
   end
 end

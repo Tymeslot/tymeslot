@@ -23,6 +23,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   alias Tymeslot.Emails.Templates.PollParticipantLink
   alias Tymeslot.Emails.Templates.PollVoteDigest
   alias Tymeslot.Emails.Templates.PollVoteReceipt
+  alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Polls.PollQueries
@@ -109,7 +110,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
         {:discard, @participant_gone}
 
       %{poll: %{status: :open} = poll} = participant ->
-        deliver_to_participant(poll, participant, action, render)
+        with_host_staying(poll, action, fn ->
+          deliver_to_participant(poll, participant, action, render)
+        end)
 
       %{poll: poll} ->
         Logger.info("Skipping poll email — poll is not open",
@@ -147,37 +150,44 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_deadline_reminders(%{"poll_id" => poll_id} = args, job_id) do
     with_current_deadline(poll_id, args, "poll deadline reminders", fn poll ->
-      # Without a host username the public voting page has no working URL, so the
-      # reminder's call-to-action would be broken. Discard rather than sending a
-      # dead link to every participant.
-      case host_username(poll) do
-        nil ->
-          Logger.warning("Skipping poll deadline reminders — host has no username",
-            poll_id: poll_id
-          )
-
-          {:discard, @no_username}
-
-        username ->
-          deliver_deadline_reminders(poll, username, job_id)
-      end
+      with_host_staying(poll, "poll deadline reminders", fn ->
+        send_deadline_reminders(poll, job_id)
+      end)
     end)
+  end
+
+  # Without a host username the public voting page has no working URL, so the
+  # reminder's call-to-action would be broken. Discard rather than sending a
+  # dead link to every participant.
+  defp send_deadline_reminders(poll, job_id) do
+    case host_username(poll) do
+      nil ->
+        Logger.warning("Skipping poll deadline reminders — host has no username",
+          poll_id: poll.id
+        )
+
+        {:discard, @no_username}
+
+      username ->
+        deliver_deadline_reminders(poll, username, job_id)
+    end
   end
 
   # Each reminder carries the participant's own link: voting is only possible
   # through it, so the bare poll link would only let them ask for it again.
   defp deliver_deadline_reminders(poll, username, job_id) do
-    poll.id
-    |> PollParticipantQueries.list_unvoted_for_poll()
-    |> Enum.each(fn participant ->
-      DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
-        poll
-        |> PollDeadlineReminder.render(participant, personal_url(poll, username, participant))
-        |> Delivery.deliver()
+    results =
+      poll.id
+      |> PollParticipantQueries.list_unvoted_for_poll()
+      |> Enum.map(fn participant ->
+        DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
+          poll
+          |> PollDeadlineReminder.render(participant, personal_url(poll, username, participant))
+          |> Delivery.deliver()
+        end)
       end)
-    end)
 
-    :ok
+    DeliveryOutcome.from_results("poll deadline reminder", [poll_id: poll.id], results)
   end
 
   @spec handle_host_nudge(%{String.t() => term()}, DeliveryClaims.job_id()) ::
@@ -259,17 +269,23 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_new_times(%{"poll_id" => poll_id, "slot_ids" => slot_ids}, job_id) do
     with_open_poll(poll_id, "poll new times", fn poll ->
-      case {host_username(poll), Enum.filter(poll.time_slots, &(&1.id in slot_ids))} do
-        {_username, []} ->
-          :ok
+      with_host_staying(poll, "poll new times", fn -> send_new_times(poll, slot_ids, job_id) end)
+    end)
+  end
 
-        {nil, _slots} ->
-          {:discard, @no_username}
+  defp send_new_times(poll, slot_ids, job_id) do
+    case {host_username(poll), Enum.filter(poll.time_slots, &(&1.id in slot_ids))} do
+      {_username, []} ->
+        :ok
 
-        {username, slots} ->
+      {nil, _slots} ->
+        {:discard, @no_username}
+
+      {username, slots} ->
+        results =
           poll.participants
           |> Enum.filter(& &1.voted_at)
-          |> Enum.each(fn participant ->
+          |> Enum.map(fn participant ->
             DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
               poll
               |> PollNewTimes.render(
@@ -280,8 +296,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
               |> Delivery.deliver()
             end)
           end)
-      end
-    end)
+
+        DeliveryOutcome.from_results("poll new times", [poll_id: poll.id], results)
+    end
   end
 
   @doc """
@@ -293,7 +310,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   instead, and is discarded once the poll is gone.
   """
   @spec handle_cancelled(%{String.t() => term()}, DeliveryClaims.job_id()) ::
-          :ok | {:discard, String.t()}
+          :ok | {:error, term()} | {:discard, String.t()}
   def handle_cancelled(
         %{"recipients" => recipients, "user_id" => user_id, "title" => title} = args,
         job_id
@@ -301,7 +318,10 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     case Auth.get_user_with_profile(user_id) do
       {:ok, host} ->
         poll = %PollSchema{id: args["poll_id"], title: title, user: host}
-        Enum.each(recipients, &deliver_cancellation(poll, recipient(&1), job_id))
+
+        recipients
+        |> Enum.map(&deliver_cancellation(poll, recipient(&1), job_id))
+        |> cancellation_outcome(poll)
 
       {:error, :not_found} ->
         Logger.info("Skipping poll cancellation emails: the host no longer exists",
@@ -315,7 +335,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   def handle_cancelled(%{"poll_id" => poll_id}, job_id) do
     case PollQueries.get_with_host(poll_id) do
       %{status: :cancelled} = poll ->
-        Enum.each(poll.participants, &deliver_cancellation(poll, &1, job_id))
+        poll.participants
+        |> Enum.map(&deliver_cancellation(poll, &1, job_id))
+        |> cancellation_outcome(poll)
 
       # Deleted straight after it was cancelled, before this ran.
       nil ->
@@ -336,6 +358,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       poll |> PollCancelled.render(participant) |> Delivery.deliver()
     end)
   end
+
+  defp cancellation_outcome(results, poll),
+    do: DeliveryOutcome.from_results("poll cancellation", [poll_id: poll.id], results)
 
   defp recipient(args) do
     %PollParticipantSchema{

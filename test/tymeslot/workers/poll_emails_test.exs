@@ -229,6 +229,21 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       refute email.html_body =~ "Typed By Anyone"
     end
 
+    test "is not sent while the host's account is about to be deleted" do
+      user = insert(:user, deletion_scheduled_at: DateTime.utc_now(:second))
+      _profile = insert(:profile, user: user, username: "hostname")
+      poll = insert(:poll, status: :open, user: user)
+      participant = insert(:poll_participant, poll: poll, email: "ada@example.com")
+
+      assert {:discard, "host account pending deletion"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_participant_link",
+                 "participant_id" => participant.id
+               })
+
+      refute_receive {:email, _any}, 200
+    end
+
     test "discards once the participant is gone" do
       assert {:discard, "poll participant not found"} =
                perform_job(EmailWorker, %{
