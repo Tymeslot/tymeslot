@@ -37,6 +37,8 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
 
   setup do
     TestMocks.setup_calendar_mocks()
+    # The list renders and goes out through the real email service.
+    stub_with(Tymeslot.EmailServiceMock, Tymeslot.Emails.EmailService)
     AvailabilityCache.clear_all()
 
     stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->

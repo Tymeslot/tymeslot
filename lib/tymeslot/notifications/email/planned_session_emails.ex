@@ -16,9 +16,8 @@ defmodule Tymeslot.Notifications.Email.PlannedSessionEmails do
   alias Tymeslot.Clock
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.AppointmentBuilder
-  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Emails.Templates.RegistrationClosed
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
@@ -77,8 +76,7 @@ defmodule Tymeslot.Notifications.Email.PlannedSessionEmails do
       end)
 
     meeting.organizer_email
-    |> RegistrationClosed.render(details, roster)
-    |> Delivery.deliver()
+    |> Config.email_service_module().send_registration_closed(details, roster)
     |> SeatJobs.send_result("registration closed", meeting_id: meeting.id)
   end
 
