@@ -32,8 +32,11 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Repo
   alias Tymeslot.Test.RaceConductor
+  alias Tymeslot.TestMocks
 
   setup do
+    TestMocks.resolve_booking_calendars()
+
     {user, poll, slot, participant} =
       unboxed(fn ->
         user = insert(:user)

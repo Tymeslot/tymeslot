@@ -21,7 +21,7 @@ defmodule Tymeslot.Polls.Confirm do
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Integrations.Calendar.Primary
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
@@ -166,28 +166,43 @@ defmodule Tymeslot.Polls.Confirm do
     |> Enum.uniq()
   end
 
-  defp integration_ids(%PollSchema{meeting_type_id: nil} = poll) do
-    {primary_calendar_id(poll.user_id), nil}
-  end
+  # The calendar the meeting is written to is chosen as a booking of the
+  # poll's meeting type would choose it: the type's own calendar where it names
+  # one the host can still book into, otherwise the host's booking calendar.
+  # The video integration is the meeting type's, and none without one.
+  defp integrations(%PollSchema{} = poll) do
+    case meeting_type(poll) do
+      nil ->
+        Map.put(calendar_target(poll.user_id), :video_integration_id, nil)
 
-  defp integration_ids(%PollSchema{meeting_type_id: meeting_type_id} = poll) do
-    case MeetingTypes.get_meeting_type(meeting_type_id, poll.user_id) do
-      nil -> {primary_calendar_id(poll.user_id), nil}
-      meeting_type -> {meeting_type.calendar_integration_id, meeting_type.video_integration_id}
+      meeting_type ->
+        Map.put(
+          calendar_target(meeting_type),
+          :video_integration_id,
+          meeting_type.video_integration_id
+        )
     end
   end
 
-  defp primary_calendar_id(user_id) do
-    case Primary.get_primary_calendar_integration(user_id) do
-      {:ok, integration} -> integration.id
-      {:error, _reason} -> nil
+  defp meeting_type(%PollSchema{meeting_type_id: nil}), do: nil
+
+  defp meeting_type(%PollSchema{meeting_type_id: meeting_type_id, user_id: user_id}),
+    do: MeetingTypes.get_meeting_type(meeting_type_id, user_id)
+
+  defp calendar_target(context) do
+    case CalendarEvents.get_booking_integration_info(context) do
+      {:ok, %{integration_id: integration_id, calendar_path: calendar_path}} ->
+        %{calendar_integration_id: integration_id, calendar_path: calendar_path}
+
+      _no_integration ->
+        %{calendar_integration_id: nil, calendar_path: nil}
     end
   end
 
   defp create_meeting(poll, slot, primary) do
-    {calendar_integration_id, video_integration_id} = integration_ids(poll)
-
-    %{
+    poll
+    |> integrations()
+    |> Map.merge(%{
       title: poll.title,
       start_time: slot.start_time,
       end_time: slot.end_time,
@@ -198,14 +213,12 @@ defmodule Tymeslot.Polls.Confirm do
       # The meeting carries one language for all its emails, so the primary
       # participant's stands for everyone: guests have no locale of their own.
       attendee_locale: primary.locale,
-      calendar_integration_id: calendar_integration_id,
-      video_integration_id: video_integration_id,
       guest_emails: guest_emails(poll.participants),
       managed_by_host: true,
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.
       organizer_note: organizer_note(poll.description)
-    }
+    })
     |> CreateAdHoc.execute_deferred(buffers: false)
     |> map_booking_result()
   end

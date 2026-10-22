@@ -47,6 +47,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
     # Confirmation runs through the ad-hoc booking path, which checks the host's
     # calendar for conflicts — stub that external boundary for the whole module.
     TestMocks.setup_calendar_mocks()
+    TestMocks.resolve_booking_calendars()
     :ok
   end
 

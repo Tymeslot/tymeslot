@@ -23,12 +23,18 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Profiles
+  alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
   # would otherwise post {:email, _} to that process. Global mode routes it to
   # the test process instead; it requires `async: false`.
   setup :set_swoosh_global
+
+  setup do
+    TestMocks.resolve_booking_calendars()
+    :ok
+  end
 
   # --- Scheduling on create ---
 

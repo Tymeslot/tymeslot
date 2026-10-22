@@ -11,11 +11,14 @@ defmodule Tymeslot.Polls.ConfirmTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
+  alias Tymeslot.Profiles
+  alias Tymeslot.TestMocks
 
   @moduletag :integration
   @moduletag :polls
 
   setup do
+    TestMocks.resolve_booking_calendars()
     user = insert(:user)
     _profile = insert(:profile, user: user)
 
@@ -418,6 +421,49 @@ defmodule Tymeslot.Polls.ConfirmTest do
                })
 
       assert meeting_count(ctx.user.id) == 1
+    end
+  end
+
+  describe "confirm/3 choosing the meeting's calendar" do
+    setup %{user: user, poll: poll, slot: slot} do
+      primary = insert(:calendar_integration, user: user)
+
+      user.id
+      |> Profiles.get_profile()
+      |> Changeset.change(primary_calendar_integration_id: primary.id)
+      |> Repo.update!()
+
+      participant = insert(:poll_participant, poll: poll)
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      %{primary: primary}
+    end
+
+    test "books into the host's calendar when the poll's meeting type names none",
+         %{user: user, poll: poll, slot: slot, primary: primary} do
+      meeting_type = insert(:meeting_type, user: user, calendar_integration_id: nil)
+      poll |> Changeset.change(meeting_type_id: meeting_type.id) |> Repo.update!()
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.calendar_integration_id == primary.id
+    end
+
+    test "books into the calendar the poll's meeting type names",
+         %{user: user, poll: poll, slot: slot} do
+      chosen = insert(:calendar_integration, user: user)
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          calendar_integration_id: chosen.id,
+          target_calendar_id: "team-calendar"
+        )
+
+      poll |> Changeset.change(meeting_type_id: meeting_type.id) |> Repo.update!()
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.calendar_integration_id == chosen.id
+      assert meeting.calendar_path == "team-calendar"
     end
   end
 end

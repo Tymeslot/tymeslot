@@ -420,9 +420,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   shares its parent's). So it takes the first row rather than raising on a
   second, ordered by `id` so the choice is at least deterministic.
   """
-  @spec get_by_identifiers(integer(), [String.t()]) ::
+  @spec get_by_identifiers(integer() | nil, [String.t()]) ::
           {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
   def get_by_identifiers(_calendar_integration_id, []), do: {:error, :not_found}
+
+  # Every cached row belongs to an integration, so a meeting without one has
+  # nothing cached to find.
+  def get_by_identifiers(nil, _identifiers), do: {:error, :not_found}
 
   def get_by_identifiers(calendar_integration_id, identifiers) when is_list(identifiers) do
     query =
