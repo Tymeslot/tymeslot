@@ -151,6 +151,47 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       )
     end
 
+    test "stores an explicitly empty reminder list as empty, not unset", %{base_params: params} do
+      assert {:ok, meeting} = CreateAdHoc.execute(Map.put(params, :reminders, []))
+      assert meeting.reminders == []
+    end
+
+    test "stores reminders given with string keys in the normalised shape", %{
+      base_params: params
+    } do
+      params = Map.put(params, :reminders, [%{"value" => "15", "unit" => "minutes"}])
+
+      assert {:ok, meeting} = CreateAdHoc.execute(params)
+      assert meeting.reminders == [%{value: 15, unit: "minutes"}]
+    end
+
+    # The picker in the calendar's quick add validates each reminder as it is
+    # added, but the reminder policy is the domain's to enforce: any other
+    # caller reaches the meeting through here.
+    for {label, reminders} <- [
+          {"more than the maximum",
+           [
+             %{value: 1, unit: "hours"},
+             %{value: 2, unit: "hours"},
+             %{value: 3, unit: "hours"},
+             %{value: 4, unit: "hours"}
+           ]},
+          {"the same interval twice", [%{value: 1, unit: "hours"}, %{value: 1, unit: "hours"}]},
+          {"one more than a year ahead", [%{value: 400, unit: "days"}]},
+          {"a reminder missing its unit", [%{value: 30}]},
+          {"a reminder with an unknown unit", [%{value: 30, unit: "fortnights"}]},
+          {"something other than a list", %{value: 30, unit: "minutes"}}
+        ] do
+      @reminders reminders
+
+      test "refuses #{label}, creating no meeting", %{base_params: params, user: user} do
+        assert {:error, :invalid_reminders} =
+                 CreateAdHoc.execute(Map.put(params, :reminders, @reminders))
+
+        assert Repo.all(from(m in MeetingSchema, where: m.organizer_user_id == ^user.id)) == []
+      end
+    end
+
     test "schedules email notifications when no video integration", %{base_params: params} do
       assert {:ok, _meeting} = CreateAdHoc.execute(params)
       assert_enqueued(worker: Tymeslot.Workers.EmailWorker)

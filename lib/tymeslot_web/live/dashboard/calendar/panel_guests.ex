@@ -3,11 +3,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   The guests of the event the side panel shows, and telling them about the
   panel's changes.
 
-  Inviting and removing email the guest concerned at once: an invitation for a
-  new guest, a cancellation for a removed one
-  (`Tymeslot.Meetings.AttendeeNotifications`). The guest list is then
-  written through `Writes.update/5`, to the event the panel shows; neither
-  pushes an undo entry, since the email cannot be taken back. Removing asks
+  Inviting and removing write the guest list through `Writes.update/5`, to
+  the event the panel shows, and email the guest concerned only once the
+  calendar has accepted that write: an invitation for a new guest, a
+  cancellation for a removed one (`membership_written/3`, from
+  `Tymeslot.Meetings.AttendeeNotifications.membership_changed/3`). A write
+  that fails emails nobody, so no guest is invited to an event they are not
+  on, or told they are off one they are still on. Neither pushes an undo
+  entry, since the email cannot be taken back. Removing asks
   first (`RemoveGuestModal`). An event a group meeting with live seats sits
   on refuses both (`EditGuard.check/3`), as does an event someone else
   organises (`EditGuard.guest_update/3`).
@@ -45,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   def of(event),
     do: event |> Map.get(:attendees) |> List.wrap() |> Enum.map(&Attendee.normalise/1)
 
-  @doc "Invites `raw` to the event the panel shows: emails them, then saves the list."
+  @doc "Invites `raw` to the event the panel shows: saves the list, then emails them."
   @spec invite(socket(), String.t()) :: socket()
   def invite(socket, raw) when is_binary(raw) do
     with {:ok, event} <- panel_event(socket),
@@ -56,7 +59,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          :ok <- gates(socket, event) do
       added = Attendee.new(email: email)
       guests = of(event) ++ [added]
-      {:ok, _sent} = AttendeeNotifications.attendees_added(event, [added])
 
       socket
       |> write(event, guests)
@@ -90,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
   def request_remove(socket, _email), do: socket
 
-  @doc "Removes the guest the open prompt names: emails them, then saves the list."
+  @doc "Removes the guest the open prompt names: saves the list, then emails them."
   @spec confirm_remove(socket()) :: socket()
   def confirm_remove(%{assigns: %{remove_guest_prompt: %{email: email, event_id: id}}} = socket) do
     socket = assign(socket, :remove_guest_prompt, nil)
@@ -98,9 +100,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
     with %{event_id: ^id} <- socket.assigns.panel,
          {:ok, event} <- Map.fetch(socket.assigns.events_by_id, id),
          :ok <- gates(socket, event),
-         {[_first | _rest] = removed, kept} <- Enum.split_with(of(event), &(&1.email == email)) do
-      {:ok, _sent} = AttendeeNotifications.attendees_removed(event, removed)
-
+         {[_first | _rest], kept} <- Enum.split_with(of(event), &(&1.email == email)) do
       socket
       |> write(event, kept)
       |> Toast.show(dgettext("dashboard_calendar_editing", "Removed %{email}.", email: email))
@@ -121,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   @doc """
   Whether `event` has guests and differs, in anything they would see, from
   `opened_with`, the event as the panel opened on it. Guests added or
-  removed since were told when it happened, so the guest lists are left out
+  removed since were told once their write was accepted, so the guest lists are left out
   of the comparison.
   """
   @spec untold?(map() | nil, map() | nil) :: boolean()
@@ -264,11 +264,72 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
         "Someone else organises this event, so only they can email its guests."
       )
 
+  @doc """
+  Emails the guests a write the calendar accepted added to the event or
+  removed from it (`AttendeeNotifications.membership_changed/3`), from
+  `original_event`, the event as the write found it, and `updated_event`, as
+  it left it. The organiser hears only when an email could not be sent, or
+  was not theirs to send: the toast already named the change.
+  """
+  @spec membership_written(socket(), map(), map()) :: socket()
+  def membership_written(socket, original_event, updated_event) do
+    %{added: added, removed: removed} =
+      AttendeeNotifications.membership_changed(
+        original_event,
+        updated_event,
+        socket.assigns.current_user.id
+      )
+
+    Enum.reduce([added_notice(added), removed_notice(removed)], socket, &notice/2)
+  end
+
+  defp notice(nil, socket), do: socket
+  defp notice(message, socket), do: flash(socket, message)
+
+  defp added_notice({:ok, :not_organiser}),
+    do:
+      {:info,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee added. They were not invited, as you don't organise this event."
+       )}
+
+  defp added_notice({:error, _reason}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee added, but their invitation could not be sent."
+       )}
+
+  defp added_notice(_sent_or_noop), do: nil
+
+  defp removed_notice({:ok, :not_organiser}),
+    do:
+      {:info,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee removed. They were not notified, as you don't organise this event."
+       )}
+
+  defp removed_notice({:error, _reason}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee removed, but they could not be notified."
+       )}
+
+  defp removed_notice(_sent_or_noop), do: nil
+
   # The panel's header follows this write like any of its own
-  # (`PanelStatus.started/2`, settled by `PanelEdits.settled/3`).
+  # (`PanelStatus.started/2`, settled by `PanelEdits.settled/3`). The guests
+  # it adds or removes are emailed once it is accepted (`membership_written/3`).
   defp write(socket, event, guests) do
     optimistic = %{event | attendees: guests}
-    {socket, ref} = Writes.update(socket, event, optimistic, %{attendees: guests}, [])
+
+    {socket, ref} =
+      Writes.update(socket, event, optimistic, %{attendees: guests}, notify: :membership)
 
     PanelState.update(socket, &PanelStatus.started(%{&1 | event: optimistic}, ref))
   end

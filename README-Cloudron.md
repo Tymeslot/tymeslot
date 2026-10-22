@@ -1,490 +1,204 @@
-# Tymeslot - Cloudron Deployment Guide
+# Tymeslot on Cloudron
 
-**Enterprise-grade meeting scheduling platform built with Elixir/Phoenix LiveView**
+> For an overview of Tymeslot's features, see the [Core README](README.md).
 
-> For a comprehensive overview of Tymeslot's features and capabilities, see the [Core README](README.md).
+Tymeslot is in the [Cloudron App Store](https://www.cloudron.io/store/tymeslot.html). The package is maintained by Cloudron in its own repository, [git.cloudron.io/packages/tymeslot-app](https://git.cloudron.io/packages/tymeslot-app): for every Tymeslot release it builds an image from the tagged source of this repository, and Cloudron offers it to installed apps as an update. This repository does not publish a Cloudron package of its own.
 
-## Overview
+On Cloudron you get, with no extra setup:
 
-Tymeslot is designed to work seamlessly with Cloudron's managed infrastructure. This deployment method provides:
+- **TLS certificates** from Cloudron's reverse proxy
+- **PostgreSQL**, provisioned and backed up by the platform
+- **Email** through Cloudron's mail relay
+- **Single sign-on** with Cloudron accounts, over OIDC
+- **Health checks, backups and updates** handled by the platform
 
-- **Automatic SSL/TLS management** via Cloudron's reverse proxy
-- **Built-in PostgreSQL database** with automatic backups
-- **Domain management** and DNS configuration
-- **Automatic updates** and health monitoring
-- **Single sign-on** integration with Cloudron users
-
----
-
-## Prerequisites
-
-- **Cloudron Server** (version 5.3.0 or higher)
-- **Admin access** to your Cloudron dashboard
-- **Domain name** configured in Cloudron
+Cloudron's own notes for the package are at [docs.cloudron.io/packages/tymeslot](https://docs.cloudron.io/packages/tymeslot), and questions about it go to the [Tymeslot category of the Cloudron forum](https://forum.cloudron.io/category/449/tymeslot). Bugs in Tymeslot itself go to this repository's issues.
 
 ---
 
-## Installation
+## Installing
 
-There are two ways to install Tymeslot on Cloudron:
+You need Cloudron 9.1.0 or later and a domain configured in it.
 
-### Option A: Cloudron App Store (Recommended)
+1. Open your Cloudron dashboard and go to **App Store**.
+2. Search for **Tymeslot** and open it.
+3. Choose a location (e.g. `tymeslot.yourdomain.com`) and click **Install**.
 
-Tymeslot is listed in the [Cloudron App Store](https://www.cloudron.io/store/tymeslot.html), packaged and maintained by Cloudron, with automatic update notifications and one-click upgrades.
+The first user to register on a fresh install becomes the admin (see [Becoming an admin](#becoming-an-admin)).
 
-1. Open your Cloudron dashboard and go to **App Store**
-2. Search for **Tymeslot** and open it
-3. Choose a location (e.g. `tymeslot.yourdomain.com`) and click **Install**
+> **Installed earlier with Install via URL?** The community package that was installed from `https://raw.githubusercontent.com/Tymeslot/tymeslot/main/CloudronVersions.json` is retired and receives no further updates. The App Store version is a separate app, so an existing installation does not move over by itself: install Tymeslot from the App Store as a new app.
 
-Cloudron handles the Docker image, health checks, and updates automatically. When a new version is published, you'll see an update prompt in the dashboard. Cloudron's own notes for the package are at [docs.cloudron.io/packages/tymeslot](https://docs.cloudron.io/packages/tymeslot), and questions about it go to the [Tymeslot category of the Cloudron forum](https://forum.cloudron.io/category/449/tymeslot).
+### What the package does on each start
 
-> **Installed earlier with Install via URL?** The community package installed from `https://raw.githubusercontent.com/Tymeslot/tymeslot/main/CloudronVersions.json` is being retired: it receives one more update, and none after that. The App Store version is a separate app, so an existing installation does not move over by itself; install Tymeslot from the App Store as a new app.
+- Generates `SECRET_KEY_BASE` on first run and keeps it in `/app/data/secret_key_base`, unless you set one in the app's environment.
+- Creates `/app/data/uploads` (avatars and theme backgrounds), `/app/data/tzdata` and `/app/data/logs`.
+- Runs the database migrations, then starts Tymeslot.
 
-### Option B: Manual Docker Build
-
-Build and install from source using the Cloudron CLI. Use this if you want to run a custom fork or a version not yet published to the App Store.
-
-1. Clone the repository and build the Docker image:
-   ```bash
-   git clone https://github.com/Tymeslot/tymeslot.git
-   cd tymeslot
-   docker build -t your-registry/tymeslot-cloudron:latest .
-   docker push your-registry/tymeslot-cloudron:latest
-   ```
-2. Install using the Cloudron CLI:
-   ```bash
-   cloudron install --image your-registry/tymeslot-cloudron:latest
-   ```
-
-With this method you manage image builds and updates yourself. To update, rebuild the image and run `cloudron update --app tymeslot.yourdomain.com`.
-
-### Required Environment Variables
-
-After installation (either method), set these via the dashboard **Environment** tab or CLI:
-
-```bash
-SECRET=$(openssl rand -base64 64 | tr -d '\n')
-cloudron env set --app tymeslot.yourdomain.com \
-  SECRET_KEY_BASE=$SECRET \
-  PHX_HOST=tymeslot.yourdomain.com \
-  PORT=4000
-```
-
-> **Note:** `PHX_HOST` must match your Cloudron domain exactly. If unset, Tymeslot falls back to `CLOUDRON_APP_DOMAIN` (provided automatically by Cloudron), but setting it explicitly is recommended.
-
-### Two Ways to Set Variables
-
-You can configure environment variables in either of two ways. They can be mixed freely — values set via the Cloudron CLI take precedence over values from the `.env` file, so the file is best treated as a default that the CLI can override per-key.
-
-**Option 1: Cloudron CLI / Dashboard (recommended for most operators)**
-
-Use `cloudron env set` or the dashboard's **Environment** tab as shown above. Cloudron persists the values, restarts the app automatically, and surfaces them under `cloudron env list`. This is the simplest workflow and the only one that also exposes the values in the dashboard UI.
-
-**Option 2: `.env` file in the data directory**
-
-Tymeslot reads `/app/data/.env` at boot and applies any key that is not already set in the environment. This is convenient when you have many variables to manage, want to keep them under version control on your own host, or are scripting the deployment.
-
-The file is created from the packaged variable reference with every value commented out, so it already contains the full documented list and nothing is enabled by it. On top of that, the variables this app already has set are copied into it, so it is a complete picture of your configuration rather than an empty form standing next to it. New installs get the file on first boot; an existing install gets it on the first boot after upgrading, unless it already holds settings of your own, in which case it is left exactly as it is.
-
-```bash
-# Edit the file directly inside the running container
-cloudron exec --app tymeslot.yourdomain.com -- vi /app/data/.env
-
-# Or copy a prepared file in from your workstation
-cloudron push --app tymeslot.yourdomain.com ./my-env /app/data/.env
-
-# Restart so the new values take effect
-cloudron restart --app tymeslot.yourdomain.com
-```
-
-The file uses standard dotenv syntax: one `KEY=value` per line, `#` for comments. Quote any value that is not a plain word, and prefer single quotes: a single-quoted value is taken literally, character for character, so `SMTP_PASSWORD='p@ss #1 $x \ "q"'` means exactly what it says. Double quotes work too but are not literal: they resolve escapes, so inside them a `"` must be written `\"` and a backslash `\\`, while `\n`, `\t` and `\uXXXX` produce those characters. Use them for a value that contains a single quote, which is the one thing single quotes cannot hold: dotenv has no escape for it. Neither form interpolates: `${VAR}` and `$(command)` are ordinary text, so a `$` needs no escaping, though inside double quotes `\$` is read as a plain `$` too, which is the form `--import` writes. An unquoted value runs to the end of the line, minus any trailing spaces and anything from the first space-preceded `#`, which starts a comment: `KEY=p#ss` is `p#ss`, but `KEY=pass # note` is `pass` and `KEY= # note` is empty. A quoted value may likewise be followed by a comment, `KEY='pass' # note`, but by nothing else: other text after the closing quote makes the line invalid, and it is skipped with a warning naming its line number. Whichever form you use, the two readers of this file (the container, at boot, and the release itself, in `cloudron exec` sessions) agree on it byte for byte. The `--import` command below writes values already quoted, so anything it copies for you is correct as it stands.
-
-A value containing a non-ASCII character can be written as it reads, quoted or not: `EMAIL_FROM_NAME=Müller` and `EMAIL_FROM_NAME="Müller"` both arrive intact, and so does an accented character in `SMTP_PASSWORD` or in the password inside `DATABASE_URL`. The `\uXXXX` form is read identically, so `EMAIL_FROM_NAME="M\u00FCller"` is equally correct; it is what `--import` writes, and nothing needs escaping by hand afterwards. The one case that does not work is a file saved in some other encoding, Latin-1 say, whose bytes are not valid UTF-8: the entry is skipped and a warning names the key, so save the file as UTF-8.
-
-The file must live in `/app/data`: `/app` itself is read-only on Cloudron and is replaced on every app upgrade, which is also why upgrades never touch your file. The reference copy that seeded it stays at `/app/.env.example` and is refreshed with each release, so `diff` it against your own file after an upgrade to see what is new.
-
-Variables set with `cloudron env set` always win over `.env` entries, so use the CLI for one-off overrides. `SECRET_KEY_BASE` and `DATA_ENCRYPTION_KEY` are honoured from the file too, and setting either there stops the container generating its own; leave them alone unless you are restoring an existing installation.
-
-### Moving Existing Variables Into the File
-
-Copying a variable into the file does not move it: Cloudron still supplies it and still wins, so editing it in the file changes nothing until you take it out of Cloudron. The order matters, and this order is safe at every step, because the value is in both places until the last command.
-
-1. Check what the file already holds. If the app was seeded as described above, your variables are in there already and you can skip to step 3.
-
-   ```bash
-   cloudron exec --app tymeslot.yourdomain.com -- grep -v '^#' /app/data/.env
-   ```
-
-2. If your file predates seeding, the container writes the current values for you. The boot log names this command whenever there is something to copy. It appends, never overwrites, and naming the file twice is deliberate: the first is read to skip variables it already assigns, so running it again adds nothing and cannot leave two lines for one variable.
-
-   ```bash
-   cloudron exec --app tymeslot.yourdomain.com -- sh -c '/app/env-template.sh --import /app/data/.env >> /app/data/.env'
-   ```
-
-   To get the commented reference list as well, run the same command with `--template` instead of `--import`.
-
-3. Compare the two lists and confirm every variable you set is present in the file.
-
-   ```bash
-   cloudron env list --app tymeslot.yourdomain.com
-   ```
-
-   Anything the import skipped, and anything Cloudron sets that Tymeslot does not document, must be copied by hand before the next step. The import deliberately leaves the platform's own variables (`CLOUDRON_*`, `PORT`, `DEPLOYMENT_TYPE` and friends) alone: those belong to Cloudron, and pinning addon credentials in a file would break them the moment Cloudron rotates one.
-
-4. Hand the variables over, naming the ones you copied. The app restarts and picks the values up from the file.
-
-   ```bash
-   cloudron env unset --app tymeslot.yourdomain.com PHX_HOST EMAIL_ADAPTER SMTP_HOST
-   ```
-
-The boot log after seeding prints this command with your own variables already filled in. To go back, `cloudron env set` the variable again: it takes precedence over the file immediately.
-
-### Accessing Your Installation
-
-Once deployed, Tymeslot will be available at:
-- **URL**: `https://tymeslot.yourdomain.com` (or your configured subdomain)
-- **SSL**: Automatically configured by Cloudron
-
-### Becoming an admin
-
-The first user to register on a fresh install is automatically promoted to admin. To promote additional users, open the app's Terminal from the Cloudron dashboard and run:
-
-```bash
-bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
-```
-
-Or from your workstation with the Cloudron CLI:
-
-```bash
-cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
-```
-
-See [`docs/ADMIN.md`](docs/ADMIN.md) for the full guide (demote, list, recovery paths).
+The image sets `DEPLOYMENT_TYPE=cloudron`, which makes Tymeslot read its database settings from the PostgreSQL addon (`CLOUDRON_POSTGRESQL_*`), send mail through the sendmail addon, offer sign-in through the OIDC addon, and keep a rotating copy of its log under `/app/data/logs`. Everything under `/app/data` is included in Cloudron's backups. The health check is `/healthcheck`.
 
 ---
 
 ## Configuration
 
-### Environment Variables
-
-Cloudron automatically provides these variables:
-- `CLOUDRON_POSTGRESQL_*` — Database connection details
-- `CLOUDRON_MAIL_*` — Sendmail addon (email relay, auto-detected)
-- `CLOUDRON_OIDC_*` — OIDC addon (SSO, auto-detected)
-- `DEPLOYMENT_TYPE=cloudron` — Set automatically
-
-### Data-at-rest encryption
-
-Integration credentials are encrypted at rest with AES-256-GCM. On first boot the container
-automatically generates a dedicated `DATA_ENCRYPTION_KEY` and persists it to
-`/app/data/data_encryption_key` (included in Cloudron backups). This decouples data-at-rest
-encryption from `SECRET_KEY_BASE`, so the session secret can be rotated without making stored
-credentials undecryptable. No action is required for new installs.
-
-**Upgrading an existing install:** the key is generated on the first boot after the upgrade.
-New credentials are written under it immediately; existing credentials keep decrypting under
-the old (`SECRET_KEY_BASE`-derived) key automatically. To migrate the existing rows onto the
-new key, run the re-encryption sweep. The container also writes the generated key into
-`/app/data/.env`, which is how a `cloudron exec` session sees it:
+Configure Tymeslot with environment variables, set with `cloudron env set` or in the app's **Environment** tab in the dashboard. Several can be set in one command; the app restarts automatically.
 
 ```bash
-cloudron exec --app tymeslot.yourdomain.com -- \
-  /app/bin/tymeslot eval "Tymeslot.Release.Encryption.reencrypt_credentials()"
-```
+cloudron env set --app tymeslot.yourdomain.com PHX_HOST=tymeslot.yourdomain.com
 
-Re-run until it reports `migrated values: 0`. The sweep is idempotent and safe to repeat. Then
-check that nothing is left on the legacy key:
-
-```bash
-cloudron exec --app tymeslot.yourdomain.com -- \
-  /app/bin/tymeslot eval "Tymeslot.Release.Encryption.key_report()"
-```
-
-Once no `v0` appears, add `LEGACY_KEY_RETIRED=true` to `/app/data/.env` and restart; from then
-on `SECRET_KEY_BASE` plays no part in data-at-rest encryption. Do not delete
-`/app/data/data_encryption_key` (losing it makes stored credentials unrecoverable), except to
-retire it after a rotation, as below.
-
-**Rotating the key.** The procedure, and what each report means, is in
-[README-Docker.md, "Rotating the data key"](README-Docker.md#rotating-the-data-key). On Cloudron:
-
-1. Read the current key with
-   `cloudron exec --app tymeslot.yourdomain.com -- cat /app/data/data_encryption_key`. It is
-   key 1, and stays loaded as key 1 while that file exists.
-2. Put `DATA_ENCRYPTION_KEYS` in `/app/data/.env` rather than in `cloudron env set`, so that it
-   travels with the app's backups together with the key file. A Cloudron app runs as a single
-   container, stopped before its replacement starts, so phases 1 and 2 may be one restart:
-   `DATA_ENCRYPTION_KEYS=2:<new key>,1:<current key>`. Back up the app first.
-3. Run the sweep and the key report as above until no `v1` remains, `oban_jobs.email_links`
-   included (links in emails still queued; they clear as the emails go out).
-4. Retire key 1: remove the `1:` entry, delete `/app/data/data_encryption_key` and the
-   `DATA_ENCRYPTION_KEY=` line in `/app/data/.env`, and restart. With `DATA_ENCRYPTION_KEYS`
-   set, the container no longer generates a replacement key.
-
-### Adding Variables After Installation
-
-To add or change variables after the app is running, use `cloudron env set`.
-Multiple variables can be passed in a single command — the app restarts automatically.
-
-```bash
-cloudron env set --app tymeslot.yourdomain.com KEY=value KEY2=value2
-```
-
-To inspect current values:
-
-```bash
+# Confirm current values
 cloudron env list --app tymeslot.yourdomain.com
 ```
 
-### Optional Configuration
+`PHX_HOST` is the domain every link Tymeslot generates is built from. Without it Tymeslot uses `CLOUDRON_APP_DOMAIN`, which Cloudron supplies, but setting it explicitly is recommended.
 
-#### OAuth Providers
+Every supported variable, with its default, is listed in [`.env.example`](.env.example) and explained in the [Docker guide](README-Docker.md). Cloudron supplies the port and the addon settings itself, so leave `PORT`, `DATABASE_URL`, `DEPLOYMENT_TYPE` and the `CLOUDRON_*` variables alone.
 
-**GitHub OAuth:**
+Tymeslot also reads `/app/data/.env` at boot if the file exists, and applies any key the environment does not already set. The package does not create the file; values set with `cloudron env set` are the ones the dashboard shows, and they always win over the file.
+
+### Running one-off commands
+
+Commands that act on the running app use `rpc` and need nothing else:
+
 ```bash
-cloudron env set --app tymeslot.yourdomain.com ENABLE_GITHUB_AUTH=true GITHUB_CLIENT_ID=your_github_client_id GITHUB_CLIENT_SECRET=your_github_client_secret
+cloudron exec --app tymeslot.yourdomain.com -- /app/bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
 ```
 
-**Google OAuth:**
+Commands run with `eval` start a separate VM that reads the configuration again, and so need `SECRET_KEY_BASE`, which the package exports only to the app itself. Read it from the file the package keeps it in (an exported value, set with `cloudron env set`, takes precedence):
+
 ```bash
-GOOGLE_STATE=$(openssl rand -base64 32 | tr -d '\n')
-cloudron env set --app tymeslot.yourdomain.com ENABLE_GOOGLE_AUTH=true GOOGLE_CLIENT_ID=your_google_client_id GOOGLE_CLIENT_SECRET=your_google_client_secret GOOGLE_STATE_SECRET=$GOOGLE_STATE
+cloudron exec --app tymeslot.yourdomain.com -- sh -c \
+  'SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(cat /app/data/secret_key_base)}" /app/bin/tymeslot eval "Tymeslot.Release.Encryption.key_report()"'
 ```
 
-**Microsoft OAuth:**
+The `eval` commands below are written in this form.
+
+### Becoming an admin
+
+The first user to register on a fresh install is promoted to admin automatically. To promote further users, open the app's **Terminal** in the Cloudron dashboard and run:
+
 ```bash
-OUTLOOK_STATE=$(openssl rand -base64 32 | tr -d '\n')
-cloudron env set --app tymeslot.yourdomain.com OUTLOOK_CLIENT_ID=your_outlook_client_id OUTLOOK_CLIENT_SECRET=your_outlook_client_secret OUTLOOK_STATE_SECRET=$OUTLOOK_STATE
+/app/bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
 ```
 
-#### Cloudron Addon Integration
+or run the `cloudron exec` form above from your workstation. See [`docs/ADMIN.md`](docs/ADMIN.md) for demoting, listing and recovery.
 
-Tymeslot automatically detects and uses Cloudron's built-in addons:
+### Email and single sign-on
 
-- **Email (Sendmail Addon):** Cloudron's mail relay is used by default — no `SMTP_*` or `EMAIL_ADAPTER` configuration needed. The sender address and name are auto-configured.
-- **Single Sign-On (OIDC Addon):** Cloudron's identity provider is enabled automatically — users see an "SSO" button on the login page. No `OAUTH_*` configuration needed.
+Tymeslot uses Cloudron's addons on its own, with no variables to set:
 
-To override the defaults:
-- **Email:** Set `EMAIL_ADAPTER` explicitly (e.g., `EMAIL_ADAPTER=postmark`) to use an external provider instead of Cloudron's relay.
-- **SSO:** Set `ENABLE_OAUTH_AUTH=false` to disable SSO, or set `ENABLE_OAUTH_AUTH=true` with your own `OAUTH_*` variables to use a different IdP. Either value also locks the SSO switch on the /admin settings page; to keep it adjustable there, leave the variable unset.
+- **Email (sendmail addon):** mail goes through Cloudron's relay, with the sender address and name Cloudron supplies. No `SMTP_*` or `EMAIL_ADAPTER` configuration is needed.
+- **Single sign-on (OIDC addon):** the login page offers Cloudron's identity provider, under the name the Cloudron admin gave it (or "SSO"). No `OAUTH_*` configuration is needed.
 
-If you're happy with Cloudron's built-in email and SSO, you can skip sections 3 (Email Configuration) and the Generic OAuth/OIDC setup below.
+To override them:
 
-#### 3. Email Configuration (Optional Override)
+- **Email:** set `EMAIL_ADAPTER` to use another provider instead of the relay, with that provider's variables:
 
-**Option A: a provider API**
+  ```bash
+  cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=postmark POSTMARK_API_KEY=your_postmark_api_key EMAIL_FROM_ADDRESS=noreply@yourdomain.com EMAIL_FROM_NAME=Tymeslot
+  ```
+
+  | `EMAIL_ADAPTER` | Additional variables |
+  |---|---|
+  | `postmark` | `POSTMARK_API_KEY` |
+  | `sendgrid` | `SENDGRID_API_KEY` |
+  | `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
+  | `ahasend` | `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` |
+  | `smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` |
+
+  An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the app at boot rather than discarding mail silently, so a typo shows up straight away in `cloudron logs`. The SMTP options (implicit TLS, self-signed relays, middlebox compatibility) are described in the [Docker guide](README-Docker.md).
+
+- **SSO:** set `ENABLE_OAUTH_AUTH=false` to turn SSO off, or `ENABLE_OAUTH_AUTH=true` with your own `OAUTH_*` variables to use a different identity provider. Either value also locks the SSO switch on the `/admin` settings page; to keep it adjustable there, leave the variable unset.
+
+### Calendar, video and social sign-in providers
+
+Google, Microsoft (Outlook and Teams) and GitHub need OAuth credentials you register with each provider. Set them with `cloudron env set`:
+
 ```bash
-cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=postmark EMAIL_FROM_NAME=Tymeslot EMAIL_FROM_ADDRESS=noreply@yourdomain.com POSTMARK_API_KEY=your_postmark_api_key
+# Google sign-in, Calendar and Meet
+cloudron env set --app tymeslot.yourdomain.com ENABLE_GOOGLE_AUTH=true GOOGLE_CLIENT_ID=your_id GOOGLE_CLIENT_SECRET=your_secret GOOGLE_STATE_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+
+# Microsoft Outlook and Teams
+cloudron env set --app tymeslot.yourdomain.com OUTLOOK_CLIENT_ID=your_id OUTLOOK_CLIENT_SECRET=your_secret OUTLOOK_STATE_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+
+# GitHub sign-in
+cloudron env set --app tymeslot.yourdomain.com ENABLE_GITHUB_AUTH=true GITHUB_CLIENT_ID=your_id GITHUB_CLIENT_SECRET=your_secret
 ```
 
-The other supported API providers take the same shape, with their own variables:
-
-| `EMAIL_ADAPTER` | Additional variables |
-|---|---|
-| `postmark` | `POSTMARK_API_KEY` |
-| `sendgrid` | `SENDGRID_API_KEY` |
-| `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
-| `ahasend` | `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` |
-
-**Option B: SMTP**
-```bash
-cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=smtp EMAIL_FROM_NAME=Tymeslot EMAIL_FROM_ADDRESS=noreply@yourdomain.com SMTP_HOST=your_smtp_host SMTP_PORT=587 SMTP_USERNAME=your_smtp_username SMTP_PASSWORD=your_smtp_password
-```
-
-Any provider without an entry above works over SMTP. An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the app at boot rather than discarding mail silently, so a typo here surfaces immediately in `cloudron logs`.
-
-Ports 587 (STARTTLS) and 465 (implicit TLS) are both supported; a provider serving implicit TLS on another port needs `SMTP_SSL=true`, and a relay that needs no login takes neither `SMTP_USERNAME` nor `SMTP_PASSWORD`. The relay's certificate is verified against the system trust store. Pointing `SMTP_HOST` at your own mail server usually needs one more variable, because a self-hosted relay commonly serves a self-signed certificate: set `SMTP_CACERTFILE` to a PEM bundle containing the CA that issued it, or, as a last resort where there is no CA to trust, `SMTP_TLS_VERIFY=none` to accept any certificate. The second still encrypts the connection but stops checking the relay's identity. Rarely, a firewall or proxy on the path drops the TLS 1.3 handshake because it does not look like TLS 1.2, which shows up as a connection that times out or closes while the same relay works from other mail clients; `SMTP_TLS_MIDDLEBOX_COMPAT=true` restores that shape, and should be left off otherwise.
-
+The redirect URIs and API permissions each provider needs are in the [OAuth setup guide](README-Docker.md#oauth-provider-setup); use your Cloudron domain in them. CalDAV calendars (Nextcloud, Fastmail, iCloud and others) need no server-side configuration.
 
 ---
 
-## Setting Environment Variables
+## Data-at-rest encryption
 
-Use the Cloudron CLI to set variables. Multiple variables can be passed in a single command and the app restarts automatically:
+Integration credentials (calendar tokens, CalDAV passwords, video API keys, Slack and Telegram tokens, webhook secrets) are encrypted at rest with AES-256-GCM. Without a dedicated `DATA_ENCRYPTION_KEY`, the key is derived from `SECRET_KEY_BASE`, so replacing `SECRET_KEY_BASE` would make every stored credential undecryptable. A dedicated key decouples the two.
 
-```bash
-cloudron env set --app tymeslot.yourdomain.com VAR_ONE=value VAR_TWO=value
-```
+1. Check whether the package has already generated a key for you:
 
-To inspect current values:
-
-```bash
-cloudron env list --app tymeslot.yourdomain.com
-```
-
-
----
-
-## OAuth Provider Setup
-
-### Google OAuth Setup
-
-1. **Create Google Cloud Project**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-
-2. **Enable APIs**
-   ```
-   - Google Calendar API
-   - Google Meet API (if using Google Meet integration)
-   ```
-
-3. **Create OAuth Credentials**
-   - Go to **APIs & Services** → **Credentials**
-   - Click **Create Credentials** → **OAuth 2.0 Client IDs**
-   - Application type: **Web application**
-   - Authorized redirect URIs:
-     ```
-     https://tymeslot.yourdomain.com/auth/google/callback
-     ```
-
-### GitHub OAuth Setup
-
-1. **Create GitHub App**
-   - Go to **Settings** → **Developer settings** → **OAuth Apps**
-   - Click **New OAuth App**
-
-2. **Configure Application**
-   ```
-   Application name: Tymeslot
-   Homepage URL: https://tymeslot.yourdomain.com
-   Authorization callback URL: https://tymeslot.yourdomain.com/auth/github/callback
-   ```
-
-### Microsoft OAuth Setup (Outlook Calendar & Teams)
-
-**Important**: Both Outlook Calendar and Microsoft Teams use the **same** OAuth app. Configure this once to enable both integrations.
-
-1. **Create Azure AD App Registration**
-   - Go to [Azure Portal](https://portal.azure.com/)
-   - Navigate to **Microsoft Entra ID** (formerly Azure Active Directory)
-   - Go to **App registrations** → **New registration**
-
-2. **Configure Application**
-   ```
-   Name: Tymeslot
-   Supported account types: Accounts in any organizational directory and personal Microsoft accounts
-   ```
-
-3. **Configure Redirect URIs**
-   - Under **Authentication** → **Platform configurations** → **Add a platform** → **Web**
-   - Add BOTH redirect URIs:
-     ```
-     https://tymeslot.yourdomain.com/auth/outlook/calendar/callback
-     https://tymeslot.yourdomain.com/auth/teams/video/callback
-     ```
-   - Save the configuration
-
-4. **Configure API Permissions**
-   - Go to **API permissions** → **Add a permission** → **Microsoft Graph**
-   - Select **Delegated permissions** and add:
-     ```
-     Calendars.ReadWrite
-     User.Read
-     offline_access
-     openid
-     profile
-     ```
-   - Click **Add permissions**
-   - (Optional) Click **Grant admin consent** if deploying for an organization
-
-5. **Create Client Secret**
-   - Go to **Certificates & secrets** → **Client secrets** → **New client secret**
-   - Add a description (e.g., "Tymeslot Production")
-   - Choose an expiration period
-   - Copy the **Value** (this is your `OUTLOOK_CLIENT_SECRET`) - you won't be able to see it again!
-
-6. **Get Application (client) ID**
-   - Go to **Overview**
-   - Copy the **Application (client) ID** (this is your `OUTLOOK_CLIENT_ID`)
-
-7. **Set Environment Variables in Cloudron**
    ```bash
-   OUTLOOK_CLIENT_ID=<your_application_client_id>
-   OUTLOOK_CLIENT_SECRET=<your_client_secret_value>
-   OUTLOOK_STATE_SECRET=$(openssl rand -base64 32 | tr -d '\n')  # Self-generated
+   cloudron exec --app tymeslot.yourdomain.com -- ls -l /app/data/data_encryption_key
    ```
 
+   If the file exists, the package manages the key: do not set `DATA_ENCRYPTION_KEY` yourself, and go on to step 3.
+
+2. Otherwise, set one. Keep a copy somewhere safe and never change it: losing it makes stored credentials unrecoverable, and to replace it you rotate it (below).
+
+   ```bash
+   cloudron env set --app tymeslot.yourdomain.com DATA_ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -d '\n')
+   ```
+
+   New values are written under the key from the restart on. Existing values keep decrypting under the old key, so nothing breaks.
+
+3. Move existing values onto the key. Re-run until it reports `migrated values: 0`; the sweep is idempotent and safe to run while the app serves traffic.
+
+   ```bash
+   cloudron exec --app tymeslot.yourdomain.com -- sh -c \
+     'SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(cat /app/data/secret_key_base)}" /app/bin/tymeslot eval "Tymeslot.Release.Encryption.reencrypt_credentials()"'
+   ```
+
+4. Check that nothing is left on the old key with `Tymeslot.Release.Encryption.key_report()` (the command under [Running one-off commands](#running-one-off-commands)). Once no `v0` appears, retire it:
+
+   ```bash
+   cloudron env set --app tymeslot.yourdomain.com LEGACY_KEY_RETIRED=true
+   ```
+
+   From then on `SECRET_KEY_BASE` plays no part in data-at-rest encryption.
+
+**Rotating the key.** Never rotate by changing `DATA_ENCRYPTION_KEY`; add keys with `DATA_ENCRYPTION_KEYS` instead. The procedure, and what each report means, is in [README-Docker.md, "Rotating the data key"](README-Docker.md#rotating-the-data-key). On Cloudron, set the variable with `cloudron env set`; a Cloudron app runs as a single container, stopped before its replacement starts, so phases 1 and 2 may be one restart: `DATA_ENCRYPTION_KEYS=2:<new key>,1:<current key>`. Back up the app first. If the package generated your current key, it is the content of `/app/data/data_encryption_key`.
+
 ---
 
-## Database Management
+## Logs and error tracking
 
-### Automatic Backups
-- Cloudron automatically backs up your PostgreSQL database
-- Backups are stored according to your Cloudron backup configuration
-- No manual database management required
-
-### Database Access (if needed)
 ```bash
-# Access via Cloudron CLI
-cloudron exec --app tymeslot.yourdomain.com -- psql $CLOUDRON_POSTGRESQL_URL
-```
-
----
-
-## File Storage
-
-### User Uploads
-- **Avatar images** and other uploads are stored in `/app/data/uploads`
-- Cloudron automatically backs up this directory
-- Files persist across app restarts and updates
-
----
-
-## Monitoring and Logs
-
-### Access Logs
-```bash
-# View application logs
-cloudron logs --app tymeslot.yourdomain.com
-
-# Follow logs in real-time
 cloudron logs --app tymeslot.yourdomain.com --follow
 ```
 
-### Log Retention
 Tymeslot writes structured JSON logs to stdout. Personal data is kept out of them: email addresses and the names, recipients and subjects of the emails it sends are redacted, and a visitor's IP address is cut down to its network (the first three parts of an IPv4 address, the first three groups of an IPv6 one) before it is written. Security events (sign-ins, rate-limit hits, lockouts) still record that network and the browser's user agent, so an operator can tell one source of traffic from another. Rate limiting and account lockout use the full address, in memory only, for the few minutes they need it.
 
-On Cloudron the same stream is also kept in rotating, gzipped files under `/app/data/logs/` (and so in the app's backups): 30 files of 10 MB each by default, which is a few weeks at typical traffic. The files rotate by size, not by age, so a quiet instance keeps them for longer. Lower `LOG_FILE_MAX_FILES` or `LOG_FILE_MAX_BYTES` in `/app/data/.env` to keep less; the `LOG FILE` section of `.env.example` describes both. Cloudron's own log viewer (`cloudron logs`) is separate and follows Cloudron's retention.
+On Cloudron the same stream is also kept in rotating, gzipped files under `/app/data/logs/` (and so in the app's backups): 30 files of 10 MB each by default, which is a few weeks at typical traffic. The files rotate by size, not by age, so a quiet instance keeps them for longer. Lower `LOG_FILE_MAX_FILES` or `LOG_FILE_MAX_BYTES` to keep less; the `LOG FILE` section of `.env.example` describes both. Cloudron's own log viewer is separate and follows Cloudron's retention.
 
-### Error Tracking
-Tymeslot records every unexpected error, process crash and failed background job in the app's own database, with the user id and the request, LiveView or job it happened in (request path, parameters and headers included; credentials, tokens, cookies, email addresses and the client's IP address are redacted first). Records of an error not seen for 30 days are resolved, and deleted 30 days later. To store nothing, add `ERROR_TRACKING_ENABLED=false` to `/app/data/.env` (or the Environment tab) and restart; errors are then only logged. The `ERROR TRACKING` section of `.env.example` lists exactly what is kept.
-
-### Health Monitoring
-- Cloudron automatically monitors app health via `/healthcheck` endpoint
-- Automatic restart on failure
-- Email notifications for downtime (configurable)
+Tymeslot records every unexpected error, process crash and failed background job in the app's own database, with the user id and the request, LiveView or job it happened in (request path, parameters and headers included; credentials, tokens, cookies, email addresses and the client's IP address are redacted first). Records of an error not seen for 30 days are resolved, and deleted 30 days later. To store nothing, set `ERROR_TRACKING_ENABLED=false`; errors are then only logged. The `ERROR TRACKING` section of `.env.example` lists exactly what is kept.
 
 ---
 
 ## Updates
 
-### Cloudron App Store (Option A)
-
-Cloudron checks for new versions automatically. When a new release is published, you'll see an update prompt in the dashboard; apply it with one click or via CLI:
+Cloudron checks for new versions of the package and shows an update in the dashboard; apply it there, or with:
 
 ```bash
 cloudron update --app tymeslot.yourdomain.com
 ```
 
-### Manual Docker Build (Option B)
-
-Rebuild the image from the latest source and push it to your registry, then update:
-
-```bash
-docker build -t your-registry/tymeslot-cloudron:latest .
-docker push your-registry/tymeslot-cloudron:latest
-cloudron update --app tymeslot.yourdomain.com
-```
+The package picks up each Tymeslot release from this repository's GitHub releases; its own version number is not Tymeslot's, which the dashboard shows as the upstream version. Release notes for each version are on this repository's [GitHub releases](https://github.com/Tymeslot/tymeslot/releases).
 
 ### Upgrading to a release that strips upload metadata
 
 Avatars and theme backgrounds no longer keep the location, capture time and camera or phone details that photos and videos often carry. Files uploaded before the update are cleaned automatically, once, in the background on the first start after updating; the app log reports `Upload metadata sweep finished` when it is done.
 
-To run the clean-up again by hand, for instance after restoring an old copy of `/app/data/uploads`, run it as the `cloudron` user so the files keep their owner. It is safe to repeat.
+To run the clean-up again by hand, for instance after restoring an old copy of `/app/data/uploads`, run it inside the running app, which keeps the files' owner unchanged. It is safe to repeat.
 
 ```bash
-cloudron exec --app tymeslot.yourdomain.com -- gosu cloudron:cloudron /app/bin/tymeslot eval 'Tymeslot.Release.strip_upload_metadata()'
+cloudron exec --app tymeslot.yourdomain.com -- /app/bin/tymeslot rpc 'Tymeslot.Release.strip_upload_metadata()'
 ```
 
 QuickTime (`.mov`) videos are no longer accepted as theme backgrounds; a `.mov` background you already have keeps working.
@@ -493,106 +207,29 @@ QuickTime (`.mov`) videos are no longer accepted as theme backgrounds; a `.mov` 
 
 ## Troubleshooting
 
-### Common Issues
+**The app will not start.** Check `cloudron logs`: Tymeslot stops at boot when a setting is incomplete, and names the variable. Common causes are an explicit `EMAIL_ADAPTER` without its provider's credentials, or `ENABLE_OAUTH_AUTH=true` without the OAuth endpoints.
 
-#### 1. App Won't Start
+**Pages load but never respond to clicks.** Check that `PHX_HOST` matches the app's domain.
+
+**OAuth sign-in or calendar connection fails.** Check that the redirect URIs registered with the provider match your domain exactly.
+
+**Migrations.** The package migrates on every start. To run pending migrations by hand:
+
 ```bash
-# Check logs for errors
-cloudron logs --app tymeslot.yourdomain.com
-
-# Common causes:
-# - Missing SECRET_KEY_BASE
-# - Invalid database connection
-# - Missing required environment variables
+cloudron exec --app tymeslot.yourdomain.com -- sh -c \
+  'SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(cat /app/data/secret_key_base)}" /app/bin/tymeslot eval "Tymeslot.Release.migrate()"'
 ```
 
-#### 2. OAuth Not Working
-```bash
-# Verify redirect URLs match exactly:
-# https://tymeslot.yourdomain.com/auth/provider/callback
+**Database console.**
 
-# Check environment variables are set correctly
-# Ensure PHX_HOST matches your domain
+```bash
+cloudron exec --app tymeslot.yourdomain.com -- sh -c 'psql "$CLOUDRON_POSTGRESQL_URL"'
 ```
 
-#### 3. Email Not Sending
-```bash
-# Test email configuration
-# Check SMTP/Postmark credentials
-# Verify FROM email domain is configured
-```
-
-#### 4. Database Issues
-```bash
-# Run database migrations manually
-cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot eval "Tymeslot.Release.migrate()"
-
-# Check database connection
-cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot remote
-```
-
-### Performance Optimization
-
-#### 1. Resource Allocation
-- **Memory**: Minimum 500MB, recommended 1GB
-- **CPU**: 1+ cores recommended for multiple users
-- Configure via Cloudron **Resources** tab
-
-#### 2. Database Optimization
-```bash
-# Check database pool size (default: 100)
-DATABASE_POOL_SIZE=50  # Reduce for smaller instances
-```
+**Memory.** The package asks for 1 GB, which suits most instances; change it in the app's **Resources** tab.
 
 ---
 
-## Security Considerations
+## Running a fork
 
-### SSL/TLS
-- **Automatic SSL** via Cloudron's reverse proxy
-- **HSTS headers** enabled by default
-- **Secure cookies** in production
-
-### Database Security
-- **Automatic encryption** of sensitive credentials
-- **Network isolation** via Cloudron's container networking
-- **Regular security updates** via Cloudron
-
-### Authentication
-- **Rate limiting** on authentication endpoints
-- **Account lockout** after failed attempts
-- **Secure password hashing** with bcrypt
-
----
-
-## Support
-
-### Getting Help
-- **Documentation**: Check this guide and application logs
-- **Cloudron Community**: [Cloudron Forum](https://forum.cloudron.io/)
-- **Issues**: Report bugs via GitHub Issues
-
-### Useful Commands
-```bash
-# App status
-cloudron status --app tymeslot.yourdomain.com
-
-# Restart app
-cloudron restart --app tymeslot.yourdomain.com
-
-# Access app shell
-cloudron exec --app tymeslot.yourdomain.com -- /bin/bash
-
-# Database console
-cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot remote
-```
-
----
-
-## Next Steps
-
-1. **Complete OAuth setup** for your preferred providers
-2. **Configure email** for notifications and invitations
-3. **Set up your profile** and availability preferences
-4. **Create meeting types** for different appointment durations
-5. **Share your booking link**: `https://tymeslot.yourdomain.com/your-username`
+To run your own build of Tymeslot on Cloudron, clone the [package repository](https://git.cloudron.io/packages/tymeslot-app), point its `Dockerfile` at your fork's source, then build and install it with the Cloudron CLI (`cloudron builder build`, then `cloudron install --image <image>`). An app installed that way is updated by you, not by the App Store.

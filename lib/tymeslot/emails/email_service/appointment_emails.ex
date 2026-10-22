@@ -17,6 +17,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     BookingRequestOutcome,
     BookingRequestReceived,
     MeetingEndChanged,
+    RegistrationClosed,
     RescheduleRequestExpired,
     SeatUpdateForOrganizer
   }
@@ -181,6 +182,19 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) :: {:ok, any()} | {:error, any()}
   def send_seat_update_to_organizer(variant, organizer_email, appointment_details) do
     Delivery.deliver(SeatUpdateForOrganizer.render(variant, organizer_email, appointment_details))
+  end
+
+  @doc """
+  Sends the organiser a planned session's participant list when its
+  registration closes. See `Tymeslot.Emails.Templates.RegistrationClosed`.
+  """
+  @spec send_registration_closed(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details(),
+          [RegistrationClosed.entry()]
+        ) :: {:ok, any()} | {:error, any()}
+  def send_registration_closed(organizer_email, appointment_details, roster) do
+    Delivery.deliver(RegistrationClosed.render(organizer_email, appointment_details, roster))
   end
 
   @doc """

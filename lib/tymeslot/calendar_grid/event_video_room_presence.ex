@@ -54,7 +54,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.Calendar.Runtime.Operations, as: CalendarOperations
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Video.ProviderConfig
 
@@ -189,7 +189,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
   end
 
   defp ask_provider(room) do
-    case CalendarOperations.fetch_event(
+    case CalendarEvents.fetch_event(
            EventVideoRooms.provider_event_ref(room),
            {room.calendar_integration_id, room.user_id}
          ) do

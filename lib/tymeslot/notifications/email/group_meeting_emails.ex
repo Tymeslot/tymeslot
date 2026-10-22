@@ -37,10 +37,14 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.SeatJobs
+  alias Tymeslot.Notifications.GuestNotifications
+  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Workers.DeliveryClaims
 
   # Bounds how many per-seat `Oban.insert/1` calls `dispatch_seat_jobs/2` runs
   # concurrently. Sequential inserts for a meeting near `max_participants` (in
@@ -144,6 +148,28 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   end
 
   @doc """
+  One live participant's notice that the host moved their planned session
+  (`Tymeslot.Meetings.SessionMove`): the reschedule email with an updated
+  entry for their seat's calendar event, and the same for each of their
+  guests. `"from"` is the previous start, which the email names. Sent only
+  while the session still holds and the seat is still theirs.
+  """
+  @spec handle_seat_session_moved(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_session_moved(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id, "from" => from},
+        job_id
+      ) do
+    SeatJobs.with_seat(
+      meeting_id,
+      participant_id,
+      "seat session moved email",
+      {:live_slot, :live},
+      &send_session_moved(&1, &2, from, job_id)
+    )
+  end
+
+  @doc """
   Dispatches one cancellation job per live participant plus one organiser
   email sent inline (there is only ever one organiser, so a job buys it no
   independent retry benefit).
@@ -169,10 +195,14 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
 
   @doc """
   Dispatches one reminder job per live participant plus one organiser
-  reminder sent inline.
+  reminder sent inline. A session the host planned that nobody has signed
+  up for has no one to remind, so it sends nothing: the host heard about it
+  when registration closed.
   """
   @spec send_group_reminder_emails(MeetingSchema.t(), [Recipient.t()], pos_integer(), String.t()) ::
           :ok | {:error, term()}
+  def send_group_reminder_emails(%MeetingSchema{planned: true}, [], _value, _unit), do: :ok
+
   def send_group_reminder_emails(meeting, participants, reminder_value, reminder_unit) do
     with :ok <-
            dispatch_seat_jobs(participants, fn recipient ->
@@ -250,6 +280,59 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
     |> Meetings.meeting_as_seen_by(Recipient.from_participant(participant))
     |> Config.email_service_module().send_reschedule_request()
     |> SeatJobs.send_result("reschedule request", seat_metadata(meeting, participant))
+  end
+
+  defp send_session_moved(meeting, participant, from, job_id) do
+    {:ok, previous, _offset} = DateTime.from_iso8601(from)
+
+    # Moves that fold into one pending notice can end where they began, and
+    # then there is nothing to tell.
+    if DateTime.compare(previous, meeting.start_time) == :eq,
+      do: :ok,
+      else: send_session_moved(meeting, participant, previous, from, job_id)
+  end
+
+  defp send_session_moved(meeting, participant, previous, from, job_id) do
+    recipient = Recipient.from_participant(participant)
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
+
+    details =
+      Map.merge(details, %{
+        original_start_time: previous,
+        original_start_time_attendee_tz:
+          DateTimeUtils.convert_to_timezone(previous, details.attendee_timezone)
+      })
+
+    email_service = Config.email_service_module()
+    metadata = seat_metadata(meeting, participant)
+
+    # Claims name the time announced as well: a later move that folds into
+    # this job after a copy went out (a partial send awaiting its retry) is
+    # news that copy did not carry, so the retry sends it.
+    claim = "session_moved:#{from}>#{DateTime.to_iso8601(meeting.start_time)}"
+
+    attendee =
+      job_id
+      |> DeliveryClaims.once("#{claim}:participant", fn ->
+        email_service.send_reschedule_email_to_attendee(recipient.email, details)
+      end)
+      |> SeatJobs.send_result("session moved", metadata)
+
+    guest_results =
+      for guest <- GuestQueries.list_notified_for_participant(participant.id) do
+        DeliveryClaims.once(job_id, "#{claim}:guest:#{guest.id}", fn ->
+          email_service.send_guest_reschedule(
+            guest.email,
+            GuestNotifications.guest_details(details, guest)
+          )
+        end)
+      end
+
+    guests = DeliveryOutcome.from_results("session moved guest", metadata, guest_results)
+
+    # Every copy is claimed as it goes out, so a retry writes only to whoever
+    # was missed, and a guest's failed copy retries like the participant's.
+    DeliveryOutcome.combine("session moved", metadata, [attendee, guests])
   end
 
   defp seat_metadata(meeting, participant),

@@ -16,11 +16,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     * `{:notify, notify, updated_event, scope}`: ask the organiser whether to
       tell the event's attendees, once a write made with `notify` was
       accepted in `scope`;
+    * `{:membership_changed, original_event, updated_event}`: email the
+      guests an accepted write made with `:membership` added or removed;
     * `{:dropped, :series_write | :series_move, count}`: tell the organiser
       that `count` changes were not applied.
 
-  Only `:start` reaches the provider; the others are for the screen, and a
-  driver with no screen ignores them.
+  Only `:start` reaches the provider. It and `:membership_changed` are made
+  by every driver; the others are for the screen, ignored without one.
 
   ## One write in flight per event
 
@@ -40,15 +42,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   ## When a write fails
 
-  Only the failed write's change is taken back. When writes are still waiting
-  behind it, they still run, and the grid shows the confirmed event with the
-  waiting writes' changes on top of it. When nothing is waiting, the grid goes
-  back to the confirmed event. So once an event's queue drains, the grid
-  shows what the provider holds.
+  Only the failed write's change is taken back. Writes waiting behind it
+  still run, and the grid shows the confirmed event with their changes on
+  top; with nothing waiting, it goes back to the confirmed event. So once an
+  event's queue drains, the grid shows what the provider holds.
 
   An edit that could not reach the provider but was saved to sync later
-  (`:queued`) counts as accepted: the next write starts from it, as the
-  queued replay will.
+  (`:queued`) counts as accepted: the next write starts from it, as the replay will.
 
   ## After a write to a whole series
 
@@ -65,15 +65,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   copy of the event over the series-wide change, or to an occurrence the
   series has left. The organiser is told how many changes were not applied.
 
-  A series moved to another calendar is not one of these writes, but it
-  ends the same way (`series_moved/2`): every write held while it was
-  moving is dropped and counted, and the grid reloads.
+  A series moved to another calendar ends the same way (`series_moved/2`):
+  every write held while it moved is dropped and counted, and the grid reloads.
 
   ## While a whole series is written or moved
 
-  Queueing by event alone would let an edit of another occurrence of the
-  series run alongside a write to the whole of it, or its move, and land
-  on the series as it was.
+  Queueing by event alone would let an edit of another occurrence run beside
+  a write to the whole series, or its move, and land on the series as it was.
 
   So while such a write or move is running, the series is held, known by
   its integration and address (`Tymeslot.CalendarGrid.Occurrence.series_address/1`)
@@ -153,6 +151,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
           | {:show, map()}
           | :reload
           | {:notify, map(), map(), atom()}
+          | {:membership_changed, map(), map()}
           | {:dropped, :series_write | :series_move, pos_integer()}
 
   @type t :: %__MODULE__{chains: map(), holds: map(), elsewhere: map()}
@@ -180,16 +179,18 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   @doc """
   Queues a write of `changes` to `event` through
-  `Tymeslot.CalendarGrid.Changes.update_event/4`. `notify`, when given, is
-  `%{original: event, saved_message: message}`: once the write is accepted
-  the queue asks the driver to tell the attendees (`{:notify, ...}`).
+  `Tymeslot.CalendarGrid.Changes.update_event/4`. Once it is accepted, a
+  `notify` of `%{original: event, saved_message: message}` asks the driver to
+  tell the attendees (`{:notify, ...}`); `:membership`, to email the guests the
+  write added or removed (`{:membership_changed, original, updated}`).
   """
-  @spec update(t(), map(), map(), keyword(), map() | nil) :: {t(), [effect()]}
+  @spec update(t(), map(), map(), keyword(), map() | :membership | nil) :: {t(), [effect()]}
   def update(queue, event, changes, opts, notify \\ nil),
     do: queue |> update_ref(event, changes, opts, notify) |> Tuple.delete_at(2)
 
   @doc "`update/5`, also answering the reference of the write it took."
-  @spec update_ref(t(), map(), map(), keyword(), map() | nil) :: {t(), [effect()], ref()}
+  @spec update_ref(t(), map(), map(), keyword(), map() | :membership | nil) ::
+          {t(), [effect()], ref()}
   def update_ref(queue, event, changes, opts, notify \\ nil) do
     write = %{kind: :update, changes: changes, opts: opts, notify: notify, ref: ref(event)}
     queue |> run(&submit(&1, event, write)) |> Tuple.insert_at(2, write.ref)
@@ -211,8 +212,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   @spec settle(t(), ref(), outcome()) :: {t(), [effect()]}
   def settle(queue, {key, _seq} = ref, outcome) do
     case queue.chains do
-      %{^key => %{in_flight: %{ref: ^ref} = write} = chain} ->
-        run(queue, &(&1 |> advance(key, chain, outcome) |> notified(write, outcome)))
+      %{^key => %{in_flight: %{ref: ^ref} = write, confirmed: before} = chain} ->
+        run(queue, &(&1 |> advance(key, chain, outcome) |> notified(write, before, outcome)))
 
       _stale ->
         {queue, []}
@@ -547,12 +548,14 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     Enum.reduce(held, acc, fn {event, write}, acc -> submit(acc, event, write) end)
   end
 
-  # An accepted write made with notify asks for the attendees to be told, in the
-  # scope it was written in.
-  defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, {:ok, updated}),
+  # What an accepted write made with `notify` asks of the driver (`update/5`).
+  defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, _before, {:ok, updated}),
     do: emit(acc, {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)})
 
-  defp notified(acc, _write, _outcome), do: acc
+  defp notified(acc, %{kind: :update, notify: :membership}, before, {:ok, updated}),
+    do: emit(acc, {:membership_changed, before, updated})
+
+  defp notified(acc, _write, _before, _outcome), do: acc
 
   defp advance(acc, key, chain, outcome) do
     cond do

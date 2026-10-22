@@ -94,14 +94,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       meeting_details = TemplateHelper.attendee_meeting_details(appointment_details, :guest)
 
-      intro_copy =
-        dgettext(
-          "emails_booking",
-          "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up.",
-          guest: guest_name,
-          organizer: appointment_details.organizer_name,
-          booker: appointment_details.attendee_name
-        )
+      intro_copy = guest_intro(appointment_details, guest_name)
 
       mjml_content = """
       #{MeetingComponents.time_alert_badge(@intent, appointment_details.time_until)}
@@ -120,7 +113,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Can you still make it?"), TemplateHelper.guest_answer_actions(appointment_details))}
 
-      #{Text.centered_text(dgettext("emails_booking", "Only %{booker} can move or cancel the meeting itself.", booker: appointment_details.attendee_name), font_size: "14px", padding: "16px 0 0 0")}
+      #{if note = guest_changes_note(appointment_details), do: Text.centered_text(note, font_size: "14px", padding: "16px 0 0 0")}
       """
 
       organizer_details =
@@ -282,13 +275,61 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
     #{dgettext("emails_booking", "Hi %{guest},", guest: guest_name)}
 
-    #{dgettext("emails_booking", "The meeting with %{organizer} that %{booker} invited you to is coming up.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
+    #{guest_coming_up_line(appointment_details)}
 
     #{dgettext("emails_booking", "DETAILS:")}
     #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{TextBodyHelper.format_guest_answers(appointment_details, dgettext("emails_booking", "CAN YOU STILL MAKE IT?"))}
-
-    #{dgettext("emails_booking", "Only %{booker} can move or cancel the meeting itself.", booker: appointment_details.attendee_name)}
+    #{if note = guest_changes_note(appointment_details), do: "\n" <> note}
     """
+  end
+
+  # Whoever put the guest on the meeting is the one named as inviting them,
+  # as in the guest's invitation: the booker for a guest brought on the
+  # public page, the host for one they added themselves, from Quick Add or a
+  # poll they confirmed (see `Tymeslot.Meetings.GuestSchema.inviter/1`).
+  defp guest_intro(%{guest_invited_by: :organizer} = appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - the meeting %{organizer} invited you to is coming up.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_intro(appointment_details, guest_name) do
+    dgettext(
+      "emails_booking",
+      "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up.",
+      guest: guest_name,
+      organizer: appointment_details.organizer_name,
+      booker: appointment_details.attendee_name
+    )
+  end
+
+  defp guest_coming_up_line(%{guest_invited_by: :organizer} = appointment_details) do
+    dgettext("emails_booking", "The meeting %{organizer} invited you to is coming up.",
+      organizer: appointment_details.organizer_name
+    )
+  end
+
+  defp guest_coming_up_line(appointment_details) do
+    dgettext(
+      "emails_booking",
+      "The meeting with %{organizer} that %{booker} invited you to is coming up.",
+      organizer: appointment_details.organizer_name,
+      booker: appointment_details.attendee_name
+    )
+  end
+
+  # Who else can move the meeting is the booker's to say only for a guest
+  # they brought. A guest the host added has nobody else to ask, and the
+  # person in the attendee fields is not one they know of.
+  defp guest_changes_note(%{guest_invited_by: :organizer}), do: nil
+
+  defp guest_changes_note(appointment_details) do
+    dgettext("emails_booking", "Only %{booker} can move or cancel the meeting itself.",
+      booker: appointment_details.attendee_name
+    )
   end
 
   defp build_organizer_text_body(appointment_details, meeting_details) do

@@ -435,3 +435,8 @@ msgstr "Jeder Eintrag dieses Kalenders blockiert jetzt Zeit"
 msgid "read-only, every event blocks time, also those marked free"
 msgstr ""
 "schreibgeschützt, jeder Eintrag blockiert Zeit, auch als frei markierte"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/feed_controls.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
+msgstr "Wählen Sie „Blockieren“, um diese Option zu nutzen: Bei einem Kalender, der belegte Zeiten nicht blockiert, ändert sie nichts"

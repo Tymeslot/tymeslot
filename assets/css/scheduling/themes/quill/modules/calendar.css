@@ -4,6 +4,28 @@
 
 /* ===== Base Styles ===== */
 
+/* The middle of the schedule card, between the pinned header and actions: the
+   card's single scrolling region. Without a session list the calendar
+   container below shrinks to fit inside it and does the scrolling itself, so
+   this never overflows. A fixed-date type's list of dates sits above the
+   calendar, and a flex column cannot shrink both without squeezing the
+   calendar to nothing on a short viewport: there the calendar keeps its
+   natural height and the list and the calendar scroll here as one. */
+.schedule-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+.schedule-scroll:has(> .session-list) > .calendar-slots-container {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
 /* The calendar/slots middle is the schedule card's single scrolling region:
    it flexes to fill the space between the pinned header and actions, and scrolls
    internally once the calendar can shrink no further. */

@@ -520,3 +520,23 @@ msgid "This is the only email you will get about this for now. If the same probl
 msgid_plural "This is the only email you will get about this for now. If the same problem is still there in %{count} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
 msgstr[0] "Per ora questa è l'unica email che riceverai in merito. Se tra %{count} giorno lo stesso problema è ancora lì, te lo faremo sapere di nuovo. Le tue impostazioni video mostrano l'avviso finché vale."
 msgstr[1] "Per ora questa è l'unica email che riceverai in merito. Se tra %{count} giorni lo stesso problema è ancora lì, te lo faremo sapere di nuovo. Le tue impostazioni video mostrano l'avviso finché vale."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this event should go to could not be found."
+msgstr "Il calendario in cui doveva essere inserito questo evento non è stato trovato."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The event exists in your calendar but could not be updated, so it may still show the old details."
+msgstr "L'evento è presente nel tuo calendario ma non è stato possibile aggiornarlo, quindi potrebbe mostrare ancora i dati precedenti."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar declined to add this event. The calendar may be read-only, or the event was rejected by the calendar service."
+msgstr "Il tuo calendario ha rifiutato di aggiungere questo evento. Il calendario potrebbe essere di sola lettura, oppure il servizio di calendario ha respinto l'evento."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar service could not be reached or did not answer properly, even after several attempts."
+msgstr "Il tuo servizio di calendario non era raggiungibile o non ha risposto correttamente, anche dopo diversi tentativi."

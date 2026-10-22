@@ -126,6 +126,41 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
                 "Imported 2 events. 1 event could not be imported. (Dentist) The import stopped because your calendar is not responding. Please try again later."}
     end
 
+    # Both refusals are Outlook having no way to store how a series repeats,
+    # so they share one line; only the calendar's own failure is a failure.
+    test "reports a month-end series with the rules Outlook can't store, apart from failures" do
+      result =
+        summary(%{
+          total: 4,
+          created: 1,
+          failed: 1,
+          failed_titles: ["Dentist"],
+          rules_refused: 2,
+          month_end_refused: 1
+        })
+
+      assert {:warning, text} = IcsImportFlow.result_flash({:ok, result})
+
+      assert text =~ "Imported 1 event."
+      assert text =~ "1 event could not be imported. (Dentist)"
+
+      assert text =~
+               "2 events repeat in a way Outlook can't store, so they were not imported. 1 of them repeats on a day some months"
+
+      assert length(String.split(text, "could not be imported")) == 2
+    end
+
+    test "names a lone month-end series among the rules Outlook can't store" do
+      result = summary(%{total: 1, rules_refused: 1, month_end_refused: 1})
+
+      assert {_level, text} = IcsImportFlow.result_flash({:ok, result})
+
+      assert text =~
+               "1 event repeats in a way Outlook can't store, so it was not imported. 1 of them repeats on a day some months"
+
+      refute text =~ "could not be imported"
+    end
+
     test "is a warning when events were written but Outlook dropped skipped dates" do
       assert IcsImportFlow.result_flash(
                {:ok, summary(%{total: 2, created: 2, exclusions_dropped: 1})}

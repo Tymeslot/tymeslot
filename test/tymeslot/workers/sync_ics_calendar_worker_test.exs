@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Ics.Provider, as: IcsProvider
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.Encryption
@@ -103,6 +104,42 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
                perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
 
       assert cached_uids(integration) == ["from-feed@example.com"]
+    end
+
+    # RFC 5545 §3.3.6: a DURATION may combine days with a time part. Read as
+    # the one-hour default, the event left 25 of its 26 hours free to book.
+    test "an event with only a combined DURATION is busy for all of it", %{
+      integration: integration
+    } do
+      stub_feed("""
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:offsite@example.com
+      DTSTART:20260810T090000Z
+      DURATION:P1DT2H
+      SUMMARY:Offsite
+      END:VEVENT
+      END:VCALENDAR
+      """)
+
+      assert :ok =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      client =
+        integration
+        |> CalendarIntegrationSchema.decrypt_credentials()
+        |> IcsProvider.build_client_configs()
+        |> hd()
+
+      assert {:ok, [event]} =
+               IcsProvider.list_events(client,
+                 start_time: ~U[2026-08-01 00:00:00Z],
+                 end_time: ~U[2026-08-31 23:59:59Z]
+               )
+
+      assert DateTime.compare(event.start_time, ~U[2026-08-10 09:00:00Z]) == :eq
+      assert DateTime.compare(event.end_time, ~U[2026-08-11 11:00:00Z]) == :eq
     end
 
     test "replaces events that have disappeared from the feed", %{integration: integration} do

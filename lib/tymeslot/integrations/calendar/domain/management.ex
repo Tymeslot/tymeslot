@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   separated from primary calendar logic and discovery operations.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Availability
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Blocking
@@ -16,11 +18,18 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimaryElection
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Locales.WeekStart
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   require Logger
+
+  @write_unauthorized_message dgettext_noop(
+                                "integrations_calendar",
+                                "Your calendar connection does not allow Tymeslot to add bookings to it. Please reconnect the integration and allow Tymeslot to create and edit events."
+                              )
 
   @type user_id :: integer()
   @type integration_id :: integer()
@@ -377,6 +386,46 @@ defmodule Tymeslot.Integrations.Calendar.Management do
       {:error, :not_found} -> {:discard, "Integration no longer exists"}
       {:error, :notification_failed} -> {:error, "Failed to flag integration: #{discard_reason}"}
     end
+  end
+
+  @doc """
+  Flags the integration a booking's calendar writes go to for reconnection,
+  after the provider refused one of them as unauthorised: a Google connection
+  granted only read access, or any other grant that no longer covers writing
+  events. Retrying the write cannot help, and the owner would otherwise never
+  hear that bookings are missing from their calendar.
+
+  The owner is emailed once per flag (`ReauthHandling.flag_and_notify/3`), so
+  every booking refused while the integration awaits reconnection adds no
+  further mail. Flagging also takes the integration out of booking, so later
+  bookings go to another working calendar when there is one. Best-effort:
+  returns `:ok` whatever the outcome, and logs a flag that could not be
+  recorded.
+  """
+  @spec flag_write_unauthorized(MeetingSchema.t()) :: :ok
+  def flag_write_unauthorized(%MeetingSchema{} = meeting) do
+    case BookingIntegrationResolver.resolve(meeting) do
+      %CalendarIntegrationSchema{} = integration ->
+        integration
+        |> flag_for_reconnection(@write_unauthorized_message, "Calendar write unauthorised")
+        |> log_write_unauthorized_flag(integration)
+
+      _none ->
+        :ok
+    end
+  end
+
+  defp log_write_unauthorized_flag({:discard, _reason}, integration) do
+    Logger.warning("Calendar refused a booking write as unauthorised; flagged for reconnection",
+      calendar_integration_id: integration.id
+    )
+  end
+
+  defp log_write_unauthorized_flag({:error, reason}, integration) do
+    Logger.error("Failed to flag calendar integration after an unauthorised write",
+      calendar_integration_id: integration.id,
+      error: reason
+    )
   end
 
   defp flag_for_reauth(integration, opts \\ []) do

@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.CalendarGrid.WriteTask
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
@@ -36,19 +37,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
   @doc """
   Shows `optimistic` at once and writes `changes` to `event` through
   `Tymeslot.CalendarGrid.Changes.update_event/4`, now or once its earlier writes
-  have answered. `opts` go to the write (`recurrence_scope:`; a `:notify`
-  key is dropped, see below). Answers the socket and the reference of the
+  have answered. `opts` go to the write (`recurrence_scope:`); `notify:
+  :membership` emails the guests the write adds or removes once it is
+  accepted (`PanelGuests.membership_written/3`), and any other `:notify` is
+  dropped, see below. Answers the socket and the reference of the
   write, which its answer names. The answer arrives as
   `{:event_update_result, ...}` at `DashboardLive`, which hands it to
   `settle/3` through `CalendarRouting`.
   """
   @spec update(socket(), map(), map(), map(), keyword()) :: {socket(), WriteQueue.ref()}
   def update(socket, event, optimistic, changes, opts) do
-    opts = Keyword.delete(opts, :notify)
+    {notify, opts} = Keyword.pop(opts, :notify)
+    notify = if notify == :membership, do: :membership
     socket = SurfaceData.show_event(socket, optimistic)
 
     {queue, effects, ref} =
-      WriteQueue.update_ref(socket.assigns.event_writes, event, changes, opts)
+      WriteQueue.update_ref(socket.assigns.event_writes, event, changes, opts, notify)
 
     {socket |> drive(fn _queue -> {queue, effects} end) |> push(), ref}
   end
@@ -176,8 +180,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Writes do
   # Reloaded by `push/2`, which pushes the window with a cache reset.
   defp run_effect(:reload, socket), do: socket
 
-  # The surface never queues a write with a notification (updates always queue with `notify: nil`).
+  # The surface never queues a write with a notification map, only `:membership`.
   defp run_effect({:notify, _notify, _updated, _scope}, socket), do: socket
+
+  defp run_effect({:membership_changed, original, updated}, socket),
+    do: PanelGuests.membership_written(socket, original, updated)
 
   defp run_effect({:dropped, reason, count}, socket) do
     send(self(), {:flash, {:warning, CalendarEditMessages.dropped_message(reason, count)}})

@@ -172,6 +172,13 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   @series_only_fields [:recurrence_rule, :recurrence_exceptions, :series_timezone, :timezone]
 
   @doc """
+  The fields of a series member an edit writes as they are, beside its
+  timing and repeat rule, in the vocabulary the cache and the payload share.
+  """
+  @spec override_fields() :: [atom()]
+  def override_fields, do: @override_fields
+
+  @doc """
   How a series member whose provider is in `family` may be edited from the
   grid: `{:ok, :single}` outside a series, `{:ok, :series}` when the edit
   takes a scope, and `{:ok, :this_only}` for a member of a series whose

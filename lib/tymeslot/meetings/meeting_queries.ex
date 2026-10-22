@@ -18,6 +18,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
@@ -325,6 +326,32 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.update()
   end
 
+  # What a booking keeps of a room that is gone: nothing.
+  @cleared_room %{
+    video_room_id: nil,
+    video_room_enabled: false,
+    organizer_video_url: nil,
+    attendee_video_url: nil
+  }
+
+  @doc """
+  Clears a meeting's video room (its id and join links), writing nothing else.
+
+  Narrower than `update_meeting/2` for the same reason as
+  `update_meeting_status/2`. Rooms are cleared by system jobs (the video sync
+  sweep, an integration's disconnect) on meetings of any age, including a
+  one-to-one meeting whose invitee data was erased (`Tymeslot.InviteeData`),
+  which no longer carries the attendee fields `Meeting.changeset/2` demands.
+  Through that changeset the clear would fail and leave a dead room id that
+  the scans keep finding.
+  """
+  @spec clear_video_room(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def clear_video_room(%Meeting{} = meeting) do
+    meeting
+    |> Changeset.change(@cleared_room)
+    |> Repo.update()
+  end
+
   @doc """
   Updates a meeting's status transition fields only (`status`,
   `cancelled_at`, `cancellation_reason`, `approval_requested_at`,
@@ -389,6 +416,12 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   That is what the caps are meant to measure — a day's load, not what is left
   of it — but it does mean the exclusion above is latent, not observed.
 
+  A session the host planned on a fixed-date type
+  (`Tymeslot.Meetings.PlannedSessions`) is a row before anyone books it, so
+  it counts only once someone holds a seat on it, and then once, however
+  many seats are taken: a group slot occupies one booking of the cap, as a
+  slot a first booker created does.
+
   Options:
     * `:exclude_uid` — omit one meeting by UID (self-exclusion on reschedule).
   """
@@ -402,10 +435,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
         opts
       ) do
     query =
-      Meeting
+      from(m in Meeting, as: :meeting)
       |> MeetingState.where_slot_live()
       |> where([m], m.organizer_user_id == ^organizer_user_id)
       |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
+      |> where(
+        [meeting: m],
+        not m.planned or
+          exists(
+            from(p in ParticipantSchema,
+              where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+              select: 1
+            )
+          )
+      )
       |> select([m], %{start_time: m.start_time, meeting_type_id: m.meeting_type_id})
 
     query =

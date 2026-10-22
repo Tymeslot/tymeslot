@@ -1,22 +1,22 @@
 defmodule Tymeslot.Release.ChangelogConfigsTest do
   @moduledoc """
-  Renders the real git-cliff configs over a throwaway repository.
+  Renders the real git-cliff config over a throwaway repository.
 
-  The two configs are release tooling with no compile-time surface: nothing
-  catches a broken template until a release is already being cut, and the
-  Cloudron one feeds the update prompt operators read. Rendering a repository
-  we build here exercises both halves that can break — the commit parsers
-  (which scope and type reach the changelog) and the body template (how each
-  entry is written) — without depending on this repository's own history.
+  The config is release tooling with no compile-time surface: nothing catches
+  a broken template until a release is already being cut, and it writes the
+  release notes operators read. Rendering a repository we build here exercises
+  both halves that can break — the commit parsers (which scope and type reach
+  the changelog) and the body template (how each entry is written) — without
+  depending on this repository's own history.
   """
   use ExUnit.Case, async: true
 
   @moduletag :utils
   @moduletag :git_cliff
 
-  # One commit per rendering decision the configs make. The `core` and `saas`
+  # One commit per rendering decision the config makes. The `core` and `saas`
   # scopes are retired and refused at commit time, but they run throughout the
-  # history before that change, so both configs still have to render them.
+  # history before that change, so the config still has to render them.
   @commits [
     "fix(core): keep the reconnect prompt until the owner reconnects",
     {"fix(core)!: read config files strictly",
@@ -34,40 +34,6 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
     {:ok, repo: build_repo(@commits)}
   end
 
-  describe "cliff-cloudron.toml (the Cloudron update prompt)" do
-    test "writes Core entries without a scope, keeping narrower ones", %{repo: repo} do
-      changelog = render(repo, "cliff-cloudron.toml")
-
-      assert changelog =~ "* Keep the reconnect prompt until the owner reconnects"
-      assert changelog =~ "* security: Redact secret tokens from request logs"
-      assert changelog =~ "* Fall back to UTC when a profile has no timezone set"
-      refute changelog =~ "core:"
-    end
-
-    test "marks a breaking change without reintroducing the scope", %{repo: repo} do
-      changelog = render(repo, "cliff-cloudron.toml")
-
-      assert changelog =~ "* [BREAKING] Remove the LEGACY_MODE environment variable\n"
-    end
-
-    # The update prompt keeps only `[BREAKING]` lines once a release has curated
-    # highlights, so the migration note must sit on that line to survive.
-    test "keeps a breaking change's migration note on its [BREAKING] line", %{repo: repo} do
-      changelog = render(repo, "cliff-cloudron.toml")
-
-      assert changelog =~
-               "* [BREAKING] Read config files strictly: values are no longer interpolated. " <>
-                 "Write the final value out.\n"
-    end
-
-    test "leaves out `saas`-scoped and chore commits", %{repo: repo} do
-      changelog = render(repo, "cliff-cloudron.toml")
-
-      refute changelog =~ "pricing page"
-      refute changelog =~ "Bump a dependency"
-    end
-  end
-
   describe "cliff.toml (the GitHub release notes)" do
     test "writes entries without a retired scope, keeping narrower ones", %{repo: repo} do
       changelog = render(repo, "cliff.toml")
@@ -77,7 +43,7 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
       refute changelog =~ "core:"
     end
 
-    # Unlike the Cloudron config, this one does not filter by scope, so a
+    # The config does not filter by scope, so a
     # `saas`-scoped commit from before the retirement still reaches the release
     # notes. The entry is kept; only the prefix, which named a repository
     # rather than anything about the change, is dropped.
@@ -96,6 +62,13 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
                  "Write the final value out.\n"
 
       assert changelog =~ "- Remove the LEGACY_MODE environment variable\n"
+    end
+
+    test "leaves out chore commits", %{repo: repo} do
+      changelog = render(repo, "cliff.toml")
+
+      assert changelog =~ "- Add a pricing page"
+      refute changelog =~ "ump a dependency"
     end
   end
 

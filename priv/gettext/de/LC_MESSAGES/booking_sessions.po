@@ -1,0 +1,57 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "Dates"
+msgstr "Termine"
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "Fully booked"
+msgstr "Ausgebucht"
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "No dates are planned at the moment."
+msgstr "Derzeit sind keine Termine geplant."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Anmeldung geschlossen"
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "Registration is closed."
+msgstr "Die Anmeldung ist geschlossen."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "Registration until %{datetime}"
+msgstr "Anmeldung bis %{datetime}"
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "This event has ended."
+msgstr "Diese Veranstaltung ist beendet."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "All dates are fully booked."
+msgstr "Alle Termine sind ausgebucht."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "None of the dates can be booked any more."
+msgstr "Keiner der Termine kann mehr gebucht werden."

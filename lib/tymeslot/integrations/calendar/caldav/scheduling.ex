@@ -67,11 +67,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
       organiser's own copy now shows them once, under the account's address,
       while the booker's invitation, which Tymeslot sends itself, keeps theirs.
 
-  Mailbox.org lists its own aliases in that set, but by the report in #151
-  not a custom-domain address added to the account, so the second case is
-  the usual one for an organiser on their own domain. Measured against a live account on
+  Mailbox.org lists its own aliases in that set, and on the custom-domain
+  account measured on 2026-10-21 the custom-domain address as well, so an
+  organiser on their own domain is usually the first case; the second is for
+  a domain the account does not list. Measured against a live account on
   2026-10-19: no event shape keeps the account's address out of an event that
   has an organiser or any attendee.
+
+  Open-Xchange honours `SCHEDULE-AGENT=CLIENT` on the write that carries it
+  but strips the parameter before storing the event, so every later write
+  Tymeslot makes from the stored copy (the video link, a reschedule, a
+  colour) would mail the booker a "changed" notice from the organiser's
+  address, and a delete or a removed guest a cancellation, beside Tymeslot's
+  own email. Every PUT and DELETE to that server therefore carries
+  `Schedule-Reply: F` (RFC 6638 §8.1), which it honours for the organiser's
+  writes as well as an attendee's: measured on 2026-10-21, it suppresses the
+  notice for a create, an update, a removed guest and a delete alike
+  (`write_opts/1`).
 
   The server also silently drops an update that names a different
   `ORGANIZER` from the stored one, so `ORGANIZER` is written on create only:
@@ -135,6 +147,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   """
   @spec open_xchange?(Client.t()) :: boolean()
   def open_xchange?(client) when is_map(client), do: server(client) == :open_xchange
+
+  @doc """
+  The options every PUT and DELETE to `client`'s server carries, for
+  `CalDAV.Http`: `schedule_reply: false` for Open-Xchange (see the
+  moduledoc), none elsewhere. Asks the server nothing.
+  """
+  @spec write_opts(Client.t()) :: keyword()
+  def write_opts(client) when is_map(client),
+    do: if(open_xchange?(client), do: [schedule_reply: false], else: [])
 
   @doc """
   The address an `{:organiser_attendee, addresses}` event lists for its

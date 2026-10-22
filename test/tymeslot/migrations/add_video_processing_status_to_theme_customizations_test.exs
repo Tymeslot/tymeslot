@@ -22,6 +22,15 @@ defmodule Tymeslot.Migrations.AddVideoProcessingStatusToThemeCustomizationsTest 
   alias Tymeslot.Repo
   alias Tymeslot.Test.MigrationRunner
 
+  # `20261020161429_drop_retired_theme_customization_columns` drops the
+  # columns these migrations read and write, so it comes off first, as it
+  # does in a real rollback, leaving the schema they were written against.
+  @drop_version 20_261_020_161_429
+
+  setup do
+    MigrationRunner.down!(@drop_version)
+  end
+
   @version 20_261_008_094_224
 
   defp insert_legacy_row(profile_id, theme_id, video_processing) do

@@ -88,4 +88,50 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
              end) == "Private oder lokale Netzwerkadressen sind nicht zulässig"
     end
   end
+
+  # A provider that answered and declined the request is not a connection
+  # failure; telling its owner to check the network sends them the wrong way.
+  describe "a calendar's refusal" do
+    test "says the calendar refused the change, not that the connection failed" do
+      message = ErrorHandler.sanitize_error_message(:refused, :google)
+
+      assert message =~ "Google Calendar refused the change"
+      refute message =~ "Network"
+    end
+
+    test "is worded the same by classify_and_format/3" do
+      assert {_category, message} = ErrorHandler.classify_and_format(:refused, :outlook)
+
+      assert message =~ "refused the change"
+      refute message =~ "Unable to connect"
+    end
+  end
+
+  # The shared envelope names a 408 `:timeout` and an undecodable body
+  # `:malformed_response`; both reach the connection test and calendar
+  # creation through this function.
+  describe "a timeout or an unreadable response" do
+    test "a timeout says the request timed out" do
+      assert ErrorHandler.sanitize_error_message(:timeout, :google) ==
+               "The request timed out. Please try again."
+    end
+
+    test "an unreadable response says the service had an error" do
+      message = ErrorHandler.sanitize_error_message(:malformed_response, :outlook)
+
+      assert message == "The calendar service encountered an error. Please try again later."
+    end
+
+    test "classify_and_format/3 words both without falling back to the unknown error" do
+      for reason <- [:timeout, :malformed_response] do
+        {_category, message} = ErrorHandler.classify_and_format(reason, :google)
+        refute message =~ "unexpected"
+      end
+
+      assert {:timeout, _message} = ErrorHandler.classify_and_format(:timeout, :google)
+
+      assert {_category, "The calendar service encountered an error. Please try again later."} =
+               ErrorHandler.classify_and_format(:malformed_response, :google)
+    end
+  end
 end

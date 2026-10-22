@@ -46,7 +46,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   @spec render(meeting_map(), any()) :: Email.t()
   def render(meeting, error_reason) do
     RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
-      error_details = TemplateHelper.format_error_reason(error_reason)
+      error_details = describe_error(error_reason)
       locale = Gettext.get_locale(TymeslotWeb.Gettext)
       clock = HostClock.for_meeting(meeting, locale)
       owner_start_time = DateTimeUtils.convert_to_timezone(meeting.start_time, clock.timezone)
@@ -142,6 +142,39 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     #{dgettext("emails_integrations", "This is an automated system notification. Please check your calendar sync settings if this issue persists.")}
     """
   end
+
+  # The error categories the calendar write path hands this email, in the
+  # owner's words. Anything else (a provider's own message, an unforeseen
+  # term) is shown as it came.
+  defp describe_error(:refused),
+    do:
+      dgettext(
+        "emails_integrations",
+        "Your calendar declined to add this event. The calendar may be read-only, or the event was rejected by the calendar service."
+      )
+
+  defp describe_error(:calendar_event_not_updatable),
+    do:
+      dgettext(
+        "emails_integrations",
+        "The event exists in your calendar but could not be updated, so it may still show the old details."
+      )
+
+  defp describe_error(:not_found),
+    do:
+      dgettext(
+        "emails_integrations",
+        "The calendar this event should go to could not be found."
+      )
+
+  defp describe_error(error) when error in [:server_error, :network_error, :malformed_response],
+    do:
+      dgettext(
+        "emails_integrations",
+        "Your calendar service could not be reached or did not answer properly, even after several attempts."
+      )
+
+  defp describe_error(error), do: TemplateHelper.format_error_reason(error)
 
   # The four causes are one list translated once, then laid out by whichever body
   # needs them. Keeping them as separate msgids from the surrounding prose means

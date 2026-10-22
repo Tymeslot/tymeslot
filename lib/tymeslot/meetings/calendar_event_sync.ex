@@ -33,6 +33,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
   alias Tymeslot.Meetings.CalendarEventMapping
@@ -141,8 +142,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         attendees: Meetings.attendees_for_calendar(meeting)
       )
 
-    update_or_create_calendar_event(meeting, event_data, attempt)
+    meeting
+    |> update_or_create_calendar_event(event_data, attempt)
+    |> flag_if_unauthorized(meeting)
   end
+
+  # An update or delete refused as unauthorised is the same lost grant a
+  # create can meet (`handle_sync_failure/4`): only a reconnect recovers it.
+  defp flag_if_unauthorized({:error, :unauthorized} = error, meeting) do
+    CalendarManagement.flag_write_unauthorized(meeting)
+    error
+  end
+
+  defp flag_if_unauthorized(result, _meeting), do: result
 
   @doc """
   Deletes the calendar event for the given meeting.
@@ -182,7 +194,9 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
             provider_identifier: calendar_event_identifier(meeting)
           )
 
-          delete_event_for_meeting(meeting, meeting_id)
+          meeting
+          |> delete_event_for_meeting(meeting_id)
+          |> flag_if_unauthorized(meeting)
         end
 
       {:error, :not_found} ->
@@ -500,11 +514,21 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:rate_limited, seconds} = waiting when is_integer(seconds) ->
         {:error, waiting}
 
+      # The connection may not write events (a read-only Google grant, say):
+      # discarded by the worker, so the owner is asked to reconnect now.
       :unauthorized ->
+        CalendarManagement.flag_write_unauthorized(meeting)
         {:error, :unauthorized}
 
       {:connection_failed, _details} ->
         {:error, :connection_failed}
+
+      # Declined outright, so the worker ends the job now rather than on the
+      # fifth attempt, and the owner hears of it now too.
+      :refused ->
+        Logger.error("Calendar refused the event", meeting_id: meeting_id)
+        send_calendar_error_notification(meeting, :refused)
+        {:error, :refused}
 
       reason ->
         Logger.error("Failed to create calendar event",

@@ -34,6 +34,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           address_to_arrange: boolean(),
           meeting_type: String.t() | nil,
           capacity: pos_integer(),
+          planned: boolean(),
+          registration_closes_at: DateTime.t() | nil,
           seat:
             %{
               participant_id: binary(),
@@ -148,6 +150,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # A solo meeting is always `1`. `Tymeslot.Meetings.group?/1` is the one
     # place that turns this into a group/solo predicate — see its @doc.
     field(:capacity, :integer, default: 1)
+
+    # A session the host planned on a fixed-date group type
+    # (`Tymeslot.Meetings.PlannedSessions`), created before anyone booked:
+    # it stays when its last participant leaves, and is offered until
+    # `registration_closes_at` (or its start, when that is nil).
+    field(:planned, :boolean, default: false)
+    field(:registration_closes_at, :utc_datetime)
 
     # Set only on the view of a group meeting as one seat sees it
     # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
@@ -359,6 +368,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :meeting_type,
     :meeting_type_id,
     :capacity,
+    :planned,
+    :registration_closes_at,
     :organizer_title,
     :organizer_user_id,
     :calendar_integration_id,
@@ -626,24 +637,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   """
   @spec group?(t()) :: boolean
   def group?(%__MODULE__{capacity: capacity}), do: capacity > 1
-
-  @doc """
-  The link the organiser joins the video call with: their own (host) room link
-  where the provider issued one, else the shared meeting link; `nil` for a
-  meeting without video.
-  """
-  @spec organizer_join_url(t()) :: String.t() | nil
-  def organizer_join_url(%__MODULE__{} = meeting),
-    do: present_url(meeting.organizer_video_url) || present_url(meeting.meeting_url)
-
-  defp present_url(url) when is_binary(url) do
-    case String.trim(url) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp present_url(_url), do: nil
 
   defp supported_locale_codes, do: Locales.supported_codes()
 end

@@ -86,6 +86,34 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
       assert updated.calendar_sync_status == "externally_deleted"
     end
 
+    test "reconciles an event the calendar no longer has, marked already gone", %{
+      integration: integration
+    } do
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "prov-gone",
+          attendee_email: "guest@example.com"
+        )
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :not_found}
+      end)
+
+      assert {:ok, result} =
+               Events.delete_event_and_reconcile(
+                 "uid-gone",
+                 "prov-gone",
+                 {integration.id, integration.user_id},
+                 provider_event_id: "prov-gone"
+               )
+
+      assert %{already_gone: true, reconcile_result: :ok} = result
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert {updated.status, updated.calendar_sync_status} == {"cancelled", "externally_deleted"}
+    end
+
     test "omits the attendee when no meeting is linked", %{integration: integration} do
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
@@ -100,28 +128,34 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
       assert result == %{uid: "uid-free", integration_id: integration.id, reconcile_result: :ok}
     end
 
-    test "leaves the linked meeting alone when the delete fails", %{integration: integration} do
-      meeting =
-        insert(:meeting,
-          calendar_integration_id: integration.id,
-          provider_event_id: "prov-kept"
-        )
+    # A calendar that is gone from the integration is not an event that is
+    # gone from the calendar: its bookings stand.
+    for reason <- [:unauthorized, :no_calendar_integration] do
+      test "leaves the linked meeting alone when the delete fails with #{reason}", %{
+        integration: integration
+      } do
+        meeting =
+          insert(:meeting,
+            calendar_integration_id: integration.id,
+            provider_event_id: "prov-kept"
+          )
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
-        {:error, :unauthorized}
-      end)
+        expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+          {:error, unquote(reason)}
+        end)
 
-      assert {:error, :unauthorized} =
-               Events.delete_event_and_reconcile(
-                 "uid-kept",
-                 "prov-kept",
-                 {integration.id, integration.user_id},
-                 []
-               )
+        assert {:error, unquote(reason)} =
+                 Events.delete_event_and_reconcile(
+                   "uid-kept",
+                   "prov-kept",
+                   {integration.id, integration.user_id},
+                   []
+                 )
 
-      {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
-      assert unchanged.status == meeting.status
-      assert unchanged.calendar_sync_status == nil
+        {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
+        assert unchanged.status == meeting.status
+        assert unchanged.calendar_sync_status == nil
+      end
     end
   end
 

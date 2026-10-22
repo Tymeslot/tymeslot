@@ -528,3 +528,23 @@ msgid_plural "This is the only email you will get about this for now. If the sam
 msgstr[0] "Наразі це єдиний лист про це. Якщо через %{count} день та сама проблема нікуди не зникне, ви почуєте про неї знову. Налаштування відео показують повідомлення, доки воно чинне."
 msgstr[1] "Наразі це єдиний лист про це. Якщо через %{count} дні та сама проблема нікуди не зникне, ви почуєте про неї знову. Налаштування відео показують повідомлення, доки воно чинне."
 msgstr[2] "Наразі це єдиний лист про це. Якщо через %{count} днів та сама проблема нікуди не зникне, ви почуєте про неї знову. Налаштування відео показують повідомлення, доки воно чинне."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this event should go to could not be found."
+msgstr "Не вдалося знайти календар, до якого мала бути додана ця подія."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The event exists in your calendar but could not be updated, so it may still show the old details."
+msgstr "Подія є у вашому календарі, але її не вдалося оновити, тож вона може й далі показувати старі дані."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar declined to add this event. The calendar may be read-only, or the event was rejected by the calendar service."
+msgstr "Ваш календар відмовився додати цю подію. Можливо, календар доступний лише для читання, або календарний сервіс відхилив подію."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar service could not be reached or did not answer properly, even after several attempts."
+msgstr "Ваш календарний сервіс був недоступний або не відповів належним чином навіть після кількох спроб."

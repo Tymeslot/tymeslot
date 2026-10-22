@@ -18,6 +18,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
@@ -95,7 +96,8 @@ defmodule Tymeslot.Bookings.CreateGroup do
     meeting_attrs
     |> group_meeting_attrs(meeting_type)
     |> GroupScheduling.book_seat(build_seat_request(booking_data),
-      on_booked: &schedule_seat_jobs(&1, opts)
+      on_booked: &schedule_seat_jobs(&1, opts),
+      join_only: FixedDates.enabled?(meeting_type)
     )
     |> map_result(booking_data)
   end

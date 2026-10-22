@@ -93,10 +93,12 @@ defmodule Tymeslot.Notifications.Email.SeatJobs do
   @doc """
   The result of one send to one recipient, as a job outcome: `:ok`, or the
   failure logged and handed to `DeliveryOutcome.from_error/2`, so an open
-  circuit snoozes and a dead address discards.
+  circuit snoozes and a dead address discards. The bare `:ok` is a
+  `DeliveryClaims.once/3` claim an earlier run of the job already took.
   """
-  @spec send_result({:ok, term()} | {:error, term()}, String.t(), keyword()) ::
+  @spec send_result(:ok | {:ok, term()} | {:error, term()}, String.t(), keyword()) ::
           :ok | {:error, term()}
+  def send_result(:ok, _label, _metadata), do: :ok
   def send_result({:ok, _result}, _label, _metadata), do: :ok
 
   def send_result({:error, reason}, label, metadata) do

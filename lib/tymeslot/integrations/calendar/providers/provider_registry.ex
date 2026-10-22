@@ -96,23 +96,22 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
   # Helper for creating client with full validation (setup/configuration)
   defp create_client_with_validation(module, config) do
     case module.validate_config(config) do
-      :ok ->
-        case module.new(config) do
-          {:ok, client} -> {:ok, client}
-          # Handle providers that return the client directly
-          client -> {:ok, client}
-        end
-
-      {:error, _reason} = error ->
-        error
+      :ok -> new_client(module, config)
+      {:error, _reason} = error -> error
     end
   end
 
   # Helper for creating client without validation (operational use)
-  defp create_client_without_validation(module, config) do
+  defp create_client_without_validation(module, config), do: new_client(module, config)
+
+  # A provider's `new/1` answers `{:ok, client}`, `{:error, reason}`, or the
+  # bare client. An error must stay an error: wrapped as `{:ok, _}`, the
+  # caller would go on to call the provider with `{:error, reason}` as its
+  # client.
+  defp new_client(module, config) do
     case module.new(config) do
       {:ok, client} -> {:ok, client}
-      # Handle providers that return the client directly
+      {:error, _reason} = error -> error
       client -> {:ok, client}
     end
   end

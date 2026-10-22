@@ -42,6 +42,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent
   alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Nextcloud.Login, as: NextcloudLogin
@@ -304,6 +305,14 @@ defmodule Tymeslot.Integrations.Calendar do
   """
   @spec calendar_for_event(map(), [CalendarEntry.t()] | nil) :: CalendarEntry.t() | nil
   defdelegate calendar_for_event(event, calendar_list), to: Selection
+
+  @doc """
+  Whether `zone` is one of the names for UTC, which a synced event written in
+  UTC carries without saying anything about the local time its series keeps.
+  See `Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent.utc_zone?/1`.
+  """
+  @spec utc_zone?(String.t()) :: boolean()
+  defdelegate utc_zone?(zone), to: TimeZoneComponent
 
   @doc """
   The collection path a CalDAV-family integration writes new events to, or

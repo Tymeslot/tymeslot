@@ -71,7 +71,6 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
-  alias Tymeslot.Integrations.Calendar.Runtime.Operations, as: CalendarOperations
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
@@ -343,7 +342,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     }
 
     with {:ok, [fetched | _rest]} <-
-           CalendarOperations.fetch_event(ref, {event.calendar_integration_id, user_id}),
+           CalendarEvents.fetch_event(ref, {event.calendar_integration_id, user_id}),
          url when is_binary(url) <-
            ConferenceData.meet_url_from_google_event(fetched.provider_metadata || %{}) do
       {:ok, url}

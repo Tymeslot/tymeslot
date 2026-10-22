@@ -8,8 +8,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
   require Logger
@@ -19,6 +22,8 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     {:ok,
      socket
      |> assign(:meeting_types, [])
+     |> assign(:events, [])
+     |> assign(:next_dates, %{})
      |> assign(:show_add_form, false)
      |> assign(:editing_type, nil)
      |> assign(:show_edit_overlay, false)
@@ -28,9 +33,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
      |> assign(:group_bookings_allowed, true)
+     |> assign(:payments_accepted, true)
      |> assign(:show_slug_modal, false)
      |> assign(:slug_modal_type, nil)
      |> assign(:slug_draft, "")
+     |> assign(:delete_sign_ups, {0, 0})
      |> ModalHook.mount_modal(delete_meeting_type: false)}
   end
 
@@ -65,13 +72,26 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     socket =
       socket
       |> assign(:meeting_types, data.meeting_types)
+      |> assign(:events, EventsListComponent.rows(data.meeting_types))
+      |> assign(:next_dates, next_dates(data.meeting_types))
       |> refresh_editing_type(data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:venues, data.venues)
       |> assign(:calendar_integrations, data.calendar_integrations)
       |> assign(:payment_currency, price_currency(data.meeting_types, user_id))
+      |> assign(:payments_accepted, payments_accepted?(data.meeting_types, user_id))
 
     {:ok, socket}
+  end
+
+  # For each fixed-date type, the start of its next session open for
+  # registration, or nil: the card says when that is, or that the type is
+  # off the booking page for want of one.
+  defp next_dates(meeting_types) do
+    meeting_types
+    |> Enum.filter(&FixedDates.enabled?/1)
+    |> PlannedSessions.next_open_by_type()
+    |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
   end
 
   # The open editor is handed `editing_type` on every render, and it saves
@@ -97,6 +117,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     else
       MeetingPayments.account_currency(nil)
     end
+  end
+
+  # Whether the host's paid meeting types can be sold, for the card warning
+  # that the booking page leaves them out. Asked only when one is paid.
+  defp payments_accepted?(meeting_types, user_id) do
+    not Enum.any?(meeting_types, & &1.payment_required) or
+      MeetingPayments.accepting_payments?(user_id)
   end
 
   @impl Phoenix.LiveComponent
@@ -205,7 +232,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
 
     if type do
-      {:noreply, ModalHook.show_modal(socket, :delete_meeting_type, type)}
+      {:noreply,
+       socket
+       |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
+       |> ModalHook.show_modal(:delete_meeting_type, type)}
     else
       Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
       {:noreply, socket}

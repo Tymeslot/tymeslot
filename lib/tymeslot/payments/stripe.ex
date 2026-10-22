@@ -29,6 +29,8 @@ defmodule Tymeslot.Payments.Stripe do
   defp invoice_payment_mod,
     do: Application.get_env(:tymeslot, :stripe_invoice_payment_mod, Stripe.InvoicePayment)
 
+  defp refund_mod, do: Application.get_env(:tymeslot, :stripe_refund_mod, Stripe.Refund)
+
   @doc """
   Creates a Stripe customer for the given email.
   """
@@ -218,6 +220,35 @@ defmodule Tymeslot.Payments.Stripe do
     Logger.info("Listing Stripe invoice payments", params: LogFormat.reason(params))
 
     with {:ok, opts} <- api_key_opts(), do: invoice_payment_mod().list(params, opts)
+  end
+
+  @doc """
+  Refunds a charge on the platform account, with Stripe's own parameters
+  (`charge` or `payment_intent`, `amount`, `reason`, `metadata`). Without an
+  `amount` the whole unrefunded remainder is returned.
+
+  The caller passes its own `:idempotency_key`: one refund is one decision,
+  and only the caller knows when a repeat is the same decision.
+  """
+  @impl StripeProvider
+  @spec create_refund(map(), keyword()) :: stripe_result()
+  def create_refund(params, opts) when is_map(params) do
+    Logger.info("Creating Stripe refund", params: LogFormat.reason(Map.drop(params, [:metadata])))
+
+    with {:ok, opts} <- api_key_opts(Keyword.fetch!(opts, :idempotency_key)),
+         do: refund_mod().create(params, opts)
+  end
+
+  @doc """
+  Lists refunds on the platform account, newest first, with Stripe's own
+  filters (`charge`, `payment_intent`, `limit`, `starting_after`).
+  """
+  @impl StripeProvider
+  @spec list_refunds(map()) :: stripe_result()
+  def list_refunds(params) when is_map(params) do
+    Logger.info("Listing Stripe refunds", params: LogFormat.reason(params))
+
+    with {:ok, opts} <- api_key_opts(), do: refund_mod().list(params, opts)
   end
 
   @doc """

@@ -204,6 +204,8 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   email it is in `extra_keys`. A meeting with reminders at one hour and at 15
   minutes sends two different reminders, keyed by their offset; a host's
   second reschedule request is a second email, keyed by when it was made.
+  `unique_overrides` replaces any of these unique options for an action that
+  needs a narrower guarantee (see `schedule_seat_session_moved/3`).
 
   The uniqueness window is wider than the usual 5 minutes deliberately: a
   seat job that hits an open mail circuit breaker snoozes for the breaker's
@@ -216,9 +218,16 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   insert a second one — re-sending to a participant who already got their
   email instead of the harmless no-op re-dispatch is meant to be.
   """
-  @spec schedule_seat_email(String.t(), term(), term(), map(), [atom()]) ::
+  @spec schedule_seat_email(String.t(), term(), term(), map(), [atom()], keyword()) ::
           :ok | {:error, term()}
-  def schedule_seat_email(action, meeting_id, participant_id, extra_args \\ %{}, extra_keys \\ []) do
+  def schedule_seat_email(
+        action,
+        meeting_id,
+        participant_id,
+        extra_args \\ %{},
+        extra_keys \\ [],
+        unique_overrides \\ []
+      ) do
     extra_args
     |> Map.merge(%{
       "action" => action,
@@ -228,14 +237,18 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     |> EmailWorker.new(
       queue: :emails,
       priority: 0,
-      unique: [
-        # 1 hour — comfortably past the ~330s worst-case circuit-open
-        # snooze on either the seat job itself or the meeting-level
-        # dispatcher that re-runs this. See the moduledoc above.
-        period: 3600,
-        fields: [:args, :queue],
-        keys: [:action, :meeting_id, :participant_id | extra_keys]
-      ]
+      unique:
+        Keyword.merge(
+          [
+            # 1 hour — comfortably past the ~330s worst-case circuit-open
+            # snooze on either the seat job itself or the meeting-level
+            # dispatcher that re-runs this. See the moduledoc above.
+            period: 3600,
+            fields: [:args, :queue],
+            keys: [:action, :meeting_id, :participant_id | extra_keys]
+          ],
+          unique_overrides
+        )
     )
     |> Helpers.insert(meeting_id: meeting_id, participant_id: participant_id)
     |> Helpers.ok()
@@ -311,6 +324,30 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       participant_id,
       %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit},
       [:reminder_value, :reminder_unit]
+    )
+  end
+
+  @doc """
+  Schedules one live participant's notice that the host moved their planned
+  session (`Tymeslot.Meetings.SessionMove`). `from` is the previous start,
+  as ISO 8601, which the email names.
+
+  One notice per seat is pending at a time. A move made while the previous
+  move's notice has not yet run (`available` or `scheduled`) folds into that
+  notice: it keeps its `from`, the time the participant last heard of, and
+  the email reads the current time when it sends, so A to B to C sends one
+  email saying "previously A". Once a notice has started running (or has
+  run), a further move is a new email from the time that notice announced.
+  """
+  @spec schedule_seat_session_moved(term(), term(), String.t()) :: :ok | {:error, String.t()}
+  def schedule_seat_session_moved(meeting_id, participant_id, from) do
+    schedule_seat_email(
+      seat_action(:seat_session_moved),
+      meeting_id,
+      participant_id,
+      %{"from" => from},
+      [],
+      states: [:available, :scheduled]
     )
   end
 

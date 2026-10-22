@@ -73,6 +73,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       guests:
         Enum.map(meeting.guests, &%{name: presence(&1.name), email: &1.email, status: &1.status}),
       capacity: meeting.capacity,
+      planned: meeting.planned,
       seats_taken: seats_taken(meeting),
       status: meeting.status,
       request: MeetingState.awaiting_approval?(meeting),

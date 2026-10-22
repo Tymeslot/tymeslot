@@ -180,6 +180,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   `If-Match: <etag>` for conditional writes that prevent lost updates on
   concurrent edits. Pass `operation: :force_update` to send no conditional
   header at all — an unconditional overwrite.
+
+  Pass `schedule_reply: false` to send `Schedule-Reply: F` (RFC 6638 §8.1),
+  asking the server to mail nobody about the write; `CalDAV.Scheduling`
+  decides which servers need it.
   """
   @spec put_event(String.t(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -228,6 +232,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   Pass `if_match: etag` to delete only the version that ETag names; a
   resource changed since is left in place and answered with
   `{:error, :precondition_failed}`.
+
+  Takes `schedule_reply: false` as `put_event/5` does.
   """
   @spec delete_event(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -239,7 +245,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       case Keyword.get(opts, :if_match) do
         nil -> []
         etag -> [{"If-Match", if_match_value(etag)}]
-      end
+      end ++ schedule_reply_headers(opts)
 
     result =
       authed_request("DELETE", url, username, password, extra_headers, fn headers ->
@@ -423,7 +429,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   end
 
   defp put_event_headers(opts) do
-    add_conditional_headers([{"Content-Type", "text/calendar; charset=utf-8"}], opts)
+    add_conditional_headers([{"Content-Type", "text/calendar; charset=utf-8"}], opts) ++
+      schedule_reply_headers(opts)
+  end
+
+  defp schedule_reply_headers(opts) do
+    if Keyword.get(opts, :schedule_reply, true), do: [], else: [{"Schedule-Reply", "F"}]
   end
 
   defp add_conditional_headers(headers, opts) do

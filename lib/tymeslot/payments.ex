@@ -51,6 +51,15 @@ defmodule Tymeslot.Payments do
   end
 
   @doc """
+  The payments a user has made for platform subscriptions, oldest first, as
+  `%{subscription_id, paid_at}`. See `SubscriptionInvoices.payments/1`.
+  """
+  @spec list_subscription_payments(pos_integer()) :: [
+          %{subscription_id: String.t() | nil, paid_at: DateTime.t()}
+        ]
+  def list_subscription_payments(user_id), do: SubscriptionInvoices.payments(user_id)
+
+  @doc """
   Lists a user's platform subscription invoices, newest first.
 
   Each entry carries the Stripe-hosted invoice page and PDF, so callers can
@@ -142,6 +151,13 @@ defmodule Tymeslot.Payments do
   """
   @spec charge_invoice(String.t()) :: {:ok, ChargeInvoice.t()} | {:error, term()}
   defdelegate charge_invoice(charge_id), to: ChargeInvoice, as: :for_charge_id
+
+  @doc """
+  As `charge_invoice/1`, for a charge the caller already holds (a webhook
+  body or an API read), so the charge itself is not read again.
+  """
+  @spec invoice_for_charge(map()) :: {:ok, ChargeInvoice.t()} | {:error, term()}
+  defdelegate invoice_for_charge(charge), to: ChargeInvoice, as: :for_charge
 
   @doc """
   Records a checkout session's outcome against its transaction row, attaching

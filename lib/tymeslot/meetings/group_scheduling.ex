@@ -9,7 +9,10 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     * an existing live meeting for `(meeting_type_id, start_time)` is locked
       `FOR UPDATE`, the seat count is re-checked under the lock, and the
       participant plus guests are inserted, or the transaction rolls back
-      with `{:error, :slot_full}`;
+      with `{:error, :slot_full}`; a planned session
+      (`Tymeslot.Meetings.PlannedSessions`) whose registration has closed
+      by then is refused the same way, so a booking validated just before
+      the close cannot commit after it;
     * with no live meeting, the meeting is created through the standard
       buffered conflict-checked path together with the first participant.
 
@@ -41,6 +44,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.Repo
@@ -75,6 +79,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       target slot's row, in id order, before either is read, so that two
       moves in opposite directions between the same two meetings queue
       behind each other instead of deadlocking.
+    * `:join_only`: when true, the seat only joins a live meeting and never
+      creates one: with nobody's slot to join it is refused as `:slot_full`.
+      A fixed-date type's sessions are planned by the host
+      (`Tymeslot.Meetings.PlannedSessions`), so a booking for one that was
+      cancelled in the meantime must not bring it back as an unplanned slot.
     * `:exclude_from_conflicts`: a function `(-> uid | nil)` run inside the
       transaction once the rows are locked, naming a meeting a newly
       created slot's conflict check and booking-limit count leave out. For
@@ -95,6 +104,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     hooks = %{
       on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
       also_lock: Keyword.get(opts, :also_lock),
+      join_only: Keyword.get(opts, :join_only, false),
       exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end)
     }
 
@@ -158,6 +168,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
 
         booking =
           case live_meeting do
+            nil when hooks.join_only ->
+              Repo.rollback(:slot_full)
+
             nil ->
               create_meeting_with_first_seat(
                 meeting_attrs,
@@ -208,15 +221,20 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   # Gates on the meeting's own capacity, not the caller's
   # `seat_request.max_participants` (which is only the correct capacity for
   # a meeting not yet created, see `create_meeting_with_first_seat/2`); the
-  # type keeps a group meeting's capacity in step with its limit.
+  # type keeps a group meeting's capacity in step with its limit. A planned
+  # session's registration close is re-read here, on the locked row, for the
+  # same reason the seats are: the caller's pre-check read it unlocked.
   defp join_meeting(meeting, seat_request, seats_requested) do
-    if joinable?(meeting, seats_requested) do
+    if joinable?(meeting, seats_requested) and registration_open?(meeting) do
       participant = insert_participant_or_rollback(meeting, seat_request)
       %{meeting: meeting, participant: participant, created_meeting?: false}
     else
       Repo.rollback(:slot_full)
     end
   end
+
+  defp registration_open?(%Meeting{planned: true} = session), do: PlannedSessions.open?(session)
+  defp registration_open?(%Meeting{}), do: true
 
   # Without a second meeting to lock there is nothing to order: the target
   # row is locked by `get_live_for_update/2` as always. With one, both rows

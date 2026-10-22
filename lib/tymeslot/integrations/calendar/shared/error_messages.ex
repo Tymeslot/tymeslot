@@ -198,6 +198,26 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
     dgettext("integrations_calendar", "Private or local network addresses are not allowed")
   end
 
+  # A provider that answered and declined the request (a 412, or a 403 on a
+  # calendar the account may only read) is not a connection problem, and the
+  # network message would send its owner checking a connection that works.
+  def specific_message(:refused, provider) do
+    dgettext(
+      "integrations_calendar",
+      "%{provider} refused the change. The connection is working, but the calendar would not accept this request.",
+      provider: format_provider_name(provider)
+    )
+  end
+
+  # A response that would not decode reached Tymeslot, so neither the
+  # network nor the server URL is to blame, which is all `:unknown` could say.
+  def specific_message(:malformed_response, _provider) do
+    dgettext(
+      "integrations_calendar",
+      "The calendar service encountered an error. Please try again later."
+    )
+  end
+
   def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
 
   def specific_message(_error, _provider), do: nil

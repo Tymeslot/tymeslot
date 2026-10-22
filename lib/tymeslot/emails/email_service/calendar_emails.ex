@@ -17,7 +17,13 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
 
   @doc """
   Sends a calendar sync error notification to the calendar owner.
-  This is only sent when calendar event creation fails after all retries.
+
+  Sent by `Tymeslot.Meetings.CalendarEventSync` when a booking's calendar
+  event cannot be written: at once when the calendar declines the create
+  (`:refused`, which no retry changes), and otherwise once the create, or an
+  update that cannot be applied, has spent its last attempt, including a
+  create given up on after waiting out an unreachable calendar. An
+  unauthorised write sends the integration's reconnection notice instead.
   """
   @spec send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
   def send_calendar_sync_error(meeting, error_reason) do

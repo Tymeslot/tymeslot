@@ -9,8 +9,10 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.BookingCalendar
   alias Tymeslot.MeetingTypes.Duration
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.GroupAccess
@@ -18,6 +20,8 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.OneOffEvents
+  alias Tymeslot.MeetingTypes.PaymentAccess
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -205,17 +209,9 @@ defmodule Tymeslot.MeetingTypes do
   def get_active_meeting_types(user_id),
     do: MeetingTypeQueries.list_active_meeting_types(user_id)
 
-  @doc """
-  The host's meeting types guests can book now: active and not archived, in
-  the host's order. A pure read, like `get_active_meeting_types/1` (which
-  keeps archived types that are still marked active).
-  """
+  @doc "The host's types guests can book now: active, not archived, in the host's order."
   @spec get_bookable_meeting_types(integer()) :: [Ecto.Schema.t()]
-  def get_bookable_meeting_types(user_id) do
-    user_id
-    |> MeetingTypeQueries.list_active_meeting_types()
-    |> Enum.reject(& &1.is_archived)
-  end
+  defdelegate get_bookable_meeting_types(user_id), to: MeetingTypeQueries
 
   @doc """
   Gets all meeting types for a user (active and inactive). A pure read, like
@@ -233,13 +229,19 @@ defmodule Tymeslot.MeetingTypes do
   meeting types shows the booking page's empty state.
 
   A paused group type (`Tymeslot.MeetingTypes.GroupAccess`) is left out, as an
-  inactive one is: it takes no new bookings, so the page must not offer it.
+  inactive one is: it takes no new bookings, so the page must not offer it. So
+  is a fixed-date type with no session left to sign up for (`FixedDates.reject_unbookable/1`),
+  and a paid type while its host is not accepting payments (`PaymentAccess`), since
+  its booking could never be submitted.
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
     user_id
     |> MeetingTypeQueries.list_public_meeting_types()
     |> GroupAccess.reject_paused()
+    |> FixedDates.reject_unbookable()
+    |> PaymentAccess.reject_unsellable()
+    |> OneOffEvents.order_for_listing()
   end
 
   @doc """
@@ -310,7 +312,8 @@ defmodule Tymeslot.MeetingTypes do
   defp do_update_meeting_type(meeting_type, attrs, opts) do
     changeset = MeetingTypeSchema.changeset(meeting_type, attrs, opts)
 
-    with {:ok, _promotion} <- BookingCalendar.promote(changeset),
+    with :ok <- FixedDates.check_sessions_kept(meeting_type, changeset),
+         {:ok, _promotion} <- BookingCalendar.promote(changeset),
          {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
       sync_group_capacity(meeting_type, updated)
       updated
@@ -353,11 +356,41 @@ defmodule Tymeslot.MeetingTypes do
 
   @doc """
   Deletes a meeting type.
+
+  A fixed-date type's upcoming dates are cancelled first, through the host's own
+  cancel path, which tells everyone booked on them (`PlannedSessions.cancel/2`):
+  deleted with the type, they would stay on the calendar with nothing left to
+  manage them from. Should a cancellation fail, the type is kept, so the host can
+  try again. `upcoming_sign_ups/1` is what the confirmation shows.
   """
   @spec delete_meeting_type(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | term()}
   def delete_meeting_type(meeting_type) do
-    MeetingTypeQueries.delete_meeting_type(meeting_type)
+    with :ok <- cancel_planned_sessions(meeting_type) do
+      MeetingTypeQueries.delete_meeting_type(meeting_type)
+    end
+  end
+
+  @doc """
+  The upcoming planned dates of `meeting_type` and how many people are
+  booked on them, which deleting the type cancels: `{dates, people}`.
+  `{0, 0}` for a type without fixed dates.
+  """
+  @spec upcoming_sign_ups(map()) :: {non_neg_integer(), non_neg_integer()}
+  def upcoming_sign_ups(meeting_type) do
+    sessions = PlannedSessions.upcoming(meeting_type)
+    {length(sessions), sessions |> Enum.map(&PlannedSessions.participant_count/1) |> Enum.sum()}
+  end
+
+  defp cancel_planned_sessions(meeting_type) do
+    meeting_type
+    |> PlannedSessions.upcoming()
+    |> Enum.reduce_while(:ok, fn session, :ok ->
+      case PlannedSessions.cancel(session, meeting_type.user_id) do
+        {:ok, _cancelled} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   @doc """

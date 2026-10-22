@@ -12,6 +12,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
            | :rate_limited
            | :not_a_calendar_user
            | :network_error
+           # A 4xx the provider answered with a refusal of the request itself.
+           | :refused
+           | :malformed_response
+           | :timeout
            | :server_error
            | :authentication_error
            | :gone

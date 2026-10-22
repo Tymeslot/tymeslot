@@ -97,10 +97,16 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   # so a status that would trip the breaker as `{:http_error, 500}` has to trip
   # it in atom form too. Without it every calendar 5xx was scored `:ignore` and
   # a server answering nothing but 500s could never open its breaker.
+  #
+  # `malformed_response` is the JSON calendar clients' name for a reply whose
+  # body will not decode (`Shared.ApiResponse`), typically a proxy or load
+  # balancer answering with HTML in front of a struggling provider. It was a
+  # `network_error` until it got its own name, and a provider that answers
+  # nothing but garbage still has to be able to open its breaker.
   @transport_reasons ~w(
     timeout network_error closed econnrefused econnreset ehostunreach
     enetunreach etimedout nxdomain closed_by_peer socket_closed_remotely
-    rate_limited service_unavailable server_error
+    rate_limited service_unavailable server_error malformed_response
   )a
 
   # Transport-level exception structs, matched by name so that neither Req nor

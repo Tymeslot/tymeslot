@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     GroupRules,
     GuestLimit,
     Init,
+    SessionHandlers,
     SlotIntervalField,
     Validation
   }
@@ -33,6 +34,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+
+  # The fixed dates' events, all handled by `SessionHandlers`.
+  @session_events SessionHandlers.events()
 
   # Public assigns passed from parent
   # - type: existing meeting type or nil
@@ -170,6 +174,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # Start from existing errors and update only the changed fields
     current_errors = socket.assigns.form_errors || %{}
 
+    # Saving accepts the edited type's own duration even off the step, so
+    # the instant feedback is given the same stored duration.
+    opts = [stored_duration: socket.assigns.type && socket.assigns.type.duration_minutes]
+
     {updated_data, updated_errors} =
       Enum.reduce(changed_fields, {new_data, current_errors}, fn field, {acc_data, acc_errors} ->
         Validation.validate_and_update_field(
@@ -177,7 +185,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           Map.get(params, field),
           metadata,
           acc_data,
-          acc_errors
+          acc_errors,
+          opts
         )
       end)
 
@@ -391,13 +400,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # the way (`GroupRules.enable_blocker/1`: no plan access, payment or
     # approval required, a location that is not fixed in advance). The
     # control renders disabled with the reason, so this only stops a stale
-    # or forged event. Turning them off is always allowed.
+    # or forged event. Turning them off is refused only while planned dates
+    # hold a fixed-date type on (`SessionHandlers.dates_planned?/1`).
     #
     # A host who has lost charge capability cannot reach the payments toggle,
     # so a required payment does not block them; enabling clears
     # `payment_required` instead, keeping the two mutually exclusive without
     # a dead end.
-    if socket.assigns.group_bookings_enabled or GroupRules.enable_blocker(socket.assigns) == nil do
+    turning_on? = not socket.assigns.group_bookings_enabled
+
+    if (turning_on? and GroupRules.enable_blocker(socket.assigns) == nil) or
+         (not turning_on? and not SessionHandlers.dates_planned?(socket.assigns)) do
       {:noreply,
        socket
        |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
@@ -411,6 +424,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:noreply, socket}
     end
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @session_events,
+    do: {:noreply, SessionHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event(
@@ -497,35 +514,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     end
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("update_reminder_input", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.update_input(params) |> apply_picker(socket)
-  end
+  # The reminder picker's events, all handled by `ReminderHandlers`.
+  @reminder_events ReminderHandlers.events()
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_custom_reminder", _params, socket) do
-    socket |> picker_state() |> ReminderPickerState.toggle_custom() |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_quick_reminder", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.add_quick(params) |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_reminder", _params, socket) do
-    socket |> picker_state() |> ReminderPickerState.add_custom() |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("commit_custom_reminder", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.commit_pending(params) |> apply_picker(socket)
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("remove_reminder", params, socket) do
-    socket |> picker_state() |> ReminderPickerState.remove(params) |> apply_picker(socket)
-  end
+  def handle_event(event, params, socket) when event in @reminder_events,
+    do: {:noreply, ReminderHandlers.handle_event(event, params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("flush_autosave", _params, socket) do
@@ -614,29 +608,4 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp off_preset_interval?(_value), do: false
-
-  # The reminder picker's own state, as the shared module keeps it. This form
-  # holds each field as an assign of its own, so it is lifted out for the
-  # picker to work on and written straight back.
-  defp picker_state(socket) do
-    Map.take(socket.assigns, [
-      :reminders,
-      :new_reminder_value,
-      :new_reminder_unit,
-      :reminder_error,
-      :show_custom_reminder,
-      :reminder_confirmation
-    ])
-  end
-
-  # A change to the list is worth saving, and starts the timer that takes the
-  # confirmation back down; anything else (a keystroke in the custom row, a
-  # rejected reminder) only updates what is on screen.
-  defp apply_picker({:ok, state}, socket) do
-    Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
-
-    {:noreply, socket |> assign(state) |> Autosave.maybe_run()}
-  end
-
-  defp apply_picker({:noop, state}, socket), do: {:noreply, assign(socket, state)}
 end

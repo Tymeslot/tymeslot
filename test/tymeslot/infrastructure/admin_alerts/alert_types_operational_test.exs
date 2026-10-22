@@ -133,4 +133,28 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesOperationalTest do
                  "for a connection in the last 60 seconds"
     end
   end
+
+  describe ":subscription_withdrawal_unfinished" do
+    @withdrawal %{
+      user_id: 7,
+      withdrawal_id: 31,
+      stripe_subscription_id: "sub_w",
+      reason: :stripe_down
+    }
+
+    test "names the withdrawal, its user and subscription, and how to finish it" do
+      msg = message(:subscription_withdrawal_unfinished, @withdrawal)
+
+      assert msg =~ "Withdrawal 31 of user 7 (subscription sub_w)"
+      assert msg =~ "Finish my withdrawal"
+    end
+
+    test "keys each withdrawal separately" do
+      refute AlertTypes.dedup_key(:subscription_withdrawal_unfinished, @withdrawal) ==
+               AlertTypes.dedup_key(:subscription_withdrawal_unfinished, %{
+                 @withdrawal
+                 | withdrawal_id: 32
+               })
+    end
+  end
 end

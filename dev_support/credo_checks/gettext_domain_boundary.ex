@@ -53,7 +53,8 @@ defmodule CredoChecks.GettextDomainBoundary do
     category: :design,
     param_defaults: [
       domains: ~w(
-        booking booking_manage booking_polls booking_voice embed errors common
+        booking booking_manage booking_polls booking_sessions booking_voice embed errors
+        common
         errors_input
         datetime booking_errors booking_payments
         emails emails_account emails_booking emails_booking_requests
@@ -66,7 +67,7 @@ defmodule CredoChecks.GettextDomainBoundary do
         dashboard_availability dashboard_calendar_settings dashboard_calendar
         dashboard_calendar_events dashboard_calendar_repeat dashboard_calendar_editing
         dashboard_calendar_booking dashboard_calendar_views dashboard_calendar_power
-        dashboard_calendar_recurrence dashboard_calendar_import
+        dashboard_calendar_recurrence dashboard_calendar_import dashboard_group_events
         dashboard_integrations
         dashboard_calendar_providers
         dashboard_automation dashboard_automation_chat dashboard_appearance

@@ -2,124 +2,73 @@ defmodule Mix.Tasks.SetVersionTest do
   use ExUnit.Case, async: true
 
   @moduletag :utils
+  @moduletag :tmp_dir
 
   alias Mix.Tasks.SetVersion
 
-  describe "build_cloudron_changelog/2" do
-    test "returns the raw commit section verbatim when no highlights are curated" do
-      raw = "* Some commit\n* Another commit"
+  @mix_exs """
+  defmodule Example.MixProject do
+    use Mix.Project
 
-      assert SetVersion.build_cloudron_changelog(raw, nil) == raw
+    def project do
+      [
+        app: :example,
+        version: "1.2.3",
+        elixir: "~> 1.20"
+      ]
+    end
+  end
+  """
+
+  describe "write_version/2" do
+    test "rewrites the project version", %{tmp_dir: dir} do
+      path = write_mix_exs(dir, @mix_exs)
+
+      assert SetVersion.write_version(path, "1.3.0") == :updated
+
+      assert File.read!(path) ==
+               String.replace(@mix_exs, ~s(version: "1.2.3"), ~s(version: "1.3.0"))
     end
 
-    test "uses curated summary and product highlights instead of the raw commit list" do
-      raw = "* Raw plumbing commit\n* More plumbing"
+    test "leaves the file alone when the version is already set", %{tmp_dir: dir} do
+      path = write_mix_exs(dir, @mix_exs)
 
-      curated = %{
-        summary: "A focused release.",
-        highlights: [{nil, "A curated headline"}, {nil, "Another headline"}]
-      }
-
-      assert SetVersion.build_cloudron_changelog(raw, curated) ==
-               "A focused release.\n* A curated headline\n* Another headline"
+      assert SetVersion.write_version(path, "1.2.3") == :unchanged
+      assert File.read!(path) == @mix_exs
     end
 
-    test "drops cloud-only highlights, since Cloudron is the Core product" do
-      raw = "* Raw commit"
+    test "rewrites only the first version line", %{tmp_dir: dir} do
+      contents = @mix_exs <> ~s(# pinned elsewhere: version: "0.1.0"\n)
+      path = write_mix_exs(dir, contents)
 
-      curated = %{
-        summary: "Mixed release.",
-        highlights: [{"cloud", "Cloud-only thing"}, {nil, "Self-hosted thing"}]
-      }
+      SetVersion.write_version(path, "2.0.0")
 
-      assert SetVersion.build_cloudron_changelog(raw, curated) ==
-               "Mixed release.\n* Self-hosted thing"
+      assert File.read!(path) =~ ~s(version: "2.0.0",)
+      assert File.read!(path) =~ ~s(# pinned elsewhere: version: "0.1.0")
     end
 
-    test "always prepends [BREAKING] lines parsed from the raw section" do
-      raw = "* [BREAKING] Removed an env var\n* Raw plumbing"
+    test "raises when the file has no version line", %{tmp_dir: dir} do
+      path = write_mix_exs(dir, "defmodule Example.MixProject do\nend\n")
 
-      curated = %{summary: nil, highlights: [{nil, "A headline"}]}
-
-      assert SetVersion.build_cloudron_changelog(raw, curated) ==
-               "* [BREAKING] Removed an env var\n* A headline"
-    end
-
-    test "omits the summary line when no summary is curated" do
-      raw = "* Raw commit"
-
-      curated = %{summary: nil, highlights: [{nil, "A headline"}]}
-
-      assert SetVersion.build_cloudron_changelog(raw, curated) == "* A headline"
-    end
-
-    test "falls back to the raw section when every highlight is cloud-only" do
-      raw = "* Raw commit"
-
-      curated = %{summary: "Cloud-only release.", highlights: [{"cloud", "Cloud thing"}]}
-
-      assert SetVersion.build_cloudron_changelog(raw, curated) == raw
-    end
-
-    test "uses the summary when a release has no Core commits to fall back to" do
-      curated = %{summary: "A maintenance release.", highlights: []}
-
-      assert SetVersion.build_cloudron_changelog("", curated) == "A maintenance release."
-      assert SetVersion.build_cloudron_changelog("\n\n", curated) == "A maintenance release."
-    end
-
-    test "uses the summary when a release has no Core commits but cloud-only highlights" do
-      curated = %{summary: "A cloud release.", highlights: [{"cloud", "Cloud thing"}]}
-
-      assert SetVersion.build_cloudron_changelog("", curated) == "A cloud release."
-    end
-
-    test "renders empty when a release has neither Core commits nor a summary" do
-      assert SetVersion.build_cloudron_changelog("", %{summary: nil, highlights: []}) == ""
+      assert_raise Mix.Error, ~r/No version: "X\.Y\.Z" line/, fn ->
+        SetVersion.write_version(path, "1.3.0")
+      end
     end
   end
 
-  describe "ensure_changelog_present/1" do
-    test "substitutes the fallback for a blank changelog" do
-      fallback = "Maintenance release with behind-the-scenes improvements."
-
-      assert SetVersion.ensure_changelog_present("") == fallback
-      assert SetVersion.ensure_changelog_present("\n\n") == fallback
-      assert SetVersion.ensure_changelog_present("   ") == fallback
+  describe "run/1" do
+    test "rejects a version that is not semver" do
+      assert_raise Mix.Error, ~r/Invalid version format/, fn -> SetVersion.run(["1.3"]) end
     end
 
-    test "passes a non-blank changelog through untouched" do
-      text = "A focused release.\n* A curated headline"
-
-      assert SetVersion.ensure_changelog_present(text) == text
+    test "requires exactly one argument" do
+      assert_raise Mix.Error, ~r/Usage: mix set_version VERSION/, fn -> SetVersion.run([]) end
     end
   end
 
-  describe "sort_versions/1" do
-    test "orders entries ascending by semver, not string order" do
-      versions = %{
-        "1.0.0" => %{"n" => 3},
-        "0.100.0" => %{"n" => 2},
-        "0.99.40" => %{"n" => 1}
-      }
-
-      assert %Jason.OrderedObject{
-               values: [
-                 {"0.99.40", %{"n" => 1}},
-                 {"0.100.0", %{"n" => 2}},
-                 {"1.0.0", %{"n" => 3}}
-               ]
-             } = SetVersion.sort_versions(versions)
-    end
-
-    test "round-trips through JSON preserving the ascending order" do
-      versions = %{"1.4.10" => %{}, "1.4.2" => %{}, "1.4.1" => %{}}
-
-      encoded = versions |> SetVersion.sort_versions() |> Jason.encode!()
-
-      assert %Jason.OrderedObject{
-               values: [{"1.4.1", _first}, {"1.4.2", _second}, {"1.4.10", _third}]
-             } = Jason.decode!(encoded, objects: :ordered_objects)
-    end
+  defp write_mix_exs(dir, contents) do
+    path = Path.join(dir, "mix.exs")
+    File.write!(path, contents)
+    path
   end
 end

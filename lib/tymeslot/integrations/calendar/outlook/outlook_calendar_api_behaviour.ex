@@ -11,6 +11,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
            | :not_found
            | :rate_limited
            | :network_error
+           # A 4xx the provider answered with a refusal of the request itself.
+           | :refused
+           | :malformed_response
+           | :timeout
            | :server_error
            | :authentication_error
            # A list read followed more next links than the page cap allows.

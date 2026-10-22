@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
   @moduledoc """
-  Guests in the side panel: Invite emails the new guest at once and saves
-  the list, removing asks first and emails the removed guest, a group
+  Guests in the side panel: Invite saves the list and emails the new guest
+  once the calendar accepts it, removing asks first and emails the removed
+  guest the same way, a group
   booking's seats lock both, and "Tell guests" sends one update for what
   changed since the panel opened.
   """
@@ -73,12 +74,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
            )
   end
 
-  test "Invite emails the new guest at once and saves the list", %{
+  test "Invite saves the list and emails the new guest once the calendar accepts it", %{
     lv: lv,
     integration: integration,
     review: review
   } do
     invite(lv, "  Grace@Example.com ")
+
+    payload = await_provider_update(lv)
+    assert emails(payload) == ["ada@example.com", "grace@example.com"]
 
     assert_enqueued(
       worker: EmailWorker,
@@ -89,8 +93,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       }
     )
 
-    payload = await_provider_update(lv)
-    assert emails(payload) == ["ada@example.com", "grace@example.com"]
     assert has_element?(lv, "#calendar-toast", "Invited grace@example.com.")
     refute has_element?(lv, "#calendar-undo")
     assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
@@ -144,6 +146,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
     lv |> element("#calendar-remove-guest-confirm") |> render_click()
 
+    payload = await_provider_update(lv)
+    assert emails(payload) == []
+
     assert_enqueued(
       worker: EmailWorker,
       args: %{
@@ -153,8 +158,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       }
     )
 
-    payload = await_provider_update(lv)
-    assert emails(payload) == []
     refute has_element?(lv, "#calendar-panel-guests li", "Ada Lovelace")
     assert has_element?(lv, "#calendar-toast", "Removed ada@example.com.")
   end

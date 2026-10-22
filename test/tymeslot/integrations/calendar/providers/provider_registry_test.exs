@@ -3,7 +3,27 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
+
+  # The debug provider's `new/1` answers `{:error, reason}` for a config
+  # without a `user_id`, as any provider may for a config it cannot use.
+  describe "create_client/3 when the provider's new/1 fails" do
+    test "returns the provider's error rather than wrapping it as the client" do
+      assert {:error, "user_id is required for debug calendar provider"} =
+               ProviderRegistry.create_client(:debug, %{}, skip_validation: true)
+    end
+
+    test "leaves the adapter with no client to build" do
+      assert {:error, "user_id is required for debug calendar provider"} =
+               ProviderAdapter.new_client(:debug, %{}, skip_validation: true)
+    end
+
+    test "still wraps a provider's {:ok, client}" do
+      assert {:ok, %{user_id: 7}} =
+               ProviderRegistry.create_client(:debug, %{user_id: 7}, skip_validation: true)
+    end
+  end
 
   describe "list_providers/0" do
     test "returns list of all registered providers" do

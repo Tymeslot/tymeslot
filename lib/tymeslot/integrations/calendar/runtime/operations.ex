@@ -36,12 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.Operations do
     EventOperations.delete_event(uid, context, opts)
   end
 
-  @doc """
-  Fetches one event straight from its calendar provider. See
-  `EventOperations.fetch_event/2`.
-  """
-  @spec fetch_event(map(), {integer(), integer()}) ::
-          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def fetch_event(event_ref, context) do
     EventOperations.fetch_event(event_ref, context)
   end

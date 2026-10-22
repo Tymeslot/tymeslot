@@ -157,7 +157,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 | Method | Guide | Notes |
 |---|---|---|
 | **Docker** | [README-Docker.md](README-Docker.md) | Single container, Postgres included — recommended |
-| **Cloudron** | [README-Cloudron.md](README-Cloudron.md) | One-click install, automatic updates |
+| **Cloudron** | [App Store](https://www.cloudron.io/store/tymeslot.html) · [README-Cloudron.md](README-Cloudron.md) | One-click install from the Cloudron App Store, automatic updates |
 | **Railway** | [Deploy →](https://railway.com/deploy/tymeslot) | One-click cloud, no server to manage |
 | **Managed Cloud** | [tymeslot.app](https://tymeslot.app) | Zero setup, free plan included |
 

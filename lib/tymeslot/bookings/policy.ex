@@ -37,7 +37,7 @@ defmodule Tymeslot.Bookings.Policy do
   layer renders a refusal (`TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`).
   """
   @type meeting_state ::
-          :cancelled | :completed | :expired | :awaiting_approval | :started | :past
+          :cancelled | :completed | :expired | :awaiting_approval | :started | :past | :planned
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
 
@@ -142,6 +142,9 @@ defmodule Tymeslot.Bookings.Policy do
   def can_request_reschedule?(%{status: "awaiting_approval"}) do
     {:error, {:not_reschedulable, :awaiting_approval}}
   end
+
+  # A fixed date moves from its meeting type, keeping everyone booked on it.
+  def can_request_reschedule?(%{planned: true}), do: {:error, {:not_reschedulable, :planned}}
 
   def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
 

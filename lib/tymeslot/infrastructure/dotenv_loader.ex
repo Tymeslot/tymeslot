@@ -15,9 +15,9 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
 
   ## The grammar
 
-  In both container images the same file is read twice: the entrypoint
-  (`start.sh` on Cloudron, `start-docker.sh` on Docker) applies it with
-  `scripts/dotenv-reader.sh` before the release boots, and this module
+  In the Docker image the same file is read twice: the entrypoint
+  (`start-docker.sh`) applies it with `scripts/dotenv-reader.sh` before the
+  release boots, and this module
   applies it again from `config/runtime.exs` (and in every eval session).
   A value the two read differently is a value an operator cannot reason
   about, so the parser below implements exactly the grammar that shell

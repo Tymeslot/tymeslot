@@ -33,7 +33,6 @@ doc/
 docs/
 *.md
 !README-Docker.md
-!README-Cloudron.md
 
 # Configuration files (use runtime config in production)
 config/dev.exs
@@ -42,9 +41,6 @@ config/test.exs
 # Environment and secrets
 .env
 .env.*
-# ...except the annotated template, which Dockerfile.cloudron ships so the
-# container can seed /app/data/.env on first boot.
-!.env.example
 env.sh
 cloudron_env_set
 cloudron_env_set.txt

@@ -98,15 +98,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   end
 
   defp parse_event_block(event_block, vtimezones) do
-    lines = LineFolder.unfold_lines(event_block)
+    {lines, subcomponents} = event_block |> LineFolder.unfold_lines() |> split_subcomponents()
 
     # Extract properties
     uid = extract_property(lines, "UID")
-    summary = extract_property(lines, "SUMMARY")
-    description = extract_property(lines, "DESCRIPTION")
-    location = extract_property(lines, "LOCATION")
-    organizer = extract_organizer(lines)
-    attendees = extract_attendees(lines)
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
     exdates = extract_exdates(lines, vtimezones)
@@ -124,13 +119,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       end
 
     if uid && start_time do
-      %{
+      lines
+      |> descriptive_properties()
+      |> Map.merge(%{
         uid: uid,
-        summary: summary,
-        description: description,
-        location: location,
-        organizer: organizer,
-        attendees: attendees,
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
         recurrence_id_range: extract_recurrence_id_range(lines),
@@ -158,22 +150,106 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         # which `start_time`/`end_time` above read as UTC. Kept so a caller that
         # knows whose wall clock it is can place it there.
         floating: floating?(dtstart),
-        transparency: normalize_transp(extract_property(lines, "TRANSP")),
-        status: extract_property(lines, "STATUS"),
-        class: extract_property(lines, "CLASS"),
-        colour:
-          extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
-      }
+        # The event's VALARMs, as written: each alarm's ACTION and TRIGGER,
+        # which the normaliser maps to the reminders it can represent.
+        valarm: extract_alarms(subcomponents)
+      })
     else
       Logger.debug("Skipping event with missing required fields",
         uid: uid,
-        summary: summary,
+        summary: extract_property(lines, "SUMMARY"),
         has_start: !is_nil(start_time)
       )
 
       nil
     end
   end
+
+  # What the event says about itself, beside its identity and timing.
+  defp descriptive_properties(lines) do
+    %{
+      summary: extract_property(lines, "SUMMARY"),
+      description: extract_property(lines, "DESCRIPTION"),
+      location: extract_property(lines, "LOCATION"),
+      organizer: extract_organizer(lines),
+      attendees: extract_attendees(lines),
+      transparency: normalize_transp(extract_property(lines, "TRANSP")),
+      status: extract_property(lines, "STATUS"),
+      class: extract_property(lines, "CLASS"),
+      colour:
+        extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
+    }
+  end
+
+  # A VEVENT's subcomponents (its VALARMs, and RFC 9073's PARTICIPANT or
+  # VLOCATION) reuse the event's property names: RFC 5545 §3.6.6 requires a
+  # DESCRIPTION on a DISPLAY alarm. They are lifted out by nesting depth
+  # before any property is matched, so that a property found in what remains
+  # is the event's own, whether it comes before or after the alarm.
+  defp split_subcomponents([event_begin | rest]),
+    do: split_subcomponents(rest, [event_begin], [])
+
+  defp split_subcomponents([], properties, components),
+    do: {Enum.reverse(properties), Enum.reverse(components)}
+
+  defp split_subcomponents([line | rest] = lines, properties, components) do
+    if component_boundary?(line, "BEGIN:") do
+      {component, remaining} = take_component(lines, 0, [])
+      split_subcomponents(remaining, properties, [component | components])
+    else
+      split_subcomponents(rest, [line | properties], components)
+    end
+  end
+
+  # Takes one component, nested ones included, up to its matching END. An
+  # unterminated component runs to the end of the event block.
+  defp take_component([], _depth, acc), do: {Enum.reverse(acc), []}
+
+  defp take_component([line | rest], depth, acc) do
+    depth =
+      cond do
+        component_boundary?(line, "BEGIN:") -> depth + 1
+        component_boundary?(line, "END:") -> depth - 1
+        true -> depth
+      end
+
+    if depth == 0,
+      do: {Enum.reverse([line | acc]), rest},
+      else: take_component(rest, depth, [line | acc])
+  end
+
+  defp component_boundary?(line, marker),
+    do: line |> String.upcase() |> String.starts_with?(marker)
+
+  defp extract_alarms(components) do
+    for [first | _rest] = lines <- components, String.upcase(first) == "BEGIN:VALARM" do
+      trigger = extract_datetime_property(lines, "TRIGGER")
+
+      %{
+        action: extract_property(lines, "ACTION"),
+        trigger: trigger && trigger.value,
+        trigger_related: trigger_param(lines, "RELATED", "START"),
+        trigger_value: trigger_param(lines, "VALUE", "DURATION")
+      }
+    end
+  end
+
+  # RFC 5545 §3.8.6.3: TRIGGER is relative to the start unless RELATED=END,
+  # and a duration unless VALUE=DATE-TIME.
+  defp trigger_param(lines, param, default) do
+    with line when is_binary(line) <- Enum.find(lines, &property_line?(&1, "TRIGGER")),
+         [params | _value] <- String.split(line, ":", parts: 2),
+         [_match, value] <- Regex.run(~r/;#{param}=([^;]+)/i, params) do
+      String.upcase(value)
+    else
+      _absent -> default
+    end
+  end
+
+  defp property_line?(line, property_name),
+    do:
+      String.starts_with?(line, property_name <> ":") or
+        String.starts_with?(line, property_name <> ";")
 
   defp dtstart_timezone(%{timezone: timezone}) when is_binary(timezone), do: timezone
   defp dtstart_timezone(_dtstart), do: nil
@@ -277,10 +353,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_property(lines, property_name) do
     line =
-      Enum.find(lines, fn line ->
-        String.starts_with?(line, property_name <> ":") or
-          String.starts_with?(line, property_name <> ";")
-      end)
+      Enum.find(lines, &property_line?(&1, property_name))
 
     case line do
       nil ->
@@ -296,10 +369,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_datetime_property(lines, property_name) do
     line =
-      Enum.find(lines, fn line ->
-        String.starts_with?(line, property_name <> ":") or
-          String.starts_with?(line, property_name <> ";")
-      end)
+      Enum.find(lines, &property_line?(&1, property_name))
 
     case line do
       nil ->
@@ -413,7 +483,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp calculate_end_time(%Date{} = start_time, nil), do: {Date.add(start_time, 1), false}
 
   defp calculate_end_time(%DateTime{} = start_time, duration_str) do
-    # Parse ISO 8601 duration (simplified - only handles basic cases)
     case Duration.parse(duration_str) do
       {:ok, seconds} -> {DateTime.add(start_time, seconds, :second), false}
       {:error, _reason} -> {DateTime.add(start_time, 3600, :second), true}
@@ -422,7 +491,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp calculate_end_time(%Date{} = start_time, duration_str) do
     # For all-day events with duration, we calculate the number of days.
-    # RFC 5545 durations like PT1H30M or P1D
     case Duration.parse(duration_str) do
       {:ok, seconds} ->
         # Convert seconds to days, rounding up to at least 1 day

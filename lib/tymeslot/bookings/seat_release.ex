@@ -1,6 +1,8 @@
 defmodule Tymeslot.Bookings.SeatRelease do
   @moduledoc """
-  Cancels a group meeting once its last seat has been released.
+  Cancels a group meeting once its last seat has been released, unless the
+  host planned it (`Tymeslot.Meetings.PlannedSessions`): a planned session
+  stays when it empties.
 
   Both ways of leaving a slot — `Tymeslot.Bookings.CancelSeat` and
   `Tymeslot.Bookings.RescheduleSeat` — end with the same question: was that
@@ -113,6 +115,12 @@ defmodule Tymeslot.Bookings.SeatRelease do
 
     cond do
       is_nil(locked) or locked.status == "cancelled" ->
+        {:ok, :seats_remain}
+
+      # A session the host planned exists because it was planned, not because
+      # somebody booked it, so it stays open when its last participant leaves
+      # (`Tymeslot.Meetings.PlannedSessions`).
+      locked.planned ->
         {:ok, :seats_remain}
 
       ParticipantQueries.count_live_for_meeting(meeting.id) > 0 ->

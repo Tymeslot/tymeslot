@@ -405,6 +405,11 @@ msgstr "skupinové rezervace nemohou vyžadovat platbu"
 msgid "You already have a meeting type with this name"
 msgstr "Typ schůzky s tímto názvem už máte"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "pevné termíny vyžadují skupinové rezervace"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -813,3 +818,8 @@ msgstr "Odpověď je příliš dlouhá"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Neznámý typ pole"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "před vypnutím pevných termínů zrušte naplánované termíny"

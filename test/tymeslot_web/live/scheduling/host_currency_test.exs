@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Live.Scheduling.HostCurrencyTest do
   import Mox
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
+  import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.TestMocks
 
@@ -34,9 +35,16 @@ defmodule TymeslotWeb.Live.Scheduling.HostCurrencyTest do
     :sys.get_state(view.pid).socket.assigns.host_currency
   end
 
+  # The paid type is offered, and so priced, only while the organiser can
+  # take payments (`Tymeslot.MeetingTypes.PaymentAccess`).
   test "is the organiser's pricing currency when they offer a paid type",
        %{conn: conn, user: user, profile: profile} do
-    insert(:connect_account, user: user, default_currency: "chf")
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+
+    insert(:connect_account, user: user, default_currency: "chf", charges_enabled: true)
 
     insert(:meeting_type,
       user: user,

@@ -5,7 +5,10 @@ defmodule Tymeslot.Meetings.SeatsTest do
 
   import Tymeslot.Factory
 
+  import Ecto.Query, only: [from: 2]
+
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.Seats
 
   describe "display/3" do
@@ -92,6 +95,43 @@ defmodule Tymeslot.Meetings.SeatsTest do
       insert(:participant, meeting: meeting)
 
       assert Seats.seats_left(meeting, 2) == 0
+    end
+  end
+
+  describe "counts_by_meeting/1 and seats_left_by_meeting/1" do
+    test "count each meeting as seats_taken/1 does, in one call" do
+      meeting = insert(:meeting)
+      empty = insert(:meeting)
+      with_guests = insert(:participant, meeting: meeting)
+      _second = insert(:participant, meeting: meeting)
+      insert(:participant, meeting: meeting, cancelled_at: DateTime.utc_now(:second))
+
+      for email <- ~w(one@example.com two@example.com) do
+        {:ok, _guest} =
+          GuestQueries.insert_guest(%{
+            meeting_id: meeting.id,
+            email: email,
+            participant_id: with_guests.id
+          })
+      end
+
+      # A declined guest gives their seat back.
+      Repo.update_all(from(g in GuestSchema, where: g.email == "two@example.com"),
+        set: [status: "declined"]
+      )
+
+      assert Seats.counts_by_meeting([meeting.id, empty.id]) == %{
+               meeting.id => %{participants: 2, seats_taken: 3},
+               empty.id => %{participants: 0, seats_taken: 0}
+             }
+
+      assert Seats.seats_taken(meeting.id) == 3
+
+      assert Seats.seats_left_by_meeting([%{meeting | capacity: 5}, %{empty | capacity: 4}]) ==
+               %{meeting.id => 2, empty.id => 4}
+
+      # Never negative, as seats_left/2.
+      assert Seats.seats_left_by_meeting([%{meeting | capacity: 2}]) == %{meeting.id => 0}
     end
   end
 

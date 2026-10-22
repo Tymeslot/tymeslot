@@ -81,6 +81,10 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
         Application.get_env(:tymeslot, :dashboard_action_components, %{})
       )
       |> assign(
+        :dashboard_notice_components,
+        Application.get_env(:tymeslot, :dashboard_notice_components, [])
+      )
+      |> assign(
         :dashboard_feature_gates,
         Application.get_env(:tymeslot, :dashboard_feature_gates, %{})
       )

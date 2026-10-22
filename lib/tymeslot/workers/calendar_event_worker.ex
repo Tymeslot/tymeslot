@@ -369,6 +369,14 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     {:discard, "Authentication failed"}
   end
 
+  # The provider understood the write and declined it (a 400, 409 or 422, see
+  # `ApiResponse`): the same request is declined on every attempt, so retrying
+  # only spends requests and delays the owner's email `CalendarEventSync` sends.
+  defp handle_error_result(:refused, job) do
+    Logger.error("Calendar refused the write, discarding job", action: job.args["action"])
+    {:discard, "Calendar refused the request"}
+  end
+
   defp handle_error_result(:not_found, job) do
     # Event doesn't exist, check if it's OK based on action
     action = job.args["action"]
@@ -464,6 +472,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     Logger.warning("Calendar service rate limited, snoozing", snooze_seconds: snooze_seconds)
     {:snooze, snooze_seconds}
   end
+
+  defp handle_error_result(error_type, job, _message), do: handle_error_result(error_type, job)
 
   # Helpers
   defp parse_retry_after(%Oban.Job{errors: errors}) do

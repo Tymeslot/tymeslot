@@ -11,10 +11,12 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
 
@@ -133,6 +135,64 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
                  "action" => "create",
                  "meeting_id" => meeting.id
                })
+    end
+
+    test "discards a refused create on its first attempt and tells the owner" do
+      meeting = insert(:meeting)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, :refused}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, :refused ->
+        :ok
+      end)
+
+      assert {:discard, "Calendar refused the request"} =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "create",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    # A read-only grant (Google's "insufficient authentication scopes") can
+    # never write the event: the owner is asked to reconnect, once.
+    test "flags the integration for reconnection when a write is unauthorised, emailing once" do
+      %{integration: integration, meeting: meeting, user: user} = setup_calendar_scenario()
+
+      second_meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          calendar_integration_id: integration.id,
+          calendar_path: "primary",
+          start_time: DateTime.add(meeting.start_time, 1, :day),
+          end_time: DateTime.add(meeting.end_time, 1, :day)
+        )
+
+      expect(Tymeslot.CalendarMock, :create_event, 2, fn _event_data, _ctx ->
+        {:error, :unauthorized}
+      end)
+
+      for %{id: meeting_id} <- [meeting, second_meeting] do
+        assert {:discard, "Authentication failed"} =
+                 perform_job(CalendarEventWorker, %{
+                   "action" => "create",
+                   "meeting_id" => meeting_id
+                 })
+      end
+
+      flagged = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert flagged.needs_reauth
+      assert flagged.sync_error =~ "does not allow Tymeslot to add bookings"
+
+      assert [_one] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{
+                   "action" => "send_integration_reauth_notification",
+                   "integration_id" => integration.id
+                 }
+               )
     end
 
     test "sends notification on final failure" do

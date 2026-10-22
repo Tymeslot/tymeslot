@@ -8,9 +8,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   `video_processing_status` is a column of its own, outside the spec and
   outside this changeset: the processing state of each uploaded video, keyed
   by its asset field (`%{"background_video_path" => "completed"}`), written in
-  place by `ThemeCustomizationQueries.update_video_processing_status/3`. The
-  table's older `video_processing` column is no longer read; a later release
-  drops it.
+  place by `ThemeCustomizationQueries.update_video_processing_status/3`.
   """
 
   use Ecto.Schema

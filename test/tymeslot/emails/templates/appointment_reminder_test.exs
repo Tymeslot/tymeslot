@@ -351,6 +351,39 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
         refute body =~ details.attendee_video_url
       end
     end
+
+    # As in the guest's invitation (`GuestSchema.inviter/1`).
+    test "names the booker for a guest brought on the booking page" do
+      details =
+        guest_details(%{
+          attendee_name: "Bella Booker",
+          organizer_name: "Olive Host",
+          guest_invited_by: :booker
+        })
+
+      email = AppointmentReminder.render(:guest, "greg@example.com", details)
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "meeting with Olive Host that Bella Booker invited you to is coming up."
+        assert body =~ "Only Bella Booker can move or cancel the meeting itself."
+      end
+    end
+
+    test "names the host for a guest the host added, and nobody else as able to move it" do
+      details =
+        guest_details(%{
+          attendee_name: "Bella Booker",
+          organizer_name: "Olive Host",
+          guest_invited_by: :organizer
+        })
+
+      email = AppointmentReminder.render(:guest, "greg@example.com", details)
+
+      assert email.html_body =~ "the meeting Olive Host invited you to is coming up."
+      assert email.text_body =~ "The meeting Olive Host invited you to is coming up."
+
+      for body <- [email.html_body, email.text_body], do: refute(body =~ "Bella Booker")
+    end
   end
 
   # The shared payload is built in the attendee's language; the organiser's
