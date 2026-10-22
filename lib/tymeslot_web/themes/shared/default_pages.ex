@@ -62,7 +62,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         meeting_uid: assigns[:meeting_uid],
         organizer_profile: assigns[:organizer_profile],
         participant: assigns[:participant],
-        link_request: assigns[:link_request]
+        link_request: assigns[:link_request],
+        invalid_link: assigns[:invalid_link] || false
       )
 
     ~H"""
