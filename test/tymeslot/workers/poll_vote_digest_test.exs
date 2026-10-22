@@ -52,6 +52,14 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
       assert_in_delta DateTime.diff(job.scheduled_at, DateTime.utc_now()), 15 * 60, 5
     end
 
+    test "a host whose account is about to be deleted is sent no update", ctx do
+      Repo.update!(Changeset.change(ctx.user, deletion_scheduled_at: DateTime.utc_now(:second)))
+      voter(ctx.poll, "Ada", DateTime.add(whole_second_now(), -600, :second))
+
+      assert {:discard, "host account pending deletion"} = perform_digest(ctx.poll)
+      refute_receive {:email, _any}, 200
+    end
+
     test "nothing is scheduled for a poll whose host did not ask for updates", ctx do
       poll = %{ctx.poll | notify_on_vote: false}
       ada = insert(:poll_participant, poll: poll)

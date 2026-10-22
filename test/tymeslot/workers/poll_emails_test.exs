@@ -327,6 +327,21 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       assert user.email in recipients(email)
     end
 
+    test "is not sent to a host whose account is about to be deleted" do
+      user = insert(:user, deletion_scheduled_at: DateTime.utc_now(:second))
+      _profile = insert(:profile, user: user)
+      poll = insert(:poll, status: :open, user: user)
+
+      assert {:discard, "host account pending deletion"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_host_nudge",
+                 "poll_id" => poll.id,
+                 "variant" => "all_voted"
+               })
+
+      refute_receive {:email, _any}, 200
+    end
+
     test "a rescued job does not nudge the host twice" do
       user = insert(:user)
       _profile = insert(:profile, user: user)

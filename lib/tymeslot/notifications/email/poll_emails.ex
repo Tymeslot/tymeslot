@@ -41,6 +41,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   @participant_gone "poll participant not found"
   # The host's account was deleted before the cancellation went out.
   @host_gone "poll host not found"
+  # The host's account is about to be deleted.
+  @host_leaving "host account pending deletion"
 
   # How long a vote is left to settle before an update to the host may report
   # it. A vote is stamped before its transaction commits, so an update that
@@ -68,6 +70,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
         @poll_closed,
         @participant_gone,
         @host_gone,
+        @host_leaving,
         @stale_deadline
       ]
 
@@ -183,18 +186,20 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     cutoff = host_update_cutoff(job_id, @nudge_cutoff)
 
     with_current_deadline(poll_id, args, "poll host nudge", fn poll ->
-      delivered =
-        DeliveryClaims.once(job_id, "host", fn ->
-          poll
-          |> PollHostNudge.render(variant_atom(variant), results_url())
-          |> Delivery.deliver()
-          |> delivery_outcome()
-        end)
+      with_host_staying(poll, "poll host nudge", fn ->
+        delivered =
+          DeliveryClaims.once(job_id, "host", fn ->
+            poll
+            |> PollHostNudge.render(variant_atom(variant), results_url())
+            |> Delivery.deliver()
+            |> delivery_outcome()
+          end)
 
-      # Once sent, the nudge counts as the host's update on the votes it
-      # carried: a pending update then has nothing new to tell. A nudge that
-      # failed told the host nothing, so nothing is marked and the job retries.
-      with :ok <- delivered, do: mark_host_updated(poll, cutoff)
+        # Once sent, the nudge counts as the host's update on the votes it
+        # carried: a pending update then has nothing new to tell. A nudge that
+        # failed told the host nothing, so nothing is marked and the job retries.
+        with :ok <- delivered, do: mark_host_updated(poll, cutoff)
+      end)
     end)
   end
 
@@ -214,7 +219,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     # Taken before the poll is read, so nothing the read missed is marked told.
     cutoff = host_update_cutoff(job_id, @digest_cutoff)
 
-    with_open_poll(poll_id, "poll vote digest", &send_vote_digest(&1, cutoff, job_id))
+    with_open_poll(poll_id, "poll vote digest", fn poll ->
+      with_host_staying(poll, "poll vote digest", fn -> send_vote_digest(poll, cutoff, job_id) end)
+    end)
   end
 
   defp send_vote_digest(%PollSchema{notify_on_vote: false}, _cutoff, _job_id), do: :ok
@@ -410,6 +417,22 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     )
 
     {:discard, @stale_deadline}
+  end
+
+  # A host whose account is about to be deleted is told nothing more about
+  # their polls (`Tymeslot.Auth.deletion_pending?/1`; the poll's user is
+  # preloaded, so this costs no query).
+  defp with_host_staying(poll, action, fun) do
+    if Auth.deletion_pending?(poll.user) do
+      Logger.info("Skipping poll email: host account pending deletion",
+        email_action: action,
+        poll_id: poll.id
+      )
+
+      {:discard, @host_leaving}
+    else
+      fun.()
+    end
   end
 
   # Fetches the poll with its host preloaded and runs `fun` only while the poll is
