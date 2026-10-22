@@ -7,11 +7,16 @@ defmodule Tymeslot.CalendarGrid.LayerPreferences do
   `bookable_meeting_type_id`). The layer shows one meeting type at a time:
   the one chosen, while it is still active and not archived, else the first
   such type in the organiser's own order. With none there is nothing to draw.
+
+  A fixed-date type (`Tymeslot.MeetingTypes.FixedDates`, a one-off event
+  among them) is never one of them: its planned sessions are joined, never
+  started, so it has no bookable times to draw.
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
 
   @typedoc """
   A meeting type the layer can show, as the rail lists it; `duration` is in
@@ -19,10 +24,14 @@ defmodule Tymeslot.CalendarGrid.LayerPreferences do
   """
   @type choice :: %{id: pos_integer(), name: String.t(), duration: pos_integer()}
 
-  @doc "The organiser's active, unarchived meeting types, in their own order."
+  @doc """
+  The organiser's active, unarchived meeting types without fixed dates, in
+  their own order.
+  """
   @spec meeting_types(pos_integer()) :: [choice()]
   def meeting_types(user_id) do
     for type <- MeetingTypes.get_bookable_meeting_types(user_id),
+        not FixedDates.enabled?(type),
         do: %{id: type.id, name: type.name, duration: type.duration_minutes}
   end
 
@@ -42,8 +51,7 @@ defmodule Tymeslot.CalendarGrid.LayerPreferences do
 
   @doc """
   Makes `id` (an integer or its decimal string) the meeting type the layer
-  shows. Only one of the organiser's own active, unarchived types can be
-  chosen; anything else, another organiser's type included, is
+  shows. Only one of `meeting_types/1` can be chosen; anything else, another organiser's type included, is
   `{:error, :not_found}`.
   """
   @spec choose_meeting_type(pos_integer(), term()) ::

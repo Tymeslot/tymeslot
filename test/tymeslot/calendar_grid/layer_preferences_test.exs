@@ -38,6 +38,51 @@ defmodule Tymeslot.CalendarGrid.LayerPreferencesTest do
     end
   end
 
+  # A fixed-date type's sessions are joined, never started: it has no
+  # bookable times, so the layer would open empty on it.
+  describe "fixed-date types" do
+    setup %{user: user} do
+      fixed =
+        insert(:meeting_type,
+          user: user,
+          name: "Workshop series",
+          sort_order: 0,
+          fixed_dates: true,
+          max_participants: 8
+        )
+
+      %{fixed: fixed}
+    end
+
+    test "are not offered, so the layer never falls back to one", %{
+      user: user,
+      intro: intro,
+      fixed: fixed
+    } do
+      choices = LayerPreferences.meeting_types(user.id)
+
+      refute Enum.any?(choices, &(&1.id == fixed.id))
+
+      assert LayerPreferences.meeting_type(%{bookable_meeting_type_id: nil}, choices).id ==
+               intro.id
+    end
+
+    test "a stored choice of one shows the first type instead", %{
+      user: user,
+      intro: intro,
+      fixed: fixed
+    } do
+      choices = LayerPreferences.meeting_types(user.id)
+
+      assert LayerPreferences.meeting_type(%{bookable_meeting_type_id: fixed.id}, choices).id ==
+               intro.id
+    end
+
+    test "cannot be chosen", %{user: user, fixed: fixed} do
+      assert LayerPreferences.choose_meeting_type(user.id, fixed.id) == {:error, :not_found}
+    end
+  end
+
   describe "meeting_type/2" do
     test "is the chosen type while it can be shown", %{user: user, workshop: workshop} do
       choices = LayerPreferences.meeting_types(user.id)
