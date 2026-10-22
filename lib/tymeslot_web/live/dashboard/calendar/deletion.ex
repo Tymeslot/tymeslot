@@ -14,10 +14,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   `pending_deletes` (see `PendingDeletes`) holds the deletes whose events
   stay hidden until they have run, across a reload, a remount and a week
-  change. A surface that loads while one is waiting takes it up again and
-  offers Undo for the newest (`resume/1`). Each delete's outcome arrives from
-  its job (`settled/3`), which turns the delete's Undo into a marker that
-  Ctrl Z answers with "too late" (`too_late/2`).
+  change. A surface that loads while one is waiting takes it up again
+  (`resume/1`), and once its hook names the browser tab it runs in, offers
+  Undo for the newest that tab scheduled (`adopt_tab/2`), so a reload keeps
+  the deleting tab's Undo and another tab never gets it. Each delete's
+  outcome arrives from its job (`settled/3`), which turns the delete's Undo
+  into a marker that Ctrl Z answers with "too late" (`too_late/2`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -38,6 +40,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   @type socket :: Phoenix.LiveView.Socket.t()
+
+  # A tab id is a UUID; anything longer is not one of ours.
+  @max_tab_id_bytes 64
 
   @doc "A delete asked for from the preview or the Delete key."
   @spec request(socket(), String.t()) :: socket()
@@ -204,20 +209,37 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   @doc """
   Takes up the deletes that are waiting when the surface loads: each stays
-  hidden (see `PendingDeletes`), and the newest one still inside its undo
-  window gets its Undo toast back.
+  hidden (see `PendingDeletes`). Undo comes back later, in `adopt_tab/2`.
   """
   @spec resume(socket()) :: socket()
   def resume(socket) do
-    jobs = Changes.pending_deletes(socket.assigns.current_user.id)
-    pending = PendingDeletes.from_jobs(jobs)
-    socket = assign(socket, :pending_deletes, Map.merge(pending, socket.assigns.pending_deletes))
+    pending =
+      socket.assigns.current_user.id |> Changes.pending_deletes() |> PendingDeletes.from_jobs()
 
-    case PendingDeletes.latest_undoable(pending, open_jobs(jobs)) do
+    assign(socket, :pending_deletes, Map.merge(pending, socket.assigns.pending_deletes))
+  end
+
+  @doc """
+  The hook names the browser tab it runs in (an id it keeps in
+  `sessionStorage`, so a reload keeps it). The first time this surface
+  hears it, the newest delete that tab scheduled still inside its undo
+  window gets its Undo toast back. Deletes made here from now on carry the
+  id. A tab whose browser keeps no storage sends none, and is offered no
+  Undo after a reload.
+  """
+  @spec adopt_tab(socket(), term()) :: socket()
+  def adopt_tab(%{assigns: %{tab_id: nil}} = socket, tab)
+      when is_binary(tab) and byte_size(tab) in 1..@max_tab_id_bytes do
+    socket = assign(socket, :tab_id, tab)
+    jobs = socket.assigns.current_user.id |> Changes.pending_deletes() |> open_jobs()
+
+    case PendingDeletes.latest_undoable(socket.assigns.pending_deletes, jobs, tab) do
       {token, %{title: title}} -> offer_undo(socket, token, title)
       nil -> socket
     end
   end
+
+  def adopt_tab(socket, _tab), do: socket
 
   # Jobs whose undo window has not closed yet.
   defp open_jobs(jobs) do
@@ -327,7 +349,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   defp delete_with_undo(socket, event, scope) do
     title = EventPayload.title(event)
 
-    case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, []) do
+    opts = [tab: socket.assigns.tab_id]
+
+    case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
       {:ok, token} ->
         socket
         |> hide(token, event, scope, false)

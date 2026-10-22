@@ -433,9 +433,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # The reply carries the bookable layer as last pushed (nil until the first
   # load answers), so a hook mounted after that push still draws it. The
   # hook says whether it is on a phone first, so the reply's view is the one
-  # that width shows (see `Viewport`).
+  # that width shows (see `Viewport`), and names its browser tab, which may
+  # take back an Undo (`Deletion.adopt_tab/2`).
   def handle_event("calendar:ready", params, socket) do
-    socket = Viewport.report(socket, params["phone"], false)
+    socket =
+      socket
+      |> Viewport.report(params["phone"], false)
+      |> Deletion.adopt_tab(params["tab"])
 
     {:reply,
      Map.put(SurfaceData.payload(socket.assigns, true), :bookable, socket.assigns.bookable),

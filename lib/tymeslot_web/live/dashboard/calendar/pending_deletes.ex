@@ -53,12 +53,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
   def foreign(address, scope),
     do: address |> Occurrence.cached_row() |> entry(scope, true) |> Map.put(:origin, :elsewhere)
 
-  @doc "The undoable entry whose delete was scheduled last, with its token."
-  @spec latest_undoable(t(), [map()]) :: {pos_integer(), map()} | nil
-  def latest_undoable(pending, jobs) do
+  @doc """
+  The undoable entry whose delete the browser tab `tab` scheduled last, with
+  its token. None without a tab (`nil`), so a job stored without one is
+  never offered.
+  """
+  @spec latest_undoable(t(), [map()], String.t() | nil) :: {pos_integer(), map()} | nil
+  def latest_undoable(_pending, _jobs, nil), do: nil
+
+  def latest_undoable(pending, jobs, tab) do
     latest =
       jobs
-      |> Enum.filter(&(&1.undoable? and Map.has_key?(pending, &1.token)))
+      |> Enum.filter(&(&1.undoable? and &1.tab == tab and Map.has_key?(pending, &1.token)))
       |> Enum.max_by(& &1.token, fn -> nil end)
 
     if latest, do: {latest.token, Map.fetch!(pending, latest.token)}

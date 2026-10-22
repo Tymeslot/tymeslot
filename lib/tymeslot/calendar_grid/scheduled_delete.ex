@@ -73,8 +73,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
 
   @doc """
   Schedules the delete of `event` in `scope` for `user_id`. Options:
-  `delay` (seconds, default `undo_delay/0`) and `notify_attendees`
-  (default `false`).
+  `delay` (seconds, default `undo_delay/0`), `notify_attendees`
+  (default `false`) and `tab` (the browser tab that asked, kept with the
+  job so only that tab offers Undo again after a reload; see `pending/1`).
   """
   @spec schedule(pos_integer(), map(), EventDeletion.scope(), keyword()) ::
           {:ok, token()} | {:error, term()}
@@ -88,7 +89,8 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
         user_id: user_id,
         scope: scope,
         notify_attendees: Keyword.get(opts, :notify_attendees, false),
-        undoable: delay > 0
+        undoable: delay > 0,
+        tab: Keyword.get(opts, :tab)
       })
 
     case args |> CalendarEventDeleteWorker.new(schedule_in: delay) |> Oban.insert() do
@@ -129,7 +131,8 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   The user's deletes that are still waiting, running or retrying, for a
   surface to hide their events and offer Undo again after a reload. Each entry
   carries the `token` Undo takes, the address the delete was scheduled with,
-  its `scope` and when it is due. `undoable?` is false for a delete that was
+  its `scope`, when it is due and the `tab` that scheduled it (`nil` when
+  none was named, as for a job stored before tabs were). `undoable?` is false for a delete that was
   confirmed (it tells someone, so it was scheduled with no undo window) and
   while a job is running or retrying. A silent delete a rate limit snoozed
   is back in `scheduled` and still undoable, which is harmless: nothing has
@@ -146,6 +149,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
         token: id,
         scope: scope(args),
         scheduled_at: scheduled_at,
+        tab: Map.get(args, "tab"),
         undoable?: Map.get(args, "undoable") != false and state in ["scheduled", "available"]
       })
     end)

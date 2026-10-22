@@ -76,7 +76,7 @@ afterEach(() => {
 test("asks for data on mount and draws nothing until it arrives", () => {
   const { el, hook } = mountHook();
   const [target, name, params] = hook.pushEventTo.mock.calls[0];
-  expect([target, name, params]).toEqual([el, "calendar:ready", { phone: false }]);
+  expect([target, name, params]).toEqual([el, "calendar:ready", { phone: false, tab: expect.any(String) }]);
   expect(el.querySelector(".cal-ev")).toBeNull();
 });
 
@@ -402,6 +402,8 @@ test("reconnecting asks the server for the data again", () => {
   hook.reconnected();
   expect(hook.pushEventTo.mock.calls).toHaveLength(2);
   expect(hook.pushEventTo.mock.calls[1][1]).toBe("calendar:ready");
+  // The new server process hears the same tab again.
+  expect(hook.pushEventTo.mock.calls[1][2].tab).toBe(hook.pushEventTo.mock.calls[0][2].tab);
 });
 
 test("a navigation to the days already shown holds nothing pending, so Back is still followed", () => {

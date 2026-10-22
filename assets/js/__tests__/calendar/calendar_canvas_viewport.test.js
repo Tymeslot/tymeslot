@@ -17,14 +17,14 @@ const columns = (el) => [...el.querySelectorAll(".cal-col")].map((column) => col
 test("the first request tells the server a phone is asking", () => {
   mockViewport(true);
   const { readyParams } = mountHook();
-  expect(readyParams).toEqual({ phone: true });
+  expect(readyParams.phone).toBe(true);
 });
 
 test("a wide screen, or a browser without matchMedia, asks as wide", () => {
   mockViewport(false);
-  expect(mountHook().readyParams).toEqual({ phone: false });
+  expect(mountHook().readyParams.phone).toBe(false);
   unmountAll();
-  expect(mountHook().readyParams).toEqual({ phone: false });
+  expect(mountHook().readyParams.phone).toBe(false);
 });
 
 test("crossing the boundary is reported once it settles", () => {

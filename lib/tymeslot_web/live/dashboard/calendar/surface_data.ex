@@ -77,6 +77,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       event_writes: WriteQueue.new(),
       writes_adopted_after: nil,
       undo: UndoStack.new(),
+      tab_id: nil,
       undoing: %{},
       toast: nil,
       series_prompt: nil,

@@ -220,8 +220,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
     assert render(lv) =~ "Failed to delete event"
   end
 
-  defp ready_ids(lv) do
-    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+  # The hook's first request, naming the browser tab it runs in (`nil` for
+  # a browser that keeps no sessionStorage).
+  defp ready_ids(lv, tab \\ nil) do
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{"tab" => tab})
     assert_reply(lv, %{events: events})
     Enum.map(events, & &1.id)
   end
@@ -242,13 +244,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
   end
 
   describe "a scheduled delete survives the surface that scheduled it" do
-    test "a remounted surface keeps the event hidden and Undo still cancels it", context do
+    test "a reload of the tab that deleted keeps the event hidden and Undo still cancels it",
+         context do
       {lv, _dentist, id} = dentist(context)
+      ready_ids(lv, "tab-a")
       canvas(lv, "calendar:delete", %{"id" => id})
+      assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"tab" => "tab-a"})
 
       {:ok, again, _html} = live(context.conn, ~p"/dashboard/calendar")
+      refute has_element?(again, "#calendar-undo")
 
-      refute id in ready_ids(again)
+      refute id in ready_ids(again, "tab-a")
       assert has_element?(again, "#calendar-toast", "Deleted “Dentist”")
 
       again |> element("#calendar-undo") |> render_click()
@@ -258,8 +264,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
       refute_enqueued(worker: CalendarEventDeleteWorker)
     end
 
+    test "a reload of another tab keeps the event hidden but offers no Undo", context do
+      {lv, _dentist, id} = dentist(context)
+      ready_ids(lv, "tab-a")
+      canvas(lv, "calendar:delete", %{"id" => id})
+
+      {:ok, tab_b, _html} = live(context.conn, ~p"/dashboard/calendar")
+
+      refute id in ready_ids(tab_b, "tab-b")
+      refute has_element?(tab_b, "#calendar-undo")
+      refute has_element?(tab_b, "#calendar-toast", "Deleted “Dentist”")
+
+      canvas(tab_b, "calendar:undo", %{})
+      assert has_element?(tab_b, "#calendar-toast", "Nothing to undo.")
+      assert_enqueued(worker: CalendarEventDeleteWorker)
+    end
+
+    # A browser that keeps no sessionStorage names no tab, and a job stored
+    # before tabs were carries none: neither is offered back to anyone.
+    test "a delete from a tab with no id is offered Undo nowhere after a reload", context do
+      {lv, _dentist, id} = dentist(context)
+      ready_ids(lv)
+      canvas(lv, "calendar:delete", %{"id" => id})
+      assert_enqueued(worker: CalendarEventDeleteWorker, args: %{"tab" => nil})
+
+      {:ok, again, _html} = live(context.conn, ~p"/dashboard/calendar")
+      refute id in ready_ids(again)
+      refute has_element?(again, "#calendar-undo")
+
+      {:ok, named, _html} = live(context.conn, ~p"/dashboard/calendar")
+      refute id in ready_ids(named, "tab-a")
+      refute has_element?(named, "#calendar-undo")
+    end
+
     test "a delete that has already started stays hidden but offers no Undo", context do
       {lv, _dentist, id} = dentist(context)
+      ready_ids(lv, "tab-a")
       canvas(lv, "calendar:delete", %{"id" => id})
 
       [job] = all_enqueued(worker: CalendarEventDeleteWorker)
@@ -270,7 +310,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
 
       {:ok, again, _html} = live(context.conn, ~p"/dashboard/calendar")
 
-      refute id in ready_ids(again)
+      refute id in ready_ids(again, "tab-a")
       refute has_element?(again, "#calendar-undo")
     end
 
@@ -338,11 +378,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
   describe "another tab of the same organiser" do
     test "undo in one tab brings the event back in the other", context do
       {tab_a, _dentist, id} = dentist(context)
+      ready_ids(tab_a, "tab-a")
       canvas(tab_a, "calendar:delete", %{"id" => id})
 
       {:ok, tab_b, _html} = live(context.conn, ~p"/dashboard/calendar")
-      refute id in ready_ids(tab_b)
-      assert has_element?(tab_b, "#calendar-undo")
+      refute id in ready_ids(tab_b, "tab-b")
+      refute has_element?(tab_b, "#calendar-undo")
 
       tab_a |> element("#calendar-undo") |> render_click()
       settled(tab_b)
@@ -376,10 +417,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
       assert has_element?(tab_b, "#calendar-toast", "Nothing to undo.")
     end
 
+    # Tab B is a reload of tab A, so it offers the Undo; tab A undoes first.
     test "an Undo for a delete the other tab already undid says nothing is wrong", context do
       {tab_a, _dentist, id} = dentist(context)
+      ready_ids(tab_a, "tab-a")
       canvas(tab_a, "calendar:delete", %{"id" => id})
       {:ok, tab_b, _html} = live(context.conn, ~p"/dashboard/calendar")
+      ready_ids(tab_b, "tab-a")
       [job] = all_enqueued(worker: CalendarEventDeleteWorker)
 
       # Cancelled behind tab B's back: no announcement reached it.
@@ -418,6 +462,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
         )
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      ready_ids(lv, "tab-a")
       canvas(lv, "calendar:delete", %{"id" => "event-#{call.id}"})
       lv |> element("#calendar-delete-notify") |> render_click()
 
@@ -429,7 +474,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteTest do
 
       {:ok, again, _html} = live(conn, ~p"/dashboard/calendar")
 
-      refute "event-#{call.id}" in ready_ids(again)
+      refute "event-#{call.id}" in ready_ids(again, "tab-a")
       refute has_element?(again, "#calendar-undo")
     end
 

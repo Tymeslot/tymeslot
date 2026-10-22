@@ -67,6 +67,7 @@ import { ViewportMixin } from "./calendar_canvas/viewport.js";
 import { ViewsMixin } from "./calendar_canvas/views.js";
 import { ZoomMixin } from "./calendar_canvas/zoom.js";
 import { placePopover } from "../calendar/popover.js";
+import { tabId } from "../calendar/tab_id.js";
 import { HOUR_HEIGHT, MINUTES_PER_DAY, NIGHT_END, dayNumber, isTimeGrid, isoFromDay, makeScale, parseWall, periodDays, shiftPeriod } from "../calendar/time.js";
 
 const TICK_MS = 60_000;
@@ -130,6 +131,7 @@ export const CalendarCanvas = {
     this.graceTimer = null;
     this.lastWidth = null;
     this.measureWidth = this.measureWidth || canvasMeasure();
+    this.tabId = tabId();
 
     this.mountList();
     this.listeners = [
@@ -205,8 +207,12 @@ export const CalendarCanvas = {
     for (const [name, listener] of this.listeners) this.el.removeEventListener(name, listener);
   },
 
+  // The tab id goes with every ready, since a reconnect is a new server
+  // process that has to hear it again (it may take back an Undo).
   requestData() {
-    this.pushEventTo(this.el, "calendar:ready", { phone: this.phone }, (reply) => this.receive(reply));
+    this.pushEventTo(this.el, "calendar:ready", { phone: this.phone, tab: this.tabId }, (reply) =>
+      this.receive(reply),
+    );
   },
 
   // The cache always takes the payload, but the grid only follows its period
