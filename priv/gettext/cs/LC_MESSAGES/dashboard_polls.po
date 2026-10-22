@@ -760,55 +760,55 @@ msgstr "Nejprve si v profilu nastavte uživatelské jméno: odkazy v e-mailech s
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closed"
-msgstr ""
+msgstr "Hlasování ukončeno"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closed %{deadline}"
-msgstr ""
+msgstr "Hlasování skončilo: %{deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{deadline}"
-msgstr ""
+msgstr "Hlasování končí: %{deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Confirm a time, or move the deadline in Edit poll to let people keep voting."
-msgstr ""
+msgstr "Hlasování skončilo. Potvrďte termín, nebo posuňte uzávěrku v Upravit anketu, aby mohli lidé hlasovat dál."
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm this time?"
-msgstr ""
+msgstr "Potvrdit tento termín?"
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Everyone on the poll will be emailed the meeting."
-msgstr ""
+msgstr "Všichni z ankety dostanou schůzku e-mailem."
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Not yet"
-msgstr ""
+msgstr "Zatím ne"
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be confirmed for %{time} (%{timezone}) and voting will close."
-msgstr ""
+msgstr "Událost „%{title}“ bude potvrzena na %{time} (%{timezone}) a hlasování skončí."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} guest has already voted. Their responses stay visible to you here, but no time will be confirmed."
 msgid_plural "%{count} guests have already voted. Their responses stay visible to you here, but no time will be confirmed."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} host už hlasoval. Jeho odpovědi tu zůstávají vidět, ale žádný termín se nepotvrdí."
+msgstr[1] "%{count} hosté už hlasovali. Jejich odpovědi tu zůstávají vidět, ale žádný termín se nepotvrdí."
+msgstr[2] "%{count} hostů už hlasovalo. Jejich odpovědi tu zůstávají vidět, ale žádný termín se nepotvrdí."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Removed %{name} from the poll."
-msgstr ""
+msgstr "%{name} byl(a) z ankety odebrán(a)."
 
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format

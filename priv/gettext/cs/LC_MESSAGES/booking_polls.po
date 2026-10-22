@@ -219,9 +219,9 @@ msgstr "Na tuto adresu v poslední době odešlo příliš mnoho e-mailů. Zkust
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only, and voting has closed."
-msgstr ""
+msgstr "Tato anketa je jen pro pozvané a hlasování je ukončeno."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
-msgstr ""
+msgstr "Tento osobní odkaz k hlasování není platný nebo už nefunguje."

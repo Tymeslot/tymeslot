@@ -748,54 +748,54 @@ msgstr "Defina primeiro um nome de usuário no seu perfil: os links dos e-mails 
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closed"
-msgstr ""
+msgstr "Votação encerrada"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closed %{deadline}"
-msgstr ""
+msgstr "Votação encerrada em %{deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{deadline}"
-msgstr ""
+msgstr "A votação termina em %{deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Confirm a time, or move the deadline in Edit poll to let people keep voting."
-msgstr ""
+msgstr "A votação foi encerrada. Confirme um horário ou adie o prazo em Editar enquete para que as pessoas possam continuar votando."
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm this time?"
-msgstr ""
+msgstr "Confirmar este horário?"
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Everyone on the poll will be emailed the meeting."
-msgstr ""
+msgstr "Todos da enquete receberão a reunião por e-mail."
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Not yet"
-msgstr ""
+msgstr "Ainda não"
 
 #: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be confirmed for %{time} (%{timezone}) and voting will close."
-msgstr ""
+msgstr "“%{title}” será confirmado para %{time} (%{timezone}) e a votação será encerrada."
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} guest has already voted. Their responses stay visible to you here, but no time will be confirmed."
 msgid_plural "%{count} guests have already voted. Their responses stay visible to you here, but no time will be confirmed."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} convidado já votou. As respostas continuam visíveis para você aqui, mas nenhum horário será confirmado."
+msgstr[1] "%{count} convidados já votaram. As respostas continuam visíveis para você aqui, mas nenhum horário será confirmado."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Removed %{name} from the poll."
-msgstr ""
+msgstr "%{name} foi removido(a) da enquete."
 
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format

@@ -219,9 +219,9 @@ msgstr "На цю адресу нещодавно надіслано забаг�
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only, and voting has closed."
-msgstr ""
+msgstr "Це опитування лише за запрошенням, і голосування завершено."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
-msgstr ""
+msgstr "Це особисте посилання для голосування недійсне або більше не працює."

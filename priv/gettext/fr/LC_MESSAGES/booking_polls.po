@@ -219,9 +219,9 @@ msgstr "Trop d'e-mails ont été envoyés récemment à cette adresse. Veuillez 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only, and voting has closed."
-msgstr ""
+msgstr "Ce sondage est réservé aux personnes invitées, et le vote est clos."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
-msgstr ""
+msgstr "Ce lien de vote personnel n'est pas valide ou ne fonctionne plus."
