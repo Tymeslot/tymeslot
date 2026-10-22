@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
               name="poll[timezone]"
               label={dgettext("dashboard_polls", "Timezone")}
               value={@timezone}
-              options={Timezones.all_options()}
+              options={timezone_options(@timezone)}
               errors={error_list(@errors, :timezone)}
             />
 
@@ -328,15 +328,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_slot", %{"key" => key}, socket) do
-    key = String.to_integer(key)
-    slots = Enum.reject(socket.assigns.slots, &(&1.key == key))
+    case Integer.parse(key) do
+      {key, ""} ->
+        slots = Enum.reject(socket.assigns.slots, &(&1.key == key))
 
-    {:noreply,
-     assign(socket,
-       slots: slots,
-       time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
-       errors: Map.delete(socket.assigns.errors, :slots)
-     )}
+        {:noreply,
+         assign(socket,
+           slots: slots,
+           time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
+           errors: Map.delete(socket.assigns.errors, :slots)
+         )}
+
+      _forged ->
+        {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -445,10 +450,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp build_slots(values, timezone) do
     values
-    |> Enum.sort_by(fn {key, _value} -> String.to_integer(key) end)
+    |> Enum.sort_by(fn {key, _value} -> slot_order(key) end)
     |> Enum.map(fn {_key, value} -> LocalTime.to_utc(value, timezone) end)
     |> Enum.reject(&is_nil/1)
     |> Enum.map(fn start_time -> %{start_time: start_time} end)
+  end
+
+  # Rows are keyed by the counter the form issued; a forged key sorts last.
+  defp slot_order(key) do
+    case Integer.parse(key) do
+      {order, ""} -> order
+      _forged -> :infinity
+    end
   end
 
   # --- Meeting-type / duration resolution ---
@@ -550,6 +563,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     do: timezone
 
   defp host_timezone(_profile), do: Profiles.get_default_timezone()
+
+  # The picker lists the zones the app offers; a host whose profile holds
+  # another valid zone (`America/Detroit`, `Etc/UTC`) would otherwise see the
+  # first option selected and create the poll in the wrong zone.
+  defp timezone_options(selected) do
+    options = Timezones.all_options()
+
+    if Enum.any?(options, fn {_label, id} -> id == selected end) or not Timezones.valid?(selected),
+      do: options,
+      else: [{selected, selected} | options]
+  end
 
   defp error_list(errors, field) do
     case Map.get(errors, field) do

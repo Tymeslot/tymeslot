@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.Polls.RemoveParticipantModal do
   Confirmation modal for taking someone off an open poll with their
   responses (`Polls.remove_participant/3`).
 
-  Stateless function component rendered by `PollEditor`, which holds the
+  Stateless function component rendered by `PollParticipantList`, which holds the
   participant being removed (or nil) and handles
   `close_remove_participant_modal` and `remove_participant`. The person is
   not told and their responses cannot be brought back, so the removal is

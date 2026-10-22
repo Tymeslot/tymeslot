@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     PollsComponent
   }
 
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   @reminder_events PollReminders.events()
@@ -159,13 +160,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
             )}
           </p>
           <div :for={time <- @new_times} class="flex items-center gap-2">
-            <input
-              type="datetime-local"
-              name={"poll[new_times][#{time.key}]"}
-              value={time.value}
-              class="input py-1.5 px-3 text-token-sm"
-              aria-label={dgettext("dashboard_polls", "New time")}
-            />
+            <div class="flex-1">
+              <.input
+                type="datetime-local"
+                name={"poll[new_times][#{time.key}]"}
+                value={time.value}
+                aria-label={dgettext("dashboard_polls", "New time")}
+              />
+            </div>
             <.icon_button
               icon="hero-x-mark"
               label={dgettext("dashboard_polls", "Remove time")}
@@ -244,7 +246,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
     {:noreply,
      socket
-     |> count_pending_requests(access)
+     |> count_pending_requests(access, socket.assigns.access)
      |> assign(
        title: Map.get(params, "title", socket.assigns.title),
        description: Map.get(params, "description", socket.assigns.description),
@@ -267,10 +269,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   def handle_event("remove_time", %{"key" => key}, socket) do
-    key = String.to_integer(key)
+    case Integer.parse(key) do
+      {key, ""} ->
+        {:noreply,
+         assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
 
-    {:noreply,
-     assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
+      _forged ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("save", %{"poll" => params}, %{assigns: %{invited?: false}} = socket),
@@ -383,9 +389,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   defp valid_access(_value, previous), do: previous
 
   # Requests can arrive while the editor is open and nothing broadcasts them,
-  # so the count the warning shows is read when the host edits while the choice
-  # is invited people only, not carried over from when the panel loaded.
-  defp count_pending_requests(socket, "invited") do
+  # so the count the warning shows is read when the host switches to invited
+  # people only, not carried over from when the panel loaded.
+  defp count_pending_requests(socket, "invited", previous) when previous != "invited" do
     case socket.assigns.poll do
       %{invite_only: false} = poll ->
         assign(socket, :unconfirmed_count, Polls.count_unconfirmed(poll))
@@ -395,7 +401,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     end
   end
 
-  defp count_pending_requests(socket, _access), do: socket
+  defp count_pending_requests(socket, _access, _previous), do: socket
 
   # Warns before the switch that withdraws the requests waiting on the poll.
   defp withdraw_hint(%{invite_only: false}, "invited", count) when count > 0 do
@@ -430,7 +436,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     do: %{new_times: [dgettext("dashboard_polls", "Times must be in the future")]}
 
   defp errors_for(%Changeset{data: %PollSchema{}} = changeset) do
-    errors = changeset_errors(changeset)
+    errors = FormErrors.to_map(changeset)
 
     if Map.has_key?(errors, :deadline_at),
       do:
@@ -447,14 +453,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
   defp errors_for(_reason),
     do: %{base: [dgettext("dashboard_polls", "Couldn't save this poll. Please try again.")]}
-
-  defp changeset_errors(changeset) do
-    Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _whole, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), "") |> to_string()
-      end)
-    end)
-  end
 
   defp error_list(errors, field), do: Map.get(errors, field, [])
 end

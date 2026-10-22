@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
@@ -192,7 +193,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("select_poll", %{"id" => id}, socket) do
-    {:noreply, socket |> resubscribe(id) |> open_results(id)}
+    case UUID.cast(id) do
+      {:ok, id} -> {:noreply, socket |> resubscribe(id) |> open_results(id)}
+      :error -> {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
