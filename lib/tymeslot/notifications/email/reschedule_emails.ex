@@ -114,7 +114,10 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   # participants' copies, and a retry writes only to whoever was missed.
   defp send_reschedule_emails(meeting, args, job_id) do
     original = Map.get(args, "original")
-    content = meeting |> content(original) |> put_moved_by(args["moved_by"])
+    # The same payload for any view of the meeting: a guest with a language
+    # and timezone of their own is told in those.
+    build = &(&1 |> content(original) |> put_moved_by(args["moved_by"]))
+    content = build.(meeting)
     service = Config.email_service_module()
 
     participants =
@@ -126,7 +129,12 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
         fn -> attendee_copy(meeting, service, content) end
       )
 
-    guests = notify_guests(meeting, content, original, &DeliveryClaims.once(job_id, &1, &2))
+    once = &DeliveryClaims.once(job_id, &1, &2)
+
+    guests =
+      if original,
+        do: GuestNotifications.notify_rescheduled(meeting, content, build, once),
+        else: GuestNotifications.notify_reapproved(meeting, content, build, once)
 
     # Every copy was attempted; a failure that a retry can fix outweighs a
     # rejected address, so a suppressed attendee never stops a guest's retry.
@@ -148,12 +156,6 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
       do: {:ok, :skipped},
       else: service.send_reschedule_email_to_attendee(content.attendee_email, content)
   end
-
-  defp notify_guests(meeting, content, nil, once),
-    do: GuestNotifications.notify_reapproved(meeting, content, once)
-
-  defp notify_guests(meeting, content, _original, once),
-    do: GuestNotifications.notify_rescheduled(meeting, content, once)
 
   defp content(meeting, nil), do: AppointmentBuilder.for_reapproval(meeting)
 

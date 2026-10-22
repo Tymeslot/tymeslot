@@ -175,10 +175,19 @@ defmodule Tymeslot.Polls.Confirm do
   end
 
   # Every invitee, the primary included: they are a guest like the rest, under the
-  # name they gave, so their emails and the host's name them.
-  defp guests(participants) do
+  # name they gave, so their emails and the host's name them. Each keeps their
+  # own language and timezone (the poll's where they gave none, as for the
+  # primary), so their emails reach them as they read the poll.
+  defp guests(participants, poll) do
     participants
-    |> Enum.map(&%{email: String.downcase(&1.email), name: &1.name})
+    |> Enum.map(
+      &%{
+        email: String.downcase(&1.email),
+        name: &1.name,
+        locale: &1.locale,
+        timezone: &1.timezone || poll.timezone
+      }
+    )
     |> Enum.uniq_by(& &1.email)
   end
 
@@ -226,10 +235,8 @@ defmodule Tymeslot.Polls.Confirm do
       attendee_name: PollParticipantSchema.display_name(primary),
       attendee_email: primary.email,
       attendee_timezone: primary.timezone || poll.timezone,
-      # The meeting carries one language for all its emails, so the primary
-      # participant's stands for everyone: guests have no locale of their own.
       attendee_locale: primary.locale,
-      guest_emails: guests(invitees),
+      guest_emails: guests(invitees, poll),
       managed_by_host: true,
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.

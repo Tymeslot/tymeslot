@@ -522,6 +522,7 @@ msgid "is not a supported language"
 msgstr "não é um idioma disponível"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
@@ -533,6 +534,7 @@ msgstr "não é um idioma disponível"
 msgid "is not a valid palette key"
 msgstr "não é uma chave de paleta válida"
 
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid timezone"

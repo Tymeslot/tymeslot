@@ -42,7 +42,11 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     %{meeting: meeting, accepted: accepted, declined: declined}
   end
 
-  describe "reset_for_new_time/1, then notify_rescheduled/3" do
+  # These guests have no view of their own, so the payload given is the one
+  # sent and nothing is built for them.
+  defp unused_view(_meeting), do: flunk("no guest here reads the meeting in a view of their own")
+
+  describe "reset_for_new_time/1, then notify_rescheduled/4" do
     test "resets every answer and asks every guest again, declined ones included" do
       %{meeting: meeting, accepted: accepted, declined: declined} = meeting_with_guests()
 
@@ -54,7 +58,9 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
       end)
 
       assert :ok = GuestNotifications.reset_for_new_time(meeting)
-      assert :ok = GuestNotifications.notify_rescheduled(meeting, %{uid: meeting.uid})
+
+      assert :ok =
+               GuestNotifications.notify_rescheduled(meeting, %{uid: meeting.uid}, &unused_view/1)
 
       # Guests are loaded without an order, so compare the set of emails sent
       # rather than the sequence.
@@ -78,7 +84,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
     test "sends nothing for a booking without guests" do
       meeting = insert(:meeting)
-      assert :ok = GuestNotifications.notify_rescheduled(meeting, %{})
+      assert :ok = GuestNotifications.notify_rescheduled(meeting, %{}, &unused_view/1)
     end
 
     test "every guest is tried, and the failures are reported" do
@@ -89,7 +95,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
       end)
 
       assert {:error, {:guest_emails_failed, 2}} =
-               GuestNotifications.notify_rescheduled(meeting, %{})
+               GuestNotifications.notify_rescheduled(meeting, %{}, &unused_view/1)
     end
   end
 
@@ -265,7 +271,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     end
   end
 
-  describe "notify_reapproved/3 (via Approval.approve/1 and the reschedule email job)" do
+  describe "notify_reapproved/4 (via Approval.approve/1 and the reschedule email job)" do
     defp held(attrs) do
       user = insert(:user)
 

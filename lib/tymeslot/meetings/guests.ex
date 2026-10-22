@@ -41,10 +41,18 @@ defmodule Tymeslot.Meetings.Guests do
 
   @typedoc """
   A guest to insert: a bare address, or an address with the name its owner
-  gave, which their emails and the host's dashboard then use.
+  gave, which their emails and the host's dashboard then use, and optionally
+  the guest's own `locale` and `timezone`, which their emails are then
+  written in rather than the attendee's.
   """
   @type entry ::
-          String.t() | %{required(:email) => String.t(), required(:name) => String.t() | nil}
+          String.t()
+          | %{
+              required(:email) => String.t(),
+              required(:name) => String.t() | nil,
+              optional(:locale) => String.t() | nil,
+              optional(:timezone) => String.t() | nil
+            }
 
   @typedoc "Aggregate RSVP counts for a meeting's guest list."
   @type summary :: GuestSchema.summary()
@@ -387,7 +395,9 @@ defmodule Tymeslot.Meetings.Guests do
     end
   end
 
-  defp guest_attrs(%{email: email, name: name}), do: %{email: email, name: name}
+  defp guest_attrs(%{email: _email, name: _name} = entry),
+    do: Map.take(entry, [:email, :name, :locale, :timezone])
+
   defp guest_attrs(email) when is_binary(email), do: %{email: email}
 
   defp broadcast_rsvp_update(%{organizer_user_id: user_id, id: meeting_id})
