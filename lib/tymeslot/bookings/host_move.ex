@@ -33,8 +33,7 @@ defmodule Tymeslot.Bookings.HostMove do
              Errors.classified_error()
              | :not_managed_by_host
              | :slot_in_past
-             | :time_off
-             | String.t()}
+             | :time_off}
   def move(meeting_uid, %DateTime{} = new_start, organizer_user_id)
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
     with {:ok, original} <- fetch_meeting(meeting_uid, organizer_user_id),
