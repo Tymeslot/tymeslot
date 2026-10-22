@@ -16,7 +16,7 @@ defmodule Tymeslot.Polls.VotingRaceTest do
 
   alias Ecto.Adapters.SQL
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollParticipantSchema, PollVoteSchema, Voting}
+  alias Tymeslot.Polls.{PollParticipantSchema, PollQueries, PollVoteSchema, Voting}
   alias Tymeslot.Repo
   alias Tymeslot.Test.RaceConductor
 
@@ -61,22 +61,7 @@ defmodule Tymeslot.Polls.VotingRaceTest do
     # answered as a request for a known address, whose link had just gone out.
     assert Enum.sort(results) == [{:ok, :sent}, {:ok, :throttled}]
 
-    {participants, link_jobs} =
-      unboxed(fn ->
-        participants = Repo.all(from(p in PollParticipantSchema, where: p.poll_id == ^poll.id))
-        ids = Enum.map(participants, &to_string(&1.id))
-
-        jobs =
-          Repo.all(
-            from(j in Oban.Job,
-              where:
-                fragment("?->>'action'", j.args) == "send_poll_participant_link" and
-                  fragment("?->>'participant_id'", j.args) in ^ids
-            )
-          )
-
-        {participants, jobs}
-      end)
+    {participants, link_jobs} = unboxed(fn -> participants_and_link_jobs(poll) end)
 
     assert [%{email: "ada@example.com"}] = participants
     assert [_one_link] = link_jobs
@@ -232,6 +217,139 @@ defmodule Tymeslot.Polls.VotingRaceTest do
     assert [%PollVoteSchema{response: :yes}] = unboxed(fn -> votes_of(participant) end)
   end
 
+  test "a request for a known address pruned before its link is claimed starts over as new", %{
+    poll: poll
+  } do
+    # A link went out moments ago, so were the row still there the request
+    # would be answered as a repeat inside the resend window.
+    pending =
+      unboxed(fn ->
+        insert(:poll_participant,
+          poll: poll,
+          name: "Ada",
+          email: "ada@example.com",
+          confirmed_at: nil,
+          invited_at: nil,
+          link_sent_at: DateTime.utc_now(:second)
+        )
+      end)
+
+    test_pid = self()
+
+    request =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), &address_lookup?/1)
+          Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
+        end)
+      end)
+
+    # The request has found Ada's row; the retention worker prunes it before
+    # the send is claimed, so the claim touches nothing.
+    assert_receive {:parked, request_pid}, 5_000
+    unboxed(fn -> Repo.delete!(Repo.get!(PollParticipantSchema, pending.id)) end)
+    send(request_pid, :release)
+
+    assert {:ok, :sent} = Task.await(request)
+
+    {participants, link_jobs} = unboxed(fn -> participants_and_link_jobs(poll) end)
+
+    assert [%{email: "ada@example.com", confirmed_at: nil} = fresh] = participants
+    refute fresh.id == pending.id
+    assert [%{args: %{"participant_id" => fresh_id}}] = link_jobs
+    assert fresh_id == to_string(fresh.id)
+  end
+
+  test "deleting a poll while a vote is being saved waits for the vote, then takes it with the poll",
+       %{poll: poll} do
+    {participant, slot, loaded} = voter_on(poll)
+    test_pid = self()
+
+    voter =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(
+            RaceConductor.park_here(test_pid),
+            RaceConductor.lock_of("poll_participants")
+          )
+
+          Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+        end)
+      end)
+
+    # The voter holds the poll `FOR SHARE` and their own row `FOR UPDATE`.
+    assert_receive {:parked, voter_pid}, 5_000
+
+    # The host cannot delete a poll still open, so their own delete never
+    # meets a vote in progress; it is refused without waiting.
+    assert {:error, :still_open} =
+             unboxed(fn -> Polls.delete_poll(poll.id, poll.user_id) end)
+
+    # The cascade every poll delete runs (the host's on a closed poll, the
+    # account deletion's on any) queues behind the vote's lock on the poll.
+    deletion = Task.async(fn -> unboxed(fn -> PollQueries.delete(poll) end) end)
+    assert RaceConductor.await_finished_or_blocked(deletion) == :blocked
+
+    send(voter_pid, :release)
+
+    assert {:ok, %PollParticipantSchema{}} = Task.await(voter)
+    assert {:ok, _deleted} = Task.await(deletion)
+
+    assert {[], _no_jobs} = unboxed(fn -> participants_and_link_jobs(poll) end)
+    assert unboxed(fn -> votes_of(participant) end) == []
+  end
+
+  test "a vote arriving while the host deletes the poll waits, then is refused cleanly", %{
+    poll: poll
+  } do
+    # The voter's page loaded while the poll was open; the host has since
+    # cancelled it and now deletes it.
+    {participant, slot, loaded} = voter_on(poll)
+    assert {:ok, _cancelled} = unboxed(fn -> Polls.cancel_poll(poll.id, poll.user_id) end)
+    test_pid = self()
+
+    deletion =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), &poll_delete?/1)
+          Repo.transaction(fn -> Polls.delete_poll(poll.id, poll.user_id) end)
+        end)
+      end)
+
+    # The delete has removed the poll and, by cascade, its participants and
+    # slots, and holds those rows until it commits.
+    assert_receive {:parked, deletion_pid}, 5_000
+
+    voter =
+      Task.async(fn ->
+        unboxed(fn -> Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"}) end)
+      end)
+
+    assert RaceConductor.await_finished_or_blocked(voter) == :blocked
+
+    send(deletion_pid, :release)
+
+    assert {:ok, :ok} = Task.await(deletion)
+    assert {:error, :voting_closed} = Task.await(voter)
+    assert unboxed(fn -> votes_of(participant) end) == []
+  end
+
+  defp participants_and_link_jobs(poll) do
+    participants = Repo.all(from(p in PollParticipantSchema, where: p.poll_id == ^poll.id))
+    ids = Enum.map(participants, &to_string(&1.id))
+
+    jobs =
+      Repo.all(
+        from(j in Oban.Job,
+          where:
+            fragment("?->>'action'", j.args) == "send_poll_participant_link" and
+              fragment("?->>'participant_id'", j.args) in ^ids
+        )
+      )
+
+    {participants, jobs}
+  end
+
   defp voter_on(poll) do
     unboxed(fn ->
       slot = insert(:poll_time_slot, poll: poll)
@@ -247,6 +365,11 @@ defmodule Tymeslot.Polls.VotingRaceTest do
   # The vote's read of the poll under its share lock.
   defp poll_share_lock?(metadata) do
     metadata[:source] == "polls" and metadata[:query] =~ "FOR SHARE"
+  end
+
+  # The host's delete of the poll row, which cascades to its children.
+  defp poll_delete?(metadata) do
+    metadata[:source] == "polls" and String.starts_with?(metadata[:query], "DELETE")
   end
 
   # The token lookup `cast_votes/4` starts with.
