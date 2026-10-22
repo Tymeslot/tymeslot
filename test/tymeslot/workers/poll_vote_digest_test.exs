@@ -157,14 +157,17 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
       assert_receive {:email, first}, 1000
       assert first.text_body =~ "Responses from: Early"
 
-      # Both were stamped before that update read the poll and committed after
-      # it: one in the same second as the update, one a few seconds earlier.
+      # Stamped before that update read the poll and committed after it. The
+      # first is at the update's cutoff to the second: too recent to be told
+      # in it, yet not to be lost to the next.
+      voter(ctx.poll, "At Cutoff", DateTime.add(now, -60, :second))
       voter(ctx.poll, "Same Second", now)
       voter(ctx.poll, "In Flight", DateTime.add(now, -5, :second))
 
       freeze_clock(DateTime.add(now, 16 * 60, :second))
       assert :ok = perform_digest(ctx.poll)
       assert_receive {:email, second}, 1000
+      assert second.text_body =~ "At Cutoff"
       assert second.text_body =~ "In Flight"
       assert second.text_body =~ "Same Second"
       refute second.text_body =~ "Early"
@@ -228,6 +231,24 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
       assert :ok = perform_digest(ctx.poll)
       assert_receive {:email, next}, 1000
       assert next.text_body =~ "Responses from: Meanwhile"
+    end
+
+    test "an update never moves the host's mark back", ctx do
+      now = whole_second_now()
+      # An update has gone out since this job's cutoff was remembered.
+      later = DateTime.add(now, -30, :second)
+      Repo.update!(Changeset.change(ctx.poll, vote_digest_sent_at: later))
+
+      freeze_clock(now)
+
+      assert :ok =
+               PollEmails.handle_host_nudge(
+                 %{"poll_id" => ctx.poll.id, "variant" => "all_voted"},
+                 nil
+               )
+
+      assert_receive {:email, _nudge}, 1000
+      assert DateTime.compare(Repo.reload(ctx.poll).vote_digest_sent_at, later) == :eq
     end
 
     test "a nudge that fails to send leaves its votes to the update", ctx do

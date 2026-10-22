@@ -360,7 +360,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   defp voted_since?(_participant, nil), do: true
   defp voted_since?(%{voted_at: voted_at}, since), do: not DateTime.before?(voted_at, since)
 
-  # Whole seconds, as `voted_at` is stored, and a settle minute back.
+  # Whole seconds, as `voted_at` is stored, and a settle minute back. A job
+  # discarded after this leaves only its remembered cutoff, pruned with the job.
   defp host_update_cutoff(job_id, name) do
     now =
       Clock.utc_now()
@@ -375,20 +376,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     cutoff
   end
 
-  # Never moves back: a rerun's kept cutoff, or a nudge's, can be earlier than
-  # an update that has gone out since, and moving back would repeat votes.
-  defp mark_host_updated(%PollSchema{vote_digest_sent_at: %DateTime{} = sent_at} = poll, cutoff) do
-    if DateTime.after?(cutoff, sent_at), do: write_host_updated(poll, cutoff), else: :ok
-  end
-
-  defp mark_host_updated(poll, cutoff), do: write_host_updated(poll, cutoff)
-
-  defp write_host_updated(poll, cutoff) do
-    case PollQueries.update(PollSchema.vote_digest_sent_changeset(poll, cutoff)) do
-      {:ok, _poll} -> :ok
-      {:error, changeset} -> {:error, changeset}
-    end
-  end
+  # Never moves back (the query's condition): a rerun's kept cutoff, or a
+  # nudge's, can be earlier than an update that has gone out since.
+  defp mark_host_updated(poll, cutoff), do: PollQueries.mark_vote_digest_sent(poll.id, cutoff)
 
   # Like `with_open_poll/3`, and a job scheduled for a deadline the poll no
   # longer has is discarded. Jobs from before deadlines were carried, and the

@@ -107,6 +107,25 @@ defmodule Tymeslot.Polls.PollQueries do
   @spec update(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(changeset), do: Repo.update(changeset)
 
+  @doc """
+  Records that the host has been told of the votes before `cutoff`. Never moves
+  the mark back, however a concurrent nudge and update interleave: the
+  comparison is made by the database, not against a struct that may be stale.
+  """
+  @spec mark_vote_digest_sent(Ecto.UUID.t(), DateTime.t()) :: :ok
+  def mark_vote_digest_sent(poll_id, cutoff) do
+    cutoff = DateTime.truncate(cutoff, :second)
+
+    PollSchema
+    |> where(
+      [p],
+      p.id == ^poll_id and (is_nil(p.vote_digest_sent_at) or p.vote_digest_sent_at < ^cutoff)
+    )
+    |> Repo.update_all(set: [vote_digest_sent_at: cutoff])
+
+    :ok
+  end
+
   @doc "Deletes a poll; its slots, participants and votes go with it."
   @spec delete(PollSchema.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def delete(poll), do: Repo.delete(poll)

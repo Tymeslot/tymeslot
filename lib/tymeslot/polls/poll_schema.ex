@@ -182,6 +182,14 @@ defmodule Tymeslot.Polls.PollSchema do
 
   # Only a deadline being set is judged: an untouched one that has passed must
   # not stop the host fixing a typo in the title.
+  defp validate_future_deadline(changeset) do
+    validate_change(changeset, :deadline_at, fn :deadline_at, deadline_at ->
+      if DateTime.compare(deadline_at, DateTime.utc_now()) == :gt,
+        do: [],
+        else: [deadline_at: "must be in the future"]
+    end)
+  end
+
   # Turning updates on starts them from now: a vote cast before is not news
   # the host asked to hear, however long ago the last update went out.
   defp start_updates_from_now(changeset) do
@@ -192,14 +200,6 @@ defmodule Tymeslot.Polls.PollSchema do
       _unchanged_or_off ->
         changeset
     end
-  end
-
-  defp validate_future_deadline(changeset) do
-    validate_change(changeset, :deadline_at, fn :deadline_at, deadline_at ->
-      if DateTime.compare(deadline_at, DateTime.utc_now()) == :gt,
-        do: [],
-        else: [deadline_at: "must be in the future"]
-    end)
   end
 
   defp validate_reminder_config(changeset) do
@@ -233,11 +233,6 @@ defmodule Tymeslot.Polls.PollSchema do
     |> cast(attrs, [:status, :confirmed_meeting_id, :confirmed_at])
     |> validate_required([:status, :confirmed_meeting_id, :confirmed_at])
   end
-
-  @doc "Marks the host as told about every vote cast before `sent_at`."
-  @spec vote_digest_sent_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
-  def vote_digest_sent_changeset(poll, sent_at),
-    do: change(poll, vote_digest_sent_at: DateTime.truncate(sent_at, :second))
 
   @spec cancel_changeset(%__MODULE__{}) :: Ecto.Changeset.t()
   def cancel_changeset(poll), do: change(poll, status: :cancelled)
