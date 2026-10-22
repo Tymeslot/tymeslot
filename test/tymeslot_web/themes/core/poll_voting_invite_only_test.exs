@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingInviteOnlyTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
+  alias Ecto.Changeset
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Repo
@@ -47,7 +48,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingInviteOnlyTest do
 
     test "after the deadline the bare link shows no tallies", ctx do
       past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
-      ctx.poll |> Ecto.Changeset.change(deadline_at: past) |> Repo.update!()
+      ctx.poll |> Changeset.change(deadline_at: past) |> Repo.update!()
 
       {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token))
 
@@ -60,7 +61,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingInviteOnlyTest do
       now = DateTime.utc_now(:second)
 
       ctx.poll
-      |> Ecto.Changeset.change(deadline_at: DateTime.add(now, -1, :hour))
+      |> Changeset.change(deadline_at: DateTime.add(now, -1, :hour))
       |> Repo.update!()
 
       invitee =
