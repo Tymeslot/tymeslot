@@ -17,9 +17,11 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
 
   setup %{conn: conn} do
     TestMocks.setup_calendar_mocks(events: [])
+
     Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _id, _from, _to ->
       {:ok, []}
     end)
+
     Gettext.put_locale(TymeslotWeb.Gettext, "en")
     %{conn: conn}
   end
@@ -101,6 +103,25 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
       |> render_click(%{"id" => "not-a-uuid"})
 
       assert has_element?(view, "button[phx-click='select_poll']")
+    end
+
+    test "confirming a slot id that is not a UUID is refused and the poll stays open", %{
+      conn: conn
+    } do
+      %{user: user} = host()
+      poll = insert(:poll, user: user, status: :open, meeting_type_id: nil)
+      slot = insert(:poll_time_slot, poll: poll)
+      insert(:poll_participant, poll: poll)
+
+      {:ok, view, _html} = live(log_in(conn, user), ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      view
+      |> element("button[phx-click='confirm_slot'][phx-value-slot='#{slot.id}']")
+      |> render_click(%{"slot" => "not-a-uuid"})
+
+      assert has_element?(view, "button[phx-click='confirm_slot'][phx-value-slot='#{slot.id}']")
+      assert {:ok, %{status: :open}} = Polls.get_poll_for_host(poll.id, user.id)
     end
 
     test "a non-numeric slot key is ignored by the create form", %{conn: conn} do

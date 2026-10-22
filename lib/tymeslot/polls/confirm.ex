@@ -15,6 +15,7 @@ defmodule Tymeslot.Polls.Confirm do
   cancel links.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Bookings.Activation
@@ -50,12 +51,16 @@ defmodule Tymeslot.Polls.Confirm do
   fails. The host chose the time, so their buffers do not pad it, as they do
   not when the host later moves the meeting (`Tymeslot.Bookings.HostMove`).
 
+  Both ids arrive as event params, so either may be anything: a `poll_id`
+  that is not a UUID is `:not_found`, and a `slot_id` that is not one of the
+  poll's times, UUID or not, is `:invalid_slot`.
+
   Time off is checked here rather than in `Bookings.CreateAdHoc`, which also
   serves the calendar grid and deliberately skips every schedule rule. A poll
   is answered days after the host proposed its times, so a holiday entered in
   between must still stop it being confirmed into.
   """
-  @spec confirm(Ecto.UUID.t(), Ecto.UUID.t(), integer()) ::
+  @spec confirm(term(), term(), integer()) ::
           {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, reason()}
   def confirm(poll_id, slot_id, user_id) do
     case Repo.transaction(fn -> claim_and_mint(poll_id, slot_id, user_id) end) do
@@ -98,10 +103,15 @@ defmodule Tymeslot.Polls.Confirm do
     end
   end
 
+  # Both ids come from the dashboard's event params, so a forged one that is
+  # not a UUID is answered as one that matches nothing rather than raising
+  # in the query.
   defp lock_poll(poll_id, user_id) do
-    case PollQueries.lock_for_user(poll_id, user_id) do
-      nil -> {:error, :not_found}
-      poll -> {:ok, poll}
+    with {:ok, poll_id} <- UUID.cast(poll_id),
+         %PollSchema{} = poll <- PollQueries.lock_for_user(poll_id, user_id) do
+      {:ok, poll}
+    else
+      _forged_or_not_found -> {:error, :not_found}
     end
   end
 
@@ -117,9 +127,11 @@ defmodule Tymeslot.Polls.Confirm do
   defp ensure_open(_poll), do: {:error, :not_open}
 
   defp resolve_slot(poll, slot_id) do
-    case PollTimeSlotQueries.get_for_poll(slot_id, poll.id) do
-      nil -> {:error, :invalid_slot}
-      slot -> ensure_future(slot)
+    with {:ok, slot_id} <- UUID.cast(slot_id),
+         %{} = slot <- PollTimeSlotQueries.get_for_poll(slot_id, poll.id) do
+      ensure_future(slot)
+    else
+      _forged_or_not_found -> {:error, :invalid_slot}
     end
   end
 

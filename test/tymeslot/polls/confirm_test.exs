@@ -241,6 +241,20 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert {:error, :invalid_slot} = Confirm.confirm(poll.id, other_slot.id, user.id)
     end
 
+    test "returns :invalid_slot for a slot id that is not a UUID, and leaves the poll open",
+         %{user: user, poll: poll} do
+      insert(:poll_participant, poll: poll)
+
+      assert {:error, :invalid_slot} = Confirm.confirm(poll.id, "not-a-uuid", user.id)
+      assert {:error, :invalid_slot} = Confirm.confirm(poll.id, nil, user.id)
+      assert Repo.reload!(poll).status == :open
+    end
+
+    test "returns :not_found for a poll id that is not a UUID", %{user: user, slot: slot} do
+      assert {:error, :not_found} = Confirm.confirm("not-a-uuid", slot.id, user.id)
+      assert {:error, :not_found} = Confirm.confirm(nil, slot.id, user.id)
+    end
+
     test "returns :not_found for a different owner", %{poll: poll, slot: slot} do
       other_user = insert(:user)
       assert {:error, :not_found} = Confirm.confirm(poll.id, slot.id, other_user.id)
