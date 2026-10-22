@@ -29,6 +29,7 @@ defmodule Tymeslot.Workers.EmailWorker do
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Notifications.EmailHandlers
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Workers.Bounded
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
@@ -43,6 +44,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   # deadline, plus one deadline's headroom for building the emails. A fixed
   # 30 seconds let two stalled sends exhaust it, and a timed-out job is
   # discarded, so the recipients after them were never emailed.
+  # The largest job is a poll's: its cancellation, or the confirmation of the
+  # meeting it made, goes to every participant, more than a booking's guests.
+  # The job's args do not say how many, so the larger limit is allowed for.
   # `:email_timeout_ms` overrides it (e.g. lowered in tests).
   @sends_beyond_guests 2
   @headroom_deadlines 1
@@ -264,11 +268,15 @@ defmodule Tymeslot.Workers.EmailWorker do
     {:discard, "Email sending timed out"}
   end
 
-  defp email_timeout_ms do
+  @doc false
+  @spec email_timeout_ms() :: pos_integer()
+  def email_timeout_ms do
     Application.get_env(:tymeslot, :email_timeout_ms) ||
-      (Guests.max_guests() + @sends_beyond_guests + @headroom_deadlines) *
+      (max_recipients() + @sends_beyond_guests + @headroom_deadlines) *
         Delivery.send_deadline_ms()
   end
+
+  defp max_recipients, do: max(Guests.max_guests(), PollSchema.max_participants())
 
   # 1 s, 2 s, 4 s ... capped at 2 minutes: about six minutes over the ten
   # attempts. A job's legs share those attempts, each retry sending only the
