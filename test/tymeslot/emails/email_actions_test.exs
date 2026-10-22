@@ -22,6 +22,8 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_seat_meeting_cancellation send_seat_reminder send_seat_reschedule_emails
     send_seat_reschedule_request send_signup_attempt_notice send_social_signup_confirmation
     send_video_room_creation_error_notification
+    send_seat_session_moved
+    send_registration_closed
     send_poll_vote_digest send_poll_participant_link send_poll_vote_receipt
   )
 

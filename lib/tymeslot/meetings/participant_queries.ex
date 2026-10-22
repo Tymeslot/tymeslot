@@ -87,6 +87,20 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   end
 
   @doc """
+  Advances the calendar revision of every live seat on a meeting, for an
+  update to the entry each of them holds (the host moved the meeting).
+  """
+  @spec bump_ical_sequence_for_meeting(binary()) :: non_neg_integer()
+  def bump_ical_sequence_for_meeting(meeting_id) do
+    {count, _rows} =
+      Participant
+      |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
+      |> Repo.update_all(inc: [ical_sequence: 1])
+
+    count
+  end
+
+  @doc """
   Records a change to the meeting's end on every live participant's seat.
 
   Each seat is its own calendar entry, so the change is a new revision of
@@ -141,6 +155,30 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
         select: count(p.id, :distinct) + count(g.id)
       )
     )
+  end
+
+  @doc """
+  Live participants and seats taken (`count_seats_taken/1`'s count) on each
+  of `meeting_ids`, in one grouped query. A meeting without live
+  participants does not appear in the result.
+  """
+  @spec counts_by_meeting([binary()]) :: %{
+          binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
+        }
+  def counts_by_meeting([]), do: %{}
+
+  def counts_by_meeting(meeting_ids) when is_list(meeting_ids) do
+    from(p in Participant,
+      left_join: g in Guest,
+      on: g.participant_id == p.id and g.status != "declined",
+      where: p.meeting_id in ^meeting_ids and is_nil(p.cancelled_at),
+      group_by: p.meeting_id,
+      select: {p.meeting_id, count(p.id, :distinct), count(p.id, :distinct) + count(g.id)}
+    )
+    |> Repo.all()
+    |> Map.new(fn {id, participants, seats} ->
+      {id, %{participants: participants, seats_taken: seats}}
+    end)
   end
 
   @doc """
