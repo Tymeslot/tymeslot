@@ -12,6 +12,7 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
 
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -33,12 +34,45 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     |> Repo.one()
   end
 
-  @doc "The participants on `poll_id` under any of `emails`, confirmed or not."
-  @spec list_by_poll_and_emails(Ecto.UUID.t(), [String.t()]) :: [PollParticipantSchema.t()]
-  def list_by_poll_and_emails(poll_id, emails) do
+  @doc """
+  The participants on `poll_id` under any of `emails`, confirmed or not,
+  locked until the caller's transaction ends, so a pending request is not
+  rewritten or deleted between this read and the caller's write to it.
+  """
+  @spec lock_by_poll_and_emails(Ecto.UUID.t(), [String.t()]) :: [PollParticipantSchema.t()]
+  def lock_by_poll_and_emails(poll_id, emails) do
     PollParticipantSchema
     |> where([p], p.poll_id == ^poll_id and p.email in ^emails)
+    |> lock("FOR UPDATE")
     |> Repo.all()
+  end
+
+  @doc """
+  Inserts the participant `changeset` builds, or, when someone is already on
+  the poll under that address (a link request committed since the caller
+  looked), returns that participant instead as `{:existing, participant}`,
+  their row locked until the caller's transaction ends.
+
+  Postgres reports the conflict only through the row it returns: the
+  no-op update on conflict returns the existing row, told apart from the new
+  one by its token.
+  """
+  @spec insert_or_lock_existing(Ecto.Changeset.t()) ::
+          {:ok, PollParticipantSchema.t()}
+          | {:existing, PollParticipantSchema.t()}
+          | {:error, Ecto.Changeset.t()}
+  def insert_or_lock_existing(changeset) do
+    token_hash = Changeset.get_change(changeset, :token_hash)
+
+    case Repo.insert(changeset,
+           on_conflict: {:replace, [:email]},
+           conflict_target: [:poll_id, :email],
+           returning: true
+         ) do
+      {:ok, %PollParticipantSchema{token_hash: ^token_hash} = inserted} -> {:ok, inserted}
+      {:ok, %PollParticipantSchema{} = existing} -> {:existing, existing}
+      {:error, _changeset} = error -> error
+    end
   end
 
   @doc """

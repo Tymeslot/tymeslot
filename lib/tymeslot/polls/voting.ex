@@ -286,10 +286,27 @@ defmodule Tymeslot.Polls.Voting do
         with :ok <- EmailLimits.charge_recipient(request_email(request)) do
           request
           |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())
-          |> PollParticipantQueries.insert()
+          |> insert_under_poll_lock(poll)
           |> handle_insert(poll, request)
         end
     end
+  end
+
+  # The poll is held `FOR SHARE` before the row is written. Postgres checks
+  # the row's reference to its poll only after writing it, so without the
+  # lock a request arriving while the host invites the same address would
+  # write its row, then wait for the host's lock on the poll while the host
+  # waits on that row: a deadlock. Taken first, the request waits for the
+  # host's invitations to commit and then meets the address as a known one.
+  defp insert_under_poll_lock(changeset, poll) do
+    Repo.transaction(fn ->
+      PollQueries.lock_shared(poll.id)
+
+      case PollParticipantQueries.insert(changeset) do
+        {:ok, participant} -> participant
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
 
   defp participant_attrs(poll, attrs) do

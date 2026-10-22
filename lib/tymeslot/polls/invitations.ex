@@ -133,7 +133,7 @@ defmodule Tymeslot.Polls.Invitations do
 
   defp existing_participants(poll, entries) do
     poll.id
-    |> PollParticipantQueries.list_by_poll_and_emails(Enum.map(entries, & &1.email))
+    |> PollParticipantQueries.lock_by_poll_and_emails(Enum.map(entries, & &1.email))
     |> Map.new(&{&1.email, &1})
   end
 
@@ -146,7 +146,12 @@ defmodule Tymeslot.Polls.Invitations do
           e.email in allowed,
           do: write(confirm(pair, now))
 
-    inserted = for e <- new, e.email in allowed, do: write(new_invitee(e, defaults, now))
+    inserted =
+      for e <- new,
+          e.email in allowed,
+          participant <- insert_new(e, defaults, now),
+          do: participant
+
     confirmed ++ inserted
   end
 
@@ -323,10 +328,21 @@ defmodule Tymeslot.Polls.Invitations do
     |> PollParticipantSchema.link_sent_changeset(now)
   end
 
-  defp write(%Ecto.Changeset{data: %{__meta__: %{state: :loaded}}} = changeset),
-    do: changeset |> PollParticipantQueries.update() |> unwrap()
+  # An address nobody was on the poll under when the host's list was read can
+  # have arrived since, by a link request on the voting page. Such a pending
+  # request is confirmed as the host's invitee, as if it had been read with
+  # the others; someone who has confirmed themselves meanwhile is on the poll
+  # already and is not invited again.
+  defp insert_new(entry, defaults, now) do
+    case PollParticipantQueries.insert_or_lock_existing(new_invitee(entry, defaults, now)) do
+      {:ok, participant} -> [participant]
+      {:existing, %{confirmed_at: nil} = pending} -> [write(confirm({pending, entry}, now))]
+      {:existing, _confirmed} -> []
+      {:error, changeset} -> Repo.rollback(changeset)
+    end
+  end
 
-  defp write(changeset), do: changeset |> PollParticipantQueries.insert() |> unwrap()
+  defp write(changeset), do: changeset |> PollParticipantQueries.update() |> unwrap()
 
   defp unwrap({:ok, participant}), do: participant
   defp unwrap({:error, changeset}), do: Repo.rollback(changeset)
