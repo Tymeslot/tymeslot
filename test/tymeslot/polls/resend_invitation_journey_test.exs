@@ -80,7 +80,7 @@ defmodule Tymeslot.Polls.ResendInvitationJourneyTest do
 
     dashboard |> element("[data-testid='poll-edit-details']") |> render_click()
     resend = "[data-testid='poll-resend-invitation'][phx-value-id='#{grace.id}']"
-    assert has_element?(dashboard, resend <> "[aria-label='Resend invitation']")
+    assert has_element?(dashboard, resend <> "[aria-label='Resend invitation to Grace Hopper']")
 
     # Minutes after the invitation, a resend is held back.
     dashboard |> element(resend) |> render_click()

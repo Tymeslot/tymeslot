@@ -18,8 +18,8 @@ msgid_plural "%{count} of %{max} times"
 msgstr[0] "%{count} de %{max} horários"
 msgstr[1] "%{count} de %{max} horários"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} participant"
 msgid_plural "%{count} participants"
@@ -248,6 +248,7 @@ msgstr "Esta enquete está confirmada. O horário vencedor está destacado abaix
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is no longer open."
@@ -540,13 +541,13 @@ msgstr "Enquete excluída"
 msgid "Remove %{name} and their responses from this poll? They are not told."
 msgstr "Remover %{name} e as respostas desta enquete? A pessoa não é avisada."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Remove from the poll"
 msgstr "Remover da enquete"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Removed from the poll"
 msgstr "Removido da enquete"
@@ -566,17 +567,17 @@ msgstr "A reunião marcada por ela continua na sua agenda."
 msgid "The poll already has this time"
 msgstr "A enquete já tem este horário"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "invited"
 msgstr "convite enviado"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "not voted yet"
 msgstr "ainda não votou"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "voted"
 msgstr "votou"
@@ -679,7 +680,7 @@ msgstr "Manter"
 msgid "Remove"
 msgstr "Remover"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "They are no longer on this poll."
 msgstr "Essa pessoa não está mais nesta enquete."
@@ -689,37 +690,52 @@ msgstr "Essa pessoa não está mais nesta enquete."
 msgid "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
 msgstr "Os lembretes vão para as pessoas convidadas que ainda não votaram. Uma enquete sem prazo não envia nenhum."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has had too many emails recently. Please try again later."
 msgstr "%{name} recebeu e-mails demais recentemente. Tente novamente mais tarde."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} was sent their link a few minutes ago. Please wait a little before sending it again."
 msgstr "%{name} recebeu o link há poucos minutos. Espere um pouco antes de enviá-lo de novo."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Resend invitation"
 msgstr "Reenviar convite"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Resend voting link"
 msgstr "Reenviar link de votação"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Sent %{name} their link again."
 msgstr "Link reenviado para %{name}."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "Voting on this poll has closed. Move the deadline to send links again."
 msgstr "A votação desta enquete foi encerrada. Mude o prazo para enviar os links de novo."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
 msgid "You have sent too many invitations recently. Please try again later."
 msgstr "Você enviou convites demais recentemente. Tente novamente mais tarde."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove %{name} from the poll"
+msgstr "Remover da enquete"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Resend invitation to %{name}"
+msgstr "Reenviar convite"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Resend voting link to %{name}"
+msgstr "Reenviar link de votação"

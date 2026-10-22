@@ -277,6 +277,11 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       participant = insert(:poll_participant, poll: poll, name: "Joker")
       view = open_editor(conn, poll)
 
+      assert has_element?(
+               view,
+               "[data-testid='poll-remove-participant'][aria-label='Remove Joker from the poll'][title='Remove from the poll']"
+             )
+
       view |> element("[data-testid='poll-remove-participant']") |> render_click()
 
       assert has_element?(view, "#remove-participant-modal-#{poll.id}", "Joker")
@@ -464,7 +469,11 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       grace = insert(:poll_participant, poll: poll, name: "Grace")
       view = open_editor(conn, poll)
 
-      assert has_element?(view, resend_button(grace) <> "[aria-label='Resend invitation']")
+      assert has_element?(
+               view,
+               resend_button(grace) <>
+                 "[aria-label='Resend invitation to Grace'][title='Resend invitation']"
+             )
 
       view |> element(resend_button(grace)) |> render_click()
 
@@ -481,7 +490,11 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       ada = insert(:poll_participant, poll: poll, name: "Ada", voted_at: in_days(-1))
       view = open_editor(conn, poll)
 
-      assert has_element?(view, resend_button(ada) <> "[aria-label='Resend voting link']")
+      assert has_element?(
+               view,
+               resend_button(ada) <>
+                 "[aria-label='Resend voting link to Ada'][title='Resend voting link']"
+             )
 
       view |> element(resend_button(ada)) |> render_click()
 
@@ -546,6 +559,25 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert render(view) =~
                "Voting on this poll has closed. Move the deadline to send links again."
+
+      assert all_enqueued(worker: EmailWorker, args: %{"participant_id" => grace.id}) == []
+    end
+
+    test "greys out the button once the deadline has passed", %{conn: conn, poll: poll} do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      open = resend_button(grace) <> "[aria-label='Resend invitation to Grace']"
+      view = open_editor(conn, poll)
+
+      refute has_element?(view, open <> "[aria-disabled]")
+
+      poll |> Changeset.change(deadline_at: in_days(-1)) |> Repo.update!()
+      view = open_editor(conn, poll)
+
+      assert has_element?(
+               view,
+               open <>
+                 "[aria-disabled='true'][title='Voting on this poll has closed. Move the deadline to send links again.']"
+             )
     end
 
     test "says so when the poll is no longer open", %{conn: conn, poll: poll} do
