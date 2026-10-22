@@ -38,6 +38,14 @@ defmodule Tymeslot.Polls.Voting do
   # someone's inbox.
   @resend_interval_seconds 10 * 60
 
+  @doc """
+  How long after a participant's link was emailed another email with it
+  waits, whoever asks for it: the participant on the voting page or the host
+  from the dashboard.
+  """
+  @spec resend_interval_seconds() :: pos_integer()
+  def resend_interval_seconds, do: @resend_interval_seconds
+
   @typedoc """
   What a link request did: sent a new participant their link (`:sent`), sent
   a known address its link again (`:resent`), or held back a known address's

@@ -688,3 +688,38 @@ msgstr "Cette personne ne fait plus partie de ce sondage."
 #, elixir-autogen, elixir-format
 msgid "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
 msgstr "Les rappels sont envoyés aux personnes invitées qui n'ont pas encore voté. Un sondage sans date limite n'en envoie aucun."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has had too many emails recently. Please try again later."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} was sent their link a few minutes ago. Please wait a little before sending it again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Resend invitation"
+msgstr "Envoyer les invitations"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Resend voting link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{name} their link again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Voting on this poll has closed. Move the deadline to send links again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "You have sent too many invitations recently. Please try again later."
+msgstr "Vous ne pouvez plus inviter personne pour le moment. Veuillez réessayer plus tard."

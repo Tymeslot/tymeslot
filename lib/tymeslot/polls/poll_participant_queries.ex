@@ -118,6 +118,18 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
   end
 
   @doc """
+  The confirmed participant `participant_id` of `poll_id`, or nil for an
+  unconfirmed one or one on another poll.
+  """
+  @spec get_confirmed_on_poll(Ecto.UUID.t(), Ecto.UUID.t()) :: PollParticipantSchema.t() | nil
+  def get_confirmed_on_poll(poll_id, participant_id) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and p.id == ^participant_id)
+    |> where([p], not is_nil(p.confirmed_at))
+    |> Repo.one()
+  end
+
+  @doc """
   Stamps `link_sent_at` with `now` unless the link was sent after
   `resend_before`. Returns whether it stamped, i.e. whether the caller should
   send the link. `link_sent_at` only throttles sends; it never extends a

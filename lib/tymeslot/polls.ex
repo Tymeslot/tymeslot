@@ -170,6 +170,26 @@ defmodule Tymeslot.Polls do
   end
 
   @doc """
+  Sends a participant of the user's open poll their personal link again, for
+  someone who lost the email. See `Tymeslot.Polls.Invitations.resend/2` for
+  which email goes out and when it is refused.
+
+  Written under the poll's row lock, like removing someone, so it never goes
+  out for a poll confirmed in the meantime, and two clicks send one email.
+  An id that is not a confirmed participant of this poll, including one that
+  is not a UUID at all, is `{:error, :not_found}`.
+  """
+  @spec resend_invitation(Ecto.UUID.t(), integer(), String.t()) ::
+          :ok | {:error, :not_found | :not_open | Invitations.resend_error()}
+  def resend_invitation(id, user_id, participant_id) do
+    with {:ok, participant_id} <- cast_participant_id(participant_id),
+         {:ok, _poll} <-
+           with_open_poll_locked(id, user_id, &Invitations.resend(&1, participant_id)) do
+      :ok
+    end
+  end
+
+  @doc """
   Deletes the user's poll once it is over, confirmed or cancelled, with its
   times, participants and votes, to tidy the list. The meeting a confirmed
   poll minted stays. An open poll has to be cancelled first, so nothing

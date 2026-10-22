@@ -21,11 +21,25 @@ defmodule Tymeslot.Polls.Invitations do
   (`Tymeslot.Polls.EmailLimits`): a list past the host's allowance invites
   nobody, and an address that has had too many poll emails lately is left out
   and reported, like someone already on the poll.
+
+  The host can send a confirmed participant their link again
+  (`resend/2`): an invitee who has not voted gets the invitation, anyone
+  else the voting-link email. It shares the voting page's resend window and
+  counts against the limits like an invitation.
   """
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Polls.{EmailLimits, PollParticipantQueries, PollParticipantSchema, PollSchema}
+  alias Tymeslot.Polls
+
+  alias Tymeslot.Polls.{
+    EmailLimits,
+    PollParticipantQueries,
+    PollParticipantSchema,
+    PollSchema,
+    Voting
+  }
+
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
@@ -35,6 +49,14 @@ defmodule Tymeslot.Polls.Invitations do
           skipped: [String.t()],
           rate_limited: [String.t()]
         }
+
+  @typedoc "Why `resend/2` sent nothing."
+  @type resend_error ::
+          :voting_closed
+          | :not_found
+          | :sent_recently
+          | :recipient_rate_limited
+          | :host_rate_limited
 
   @separators ~r/[\n\r,;]+/
   @named ~r/^(.*?)\s*<\s*([^<>\s]+)\s*>$/
@@ -144,6 +166,76 @@ defmodule Tymeslot.Polls.Invitations do
   @spec send_invitations([PollParticipantSchema.t()]) :: :ok
   def send_invitations(participants) do
     Enum.each(participants, &EmailScheduler.schedule_poll_invitation/1)
+  end
+
+  @doc """
+  Sends confirmed participant `participant_id` of `poll` their personal link
+  again, for someone who lost the email: an invitee who has not voted gets
+  the invitation, anyone else the voting-link email, both with the link they
+  already have.
+
+  Call it inside a transaction holding `poll`'s row lock (as
+  `Tymeslot.Polls.resend_invitation/3` does), and roll back on an error: the
+  send is claimed before the limits are charged, and only the rollback
+  releases the claim when a limit refuses. The job is inserted in the same
+  transaction.
+
+  Refuses with `:voting_closed` past the deadline, `:not_found` for anyone
+  not confirmed on the poll, `:sent_recently` within
+  `Tymeslot.Polls.Voting.resend_interval_seconds/0` of the last email with
+  the link (an invitation, a resend or the participant's own request), and
+  `:recipient_rate_limited` or `:host_rate_limited` past the poll email
+  limits (`Tymeslot.Polls.EmailLimits`).
+  """
+  @spec resend(PollSchema.t(), Ecto.UUID.t()) :: {:ok, PollSchema.t()} | {:error, resend_error()}
+  def resend(%PollSchema{} = poll, participant_id) do
+    with :ok <- ensure_voting_open(poll),
+         {:ok, participant} <- fetch_confirmed(poll, participant_id),
+         :ok <- claim_send(participant),
+         :ok <- reserve_resend(poll, participant) do
+      :ok = schedule_resend(participant)
+      {:ok, poll}
+    end
+  end
+
+  # --- Resending ---
+
+  defp ensure_voting_open(poll) do
+    if Polls.voting_open?(poll), do: :ok, else: {:error, :voting_closed}
+  end
+
+  defp fetch_confirmed(poll, participant_id) do
+    case PollParticipantQueries.get_confirmed_on_poll(poll.id, participant_id) do
+      nil -> {:error, :not_found}
+      participant -> {:ok, participant}
+    end
+  end
+
+  # The same claim the voting page takes, so a resend, an invitation and a
+  # participant's own request share one window, and two clicks send once.
+  defp claim_send(participant) do
+    now = DateTime.utc_now()
+    resend_before = DateTime.add(now, -Voting.resend_interval_seconds(), :second)
+
+    if PollParticipantQueries.claim_link_send(participant.id, now, resend_before),
+      do: :ok,
+      else: {:error, :sent_recently}
+  end
+
+  # One unit from the address and one from the host, like an invitation, so
+  # resending is no way round either limit. Each refusal charges nothing.
+  defp reserve_resend(%PollSchema{user_id: user_id}, participant) do
+    case EmailLimits.reserve_invitations(user_id, [participant.email]) do
+      {:ok, %{allowed: [_email]}} -> :ok
+      {:ok, %{limited: [_email]}} -> {:error, :recipient_rate_limited}
+      {:error, _reason} -> {:error, :host_rate_limited}
+    end
+  end
+
+  defp schedule_resend(participant) do
+    if PollParticipantSchema.unanswered_invitee?(participant),
+      do: EmailScheduler.schedule_poll_invitation_again(participant),
+      else: EmailScheduler.schedule_poll_participant_link(participant)
   end
 
   # --- Parsing ---

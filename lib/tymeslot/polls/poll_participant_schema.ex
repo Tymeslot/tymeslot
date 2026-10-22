@@ -161,6 +161,15 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   def display_name(%__MODULE__{email: email}), do: email
 
   @doc """
+  Whether the participant was invited by the host and has not voted yet.
+  Sending their link again sends the invitation; anyone else gets the
+  voting-link email (see `Tymeslot.Polls.Invitations.resend/2`).
+  """
+  @spec unanswered_invitee?(%__MODULE__{}) :: boolean()
+  def unanswered_invitee?(%__MODULE__{invited_at: %DateTime{}, voted_at: nil}), do: true
+  def unanswered_invitee?(%__MODULE__{}), do: false
+
+  @doc """
   The participant's name as the public voting page may show it, or nil while
   they have none. Never their address.
   """

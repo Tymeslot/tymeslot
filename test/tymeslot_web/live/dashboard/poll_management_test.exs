@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
   deleting a poll that is over.
   """
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :polls
   @moduletag :live
@@ -16,7 +17,9 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
 
   setup %{conn: conn} do
     TestMocks.setup_calendar_mocks(events: [])
@@ -440,6 +443,133 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
     end
   end
 
+  describe "sending someone their link again" do
+    setup %{user: user} do
+      poll =
+        insert(:poll,
+          user: user,
+          status: :open,
+          title: "Offsite",
+          timezone: "Etc/UTC",
+          duration_minutes: 30,
+          meeting_type_id: nil,
+          deadline_at: in_days(3)
+        )
+
+      insert(:poll_time_slot, poll: poll, start_time: in_days(7), position: 0)
+      %{poll: poll}
+    end
+
+    test "sends an invitee who has not voted their invitation again", %{conn: conn, poll: poll} do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      view = open_editor(conn, poll)
+
+      assert has_element?(view, resend_button(grace) <> "[aria-label='Resend invitation']")
+
+      view |> element(resend_button(grace)) |> render_click()
+
+      assert render(view) =~ "Sent Grace their link again."
+
+      assert [_invitation] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_poll_invitation", "participant_id" => grace.id}
+               )
+    end
+
+    test "sends someone who has voted their voting link", %{conn: conn, poll: poll} do
+      ada = insert(:poll_participant, poll: poll, name: "Ada", voted_at: in_days(-1))
+      view = open_editor(conn, poll)
+
+      assert has_element?(view, resend_button(ada) <> "[aria-label='Resend voting link']")
+
+      view |> element(resend_button(ada)) |> render_click()
+
+      assert render(view) =~ "Sent Ada their link again."
+
+      assert [_link] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_poll_participant_link", "participant_id" => ada.id}
+               )
+    end
+
+    test "says so when their link went out a few minutes ago", %{conn: conn, poll: poll} do
+      grace =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Grace",
+          link_sent_at: DateTime.utc_now(:second)
+        )
+
+      view = open_editor(conn, poll)
+      view |> element(resend_button(grace)) |> render_click()
+
+      assert render(view) =~ "Grace was sent their link a few minutes ago."
+      assert all_enqueued(worker: EmailWorker, args: %{"participant_id" => grace.id}) == []
+    end
+
+    test "says so when the address has had too many emails", %{conn: conn, poll: poll} do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      fill(:poll_recipient_email, grace.email)
+
+      view = open_editor(conn, poll)
+      view |> element(resend_button(grace)) |> render_click()
+
+      assert render(view) =~ "Grace has had too many emails recently. Please try again later."
+      assert all_enqueued(worker: EmailWorker, args: %{"participant_id" => grace.id}) == []
+    end
+
+    test "says so when the host has sent too many invitations", %{
+      conn: conn,
+      user: user,
+      poll: poll
+    } do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      fill(:poll_host_invitations, user.id)
+
+      view = open_editor(conn, poll)
+      view |> element(resend_button(grace)) |> render_click()
+
+      assert render(view) =~
+               "You have sent too many invitations recently. Please try again later."
+
+      assert all_enqueued(worker: EmailWorker, args: %{"participant_id" => grace.id}) == []
+    end
+
+    test "says so when voting has closed in the meantime", %{conn: conn, poll: poll} do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      view = open_editor(conn, poll)
+      poll |> Changeset.change(deadline_at: in_days(-1)) |> Repo.update!()
+
+      view |> element(resend_button(grace)) |> render_click()
+
+      assert render(view) =~
+               "Voting on this poll has closed. Move the deadline to send links again."
+    end
+
+    test "says so when the poll is no longer open", %{conn: conn, poll: poll} do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      view = open_editor(conn, poll)
+      poll |> Changeset.change(status: :cancelled) |> Repo.update!()
+
+      view |> element(resend_button(grace)) |> render_click()
+
+      assert render(view) =~ "This poll is no longer open."
+      assert all_enqueued(worker: EmailWorker, args: %{"participant_id" => grace.id}) == []
+    end
+
+    test "sends nothing for an id that is not on the poll", %{conn: conn, poll: poll} do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      view = open_editor(conn, poll)
+
+      view |> element(resend_button(grace)) |> render_click(%{"id" => "not-a-uuid"})
+
+      assert render(view) =~ "They are no longer on this poll."
+      assert all_enqueued(worker: EmailWorker, args: %{"participant_id" => grace.id}) == []
+    end
+  end
+
   defp open_editor(conn, poll) do
     {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
     select_poll(view, poll)
@@ -464,6 +594,12 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       voted_at: nil
     )
   end
+
+  defp fill(name, key),
+    do: :ok = RateLimiter.consume(name, key, RateLimiter.remaining(name, key))
+
+  defp resend_button(participant),
+    do: "[data-testid='poll-resend-invitation'][phx-value-id='#{participant.id}']"
 
   defp in_days(days), do: DateTime.add(DateTime.utc_now(:second), days, :day)
 

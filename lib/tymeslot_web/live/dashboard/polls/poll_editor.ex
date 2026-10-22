@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   which the editor warns about with the count it reads when the choice is made), the
   voting deadline (moved, removed, or set again to reopen voting), the
   reminders before it, and new candidate times. Everything is saved at once.
-  The participant list beside it removes someone straight away.
+  The participant list beside it takes someone off the poll, after a
+  confirmation, or sends them their link again.
 
   The editor keeps its own state across re-renders: a vote arriving while the
   host edits refreshes the poll it is given, not what the host has typed.
@@ -232,7 +233,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   attr :poll, :map, required: true
   attr :myself, :any, required: true
 
-  # Everyone counted on the poll, with a way to take someone off it.
+  # Everyone counted on the poll, with a way to send someone their link again or take them off it.
   defp participants(assigns) do
     ~H"""
     <details :if={@poll.participants != []} class="text-token-sm" data-testid="poll-participants">
@@ -258,14 +259,24 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               {participant.email} · {status_label(participant)}
             </p>
           </div>
-          <.icon_button
-            icon="hero-user-minus"
-            label={dgettext("dashboard_polls", "Remove from the poll")}
-            phx-click="request_remove_participant"
-            phx-value-id={participant.id}
-            phx-target={@myself}
-            data-testid="poll-remove-participant"
-          />
+          <div class="flex shrink-0 items-center gap-1">
+            <.icon_button
+              icon="hero-paper-airplane"
+              label={resend_label(participant)}
+              phx-click="resend_invitation"
+              phx-value-id={participant.id}
+              phx-target={@myself}
+              data-testid="poll-resend-invitation"
+            />
+            <.icon_button
+              icon="hero-user-minus"
+              label={dgettext("dashboard_polls", "Remove from the poll")}
+              phx-click="request_remove_participant"
+              phx-value-id={participant.id}
+              phx-target={@myself}
+              data-testid="poll-remove-participant"
+            />
+          </div>
         </li>
       </ul>
     </details>
@@ -339,6 +350,26 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
     send_update(PollsComponent, id: socket.assigns.parent_id, poll_updated: poll.id)
     {:noreply, assign(socket, :removing, nil)}
+  end
+
+  # The domain decides whether anything goes out; the participant from the
+  # editor's poll only names them in the answer. An id that is not among them
+  # is answered without asking the domain.
+  def handle_event("resend_invitation", %{"id" => participant_id}, socket) do
+    %{poll: poll, user_id: user_id} = socket.assigns
+
+    case Enum.find(poll.participants, &(&1.id == participant_id)) do
+      nil ->
+        Flash.warning(removal_error(:not_found))
+
+      participant ->
+        case Polls.resend_invitation(poll.id, user_id, participant.id) do
+          :ok -> Flash.info(resend_message(:ok, participant))
+          {:error, reason} -> Flash.warning(resend_message(reason, participant))
+        end
+    end
+
+    {:noreply, socket}
   end
 
   def handle_event("save", %{"poll" => params}, %{assigns: %{invited?: false}} = socket),
@@ -451,6 +482,50 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
     do: dgettext("dashboard_polls", "They are no longer on this poll.")
 
   defp removal_error(:not_open), do: dgettext("dashboard_polls", "This poll is no longer open.")
+
+  defp resend_label(participant) do
+    if PollParticipantSchema.unanswered_invitee?(participant),
+      do: dgettext("dashboard_polls", "Resend invitation"),
+      else: dgettext("dashboard_polls", "Resend voting link")
+  end
+
+  defp resend_message(:ok, participant),
+    do: dgettext("dashboard_polls", "Sent %{name} their link again.", name: name(participant))
+
+  defp resend_message(:sent_recently, participant),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "%{name} was sent their link a few minutes ago. Please wait a little before sending it again.",
+        name: name(participant)
+      )
+
+  defp resend_message(:recipient_rate_limited, participant),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "%{name} has had too many emails recently. Please try again later.",
+        name: name(participant)
+      )
+
+  defp resend_message(:host_rate_limited, _participant),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "You have sent too many invitations recently. Please try again later."
+      )
+
+  defp resend_message(:voting_closed, _participant),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "Voting on this poll has closed. Move the deadline to send links again."
+      )
+
+  defp resend_message(reason, _participant) when reason in [:not_found, :not_open],
+    do: removal_error(reason)
+
+  defp name(participant), do: PollParticipantSchema.display_name(participant)
 
   defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_polls", "voted")
   defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_polls", "invited")

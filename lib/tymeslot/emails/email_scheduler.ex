@@ -136,6 +136,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
     to: PollScheduler,
     as: :schedule_invitation
 
+  defdelegate schedule_poll_invitation_again(participant),
+    to: PollScheduler,
+    as: :schedule_invitation_again
+
   defdelegate reschedule_poll_deadline_jobs(poll, invited?),
     to: PollScheduler,
     as: :reschedule_deadline_jobs

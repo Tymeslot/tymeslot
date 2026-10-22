@@ -131,14 +131,29 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
 
   @doc """
   Sends an invitee their invitation now. Keyed so it goes out once per
-  participant. Someone who loses it can ask for their link again on the voting
-  page, unless the poll is invite-only: that page takes no requests.
+  participant; when it is lost the host sends it again with
+  `schedule_invitation_again/1`.
   """
   @spec schedule_invitation(map()) :: :ok
   def schedule_invitation(participant) do
     insert_job(
       %{"action" => "send_poll_invitation", "participant_id" => participant.id},
       unique: unique_opts([:action, :participant_id])
+    )
+  end
+
+  @doc """
+  Sends an invitee their invitation again now, at the host's request.
+
+  Not deduplicated here: the first invitation's key would swallow every
+  resend, and `Tymeslot.Polls.Invitations.resend/2` already allows one send
+  per participant in the resend window.
+  """
+  @spec schedule_invitation_again(map()) :: :ok
+  def schedule_invitation_again(participant) do
+    insert_job(
+      %{"action" => "send_poll_invitation", "participant_id" => participant.id},
+      []
     )
   end
 
