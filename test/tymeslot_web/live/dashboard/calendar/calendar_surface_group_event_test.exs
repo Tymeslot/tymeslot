@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.OneOffEvents
@@ -108,6 +109,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
   test "is not offered on a draft with guests", %{conn: conn, integration: integration} do
     lv = open(conn, integration, %{"guests" => ["ada@example.com"]})
 
+    refute has_element?(lv, "#calendar-panel-group-event")
+  end
+
+  # People book a group event on the public page, which needs a calendar.
+  test "is not offered without a calendar people can book through", %{
+    conn: conn,
+    integration: integration
+  } do
+    Repo.delete_all(CalendarIntegrationSchema)
+    lv = open(conn, integration, %{"calendar" => ""})
+
+    assert has_element?(lv, "#calendar-panel-new-form")
     refute has_element?(lv, "#calendar-panel-group-event")
   end
 
