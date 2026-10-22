@@ -339,14 +339,6 @@ msgid "e.g., Team sync"
 msgstr "напр., зустріч команди"
 
 #: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} guest has already voted. Their responses will be discarded."
-msgid_plural "%{count} guests have already voted. Their responses will be discarded."
-msgstr[0] "%{count} гість уже проголосував. Його відповіді буде видалено."
-msgstr[1] "%{count} гості вже проголосували. Їхні відповіді буде видалено."
-msgstr[2] "%{count} гостей уже проголосували. Їхні відповіді буде видалено."
-
-#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #: lib/tymeslot_web/live/dashboard/polls/delete_poll_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Keep poll"
@@ -824,3 +816,11 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "“%{title}” will be confirmed for %{time} (%{timezone}) and voting will close."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest has already voted. Their responses stay visible to you here, but no time will be confirmed."
+msgid_plural "%{count} guests have already voted. Their responses stay visible to you here, but no time will be confirmed."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""

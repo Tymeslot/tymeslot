@@ -55,8 +55,8 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
         <.info_box variant={:warning}>
           {dngettext(
             "dashboard_polls",
-            "%{count} guest has already voted. Their responses will be discarded.",
-            "%{count} guests have already voted. Their responses will be discarded.",
+            "%{count} guest has already voted. Their responses stay visible to you here, but no time will be confirmed.",
+            "%{count} guests have already voted. Their responses stay visible to you here, but no time will be confirmed.",
             @participant_count
           )}
         </.info_box>
