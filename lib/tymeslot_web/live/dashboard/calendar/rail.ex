@@ -95,10 +95,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   """
   attr :id_prefix, :string, default: "calendar-rail"
 
-  attr :show_heading, :boolean,
-    default: true,
-    doc: "false keeps the heading for screen readers only"
-
   attr :accounts, :list, required: true
   attr :syncing_ids, :any, default: MapSet.new()
   attr :problem_ids, :any, default: MapSet.new()
@@ -119,10 +115,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
     <section aria-labelledby={"#{@id_prefix}-heading"}>
       <h2
         id={"#{@id_prefix}-heading"}
-        class={[
-          "mb-2 text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500",
-          !@show_heading && "sr-only"
-        ]}
+        class="mb-2 text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500"
       >
         {dgettext("dashboard_calendar", "Calendars")}
       </h2>

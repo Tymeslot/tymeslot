@@ -59,6 +59,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       assert has_element?(lv, "#{sheet} #calendar-sheet-fold-night[role='switch']")
     end
 
+    test "names its calendars section with a visible heading, as it does sets and layers",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_calendars(lv)
+
+      sheet = "#calendar-calendars-sheet"
+
+      heading =
+        "#{sheet} section[aria-labelledby='calendar-sheet-heading'] > h2#calendar-sheet-heading"
+
+      assert has_element?(lv, heading, "Calendars")
+      refute has_element?(lv, "#{heading}.sr-only")
+      assert has_element?(lv, "#{sheet} h2#calendar-sheet-sets-heading", "Calendar sets")
+      assert has_element?(lv, "#{sheet} h2#calendar-sheet-layers-heading", "Layers")
+    end
+
     test "a calendar hidden there leaves the grid at once and the sheet stays open",
          %{conn: conn, integration: integration} do
       event(integration, "family", "Swimming", ~U[2026-10-14 16:00:00Z])

@@ -81,7 +81,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
         />
         <Rail.calendar_list
           id_prefix="calendar-sheet"
-          show_heading={false}
           accounts={@accounts}
           syncing_ids={@syncing_ids}
           problem_ids={@problem_ids}
