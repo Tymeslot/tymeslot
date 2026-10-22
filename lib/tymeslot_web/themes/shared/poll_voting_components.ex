@@ -78,8 +78,8 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             />
           </div>
         <% :invite_only -> %>
-          <.deadline_banner poll={@poll} />
-          <.invitation_only />
+          <.deadline_banner :if={@voting_open} poll={@poll} />
+          <.invitation_only voting_open={@voting_open} />
         <% :register -> %>
           <.deadline_banner poll={@poll} />
           <%= if @link_request do %>
@@ -162,13 +162,19 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   Shown on an invite-only poll to anyone without a personal link: there is
   no form to ask for one, and the tallies are for the people invited.
   """
+  attr :voting_open, :boolean, default: true
+
   @spec invitation_only(map()) :: Phoenix.LiveView.Rendered.t()
   def invitation_only(assigns) do
     ~H"""
     <div class="poll-invite-only" role="status" data-testid="poll-invite-only">
       <.icon name="hero-envelope" class="poll-invite-only-icon" />
       <p class="poll-voting-notice">
-        {invite_only_message()}
+        <%= if @voting_open do %>
+          {invite_only_message()}
+        <% else %>
+          {dgettext("booking_polls", "This poll is by invitation only, and voting has closed.")}
+        <% end %>
       </p>
     </div>
     """

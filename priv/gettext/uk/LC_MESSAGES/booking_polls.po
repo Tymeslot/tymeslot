@@ -215,3 +215,8 @@ msgstr "Це опитування лише за запрошеннями. Щоб
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
 msgstr "На цю адресу нещодавно надіслано забагато листів. Спробуйте пізніше."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only, and voting has closed."
+msgstr ""

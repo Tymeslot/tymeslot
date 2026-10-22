@@ -215,3 +215,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only, and voting has closed."
+msgstr ""

@@ -215,3 +215,8 @@ msgstr "Tato anketa je jen pro pozvané. K hlasování použijte osobní odkaz z
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
 msgstr "Na tuto adresu v poslední době odešlo příliš mnoho e-mailů. Zkuste to prosím později."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only, and voting has closed."
+msgstr ""

@@ -57,6 +57,27 @@ defmodule TymeslotWeb.Themes.Core.PollVotingInviteOnlyTest do
       refute has_element?(view, "[data-testid='poll-slot']")
     end
 
+    test "after the deadline the bare link says voting has closed, not how to vote", ctx do
+      past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+      ctx.poll |> Changeset.change(deadline_at: past) |> Repo.update!()
+
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token))
+
+      assert has_element?(view, "[data-testid='poll-invite-only']", "voting has closed")
+      refute has_element?(view, "[data-testid='poll-invite-only']", "to vote")
+      refute has_element?(view, "[data-testid='poll-deadline']")
+    end
+
+    test "before the deadline the bare link says when voting closes", ctx do
+      future = DateTime.add(DateTime.utc_now(:second), 2, :day)
+      ctx.poll |> Changeset.change(deadline_at: future) |> Repo.update!()
+
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token))
+
+      assert has_element?(view, "[data-testid='poll-deadline']", "Voting closes")
+      assert has_element?(view, "[data-testid='poll-invite-only']", "personal link")
+    end
+
     test "after the deadline a confirmed invitee still sees the final responses", ctx do
       now = DateTime.utc_now(:second)
 

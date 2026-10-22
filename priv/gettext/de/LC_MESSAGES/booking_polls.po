@@ -215,3 +215,8 @@ msgstr "An dieser Umfrage können nur eingeladene Personen teilnehmen. Nutzen Si
 #, elixir-autogen, elixir-format
 msgid "Too many emails to this address recently; try again later."
 msgstr "An diese Adresse wurden in letzter Zeit zu viele E-Mails gesendet. Bitte versuchen Sie es später noch einmal."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only, and voting has closed."
+msgstr ""
