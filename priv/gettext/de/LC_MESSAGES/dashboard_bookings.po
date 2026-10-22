@@ -855,4 +855,4 @@ msgstr "Tymeslot konnte diese Buchung nicht verschieben. Bitte versuchen Sie es 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
-msgstr "Diese Zeit fällt in Ihre Abwesenheit. Ändern oder entfernen Sie die Abwesenheit, um den Termin dorthin zu verschieben."
+msgstr "Dieser Zeitpunkt fällt in Ihre Abwesenheit. Ändern oder entfernen Sie die Abwesenheit, um den Termin dorthin zu verschieben."

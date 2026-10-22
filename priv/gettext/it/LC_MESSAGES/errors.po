@@ -794,4 +794,4 @@ msgstr "Tipo di campo sconosciuto"
 #: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
-msgstr ""
+msgstr "spostamenti di riunioni"

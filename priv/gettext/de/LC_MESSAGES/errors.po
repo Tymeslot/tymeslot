@@ -792,4 +792,4 @@ msgstr "Unbekannter Feldtyp"
 #: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
-msgstr ""
+msgstr "Terminverschiebungen"
