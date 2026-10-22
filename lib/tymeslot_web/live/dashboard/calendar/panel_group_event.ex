@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
   @moduledoc """
-  "Make it a group event" in the side panel's New event state: the draft
+  "Group event" in the side panel's New event state: the draft
   becomes a one-off event people sign up for
   (`Tymeslot.MeetingTypes.OneOffEvents`), a fixed-date group meeting type
   with its one session, instead of a bare calendar event.

@@ -13,9 +13,6 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
       back to `settle/3`;
     * `{:show, event}`: show `event` on the grid in place of its row;
     * `:reload`: reload the grid's events;
-    * `{:notify, notify, updated_event, scope}`: ask the organiser whether to
-      tell the event's attendees, once a write made with `notify` was
-      accepted in `scope`;
     * `{:membership_changed, original_event, updated_event}`: email the
       guests an accepted write made with `:membership` added or removed;
     * `{:dropped, :series_write | :series_move, count}`: tell the organiser
@@ -150,7 +147,6 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
           {:start, write(), map()}
           | {:show, map()}
           | :reload
-          | {:notify, map(), map(), atom()}
           | {:membership_changed, map(), map()}
           | {:dropped, :series_write | :series_move, pos_integer()}
 
@@ -179,18 +175,16 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   @doc """
   Queues a write of `changes` to `event` through
-  `Tymeslot.CalendarGrid.Changes.update_event/4`. Once it is accepted, a
-  `notify` of `%{original: event, saved_message: message}` asks the driver to
-  tell the attendees (`{:notify, ...}`); `:membership`, to email the guests the
-  write added or removed (`{:membership_changed, original, updated}`).
+  `Tymeslot.CalendarGrid.Changes.update_event/4`. With `notify` set to
+  `:membership`, once it is accepted, the driver is asked to email the guests
+  the write added or removed (`{:membership_changed, original, updated}`).
   """
-  @spec update(t(), map(), map(), keyword(), map() | :membership | nil) :: {t(), [effect()]}
+  @spec update(t(), map(), map(), keyword(), :membership | nil) :: {t(), [effect()]}
   def update(queue, event, changes, opts, notify \\ nil),
     do: queue |> update_ref(event, changes, opts, notify) |> Tuple.delete_at(2)
 
   @doc "`update/5`, also answering the reference of the write it took."
-  @spec update_ref(t(), map(), map(), keyword(), map() | :membership | nil) ::
-          {t(), [effect()], ref()}
+  @spec update_ref(t(), map(), map(), keyword(), :membership | nil) :: {t(), [effect()], ref()}
   def update_ref(queue, event, changes, opts, notify \\ nil) do
     write = %{kind: :update, changes: changes, opts: opts, notify: notify, ref: ref(event)}
     queue |> run(&submit(&1, event, write)) |> Tuple.insert_at(2, write.ref)
@@ -549,9 +543,6 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   end
 
   # What an accepted write made with `notify` asks of the driver (`update/5`).
-  defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, _before, {:ok, updated}),
-    do: emit(acc, {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)})
-
   defp notified(acc, %{kind: :update, notify: :membership}, before, {:ok, updated}),
     do: emit(acc, {:membership_changed, before, updated})
 

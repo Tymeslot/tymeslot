@@ -145,10 +145,10 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
     end
   end
 
-  # The grid removes a guest by writing the shortened list
-  # (`AttendeeManagement.apply_remove_attendee/3`). The guest has already been
-  # emailed a cancellation by then, so a document that kept her line would put
-  # her back in the grid on the next sync.
+  # The side panel removes a guest by writing the shortened list
+  # (`Dashboard.Calendar.PanelGuests.confirm_remove/1`). The guest is emailed a
+  # cancellation once it is accepted, so a document that kept her line would
+  # put her back on the calendar on the next sync.
   describe "changing the guests of a synced CalDAV event from the grid" do
     defp expect_put do
       test_pid = self()

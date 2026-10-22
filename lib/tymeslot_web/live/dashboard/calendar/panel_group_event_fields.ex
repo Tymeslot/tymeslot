@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEventFields do
   @moduledoc """
   The New event form's group-event fields (see `PanelGroupEvent`): the
-  "Make it a group event" box, and while it is ticked how many people can
+  "Group event" box, and while it is ticked how many people can
   sign up, where the event takes place and when registration closes.
 
   A group event needs exactly one place fixed in advance, so the location is

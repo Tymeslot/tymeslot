@@ -588,25 +588,29 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
   end
 
-  describe "telling the attendees" do
-    @notify %{original: @event, saved_message: "Saved"}
-
-    test "an accepted write made with notify asks for it, in the scope it was written in" do
-      updated = %{@event | summary: "Renamed"}
+  describe "telling the guests a write added or removed" do
+    test "an accepted :membership write asks for it, from the event as it found and left it" do
+      updated = Map.put(@event, :attendees, [%{email: "new@example.com"}])
 
       {queue, [{:start, write, _event}]} =
-        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], @notify)
+        WriteQueue.update(
+          WriteQueue.new(),
+          @event,
+          %{attendees: updated.attendees},
+          [],
+          :membership
+        )
 
-      assert {_queue, [{:notify, @notify, ^updated, :this_only}]} =
+      assert {_queue, [{:membership_changed, @event, ^updated}]} =
                WriteQueue.settle(queue, write.ref, {:ok, updated})
     end
 
-    test "a failed write, or one made without notify, asks nobody" do
+    test "a failed write, or one made without :membership, asks nobody" do
       {queue, [{:start, write, _event}]} =
-        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], @notify)
+        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], :membership)
 
       assert {_queue, effects} = WriteQueue.settle(queue, write.ref, :failed)
-      refute Enum.any?(effects, &match?({:notify, _, _, _}, &1))
+      refute Enum.any?(effects, &match?({:membership_changed, _, _}, &1))
 
       {queue, [{:start, plain, _event}]} =
         WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [])
