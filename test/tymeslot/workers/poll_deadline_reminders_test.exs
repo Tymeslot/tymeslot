@@ -14,8 +14,8 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
-  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Emails.Shared.Formatting
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Workers.EmailWorker
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter

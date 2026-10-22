@@ -140,7 +140,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
 
       assert_receive {:email, first}, 1000
       assert_receive {:email, second}, 1000
-      by_address = Map.new([first, second], fn email -> {hd(email.to) |> elem(1), email} end)
+      by_address = Map.new([first, second], fn email -> {email.to |> hd() |> elem(1), email} end)
 
       voter = by_address["voter@example.com"]
       assert voter.text_body =~ "Thank you for your responses."

@@ -18,11 +18,11 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
-  alias Tymeslot.Profiles
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
+  alias Tymeslot.Profiles
   alias Tymeslot.Workers.EmailWorker
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
