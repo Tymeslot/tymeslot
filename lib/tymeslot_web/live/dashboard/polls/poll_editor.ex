@@ -212,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         poll={@poll}
         user_id={@user_id}
         parent_id={@parent_id}
-        now={@now}
+        voting_open?={@voting_open?}
       />
 
       <div class="flex justify-end gap-2">

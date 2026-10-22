@@ -163,7 +163,10 @@ defmodule TymeslotWeb.DashboardLive do
         else: socket
 
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
-    reschedule_agenda_tick(socket, action)
+
+    socket
+    |> reschedule_agenda_tick(action)
+    |> PollEventHandlers.keep_deadline_timer(action)
   end
 
   # Keeps a single agenda-refresh timer alive only while a section that shows
@@ -435,6 +438,9 @@ defmodule TymeslotWeb.DashboardLive do
 
   def handle_info({:poll_deadline_reached, poll_id}, socket),
     do: PollEventHandlers.handle_poll_deadline_reached(poll_id, socket)
+
+  def handle_info({:poll_deadline_next, deadline}, socket),
+    do: PollEventHandlers.handle_poll_deadline_next(deadline, socket)
 
   # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
 

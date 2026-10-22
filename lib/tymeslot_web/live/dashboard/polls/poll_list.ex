@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :selected_poll_id, :any, default: nil
-  attr :now, DateTime, required: true, doc: "the instant voting is judged open at"
+  attr :open_poll_ids, :any, required: true, doc: "MapSet of the ids of polls taking votes"
   attr :myself, :any, required: true
 
   @spec poll_list(map()) :: Phoenix.LiveView.Rendered.t()
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
         profile={@profile}
         integration_status={@integration_status}
         selected={@selected_poll_id == poll.id}
-        now={@now}
+        voting_open?={MapSet.member?(@open_poll_ids, poll.id)}
         myself={@myself}
       />
     </div>
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :selected, :boolean, default: false
-  attr :now, DateTime, required: true
+  attr :voting_open?, :boolean, required: true
   attr :myself, :any, required: true
 
   @spec poll_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
               {@poll.title}
             </h2>
-            <.status_pill status={status(@poll, @now)} />
+            <.status_pill status={status(@poll, @voting_open?)} />
           </div>
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-token-xs text-tymeslot-600">
@@ -175,11 +175,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   # An open poll past its deadline takes no more votes, though it still
   # waits for the host to confirm a time.
-  defp status(%{status: :open} = poll, now) do
-    if Polls.voting_open?(poll, now), do: :open, else: :voting_closed
-  end
-
-  defp status(%{status: status}, _now), do: status
+  defp status(%{status: :open}, true = _voting_open?), do: :open
+  defp status(%{status: :open}, false = _voting_open?), do: :voting_closed
+  defp status(%{status: status}, _voting_open?), do: status
 
   defp status_tone(:open), do: :brand
   defp status_tone(:voting_closed), do: :warning

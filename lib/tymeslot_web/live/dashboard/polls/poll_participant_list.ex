@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
   tooltip; the domain refuses it either way.
 
   The editor passes the poll it shows, so a vote arriving while the host edits
-  refreshes the list. Answers reach the host as flashes through
+  refreshes the list, and whether it takes votes, as `PollsComponent` judged
+  it, so the resend actions close with voting at the deadline. Answers reach the host as flashes through
   `TymeslotWeb.Live.Shared.Flash`, and a removal tells the owning
   `PollsComponent` to reload the poll.
   """
@@ -102,15 +103,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
       />
     </div>
     """
-  end
-
-  @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    socket = assign(socket, assigns)
-    # `now` comes from the dashboard, which moves it on at the poll's
-    # deadline, so the resend actions close with voting.
-    %{poll: poll, now: now} = socket.assigns
-    {:ok, assign(socket, :voting_open?, Polls.voting_open?(poll, now))}
   end
 
   @impl Phoenix.LiveComponent

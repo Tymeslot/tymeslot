@@ -16,6 +16,10 @@ defmodule TymeslotWeb.Live.Shared.PollDeadlineTimer do
   a timer already running for the same deadline is kept, and any other is
   cancelled and replaced. A delay longer than `@max_delay_ms` is capped; the
   early wake-up finds voting still open and arms the timer again.
+
+  A view that does not own its process, such as a LiveComponent, works out
+  the deadline with `next_deadline/2` and leaves the timer to its LiveView,
+  which `track/3`s it and can cancel it when the view goes away.
   """
 
   alias Tymeslot.Polls
@@ -27,6 +31,7 @@ defmodule TymeslotWeb.Live.Shared.PollDeadlineTimer do
   defstruct [:ref, :deadline]
 
   @type t :: %__MODULE__{ref: reference(), deadline: DateTime.t()}
+  @type deadline :: {Ecto.UUID.t(), DateTime.t()}
 
   @doc """
   Arms, keeps or cancels `timer` so it fires at the next deadline among
@@ -34,10 +39,35 @@ defmodule TymeslotWeb.Live.Shared.PollDeadlineTimer do
   deadline still ahead.
   """
   @spec sync(t() | nil, [Polls.PollSchema.t()], DateTime.t()) :: t() | nil
-  def sync(timer, polls, now) do
+  def sync(timer, polls, now), do: track(timer, next_deadline(polls, now), now)
+
+  @doc """
+  The next deadline among `polls` as of `now`, as `{poll_id, deadline}`, or
+  nil when none is still ahead. Lets a view that does not own the process's
+  timer say which deadline the owner should `track/3`.
+  """
+  @spec next_deadline([Polls.PollSchema.t()], DateTime.t()) :: deadline() | nil
+  def next_deadline(polls, now) do
     case Polls.next_to_close(polls, now) do
-      nil -> cancel(timer)
-      poll -> arm(timer, poll, now)
+      nil -> nil
+      poll -> {poll.id, poll.deadline_at}
+    end
+  end
+
+  @doc """
+  Arms, keeps or cancels `timer` so it fires at `deadline`, a
+  `{poll_id, deadline}` pair from `next_deadline/2`, or nil for none.
+  """
+  @spec track(t() | nil, deadline() | nil, DateTime.t()) :: t() | nil
+  def track(timer, nil, _now), do: cancel(timer)
+
+  def track(timer, {poll_id, deadline}, now) do
+    if running_for?(timer, deadline) do
+      timer
+    else
+      cancel(timer)
+      ref = Process.send_after(self(), {:poll_deadline_reached, poll_id}, delay_ms(deadline, now))
+      %__MODULE__{ref: ref, deadline: deadline}
     end
   end
 
@@ -54,15 +84,11 @@ defmodule TymeslotWeb.Live.Shared.PollDeadlineTimer do
   @spec max_delay_ms() :: pos_integer()
   def max_delay_ms, do: @max_delay_ms
 
-  defp arm(timer, %{deadline_at: deadline} = poll, now) do
-    if running_for?(timer, deadline) do
-      timer
-    else
-      cancel(timer)
-      delay = deadline |> DateTime.diff(now, :millisecond) |> max(0) |> min(@max_delay_ms)
-      ref = Process.send_after(self(), {:poll_deadline_reached, poll.id}, delay)
-      %__MODULE__{ref: ref, deadline: deadline}
-    end
+  # Rounded up: a timer that fires a fraction of a millisecond early finds
+  # voting still open and has to be armed again for the remainder.
+  defp delay_ms(deadline, now) do
+    ms = div(DateTime.diff(deadline, now, :microsecond) + 999, 1000)
+    ms |> max(0) |> min(@max_delay_ms)
   end
 
   # `read_timer/1` is false once the timer has fired: the wake-up that
