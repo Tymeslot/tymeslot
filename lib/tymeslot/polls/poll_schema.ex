@@ -220,7 +220,7 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_required([:status, :confirmed_meeting_id, :confirmed_at])
   end
 
-  @doc "Marks the host as told about every vote cast up to `sent_at`."
+  @doc "Marks the host as told about every vote cast before `sent_at`."
   @spec vote_digest_sent_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
   def vote_digest_sent_changeset(poll, sent_at),
     do: change(poll, vote_digest_sent_at: DateTime.truncate(sent_at, :second))

@@ -12,6 +12,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   require Logger
 
   alias Tymeslot.Auth
+  alias Tymeslot.Clock
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Emails.Templates.PollCancelled
@@ -40,6 +41,18 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   @participant_gone "poll participant not found"
   # The host's account was deleted before the cancellation went out.
   @host_gone "poll host not found"
+
+  # How long a vote is left to settle before an update to the host may report
+  # it. A vote is stamped before its transaction commits, so an update that
+  # read the poll in between would otherwise mark it as told without having
+  # seen it. A minute is far beyond any vote's transaction; a newer vote waits
+  # for the next update.
+  @vote_settle_seconds 60
+
+  # The cutoff an update to the host marks as told, kept on its job
+  # (`DeliveryClaims.remember/3`) so that a rerun marks the same one.
+  @digest_cutoff "vote_digest:cutoff"
+  @nudge_cutoff "host_nudge:cutoff"
 
   @doc """
   Whether `reason`, from a discard this module returned, is an expected end
@@ -167,16 +180,21 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   @spec handle_host_nudge(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_host_nudge(%{"poll_id" => poll_id, "variant" => variant} = args, job_id) do
-    with_current_deadline(poll_id, args, "poll host nudge", fn poll ->
-      DeliveryClaims.once(job_id, "host", fn ->
-        poll
-        |> PollHostNudge.render(variant_atom(variant), results_url())
-        |> Delivery.deliver()
-      end)
+    cutoff = host_update_cutoff(job_id, @nudge_cutoff)
 
-      # The nudge carries the standings, so it counts as the host's update on
-      # new votes: a pending one then has nothing new to tell.
-      mark_host_updated(poll, DateTime.utc_now())
+    with_current_deadline(poll_id, args, "poll host nudge", fn poll ->
+      delivered =
+        DeliveryClaims.once(job_id, "host", fn ->
+          poll
+          |> PollHostNudge.render(variant_atom(variant), results_url())
+          |> Delivery.deliver()
+          |> delivery_outcome()
+        end)
+
+      # Once sent, the nudge counts as the host's update on the votes it
+      # carried: a pending update then has nothing new to tell. A nudge that
+      # failed told the host nothing, so nothing is marked and the job retries.
+      with :ok <- delivered, do: mark_host_updated(poll, cutoff)
     end)
   end
 
@@ -185,32 +203,44 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   their last one, with the standings. Sends nothing when the host has turned
   updates off since the job was scheduled, or when nothing is new, e.g.
   because a nudge carried the same standings in the meantime.
+
+  The update covers the votes cast before a cutoff a minute before the job
+  first ran, kept on the job so that a rerun covers the same ones. Votes cast
+  after it are left to the next update, which this one schedules.
   """
   @spec handle_vote_digest(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_vote_digest(%{"poll_id" => poll_id}, job_id) do
-    with_open_poll(poll_id, "poll vote digest", fn poll ->
-      cutoff = DateTime.utc_now()
+    # Taken before the poll is read, so nothing the read missed is marked told.
+    cutoff = host_update_cutoff(job_id, @digest_cutoff)
 
-      case {poll.notify_on_vote, voted_since_update(poll, cutoff)} do
-        {false, _voters} ->
-          :ok
+    with_open_poll(poll_id, "poll vote digest", &send_vote_digest(&1, cutoff, job_id))
+  end
 
-        {true, []} ->
-          :ok
+  defp send_vote_digest(%PollSchema{notify_on_vote: false}, _cutoff, _job_id), do: :ok
 
-        {true, voters} ->
-          delivered =
-            DeliveryClaims.once(job_id, "host", fn ->
-              poll
-              |> PollVoteDigest.render(voters, results_url())
-              |> Delivery.deliver()
-              |> delivery_outcome()
-            end)
+  defp send_vote_digest(poll, cutoff, job_id) do
+    {voters, settling} = voters_since_update(poll, cutoff)
 
-          with :ok <- delivered, do: mark_host_updated(poll, cutoff)
-      end
-    end)
+    with :ok <- deliver_vote_digest(poll, voters, cutoff, job_id) do
+      # A vote cast while this update was waiting joined it rather than
+      # scheduling its own, so one this update leaves out needs the next.
+      if settling == [], do: :ok, else: PollScheduler.schedule_vote_digest(poll)
+    end
+  end
+
+  defp deliver_vote_digest(_poll, [], _cutoff, _job_id), do: :ok
+
+  defp deliver_vote_digest(poll, voters, cutoff, job_id) do
+    delivered =
+      DeliveryClaims.once(job_id, "host", fn ->
+        poll
+        |> PollVoteDigest.render(voters, results_url())
+        |> Delivery.deliver()
+        |> delivery_outcome()
+      end)
+
+    with :ok <- delivered, do: mark_host_updated(poll, cutoff)
   end
 
   @doc """
@@ -309,22 +339,45 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     }
   end
 
-  # Who voted after the host's last update and up to `cutoff`, in the order
-  # they voted. Votes after `cutoff` scheduled the next update.
-  defp voted_since_update(poll, cutoff) do
-    since = poll.vote_digest_sent_at
-
+  # Who voted since the host's last update and before `cutoff`, in the order
+  # they voted, and apart from them whoever voted since and at or after
+  # `cutoff`: too recently for this update.
+  defp voters_since_update(poll, cutoff) do
     poll.participants
-    |> Enum.filter(fn participant ->
-      participant.voted_at != nil and
-        (since == nil or DateTime.compare(participant.voted_at, since) == :gt) and
-        DateTime.compare(participant.voted_at, cutoff) != :gt
-    end)
+    |> Enum.filter(&voted_since?(&1, poll.vote_digest_sent_at))
     |> Enum.sort_by(& &1.voted_at, DateTime)
+    |> Enum.split_with(&DateTime.before?(&1.voted_at, cutoff))
   end
 
-  defp mark_host_updated(poll, at) do
-    case PollQueries.update(PollSchema.vote_digest_sent_changeset(poll, at)) do
+  defp voted_since?(%{voted_at: nil}, _since), do: false
+  defp voted_since?(_participant, nil), do: true
+  defp voted_since?(%{voted_at: voted_at}, since), do: not DateTime.before?(voted_at, since)
+
+  # Whole seconds, as `voted_at` is stored, and a settle minute back.
+  defp host_update_cutoff(job_id, name) do
+    now =
+      Clock.utc_now()
+      |> DateTime.truncate(:second)
+      |> DateTime.add(-@vote_settle_seconds, :second)
+
+    {:ok, cutoff, _offset} =
+      job_id
+      |> DeliveryClaims.remember(name, DateTime.to_iso8601(now))
+      |> DateTime.from_iso8601()
+
+    cutoff
+  end
+
+  # Never moves back: a rerun's kept cutoff, or a nudge's, can be earlier than
+  # an update that has gone out since, and moving back would repeat votes.
+  defp mark_host_updated(%PollSchema{vote_digest_sent_at: %DateTime{} = sent_at} = poll, cutoff) do
+    if DateTime.after?(cutoff, sent_at), do: write_host_updated(poll, cutoff), else: :ok
+  end
+
+  defp mark_host_updated(poll, cutoff), do: write_host_updated(poll, cutoff)
+
+  defp write_host_updated(poll, cutoff) do
+    case PollQueries.update(PollSchema.vote_digest_sent_changeset(poll, cutoff)) do
       {:ok, _poll} -> :ok
       {:error, changeset} -> {:error, changeset}
     end

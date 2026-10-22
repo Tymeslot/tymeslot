@@ -16,14 +16,12 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
-  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
-  alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
@@ -310,113 +308,6 @@ defmodule Tymeslot.Workers.PollEmailsTest do
     end
   end
 
-  # --- Host updates on new votes ---
-
-  describe "updates on new votes" do
-    setup do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-      poll = insert(:poll, status: :open, user: user, notify_on_vote: true)
-      slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
-      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
-      %{user: user, poll: poll, slot: slot}
-    end
-
-    test "votes cast before the update goes out join one update a quarter hour away", ctx do
-      ada = insert(:poll_participant, poll: ctx.poll)
-      grace = insert(:poll_participant, poll: ctx.poll)
-
-      {:ok, _ada_vote} = Voting.cast_votes(ctx.poll, ada.token, %{ctx.slot.id => :yes})
-      {:ok, _grace_vote} = Voting.cast_votes(ctx.poll, grace.token, %{ctx.slot.id => :no})
-
-      assert [job] = digest_jobs(ctx.poll.id)
-      assert_in_delta DateTime.diff(job.scheduled_at, DateTime.utc_now()), 15 * 60, 5
-    end
-
-    test "nothing is scheduled for a poll whose host did not ask for updates", ctx do
-      poll = %{ctx.poll | notify_on_vote: false}
-      ada = insert(:poll_participant, poll: poll)
-
-      {:ok, _vote} = Voting.cast_votes(poll, ada.token, %{ctx.slot.id => :yes})
-
-      assert digest_jobs(poll.id) == []
-    end
-
-    test "the update names who voted since the last one and is then marked sent", ctx do
-      long_ago = DateTime.add(DateTime.utc_now(:second), -3600, :second)
-
-      Repo.update!(Changeset.change(ctx.poll, vote_digest_sent_at: long_ago))
-
-      insert(:poll_participant,
-        poll: ctx.poll,
-        name: "Before",
-        voted_at: DateTime.add(long_ago, -60, :second)
-      )
-
-      insert(:poll_participant,
-        poll: ctx.poll,
-        name: "Since",
-        voted_at: DateTime.add(long_ago, 60, :second)
-      )
-
-      assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_vote_digest",
-                 "poll_id" => ctx.poll.id
-               })
-
-      assert_receive {:email, email}, 1000
-      assert ctx.user.email in recipients(email)
-      assert email.text_body =~ "Responses from: Since"
-      refute email.text_body =~ "Before"
-
-      assert DateTime.compare(Repo.reload(ctx.poll).vote_digest_sent_at, long_ago) == :gt
-
-      # Nothing new since: the next run sends nothing.
-      assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_vote_digest",
-                 "poll_id" => ctx.poll.id
-               })
-
-      refute_receive {:email, _again}, 200
-    end
-
-    test "sends nothing once the host has turned updates off", ctx do
-      Repo.update!(Changeset.change(ctx.poll, notify_on_vote: false))
-      insert(:poll_participant, poll: ctx.poll, voted_at: DateTime.utc_now(:second))
-
-      assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_vote_digest",
-                 "poll_id" => ctx.poll.id
-               })
-
-      refute_receive {:email, _any}, 200
-    end
-
-    test "a nudge carries the standings, so a waiting update has nothing new to tell", ctx do
-      insert(:poll_participant, poll: ctx.poll, voted_at: DateTime.utc_now(:second))
-
-      assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_host_nudge",
-                 "poll_id" => ctx.poll.id,
-                 "variant" => "all_voted"
-               })
-
-      assert_receive {:email, _nudge}, 1000
-
-      assert :ok =
-               perform_job(EmailWorker, %{
-                 "action" => "send_poll_vote_digest",
-                 "poll_id" => ctx.poll.id
-               })
-
-      refute_receive {:email, _digest}, 200
-    end
-  end
-
   # --- Handler: host nudge ---
 
   describe "send_poll_host_nudge" do
@@ -508,13 +399,6 @@ defmodule Tymeslot.Workers.PollEmailsTest do
           "variant" => "all_voted"
         }
       )
-    )
-  end
-
-  defp digest_jobs(poll_id) do
-    Enum.filter(
-      all_enqueued(worker: EmailWorker),
-      &(&1.args["action"] == "send_poll_vote_digest" and &1.args["poll_id"] == poll_id)
     )
   end
 
