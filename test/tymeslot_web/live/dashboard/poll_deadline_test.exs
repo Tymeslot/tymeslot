@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
 
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.TestHelpers.Eventually, only: [eventually: 1]
   import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
   alias Ecto.Changeset
@@ -100,7 +101,9 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
     poll |> Changeset.change(deadline_at: later) |> Repo.update!()
     send(view.pid, {:poll_updated, poll.id})
 
-    assert %{deadline: ^later} = deadline_timer(view)
+    # The update reaches the timer in several hops (the component reloads,
+    # then reports its next deadline back), so wait for it to land.
+    eventually(fn -> assert %{deadline: ^later} = deadline_timer(view) end)
   end
 
   describe "when the host leaves the Polls section" do
