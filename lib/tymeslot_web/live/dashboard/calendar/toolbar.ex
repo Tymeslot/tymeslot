@@ -42,12 +42,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
   def toolbar(assigns) do
     ~H"""
-    <%!-- The trailing controls need about 500px: narrower, they wrap to a
-         second row as one group, so the display options stay at the right
-         edge and their panel opens over the calendar, not the menu. --%>
+    <%!-- A container, since the menu, the rail and focus mode change its
+         width: below 64rem Create keeps only its icon (its name stays for
+         screen readers and in its tooltip). The period takes the room left
+         over and ends in an ellipsis before the row wraps (the picker's
+         aria-label and the title's tooltip keep it whole); below 8rem of it,
+         the trailing controls (about 500px) wrap to a second row as one
+         group, so the display options stay at the right edge and their
+         panel opens over the calendar, not the menu. --%>
     <div
       id="calendar-toolbar"
-      class="flex min-h-11 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-tymeslot-200 bg-white px-3 py-1 max-sm:hidden"
+      class="@container flex min-h-11 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-tymeslot-200 bg-white px-3 py-1 max-sm:hidden"
     >
       <.icon_button
         id="calendar-rail-toggle"
@@ -79,9 +84,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         size={:sm}
         icon="hero-plus"
         aria-keyshortcuts="c"
+        title={dgettext("dashboard_calendar", "Create")}
         phx-click={JS.dispatch("calendar:quick-create", to: "#calendar-canvas")}
+        class="shrink-0"
       >
-        {dgettext("dashboard_calendar", "Create")}
+        <span class="@max-5xl:sr-only">{dgettext("dashboard_calendar", "Create")}</span>
       </.action_button>
       <.action_button
         id="calendar-today"
@@ -107,56 +114,70 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           phx-click={Navigation.js(@view, Period.shift(@view, @date, 1), step: 1)}
         />
       </div>
-      <.dropdown
-        id="calendar-date-picker"
-        open={@open_menu == :date}
-        on_toggle="calendar:toggle_menu"
-        on_close="calendar:close_menu"
-        target={@target}
-        trigger_attrs={[{"phx-value-menu", "date"}]}
-        position={:bottom_start}
-        role="dialog"
-        panel_label={dgettext("dashboard_calendar", "Choose a date")}
-        aria-label={
-          dgettext("dashboard_calendar", "Choose a date, %{period}",
-            period: PeriodLabels.title(@view, @date, @days, @locale)
-          )
-        }
-        trigger_class="flex items-center gap-1 rounded-token-md px-2 py-1 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
-        class="mt-1 w-72 rounded-token-xl bg-white p-3 shadow-lg ring-1 ring-tymeslot-200"
-      >
-        <:trigger>
-          <span
-            id="calendar-period-title"
-            class="whitespace-nowrap text-token-lg font-semibold text-tymeslot-900"
-          >
-            {PeriodLabels.title(@view, @date, @days, @locale)}
-          </span>
-          <.icon name="hero-chevron-down-mini" class="h-4 w-4 text-tymeslot-500" />
-        </:trigger>
-        <:panel>
-          <MiniMonth.mini_month
-            id="calendar-picker-month"
-            cursor={@mini_cursor}
-            view={@view}
-            date={@date}
-            days={@days}
-            today={@today}
-            week_start={@week_start}
-            locale={@locale}
-            target={@target}
-            week_numbers={@week_numbers}
-          />
-        </:panel>
-      </.dropdown>
-      <div class="flex-1"></div>
+      <div class="min-w-32 flex-1">
+        <.dropdown
+          id="calendar-date-picker"
+          open={@open_menu == :date}
+          on_toggle="calendar:toggle_menu"
+          on_close="calendar:close_menu"
+          target={@target}
+          trigger_attrs={[{"phx-value-menu", "date"}]}
+          position={:bottom_start}
+          role="dialog"
+          panel_label={dgettext("dashboard_calendar", "Choose a date")}
+          aria-label={
+            dgettext("dashboard_calendar", "Choose a date, %{period}",
+              period: PeriodLabels.title(@view, @date, @days, @locale)
+            )
+          }
+          trigger_class="inline-flex max-w-full items-center gap-1 rounded-token-md px-2 py-1 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+          class="mt-1 w-72 rounded-token-xl bg-white p-3 shadow-lg ring-1 ring-tymeslot-200"
+        >
+          <:trigger>
+            <span
+              id="calendar-period-title"
+              title={PeriodLabels.title(@view, @date, @days, @locale)}
+              class={[
+                "min-w-0 truncate text-token-lg font-semibold text-tymeslot-900",
+                @view == :day && "@max-6xl:hidden"
+              ]}
+            >
+              {PeriodLabels.title(@view, @date, @days, @locale)}
+            </span>
+            <%!-- A day's full date only fits the widest toolbar; narrower, it is "Wed 30 Sep". --%>
+            <span
+              :if={@view == :day}
+              id="calendar-period-title-short"
+              title={PeriodLabels.title(@view, @date, @days, @locale)}
+              class="min-w-0 truncate text-token-lg font-semibold text-tymeslot-900 @6xl:hidden"
+            >
+              {PeriodLabels.short_title(@view, @date, @days, @locale)}
+            </span>
+            <.icon name="hero-chevron-down-mini" class="h-4 w-4 shrink-0 text-tymeslot-500" />
+          </:trigger>
+          <:panel>
+            <MiniMonth.mini_month
+              id="calendar-picker-month"
+              cursor={@mini_cursor}
+              view={@view}
+              date={@date}
+              days={@days}
+              today={@today}
+              week_start={@week_start}
+              locale={@locale}
+              target={@target}
+              week_numbers={@week_numbers}
+            />
+          </:panel>
+        </.dropdown>
+      </div>
       <FilterChip.filter_chip
         hidden_count={@hidden_count}
         set_name={@set_name}
         rail_open={@rail_open}
         target={@target}
       />
-      <div id="calendar-toolbar-end" class="ml-auto flex items-center gap-2">
+      <div id="calendar-toolbar-end" class="ml-auto flex shrink-0 items-center gap-2">
         <.icon_button
           id="calendar-search"
           icon="hero-magnifying-glass"

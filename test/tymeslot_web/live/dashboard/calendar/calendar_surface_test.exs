@@ -119,6 +119,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     assert lv |> element("#calendar-period-title") |> render() =~ "20 October 2026"
   end
 
+  # The toolbar is a container: a narrow one shows the short date, a wide one the full.
+  test "day view's title has a short form for a narrow toolbar, the full date in its tooltip",
+       %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=day&date=2026-10-20")
+
+    full = "#calendar-period-title[class~='@max-6xl:hidden']"
+    short = "#calendar-period-title-short[class~='@6xl:hidden'][title='Tuesday, 20 October 2026']"
+    assert has_element?(lv, full, "20 October 2026")
+    assert has_element?(lv, short, "Tue 20 Oct")
+
+    lv |> element("#calendar-view-week") |> render_click()
+
+    refute has_element?(lv, "#calendar-period-title-short")
+    refute has_element?(lv, "#calendar-period-title[class~='@max-6xl:hidden']")
+  end
+
   test "day view loads its week with a week either side, so switching to that week needs no query",
        %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar?view=day&date=2026-10-14")
@@ -321,6 +337,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
 
     assert has_element?(lv, "#calendar-create[aria-keyshortcuts='c']", "Create")
+    # A narrow toolbar keeps only the icon; the name stays for screen readers and the tooltip.
+    assert has_element?(
+             lv,
+             "#calendar-create[title='Create'] span[class~='@max-5xl:sr-only']",
+             "Create"
+           )
 
     ops =
       html
