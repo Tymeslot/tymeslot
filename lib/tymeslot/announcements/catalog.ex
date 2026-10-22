@@ -55,12 +55,11 @@ defmodule Tymeslot.Announcements.Catalog do
       body:
         dgettext(
           "onboarding",
-          "Invite people to a poll by email and keep it to the people you invite. Anyone else " <>
-            "gets a voting link by email, and you can be emailed as votes arrive, with the " <>
-            "standings. After sending you can change the deadline, add times, resend an " <>
-            "invitation and remove people; reminders go to invited people who haven't voted. " <>
-            "The meeting a poll confirms is yours: everyone on it is a guest, and only you " <>
-            "can move or cancel it."
+          "A poll can be open, so anyone with the link asks for a voting link by email, or " <>
+            "invite-only. You can be emailed as votes arrive. After sending you can change " <>
+            "the deadline, add times, resend an invitation and remove people; reminders go to " <>
+            "invited people who haven't voted. The meeting a poll confirms is yours: everyone " <>
+            "on it is a guest, and only you can move or cancel it."
         ),
       image_path: "/images/announcements/meeting-polls.svg",
       cta_label: dgettext("onboarding", "Read the docs"),

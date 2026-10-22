@@ -175,10 +175,10 @@ msgstr "Transformez n'importe quel type de rendez-vous en session de groupe. Fix
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
-msgid "Invite people to a poll by email and keep it to the people you invite. Anyone else gets a voting link by email, and you can be emailed as votes arrive, with the standings. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr "Invitez par e-mail les personnes de votre choix et réservez-leur le sondage. Les autres reçoivent un lien de vote par e-mail, et chaque vote peut vous être signalé par e-mail, résultats compris. Vous pouvez ensuite changer la date limite, ajouter des horaires, renvoyer une invitation et retirer quelqu'un ; les rappels vont aux personnes invitées qui n'ont pas voté. La réunion confirmée est à vous : tous ses participants sont des invités, et personne d'autre ne peut la reporter ni l'annuler."
+msgid "Polls that invite, confirm and keep you posted"
+msgstr "Des sondages qui invitent, confirment et vous tiennent au courant"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
-msgid "Polls that invite, confirm and keep you posted"
-msgstr "Des sondages qui invitent, confirment et vous tiennent au courant"
+msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
+msgstr ""
