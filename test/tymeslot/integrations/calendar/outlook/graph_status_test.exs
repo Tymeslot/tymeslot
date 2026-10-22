@@ -30,6 +30,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatusTest do
              )
   end
 
+  test "a 403 with an activity-limit code is :rate_limited, whatever the message" do
+    assert {:error, :rate_limited, _msg} =
+             GraphStatus.classify(forbidden("activityLimitReached", "Too many requests."))
+  end
+
   test "a 403 with an access-denied code is :unauthorized" do
     assert {:error, :unauthorized, _msg} =
              GraphStatus.classify(forbidden("ErrorAccessDenied", "Access is denied."))

@@ -704,6 +704,16 @@ msgstr "Ha lasciato questo orario"
 msgid "Cancel meeting"
 msgstr "Annulla riunione"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Iscrizioni chiuse"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Sposta una data fissa dal suo tipo di riunione."
+
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "This booking was already cancelled, so no refund was issued."

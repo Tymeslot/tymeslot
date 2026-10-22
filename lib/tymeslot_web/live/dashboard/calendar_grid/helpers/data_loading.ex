@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   # Number of days the agenda view looks ahead from the current date.
@@ -38,6 +39,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
     |> assign(:video_integrations, video_integrations)
+    # Where a one-off group event can take place (`CreateEventModal`).
+    |> assign(:venues, Venues.list_venues(user_id))
     |> assign_calendar_appearances(user_id)
     |> check_staleness()
   end

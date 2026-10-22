@@ -382,6 +382,11 @@ msgstr "les réservations de groupe ne peuvent pas exiger de paiement"
 msgid "You already have a meeting type with this name"
 msgstr "Vous avez déjà un type de réunion portant ce nom"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "les dates fixes nécessitent les réservations de groupe"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -788,3 +793,8 @@ msgstr "La réponse est trop longue"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Type de champ inconnu"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "annulez les dates prévues avant de désactiver les dates fixes"

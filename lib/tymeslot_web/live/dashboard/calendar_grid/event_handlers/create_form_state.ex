@@ -132,7 +132,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       # alarms a plain calendar event carries and mean nothing to a booking.
       meeting_reminders: ReminderPickerState.new(),
       recurrence_rule: nil,
-      video_integration_id: nil
+      video_integration_id: nil,
+      # A one-off group event's own fields, as its form posts them.
+      group_event: %{"max_participants" => "10", "location" => "", "closes_at" => ""}
     }
 
     Map.merge(defaults, overrides)
@@ -144,11 +146,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     creating = socket.assigns.creating_event
 
     cond do
-      is_nil(creating) or mode not in ~w(event meeting) ->
+      is_nil(creating) or mode not in ~w(event meeting group_event) ->
         {:noreply, socket}
 
       # Event mode needs a calendar that can be written to.
       mode == "event" and not writable?(socket) ->
+        {:noreply, socket}
+
+      # A group event is a group meeting type, which may sit behind a plan,
+      # and people book it on the public page, which needs a calendar.
+      mode == "group_event" and
+          (not Map.get(socket.assigns, :group_bookings_allowed, false) or not writable?(socket)) ->
         {:noreply, socket}
 
       true ->
@@ -157,6 +165,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
             # Meetings are always timed; clear a stray all-day toggle so the
             # time inputs reappear.
             "meeting" -> creating |> Map.put(:mode, :meeting) |> Map.put(:all_day, false)
+            "group_event" -> creating |> Map.put(:mode, :group_event) |> Map.put(:all_day, false)
             "event" -> Map.put(creating, :mode, :event)
           end
 

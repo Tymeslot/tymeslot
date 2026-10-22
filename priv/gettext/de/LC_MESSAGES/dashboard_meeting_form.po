@@ -46,6 +46,7 @@ msgstr "Kurze Beschreibung dieses Termintyps"
 msgid "Calendar availability"
 msgstr "Kalenderverfügbarkeit"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -80,6 +81,11 @@ msgstr "Änderungen konnten nicht gespeichert werden"
 #, elixir-autogen, elixir-format
 msgid "Custom booking questions are available on Pro plans."
 msgstr "Benutzerdefinierte Buchungsfragen sind in Pro-Tarifen verfügbar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Datum"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -207,6 +213,11 @@ msgstr "Diese Buchungen in meinem Kalender als frei anzeigen"
 #, elixir-autogen, elixir-format
 msgid "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
 msgstr "Der Termin wird trotzdem erstellt, aber als freie Zeit markiert, sodass er keine anderen Buchungen blockiert und für Personen, die Ihre Verfügbarkeit sehen können, nicht als belegt erscheint."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Uhrzeit"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/creation.ex
 #, elixir-autogen, elixir-format
@@ -630,6 +641,145 @@ msgid_plural "%{time} (+%{count} days)"
 msgstr[0] "%{time} (+%{count} Tag)"
 msgstr[1] "%{time} (+%{count} Tage)"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{taken} of %{capacity} seats taken"
+msgstr "%{taken} von %{capacity} Plätzen belegt"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Add date"
+msgstr "Termin hinzufügen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel date"
+msgstr "Termin absagen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the planned dates to turn this off."
+msgstr "Sagen Sie die geplanten Termine ab, um das auszuschalten."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this date"
+msgstr "Diesen Termin absagen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this date? %{count} person is booked and will be told."
+msgid_plural "Cancel this date? %{count} people are booked and will be told."
+msgstr[0] "Diesen Termin absagen? %{count} Person ist angemeldet und wird benachrichtigt."
+msgstr[1] "Diesen Termin absagen? %{count} Personen sind angemeldet und werden benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Create the meeting type to plan its dates."
+msgstr "Legen Sie den Termintyp an, um seine Termine zu planen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the date and time of the session."
+msgstr "Geben Sie Datum und Uhrzeit des Termins ein."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Instead of times from the availability schedule, bookers choose from the dates you plan. Each date is on your calendar at once."
+msgstr "Statt Zeiten aus dem Zeitplan wählen Buchende aus den Terminen, die Sie planen. Jeder Termin steht sofort in Ihrem Kalender."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Keep it"
+msgstr "Behalten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "No dates planned yet."
+msgstr "Noch keine Termine geplant."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Offer fixed dates only"
+msgstr "Nur feste Termine anbieten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closes (optional)"
+msgstr "Anmeldeschluss (optional)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Registration has to close in the future, and no later than the session starts."
+msgstr "Der Anmeldeschluss muss in der Zukunft liegen und darf nicht nach dem Beginn sein."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The date could not be planned. Please try again."
+msgstr "Der Termin konnte nicht geplant werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The date has to lie in the future."
+msgstr "Der Termin muss in der Zukunft liegen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Times are in your time zone, %{timezone}."
+msgstr "Zeiten in Ihrer Zeitzone, %{timezone}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on fixed dates and group bookings first."
+msgstr "Schalten Sie zuerst feste Termine und Gruppenbuchungen ein."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a booking at that time."
+msgstr "Zu dieser Zeit haben Sie bereits einen Termin."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "registration until %{datetime}"
+msgstr "Anmeldung bis %{datetime}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closes"
+msgstr "Anmeldeschluss"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Speichern"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This date has already started."
+msgstr "Dieser Termin hat bereits begonnen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "registration closed"
+msgstr "Anmeldung geschlossen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit this date"
+msgstr "Diesen Termin bearbeiten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
+msgstr "Lassen Sie den Anmeldeschluss leer, um Anmeldungen bis zum Beginn anzunehmen. Ein bereits vergangener Zeitpunkt schließt die Anmeldung sofort."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the date emails the %{count} person booked on it the new time."
+msgid_plural "Moving the date emails the %{count} people booked on it the new time."
+msgstr[0] "Beim Verlegen erhält die %{count} angemeldete Person die neue Zeit per E-Mail."
+msgstr[1] "Beim Verlegen erhalten die %{count} angemeldeten Personen die neue Zeit per E-Mail."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account's currency, %{currency}, is not supported for meeting payments. Choose a supported currency on the %{payments_link} page to charge for this meeting type."
@@ -828,3 +978,8 @@ msgid "Without a limit, each booking may bring up to %{count} guest."
 msgid_plural "Without a limit, each booking may bring up to %{count} guests."
 msgstr[0] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gast mitbringen."
 msgstr[1] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gäste mitbringen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the planned dates to turn group bookings off."
+msgstr "Sagen Sie die geplanten Termine ab, um Gruppenbuchungen auszuschalten."

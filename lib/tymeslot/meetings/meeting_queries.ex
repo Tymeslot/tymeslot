@@ -18,6 +18,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
@@ -415,6 +416,12 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   That is what the caps are meant to measure — a day's load, not what is left
   of it — but it does mean the exclusion above is latent, not observed.
 
+  A session the host planned on a fixed-date type
+  (`Tymeslot.Meetings.PlannedSessions`) is a row before anyone books it, so
+  it counts only once someone holds a seat on it, and then once, however
+  many seats are taken: a group slot occupies one booking of the cap, as a
+  slot a first booker created does.
+
   Options:
     * `:exclude_uid` — omit one meeting by UID (self-exclusion on reschedule).
   """
@@ -428,10 +435,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
         opts
       ) do
     query =
-      Meeting
+      from(m in Meeting, as: :meeting)
       |> MeetingState.where_slot_live()
       |> where([m], m.organizer_user_id == ^organizer_user_id)
       |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
+      |> where(
+        [meeting: m],
+        not m.planned or
+          exists(
+            from(p in ParticipantSchema,
+              where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+              select: 1
+            )
+          )
+      )
       |> select([m], %{start_time: m.start_time, meeting_type_id: m.meeting_type_id})
 
     query =

@@ -30,6 +30,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.GuestEmails
   alias Tymeslot.Notifications.Email.IntegrationEmails
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.Email.PlannedSessionEmails
   alias Tymeslot.Notifications.Email.PollEmails
   alias Tymeslot.Notifications.Email.RescheduleEmails
   alias Tymeslot.Notifications.Email.RescheduleRequestEmails
@@ -48,7 +49,8 @@ defmodule Tymeslot.Emails.EmailActions do
     seat_meeting_cancellation: "send_seat_meeting_cancellation",
     seat_reschedule: "send_seat_reschedule_emails",
     seat_reschedule_request: "send_seat_reschedule_request",
-    seat_reminder: "send_seat_reminder"
+    seat_reminder: "send_seat_reminder",
+    seat_session_moved: "send_seat_session_moved"
   }
 
   @actions %{
@@ -84,6 +86,12 @@ defmodule Tymeslot.Emails.EmailActions do
     "send_seat_reminder" =>
       {["meeting_id", "participant_id", "reminder_value", "reminder_unit"],
        {GroupMeetingEmails, :handle_seat_reminder_emails}},
+    "send_seat_session_moved" =>
+      {["meeting_id", "participant_id", "from"],
+       {GroupMeetingEmails, :handle_seat_session_moved, :with_job_id}},
+    # Planned sessions
+    "send_registration_closed" =>
+      {["meeting_id"], {PlannedSessionEmails, :handle_registration_closed, :with_job_id}},
     # Booking requests
     "send_booking_request_emails" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_booking_request_emails, :with_job_id}},

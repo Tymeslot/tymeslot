@@ -807,3 +807,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{provider} refused the change. The connection is working, but the calendar would not accept this request."
 msgstr ""
+
+#: lib/tymeslot/integrations/calendar/domain/management.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar connection does not allow Tymeslot to add bookings to it. Please reconnect the integration and allow Tymeslot to create and edit events."
+msgstr ""
