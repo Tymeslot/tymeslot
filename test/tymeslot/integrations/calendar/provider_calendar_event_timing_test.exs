@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventTimingTest do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
 
   setup do
     %{integration: insert(:calendar_integration)}
@@ -125,7 +126,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventTimingTest do
       insert(:provider_calendar_event, calendar_integration: i, summary: "Review", end_at: nil)
 
     capture_log(fn ->
-      assert [%{id: id}] = CalendarGrid.search_events(i.user_id, "review", [i])
+      assert %{upcoming: [%{id: id}], past: []} =
+               ProviderCalendarEventSearchQueries.search_around(i.user_id, "review",
+                 from: ~U[2000-01-01 00:00:00Z]
+               )
+
       assert id == whole.id
     end)
   end
@@ -146,7 +151,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventTimingTest do
         start_at: ~U[2027-02-22 10:00:00.000000Z]
       )
 
-    assert [%{id: id}] = CalendarGrid.search_events(i.user_id, "review", [i], limit: 1)
+    assert %{upcoming: [%{id: id}]} =
+             ProviderCalendarEventSearchQueries.search_around(i.user_id, "review",
+               from: ~U[2027-02-22 00:00:00Z],
+               limit: 1
+             )
+
     assert id == whole.id
   end
 

@@ -2,12 +2,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
   @moduledoc """
   Free-text search over a user's cached calendar events.
 
-  `search/3` lists matches earliest first (`CalendarGrid.search_events/4`);
   `search_around/3` is the calendar's command bar search, nearest to a
   moment first: what is ahead in ascending order, then what has passed,
-  latest first. Both match the term case-insensitively against `summary`,
+  latest first. It matches the term case-insensitively against `summary`,
   `description` and `location`, scoped to the user's active integrations,
-  and leave out rows with half their timing. Moved out of
+  and leaves out rows with half their timing. Moved out of
   `ProviderCalendarEventQueries`, which sits at Core's module-size limit.
   """
 
@@ -25,7 +24,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
   @role_busy_only EventRole.busy_only()
   @sync_state_locally_deleted "locally_deleted"
 
-  @default_search_limit 50
   @default_around_limit 20
 
   # The key a series' occurrences share, mirroring `Occurrence.series_address/1`:
@@ -65,46 +63,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
   end
 
   @doc """
-  Searches a user's cached calendar events by a free-text term.
-
-  Performs a case-insensitive `ILIKE` match against the event `summary`,
-  `description`, and `location`. Results are scoped to the user's active
-  calendar integrations and exclude any integration whose id appears in
-  `:hidden_integration_ids`. Matches are ordered by start time ascending
-  (timed events by `start_at`, all-day events by `start_date`) and capped
-  at `:limit` (default #{@default_search_limit}).
-
-  A blank or whitespace-only term returns `[]` without touching the database.
-
-  ## Options
-
-  - `:hidden_integration_ids`: list of integration ids to exclude (default `[]`).
-  - `:limit`: maximum number of rows to return (default #{@default_search_limit}).
-  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
-    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
-    as a `where` clause so a deselected calendar's rows never occupy a limit
-    slot a real match could have used. Omitted or `%{}` returns every row
-    regardless of selection, matching the pre-selection behaviour.
-  """
-  @spec search(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
-  def search(user_id, term, opts \\ []) when is_integer(user_id) do
-    case String.trim(to_string(term)) do
-      "" ->
-        []
-
-      trimmed ->
-        user_id
-        |> matching(trimmed, opts)
-        |> order_by([e, _i],
-          asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
-          asc: e.id
-        )
-        |> limit(^Keyword.get(opts, :limit, @default_search_limit))
-        |> Repo.all()
-    end
-  end
-
-  @doc """
   Searches a user's cached calendar events around a moment: the matches
   starting on or after `:from` in ascending order (`upcoming`), and those
   starting before it, latest first (`past`). Each side is capped at `:limit`.
@@ -116,7 +74,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
 
   - `:from` (required): the moment the two sides divide at.
   - `:limit`: rows per side (default #{@default_around_limit}).
-  - `:hidden_integration_ids` and `:visibility_rules`: as `search/3`.
+  - `:hidden_integration_ids`: integration ids to leave out (default `[]`).
+  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
+    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
+    as a `where` clause so a deselected calendar's rows never occupy a limit
+    slot a real match could have used. Omitted or `%{}` returns every row
+    regardless of selection.
   """
   @spec search_around(integer(), String.t(), keyword()) :: %{
           upcoming: [ProviderCalendarEventSchema.t()],
@@ -227,7 +190,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
     {ProviderConfig.caldav_based_provider_strings() ++ ["debug"], oauth}
   end
 
-  # The term, scope and visibility clauses both searches share.
+  # The term, scope and visibility clauses of the search.
   defp matching(user_id, trimmed, opts) do
     hidden_ids = Keyword.get(opts, :hidden_integration_ids, [])
     rules = Keyword.get(opts, :visibility_rules, %{})

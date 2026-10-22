@@ -20,10 +20,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSyncTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -371,7 +371,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSyncTest do
       assert :ok =
                second
                |> address()
-               |> CalendarGrid.delete_event_video_rooms()
+               |> EventVideoRooms.event_deleted()
 
       refute_enqueued(worker: VideoSyncWorker, args: %{"action" => "delete"})
       assert Repo.get(EventVideoRoomSchema, room.id)

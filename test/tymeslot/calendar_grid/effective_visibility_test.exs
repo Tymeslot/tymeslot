@@ -106,11 +106,10 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibilityTest do
 
       assert result.hidden_integration_ids == [1]
       assert result.hidden_calendar_keys == MapSet.new([{1, "work"}, {1, "family"}])
-      assert EffectiveVisibility.visible_integration_ids(@integrations, result) == [2]
     end
   end
 
-  describe "reject/2 and visible_integration_ids/2" do
+  describe "reject/2" do
     test "drop what the set hides and never a booking" do
       result = EffectiveVisibility.resolve([], MapSet.new(), @integrations, set([{1, "work"}]))
 
@@ -122,7 +121,7 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibilityTest do
       ]
 
       assert Enum.map(EffectiveVisibility.reject(events, result), & &1.id) == ["a", "booking-9"]
-      assert EffectiveVisibility.visible_integration_ids(@integrations, result) == [1]
+      assert result.hidden_integration_ids == [2]
     end
   end
 

@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.FreshnessTest do
   @moduledoc """
-  The refresh the calendar grid starts by itself when it opens on stale
-  events, against the owner's own Refresh or Sync now: the first leaves a
-  sync waiting out an error's backoff to it, the second brings it forward.
+  The sync the calendar grid asks for by itself when it opens on stale
+  events, against the owner's own Sync now: the first leaves a sync waiting
+  out an error's backoff to it, the second brings it forward.
   """
   use Tymeslot.DataCase, async: true
   use Oban.Testing, repo: Tymeslot.Repo
@@ -32,25 +32,6 @@ defmodule Tymeslot.CalendarGrid.FreshnessTest do
     )
 
     %{user: user, failing: failing, idle: idle, job: job, backoff_until: backoff_until}
-  end
-
-  test "an opened grid leaves a retrying sync to its backoff and counts it as skipped", ctx do
-    assert {:ok, %{enqueued: 1, skipped: 1, errors: []}} =
-             Freshness.refresh_events(ctx.user.id, :opened)
-
-    assert Repo.get!(Oban.Job, ctx.job.id).scheduled_at == ctx.backoff_until
-
-    assert_enqueued(
-      worker: SyncGoogleCalendarWorker,
-      args: %{"calendar_integration_id" => ctx.idle.id}
-    )
-  end
-
-  test "the owner's Refresh brings a retrying sync forward", ctx do
-    assert {:ok, %{enqueued: 2, skipped: 0, errors: []}} = Freshness.refresh_events(ctx.user.id)
-
-    %{scheduled_at: scheduled_at} = Repo.get!(Oban.Job, ctx.job.id)
-    assert DateTime.before?(scheduled_at, DateTime.add(DateTime.utc_now(), 5, :second))
   end
 
   describe "one account's sync" do

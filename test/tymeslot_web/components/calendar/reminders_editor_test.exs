@@ -4,91 +4,20 @@ defmodule TymeslotWeb.Components.Calendar.RemindersEditorTest do
   @moduletag :components
   @moduletag :calendar
 
-  import Phoenix.LiveViewTest
-
   alias TymeslotWeb.Components.Calendar.ReminderForm
   alias TymeslotWeb.Components.Calendar.RemindersEditor
 
-  # The lead-time select's options, as `{minutes, label}`. The method select's
-  # options carry non-numeric values, so they never match.
-  defp offered_lead_times(html) do
-    ~r/<option value="(\d+)"[^>]*>([^<]*)<\/option>/
-    |> Regex.scan(html)
-    |> Enum.map(fn [_match, minutes, label] -> {String.to_integer(minutes), label} end)
-  end
+  # The side panel offers `reminder_minutes_presets/0`, labelled by
+  # `minutes_label/1`, and `parse_reminder/1` validates against the same list.
+  test "every preset lead time is accepted by parse_reminder/1 and carries a label" do
+    presets = ReminderForm.reminder_minutes_presets()
+    refute Enum.empty?(presets)
 
-  defp base_assigns(overrides \\ %{}) do
-    Map.merge(
-      %{
-        reminders: [],
-        myself: %Phoenix.LiveComponent.CID{cid: 1},
-        add_event: "add_event_reminder",
-        remove_event: "remove_event_reminder"
-      },
-      overrides
-    )
-  end
+    for minutes <- presets do
+      assert ReminderForm.parse_reminder(%{"method" => "popup", "minutes" => to_string(minutes)}) ==
+               {:ok, %{method: :popup, minutes_before: minutes}}
 
-  test "renders the add-reminder control with presets and methods" do
-    html = render_component(&RemindersEditor.reminders_editor/1, base_assigns())
-
-    assert html =~ "Reminders"
-    assert html =~ "Add reminder"
-    assert html =~ "10 minutes before"
-    assert html =~ "1 day before"
-    assert html =~ "Notification"
-    assert html =~ "Email"
-    assert html =~ ~s(phx-submit="add_event_reminder")
-  end
-
-  test "renders existing reminders as removable rows with their lead time" do
-    assigns =
-      base_assigns(%{
-        reminders: [
-          %{method: :popup, minutes_before: 10},
-          %{method: :email, minutes_before: 1440}
-        ]
-      })
-
-    html = render_component(&RemindersEditor.reminders_editor/1, assigns)
-
-    assert html =~ "Notification 10 minutes before"
-    assert html =~ "Email 1 day before"
-    assert html =~ ~s(phx-click="remove_event_reminder")
-    assert html =~ ~s(phx-value-index="0")
-    assert html =~ ~s(phx-value-index="1")
-  end
-
-  describe "the offered lead times against the whitelist that validates them" do
-    # The editor's options and `parse_reminder/1`'s whitelist were once two
-    # independent literals: an option added to one and not the other either
-    # offered a lead time the server rejects, or accepted one never shown.
-
-    test "every lead time the editor offers is accepted by parse_reminder/1" do
-      html = render_component(&RemindersEditor.reminders_editor/1, base_assigns())
-      offered = offered_lead_times(html)
-
-      # Anchor: no options at all would make the rejection below vacuous.
-      refute Enum.empty?(offered)
-
-      assert Enum.map(offered, fn {minutes, _label} -> minutes end) ==
-               ReminderForm.reminder_minutes_presets()
-
-      assert Enum.reject(offered, fn {minutes, _label} ->
-               ReminderForm.parse_reminder(%{
-                 "method" => "popup",
-                 "minutes" => to_string(minutes)
-               }) ==
-                 {:ok, %{method: :popup, minutes_before: minutes}}
-             end) == []
-    end
-
-    test "every offered lead time carries a label" do
-      html = render_component(&RemindersEditor.reminders_editor/1, base_assigns())
-      offered = offered_lead_times(html)
-
-      refute Enum.empty?(offered)
-      assert Enum.reject(offered, fn {_minutes, label} -> String.trim(label) != "" end) == []
+      assert String.trim(RemindersEditor.minutes_label(minutes)) != ""
     end
   end
 

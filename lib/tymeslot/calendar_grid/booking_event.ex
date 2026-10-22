@@ -11,7 +11,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
   modal instead of the provider-event editor.
 
   The calendar keeps this projection and drops the calendar copy Tymeslot
-  wrote for it (`Tymeslot.CalendarGrid.EventWindow`, `bookings: :prefer`),
+  wrote for it (`Tymeslot.CalendarGrid.EventWindow`),
   recording in `copy` which calendar the copy sits in
   (`%{calendar_integration_id, provider_calendar_id, calendar_name}`).
 

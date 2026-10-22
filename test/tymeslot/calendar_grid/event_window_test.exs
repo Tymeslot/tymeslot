@@ -44,7 +44,7 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
     )
   end
 
-  describe "list_events/4" do
+  describe "list_events/5" do
     test "keeps selected calendars' events and adds bookings" do
       user = insert(:user)
       integration = google_account(user)
@@ -88,34 +88,6 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
              ) == []
     end
 
-    test "leaves out a booking whose synced copy sits on a deselected calendar" do
-      user = insert(:user)
-      integration = google_account(user)
-
-      cached(integration, "old", "Intro call", ~U[2026-10-15 10:00:00Z],
-        provider_event_id: "evt-intro"
-      )
-
-      insert(:meeting,
-        organizer_user: user,
-        title: "Intro call",
-        attendee_name: "Anna Kowalski",
-        start_time: ~U[2026-10-15 10:00:00Z],
-        end_time: ~U[2026-10-15 10:30:00Z],
-        status: "confirmed",
-        provider_event_id: "evt-intro"
-      )
-
-      assert EventWindow.list_events(
-               user.id,
-               [integration],
-               ~U[2026-10-12 00:00:00Z],
-               ~U[2026-10-19 00:00:00Z]
-             ) == []
-    end
-  end
-
-  describe "list_events/5 with bookings: :prefer" do
     test "draws a booking in place of its calendar copy, naming the copy's calendar" do
       user = insert(:user)
       integration = google_account(user)
@@ -143,8 +115,7 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
                  user.id,
                  [integration],
                  ~U[2026-10-12 00:00:00Z],
-                 ~U[2026-10-19 00:00:00Z],
-                 bookings: :prefer
+                 ~U[2026-10-19 00:00:00Z]
                )
 
       assert booking.meeting_id == meeting.id
@@ -178,8 +149,7 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
                  user.id,
                  [integration],
                  ~U[2026-10-12 00:00:00Z],
-                 ~U[2026-10-19 00:00:00Z],
-                 bookings: :prefer
+                 ~U[2026-10-19 00:00:00Z]
                )
     end
 
@@ -212,8 +182,7 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
                  user.id,
                  [integration],
                  ~U[2026-10-12 00:00:00Z],
-                 ~U[2026-10-19 00:00:00Z],
-                 bookings: :prefer
+                 ~U[2026-10-19 00:00:00Z]
                )
     end
 
@@ -234,14 +203,10 @@ defmodule Tymeslot.CalendarGrid.EventWindowTest do
 
       range = [user.id, [integration], ~U[2026-10-12 00:00:00Z], ~U[2026-10-19 00:00:00Z]]
 
-      assert apply(EventWindow, :list_events, range ++ [[bookings: :prefer]]) == []
+      assert apply(EventWindow, :list_events, range) == []
 
       assert [%BookingEvent{summary: "Lapsed request", expired: true, copy: nil}] =
-               apply(
-                 EventWindow,
-                 :list_events,
-                 range ++ [[bookings: :prefer, include_expired: true]]
-               )
+               apply(EventWindow, :list_events, range ++ [[include_expired: true]])
     end
   end
 

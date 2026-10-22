@@ -1,7 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueriesTest do
   @moduledoc """
-  Free-text search over the cached calendar events: `search/3` and the
-  calendar's `search_around/3`, nearest to a moment first.
+  Free-text search over the cached calendar events: the calendar's
+  `search_around/3`, nearest to a moment first.
   """
 
   use Tymeslot.DataCase, async: true
@@ -9,129 +9,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueriesTest 
   @moduletag :calendar
   @moduletag :queries
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
 
   @from ~U[2026-10-14 08:00:00Z]
-
-  describe "search/3" do
-    setup do
-      user = insert(:user)
-      visible = insert(:calendar_integration, user: user, is_active: true)
-      hidden = insert(:calendar_integration, user: user, is_active: true)
-      %{user: user, visible: visible, hidden: hidden}
-    end
-
-    test "returns [] for a blank or whitespace-only term", %{user: user} do
-      assert ProviderCalendarEventSearchQueries.search(user.id, "") == []
-      assert ProviderCalendarEventSearchQueries.search(user.id, "   ") == []
-    end
-
-    test "matches the summary case-insensitively", %{user: user, visible: visible} do
-      event =
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Quarterly Strategy Review"
-        )
-
-      assert [%{id: id}] = ProviderCalendarEventSearchQueries.search(user.id, "strategy")
-      assert id == event.id
-    end
-
-    test "matches the description", %{user: user, visible: visible} do
-      event =
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Sync",
-          description: "Discuss the migration plan"
-        )
-
-      assert [%{id: id}] = ProviderCalendarEventSearchQueries.search(user.id, "migration")
-      assert id == event.id
-    end
-
-    test "matches the location", %{user: user, visible: visible} do
-      event =
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Standup",
-          location: "Conference Room Berlin"
-        )
-
-      assert [%{id: id}] = ProviderCalendarEventSearchQueries.search(user.id, "berlin")
-      assert id == event.id
-    end
-
-    test "excludes integrations passed in hidden_integration_ids", %{
-      user: user,
-      visible: visible,
-      hidden: hidden
-    } do
-      kept =
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Planning workshop"
-        )
-
-      insert(:provider_calendar_event,
-        calendar_integration: hidden,
-        summary: "Hidden planning session"
-      )
-
-      result =
-        ProviderCalendarEventSearchQueries.search(user.id, "planning",
-          hidden_integration_ids: [hidden.id]
-        )
-
-      assert [%{id: id}] = result
-      assert id == kept.id
-    end
-
-    test "excludes events belonging to another user", %{user: user} do
-      other_user = insert(:user)
-      other_integration = insert(:calendar_integration, user: other_user, is_active: true)
-
-      insert(:provider_calendar_event,
-        calendar_integration: other_integration,
-        summary: "Confidential roadmap"
-      )
-
-      assert ProviderCalendarEventSearchQueries.search(user.id, "roadmap") == []
-    end
-
-    test "orders matches by start time ascending", %{user: user, visible: visible} do
-      later =
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Demo finale",
-          start_at: ~U[2026-06-20 10:00:00Z],
-          end_at: ~U[2026-06-20 11:00:00Z]
-        )
-
-      earlier =
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Demo kickoff",
-          start_at: ~U[2026-06-01 10:00:00Z],
-          end_at: ~U[2026-06-01 11:00:00Z]
-        )
-
-      assert [first, second] = ProviderCalendarEventSearchQueries.search(user.id, "demo")
-      assert first.id == earlier.id
-      assert second.id == later.id
-    end
-
-    test "respects the limit option", %{user: user, visible: visible} do
-      for n <- 1..3 do
-        insert(:provider_calendar_event,
-          calendar_integration: visible,
-          summary: "Repeat meeting #{n}"
-        )
-      end
-
-      assert length(ProviderCalendarEventSearchQueries.search(user.id, "repeat", limit: 2)) == 2
-    end
-  end
 
   defp timed(integration, summary, start_at, attrs \\ []) do
     insert(
@@ -214,6 +96,71 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueriesTest 
       result = ProviderCalendarEventSearchQueries.search_around(user.id, "review", from: @from)
 
       assert summaries(result.upcoming) == ["Review kept"]
+    end
+
+    test "matches the summary, description and location case-insensitively", %{
+      user: user,
+      integration: integration
+    } do
+      timed(integration, "Quarterly Strategy Review", DateTime.add(@from, 1, :day))
+
+      timed(integration, "Sync", DateTime.add(@from, 2, :day),
+        description: "Discuss the migration plan"
+      )
+
+      timed(integration, "Standup", DateTime.add(@from, 3, :day),
+        location: "Conference Room Berlin"
+      )
+
+      for {term, summary} <- [
+            {"strategy", "Quarterly Strategy Review"},
+            {"MIGRATION", "Sync"},
+            {"berlin", "Standup"}
+          ] do
+        result = ProviderCalendarEventSearchQueries.search_around(user.id, term, from: @from)
+        assert summaries(result.upcoming) == [summary]
+      end
+    end
+
+    test "another user's events are left out", %{user: user} do
+      other = insert(:calendar_integration, user: insert(:user), is_active: true)
+      timed(other, "Confidential roadmap", DateTime.add(@from, 1, :day))
+
+      assert ProviderCalendarEventSearchQueries.search_around(user.id, "roadmap", from: @from) ==
+               %{upcoming: [], past: []}
+    end
+
+    # More than four times the limit of earlier matches in a deselected
+    # calendar: filtered after the query, they would fill the page.
+    test "a deselected calendar's rows do not crowd a selected match out", %{
+      user: user,
+      integration: integration
+    } do
+      deselected =
+        insert(:calendar_integration,
+          user: user,
+          is_active: true,
+          provider: "caldav",
+          calendar_paths: [],
+          calendar_list: [%{"id" => "/cal/team/", "path" => "/cal/team/", "selected" => false}]
+        )
+
+      for n <- 1..13 do
+        timed(deselected, "Standup #{n}", DateTime.add(@from, n, :hour),
+          provider_event_id: "/cal/team/evt-#{n}.ics"
+        )
+      end
+
+      timed(integration, "Standup kickoff", DateTime.add(@from, 1, :day))
+
+      result =
+        ProviderCalendarEventSearchQueries.search_around(user.id, "standup",
+          from: @from,
+          limit: 3,
+          visibility_rules: Calendar.visibility_rules([integration, deselected])
+        )
+
+      assert summaries(result.upcoming) == ["Standup kickoff"]
     end
 
     test "hidden integrations are left out", %{user: user, integration: integration} do

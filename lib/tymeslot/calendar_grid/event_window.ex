@@ -39,12 +39,8 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
   events from `integrations` that the calendar selection keeps, and the
   user's bookings.
 
-  How a booking and the calendar copy Tymeslot wrote for it meet depends on
-  `bookings:`. `:dedupe` (the default) keeps the copy and drops the booking,
-  matching against every cached row, not only the visible ones: a booking
-  whose synced copy sits on a deselected calendar stays out rather than
-  reappear through its projection. `:prefer` (what the calendar passes)
-  keeps the booking and drops the copy, recording on the booking which
+  A booking is drawn in place of the calendar copy Tymeslot wrote for it:
+  the booking is kept and the copy dropped, with the booking recording which
   calendar the copy is in (`PreferredBookings`).
   `include_expired: true` adds the requests that expired unanswered.
   """
@@ -56,24 +52,13 @@ defmodule Tymeslot.CalendarGrid.EventWindow do
       |> CalendarGrid.list_events_for_range(start_dt, end_dt)
 
     visible = Selection.visible_events(cached, integrations)
-    include_expired = Keyword.get(opts, :include_expired, false)
 
-    case Keyword.get(opts, :bookings, :dedupe) do
-      :prefer ->
-        bookings =
-          CalendarGrid.list_booking_events_for_range(user_id, start_dt, end_dt, cached,
-            include_expired: include_expired,
-            keep_mirrored: true
-          )
+    bookings =
+      CalendarGrid.list_booking_events_for_range(user_id, start_dt, end_dt,
+        include_expired: Keyword.get(opts, :include_expired, false)
+      )
 
-        PreferredBookings.merge(visible, cached, bookings, integrations)
-
-      :dedupe ->
-        visible ++
-          CalendarGrid.list_booking_events_for_range(user_id, start_dt, end_dt, cached,
-            include_expired: include_expired
-          )
-    end
+    PreferredBookings.merge(visible, cached, bookings, integrations)
   end
 
   @doc """

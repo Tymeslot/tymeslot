@@ -1,98 +1,16 @@
 defmodule TymeslotWeb.Components.Calendar.RemindersEditor do
   @moduledoc """
-  Reusable reminders editor for the calendar create/detail modals.
-
-  Renders the current reminders as removable rows plus an "Add reminder" control
-  offering preset lead times and a method (popup/email). The lead times offered
-  are exactly `ReminderForm.reminder_minutes_presets/0`, the list `ReminderForm.parse_reminder/1`
-  validates an added reminder against, labelled through `reminder_label/1`'s own
-  `minutes_label/1`; there is no second copy of the values to fall out of step.
-  Reminders are synced to the calendar provider, which fires the alert on the
-  user's own devices — Tymeslot does not fire them itself.
-
-  Add/remove actions dispatch `add_event` / `remove_event` back to the owning
-  LiveComponent via `phx-target`, carrying `method` + `minutes` (add) or `index`
-  (remove). The owner threads the canonical
-  `%{method: :popup | :email, minutes_before: integer}` shape through its state.
+  How the calendar labels a reminder: `reminder_label/1` for a saved
+  reminder ("Notification 10 minutes before") and `minutes_label/1` for a
+  lead time, which the side panel's reminder select also labels the
+  `ReminderForm.reminder_minutes_presets/0` lead times with. Reminders are
+  synced to the calendar provider, which fires the alert on the user's own
+  devices; Tymeslot does not fire them itself.
   """
 
-  use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Reminder
-  alias TymeslotWeb.Components.Calendar.ReminderForm
-
-  attr :reminders, :list, default: []
-  attr :myself, :any, required: true
-  attr :add_event, :string, required: true
-  attr :remove_event, :string, required: true
-
-  @spec reminders_editor(map()) :: Phoenix.LiveView.Rendered.t()
-  def reminders_editor(assigns) do
-    assigns = assign(assigns, :presets, presets())
-
-    ~H"""
-    <.detail_line
-      variant={:compact}
-      icon="hero-bell"
-      label={dgettext("dashboard_calendar_events", "Reminders")}
-      class="mb-3"
-    >
-      <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
-        <span
-          :for={{reminder, index} <- Enum.with_index(@reminders)}
-          class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
-        >
-          {reminder_label(reminder)}
-          <button
-            type="button"
-            phx-click={@remove_event}
-            phx-value-index={index}
-            phx-target={@myself}
-            class="w-4 h-4 rounded-token-full hover:bg-red-100 flex items-center justify-center transition-colors"
-            aria-label={
-              dgettext("dashboard_calendar_events", "Remove reminder %{label}",
-                label: reminder_label(reminder)
-              )
-            }
-          >
-            <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
-          </button>
-        </span>
-      </div>
-
-      <form
-        id="add-reminder-form"
-        phx-submit={@add_event}
-        phx-target={@myself}
-        class="flex flex-wrap items-center gap-2"
-      >
-        <select
-          name="minutes"
-          class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-        >
-          <option :for={{minutes, label} <- @presets} value={minutes}>{label}</option>
-        </select>
-        <select
-          name="method"
-          class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-        >
-          <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
-          <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>
-        </select>
-        <.action_button type="submit" variant={:secondary} size={:sm}>
-          {dgettext("dashboard_calendar_events", "Add reminder")}
-        </.action_button>
-      </form>
-      <p class="text-token-xs text-tymeslot-400 mt-1">
-        {dgettext(
-          "dashboard_calendar_events",
-          "Reminders are synced to your calendar so it can alert you on your own devices."
-        )}
-      </p>
-    </.detail_line>
-    """
-  end
 
   @doc """
   Returns a human-readable label for a reminder, e.g. "Notification 10 minutes before".
@@ -140,11 +58,4 @@ defmodule TymeslotWeb.Components.Calendar.RemindersEditor do
         "%{count} minutes before",
         minutes
       )
-
-  # Offer exactly the lead times `parse_reminder/1` accepts, labelled by the same
-  # function that labels a saved reminder. A value added to the whitelist shows
-  # up here with a label already; one removed stops being offered.
-  defp presets do
-    Enum.map(ReminderForm.reminder_minutes_presets(), &{&1, minutes_label(&1)})
-  end
 end

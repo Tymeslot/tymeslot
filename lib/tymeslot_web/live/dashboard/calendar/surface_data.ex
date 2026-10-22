@@ -221,10 +221,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
     # Bookings are drawn as themselves rather than as their calendar copies,
     # and requests that expired unanswered are drawn too (see `EventWindow`).
-    EventWindow.list_events(user.id, integrations, start_dt, end_dt,
-      bookings: :prefer,
-      include_expired: true
-    )
+    EventWindow.list_events(user.id, integrations, start_dt, end_dt, include_expired: true)
   end
 
   @doc "`events` without hidden calendars and accounts, or deletes still waiting for their undo."

@@ -45,11 +45,6 @@ msgstr "За 1 годину"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
 #, elixir-autogen, elixir-format
-msgid "Add reminder"
-msgstr "Додати нагадування"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Електронна пошта"
 
@@ -67,21 +62,6 @@ msgstr "Зустріч створено, а запрошення надісла�
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Сповіщення"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders"
-msgstr "Нагадування"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Нагадування синхронізуються з вашим календарем, щоб ви отримували сповіщення на своїх пристроях."
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder %{label}"
-msgstr "Видалити нагадування %{label}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format

@@ -43,11 +43,6 @@ msgstr ""
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
 #, elixir-autogen, elixir-format
-msgid "Add reminder"
-msgstr ""
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
 
@@ -64,21 +59,6 @@ msgstr ""
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Notification"
-msgstr ""
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders"
-msgstr ""
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr ""
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder %{label}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex

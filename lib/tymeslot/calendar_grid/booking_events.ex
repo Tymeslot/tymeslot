@@ -17,33 +17,21 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
 
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` as
-  `BookingEvent` structs, excluding any whose synced provider copy is already
-  present.
-
-  `cached_events` is the cached provider events loaded for the same window. A
-  booking that has been written back to a connected calendar reappears in the
-  cache as a `created_by_tymeslot` event; under `:dedupe` that copy stays
-  the interactive one, so the booking projection is dropped to avoid a
-  duplicate block.
-
-  Pass the cached events themselves rather than a pre-extracted key set: which
-  identifier links the two sides varies by provider family, and
-  `Tymeslot.Meetings.CalendarEventLink` is the one place that knows the rule.
+  `BookingEvent` structs, including those written back to a connected
+  calendar: the caller draws a booking in place of its calendar copy
+  (`PreferredBookings`).
 
   Options:
 
     * `include_expired: true` adds the requests that expired unanswered.
-    * `keep_mirrored: true` keeps the bookings whose copy is cached, for a
-      caller that drops the copy instead (`PreferredBookings`).
   """
-  @spec list_for_range(pos_integer(), DateTime.t(), DateTime.t(), Enumerable.t(), keyword()) ::
+  @spec list_for_range(pos_integer(), DateTime.t(), DateTime.t(), keyword()) ::
           [BookingEvent.t()]
-  def list_for_range(user_id, start_dt, end_dt, cached_events \\ [], opts \\ []) do
+  def list_for_range(user_id, start_dt, end_dt, opts \\ []) do
     now = Clock.utc_now()
 
     user_id
     |> meetings(start_dt, end_dt, Keyword.get(opts, :include_expired, false))
-    |> drop_mirrored(cached_events, Keyword.get(opts, :keep_mirrored, false))
     |> Meetings.with_live_people()
     |> Enum.map(&to_event(&1, now))
   end
@@ -58,13 +46,6 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     |> meetings(start_dt, end_dt, false)
     |> Kernel.++(expired)
     |> Enum.sort_by(& &1.start_time, DateTime)
-  end
-
-  defp drop_mirrored(meetings, _cached_events, true), do: meetings
-
-  defp drop_mirrored(meetings, cached_events, false) do
-    synced_identifiers = Meetings.calendar_identifier_set(cached_events)
-    Enum.reject(meetings, &Meetings.linked_to_calendar_event?(&1, synced_identifiers))
   end
 
   defp to_event(meeting, now) do

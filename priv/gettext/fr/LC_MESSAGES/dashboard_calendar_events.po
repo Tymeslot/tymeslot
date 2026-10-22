@@ -43,11 +43,6 @@ msgstr "1 heure avant"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
 #, elixir-autogen, elixir-format
-msgid "Add reminder"
-msgstr "Ajouter un rappel"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
 
@@ -65,21 +60,6 @@ msgstr "Réunion créée et invitation envoyée"
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Notification"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders"
-msgstr "Rappels"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Les rappels sont synchronisés avec votre calendrier afin qu’il puisse vous alerter sur vos propres appareils."
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder %{label}"
-msgstr "Supprimer le rappel %{label}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format

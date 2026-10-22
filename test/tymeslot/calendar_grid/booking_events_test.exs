@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.BookingEventsTest do
   @moduledoc """
   Covers the booking-to-grid-event projection: which bookings load for a
-  window, how they are shaped for the grid, and deduplication against
-  provider-synced copies.
+  window and how they are shaped for the grid. A booking's calendar copy is
+  dropped in its favour by `EventWindow` (see `EventWindowTest`).
   """
 
   use Tymeslot.DataCase, async: true
@@ -18,10 +18,6 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
   defp window do
     start_dt = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
     {start_dt, DateTime.add(start_dt, 7 * 86_400, :second)}
-  end
-
-  defp cached_event(attrs) do
-    Enum.into(attrs, %{provider_event_id: nil, uid: nil})
   end
 
   defp insert_meeting(user, attrs) do
@@ -106,57 +102,6 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
 
     assert [event] = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
     assert event.meeting_id == past.id
-  end
-
-  test "drops bookings whose synced provider copy is present" do
-    user = insert(:user)
-    synced = insert_meeting(user, %{provider_event_id: "prov-event-1"})
-    unsynced = insert_meeting(user, %{title: "Unsynced"})
-
-    {start_dt, end_dt} = window()
-    cached = [cached_event(provider_event_id: "prov-event-1", uid: "prov-event-1@google.com")]
-
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
-
-    assert Enum.map(events, & &1.meeting_id) == [unsynced.id]
-    refute Enum.any?(events, &(&1.meeting_id == synced.id))
-  end
-
-  test "drops a CalDAV booking whose synced copy is keyed by href, not provider event id" do
-    user = insert(:user)
-
-    # The CalDAV write path persists its caller-supplied UID (the meeting's
-    # calendar_uid) and never sets
-    # provider_event_id, while the synced copy carries the server's href
-    # there. The only identifier the two sides share is the UID.
-    synced = insert_meeting(user, %{calendar_uid: "abc123@tymeslot.com", provider_event_id: nil})
-    unsynced = insert_meeting(user, %{title: "Unsynced", calendar_uid: "def456@tymeslot.com"})
-
-    {start_dt, end_dt} = window()
-
-    cached = [
-      cached_event(
-        provider_event_id: "/calendars/sander/default/abc123@tymeslot.com.ics",
-        uid: "abc123@tymeslot.com"
-      )
-    ]
-
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
-
-    assert Enum.map(events, & &1.meeting_id) == [unsynced.id]
-    refute Enum.any?(events, &(&1.meeting_id == synced.id))
-  end
-
-  test "keeps a booking whose UID merely resembles an unrelated cached event" do
-    user = insert(:user)
-    booking = insert_meeting(user, %{calendar_uid: "abc123@tymeslot.com", provider_event_id: nil})
-
-    {start_dt, end_dt} = window()
-    cached = [cached_event(provider_event_id: "/calendars/x/other.ics", uid: "other@example.com")]
-
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
-
-    assert Enum.map(events, & &1.meeting_id) == [booking.id]
   end
 
   test "does not return other organisers' bookings" do
@@ -265,7 +210,7 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
       {start_dt, end_dt} = window()
 
       assert [%BookingEvent{meeting_id: id}] =
-               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, [],
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt,
                  include_expired: true
                )
 
@@ -303,26 +248,11 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
       assert CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt) == []
 
       assert [%BookingEvent{request: false, expired: true} = event] =
-               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, [],
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt,
                  include_expired: true
                )
 
       assert event.meeting_id == lapsed.id
-    end
-
-    test "keep_mirrored keeps a booking whose synced copy is cached" do
-      user = insert(:user)
-      synced = insert_meeting(user, %{provider_event_id: "prov-event-1"})
-
-      {start_dt, end_dt} = window()
-      cached = [cached_event(provider_event_id: "prov-event-1", uid: "prov-event-1@google.com")]
-
-      assert [%BookingEvent{meeting_id: id}] =
-               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached,
-                 keep_mirrored: true
-               )
-
-      assert id == synced.id
     end
   end
 end

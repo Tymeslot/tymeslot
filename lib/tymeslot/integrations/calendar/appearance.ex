@@ -22,17 +22,6 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
   @type result ::
           {:ok, CalendarAppearanceSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
 
-  @doc """
-  Sets one calendar's colour, or clears it back to the integration's colour when
-  `colour` is `nil`.
-  """
-  @spec set_colour(integer(), integer(), String.t(), String.t() | nil) :: result()
-  def set_colour(user_id, integration_id, provider_calendar_id, colour) do
-    with_owned_integration(user_id, integration_id, fn ->
-      CalendarAppearanceQueries.upsert(integration_id, provider_calendar_id, %{colour: colour})
-    end)
-  end
-
   @doc "Shows or hides one calendar's events in the organiser's grid."
   @spec set_hidden(integer(), integer(), String.t(), boolean()) :: result()
   def set_hidden(user_id, integration_id, provider_calendar_id, hidden) do
@@ -85,21 +74,6 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
     appearances
     |> Enum.filter(& &1.hidden)
     |> MapSet.new(&{&1.calendar_integration_id, &1.provider_calendar_id})
-  end
-
-  @doc """
-  The stored palette key per calendar, for the swatch picker to mark one pressed.
-
-  Distinct from `Tymeslot.CalendarGrid.calendar_colour_classes/2`, which returns
-  the resolved Tailwind classes the grid paints with. The picker compares keys,
-  so inverting a class back to its key would be a second copy of the palette
-  mapping and a second thing to keep in step.
-  """
-  @spec colour_keys([CalendarAppearanceSchema.t()]) :: %{{integer(), String.t()} => String.t()}
-  def colour_keys(appearances) do
-    appearances
-    |> Enum.filter(&chosen?/1)
-    |> Map.new(&{{&1.calendar_integration_id, &1.provider_calendar_id}, &1.colour})
   end
 
   @doc "Whether this row carries a colour choice, as opposed to only a visibility one."

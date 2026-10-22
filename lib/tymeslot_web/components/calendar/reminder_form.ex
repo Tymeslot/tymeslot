@@ -1,19 +1,18 @@
 defmodule TymeslotWeb.Components.Calendar.ReminderForm do
   @moduledoc """
   The reminder lead times the calendar offers, and reading a reminder the
-  reminders editor (`TymeslotWeb.Components.Calendar.RemindersEditor`) or
-  the side panel sends.
+  side panel sends.
   """
 
   # Allowed reminder lead times (minutes before the event start) offered as
-  # presets in the editor. Values outside this set are rejected so the UI
+  # presets in the side panel. Values outside this set are rejected so the UI
   # cannot feed arbitrary integers into the provider write.
   @reminder_minutes_presets [5, 10, 30, 60, 1440]
 
   @doc """
   Returns the allowed reminder lead times (minutes before the event start).
   This is the single source of truth for the preset whitelist: `parse_reminder/1`
-  rejects anything outside it, and `RemindersEditor` builds the editor's options
+  rejects anything outside it, and the side panel builds its reminder options
   from this list rather than duplicating the values.
   """
   @spec reminder_minutes_presets() :: [pos_integer()]

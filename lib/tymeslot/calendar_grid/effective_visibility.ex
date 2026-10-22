@@ -68,11 +68,6 @@ defmodule Tymeslot.CalendarGrid.EffectiveVisibility do
     )
   end
 
-  @doc "The ids of the integrations not hidden whole."
-  @spec visible_integration_ids([map()], t()) :: [integer()]
-  def visible_integration_ids(integrations, %__MODULE__{hidden_integration_ids: hidden}),
-    do: for(%{id: id} <- integrations, id not in hidden, do: id)
-
   @doc "`events` without those it hides (see `EventWindow.reject_hidden/3`)."
   @spec reject([map()], t()) :: [map()]
   def reject(events, %__MODULE__{} = visibility),

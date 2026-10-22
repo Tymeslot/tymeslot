@@ -32,7 +32,6 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Integrations.Calendar.SyncSchedule
   alias Tymeslot.Integrations.HealthCheck
@@ -63,7 +62,7 @@ defmodule Tymeslot.CalendarGrid do
   # The cache's writers refuse a half-timed row, but one stored before they
   # did would crash the grid's layout (a timed event without an end has
   # nowhere to stop), so it is left out and logged instead. Search leaves such
-  # rows out in its query (`ProviderCalendarEventSearchQueries.search/3`).
+  # rows out in its query (`ProviderCalendarEventSearchQueries.search_around/3`).
   defp placeable?(%ProviderCalendarEventSchema{} = row) do
     complete? = ProviderCalendarEventSchema.timing_complete?(Map.from_struct(row))
 
@@ -80,27 +79,15 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` projected
-  into the grid's event shape, excluding bookings whose provider-synced copy
-  is among `cached_events`. See
-  `Tymeslot.CalendarGrid.BookingEvents.list_for_range/5`. `opts` as that
+  into the grid's event shape. See
+  `Tymeslot.CalendarGrid.BookingEvents.list_for_range/4`. `opts` as that
   function takes them.
   """
-  @spec list_booking_events_for_range(
-          pos_integer(),
-          DateTime.t(),
-          DateTime.t(),
-          Enumerable.t(),
-          keyword()
-        ) :: [BookingEvent.t()]
-  defdelegate list_booking_events_for_range(
-                user_id,
-                start_dt,
-                end_dt,
-                cached_events \\ [],
-                opts \\ []
-              ),
-              to: BookingEvents,
-              as: :list_for_range
+  @spec list_booking_events_for_range(pos_integer(), DateTime.t(), DateTime.t(), keyword()) ::
+          [BookingEvent.t()]
+  defdelegate list_booking_events_for_range(user_id, start_dt, end_dt, opts \\ []),
+    to: BookingEvents,
+    as: :list_for_range
 
   # How far ahead the desktop-reminder feed looks. Wide enough to cover the
   # longest reminder lead time (a week) while keeping the payload bounded.
@@ -151,35 +138,6 @@ defmodule Tymeslot.CalendarGrid do
     do: %{event | reminders: Enum.map(event.reminders, &Reminder.normalise/1)}
 
   @doc """
-  Searches the user's cached calendar events by a free-text term.
-
-  Matches case-insensitively against event title, description, and location,
-  scoped to the user's active integrations. Pass `:hidden_integration_ids` in
-  `opts` to exclude calendars the user has toggled off entirely; results are
-  ordered by start time and capped at a sensible limit. A blank term returns
-  `[]`.
-
-  `integrations` (the full structs, not just their ids) is used to drop rows
-  from a calendar the user has *selectively* deselected, a finer grain than
-  `:hidden_integration_ids`. Selection is pushed into the query itself (see
-  `Tymeslot.Integrations.Calendar.visibility_rules/1` and
-  `ProviderCalendarEventSearchQueries.search/3`) rather than filtered afterwards, so
-  a busy deselected calendar can't crowd real matches out of the results: the
-  `LIMIT` only ever counts rows the caller can actually see.
-  """
-  @spec search_events(integer(), String.t(), [map()], keyword()) ::
-          [ProviderCalendarEventSchema.t()]
-  def search_events(user_id, term, integrations, opts \\ []) do
-    rules = Calendar.visibility_rules(integrations)
-
-    ProviderCalendarEventSearchQueries.search(
-      user_id,
-      term,
-      Keyword.put(opts, :visibility_rules, rules)
-    )
-  end
-
-  @doc """
   The calendar's search: events nearest to now first, a repeating event once,
   bookings by their guest and in place of their calendar copies, calendars
   the organiser has hidden (or left out of the active set) excluded. See
@@ -191,9 +149,6 @@ defmodule Tymeslot.CalendarGrid do
     to: EventSearch,
     as: :search
 
-  @doc "Enqueues a sync of each of the user's active integrations. See `Freshness.refresh_events/2`."
-  defdelegate refresh_events(user_id, how \\ :requested), to: Freshness
-
   @doc "The consecutive failed sync cycles of each of the user's calendar integrations, by id."
   @spec sync_failures(integer()) :: %{integer() => pos_integer()}
   def sync_failures(user_id), do: HealthCheck.sync_failure_counts(:calendar, user_id)
@@ -203,9 +158,6 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc "The integrations whose cached events are stale. See `Freshness.stale_integrations/1`."
   defdelegate stale_integrations(integrations), to: Freshness
-
-  @doc "The oldest sync among the integrations. See `Freshness.oldest_sync_at/1`."
-  defdelegate oldest_sync_at(integrations), to: Freshness
 
   @doc """
   Returns the display class each of the given integrations paints its events in.
@@ -333,10 +285,6 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   # --- Video rooms of grid events (see `EventVideoRooms`) ---
-
-  @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."
-  @spec delete_event_video_rooms(map()) :: :ok
-  defdelegate delete_event_video_rooms(event), to: EventVideoRooms, as: :event_deleted
 
   @doc "Whether an ended grid event's room may be deleted. See `EventVideoRooms.check_expired/1`."
   @spec check_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept

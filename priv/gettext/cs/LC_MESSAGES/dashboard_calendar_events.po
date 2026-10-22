@@ -45,11 +45,6 @@ msgstr "1 hodinu předem"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
 #, elixir-autogen, elixir-format
-msgid "Add reminder"
-msgstr "Přidat připomínku"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
 
@@ -67,21 +62,6 @@ msgstr "Schůzka byla vytvořena a pozvánka odeslána"
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Oznámení"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders"
-msgstr "Připomínky"
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Připomínky se synchronizují s vaším kalendářem, aby vás mohl upozornit na vašich vlastních zařízeních."
-
-#: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder %{label}"
-msgstr "Odebrat připomínku %{label}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
