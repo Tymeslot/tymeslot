@@ -70,6 +70,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     :attendee_name_required => "Attendee name is required",
     :attendee_email_required => "Attendee email is required",
     :attendee_is_organizer => "The guest email must differ from your own address",
+    :invalid_reminders => "The reminders for this meeting are not valid",
     :end_before_start => "End time must be after start time",
     :meeting_creation_failed => "Failed to create meeting"
   }

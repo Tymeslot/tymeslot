@@ -809,11 +809,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guests."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr ""
 
@@ -826,3 +821,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guest."
+msgid_plural "Without a limit, each booking may bring up to %{count} guests."
+msgstr[0] ""
+msgstr[1] ""

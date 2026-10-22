@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarSelectionQueries
   alias Tymeslot.Integrations.Calendar.Deletion
@@ -110,18 +111,30 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   Sets whether a subscription counts every event in its feed as busy, also
   those the feed marks free (see `Calendar.Management.put_all_events_busy/2`).
   Any other connection is refused with `{:error, :not_a_subscription}`.
+
+  A feed set not to block has nothing for the setting to act on, so it is
+  refused with `{:error, :feed_does_not_block}` and kept as it was, to apply
+  again once the feed blocks. A subscription without a calendar list has no
+  blocking choice and blocks as it always did, so it may set it.
   """
   @spec set_all_events_busy(pos_integer(), pos_integer(), boolean()) ::
           {:ok, integration()}
-          | {:error, refusal() | :not_a_subscription | Ecto.Changeset.t()}
+          | {:error, refusal() | :not_a_subscription | :feed_does_not_block | Ecto.Changeset.t()}
   def set_all_events_busy(user_id, integration_id, busy?) when is_boolean(busy?) do
-    with_owned(
-      user_id,
-      integration_id,
-      :write,
-      &Management.put_all_events_busy(&1, busy?)
-    )
+    with_owned(user_id, integration_id, :write, fn integration ->
+      with :ok <- feed_blocks(integration),
+           do: Management.put_all_events_busy(integration, busy?)
+    end)
   end
+
+  defp feed_blocks(%{calendar_list: [feed | _rest]}) do
+    case CalendarEntry.normalize(feed) do
+      %CalendarEntry{blocks_availability: false} -> {:error, :feed_does_not_block}
+      %CalendarEntry{} -> :ok
+    end
+  end
+
+  defp feed_blocks(_integration), do: :ok
 
   @doc """
   Sets whether one of an integration's calendars is shown, leaving whether

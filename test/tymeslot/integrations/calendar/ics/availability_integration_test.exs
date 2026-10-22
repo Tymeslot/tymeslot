@@ -174,6 +174,22 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
       refute Repo.reload!(caldav).all_events_busy
     end
 
+    test "refuses a feed set not to block, keeping what was stored", %{
+      user: user,
+      integration: integration
+    } do
+      integration
+      |> Changeset.change(
+        calendar_list: [%{id: "subscription", selected: true, blocks_availability: false}]
+      )
+      |> Repo.update!()
+
+      assert {:error, :feed_does_not_block} =
+               Calendar.set_all_events_busy(user.id, integration.id, true)
+
+      refute Repo.reload!(integration).all_events_busy
+    end
+
     test "refuses another user's subscription", %{integration: integration} do
       other = insert(:user)
 

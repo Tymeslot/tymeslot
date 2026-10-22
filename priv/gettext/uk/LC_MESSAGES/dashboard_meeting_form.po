@@ -813,11 +813,6 @@ msgstr "Обмежити кількість гостей на бронюванн
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
-msgid "Without a limit, each booking may bring up to %{count} guests."
-msgstr "Без обмеження кожне бронювання може привести до %{count} гостей."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
-#, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
 msgstr "Кожен гість займає одне з місць цього часу, як і той, хто бронює."
 
@@ -830,3 +825,11 @@ msgstr "Тижні починаються з понеділка, як указа
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Тижні починаються з неділі, як указано в «Налаштуваннях календаря»."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
+#, elixir-autogen, elixir-format
+msgid "Without a limit, each booking may bring up to %{count} guest."
+msgid_plural "Without a limit, each booking may bring up to %{count} guests."
+msgstr[0] "Без обмеження кожне бронювання може привести до %{count} гостя."
+msgstr[1] "Без обмеження кожне бронювання може привести до %{count} гостей."
+msgstr[2] "Без обмеження кожне бронювання може привести до %{count} гостей."

@@ -16,6 +16,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -43,6 +44,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           | :attendee_email_required
           | :attendee_is_organizer
           | :end_before_start
+          | :invalid_reminders
           | :time_conflict
           | :meeting_creation_failed
 
@@ -79,10 +81,12 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     # stored `organizer_email` disagreeing.
     organizer = get_organizer_details(params.organizer_user_id)
 
-    with :ok <- validate(params, organizer) do
+    with :ok <- validate(params, organizer),
+         {:ok, reminders} <- validate_reminders(params[:reminders]) do
       guest_emails = params[:guest_emails] || []
 
       params
+      |> Map.put(:reminders, reminders)
       |> build_meeting_attrs(organizer)
       |> run_transaction(guest_emails, opts)
     end
@@ -109,6 +113,24 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
         :ok
     end
   end
+
+  # The reminder policy a meeting type's changeset enforces
+  # (`ReminderValidation`), held here for the meeting itself: its caller's
+  # picker checks each reminder as it is added, but this is the rule's owner.
+  # No reminders stays `[]`, never `nil`, which would read as a legacy meeting
+  # and get the default reminder (see `build_meeting_attrs/2`).
+  defp validate_reminders(nil), do: {:ok, []}
+
+  defp validate_reminders(reminders) when is_list(reminders) do
+    with {:ok, normalized} <- ReminderValidation.parse_and_normalize_reminders(reminders),
+         :ok <- ReminderValidation.check_policy(normalized) do
+      {:ok, normalized}
+    else
+      {:error, _reason} -> {:error, :invalid_reminders}
+    end
+  end
+
+  defp validate_reminders(_reminders), do: {:error, :invalid_reminders}
 
   # Booking yourself as your own guest produces a meeting whose organiser and
   # attendee are one person: both confirmation emails land in the same inbox,
@@ -173,7 +195,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       # meeting from before the reminders column existed, and answered with the
       # legacy default of 30 minutes, so a booking whose own confirmation says
       # no reminders are scheduled would send one anyway.
-      reminders: params[:reminders] || [],
+      reminders: params.reminders,
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
       # The organiser chooses which language the guests are written to; a
       # missing or unsupported choice falls back to the booking default.

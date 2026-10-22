@@ -210,6 +210,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message(:end_before_start),
     do: dgettext("booking_errors", "End time must be after start time")
 
+  def message(:invalid_reminders),
+    do: dgettext("booking_errors", "The reminders for this meeting are not valid")
+
   def message(:meeting_creation_failed),
     do: dgettext("booking_errors", "Failed to create meeting")
 

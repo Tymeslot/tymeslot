@@ -235,3 +235,8 @@ msgstr "Non puoi prenotare con più di %{days} giorni di anticipo"
 #, elixir-autogen, elixir-format
 msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
 msgstr "Questa riunione è stata fissata tramite un sondaggio, quindi solo l'organizzatore può spostarlo. Se il nuovo orario non ti va bene, rispondi al tuo invito."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The reminders for this meeting are not valid"
+msgstr "I promemoria per questa riunione non sono validi"
