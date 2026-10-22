@@ -181,4 +181,4 @@ msgstr "Umfragen, die einladen, bestätigen und Sie auf dem Laufenden halten"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Eine Umfrage kann offen sein, sodass jeder mit dem Link per E-Mail einen Abstimmungslink anfordert, oder nur für Eingeladene gelten. Auf Wunsch erhalten Sie eine E-Mail, sobald Stimmen eingehen. Nach dem Versenden können Sie die Frist ändern, Termine hinzufügen, eine Einladung erneut senden und Personen entfernen; Erinnerungen gehen an Eingeladene, die noch nicht abgestimmt haben. Der Termin, den eine Umfrage bestätigt, gehört Ihnen: Alle Teilnehmenden sind Gäste, und nur Sie können ihn verschieben oder absagen."

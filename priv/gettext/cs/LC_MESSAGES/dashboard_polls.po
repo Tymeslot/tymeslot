@@ -761,9 +761,9 @@ msgstr "Tato jména nelze použít: %{names}"
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline in Edit poll to invite people."
-msgstr ""
+msgstr "Hlasování skončilo. Pozvat lidi můžete po posunutí uzávěrky v části Upravit anketu."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "Set a username in your profile first: the links in the emails are built from it."
-msgstr ""
+msgstr "Nejprve si v profilu nastavte uživatelské jméno: odkazy v e-mailech se z něj sestavují."

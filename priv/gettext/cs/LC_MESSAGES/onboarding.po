@@ -180,4 +180,4 @@ msgstr "Ankety, které zvou, potvrzují a drží vás v obraze"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Anketa může být otevřená (o hlasovací odkaz si e-mailem řekne každý, kdo má odkaz), nebo jen pro pozvané. E-mailem se můžete nechat upozorňovat na nové hlasy. Po odeslání můžete změnit uzávěrku, přidat termíny, znovu poslat pozvánku a odebrat lidi; připomínky dostávají pozvaní, kteří ještě nehlasovali. Schůzka, kterou anketa potvrdí, je vaše: všichni na ní jsou hosté a jen vy ji můžete přesunout nebo zrušit."

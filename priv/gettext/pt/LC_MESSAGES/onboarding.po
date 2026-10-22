@@ -176,4 +176,4 @@ msgstr "Enquetes que convidam, confirmam e deixam você por dentro"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Uma enquete pode ser aberta, e aí qualquer pessoa com o link pede um link de votação por e-mail, ou apenas por convite. Você pode receber um e-mail a cada voto. Depois do envio, dá para mudar o prazo, adicionar horários, reenviar um convite e remover pessoas; os lembretes vão para as pessoas convidadas que ainda não votaram. A reunião que uma enquete confirma é sua: todos nela são convidados, e só você pode remarcá-la ou cancelá-la."

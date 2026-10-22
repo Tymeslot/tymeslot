@@ -761,9 +761,9 @@ msgstr "Ці імена не можна використати: %{names}"
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline in Edit poll to invite people."
-msgstr ""
+msgstr "Голосування завершено. Щоб запросити людей, перенесіть кінцевий термін у розділі «Редагувати опитування»."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "Set a username in your profile first: the links in the emails are built from it."
-msgstr ""
+msgstr "Спершу вкажіть ім'я користувача у профілі: посилання в листах створюються на його основі."

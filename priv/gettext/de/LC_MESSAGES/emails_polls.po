@@ -401,4 +401,4 @@ msgstr "Hier ist noch einmal Ihr Link, um für %{host} über %{title} abzustimme
 #: lib/tymeslot/emails/templates/poll_cancelled.ex
 #, elixir-autogen, elixir-format
 msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
-msgstr ""
+msgstr "%{host} hat die Umfrage %{title} abgesagt, es wird also kein Termin daraus festgelegt."

@@ -181,4 +181,4 @@ msgstr "Des sondages qui invitent, confirment et vous tiennent au courant"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
-msgstr ""
+msgstr "Un sondage peut être ouvert, auquel cas toute personne disposant du lien demande par e-mail un lien de vote, ou réservé aux invités. Vous pouvez recevoir un e-mail à chaque nouveau vote. Après l'envoi, vous pouvez modifier la date limite, ajouter des créneaux, renvoyer une invitation et retirer des personnes ; les rappels sont envoyés aux invités qui n'ont pas encore voté. La réunion qu'un sondage confirme est la vôtre : tous les participants y sont des invités, et vous seul pouvez la déplacer ou l'annuler."
