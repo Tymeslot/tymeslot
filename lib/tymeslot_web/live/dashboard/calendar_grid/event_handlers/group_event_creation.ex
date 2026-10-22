@@ -13,8 +13,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.MeetingTypes.OneOffEvents
+  alias Tymeslot.Utils.ChangesetErrors
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -62,13 +65,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
          {:ok, starts_at, duration} <- timing(creating, timezone),
          {:ok, max_participants} <- participant_limit(fields["max_participants"]),
          {:ok, location} <- location(fields["location"]),
+         {:ok, description} <- description(fields["description"]),
          {:ok, closes_at} <- registration_close(fields["closes_at"], timezone),
          :ok <- rate_limit(socket) do
       {:ok,
        %{
          user_id: socket.assigns.current_user.id,
          name: title,
-         description: blank_to_nil(fields["description"]),
+         description: description,
          starts_at: starts_at,
          duration_minutes: duration,
          max_participants: max_participants,
@@ -117,14 +121,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
     end
   end
 
+  # The title becomes the event's meeting type name, so it is checked and
+  # sanitised by the same rule as a name typed into the meeting-type form.
   defp title(title) when is_binary(title) do
     case String.trim(title) do
       "" -> {:error, dgettext("dashboard_group_events", "Give the event a title.")}
-      trimmed -> {:ok, trimmed}
+      trimmed -> field(:name, trimmed)
     end
   end
 
   defp title(_title), do: title("")
+
+  defp description(value) do
+    case field(:description, value) do
+      {:ok, ""} -> {:ok, nil}
+      result -> result
+    end
+  end
+
+  defp field(name, value) do
+    case InputValidation.validate_field(name, value, %{}) do
+      {:ok, sanitised} -> {:ok, sanitised}
+      {:error, errors} -> {:error, errors |> Map.values() |> List.first()}
+    end
+  end
 
   # One day at most, as any meeting type: an event is one session, not a span.
   defp timing(creating, timezone) do
@@ -136,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
            Shared.to_utc(end_date, creating.end_hour, creating.end_minute, timezone),
          duration = div(DateTime.diff(ends_at, starts_at), 60),
          true <- duration in Constraints.duration_minutes_range() do
-      {:ok, starts_at, duration}
+      duration_step(starts_at, duration)
     else
       _invalid ->
         {:error,
@@ -145,6 +165,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
            "An event lasts at least 5 minutes and at most 24 hours."
          )}
     end
+  end
+
+  defp duration_step(starts_at, duration) do
+    step = Constraints.duration_step_minutes()
+
+    if rem(duration, step) == 0,
+      do: {:ok, starts_at, duration},
+      else:
+        {:error,
+         dgettext("dashboard_group_events", "An event lasts a multiple of %{step} minutes.",
+           step: step
+         )}
   end
 
   defp participant_limit(value) do
@@ -206,15 +238,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
     end
   end
 
-  defp blank_to_nil(value) when is_binary(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp blank_to_nil(_value), do: nil
-
   defp error_message(:start_in_past),
     do: dgettext("dashboard_group_events", "The event has to start in the future.")
 
@@ -230,6 +253,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
 
   defp error_message(:group_bookings_not_allowed),
     do: dgettext("dashboard_group_events", "Group events are not included in your plan.")
+
+  # A rule the checks above do not restate (a link or name taken in the
+  # meantime): the changeset says which.
+  defp error_message(%Changeset{} = changeset),
+    do: ChangesetErrors.first(changeset, &ChangesetErrors.translate/1) || error_message(nil)
 
   defp error_message(_reason),
     do: dgettext("dashboard_group_events", "The event could not be created. Please try again.")

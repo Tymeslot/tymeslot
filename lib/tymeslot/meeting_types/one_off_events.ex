@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.{FormValidation, MeetingTypeQueries, Slugs}
   alias Tymeslot.Repo
+  alias Tymeslot.Validation.Constraints
 
   @type location :: {:venue, pos_integer()} | {:video, pos_integer()}
 
@@ -40,9 +41,11 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   @doc """
   Creates the event's meeting type and plans its session, returning both.
 
-  The name is the event's title. When the host already has a meeting type
-  of that name (a monthly workshop planned again), the date is added to it,
-  since names are unique per host. The link is derived from the name too,
+  The name is the event's title. Names are unique per host, so when the
+  host already has a meeting type of that name (a monthly workshop planned
+  again), the new type is named after the title and its date instead
+  ("Workshop · 2026-11-03"), numbered on when that is taken as well; the
+  existing type is never touched. The link is derived from the name too,
   and made random only when that one is taken.
   """
   @spec create(params()) ::
@@ -114,10 +117,26 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
     }
   end
 
+  # The title, else the title with the date, else with the date and a
+  # number, each cut so the whole name stays within the schema's limit.
   defp unique_name(name, starts_at, existing) do
-    if Enum.any?(existing, &(&1.name == name)),
-      do: "#{name} · #{Date.to_iso8601(DateTime.to_date(starts_at))}",
-      else: name
+    taken = MapSet.new(existing, & &1.name)
+    date = Date.to_iso8601(DateTime.to_date(starts_at))
+
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(&suffix(date, &1))
+    |> then(&Stream.concat([""], &1))
+    |> Stream.map(&fit(name, &1))
+    |> Enum.find(&(not MapSet.member?(taken, &1)))
+  end
+
+  defp suffix(date, 1), do: " · #{date}"
+  defp suffix(date, n), do: " · #{date} (#{n})"
+
+  defp fit(name, suffix) do
+    room = Constraints.name_length_range().last - String.length(suffix)
+    (name |> String.slice(0, room) |> String.trim_trailing()) <> suffix
   end
 
   # The name-derived slug the schema would accept, or a random one when it is

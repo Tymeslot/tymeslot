@@ -77,6 +77,31 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
     assert second.slug != first.slug
   end
 
+  test "numbers a title repeated on the same date, and keeps a long title within the limit",
+       ctx do
+    morning = DateTime.new!(Date.add(Date.utc_today(), 40), ~T[09:00:00], "Etc/UTC")
+    evening = DateTime.new!(Date.add(Date.utc_today(), 40), ~T[18:00:00], "Etc/UTC")
+    date = Date.to_iso8601(DateTime.to_date(morning))
+    long = String.duplicate("a", 100)
+
+    {:ok, _first} = OneOffEvents.create(params(ctx, %{name: long, registration_closes_at: nil}))
+
+    assert {:ok, %{meeting_type: second}} =
+             OneOffEvents.create(
+               params(ctx, %{name: long, starts_at: morning, registration_closes_at: nil})
+             )
+
+    assert {:ok, %{meeting_type: third}} =
+             OneOffEvents.create(
+               params(ctx, %{name: long, starts_at: evening, registration_closes_at: nil})
+             )
+
+    assert String.ends_with?(second.name, " · #{date}")
+    assert String.ends_with?(third.name, " · #{date} (2)")
+    assert String.length(second.name) == 100
+    assert String.length(third.name) == 100
+  end
+
   test "stores nothing when the session cannot be planned", ctx do
     past = DateTime.add(DateTime.utc_now(), -3600)
 

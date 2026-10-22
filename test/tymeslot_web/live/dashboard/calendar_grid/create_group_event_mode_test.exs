@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.OneOffEvents
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
 
   defp event_date, do: Date.add(Date.utc_today(), 10)
 
-  defp open_group_event_form(lv) do
+  defp open_group_event_form(lv, end_minute \\ "30") do
     lv
     |> element("#calendar-grid")
     |> render_hook("show_create_form", %{
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
       "start-hour" => "18",
       "start-minute" => "0",
       "end-hour" => "19",
-      "end-minute" => "30"
+      "end-minute" => end_minute
     })
 
     lv |> element(~s{[data-testid="create-mode-group-event"]}) |> render_click()
@@ -158,6 +159,52 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
     assert Repo.all(MeetingTypeSchema) == []
   end
 
+  test "says why an over-long title is refused", %{conn: conn, venue: venue} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard")
+    open_group_event_form(lv)
+
+    fill_in(lv, String.duplicate("a", 120), %{
+      "max_participants" => "12",
+      "location" => "venue:#{venue.id}"
+    })
+
+    assert save(lv) =~ "Meeting name must be 100 characters or less"
+    assert Repo.all(MeetingTypeSchema) == []
+  end
+
+  test "says why a length off the 5-minute step is refused", %{conn: conn, venue: venue} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard")
+    open_group_event_form(lv, "37")
+
+    fill_in(lv, "Introduction to X", %{
+      "max_participants" => "12",
+      "location" => "venue:#{venue.id}"
+    })
+
+    assert save(lv) =~ "An event lasts a multiple of 5 minutes."
+    assert Repo.all(MeetingTypeSchema) == []
+  end
+
+  test "stores the description sanitised, as the meeting-type form does", %{
+    conn: conn,
+    venue: venue
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard")
+    open_group_event_form(lv)
+
+    fill_in(lv, "Introduction to X", %{
+      "max_participants" => "12",
+      "location" => "venue:#{venue.id}",
+      "description" => "Bring a\u0000 laptop."
+    })
+
+    save(lv)
+
+    assert [%{description: description}] = Repo.all(MeetingTypeSchema)
+    refute description =~ "\u0000"
+    assert description =~ "laptop."
+  end
+
   describe "on the meeting settings page" do
     setup %{user: user, venue: venue} do
       starts_at = DateTime.new!(event_date(), ~T[18:00:00], "Etc/UTC")
@@ -198,6 +245,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
 
       assert [link] = Floki.attribute(row, "#copy-event-link-#{event.id}", "data-copy-text")
       assert link =~ "/trainer/introduction-to-x"
+    end
+
+    test "deleting the event cancels its session and tells who signed up", %{
+      conn: conn,
+      event: event
+    } do
+      [session] = PlannedSessions.list(event)
+      insert(:participant, meeting: session, email: "ada@example.com")
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      lv
+      |> element("[phx-click='show_delete_modal'][phx-value-id='#{event.id}']")
+      |> render_click()
+
+      assert render(lv) =~ "The 1 person who signed up is told by email."
+
+      lv
+      |> element("#delete-meeting-type-modal button", "Delete Meeting Type")
+      |> render_click()
+
+      assert Repo.get(MeetingTypeSchema, event.id) == nil
+      assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
     end
 
     test "shows a cancelled event without its link", %{conn: conn, event: event, user: user} do
