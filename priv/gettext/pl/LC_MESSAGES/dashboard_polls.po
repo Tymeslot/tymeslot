@@ -545,11 +545,6 @@ msgstr "Usunąć %{name} wraz z odpowiedziami z tej ankiety? Ta osoba nie zostan
 msgid "Remove from the poll"
 msgstr "Usuń z ankiety"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format
-msgid "Removed from the poll"
-msgstr "Usunięto z ankiety"
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
@@ -820,3 +815,8 @@ msgid_plural "%{count} guests have already voted. Their responses stay visible t
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{name} from the poll."
+msgstr ""

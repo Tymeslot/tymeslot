@@ -541,11 +541,6 @@ msgstr "%{name} samt Antworten aus dieser Umfrage entfernen? Die Person wird nic
 msgid "Remove from the poll"
 msgstr "Aus der Umfrage entfernen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format
-msgid "Removed from the poll"
-msgstr "Aus der Umfrage entfernt"
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
@@ -811,3 +806,8 @@ msgid "%{count} guest has already voted. Their responses stay visible to you her
 msgid_plural "%{count} guests have already voted. Their responses stay visible to you here, but no time will be confirmed."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{name} from the poll."
+msgstr ""

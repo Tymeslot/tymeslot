@@ -22,22 +22,41 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
   alias TymeslotWeb.Live.Shared.Flash
 
   @impl Phoenix.LiveComponent
-  def mount(socket), do: {:ok, assign(socket, :removing, nil)}
+  def mount(socket), do: {:ok, assign(socket, removing: nil, expanded?: false)}
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div data-testid="poll-participant-list">
-      <details :if={@poll.participants != []} class="text-token-sm" data-testid="poll-participants">
-        <summary class="cursor-pointer font-medium text-tymeslot-700">
+      <%!-- A disclosure held in assigns rather than a native <details>: the
+            re-render after a resend or a live vote would otherwise close a
+            list the host has open. --%>
+      <div :if={@poll.participants != []} class="text-token-sm" data-testid="poll-participants">
+        <button
+          type="button"
+          phx-click="toggle_participants"
+          phx-target={@myself}
+          aria-expanded={to_string(@expanded?)}
+          aria-controls={"poll-participants-#{@poll.id}"}
+          class="flex items-center gap-1 font-medium text-tymeslot-700"
+          data-testid="poll-participants-toggle"
+        >
+          <.icon
+            name={if @expanded?, do: "hero-chevron-down-mini", else: "hero-chevron-right-mini"}
+            class="w-4 h-4"
+          />
           {dngettext(
             "dashboard_polls",
             "%{count} participant",
             "%{count} participants",
             length(@poll.participants)
           )}
-        </summary>
-        <ul class="mt-2 divide-y divide-tymeslot-100">
+        </button>
+        <ul
+          id={"poll-participants-#{@poll.id}"}
+          hidden={!@expanded?}
+          class="mt-2 divide-y divide-tymeslot-100"
+        >
           <li
             :for={participant <- @poll.participants}
             class="flex items-center justify-between gap-3 py-2"
@@ -74,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
             </div>
           </li>
         </ul>
-      </details>
+      </div>
 
       <RemoveParticipantModal.remove_participant_modal
         id={"remove-participant-modal-#{@poll.id}"}
@@ -91,9 +110,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
     {:ok, assign(socket, :voting_open?, Polls.voting_open?(socket.assigns.poll))}
   end
 
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_participants", _params, socket),
+    do: {:noreply, update(socket, :expanded?, &(!&1))}
+
   # The modal names someone from the poll the editor shows. An id from the
   # client that is not among its participants opens nothing.
-  @impl Phoenix.LiveComponent
   def handle_event("request_remove_participant", %{"id" => participant_id}, socket) do
     removing = Enum.find(socket.assigns.poll.participants, &(&1.id == participant_id))
     {:noreply, assign(socket, :removing, removing)}
@@ -109,8 +131,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
     %{poll: poll, user_id: user_id, removing: participant} = socket.assigns
 
     case Polls.remove_participant(poll.id, user_id, participant.id) do
-      :ok -> Flash.info(dgettext("dashboard_polls", "Removed from the poll"))
-      {:error, reason} -> Flash.warning(removal_error(reason))
+      :ok ->
+        Flash.info(
+          dgettext("dashboard_polls", "Removed %{name} from the poll.", name: name(participant))
+        )
+
+      {:error, reason} ->
+        Flash.warning(removal_error(reason))
     end
 
     send_update(PollsComponent, id: socket.assigns.parent_id, poll_updated: poll.id)

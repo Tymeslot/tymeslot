@@ -294,7 +294,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> render_click()
 
       assert Repo.get(PollParticipantSchema, participant.id) == nil
-      refute render(view) =~ "Joker"
+      assert render(view) =~ "Removed Joker from the poll."
+      refute has_element?(view, "[data-testid='poll-participant']", "Joker")
     end
 
     test "keeps someone when the host thinks better of it", %{conn: conn, poll: poll} do
