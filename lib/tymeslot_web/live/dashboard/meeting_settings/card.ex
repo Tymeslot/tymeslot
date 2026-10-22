@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.DashboardFormat
 
   @doc """
   Renders a meeting type card with status toggle and action buttons.
@@ -31,6 +32,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   attr :payments_accepted, :boolean,
     default: true,
     doc: "whether the host can take payments; a paid type without it is not offered to guests"
+
+  attr :next_date, :any,
+    default: :not_fixed,
+    doc: "a fixed-date type's next date open for registration, or nil when it has none"
+
+  attr :timezone, :string, default: "Etc/UTC"
+  attr :time_format, :string, default: "24h"
 
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_type_card(assigns) do
@@ -66,6 +74,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               }
             >
               {dgettext("dashboard_meeting_types", "Unlisted")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={is_nil(@next_date)}
+              tone={:warning}
+              icon="hero-calendar-mini"
+              title={
+                dgettext(
+                  "dashboard_meeting_types",
+                  "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+                )
+              }
+              data-testid="no-open-dates"
+            >
+              {dgettext("dashboard_meeting_types", "No open dates")}
             </Feedback.pill>
             <Feedback.pill
               :if={group_paused?(@type, @group_bookings_allowed)}
@@ -109,6 +131,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               <Icons.icon name="hero-users-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
               {dgettext("dashboard_meeting_types", "Group · up to %{count}",
                 count: @type.max_participants
+              )}
+            </span>
+            <span
+              :if={match?(%DateTime{}, @next_date)}
+              class="flex items-center shrink-0"
+              data-testid="next-fixed-date"
+            >
+              <Icons.icon name="hero-calendar-days-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
+              {dgettext("dashboard_meeting_types", "Next date: %{date}",
+                date: next_date_label(@next_date, @timezone, @time_format)
               )}
             </span>
             <.location_summary type={@type} icon_size={@icon_size} venues={@venues} />
@@ -250,6 +282,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     end
   end
 
+  defp next_date_label(datetime, timezone, time_format) do
+    date = datetime |> DashboardFormat.local_date(timezone) |> DashboardFormat.short_date()
+    "#{date}, #{DashboardFormat.clock(datetime, timezone, time_format)}"
+  end
+
   # A group type saved while the host had group bookings, kept after they lost
   # access: it keeps its bookings but takes no new ones (see
   # `Tymeslot.MeetingTypes.GroupAccess`).
@@ -268,14 +305,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   defp described?(%{description: nil}), do: false
   defp described?(%{description: description}), do: String.trim(description) != ""
 
-  # One location is named; several are counted. Naming them all would push
-  # the calendar and question badges off the row on a card that is already a
-  # single line of metadata.
+  @doc """
+  Where a meeting type takes place, as its card's metadata row shows it. One
+  location is named; several are counted. Naming them all would push the
+  calendar and question badges off the row on a card that is already a
+  single line of metadata.
+  """
   attr :type, :map, required: true
   attr :icon_size, :string, required: true
   attr :venues, :list, required: true
 
-  defp location_summary(assigns) do
+  @spec location_summary(map()) :: Phoenix.LiveView.Rendered.t()
+  def location_summary(assigns) do
     assigns = assign(assigns, :locations, MeetingTypes.location_options(assigns.type))
 
     ~H"""

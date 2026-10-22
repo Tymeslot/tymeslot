@@ -25,6 +25,11 @@
   min-height: var(--card-height-md);
   display: flex;
   flex-direction: column;
+  /* Clipped like every card, but never scrollable: its middle is the one
+     scroll region, and a `scrollIntoView` reaching past that region's end
+     (the slot list's, on a fixed-date type's short page) would otherwise
+     scroll the card itself and push the header out of sight. */
+  overflow: clip;
 }
 
 /* Booking form card - use natural content height */

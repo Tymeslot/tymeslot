@@ -36,7 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphStatus do
   end
 
   defp throttled_or_quota?(message, code) do
-    String.contains?(code, "throttled") or
+    String.contains?(code, ["throttled", "quota", "limitexceeded", "limitreached"]) or
       String.contains?(message, "throttle") or
       String.contains?(message, "rate") or
       String.contains?(message, "quota")

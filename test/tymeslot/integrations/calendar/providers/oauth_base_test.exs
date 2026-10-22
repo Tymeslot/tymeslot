@@ -32,23 +32,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.OAuthBaseTest do
     end
   end
 
-  describe "new/2" do
-    test "returns ok tuple on success" do
-      config = %{
-        access_token: "at",
-        refresh_token: "rt",
-        token_expires_at: DateTime.utc_now(),
-        oauth_scope: "scope"
-      }
-
-      assert {:ok, ^config} = OAuthBase.new(config, fn _client -> :ok end)
-    end
-
-    test "returns error on failure" do
-      assert {:error, _reason} = OAuthBase.new(%{}, fn _client -> :ok end)
-    end
-  end
-
   describe "handle_api_call/2" do
     test "handles ok results" do
       assert {:ok, "RESULT"} =

@@ -20,6 +20,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   use TymeslotWeb.BrowserCase, async: false
 
   alias Ecto.Changeset
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
@@ -140,6 +141,38 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
+  feature "a fixed-date type's dates scroll with the calendar at short heights (both themes)",
+          %{session: session} do
+    # The list of dates sits above the calendar. Were the calendar the only
+    # scroll region, a long list would keep its height and squeeze the
+    # calendar to nothing between the header and the actions.
+    {profile, slug} = create_user_with_fixed_date_sessions(8)
+
+    for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme.name} fixed-date schedule #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> assert_has(css("[data-testid='session-list']"))
+        |> assert_has(css("[data-testid='schedule-actions']"))
+        |> assert_no_horizontal_overflow(context)
+        |> assert_calendar_scrolls_with_session_list(context)
+        |> assert_cta_reachable(context)
+        |> then(fn acc ->
+          if theme.pins_schedule_actions do
+            acc
+            |> assert_actions_within_viewport(context)
+            |> assert_no_vertical_page_scroll(context)
+          else
+            acc
+          end
+        end)
+    end
+  end
+
   feature "branding banner stays within the viewport when the page content fits",
           %{session: session} do
     # Inject a stand-in for the SaaS branding banner via the theme-extensions
@@ -235,6 +268,33 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         duration_minutes: 30,
         is_active: true
       })
+
+    {profile, Slugs.to_slug(meeting_type)}
+  end
+
+  # A fixed-date group type held at one venue, with `count` sessions planned
+  # two days apart from tomorrow.
+  defp create_user_with_fixed_date_sessions(count) do
+    user = create_onboarded_user()
+    profile = Profiles.get_profile(user.id)
+    insert(:calendar_integration, user_id: user.id, user: user)
+    venue = insert(:venue, user: user, name: "Main Hall")
+
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        name: "Sizes Matrix Workshop",
+        duration_minutes: 90,
+        is_active: true,
+        max_participants: 12,
+        fixed_dates: true,
+        locations: [in_person_location([venue])]
+      )
+
+    for day <- 1..count do
+      starts_at = Date.utc_today() |> Date.add(day * 2) |> DateTime.new!(~T[16:00:00], "Etc/UTC")
+      {:ok, _session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
+    end
 
     {profile, Slugs.to_slug(meeting_type)}
   end
@@ -382,6 +442,45 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
            The schedule step should lock to the viewport and scroll only inside
            the calendar.
            """
+
+    session
+  end
+
+  # The calendar a fixed-date type shows below its list of dates is never a
+  # scroll region of its own while it overflows: whatever scrolls it (an
+  # element of the card, or the page) scrolls the list too.
+  defp assert_calendar_scrolls_with_session_list(session, context) do
+    me = self()
+    ref = make_ref()
+
+    execute_script(
+      session,
+      """
+      // A week strip's day where the month grid is hidden (Quill, short).
+      const day = [...document.querySelectorAll("[data-testid='calendar-day'], .week-day-cell")]
+        .find((el) => el.offsetParent !== null);
+      const list = document.querySelector("[data-testid='session-list']");
+      if (!day || !list) return "missing";
+      for (let el = day.parentElement; el && el !== document.body; el = el.parentElement) {
+        const overflowY = getComputedStyle(el).overflowY;
+        const scrolls = overflowY === "auto" || overflowY === "scroll";
+        if (scrolls && el.scrollHeight > el.clientHeight + 1) {
+          return el.contains(list) ? "shared" : el.className;
+        }
+      }
+      return "shared";
+      """,
+      fn value -> send(me, {:calendar_scroller, ref, value}) end
+    )
+
+    assert_receive {:calendar_scroller, ^ref, value}, 5_000
+
+    refute value == "missing", "#{context}: no visible calendar day, or no session list"
+
+    assert value == "shared",
+           "The calendar scrolls on its own below the list of dates at #{context} " <>
+             "(scroll region: #{inspect(value)}), so the list squeezes it; the " <>
+             "dates and the calendar should scroll together."
 
     session
   end
