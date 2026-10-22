@@ -3,8 +3,8 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
   The rate limits for the dashboard's write actions, per organiser: webhooks,
   integrations, calendar edits, meeting types, uploads, theme and embed
   settings, and the meeting actions. Split out of `Limits` to keep that table
-  under the module size limit; `Limits` merges these entries into its own, and
-  its moduledoc describes the shape of an entry.
+  under the module size limit; `Limits` merges these entries into its own
+  with `merge_disjoint/1`, and its moduledoc describes the shape of an entry.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -199,7 +199,15 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
     ]
   }
 
-  @doc "The dashboard entries, by name."
-  @spec all() :: %{atom() => keyword()}
-  def all, do: @limits
+  @doc """
+  `limits` with the dashboard entries added. Raises on a name in both, so a
+  duplicated name fails `Limits`' compilation instead of one entry silently
+  replacing the other.
+  """
+  @spec merge_disjoint(%{atom() => keyword()}) :: %{atom() => keyword()}
+  def merge_disjoint(limits) do
+    Map.merge(@limits, limits, fn name, _dashboard, _other ->
+      raise ArgumentError, "rate limit #{inspect(name)} is defined twice"
+    end)
+  end
 end

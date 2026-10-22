@@ -83,7 +83,7 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
     {"1d", Keyword.fetch!(@poll_limits, :per_recipient_day), @day}
   ]
 
-  @limits Map.merge(DashboardLimits.all(), %{
+  @limits DashboardLimits.merge_disjoint(%{
             # Auth
             signup_ip: [
               prefix: "signup:ip",

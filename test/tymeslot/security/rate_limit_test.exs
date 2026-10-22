@@ -230,6 +230,49 @@ defmodule Tymeslot.Security.RateLimitTest do
       assert RateLimit.take([{key, 1_000, 2}], 1, t0 + @second - 1) == {:deny, 0}
       assert RateLimit.take([{key, 1_000, 2}], 2, t0 + @second) == :ok
     end
+
+    # Another take's rows landing between this take's check and its insert,
+    # staged without timing: the bucket is named twice, so the take's check
+    # sees room for one in each, and its own second row then plays the
+    # racer's, leaving the bucket over its limit once both are in.
+    test "a take that finds the bucket overfilled after its insert withdraws its rows", %{
+      key: key,
+      t0: t0
+    } do
+      :ok = RateLimit.take([{key, 60_000, 3}], 2, t0)
+
+      assert RateLimit.take([{key, 60_000, 3}, {key, 60_000, 3}], 1, t0) == {:deny, 0}
+      assert RateLimit.get(key, 60_000) == 2
+      assert RateLimit.take([{key, 60_000, 3}], 1, t0) == :ok
+    end
+
+    test "takers racing for the last unit never overfill the bucket", %{key: key, t0: t0} do
+      for round <- 1..25 do
+        bucket = {"#{key}:#{round}", 60_000, 1}
+        test_pid = self()
+
+        racers =
+          for _racer <- 1..8 do
+            spawn_link(fn ->
+              receive do
+                :go -> send(test_pid, {:took, self(), RateLimit.take([bucket], 1, t0)})
+              end
+            end)
+          end
+
+        Enum.each(racers, &send(&1, :go))
+
+        results =
+          for racer <- racers do
+            assert_receive {:took, ^racer, result}, 1_000
+            result
+          end
+
+        assert Enum.count(results, &(&1 == :ok)) <= 1
+        assert Enum.reject(results, &(&1 in [:ok, {:deny, 0}])) == []
+        assert RateLimit.get(elem(bucket, 0), 60_000) == Enum.count(results, &(&1 == :ok))
+      end
+    end
   end
 
   describe "available/2" do

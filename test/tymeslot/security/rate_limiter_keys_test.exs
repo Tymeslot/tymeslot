@@ -14,6 +14,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
 
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.RateLimiter.DashboardLimits
   alias Tymeslot.Security.RateLimiter.Limits
 
   @ip "203.0.113.9"
@@ -125,6 +126,15 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
 
   test "every limit in the table has its keys pinned here" do
     assert Enum.sort(Map.keys(Limits.all())) == Enum.sort(Map.keys(@expected))
+  end
+
+  test "a name defined in both limit tables is refused rather than overridden" do
+    assert %{webhook_write: _dashboard, own: [limit: 1]} =
+             DashboardLimits.merge_disjoint(%{own: [limit: 1]})
+
+    assert_raise ArgumentError, ~r/:webhook_write is defined twice/, fn ->
+      DashboardLimits.merge_disjoint(%{webhook_write: [limit: 1]})
+    end
   end
 
   for {name, {key, buckets}} <- @expected do
