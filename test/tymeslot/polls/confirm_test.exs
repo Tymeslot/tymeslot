@@ -6,6 +6,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
@@ -330,6 +331,70 @@ defmodule Tymeslot.Polls.ConfirmTest do
 
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.status == :confirmed
+    end
+  end
+
+  describe "confirm/3 next to another of the host's meetings" do
+    # The host pads what bookers may pick by 15 minutes either side, and has a
+    # meeting the poll's time starts five minutes after.
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
+
+      other_start = DateTime.utc_now() |> DateTime.add(4, :day) |> DateTime.truncate(:second)
+
+      other =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          start_time: other_start,
+          end_time: DateTime.add(other_start, 30, :minute)
+        )
+
+      slot_start = DateTime.add(other.end_time, 5, :minute)
+
+      %{user: user, slot_start: slot_start, slot_end: DateTime.add(slot_start, 30, :minute)}
+    end
+
+    test "confirms a time inside the host's buffers, which shape only what bookers pick", ctx do
+      poll =
+        insert(:poll,
+          user: ctx.user,
+          status: :open,
+          timezone: "Europe/Berlin",
+          meeting_type_id: nil
+        )
+
+      slot =
+        insert(:poll_time_slot, poll: poll, start_time: ctx.slot_start, end_time: ctx.slot_end)
+
+      participant = insert(:poll_participant, poll: poll, email: "voter@example.com")
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, ctx.user.id)
+      assert DateTime.compare(meeting.start_time, ctx.slot_start) == :eq
+      assert meeting_count(ctx.user.id) == 2
+    end
+
+    test "Quick Add at that time is still padded by the buffers and refused", ctx do
+      assert {:error, :time_conflict} =
+               EventCreation.run_create_ad_hoc_meeting(%{
+                 title: "Quick sync",
+                 start_time: ctx.slot_start,
+                 end_time: ctx.slot_end,
+                 attendee_name: "Jane Doe",
+                 attendee_email: "jane@example.com",
+                 organizer_user_id: ctx.user.id
+               })
+
+      assert meeting_count(ctx.user.id) == 1
     end
   end
 end

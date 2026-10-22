@@ -45,8 +45,10 @@ defmodule Tymeslot.Polls.Confirm do
 
   Returns `{:ok, meeting}` on success, or `{:error, reason}` when the poll is
   missing, not open, the slot is invalid or past, the slot falls inside the
-  host's time off (`:time_off`), there are no participants, the slot is already
-  taken for the host, or the underlying booking fails.
+  host's time off (`:time_off`), there are no participants, another of the
+  host's meetings overlaps the slot (`:slot_taken`), or the underlying booking
+  fails. The host chose the time, so their buffers do not pad it, as they do
+  not when the host later moves the meeting (`Tymeslot.Bookings.HostMove`).
 
   Time off is checked here rather than in `Bookings.CreateAdHoc`, which also
   serves the calendar grid and deliberately skips every schedule rule. A poll
@@ -196,7 +198,7 @@ defmodule Tymeslot.Polls.Confirm do
       # their note to them once the meeting is set.
       organizer_note: organizer_note(poll.description)
     }
-    |> CreateAdHoc.execute_deferred()
+    |> CreateAdHoc.execute_deferred(buffers: false)
     |> map_booking_result()
   end
 

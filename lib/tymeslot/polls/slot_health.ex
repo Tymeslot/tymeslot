@@ -6,7 +6,8 @@ defmodule Tymeslot.Polls.SlotHealth do
   `:conflict` depending on whether it overlaps a blocking event on the host's
   calendar. This is a hint only, **not** an authoritative gate. The binding
   conflict check happens at confirmation time in
-  `Tymeslot.Meetings.Scheduling.create_meeting_with_conflict_check/1`.
+  `Tymeslot.Meetings.Scheduling.create_meeting_with_conflict_check/2`, which,
+  like this hint, counts only what overlaps the slot itself.
 
   Because it is advisory, it degrades gracefully: any failure fetching the
   host's calendar events returns every slot as `:ok` and never blocks anything.
