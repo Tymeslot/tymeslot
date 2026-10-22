@@ -7,7 +7,8 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
   day even when marked free, and the organiser's "Treat as Free" opens it
   again. Checked on the booking page (`Offer.slots_for_date/3`), in the
   guest's week view (`Offer.slots_for_range/4`, which reads the calendar
-  fresh), in the calendar's bookable windows, and in the submit's own re-read
+  fresh), in the month view's day markers (`Offer.days_in_range/4`), in the
+  calendar's bookable windows, and in the submit's own re-read
   of the calendars (`CalendarCheck.probe/3`), which must all agree.
   """
 
@@ -115,6 +116,14 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     Map.fetch!(days, Date.to_iso8601(date))
   end
 
+  # The month view's day markers, read from the cached booking window.
+  defp month_day_open?(ctx, date) do
+    request = %{profile: ctx.profile, user_timezone: ctx.profile.timezone, meeting_type: nil}
+
+    {:ok, days} = Offer.days_in_range(request, date, Date.add(date, 6), 30)
+    Map.fetch!(days, Date.to_iso8601(date))
+  end
+
   defp probe(ctx), do: probe_at(ctx, DateTime.new!(ctx.date, ~T[11:00:00], "Etc/UTC"))
 
   defp probe_at(ctx, start) do
@@ -150,6 +159,17 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
 
     assert "11:00 AM" in week(ctx, ctx.date)
+  end
+
+  test "the month view marks the day closed, and Treat as Free opens it", ctx do
+    row = holiday(ctx)
+
+    refute month_day_open?(ctx, ctx.date)
+    assert month_day_open?(ctx, Date.add(ctx.date, 7))
+
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
+
+    assert month_day_open?(ctx, ctx.date)
   end
 
   test "the submit's re-check refuses the day as well", ctx do
