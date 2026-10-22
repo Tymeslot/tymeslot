@@ -96,11 +96,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
 
   def rows(_type), do: []
 
+  @doc """
+  Whether the form's fixed dates are held on by upcoming planned dates:
+  neither fixed dates nor group bookings can be turned off until those are
+  cancelled (`Tymeslot.MeetingTypes.FixedDates.check_sessions_kept/2`).
+  """
+  @spec dates_planned?(map()) :: boolean()
+  def dates_planned?(assigns) do
+    Map.get(assigns, :fixed_dates) == true and
+      Enum.any?(Map.get(assigns, :session_rows) || [], &(not &1.past?))
+  end
+
   @spec toggle_fixed_dates(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def toggle_fixed_dates(socket) do
-    upcoming? = Enum.any?(socket.assigns[:session_rows] || [], &(not &1.past?))
-
-    if socket.assigns.fixed_dates and upcoming? do
+    if dates_planned?(socket.assigns) do
       socket
     else
       socket

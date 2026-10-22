@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:show_slug_modal, false)
      |> assign(:slug_modal_type, nil)
      |> assign(:slug_draft, "")
+     |> assign(:delete_sign_ups, {0, 0})
      |> ModalHook.mount_modal(delete_meeting_type: false)}
   end
 
@@ -230,7 +231,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
 
     if type do
-      {:noreply, ModalHook.show_modal(socket, :delete_meeting_type, type)}
+      {:noreply,
+       socket
+       |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
+       |> ModalHook.show_modal(:delete_meeting_type, type)}
     else
       Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
       {:noreply, socket}

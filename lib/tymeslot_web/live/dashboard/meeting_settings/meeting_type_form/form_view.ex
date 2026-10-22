@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     LocationsSection,
     PaymentsSection,
     QuestionEditorComponent,
+    SessionHandlers,
     ShowAsFreeSection,
     SlotIntervalField,
     VisibilitySection
@@ -335,6 +336,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               })
             }
             allowed={@group_bookings_allowed}
+            dates_planned={
+              SessionHandlers.dates_planned?(%{
+                fixed_dates: @fixed_dates,
+                session_rows: @session_rows
+              })
+            }
             form_id={@id}
             current_user={@current_user}
             form_errors={@form_errors}

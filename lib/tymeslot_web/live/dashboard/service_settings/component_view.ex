@@ -171,6 +171,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
           <DeleteMeetingTypeModal.delete_meeting_type_modal
             show={@show_delete_meeting_type_modal}
             meeting_type={@delete_meeting_type_modal_data}
+            sign_ups={@delete_sign_ups}
             myself={@myself}
           />
         <% end %>

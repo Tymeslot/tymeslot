@@ -400,13 +400,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # the way (`GroupRules.enable_blocker/1`: no plan access, payment or
     # approval required, a location that is not fixed in advance). The
     # control renders disabled with the reason, so this only stops a stale
-    # or forged event. Turning them off is always allowed.
+    # or forged event. Turning them off is refused only while planned dates
+    # hold a fixed-date type on (`SessionHandlers.dates_planned?/1`).
     #
     # A host who has lost charge capability cannot reach the payments toggle,
     # so a required payment does not block them; enabling clears
     # `payment_required` instead, keeping the two mutually exclusive without
     # a dead end.
-    if socket.assigns.group_bookings_enabled or GroupRules.enable_blocker(socket.assigns) == nil do
+    turning_on? = not socket.assigns.group_bookings_enabled
+
+    if (turning_on? and GroupRules.enable_blocker(socket.assigns) == nil) or
+         (not turning_on? and not SessionHandlers.dates_planned?(socket.assigns)) do
       {:noreply,
        socket
        |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)

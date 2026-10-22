@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :meeting_types
   @moduletag :live
@@ -20,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
 
   setup :setup_dashboard_user
 
@@ -175,5 +177,102 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
     view |> element("[data-testid='confirm-cancel-session']") |> render_click()
 
     assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+  end
+
+  defp book_seat(user, meeting_type, starts_at) do
+    {:ok, _seat} =
+      Create.execute(
+        %{
+          date: DateTime.to_date(starts_at),
+          time: Calendar.strftime(starts_at, "%H:%M"),
+          duration: "90min",
+          user_timezone: "Etc/UTC",
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id
+        },
+        %{"name" => "Booker", "email" => "booker@example.com"}
+      )
+  end
+
+  test "group bookings cannot be turned off while dates are planned", %{conn: conn, user: user} do
+    meeting_type = group_type(user, fixed_dates: true)
+    starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+    {:ok, _session} = PlannedSessions.add(meeting_type, starts_at)
+
+    view = edit(conn, meeting_type)
+
+    assert has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
+    assert render(view) =~ "Cancel the planned dates to turn group bookings off."
+
+    # A stale or forged event changes nothing either.
+    view
+    |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
+    |> render_click("toggle_group_bookings", %{})
+
+    assert %{max_participants: 10, fixed_dates: true} = reload(meeting_type)
+  end
+
+  test "the type refuses to stop offering fixed dates while dates are planned", %{user: user} do
+    meeting_type = group_type(user, fixed_dates: true)
+    starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+    {:ok, session} = PlannedSessions.add(meeting_type, starts_at)
+
+    assert {:error, %Ecto.Changeset{errors: errors}} =
+             MeetingTypes.update_meeting_type(meeting_type, %{max_participants: 1})
+
+    assert {"cancel the planned dates before turning fixed dates off", []} in Keyword.get_values(
+             errors,
+             :fixed_dates
+           )
+
+    assert {:error, %Ecto.Changeset{}} =
+             MeetingTypes.update_meeting_type(meeting_type, %{fixed_dates: false})
+
+    {:ok, _cancelled} = PlannedSessions.cancel(session, user.id)
+
+    assert {:ok, %{fixed_dates: false}} =
+             MeetingTypes.update_meeting_type(meeting_type, %{fixed_dates: false})
+  end
+
+  test "deleting the type cancels its upcoming dates and tells who signed up", %{
+    conn: conn,
+    user: user
+  } do
+    meeting_type = group_type(user, fixed_dates: true)
+    starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+    {:ok, session} = PlannedSessions.add(meeting_type, starts_at)
+    book_seat(user, meeting_type, starts_at)
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    view
+    |> element("[phx-click='show_delete_modal'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
+    assert has_element?(
+             view,
+             "[data-testid='delete-cancels-dates']",
+             "Its upcoming date is cancelled."
+           )
+
+    assert has_element?(
+             view,
+             "[data-testid='delete-cancels-dates']",
+             "The 1 person who signed up is told by email."
+           )
+
+    view
+    |> element("#delete-meeting-type-modal button", "Delete Meeting Type")
+    |> render_click()
+
+    assert reload(meeting_type) == nil
+    assert Repo.get!(MeetingSchema, session.id).status == "cancelled"
+
+    # Everyone booked on the date hears about it through the cancel path.
+    assert [_cancellation] =
+             all_enqueued(
+               worker: EmailWorker,
+               args: %{"action" => "send_cancellation_emails", "meeting_id" => session.id}
+             )
   end
 end

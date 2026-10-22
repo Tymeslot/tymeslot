@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.BookingCalendar
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FixedDates
@@ -309,7 +310,8 @@ defmodule Tymeslot.MeetingTypes do
   defp do_update_meeting_type(meeting_type, attrs, opts) do
     changeset = MeetingTypeSchema.changeset(meeting_type, attrs, opts)
 
-    with {:ok, _promotion} <- BookingCalendar.promote(changeset),
+    with :ok <- FixedDates.check_sessions_kept(meeting_type, changeset),
+         {:ok, _promotion} <- BookingCalendar.promote(changeset),
          {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
       sync_group_capacity(meeting_type, updated)
       updated
@@ -352,11 +354,42 @@ defmodule Tymeslot.MeetingTypes do
 
   @doc """
   Deletes a meeting type.
+
+  A fixed-date type's upcoming dates are cancelled first, through the host's
+  own cancel path, which tells everyone booked on them
+  (`Tymeslot.Meetings.PlannedSessions.cancel/2`): deleted with the type, they
+  would stay on the calendar and in people's diaries with nothing left to
+  manage them from. Should a cancellation fail, the type is kept, so the
+  host can try again. `upcoming_sign_ups/1` is what the confirmation shows.
   """
   @spec delete_meeting_type(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | term()}
   def delete_meeting_type(meeting_type) do
-    MeetingTypeQueries.delete_meeting_type(meeting_type)
+    with :ok <- cancel_planned_sessions(meeting_type) do
+      MeetingTypeQueries.delete_meeting_type(meeting_type)
+    end
+  end
+
+  @doc """
+  The upcoming planned dates of `meeting_type` and how many people are
+  booked on them, which deleting the type cancels: `{dates, people}`.
+  `{0, 0}` for a type without fixed dates.
+  """
+  @spec upcoming_sign_ups(map()) :: {non_neg_integer(), non_neg_integer()}
+  def upcoming_sign_ups(meeting_type) do
+    sessions = PlannedSessions.upcoming(meeting_type)
+    {length(sessions), sessions |> Enum.map(&PlannedSessions.participant_count/1) |> Enum.sum()}
+  end
+
+  defp cancel_planned_sessions(meeting_type) do
+    meeting_type
+    |> PlannedSessions.upcoming()
+    |> Enum.reduce_while(:ok, fn session, :ok ->
+      case PlannedSessions.cancel(session, meeting_type.user_id) do
+        {:ok, _cancelled} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   @doc """

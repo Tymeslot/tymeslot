@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
   import Ecto.Changeset
 
   alias Tymeslot.Availability.SessionSlots
+  alias Tymeslot.Meetings.PlannedSessions
 
   @doc "Whether `meeting_type` offers planned sessions instead of its schedule's slots."
   @spec enabled?(map() | nil) :: boolean()
@@ -53,6 +54,27 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
       )
     else
       changeset
+    end
+  end
+
+  @doc """
+  Refuses an update that would stop `meeting_type` offering fixed dates
+  (fixed dates or group bookings turned off) while it still has upcoming
+  planned dates: they would stay on the calendar and in people's diaries
+  with nothing left to manage them from. The host cancels the dates first.
+  """
+  @spec check_sessions_kept(map(), Ecto.Changeset.t()) :: :ok | {:error, Ecto.Changeset.t()}
+  def check_sessions_kept(meeting_type, changeset) do
+    if enabled?(meeting_type) and not enabled?(apply_changes(changeset)) and
+         PlannedSessions.upcoming(meeting_type) != [] do
+      {:error,
+       add_error(
+         changeset,
+         :fixed_dates,
+         dgettext_noop("errors", "cancel the planned dates before turning fixed dates off")
+       )}
+    else
+      :ok
     end
   end
 end
