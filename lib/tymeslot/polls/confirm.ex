@@ -13,6 +13,10 @@ defmodule Tymeslot.Polls.Confirm do
   available for the slot fills the meeting's attendee fields, which a calendar
   entry needs, but is not sent the booking emails with their reschedule and
   cancel links.
+
+  A host may take part in their own poll, to give their own answers next to
+  everyone else's. That entry is left out of the meeting: the host is its
+  organiser, so they are neither its attendee nor one of its guests.
   """
 
   alias Ecto.UUID
@@ -46,10 +50,11 @@ defmodule Tymeslot.Polls.Confirm do
 
   Returns `{:ok, meeting}` on success, or `{:error, reason}` when the poll is
   missing, not open, the slot is invalid or past, the slot falls inside the
-  host's time off (`:time_off`), there are no participants, another of the
-  host's meetings overlaps the slot (`:slot_taken`), or the underlying booking
-  fails. The host chose the time, so their buffers do not pad it, as they do
-  not when the host later moves the meeting (`Tymeslot.Bookings.HostMove`).
+  host's time off (`:time_off`), there are no participants besides the host
+  (`:no_participants`), another of the host's meetings overlaps the slot
+  (`:slot_taken`), or the underlying booking fails. The host chose the time,
+  so their buffers do not pad it, as they do not when the host later moves the
+  meeting (`Tymeslot.Bookings.HostMove`).
 
   Both ids arrive as event params, so either may be anything: a `poll_id`
   that is not a UUID is `:not_found`, and a `slot_id` that is not one of the
@@ -89,8 +94,9 @@ defmodule Tymeslot.Polls.Confirm do
          :ok <- ensure_open(poll),
          {:ok, slot} <- resolve_slot(poll, slot_id),
          :ok <- TimeOff.ensure_clear(poll.user_id, slot.start_time, slot.end_time),
-         {:ok, primary} <- resolve_primary(poll, slot),
-         {:ok, meeting, pending} <- create_meeting(poll, slot, primary),
+         invitees = invitees(poll),
+         {:ok, primary} <- resolve_primary(invitees, slot),
+         {:ok, meeting, pending} <- create_meeting(poll, slot, primary, invitees),
          {:ok, _poll} <-
            PollQueries.update(PollSchema.confirm_changeset(poll, confirm_attrs(meeting))) do
       EmailScheduler.cancel_poll_deadline_jobs(poll.id)
@@ -143,11 +149,20 @@ defmodule Tymeslot.Polls.Confirm do
     end
   end
 
-  defp resolve_primary(%PollSchema{participants: []}, _slot), do: {:error, :no_participants}
-
-  defp resolve_primary(%PollSchema{participants: participants}, slot) do
-    {:ok, pick_primary(participants, slot.id)}
+  # The participants the meeting is for: everyone but the host's own entry,
+  # matched by address as `Bookings.CreateAdHoc` matches a self-booking.
+  defp invitees(%PollSchema{participants: participants} = poll) do
+    host_email = normalise_email(Repo.preload(poll, :user).user.email)
+    Enum.reject(participants, &(normalise_email(&1.email) == host_email))
   end
+
+  defp normalise_email(email) when is_binary(email),
+    do: email |> String.trim() |> String.downcase()
+
+  defp normalise_email(_email), do: nil
+
+  defp resolve_primary([], _slot), do: {:error, :no_participants}
+  defp resolve_primary(invitees, slot), do: {:ok, pick_primary(invitees, slot.id)}
 
   defp pick_primary(participants, slot_id) do
     Enum.find(participants, List.first(participants), &available_for?(&1, slot_id))
@@ -159,7 +174,7 @@ defmodule Tymeslot.Polls.Confirm do
     end)
   end
 
-  # Everyone, the primary included: they are a guest like the rest, under the
+  # Every invitee, the primary included: they are a guest like the rest, under the
   # name they gave, so their emails and the host's name them.
   defp guests(participants) do
     participants
@@ -200,7 +215,7 @@ defmodule Tymeslot.Polls.Confirm do
     end
   end
 
-  defp create_meeting(poll, slot, primary) do
+  defp create_meeting(poll, slot, primary, invitees) do
     poll
     |> integrations()
     |> Map.merge(%{
@@ -214,7 +229,7 @@ defmodule Tymeslot.Polls.Confirm do
       # The meeting carries one language for all its emails, so the primary
       # participant's stands for everyone: guests have no locale of their own.
       attendee_locale: primary.locale,
-      guest_emails: guests(poll.participants),
+      guest_emails: guests(invitees),
       managed_by_host: true,
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.

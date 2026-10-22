@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.UUID
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
@@ -40,6 +41,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   }
 
   alias TymeslotWeb.Live.Shared.Flash
+
+  require Logger
 
   @task_supervisor Tymeslot.TaskSupervisor
   @health_timeout 6_000
@@ -275,6 +278,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
         {:noreply, poll_no_longer_open(socket)}
 
       {:error, reason} ->
+        Logger.warning("Poll confirmation failed",
+          poll_id: poll_id,
+          reason: LogFormat.reason(reason)
+        )
+
         Flash.error(confirm_error_message(reason))
         {:noreply, socket}
     end
