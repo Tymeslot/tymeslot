@@ -26,11 +26,13 @@ defmodule Tymeslot.Polls.Confirm do
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollQueries, PollSchema, PollTimeSlotQueries}
   alias Tymeslot.Repo
+  alias Tymeslot.Timezones
 
   @available_responses [:yes, :if_need_be]
 
@@ -184,11 +186,23 @@ defmodule Tymeslot.Polls.Confirm do
       &%{
         email: String.downcase(&1.email),
         name: &1.name,
-        locale: &1.locale,
-        timezone: &1.timezone || poll.timezone
+        locale: supported_locale(&1.locale),
+        timezone: participant_timezone(&1, poll)
       }
     )
     |> Enum.uniq_by(& &1.email)
+  end
+
+  # A participant's language and zone are conveniences, not something the
+  # guest row may refuse: one stored before a locale was retired, or a zone the
+  # tz database has since dropped, falls back (the attendee's language, the
+  # poll's zone) rather than abort the whole confirm.
+  defp supported_locale(locale) do
+    if locale in Locales.supported_codes(), do: locale
+  end
+
+  defp participant_timezone(%{timezone: timezone}, poll) do
+    if Timezones.valid?(timezone), do: timezone, else: poll.timezone
   end
 
   # The calendar the meeting is written to is chosen as a booking of the
@@ -234,7 +248,7 @@ defmodule Tymeslot.Polls.Confirm do
       organizer_user_id: poll.user_id,
       attendee_name: PollParticipantSchema.display_name(primary),
       attendee_email: primary.email,
-      attendee_timezone: primary.timezone || poll.timezone,
+      attendee_timezone: participant_timezone(primary, poll),
       attendee_locale: primary.locale,
       guest_emails: guests(invitees, poll),
       managed_by_host: true,

@@ -16,6 +16,7 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
 
   alias Tymeslot.Bookings.HostMove
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendarChanges
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Polls.Confirm
@@ -24,6 +25,8 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
 
   @ada "ada@example.com"
   @ben "ben@example.com"
+  @cal "cal@example.com"
+  @dee "dee@example.com"
 
   setup do
     TestMocks.resolve_booking_calendars()
@@ -38,7 +41,7 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
 
     user = insert(:user)
     insert(:profile, user: user, timezone: "Etc/UTC")
-    poll = insert(:poll, user: user, status: :open, timezone: "Etc/UTC", meeting_type_id: nil)
+    poll = insert(:poll, user: user, status: :open, timezone: "Asia/Tokyo", meeting_type_id: nil)
 
     # 15:00 UTC, five days out: 16:00 in London or 15:00 in winter, and
     # 10:00 or 11:00 in New York, so the two zones never show the same hour.
@@ -72,10 +75,34 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
         timezone: "America/New_York"
       )
 
-    # Ada voted for the slot and Ben did not, so Ada is the primary and the
-    # meeting's attendee language and timezone are hers.
+    # Cal gave no timezone, so the poll's stands in for one.
+    cal =
+      insert(:poll_participant,
+        poll: poll,
+        name: "Cal Moss",
+        email: @cal,
+        locale: "en",
+        timezone: nil
+      )
+
+    # Dee's row holds a language no longer offered and a zone the tz database
+    # does not know (written before either was checked): they must not stop
+    # the confirm, so they are inserted past the changeset that would drop them.
+    dee =
+      insert(:poll_participant,
+        poll: poll,
+        name: "Dee Ray",
+        email: @dee,
+        locale: "xx",
+        timezone: "Mars/Olympus_Mons"
+      )
+
+    # Ada voted for the slot and the others did not, so Ada is the primary and
+    # the meeting's attendee language and timezone are hers.
     insert(:poll_vote, participant: ada, time_slot: slot, response: :yes)
-    insert(:poll_vote, participant: ben, time_slot: slot, response: :no)
+
+    for participant <- [ben, cal, dee],
+        do: insert(:poll_vote, participant: participant, time_slot: slot, response: :no)
 
     {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
 
@@ -90,6 +117,20 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
 
     assert {guests[@ada].locale, guests[@ada].timezone} == {"en", "Europe/London"}
     assert {guests[@ben].locale, guests[@ben].timezone} == {"de", "America/New_York"}
+    assert {guests[@cal].locale, guests[@cal].timezone} == {"en", "Asia/Tokyo"}
+  end
+
+  test "a stored language or zone no longer supported falls back rather than block the confirm",
+       %{meeting: meeting} do
+    guests = meeting.id |> Guests.list_for_meeting() |> Map.new(&{&1.email, &1})
+
+    # The language falls back to the attendee's when the emails are written;
+    # the zone to the poll's, as for a participant who gave none.
+    assert {guests[@dee].locale, guests[@dee].timezone} == {nil, "Asia/Tokyo"}
+
+    send_confirmations(meeting)
+
+    assert guest_emails()[@dee].subject =~ "You're invited"
   end
 
   test "the confirmation reaches each guest in their own language and time", %{meeting: meeting} do
@@ -105,6 +146,10 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
     assert emails[@ada].subject =~ "You're invited"
     assert emails[@ada].text_body =~ "Time: #{local_time(meeting.start_time, :ada)}"
     assert emails[@ada].text_body =~ "(Europe/London)"
+
+    assert emails[@cal].text_body =~ "Time: #{local_time(meeting.start_time, :cal)}"
+    assert emails[@cal].text_body =~ "(Asia/Tokyo)"
+    refute emails[@cal].text_body =~ "Europe/London"
   end
 
   test "a reminder reaches each guest in their own language and time", %{meeting: meeting} do
@@ -165,6 +210,32 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
     assert emails[@ada].text_body =~ "(Europe/London)"
   end
 
+  test "a new end set in the host's calendar reaches each guest in their own language and time",
+       %{meeting: meeting} do
+    send_confirmations(meeting)
+    _confirmations = guest_emails()
+
+    new_end = DateTime.add(meeting.end_time, 30, :minute)
+    assert :ok = ExternalCalendarChanges.apply_end_change(meeting, new_end)
+    run_email_job("send_end_change_emails")
+
+    emails = guest_emails()
+
+    assert emails[@ben].subject =~ "Neue Endzeit"
+
+    assert emails[@ben].text_body =~
+             "endet jetzt um #{local_time(new_end, :ben)} " <>
+               "#{zone_abbreviation(new_end, "America/New_York")} statt um " <>
+               "#{local_time(meeting.end_time, :ben)}"
+
+    assert emails[@ada].subject =~ "New end time"
+
+    assert emails[@ada].text_body =~
+             "now ends at #{local_time(new_end, :ada)} " <>
+               "#{zone_abbreviation(new_end, "Europe/London")} instead of " <>
+               "#{local_time(meeting.end_time, :ada)}"
+  end
+
   describe "a guest added on an ordinary booking" do
     test "hears in the attendee's language and timezone, having none of their own" do
       start_time = DateTime.add(DateTime.utc_now(:second), 5, :day)
@@ -213,12 +284,18 @@ defmodule Tymeslot.Polls.ConfirmGuestLocalesTest do
   defp local_time(at, :ada),
     do: at |> DateTime.shift_zone!("Europe/London") |> Calendar.strftime("%I:%M %p")
 
+  defp local_time(at, :cal),
+    do: at |> DateTime.shift_zone!("Asia/Tokyo") |> Calendar.strftime("%I:%M %p")
+
+  defp zone_abbreviation(at, zone), do: DateTime.shift_zone!(at, zone).zone_abbr
+
   # Every guest email delivered so far, by address; the host's are skipped.
   defp guest_emails, do: collect(%{})
 
   defp collect(acc) do
     receive do
-      {:email, %Swoosh.Email{to: [{_name, address}]} = email} when address in [@ada, @ben] ->
+      {:email, %Swoosh.Email{to: [{_name, address}]} = email}
+      when address in [@ada, @ben, @cal, @dee] ->
         collect(Map.put(acc, address, email))
 
       {:email, _other} ->

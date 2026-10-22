@@ -13,6 +13,8 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Workers.EmailWorker
@@ -396,5 +398,49 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
   defp run_reschedule_emails do
     for job <- all_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"}),
         do: perform_job(EmailWorker, job.args)
+  end
+
+  describe "with_inviter_details/4" do
+    # Each built view is reported back, so a test can count the builds.
+    defp report_build(meeting) do
+      send(self(), {:built, meeting.attendee_locale, meeting.attendee_timezone})
+      %{built_for: {meeting.attendee_locale, meeting.attendee_timezone}}
+    end
+
+    test "a guest whose own language and zone are the meeting's shares the meeting's payload" do
+      meeting = %MeetingSchema{attendee_locale: "de", attendee_timezone: "Europe/Berlin"}
+
+      guests = [
+        %GuestSchema{email: "plain@example.com"},
+        %GuestSchema{email: "same@example.com", locale: "de", timezone: "Europe/Berlin"},
+        %GuestSchema{email: "half@example.com", locale: "de"}
+      ]
+
+      paired =
+        GuestNotifications.with_inviter_details(guests, meeting, :fallback, &report_build/1)
+
+      assert Enum.map(paired, &elem(&1, 1)) == [:fallback, :fallback, :fallback]
+      refute_received {:built, _locale, _timezone}
+    end
+
+    test "guests reading the meeting the same way share one build" do
+      meeting = %MeetingSchema{attendee_locale: "de", attendee_timezone: "Europe/Berlin"}
+
+      guests = [
+        %GuestSchema{email: "a@example.com", locale: "en"},
+        %GuestSchema{email: "b@example.com", locale: "en", timezone: "Europe/Berlin"}
+      ]
+
+      paired =
+        GuestNotifications.with_inviter_details(guests, meeting, :fallback, &report_build/1)
+
+      assert Enum.map(paired, &elem(&1, 1)) == [
+               %{built_for: {"en", "Europe/Berlin"}},
+               %{built_for: {"en", "Europe/Berlin"}}
+             ]
+
+      assert_received {:built, "en", "Europe/Berlin"}
+      refute_received {:built, _locale, _timezone}
+    end
   end
 end

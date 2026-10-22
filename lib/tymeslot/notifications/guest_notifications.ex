@@ -208,23 +208,43 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   def with_inviter_details(guests, %MeetingSchema{} = meeting, fallback, build) do
     views =
       guests
-      |> Enum.group_by(&view_key/1)
+      |> Enum.group_by(&view_key(&1, meeting))
       |> Map.delete(:meeting)
       |> Map.new(fn {key, [guest | _same_view]} -> {key, build.(view(meeting, guest))} end)
 
-    Enum.map(guests, &{&1, Map.get(views, view_key(&1), fallback)})
+    Enum.map(guests, &{&1, Map.get(views, view_key(&1, meeting), fallback)})
   end
 
   def with_inviter_details(guests, _meeting, fallback, _build),
     do: Enum.map(guests, &{&1, fallback})
 
   # Guests sharing a key read the meeting identically, so their payload is
-  # built once.
-  defp view_key(%{participant: %ParticipantSchema{id: participant_id}} = guest),
+  # built once; a guest whose language and timezone come out as the meeting's
+  # own reads it as the attendee does, and shares `fallback`.
+  #
+  # A group-booking guest is recognised by its preloaded participant. One with
+  # a `participant_id` but no participant loaded (the seat confirmation path
+  # lists them unpreloaded, and passes the participant's own payload as
+  # `fallback`) is read as a plain guest: with no language or timezone of its
+  # own it shares `fallback`, which is the seat's view. Were such a guest ever
+  # to carry its own language or timezone it would get the bare meeting's view
+  # in them instead and lose the seat's; it cannot today, since only a poll
+  # confirm writes them and a poll's guests belong to no participant.
+  # `notify_seat_cancelled/4` deliberately bypasses this: it sends every guest
+  # the cancelled seat's own details, built by the caller.
+  defp view_key(%{participant: %ParticipantSchema{id: participant_id}} = guest, _meeting),
     do: {participant_id, guest.locale, guest.timezone}
 
-  defp view_key(%{locale: nil, timezone: nil}), do: :meeting
-  defp view_key(guest), do: {nil, guest.locale, guest.timezone}
+  defp view_key(guest, meeting) do
+    case {guest.locale || meeting.attendee_locale, guest.timezone || meeting.attendee_timezone} do
+      {locale, timezone}
+      when locale == meeting.attendee_locale and timezone == meeting.attendee_timezone ->
+        :meeting
+
+      {locale, timezone} ->
+        {nil, locale, timezone}
+    end
+  end
 
   defp view(meeting, %{participant: %ParticipantSchema{} = participant} = guest) do
     meeting
