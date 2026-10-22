@@ -115,6 +115,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   # Planned sessions
 
   defdelegate schedule_registration_closed(session), to: SessionScheduler
+  defdelegate reschedule_registration_closed(previous, current), to: SessionScheduler
+  defdelegate reschedule_registration_closed(previous, current, now), to: SessionScheduler
 
   # Poll emails
 

@@ -137,7 +137,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       true ->
         with {:ok, updated} <- GroupMeetingQueries.set_registration_closes_at(session, closes_at) do
           SeatEffects.broadcast_and_invalidate(updated)
-          :ok = EmailScheduler.schedule_registration_closed(updated)
+          :ok = EmailScheduler.reschedule_registration_closed(session, updated, now)
           {:ok, updated}
         end
     end

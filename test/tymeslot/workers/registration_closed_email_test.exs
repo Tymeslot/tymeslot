@@ -18,11 +18,14 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
 
   alias Ecto.Changeset
   alias Swoosh.Attachment
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.RegistrationClosed
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Notifications.EmailHandlers
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -121,6 +124,26 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
       assert DateTime.compare(job.scheduled_at, new_close) == :eq
     end
 
+    test "a save after the list has gone out sends it again only once registration reopens",
+         ctx do
+      closed = DateTime.add(DateTime.utc_now(:second), -60)
+      session = ctx.session |> Changeset.change(registration_closes_at: closed) |> Repo.update!()
+
+      # The list has gone out: its job is done, so nothing is pending.
+      Repo.update_all(Oban.Job, set: [state: "completed"])
+
+      {:ok, session} =
+        PlannedSessions.set_registration_close(session, DateTime.add(closed, 30))
+
+      assert list_jobs(session) == []
+
+      reopened = DateTime.add(DateTime.utc_now(:second), 3600)
+      {:ok, _session} = PlannedSessions.set_registration_close(session, reopened)
+
+      assert [job] = list_jobs(session)
+      assert DateTime.compare(job.scheduled_at, reopened) == :eq
+    end
+
     test "moving the session moves the pending list to its new close", ctx do
       new_start = DateTime.add(ctx.starts_at, 3, :day)
       {:ok, _moved} = PlannedSessions.move(ctx.session, new_start, nil)
@@ -216,10 +239,48 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
       assert_no_email_sent()
     end
 
-    test "waits while registration is still open", ctx do
+    test "waits while registration is still open, until it closes", ctx do
       assert {:snooze, seconds} = run_list_job(ctx.session)
-      assert seconds > 0
+      expected = DateTime.diff(ctx.closes_at, DateTime.utc_now())
+      assert_in_delta seconds, expected, 5
       assert_no_email_sent()
+    end
+
+    test "a job run again after sending does not send the list twice", ctx do
+      [job] = list_jobs(ctx.session)
+
+      after_close(ctx, fn ->
+        assert :ok =
+                 EmailHandlers.execute_email_action("send_registration_closed", job.args, job.id)
+
+        assert_email_sent(subject: ~r/Registration closed/)
+
+        assert :ok =
+                 EmailHandlers.execute_email_action("send_registration_closed", job.args, job.id)
+
+        assert_no_email_sent()
+      end)
+    end
+
+    test "names the session by the host's own day, in the subject and the CSV", ctx do
+      ProfileSchema
+      |> Repo.get_by!(user_id: ctx.meeting_type.user_id)
+      |> Changeset.change(timezone: "Pacific/Kiritimati")
+      |> Repo.update!()
+
+      insert(:participant, meeting: ctx.session, name: "Ada Lovelace", email: "ada@example.com")
+
+      # 18:00 UTC is 08:00 the next day at UTC+14.
+      host_day = Date.add(DateTime.to_date(ctx.starts_at), 1)
+
+      assert :ok = after_close(ctx, fn -> run_list_job(ctx.session) end)
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ Formatting.format_date_short(host_day, "en")
+        assert [%Attachment{filename: filename}] = csv_attachments(email)
+        assert filename == "participants-#{Date.to_iso8601(host_day)}.csv"
+        true
+      end)
     end
 
     test "sends nothing for a meeting that is not a planned session", ctx do

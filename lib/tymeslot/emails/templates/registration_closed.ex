@@ -51,8 +51,10 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
     locale = RecipientLocale.organizer_locale(details)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      copy = copy(details, roster, locale)
+      # The host's own day, not the start's UTC one, names the session in the
+      # subject and the CSV file.
       meeting_details = TemplateHelper.organizer_meeting_details(details)
+      copy = copy(details, meeting_details.date, roster, locale)
 
       mjml_content = """
       #{Text.centered_text(copy.lead, padding: "8px 0 16px 0")}
@@ -79,7 +81,7 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
       |> subject(Sanitise.sanitize_for_header(copy.subject))
       |> html_body(TemplateHelper.compile_template(mjml_content, stage))
       |> text_body(text_body(details, meeting_details, roster, copy, locale))
-      |> maybe_attach_csv(roster, details, locale)
+      |> maybe_attach_csv(roster, meeting_details.date)
     end)
   end
 
@@ -119,9 +121,9 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
     "﻿" <> Enum.map_join([header | rows], "", &csv_row/1)
   end
 
-  defp copy(details, roster, locale) do
+  defp copy(details, host_date, roster, locale) do
     event = details.meeting_type || ""
-    date = Formatting.format_date_short(details.date, locale)
+    date = Formatting.format_date_short(host_date, locale)
 
     lead =
       case length(roster) do
@@ -259,11 +261,11 @@ defmodule Tymeslot.Emails.Templates.RegistrationClosed do
     Enum.reject(lines, &blank?/1)
   end
 
-  defp maybe_attach_csv(email, [], _details, _locale), do: email
+  defp maybe_attach_csv(email, [], _host_date), do: email
 
-  defp maybe_attach_csv(email, roster, details, _locale) do
+  defp maybe_attach_csv(email, roster, host_date) do
     attachment(email, %Swoosh.Attachment{
-      filename: "participants-#{Date.to_iso8601(details.date)}.csv",
+      filename: "participants-#{Date.to_iso8601(host_date)}.csv",
       content_type: "text/csv",
       data: csv(roster)
     })

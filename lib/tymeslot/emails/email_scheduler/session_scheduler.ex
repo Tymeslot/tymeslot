@@ -13,6 +13,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
   closes again sends a new one.
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Workers.EmailWorker
@@ -51,4 +52,22 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
     _result = Helpers.insert(job, meeting_id: session.id)
     :ok
   end
+
+  @doc """
+  Follows a change to `previous`'s time or registration close, now `current`.
+
+  Only a registration that is, or was until this change, still open has a
+  list to move or owe: one that had already closed, and closes again at a
+  time already past, has sent its list, and scheduling it again would send
+  the same list once more.
+  """
+  @spec reschedule_registration_closed(map(), map(), DateTime.t()) :: :ok
+  def reschedule_registration_closed(previous, current, now \\ Clock.utc_now()) do
+    if open_at?(previous, now) or open_at?(current, now),
+      do: schedule_registration_closed(current),
+      else: :ok
+  end
+
+  defp open_at?(session, now),
+    do: DateTime.compare(PlannedSessions.registration_closes_at(session), now) == :gt
 end

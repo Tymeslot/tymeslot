@@ -114,7 +114,7 @@ defmodule Tymeslot.Meetings.SessionMove do
 
   defp after_move(moved, original) do
     SeatEffects.broadcast_and_invalidate(moved)
-    :ok = EmailScheduler.schedule_registration_closed(moved)
+    :ok = EmailScheduler.reschedule_registration_closed(original, moved)
     sync_video_room(moved)
     repin_reminders(moved)
     tell_participants(moved, original)
