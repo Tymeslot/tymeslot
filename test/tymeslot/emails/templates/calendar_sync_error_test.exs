@@ -118,11 +118,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
 
       error_reasons = [
-        {:network_error, ":network_error"},
         {:timeout, ":timeout"},
         {:authentication_failed, ":authentication_failed"},
-        {:rate_limited, ":rate_limited"},
-        {:server_error, ":server_error"}
+        {:rate_limited, ":rate_limited"}
       ]
 
       for {error_reason, rendered} <- error_reasons do
@@ -130,6 +128,31 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
         assert html =~ "Error Details"
         assert html =~ rendered
+      end
+    end
+
+    # A calendar declining the write is discarded on the first attempt and
+    # emailed at once, so the owner reads it in words, not as `:refused`.
+    test "describes the error categories of the calendar write path in words" do
+      meeting = insert(:meeting)
+
+      described = [
+        {:refused, "Your calendar declined to add this event."},
+        {:calendar_event_not_updatable, "could not be updated"},
+        {:not_found, "could not be found"},
+        {:network_error, "could not be reached"},
+        {:server_error, "could not be reached"},
+        {:malformed_response, "could not be reached"}
+      ]
+
+      for {error_reason, sentence} <- described do
+        email = CalendarSyncError.render(meeting, error_reason)
+        raw = inspect(error_reason)
+
+        assert email.html_body =~ sentence
+        assert email.text_body =~ sentence
+        refute email.html_body =~ raw
+        refute email.text_body =~ raw
       end
     end
   end
@@ -161,6 +184,18 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       assert text =~ "TERMIN-DETAILS:"
       assert text =~ "1 Stunde"
       refute text =~ "MEETING DETAILS:"
+    end
+
+    test "describes a refused write in the owner's locale" do
+      user = create_user_fixture()
+      {:ok, user} = UserQueries.update_user_locale(user, "de")
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      text = CalendarSyncError.render(meeting, :refused).text_body
+
+      refute text =~ ":refused"
+      refute text =~ "Your calendar declined to add this event."
+      assert text =~ "Ihr Kalender"
     end
 
     test "handles missing organizer_user_id" do
