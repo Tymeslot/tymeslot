@@ -45,10 +45,25 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
   attr :poll, :map, required: true
   attr :value, :string, default: ""
   attr :error, :string, default: nil
+  attr :voting_open?, :boolean, default: true
   attr :myself, :any, required: true
 
-  @doc "Invites more people to an open poll, from its results panel."
+  @doc """
+  Invites more people to an open poll, from its results panel. Once the
+  deadline has passed the form gives way to a hint to move the deadline.
+  """
   @spec invite_form(map()) :: Phoenix.LiveView.Rendered.t()
+  def invite_form(%{voting_open?: false} = assigns) do
+    ~H"""
+    <p
+      class="text-token-sm text-tymeslot-600 pt-2 border-t border-tymeslot-100"
+      data-testid="poll-invite-closed"
+    >
+      {error_message(:voting_closed)}
+    </p>
+    """
+  end
+
   def invite_form(assigns) do
     ~H"""
     <form
@@ -188,6 +203,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
     do: dgettext("dashboard_polls", "Enter at least one email address.")
 
   def error_message(:not_open), do: dgettext("dashboard_polls", "This poll is no longer open.")
+
+  def error_message(:voting_closed),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "Voting has closed. Move the deadline in Edit poll to invite people."
+      )
 
   def error_message(_reason),
     do: dgettext("dashboard_polls", "Couldn't send the invitations. Please try again.")

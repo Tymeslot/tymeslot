@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       assigns
       |> assign(:votes, vote_index(assigns.poll.participants))
       |> assign(:open?, assigns.poll.status == :open)
+      |> assign(:voting_open?, Polls.voting_open?(assigns.poll))
       |> assign(:participant_count, length(assigns.poll.participants))
       |> assign(:voted_count, Enum.count(assigns.poll.participants, & &1.voted_at))
       |> assign(:leaders, Polls.leading_slot_ids(assigns.poll.time_slots, assigns.tallies))
@@ -211,6 +212,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         poll={@poll}
         value={@invite_value}
         error={@invite_error}
+        voting_open?={@voting_open?}
         myself={@myself}
       />
 

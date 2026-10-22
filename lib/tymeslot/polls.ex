@@ -229,12 +229,17 @@ defmodule Tymeslot.Polls do
   Written under the poll's row lock, like cancelling and editing, so an
   invitation never lands on a poll confirmed in the meantime, and the
   reminders it schedules are for the deadline the poll holds now.
+
+  Returns `{:error, :voting_closed}` for an open poll whose deadline has
+  passed (the host can move the deadline to invite more people) and
+  `{:error, :not_open}` for one that is confirmed or cancelled.
   """
   @spec invite_participants(Ecto.UUID.t(), integer(), [Invitations.entry()]) ::
           {:ok, Invitations.result()}
           | {:error,
              :not_found
              | :not_open
+             | :voting_closed
              | :poll_full
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
@@ -244,7 +249,7 @@ defmodule Tymeslot.Polls do
              if voting_open?(poll) do
                {:ok, Invitations.insert(poll, entries)}
              else
-               {:error, :not_open}
+               {:error, :voting_closed}
              end
            end) do
       :ok = Invitations.send_invitations(result.invited)

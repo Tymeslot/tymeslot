@@ -174,6 +174,18 @@ defmodule Tymeslot.Polls.InvitationsTest do
       assert all_enqueued(worker: EmailWorker) == []
     end
 
+    test "tells the host to move the deadline when voting has closed" do
+      past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+      poll = insert(:poll, status: :open, deadline_at: past)
+
+      assert {:error, :voting_closed} =
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com") == nil
+    end
+
     test "refuses a poll that is no longer open" do
       poll = insert(:poll, status: :cancelled)
 

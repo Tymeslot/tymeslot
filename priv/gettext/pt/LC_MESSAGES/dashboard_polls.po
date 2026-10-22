@@ -744,3 +744,8 @@ msgstr "Reenviar link de votação para %{name}"
 #, elixir-autogen, elixir-format
 msgid "These names can't be used: %{names}"
 msgstr "Estes nomes não podem ser usados: %{names}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline in Edit poll to invite people."
+msgstr ""

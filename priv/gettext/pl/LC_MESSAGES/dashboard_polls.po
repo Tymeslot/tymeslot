@@ -753,3 +753,8 @@ msgstr "Wyślij ponownie link do głosowania (odbiorca: %{name})"
 #, elixir-autogen, elixir-format
 msgid "These names can't be used: %{names}"
 msgstr "Tych imion nie można użyć: %{names}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline in Edit poll to invite people."
+msgstr ""
