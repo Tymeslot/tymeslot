@@ -179,6 +179,76 @@ defmodule Tymeslot.Polls.VotingRaceTest do
     assert votes == []
   end
 
+  test "a vote on a poll the host cancelled after the page loaded is refused and saves nothing",
+       %{poll: poll} do
+    {participant, slot, loaded} = voter_on(poll)
+    test_pid = self()
+
+    voter =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), &token_lookup?/1)
+          Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+        end)
+      end)
+
+    # The voter has passed the check against the page's copy of the poll; the
+    # host cancels it before the votes are written.
+    assert_receive {:parked, voter_pid}, 5_000
+
+    assert {:ok, %{status: :cancelled}} =
+             unboxed(fn -> Polls.cancel_poll(poll.id, poll.user_id) end)
+
+    send(voter_pid, :release)
+
+    assert {:error, :voting_closed} = Task.await(voter)
+    assert unboxed(fn -> votes_of(participant) end) == []
+  end
+
+  test "a host cancelling a poll waits for the vote being saved, then closes it", %{poll: poll} do
+    {participant, slot, loaded} = voter_on(poll)
+    test_pid = self()
+
+    voter =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), &poll_share_lock?/1)
+          Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+        end)
+      end)
+
+    # The voter holds the poll's row and has not yet locked themselves.
+    assert_receive {:parked, voter_pid}, 5_000
+
+    cancel = Task.async(fn -> unboxed(fn -> Polls.cancel_poll(poll.id, poll.user_id) end) end)
+
+    # The cancellation queues behind the vote's share lock.
+    assert Task.yield(cancel, 500) == nil
+
+    send(voter_pid, :release)
+
+    assert {:ok, %PollParticipantSchema{}} = Task.await(voter)
+    assert {:ok, %{status: :cancelled}} = Task.await(cancel)
+    assert [%PollVoteSchema{response: :yes}] = unboxed(fn -> votes_of(participant) end)
+  end
+
+  defp voter_on(poll) do
+    unboxed(fn ->
+      slot = insert(:poll_time_slot, poll: poll)
+      participant = insert(:poll_participant, poll: poll, name: "Grace")
+      {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
+      {participant, slot, loaded}
+    end)
+  end
+
+  defp votes_of(participant),
+    do: Repo.all(from(v in PollVoteSchema, where: v.poll_participant_id == ^participant.id))
+
+  # The vote's read of the poll under its share lock.
+  defp poll_share_lock?(metadata) do
+    metadata[:source] == "polls" and metadata[:query] =~ "FOR SHARE"
+  end
+
   # The token lookup `cast_votes/4` starts with.
   defp token_lookup?(metadata) do
     metadata[:source] == "poll_participants" and metadata[:query] =~ ~s("token_hash" = )

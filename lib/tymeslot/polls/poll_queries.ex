@@ -63,6 +63,25 @@ defmodule Tymeslot.Polls.PollQueries do
     |> preload_associations()
   end
 
+  @doc """
+  Reads poll `id` and holds it `FOR SHARE` until the caller's transaction
+  ends, or returns nil.
+
+  Must be called inside `Repo.transaction/1`. A participant's write takes it
+  before locking their own row, the same order as `lock_for_user/2` and then
+  participants on the host's side, so a host closing, editing or confirming
+  the poll waits for the write in progress, and a write starting after the
+  host's commits sees the poll as the host left it. Shared, so voters do not
+  queue behind one another. No associations are loaded.
+  """
+  @spec lock_shared(Ecto.UUID.t()) :: PollSchema.t() | nil
+  def lock_shared(id) do
+    PollSchema
+    |> where([p], p.id == ^id)
+    |> lock("FOR SHARE")
+    |> Repo.one()
+  end
+
   defp preload_associations(nil), do: nil
   defp preload_associations(poll), do: Repo.preload(poll, @preloads)
 

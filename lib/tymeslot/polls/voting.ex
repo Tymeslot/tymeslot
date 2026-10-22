@@ -404,8 +404,10 @@ defmodule Tymeslot.Polls.Voting do
   defp persist(poll, participant, vote_maps, name) do
     transaction =
       Repo.transaction(fn ->
-        with {:ok, locked} <- lock_participant(poll, participant),
-             :ok <- ensure_admitted(poll, locked),
+        with {:ok, current} <- lock_poll(poll),
+             :ok <- ensure_open(current),
+             {:ok, locked} <- lock_participant(poll, participant),
+             :ok <- ensure_admitted(current, locked),
              :ok <- ensure_room(poll, locked),
              {:ok, named} <- ensure_named(locked, name) do
           PollVoteQueries.upsert_votes(vote_maps)
@@ -429,6 +431,19 @@ defmodule Tymeslot.Polls.Voting do
     end
   end
 
+  # The poll as it stands, held `FOR SHARE` until the votes are in and taken
+  # before the participant's row, the order the host's writes lock in. A host
+  # closing the poll or moving its deadline waits for the vote in progress;
+  # a vote starting after the host's write commits checks voting is open
+  # against what the host left, not against the page's copy. Gone already,
+  # voting is closed.
+  defp lock_poll(poll) do
+    case PollQueries.lock_shared(poll.id) do
+      nil -> {:error, :voting_closed}
+      current -> {:ok, current}
+    end
+  end
+
   # Holds the participant's row until the votes are in, so a host removing
   # them or the retention worker pruning them waits instead of pulling the
   # row out from under the vote insert. Gone already, they are told so.
@@ -442,10 +457,10 @@ defmodule Tymeslot.Polls.Voting do
   # Confirming lets someone in. On an invite-only poll only the host does
   # that, so a pending request (one inserted just as the host switched the
   # poll, after the switch withdrew the others) cannot confirm itself. Read
-  # inside the transaction, fresh.
+  # from the poll locked inside the transaction, fresh.
   defp ensure_admitted(_poll, %PollParticipantSchema{confirmed_at: %DateTime{}}), do: :ok
-
-  defp ensure_admitted(poll, _unconfirmed), do: refuse_if_invite_only(poll.id)
+  defp ensure_admitted(%PollSchema{invite_only: true}, _unconfirmed), do: {:error, :invite_only}
+  defp ensure_admitted(%PollSchema{}, _unconfirmed), do: :ok
 
   defp refuse_if_invite_only(poll_id) do
     if PollQueries.invite_only?(poll_id), do: {:error, :invite_only}, else: :ok
