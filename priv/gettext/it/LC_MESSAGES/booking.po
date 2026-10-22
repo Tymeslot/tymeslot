@@ -914,12 +914,12 @@ msgstr "Contatta l'organizzatore"
 #: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available right now. The organiser hasn’t connected a calendar yet."
-msgstr "Questa pagina di prenotazione non è al momento disponibile. L’organizzatore non ha ancora collegato un calendario."
+msgstr "Questa pagina di prenotazione non è al momento disponibile. L'organizzatore non ha ancora collegato un calendario."
 
 #: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available yet. The organiser hasn’t set a username."
-msgstr "Questa pagina di prenotazione non è ancora disponibile. L’organizzatore non ha ancora impostato un nome utente."
+msgstr "Questa pagina di prenotazione non è ancora disponibile. L'organizzatore non ha ancora impostato un nome utente."
 
 #: lib/tymeslot_web/themes/shared/blocks/day_chips.ex
 #, elixir-autogen, elixir-format

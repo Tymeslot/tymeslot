@@ -532,7 +532,7 @@ msgstr "Il tuo calendario deve essere ricollegato. Ricollegalo dalla pagina Inte
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "A valid guest email is required"
-msgstr "È richiesta un’email valida per l’ospite"
+msgstr "È richiesta un'email valida per l'ospite"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -542,7 +542,7 @@ msgstr "Ada Lovelace"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Books the slot, emails the guest an invitation, and adds it to your calendar."
-msgstr "Prenota lo slot, invia all’ospite un invito via email e lo aggiunge al tuo calendario."
+msgstr "Prenota lo slot, invia all'ospite un invito via email e lo aggiunge al tuo calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -552,17 +552,17 @@ msgstr "Evento"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Guest email"
-msgstr "Email dell’ospite"
+msgstr "Email dell'ospite"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name"
-msgstr "Nome dell’ospite"
+msgstr "Nome dell'ospite"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name is required"
-msgstr "Il nome dell’ospite è obbligatorio"
+msgstr "Il nome dell'ospite è obbligatorio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
@@ -745,7 +745,7 @@ msgstr "La regola di ripetizione di questa serie non può essere divisa qui. App
 #: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "A Teams meeting on the series is not carried over."
-msgstr "Un’eventuale riunione Teams della serie non viene trasferita."
+msgstr "Un'eventuale riunione Teams della serie non viene trasferita."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/series_move.ex
 #, elixir-autogen, elixir-format
@@ -862,12 +862,12 @@ msgstr "Un ordine del giorno, o cosa portare o preparare"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Included in the invitation and on the calendar entry."
-msgstr "Inclusa nell’invito e nella voce del calendario."
+msgstr "Inclusa nell'invito e nella voce del calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Note to the guest"
-msgstr "Nota per l’ospite"
+msgstr "Nota per l'ospite"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -882,7 +882,7 @@ msgstr "Ognuno riceve un invito via email e può accettare o rifiutare."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Language of the invitation"
-msgstr "Lingua dell’invito"
+msgstr "Lingua dell'invito"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -902,7 +902,7 @@ msgstr "%{email} è già invitato."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already the main guest."
-msgstr "%{email} è già l’ospite principale."
+msgstr "%{email} è già l'ospite principale."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
@@ -924,8 +924,8 @@ msgstr "Troppe nuove riunioni. Attendi un momento."
 #, elixir-autogen, elixir-format
 msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
 msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
-msgstr[0] "Aggiungi fino a %{count} email di promemoria per questa riunione. La riceveranno l’ospite e tutti gli altri invitati."
-msgstr[1] "Aggiungi fino a %{count} email di promemoria per questa riunione. Le riceveranno l’ospite e tutti gli altri invitati."
+msgstr[0] "Aggiungi fino a %{count} email di promemoria per questa riunione. La riceveranno l'ospite e tutti gli altri invitati."
+msgstr[1] "Aggiungi fino a %{count} email di promemoria per questa riunione. Le riceveranno l'ospite e tutti gli altri invitati."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
@@ -961,7 +961,7 @@ msgstr "Questo schema di ripetizione non può essere salvato in Outlook."
 #, elixir-autogen, elixir-format
 msgid "Outlook can't skip the months that don't have this series' day, and would move those events to the month's last day. Please start the series on the 28th or earlier, or save it to another calendar."
 msgstr ""
-"Outlook non può saltare i mesi che non hanno il giorno di questa serie e sposterebbe quegli eventi all’ultimo giorno del mese. Fai iniziare la serie il 28 o prima, oppure salvala in un altro calendario."
+"Outlook non può saltare i mesi che non hanno il giorno di questa serie e sposterebbe quegli eventi all'ultimo giorno del mese. Fai iniziare la serie il 28 o prima, oppure salvala in un altro calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format

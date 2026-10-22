@@ -780,7 +780,7 @@ msgstr "Sposta la prenotazione al nuovo orario"
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "This booking can no longer be moved to its calendar time."
-msgstr "Questa prenotazione non può più essere spostata all’orario del suo calendario."
+msgstr "Questa prenotazione non può più essere spostata all'orario del suo calendario."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
@@ -790,7 +790,7 @@ msgstr "Tymeslot sta ancora aggiornando il tuo calendario per questa prenotazion
 #: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar now has this meeting at %{time}. Tymeslot will move the booking there, reschedule its reminders and email %{attendee_name} and any guests the new time."
-msgstr "Il tuo calendario ora ha questa riunione a %{time}. Tymeslot sposterà la prenotazione a quell’orario, riprogrammerà i promemoria e avviserà via email %{attendee_name} e gli eventuali ospiti del nuovo orario."
+msgstr "Il tuo calendario ora ha questa riunione a %{time}. Tymeslot sposterà la prenotazione a quell'orario, riprogrammerà i promemoria e avviserà via email %{attendee_name} e gli eventuali ospiti del nuovo orario."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
@@ -800,7 +800,7 @@ msgstr "La riunione è stata spostata di nuovo nel tuo calendario. Controlla il 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Another booking already starts at that time."
-msgstr "Tymeslot non è riuscito a spostare questa prenotazione. A quell’orario inizia già un’altra prenotazione."
+msgstr "Tymeslot non è riuscito a spostare questa prenotazione. A quell'orario inizia già un'altra prenotazione."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format

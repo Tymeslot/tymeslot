@@ -186,7 +186,7 @@ msgstr "Controlla le tue credenziali Radicale. Se usi l'autenticazione htpasswd,
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
-msgstr "Connessione a %{url} riuscita e le tue credenziali sono state accettate, ma non è stata trovata alcuna raccolta di calendari. Inserisci l’URL completo della tua raccolta di calendari, come indicato nelle impostazioni del tuo server di calendario."
+msgstr "Connessione a %{url} riuscita e le tue credenziali sono state accettate, ma non è stata trovata alcuna raccolta di calendari. Inserisci l'URL completo della tua raccolta di calendari, come indicato nelle impostazioni del tuo server di calendario."
 
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
@@ -196,7 +196,7 @@ msgstr "Connessione a %{provider} scaduta. Il server potrebbe essere lento o irr
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "Could not reach the calendar feed. Check the URL and try again."
-msgstr "Impossibile raggiungere il feed del calendario. Controlla l’URL e riprova."
+msgstr "Impossibile raggiungere il feed del calendario. Controlla l'URL e riprova."
 
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
@@ -216,7 +216,7 @@ msgstr "Inserisci un indirizzo di casella di posta nel formato name@example.com"
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the calendar feed URL."
-msgstr "Inserisci l’URL del feed del calendario."
+msgstr "Inserisci l'URL del feed del calendario."
 
 #: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
@@ -523,7 +523,7 @@ msgstr "Il calendario di prenotazione non esiste più sul server CalDAV. Ricolle
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed URL returned 404. Check that the link is complete and still published."
-msgstr "L’URL del feed di calendario ha restituito 404. Controlla che il link sia completo e ancora pubblicato."
+msgstr "L'URL del feed di calendario ha restituito 404. Controlla che il link sia completo e ancora pubblicato."
 
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
@@ -553,12 +553,12 @@ msgstr "Il feed del calendario ha restituito un errore."
 #: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
-msgstr "Il server calendario ha risposto a questo indirizzo, ma non vi accetta richieste di calendario. Controlla l’URL del server."
+msgstr "Il server calendario ha risposto a questo indirizzo, ma non vi accetta richieste di calendario. Controlla l'URL del server."
 
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server at %{url} listed more items than Tymeslot can process at once. If this address points at a single calendar, enter your account's server address instead, and Tymeslot will find your calendars there."
-msgstr "Il server di calendario all’indirizzo %{url} ha elencato più elementi di quanti Tymeslot possa elaborare in una volta. Se questo indirizzo punta a un singolo calendario, inserisci invece l’indirizzo del server del tuo account e Tymeslot troverà lì i tuoi calendari."
+msgstr "Il server di calendario all'indirizzo %{url} ha elencato più elementi di quanti Tymeslot possa elaborare in una volta. Se questo indirizzo punta a un singolo calendario, inserisci invece l'indirizzo del server del tuo account e Tymeslot troverà lì i tuoi calendari."
 
 #: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
@@ -645,12 +645,12 @@ msgstr "Google Calendar non è attivo per questo account Google. Attiva Google C
 #: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "A questa modifica manca l’ora di inizio o di fine dell’evento, quindi non è stato possibile inviarla al server di calendario."
+msgstr "A questa modifica manca l'ora di inizio o di fine dell'evento, quindi non è stato possibile inviarla al server di calendario."
 
 #: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
-msgstr "Questa modifica riguarda una sola occorrenza di un evento ricorrente, ma il server di calendario l’avrebbe applicata a tutte le occorrenze, quindi non è stata inviata."
+msgstr "Questa modifica riguarda una sola occorrenza di un evento ricorrente, ma il server di calendario l'avrebbe applicata a tutte le occorrenze, quindi non è stata inviata."
 
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
