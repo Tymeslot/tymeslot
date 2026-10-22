@@ -394,7 +394,7 @@
   background-size: 1rem;
 }
 
-/* Focus mode on the new calendar (CalendarFocus), from lg up where the menu
+/* Focus mode on the calendar (CalendarFocus), from lg up where the menu
    is a column: the menu, the row's gutter and the strips go. */
 @media (width >= 64rem) {
   #dashboard-root[data-calendar-focus] #dashboard-sidebar {

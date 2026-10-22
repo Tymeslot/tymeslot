@@ -157,7 +157,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> assert_has(css("#calendar-fab"))
     |> refute_has(css("#calendar-toolbar"))
     |> assert_has(css("#calendar-tab-day[aria-current='page']"))
-    |> assert_no_horizontal_overflow("new calendar, Day view at 390px")
+    |> assert_no_horizontal_overflow("calendar, Day view at 390px")
     # + opens quick create as a sheet; a title and Save create the event.
     |> click(css("#calendar-fab"))
     |> assert_has(css("#calendar-quick-create.is-sheet"))
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> assert_has(css("#calendar-tab-month[aria-current='page']"))
     |> assert_has(css("button[data-month-day]", count: 42))
     |> assert_has(css("#calendar-canvas [data-event-id]", text: "Dentist"))
-    |> assert_no_horizontal_overflow("new calendar, Month view at 390px")
+    |> assert_no_horizontal_overflow("calendar, Month view at 390px")
     # Select the next day, so the event's day is an ordinary cell: it has dots.
     |> click(css("button[data-month-day='#{next}']"))
     |> assert_has(css("#calendar-canvas [data-event-id]", text: "Dentist", count: 0))
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> click(css("#calendar-tab-agenda"))
     |> assert_has(css("#calendar-tab-agenda[aria-current='page']"))
     |> assert_has(css("#calendar-canvas [data-event-id]", text: "Dentist"))
-    |> assert_no_horizontal_overflow("new calendar, Agenda view at 390px")
+    |> assert_no_horizontal_overflow("calendar, Agenda view at 390px")
   end
 
   feature "the phone calendar fits the narrowest supported viewport in every tab", %{
@@ -207,7 +207,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
       # The stored default is a week, which a phone shows as 3 days.
       |> assert_has(css("#calendar-tab-three_day[aria-current='page']"))
       |> assert_has(css("#calendar-canvas[data-view='three_day']"))
-      |> assert_no_horizontal_overflow("new calendar, 3 days at 320px")
+      |> assert_no_horizontal_overflow("calendar, 3 days at 320px")
 
     # Each tab waits for what only its own view draws.
     for {tab, drawn} <- [
@@ -220,7 +220,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
       |> assert_has(css("#calendar-tab-#{tab}[aria-current='page']"))
       |> assert_has(css("#calendar-canvas[aria-busy='false']"))
       |> assert_has(drawn)
-      |> assert_no_horizontal_overflow("new calendar, #{tab} at 320px")
+      |> assert_no_horizontal_overflow("calendar, #{tab} at 320px")
     end
   end
 

@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePreviewTest do
   @moduledoc """
-  The preview that opens when an event on the new grid is clicked: calendar
+  The preview that opens when an event on the grid is clicked: calendar
   and account, time with how far away it is, place, guests, whether guests
   can book over it, and whether it is still waiting to sync. Read only in
   this release.

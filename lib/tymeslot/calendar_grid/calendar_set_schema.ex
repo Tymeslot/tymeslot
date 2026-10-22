@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.CalendarSetSchema do
   @moduledoc """
   A calendar set: a named group of calendars the organiser applies with its
-  digit (`position`, 1 to 9) on the new calendar. `members` lists what the
+  digit (`position`, 1 to 9) on the calendar. `members` lists what the
   set shows (see `Member`). Which set is active lives on the calendar
   preferences (`active_calendar_set_id`); see
   `Tymeslot.CalendarGrid.CalendarSets`.

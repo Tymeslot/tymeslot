@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.E2E.CalendarJourneysTest do
   @moduledoc """
-  The new calendar's core journeys in a real browser at 1280x800: a drag
+  The calendar's core journeys in a real browser at 1280x800: a drag
   over an empty slot opens quick create and Save adds the event; a drag of
   an event to the next day moves it and the toast's Undo puts it back; the
   side panel renames an event; a click on an all-day bar opens its preview;

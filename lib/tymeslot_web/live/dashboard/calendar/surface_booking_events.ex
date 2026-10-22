@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   @moduledoc """
-  The new calendar's booking and bookable-layer events, routed here by
+  The calendar's booking and bookable-layer events, routed here by
   `CalendarSurface` so the component stays a router: the preview's booking
   actions (`booking:*`), the rail's Layers section and B, and the work these
   start off the process (`start_async/3`). Each clause hands off to the

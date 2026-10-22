@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.EventWindowTest do
   @moduledoc """
   Which events a span of days holds for an organiser: the cached events their
-  calendar selection keeps, their bookings, less what they have hidden. Both
-  calendar surfaces load through `EventWindow`, so this is the one place the
+  calendar selection keeps, their bookings, less what they have hidden. The
+  calendar surface loads through `EventWindow`, so this is the one place the
   rule is pinned.
   """
 

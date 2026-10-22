@@ -1,5 +1,5 @@
 /* Calendar editing: quick create, drafts and the event panel on the
-   redesigned organiser calendar. The quick-create popover
+   organiser calendar. The quick-create popover
    (assets/js/calendar/quick_create.js) and the draft blocks
    (assets/js/calendar/render.js, hooks/calendar_canvas/draft.js) are drawn by
    the CalendarCanvas hook as class strings, so their styles live here rather

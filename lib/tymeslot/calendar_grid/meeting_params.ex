@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.MeetingParams do
   @moduledoc """
-  A Tymeslot meeting booked from the new calendar's side panel ("Send as a
+  A Tymeslot meeting booked from the calendar's side panel ("Send as a
   Tymeslot meeting"): the event the organiser drafted, already checked by
   `CreateParams.cast/4`, plus the name of the guest the meeting is with,
   the language every email about it is written in, and the reminder emails

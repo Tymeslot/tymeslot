@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.ReminderFeed do
   @moduledoc """
-  The desktop-notification feed for the new calendar: for the next eight
+  The desktop-notification feed for the calendar: for the next eight
   days, the timed events that carry a reminder, as the entries the
   `DesktopReminders` hook fires (`DesktopReminderFeed.build/4`).
 

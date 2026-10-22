@@ -47,7 +47,7 @@ body {
   z-index: 9990;
 }
 
-/* Above the new calendar: the row alone, so the grid keeps the height. */
+/* Above the calendar: the row alone, so the grid keeps the height. */
 .brand-nav.brand-nav-compact {
   padding-block: 0;
 }

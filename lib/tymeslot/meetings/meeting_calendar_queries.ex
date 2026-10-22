@@ -92,8 +92,8 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   Blank identifiers are dropped — they cannot be keyed. Use this instead of
   `get_by_provider_event_id/2` in loops to avoid N+1 queries.
 
-  With `drawn_for: user_id` only that organiser's meetings the redesigned
-  calendar draws (`MeetingState.where_drawn/1`) are considered, so a cancelled
+  With `drawn_for: user_id` only that organiser's meetings the calendar
+  draws (`MeetingState.where_drawn/1`) are considered, so a cancelled
   meeting sharing an identifier cannot take the place of a live one.
   """
   @spec list_by_calendar_identifiers(integer(), [String.t() | nil], keyword()) :: %{

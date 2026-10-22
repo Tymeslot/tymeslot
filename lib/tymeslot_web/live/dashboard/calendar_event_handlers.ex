@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, socket}
   end
 
-  @doc "Tells the new calendar how a delete it scheduled ended."
+  @doc "Tells the calendar how a delete it scheduled ended."
   @spec handle_calendar_delete_result(Phoenix.LiveView.Socket.t(), pos_integer(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_delete_result(socket, token, outcome) do
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
   end
 
-  # The new calendar says this in its sync banner, naming the change.
+  # The calendar says this in its sync banner, naming the change.
   defp queued_flash(socket) do
     if CalendarRouting.surface_on_screen?(socket),
       do: socket,
@@ -211,8 +211,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   after any write to a whole series, since the series' rows are gone from
   the source until the destination's sync brings them back.
 
-  On the new calendar a successful move is named by the surface's toast
-  instead of a flash.
+  While the calendar is on screen a successful move is named by the
+  surface's toast instead of a flash.
   """
   @spec handle_event_move_result(
           {:ok, keyword()} | {:error, keyword()},
@@ -269,7 +269,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
   end
 
-  # The new calendar names a change's result itself (a move in its toast,
+  # The calendar names a change's result itself (a move in its toast,
   # with Undo when it can be taken back; a video change in the panel's
   # header), so a flash beside it would say it twice.
   defp result_flash(socket, {level, message}) do

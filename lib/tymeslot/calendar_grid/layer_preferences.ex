@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.LayerPreferences do
   @moduledoc """
-  The new calendar's bookable-times layer as the organiser left it: whether
+  The calendar's bookable-times layer as the organiser left it: whether
   it shows, and which meeting type's bookable times it draws.
 
   Both live on the organiser's calendar preferences (`bookable_layer`,

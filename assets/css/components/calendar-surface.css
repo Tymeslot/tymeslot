@@ -1,4 +1,4 @@
-/* Calendar surface: the redesigned organiser calendar
+/* Calendar surface: the organiser calendar
    (TymeslotWeb.Dashboard.Calendar.*). The time grid is drawn by the
    CalendarCanvas hook from assets/js/calendar/render.js, which emits these
    classes as strings, so they live here rather than as Tailwind utilities a

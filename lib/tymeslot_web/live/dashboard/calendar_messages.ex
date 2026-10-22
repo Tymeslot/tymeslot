@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
     {:noreply, socket}
   end
 
-  # A create the new surface started (`Tymeslot.CalendarGrid.WriteTask`)
+  # A create the calendar surface started (`Tymeslot.CalendarGrid.WriteTask`)
   # finished: its draft is settled on the surface if it is still on screen,
   # and otherwise (the organiser left the calendar) the outcome is flashed
   # here, so it is never lost.

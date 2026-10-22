@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.CreateParams do
   @moduledoc """
-  The server's own check of an event the new calendar asks to create, from
+  The server's own check of an event the calendar asks to create, from
   the quick-create popover or the side panel's "New event" state.
 
   The hook parses what the organiser typed, but nothing it sends is trusted:

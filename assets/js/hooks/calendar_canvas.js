@@ -1,5 +1,5 @@
 /**
- * CalendarCanvas hook: draws the redesigned calendar's time grid.
+ * CalendarCanvas hook: draws the calendar's time grid.
  *
  * Thin glue. The LiveComponent `TymeslotWeb.Dashboard.Calendar.CalendarSurface`
  * owns the data and the chrome; this hook keeps a cache of the events it has

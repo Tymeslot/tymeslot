@@ -4,7 +4,7 @@ defmodule Tymeslot.CalendarGrid.WriteTask do
   the process that started it (a calendar's LiveView) once it returns.
 
   A `{tag, ref}` tag sends `{tag, ref, result}` instead, for a caller with
-  several writes of one kind in flight at once (the new calendar's creates,
+  several writes of one kind in flight at once (the calendar's creates,
   one per draft).
 
   If the write raises, throws or exits, `{tag, crash_result}` is sent

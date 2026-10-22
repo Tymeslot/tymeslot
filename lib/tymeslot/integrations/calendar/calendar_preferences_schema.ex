@@ -43,13 +43,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :fold_night, :boolean, default: true
     field :focus_mode, :boolean, default: false
 
-    # The new calendar's bookable-times layer: whether it shows, and the
+    # The calendar's bookable-times layer: whether it shows, and the
     # meeting type it shows (nil: the first active one). See
     # `Tymeslot.CalendarGrid.LayerPreferences`.
     field :bookable_layer, :boolean, default: true
     belongs_to :bookable_meeting_type, Tymeslot.MeetingTypes.MeetingTypeSchema
 
-    # The calendar set the new calendar shows (nil: none, the organiser's
+    # The calendar set the calendar shows (nil: none, the organiser's
     # own hidden choices apply). A plain id rather than `belongs_to`, so this
     # module does not depend on `Tymeslot.CalendarGrid`; see
     # `Tymeslot.CalendarGrid.CalendarSets`.

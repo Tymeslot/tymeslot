@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EffectiveVisibility do
   @moduledoc """
-  What the new calendar hides, from the organiser's two hidden stores
+  What the calendar hides, from the organiser's two hidden stores
   (accounts on the calendar preferences, calendars on their appearances)
   and the active calendar set, if any.
 

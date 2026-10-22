@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   @moduledoc """
-  The new calendar's `.ics` import. Its state is the `ics_import` assign,
+  The calendar's `.ics` import. Its state is the `ics_import` assign,
   `nil` until the modal first opens, then a map whose `stage` is one of:
 
     * `:choose`: waiting for a file, picked in the modal or dropped anywhere

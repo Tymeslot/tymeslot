@@ -1,6 +1,6 @@
 /**
  * Tests for the cascade overlap layout (calendar/layout.js), the part of the
- * redesign the spec's busy-day falsifier rests on: every visible event keeps
+ * calendar the spec's busy-day falsifier rests on: every visible event keeps
  * at least its first title line uncovered.
  */
 import { describe, expect, test } from "vitest";

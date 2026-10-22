@@ -1,5 +1,5 @@
 /*
- * The new calendar on a phone: below 40rem, Tailwind's `sm` boundary, the
+ * The calendar on a phone: below 40rem, Tailwind's `sm` boundary, the
  * query PHONE_QUERY in assets/js/calendar/viewport.js names. The server
  * renders the desktop and the phone chrome alike and these rules choose, so
  * the first paint is right before any script runs. Every rule sits inside

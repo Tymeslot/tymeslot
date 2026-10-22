@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.WorkingHoursTest do
   @moduledoc """
-  The hours the new grid leaves unshaded: the organiser's default
+  The hours the grid leaves unshaded: the organiser's default
   availability schedule, read as minutes per ISO weekday.
   """
 

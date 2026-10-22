@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Calendar.ShortcutHelp do
   @moduledoc """
-  The new calendar's keyboard shortcuts: the help modal (`help/1`), opened
+  The calendar's keyboard shortcuts: the help modal (`help/1`), opened
   as the `:shortcuts` surface menu by ?, by display options and by the
   command bar, and the screen-reader hints (`keys_hint/1`).
 

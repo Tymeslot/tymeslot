@@ -1,5 +1,5 @@
 /* Calendar booking layer: booking requests, the bookable-times bands and
-   their explainer on the redesigned organiser calendar. The CalendarCanvas
+   their explainer on the organiser calendar. The CalendarCanvas
    hook draws all of these as class strings (assets/js/calendar/render.js,
    assets/js/calendar/bookable.js, assets/js/hooks/calendar_canvas.js), so
    they live here rather than as Tailwind utilities a template scan would
