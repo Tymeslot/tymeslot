@@ -6,9 +6,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
   one-click choices are days rather than minutes.
 
   The owning LiveComponent keeps a `ReminderPickerState` and routes the
-  picker's events (`events/0`) through `apply_event/3`. Before saving the
-  poll it runs `commit_pending/1`, so a lead time typed into the custom row
-  but never added is not lost. The picker sits in a form of its own, so it
+  picker's events (`PollReminders.Events.all/0`) through `apply_event/3`.
+  Before saving the poll it runs `commit_pending/1`, so a lead time typed
+  into the custom row but never added is not lost. The picker sits in a form of its own, so it
   must be rendered outside the poll's main form.
   """
   use Phoenix.Component
@@ -16,16 +16,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
 
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias TymeslotWeb.Components.Shared.{ReminderPicker, ReminderPickerState}
-
-  # `poll_commit_custom_reminder` comes from the picker's `ReminderCustomRow`
-  # hook when focus leaves the custom row with a value still in it.
-  @events ~w(poll_add_quick_reminder poll_add_reminder poll_remove_reminder
-             poll_toggle_custom_reminder poll_update_reminder_input
-             poll_commit_custom_reminder)
-
-  @doc "The picker events, prefixed `poll_`, that the owner routes to `apply_event/3`."
-  @spec events() :: [String.t()]
-  def events, do: @events
 
   @doc "A picker holding `reminders`."
   @spec new([map()]) :: ReminderPickerState.t()

@@ -18,8 +18,7 @@ defmodule Tymeslot.Bookings.HostMove do
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Bookings.{Errors, Policy, Reschedule}
   alias Tymeslot.Clock
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
-  alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.{HostManaged, MeetingQueries, MeetingSchema}
 
   @doc """
   Moves the host's meeting `meeting_uid` to start at `new_start`.

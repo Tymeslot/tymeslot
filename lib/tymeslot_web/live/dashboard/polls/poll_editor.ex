@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
-  @reminder_events PollReminders.events()
+  @reminder_events PollReminders.Events.all()
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
