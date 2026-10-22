@@ -271,8 +271,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
          put_slot_error(
            socket,
            slot_id,
-           dgettext("dashboard_polls", "This time has already passed")
+           dgettext("dashboard_polls", "This time has already begun.")
          )}
+
+      # The host's own entry is not counted (`Confirm`), so a poll only they
+      # answered has nobody to invite.
+      {:error, :no_participants} ->
+        Flash.error(
+          dgettext(
+            "dashboard_polls",
+            "Nobody but you has joined this poll yet, so there is nobody to invite."
+          )
+        )
+
+        {:noreply, socket}
 
       {:error, reason} when reason in [:not_open, :not_found] ->
         {:noreply, poll_no_longer_open(socket)}
@@ -283,7 +295,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           reason: LogFormat.reason(reason)
         )
 
-        Flash.error(confirm_error_message(reason))
+        Flash.error(dgettext("dashboard_polls", "Couldn't confirm this time. Please try again."))
         {:noreply, socket}
     end
   end
@@ -499,23 +511,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       DateTime.compare(slot.start_time, start_time) == :eq && slot.id
     end)
   end
-
-  defp confirm_error_message(:no_participants),
-    do:
-      dgettext(
-        "dashboard_polls",
-        "No one has joined this poll yet, so there is no one to send the meeting to."
-      )
-
-  defp confirm_error_message(:attendee_is_organizer),
-    do:
-      dgettext(
-        "dashboard_polls",
-        "Your own address is on this poll as a participant, and the meeting can't be sent to you as a guest. Remove yourself from the participants and try again."
-      )
-
-  defp confirm_error_message(_reason),
-    do: dgettext("dashboard_polls", "Couldn't confirm this time. Please try again.")
 
   defp put_slot_error(socket, slot_id, message) do
     assign(socket, :slot_errors, Map.put(socket.assigns.slot_errors, slot_id, message))

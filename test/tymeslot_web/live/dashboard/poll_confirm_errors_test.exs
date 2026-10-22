@@ -42,12 +42,12 @@ defmodule TymeslotWeb.Dashboard.PollConfirmErrorsTest do
     view
   end
 
-  test "a poll nobody has joined says there is no one to send the meeting to", ctx do
+  test "a poll nobody has joined says there is nobody to invite", ctx do
     slot = insert(:poll_time_slot, poll: ctx.poll)
 
     view = confirm(ctx.conn, ctx.poll, slot)
 
-    assert render(view) =~ "No one has joined this poll yet"
+    assert render(view) =~ "Nobody but you has joined this poll yet"
     refute render(view) =~ "Couldn&#39;t confirm this time"
     assert {:ok, %{status: :open}} = Polls.get_poll_for_host(ctx.poll.id, ctx.user.id)
   end
@@ -66,17 +66,7 @@ defmodule TymeslotWeb.Dashboard.PollConfirmErrorsTest do
 
     view = confirm(ctx.conn, ctx.poll, slot)
 
-    assert render(view) =~ "This time has already passed"
-    refute render(view) =~ "Couldn&#39;t confirm this time"
-  end
-
-  test "a poll whose main participant is the host asks them to remove themselves", ctx do
-    slot = insert(:poll_time_slot, poll: ctx.poll)
-    insert(:poll_participant, poll: ctx.poll, name: "Me", email: ctx.user.email)
-
-    view = confirm(ctx.conn, ctx.poll, slot)
-
-    assert render(view) =~ "Your own address is on this poll"
+    assert render(view) =~ "This time has already begun."
     refute render(view) =~ "Couldn&#39;t confirm this time"
   end
 end

@@ -745,21 +745,6 @@ msgstr "A votação foi encerrada. Mude o prazo em Editar enquete para convidar 
 msgid "Set a username in your profile first: the links in the emails are built from it."
 msgstr "Defina primeiro um nome de usuário no seu perfil: os links dos e-mails são criados a partir dele."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "No one has joined this poll yet, so there is no one to send the meeting to."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "This time has already passed"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your own address is on this poll as a participant, and the meeting can't be sent to you as a guest. Remove yourself from the participants and try again."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closed"
@@ -811,3 +796,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "Removed %{name} from the poll."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody but you has joined this poll yet, so there is nobody to invite."
+msgstr "Ninguém além de você entrou nesta enquete ainda, então não há ninguém para convidar."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time has already begun."
+msgstr "Este horário já começou."
