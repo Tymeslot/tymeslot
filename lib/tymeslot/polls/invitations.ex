@@ -30,7 +30,6 @@ defmodule Tymeslot.Polls.Invitations do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.RecipientLocale
-  alias Tymeslot.Polls
 
   alias Tymeslot.Polls.{
     EmailLimits,
@@ -201,7 +200,7 @@ defmodule Tymeslot.Polls.Invitations do
   # --- Resending ---
 
   defp ensure_voting_open(poll) do
-    if Polls.voting_open?(poll), do: :ok, else: {:error, :voting_closed}
+    if PollSchema.voting_open?(poll), do: :ok, else: {:error, :voting_closed}
   end
 
   defp fetch_confirmed(poll, participant_id) do
@@ -228,7 +227,7 @@ defmodule Tymeslot.Polls.Invitations do
     case EmailLimits.reserve_invitations(user_id, [participant.email]) do
       {:ok, %{allowed: [_email]}} -> :ok
       {:ok, %{limited: [_email]}} -> {:error, :recipient_rate_limited}
-      {:error, _reason} -> {:error, :host_rate_limited}
+      {:error, {:rate_limited, _remaining}} -> {:error, :host_rate_limited}
     end
   end
 

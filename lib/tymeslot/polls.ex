@@ -190,6 +190,14 @@ defmodule Tymeslot.Polls do
   end
 
   @doc """
+  Whether the participant was invited by the host and has not voted yet, so
+  sending their link again sends the invitation rather than the voting-link
+  email.
+  """
+  @spec unanswered_invitee?(PollParticipantSchema.t()) :: boolean()
+  defdelegate unanswered_invitee?(participant), to: PollParticipantSchema
+
+  @doc """
   Deletes the user's poll once it is over, confirmed or cancelled, with its
   times, participants and votes, to tidy the list. The meeting a confirmed
   poll minted stays. An open poll has to be cancelled first, so nothing
@@ -333,12 +341,7 @@ defmodule Tymeslot.Polls do
 
   @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."
   @spec voting_open?(PollSchema.t()) :: boolean()
-  def voting_open?(%{status: status}) when status != :open, do: false
-  def voting_open?(%{deadline_at: nil}), do: true
-
-  def voting_open?(%{deadline_at: deadline_at}) do
-    DateTime.compare(DateTime.utc_now(), deadline_at) == :lt
-  end
+  defdelegate voting_open?(poll), to: PollSchema
 
   @doc "Subscribes the calling process to updates for a poll."
   @spec subscribe(Ecto.UUID.t()) :: :ok | {:error, term()}
@@ -478,7 +481,7 @@ defmodule Tymeslot.Polls do
   # --- Lifecycle helpers ---
 
   # A lifecycle write on an open poll (cancel, removing a participant,
-  # inviting) reads the poll under the row lock confirmation takes
+  # inviting, resending a link) reads the poll under the row lock confirmation takes
   # (`Tymeslot.Polls.Confirm`), so a poll confirmed after the caller loaded its
   # page is seen as confirmed here and refused, rather than written over. `fun`
   # gets the locked open poll and returns `{:ok, value}` or `{:error, reason}`

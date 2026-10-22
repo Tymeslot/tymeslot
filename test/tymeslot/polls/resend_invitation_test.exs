@@ -86,11 +86,18 @@ defmodule Tymeslot.Polls.ResendInvitationTest do
   describe "the resend window" do
     test "a second resend moments later sends nothing more", ctx do
       grace = insert(:poll_participant, poll: ctx.poll)
+      host_before = RateLimiter.remaining(:poll_host_invitations, ctx.user.id)
+      recipient_before = RateLimiter.remaining(:poll_recipient_email, grace.email)
 
       assert resend(ctx, grace.id) == :ok
       assert resend(ctx, grace.id) == {:error, :sent_recently}
 
       assert [_one] = email_jobs(grace)
+
+      # The window is claimed before the limits are charged, so the refused
+      # second click costs nothing.
+      assert RateLimiter.remaining(:poll_host_invitations, ctx.user.id) == host_before - 1
+      assert RateLimiter.remaining(:poll_recipient_email, grace.email) == recipient_before - 1
     end
 
     test "an invitation that went out moments ago is not sent again", ctx do

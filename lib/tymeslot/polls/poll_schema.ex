@@ -158,6 +158,15 @@ defmodule Tymeslot.Polls.PollSchema do
     |> foreign_key_constraint(:meeting_type_id)
   end
 
+  @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."
+  @spec voting_open?(%__MODULE__{} | map()) :: boolean()
+  def voting_open?(%{status: status}) when status != :open, do: false
+  def voting_open?(%{deadline_at: nil}), do: true
+
+  def voting_open?(%{deadline_at: deadline_at}) do
+    DateTime.compare(DateTime.utc_now(), deadline_at) == :lt
+  end
+
   @doc """
   The poll's reminders as `%{value:, unit:}` lead times before its deadline.
   A poll from before the host could choose them keeps the one reminder every

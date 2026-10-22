@@ -338,7 +338,7 @@ defmodule Tymeslot.Polls.Voting do
   # A voting page opened before its host asked to delete their account can
   # still submit; the poll is about to go, so it takes no more names or votes.
   defp ensure_open(%PollSchema{user_id: user_id} = poll) do
-    if Polls.voting_open?(poll) and not Auth.deletion_pending?(user_id),
+    if PollSchema.voting_open?(poll) and not Auth.deletion_pending?(user_id),
       do: :ok,
       else: {:error, :voting_closed}
   end
