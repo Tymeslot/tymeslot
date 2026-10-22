@@ -14,6 +14,8 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Workers.EmailWorker
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
@@ -106,6 +108,41 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
 
       assert Enum.sort(recipients(first) ++ recipients(second)) ==
                ["first@example.com", "second@example.com"]
+    end
+
+    test "shows the deadline in the poll's timezone to a participant with none" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user, username: "hostname")
+      deadline = DateTime.add(DateTime.utc_now(:second), 2, :day)
+
+      poll =
+        insert(:poll, status: :open, user: user, deadline_at: deadline, timezone: "Asia/Tokyo")
+
+      now = DateTime.utc_now(:second)
+
+      insert(:poll_participant,
+        poll: poll,
+        email: "unvoted@example.com",
+        timezone: nil,
+        invited_at: now,
+        confirmed_at: now,
+        link_sent_at: now
+      )
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_poll_deadline_reminders",
+                 "poll_id" => poll.id
+               })
+
+      assert_receive {:email, email}, 1000
+
+      expected =
+        deadline
+        |> DateTimeUtils.convert_to_timezone("Asia/Tokyo")
+        |> Formatting.format_datetime("en")
+
+      assert email.text_body =~ expected
     end
 
     test "discards when the poll is not open" do
