@@ -106,11 +106,12 @@ defmodule Tymeslot.Polls.Editing do
     end
   end
 
-  # A type the edit sets is held to the rule creating a poll applies: the
-  # host's own, and not a paid one, since confirming a poll takes no
-  # payment. The type the poll already has passes as it is, even once it
-  # has been switched off or has started taking payment, so an edit that
-  # leaves it alone never fails on it.
+  # A type the edit sets is held to the rule creating a poll applies
+  # (`Polls.meeting_types_for_poll/1`): the host's own, not a paid one, since
+  # confirming a poll takes no payment, and not a one-off event. The type the
+  # poll already has passes as it is, even once it has been switched off or
+  # has started taking payment, so an edit that leaves it alone never fails
+  # on it.
   defp check_meeting_type(%PollSchema{meeting_type_id: current}, attrs, user_id) do
     case Map.get(attrs, "meeting_type_id", Map.get(attrs, :meeting_type_id)) do
       blank when blank in [nil, ""] -> :ok
@@ -125,6 +126,7 @@ defmodule Tymeslot.Polls.Editing do
     case MeetingTypes.get_meeting_type(id, user_id) do
       nil -> {:error, :meeting_type_not_found}
       %{payment_required: true} -> {:error, :payment_required_type}
+      %{one_off: true} -> {:error, :meeting_type_not_found}
       _meeting_type -> :ok
     end
   end

@@ -159,6 +159,33 @@ defmodule Tymeslot.PollsTest do
 
       assert {:error, :payment_required_type} = Polls.create_poll(user.id, attrs)
     end
+
+    test "refuses a one-off event's type", %{user: user, future: future} do
+      one_off = insert(:meeting_type, user: user, one_off: true)
+
+      attrs = %{
+        title: "Webinar",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        meeting_type_id: one_off.id,
+        slots: [slot(future)]
+      }
+
+      assert {:error, :meeting_type_not_found} = Polls.create_poll(user.id, attrs)
+    end
+  end
+
+  describe "meeting_types_for_poll/1" do
+    test "offers the host's active types, but no paid type or one-off event", %{user: user} do
+      offered = insert(:meeting_type, user: user)
+      insert(:meeting_type, user: user, payment_required: true)
+      insert(:meeting_type, user: user, one_off: true)
+      insert(:meeting_type, user: user, is_active: false)
+      insert(:meeting_type, user: insert(:user))
+
+      assert [%{id: id}] = Polls.meeting_types_for_poll(user.id)
+      assert id == offered.id
+    end
   end
 
   describe "create_poll/2 slot validation" do

@@ -129,6 +129,19 @@ defmodule Tymeslot.Polls do
   def list_polls(user_id), do: PollQueries.list_for_user(user_id)
 
   @doc """
+  The host's meeting types a poll may take its title and length from: active
+  ones, but not a paid type (confirming a poll takes no payment) nor a
+  one-off event, which is a single dated session rather than a kind of
+  meeting.
+  """
+  @spec meeting_types_for_poll(integer()) :: [Ecto.Schema.t()]
+  def meeting_types_for_poll(user_id) do
+    user_id
+    |> MeetingTypes.get_active_meeting_types()
+    |> Enum.reject(&(&1.payment_required or &1.one_off))
+  end
+
+  @doc """
   Counts the user's polls that are still open for votes.
   """
   @spec count_open_polls(pos_integer()) :: non_neg_integer()
@@ -390,6 +403,7 @@ defmodule Tymeslot.Polls do
     case MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
       nil -> {:error, :meeting_type_not_found}
       %{payment_required: true} -> {:error, :payment_required_type}
+      %{one_off: true} -> {:error, :meeting_type_not_found}
       meeting_type -> {:ok, snapshot_meeting_type(attrs, meeting_type)}
     end
   end

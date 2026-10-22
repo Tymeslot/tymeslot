@@ -249,7 +249,7 @@ defmodule Tymeslot.Polls.EditingTest do
       assert updated.meeting_type_id == paid.id
     end
 
-    test "refuses another host's type and a paid one", ctx do
+    test "refuses another host's type, a paid one and a one-off event", ctx do
       foreign = insert(:meeting_type, user: insert(:user))
       paid = insert(:meeting_type, user: ctx.user, payment_required: true)
 
@@ -258,6 +258,11 @@ defmodule Tymeslot.Polls.EditingTest do
 
       assert {:error, :payment_required_type} =
                Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => paid.id})
+
+      one_off = insert(:meeting_type, user: ctx.user, one_off: true)
+
+      assert {:error, :meeting_type_not_found} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => one_off.id})
 
       assert Repo.get!(PollSchema, ctx.poll.id).meeting_type_id == nil
     end

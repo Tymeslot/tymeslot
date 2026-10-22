@@ -35,7 +35,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
-  alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.Invitations
@@ -441,12 +440,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     |> reload_selected(refresh_health: true)
   end
 
-  # A paid meeting type cannot carry a poll: confirming one mints no payment.
-  defp poll_meeting_types(socket) do
-    socket.assigns.current_user.id
-    |> MeetingTypes.get_active_meeting_types()
-    |> Enum.reject(& &1.payment_required)
-  end
+  defp poll_meeting_types(socket),
+    do: Polls.meeting_types_for_poll(socket.assigns.current_user.id)
 
   defp parse_invitees(text) do
     case Invitations.parse(text) do
