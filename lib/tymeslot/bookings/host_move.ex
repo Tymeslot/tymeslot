@@ -4,9 +4,10 @@ defmodule Tymeslot.Bookings.HostMove do
   confirmed from a poll) to a new start, keeping its length.
 
   The host chooses the time, as they did when they confirmed the poll, so the
-  schedule the booking page offers is not consulted; only another meeting of
-  theirs at that time refuses it (`:slot_taken`). Everything else follows the
-  reschedule path (`Tymeslot.Bookings.Reschedule.apply_new_time/4`): the
+  schedule the booking page offers is not consulted, nor are their booking
+  limits or buffers; only another meeting of theirs overlapping that time
+  refuses it (`:slot_taken`). Everything else follows the
+  reschedule path (`Tymeslot.Bookings.Reschedule.apply_new_time/5`): the
   calendar entry and any video room move, reminders are pinned to the new
   time, and the host and every guest get the new time with an updated
   calendar entry, the guests asked again whether they can come.
@@ -34,7 +35,9 @@ defmodule Tymeslot.Bookings.HostMove do
          :ok <- ensure_host_managed(original),
          :ok <- Policy.can_reschedule_meeting?(original),
          :ok <- ensure_future(new_start) do
-      Reschedule.apply_new_time(original, host_times(original, new_start), nil, %{})
+      Reschedule.apply_new_time(original, host_times(original, new_start), nil, %{},
+        host_chosen: true
+      )
     end
   end
 

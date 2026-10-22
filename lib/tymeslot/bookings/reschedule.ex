@@ -152,12 +152,22 @@ defmodule Tymeslot.Bookings.Reschedule do
   host's move (`Tymeslot.Bookings.HostMove`) share; the meeting is checked
   again under its lock, and another meeting at the new time refuses it
   (`:slot_taken`).
+
+  The host's booking limits and buffers are checked too, as they shape the
+  times a booker may pick. Pass `host_chosen: true` for a time the host
+  picked themselves (`Tymeslot.Bookings.HostMove`), to which neither applies.
   """
-  @spec apply_new_time(MeetingSchema.t(), map(), map() | nil, map()) ::
+  @spec apply_new_time(MeetingSchema.t(), map(), map() | nil, map(), keyword()) ::
           {:ok, MeetingSchema.t()} | {:error, Errors.classified_error()}
-  def apply_new_time(original, new_times, meeting_type, location_attrs) do
+  def apply_new_time(original, new_times, meeting_type, location_attrs, opts \\ []) do
     with {:ok, {updated, pending}} <-
-           apply_time_update_and_schedule_job(original, new_times, meeting_type, location_attrs) do
+           apply_time_update_and_schedule_job(
+             original,
+             new_times,
+             meeting_type,
+             location_attrs,
+             opts
+           ) do
       after_commit(updated, original, pending)
       {:ok, updated}
     end
@@ -188,7 +198,8 @@ defmodule Tymeslot.Bookings.Reschedule do
          meeting,
          %{start_time: start_dt, end_time: end_dt, duration_minutes: _dur},
          meeting_type,
-         location_attrs
+         location_attrs,
+         opts
        ) do
     # Booking a new time settles any pending organizer reschedule request, so
     # the slot becomes live again — clear the timestamp.
@@ -247,7 +258,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       |> Map.merge(location_attrs)
 
     case Repo.transaction(fn ->
-           with {:ok, updated} <- update_meeting(meeting, attrs),
+           with {:ok, updated} <- update_meeting(meeting, attrs, opts),
                 {:ok, _result} <- schedule_calendar_job(updated),
                 {:ok, pending} <- activate_if_confirmed_outright(updated, meeting),
                 :ok <- settle_reminders(updated, meeting) do
@@ -267,6 +278,14 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, {:refused, reason}} -> {:error, reason}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
+  end
+
+  # A time the host picked is theirs to pick: the limits and buffers that
+  # shape what a booker is offered do not apply to it.
+  defp host_choice_opts(opts) do
+    if Keyword.get(opts, :host_chosen, false),
+      do: [enforce_booking_limits: false, buffers: false],
+      else: []
   end
 
   # A held request this reschedule confirms outright (see
@@ -344,7 +363,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # the approval it is standing in for.
   #
   # The duplicate calendar "update" job this schedules on top of
-  # `apply_time_update_and_schedule_job/3`'s own is harmless:
+  # `apply_time_update_and_schedule_job/5`'s own is harmless:
   # `CalendarJobs.schedule_job/2` is uniqueness-guarded and reports the second
   # insert as `:already_scheduled`.
   defp announce(%{status: "confirmed"} = updated, %{status: "awaiting_approval"}, pending) do
@@ -490,10 +509,14 @@ defmodule Tymeslot.Bookings.Reschedule do
   # may have committed since. The guard re-runs the same validation against
   # the row as it stands under its lock, so a meeting cancelled meanwhile is
   # refused rather than moved, or returned to the approval gate.
-  defp update_meeting(meeting, attrs) do
-    case Scheduling.update_meeting_with_conflict_check(meeting, attrs,
-           guard: &validate_can_reschedule/1,
-           locked_attrs: &%{ical_sequence: &1.ical_sequence + 1}
+  defp update_meeting(meeting, attrs, opts) do
+    case Scheduling.update_meeting_with_conflict_check(
+           meeting,
+           attrs,
+           [
+             guard: &validate_can_reschedule/1,
+             locked_attrs: &%{ical_sequence: &1.ical_sequence + 1}
+           ] ++ host_choice_opts(opts)
          ) do
       {:ok, updated} -> {:ok, updated}
       {:error, :time_conflict} -> {:error, :slot_taken}
@@ -514,7 +537,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # desyncing. Never blocks the reschedule: the booking is already updated
   # locally, and its join URLs either stay valid across the move or were
   # already rebuilt for the new time by
-  # `apply_time_update_and_schedule_job/3`. Whether an integration can still
+  # `apply_time_update_and_schedule_job/5`. Whether an integration can still
   # reach the room is decided inside the job by `IntegrationResolver`, so a
   # meeting whose integration was disconnected is still synced rather than left
   # advertising the old time.

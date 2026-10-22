@@ -26,7 +26,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
   setup do
     user = insert(:user)
-    insert(:profile, user: user)
+    profile = insert(:profile, user: user)
 
     meeting =
       insert(:meeting,
@@ -43,7 +43,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     {:ok, guests} =
       Guests.create_for_meeting(meeting.id, ["ada@example.com", "bob@example.com"], :organizer)
 
-    %{user: user, meeting: meeting, guests: guests}
+    %{user: user, profile: profile, meeting: meeting, guests: guests}
   end
 
   # The host's copy is about the meeting and its guests: nobody booked it
@@ -195,6 +195,49 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
                HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
 
       assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+    end
+
+    test "is not held to the host's booking limits, which govern what bookers pick", ctx do
+      Repo.update!(Changeset.change(ctx.profile, max_bookings_per_day: 1, timezone: "Etc/UTC"))
+      day = Date.add(Date.utc_today(), 5)
+
+      insert(:meeting,
+        organizer_user: ctx.user,
+        organizer_email: ctx.user.email,
+        status: "confirmed",
+        start_time: DateTime.new!(day, ~T[09:00:00], "Etc/UTC"),
+        end_time: DateTime.new!(day, ~T[10:00:00], "Etc/UTC")
+      )
+
+      new_start = DateTime.new!(day, ~T[14:00:00], "Etc/UTC")
+
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
+      assert moved.start_time == new_start
+    end
+
+    test "is not padded by the host's buffers: only a meeting at that time refuses it", ctx do
+      insert(:availability_schedule,
+        profile: ctx.profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
+
+      other_start = DateTime.add(ctx.meeting.start_time, 2, :day)
+
+      other =
+        insert(:meeting,
+          organizer_user: ctx.user,
+          organizer_email: ctx.user.email,
+          status: "confirmed",
+          start_time: other_start,
+          end_time: DateTime.add(other_start, 30, :minute)
+        )
+
+      # Back to back with `other`: inside the 15 minutes a booker's time is
+      # padded by.
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, other.end_time, ctx.user.id)
+      assert moved.start_time == other.end_time
     end
 
     test "refuses a time that has started", ctx do
