@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -70,7 +71,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               </div>
             </div>
 
-            <div class="schedule-grid">
+            <SessionList.session_list
+              sessions={assigns[:planned_sessions]}
+              selected_date={@selected_date}
+              timezone={@user_timezone}
+              target={@myself}
+            />
+
+            <div :if={SessionList.show_calendar?(assigns[:planned_sessions])} class="schedule-grid">
               <div class="calendar-section calendar-section-wrapper">
                 <div class="calendar-header">
                   <button

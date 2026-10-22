@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   @spec can_reschedule?(Ecto.Schema.t()) :: boolean()
   def can_reschedule?(meeting) do
-    case Policy.can_reschedule_meeting?(meeting) do
+    case Policy.can_request_reschedule?(meeting) do
       :ok -> true
       {:error, _reason} -> false
     end

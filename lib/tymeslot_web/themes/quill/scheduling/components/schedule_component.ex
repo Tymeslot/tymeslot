@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
@@ -152,219 +153,234 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     </div>
                   </div>
 
-                  <div class="calendar-slots-container">
-                    <div class="flex-1 calendar-section">
-                      <%!-- Weekly view: shown on small screens --%>
-                      <div class="calendar-weekly">
-                        <div class="weekly-nav-row">
-                          <button
-                            phx-click="prev_week"
-                            phx-target={@myself}
-                            phx-disable-with="..."
-                            disabled={
-                              CalendarNavigation.prev_week_disabled?(
-                                @current_week_start,
-                                @user_timezone
-                              )
-                            }
-                            class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
-                          >
-                            ←
-                          </button>
-                          <div class="weekly-nav-label">
-                            <div class="text-xs font-semibold text-white">
-                              {LocalizationHelpers.get_week_display(@current_week_start)}
-                            </div>
-                            <.loading_spinner show={@availability_status == :loading} />
-                          </div>
-                          <button
-                            phx-click="next_week"
-                            phx-target={@myself}
-                            phx-disable-with="..."
-                            disabled={
-                              CalendarNavigation.next_week_disabled?(
-                                @current_week_start,
-                                @user_timezone,
-                                @booking_window_days
-                              )
-                            }
-                            class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
-                          >
-                            →
-                          </button>
-                        </div>
-                        <div class="week-day-strip">
-                          <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
-                            <button
-                              class={[
-                                "week-day-cell",
-                                @selected_date == day.date && "selected",
-                                day.loading && "loading"
-                              ]}
-                              phx-click="select_date"
-                              phx-value-date={day.date}
-                              phx-target={@myself}
-                              disabled={not day.available || day.loading}
-                              aria-label={LocalizationHelpers.format_full_date_label(day.date)}
-                              aria-current={day.today && "date"}
-                            >
-                              <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
-                              <span class="week-day-number" aria-hidden="true">{day.day_number}</span>
-                            </button>
-                          <% end %>
-                        </div>
-                      </div>
+                  <%!-- The card's one scrolling region, between the pinned header and
+                       actions: a fixed-date type's dates scroll with the calendar
+                       rather than squeezing it. --%>
+                  <div class="schedule-scroll">
+                    <SessionList.session_list
+                      sessions={assigns[:planned_sessions]}
+                      selected_date={@selected_date}
+                      timezone={@user_timezone}
+                      target={@myself}
+                    />
 
-                      <%!-- Monthly view: shown on larger screens --%>
-                      <div class="calendar-monthly">
-                        <div class="calendar-month-header">
-                          <h2 class="calendar-month-title font-bold text-glass-primary">
-                            {dgettext("booking", "Select a Date")}
-                            <.loading_spinner show={@availability_status == :loading} />
-                          </h2>
-                          <div class="calendar-nav-cluster">
-                            <%= if @availability_status == :error do %>
-                              <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
-                                <svg
-                                  class="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                  />
-                                </svg>
-                                {dgettext("booking", "Calendar is loading slowly")}
-                              </div>
-                            <% end %>
+                    <div
+                      :if={SessionList.show_calendar?(assigns[:planned_sessions])}
+                      class="calendar-slots-container"
+                    >
+                      <div class="flex-1 calendar-section">
+                        <%!-- Weekly view: shown on small screens --%>
+                        <div class="calendar-weekly">
+                          <div class="weekly-nav-row">
                             <button
-                              phx-click="prev_month"
+                              phx-click="prev_week"
                               phx-target={@myself}
-                              data-intent="earlier"
                               phx-disable-with="..."
                               disabled={
-                                CalendarNavigation.prev_month_disabled?(
-                                  @current_year,
-                                  @current_month,
+                                CalendarNavigation.prev_week_disabled?(
+                                  @current_week_start,
                                   @user_timezone
                                 )
                               }
-                              class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                             >
                               ←
                             </button>
-                            <div class="calendar-month-label font-semibold text-white">
-                              {LocalizationHelpers.get_month_year_display(
-                                @current_year,
-                                @current_month
-                              )}
+                            <div class="weekly-nav-label">
+                              <div class="text-xs font-semibold text-white">
+                                {LocalizationHelpers.get_week_display(@current_week_start)}
+                              </div>
+                              <.loading_spinner show={@availability_status == :loading} />
                             </div>
                             <button
-                              phx-click="next_month"
+                              phx-click="next_week"
                               phx-target={@myself}
-                              data-intent="later"
                               phx-disable-with="..."
                               disabled={
-                                CalendarNavigation.next_month_disabled?(
-                                  @current_year,
-                                  @current_month,
+                                CalendarNavigation.next_week_disabled?(
+                                  @current_week_start,
                                   @user_timezone,
                                   @booking_window_days
                                 )
                               }
-                              class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                             >
                               →
                             </button>
                           </div>
-                        </div>
-                        <div class="calendar-grid-container flex-1">
-                          <div class="calendar-month-grid grid grid-cols-7 gap-0.5 text-center mb-1">
-                            <div
-                              :for={day <- LocalizationHelpers.weekday_headings(@week_start)}
-                              class="calendar-weekday text-xs font-medium"
-                            >
-                              {day}
-                            </div>
-                          </div>
-                          <div class="calendar-month-grid grid grid-cols-7 gap-0.5">
-                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, ChosenLength.meeting_type(assigns)) do %>
-                              <.calendar_day
+                          <div class="week-day-strip">
+                            <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
+                              <button
+                                class={[
+                                  "week-day-cell",
+                                  @selected_date == day.date && "selected",
+                                  day.loading && "loading"
+                                ]}
                                 phx-click="select_date"
+                                phx-value-date={day.date}
                                 phx-target={@myself}
-                                phx-value-date={day[:date]}
-                                day={Map.put(day, :is_today, day[:today])}
-                                selected={@selected_date == day[:date]}
-                                available={day[:available] && !day[:past]}
-                                current_month={day[:current_month]}
-                                loading={Map.get(day, :loading, false)}
-                              />
+                                disabled={not day.available || day.loading}
+                                aria-label={LocalizationHelpers.format_full_date_label(day.date)}
+                                aria-current={day.today && "date"}
+                              >
+                                <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
+                                <span class="week-day-number" aria-hidden="true">{day.day_number}</span>
+                              </button>
                             <% end %>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    <SlotList.slot_list
-                      selected_date={@selected_date}
-                      selected_time={@selected_time}
-                      available_slots={@available_slots}
-                      loading_slots={@loading_slots}
-                      calendar_error={@calendar_error}
-                      slot_interval_minutes={@slot_interval_minutes}
-                      duration_minutes={@duration_minutes}
-                      expanded_hour={@expanded_hour}
-                      meeting_type={@meeting_type}
-                      target={@myself}
-                    >
-                      <:loading>
-                        <div class="h-full flex items-center justify-center">
-                          <.spinner />
-                          <span class="ml-3 text-white">
-                            {dgettext("booking", "Loading available times...")}
-                          </span>
-                        </div>
-                      </:loading>
-                      <:error :let={message}>
-                        <.info_box variant={:warning}>
-                          {message}
-                        </.info_box>
-                      </:error>
-                      <:empty>
-                        <%!-- Drawn in Quill's own light-on-glass colours, so it
-                             stays local rather than using the dashboard's empty
-                             state. --%>
-                        <div class="h-full flex items-center justify-center">
-                          <div class="text-center p-4">
-                            <svg
-                              class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              aria-hidden="true"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                        <%!-- Monthly view: shown on larger screens --%>
+                        <div class="calendar-monthly">
+                          <div class="calendar-month-header">
+                            <h2 class="calendar-month-title font-bold text-glass-primary">
+                              {dgettext("booking", "Select a Date")}
+                              <.loading_spinner show={@availability_status == :loading} />
+                            </h2>
+                            <div class="calendar-nav-cluster">
+                              <%= if @availability_status == :error do %>
+                                <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
+                                  <svg
+                                    class="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                    />
+                                  </svg>
+                                  {dgettext("booking", "Calendar is loading slowly")}
+                                </div>
+                              <% end %>
+                              <button
+                                phx-click="prev_month"
+                                phx-target={@myself}
+                                data-intent="earlier"
+                                phx-disable-with="..."
+                                disabled={
+                                  CalendarNavigation.prev_month_disabled?(
+                                    @current_year,
+                                    @current_month,
+                                    @user_timezone
+                                  )
+                                }
+                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                               >
-                              </path>
-                            </svg>
-                            <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
-                              {dgettext("booking", "This date is fully booked")}
-                            </p>
-                            <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
-                              {dgettext("booking", "Please select another date")}
-                            </p>
+                                ←
+                              </button>
+                              <div class="calendar-month-label font-semibold text-white">
+                                {LocalizationHelpers.get_month_year_display(
+                                  @current_year,
+                                  @current_month
+                                )}
+                              </div>
+                              <button
+                                phx-click="next_month"
+                                phx-target={@myself}
+                                data-intent="later"
+                                phx-disable-with="..."
+                                disabled={
+                                  CalendarNavigation.next_month_disabled?(
+                                    @current_year,
+                                    @current_month,
+                                    @user_timezone,
+                                    @booking_window_days
+                                  )
+                                }
+                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              >
+                                →
+                              </button>
+                            </div>
+                          </div>
+                          <div class="calendar-grid-container flex-1">
+                            <div class="calendar-month-grid grid grid-cols-7 gap-0.5 text-center mb-1">
+                              <div
+                                :for={day <- LocalizationHelpers.weekday_headings(@week_start)}
+                                class="calendar-weekday text-xs font-medium"
+                              >
+                                {day}
+                              </div>
+                            </div>
+                            <div class="calendar-month-grid grid grid-cols-7 gap-0.5">
+                              <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, ChosenLength.meeting_type(assigns)) do %>
+                                <.calendar_day
+                                  phx-click="select_date"
+                                  phx-target={@myself}
+                                  phx-value-date={day[:date]}
+                                  day={Map.put(day, :is_today, day[:today])}
+                                  selected={@selected_date == day[:date]}
+                                  available={day[:available] && !day[:past]}
+                                  current_month={day[:current_month]}
+                                  loading={Map.get(day, :loading, false)}
+                                />
+                              <% end %>
+                            </div>
                           </div>
                         </div>
-                      </:empty>
-                    </SlotList.slot_list>
+                      </div>
+
+                      <SlotList.slot_list
+                        selected_date={@selected_date}
+                        selected_time={@selected_time}
+                        available_slots={@available_slots}
+                        loading_slots={@loading_slots}
+                        calendar_error={@calendar_error}
+                        slot_interval_minutes={@slot_interval_minutes}
+                        duration_minutes={@duration_minutes}
+                        expanded_hour={@expanded_hour}
+                        meeting_type={@meeting_type}
+                        target={@myself}
+                      >
+                        <:loading>
+                          <div class="h-full flex items-center justify-center">
+                            <.spinner />
+                            <span class="ml-3 text-white">
+                              {dgettext("booking", "Loading available times...")}
+                            </span>
+                          </div>
+                        </:loading>
+                        <:error :let={message}>
+                          <.info_box variant={:warning}>
+                            {message}
+                          </.info_box>
+                        </:error>
+                        <:empty>
+                          <%!-- Drawn in Quill's own light-on-glass colours, so it
+                             stays local rather than using the dashboard's empty
+                             state. --%>
+                          <div class="h-full flex items-center justify-center">
+                            <div class="text-center p-4">
+                              <svg
+                                class="w-12 h-12 mx-auto mb-2 text-tymeslot-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                >
+                                </path>
+                              </svg>
+                              <p class="text-sm font-medium" style="color: rgba(255,255,255,0.8);">
+                                {dgettext("booking", "This date is fully booked")}
+                              </p>
+                              <p class="text-xs mt-1" style="color: rgba(255,255,255,0.6);">
+                                {dgettext("booking", "Please select another date")}
+                              </p>
+                            </div>
+                          </div>
+                        </:empty>
+                      </SlotList.slot_list>
+                    </div>
                   </div>
 
                   <div class="schedule-actions shrink-0" data-testid="schedule-actions">

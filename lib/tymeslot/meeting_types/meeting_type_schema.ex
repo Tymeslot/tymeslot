@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
@@ -35,6 +36,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           payment_required: boolean(),
           price_cents: integer() | nil,
           max_participants: integer(),
+          fixed_dates: boolean(),
+          one_off: boolean(),
           show_seat_availability: boolean(),
           last_spots_threshold: pos_integer() | nil,
           max_guests_per_booking: pos_integer() | nil,
@@ -77,6 +80,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
+    # See `Tymeslot.MeetingTypes.FixedDates` and `Tymeslot.MeetingTypes.OneOffEvents`.
+    field(:fixed_dates, :boolean, default: false)
+    field(:one_off, :boolean, default: false)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
     # Guests one booking may bring; nil is the overall limit (`Guests.limit_for/1`).
@@ -190,6 +196,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :payment_required,
       :price_cents,
       :max_participants,
+      :fixed_dates,
+      :one_off,
       :show_seat_availability,
       :last_spots_threshold,
       :max_guests_per_booking,
@@ -220,6 +228,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
     |> validate_group_rules()
+    |> FixedDates.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")

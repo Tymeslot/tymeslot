@@ -387,6 +387,11 @@ msgstr "Vous avez déjà un type de réunion portant ce nom"
 msgid "group bookings cannot offer more than one duration"
 msgstr "les réservations de groupe ne peuvent proposer qu'une seule durée"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "les dates fixes nécessitent les réservations de groupe"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -813,3 +818,8 @@ msgstr "doivent chacune être comprises entre %{min} et %{max} minutes"
 #, elixir-autogen, elixir-format
 msgid "must not repeat a duration"
 msgstr "ne doit pas répéter une durée"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "annulez les dates prévues avant de désactiver les dates fixes"

@@ -520,3 +520,23 @@ msgid "This is the only email you will get about this for now. If the same probl
 msgid_plural "This is the only email you will get about this for now. If the same problem is still there in %{count} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
 msgstr[0] "Dies ist vorerst die einzige E-Mail dazu. Besteht dasselbe Problem in %{count} Tag noch, hören Sie wieder davon. Ihre Video-Einstellungen zeigen den Hinweis, solange er gilt."
 msgstr[1] "Dies ist vorerst die einzige E-Mail dazu. Besteht dasselbe Problem in %{count} Tagen noch, hören Sie wieder davon. Ihre Video-Einstellungen zeigen den Hinweis, solange er gilt."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this event should go to could not be found."
+msgstr "Der Kalender, in den dieser Termin eingetragen werden sollte, wurde nicht gefunden."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The event exists in your calendar but could not be updated, so it may still show the old details."
+msgstr "Der Termin ist in Ihrem Kalender vorhanden, konnte aber nicht aktualisiert werden. Er zeigt daher möglicherweise noch die alten Angaben."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar declined to add this event. The calendar may be read-only, or the event was rejected by the calendar service."
+msgstr "Ihr Kalender hat es abgelehnt, diesen Termin einzutragen. Möglicherweise ist der Kalender schreibgeschützt, oder der Kalenderdienst hat den Termin zurückgewiesen."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar service could not be reached or did not answer properly, even after several attempts."
+msgstr "Ihr Kalenderdienst war auch nach mehreren Versuchen nicht erreichbar oder hat nicht korrekt geantwortet."

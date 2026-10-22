@@ -133,9 +133,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   # for refetches the booker did not cause a date change with (a
   # timezone change, a lost-slot retry), which must not spring a
   # deliberately collapsed `:none` back open.
+  #
+  # A day outside the month on screen (a fixed-date session further ahead)
+  # takes the calendar there, so the day picked is the day shown.
   defp select_date(socket, date) do
     socket =
-      assign(socket,
+      socket
+      |> follow_month(date)
+      |> assign(
         selected_date: date,
         selected_time: nil,
         expanded_hour: nil,
@@ -146,6 +151,27 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
     if date, do: send(self(), {:load_slots, date})
     {:noreply, socket}
   end
+
+  # A positioned calendar moves onto the month of a day picked outside the
+  # one on screen, fetching it as month navigation does but keeping the day;
+  # a day the booker cannot book (the window `anchor_on_selection/1` keeps a
+  # day by) moves nothing.
+  defp follow_month(%{assigns: %{current_year: year, current_month: month}} = socket, date)
+       when is_integer(month) and is_binary(date) do
+    with {:ok, day} <- Date.from_iso8601(date),
+         true <- {day.year, day.month} != {year, month},
+         false <-
+           CalendarHelpers.selection_out_of_window?(Map.put(socket.assigns, :selected_date, date)) do
+      socket
+      |> CalendarHelpers.anchor_on(day)
+      |> assign(month_availability_map: nil, availability_status: :not_loaded)
+      |> AvailabilityHelpers.fetch_month_availability_async()
+    else
+      _same_month_or_unbookable -> socket
+    end
+  end
+
+  defp follow_month(socket, _date), do: socket
 
   # The week grid's one click: a day and a time together. Unlike
   # `select_date/2` it keeps the time, and unlike `:select_time` a second click

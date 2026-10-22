@@ -410,6 +410,11 @@ msgstr "Typ schůzky s tímto názvem už máte"
 msgid "group bookings cannot offer more than one duration"
 msgstr "skupinové rezervace mohou nabízet jen jednu délku"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "pevné termíny vyžadují skupinové rezervace"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -838,3 +843,8 @@ msgstr "musí být každá mezi %{min} a %{max} minutami"
 #, elixir-autogen, elixir-format
 msgid "must not repeat a duration"
 msgstr "nesmí opakovat délku"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "před vypnutím pevných termínů zrušte naplánované termíny"

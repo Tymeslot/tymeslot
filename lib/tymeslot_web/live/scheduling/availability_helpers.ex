@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Tasks
   alias TymeslotWeb.Themes.Shared.ChosenLength
+  alias TymeslotWeb.Themes.Shared.Components.SessionList
 
   require Logger
 
@@ -66,6 +67,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   """
   @spec fetch_month_availability_async(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def fetch_month_availability_async(socket) do
+    socket = assign_planned_sessions(socket)
+
     if can_fetch_availability?(socket) do
       socket
       |> maybe_cancel_existing_task()
@@ -73,6 +76,17 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     else
       socket
     end
+  end
+
+  # A fixed-date type's sessions, listed above its calendar
+  # (`SessionList`). Loaded with each month fetch, the moment the page
+  # re-reads what it offers, rather than on every render.
+  defp assign_planned_sessions(socket) do
+    assign(
+      socket,
+      :planned_sessions,
+      SessionList.load(socket.assigns[:meeting_type], socket.assigns[:user_timezone] || "Etc/UTC")
+    )
   end
 
   @doc """

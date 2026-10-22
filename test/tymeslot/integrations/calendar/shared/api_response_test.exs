@@ -66,6 +66,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponseTest do
              ApiResponse.with_error_object("<html>", fn _msg, _decoded -> :unreachable end)
   end
 
+  # A bare Graph 403 carries no body at all.
+  test "an empty error body is a refusal" do
+    assert {:error, :refused, _msg} =
+             ApiResponse.with_error_object("", fn _msg, _decoded -> :unreachable end)
+  end
+
   test "a provider's own classification comes first" do
     custom = fn _response -> {:error, :gone, "Gone"} end
 

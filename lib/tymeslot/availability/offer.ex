@@ -26,13 +26,14 @@ defmodule Tymeslot.Availability.Offer do
   capture it whole and nothing here depends on the web layer.
   """
 
-  alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, TimeSlots}
+  alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, SessionSlots, TimeSlots}
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
@@ -114,17 +115,22 @@ defmodule Tymeslot.Availability.Offer do
           {:ok, [term()]} | {:error, any()}
   def slots_for_date(%{profile: %{user_id: user_id} = profile} = request, date_string, duration) do
     with {:ok, date} <- Date.from_iso8601(date_string) do
-      if demo?(request) do
-        Demo.get_available_slots(
-          date_string,
-          duration,
-          request.user_timezone,
-          user_id,
-          profile,
-          context(request)
-        )
-      else
-        free_slots(request, date, duration)
+      cond do
+        FixedDates.enabled?(request[:meeting_type]) ->
+          {:ok, SessionSlots.day_slots(request.meeting_type, date, request.user_timezone)}
+
+        demo?(request) ->
+          Demo.get_available_slots(
+            date_string,
+            duration,
+            request.user_timezone,
+            user_id,
+            profile,
+            context(request)
+          )
+
+        true ->
+          free_slots(request, date, duration)
       end
     end
   end
@@ -182,18 +188,24 @@ defmodule Tymeslot.Availability.Offer do
         end_date,
         duration_minutes
       ) do
-    if demo?(request) do
-      Demo.get_range_availability(
-        user_id,
-        start_date,
-        end_date,
-        request.user_timezone,
-        profile,
-        context(request),
-        duration_minutes
-      )
-    else
-      free_days(request, start_date, end_date, duration_minutes)
+    cond do
+      FixedDates.enabled?(request[:meeting_type]) ->
+        {:ok,
+         SessionSlots.days(request.meeting_type, start_date, end_date, request.user_timezone)}
+
+      demo?(request) ->
+        Demo.get_range_availability(
+          user_id,
+          start_date,
+          end_date,
+          request.user_timezone,
+          profile,
+          context(request),
+          duration_minutes
+        )
+
+      true ->
+        free_days(request, start_date, end_date, duration_minutes)
     end
   end
 
