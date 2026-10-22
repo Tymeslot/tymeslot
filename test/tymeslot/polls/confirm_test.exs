@@ -136,6 +136,15 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.attendee_timezone == poll.timezone
     end
 
+    test "writes the meeting's emails in the primary's language",
+         %{user: user, poll: poll, slot: slot} do
+      participant = insert(:poll_participant, poll: poll, email: "solo@example.com", locale: "de")
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.attendee_locale == "de"
+    end
+
     test "names the primary by address when they were invited without a name and never voted",
          %{user: user, poll: poll, slot: slot} do
       insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")

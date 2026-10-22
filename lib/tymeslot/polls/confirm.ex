@@ -183,6 +183,9 @@ defmodule Tymeslot.Polls.Confirm do
       attendee_name: PollParticipantSchema.display_name(primary),
       attendee_email: primary.email,
       attendee_timezone: primary.timezone || poll.timezone,
+      # The meeting carries one language for all its emails, so the primary
+      # participant's stands for everyone: guests have no locale of their own.
+      attendee_locale: primary.locale,
       calendar_integration_id: calendar_integration_id,
       video_integration_id: video_integration_id,
       guest_emails: guest_emails(poll.participants),
