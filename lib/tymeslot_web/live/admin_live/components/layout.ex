@@ -54,7 +54,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
               icon="hero-cog-6-tooth"
               title={dgettext("dashboard_admin", "Admin")}
             />
-            <p class="mb-8 -mt-2 text-base text-tymeslot-600 font-medium">
+            <p class="mt-2 mb-8 text-base text-tymeslot-600 font-medium">
               {dgettext("dashboard_admin", "Manage this self-hosted Tymeslot install.")}
             </p>
 

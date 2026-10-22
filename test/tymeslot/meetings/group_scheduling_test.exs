@@ -95,6 +95,27 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
       assert Repo.all(MeetingSchema) == []
     end
 
+    test "with :join_only, refuses rather than creates when no live meeting is there", ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      assert {:error, :slot_full} =
+               GroupScheduling.book_seat(attrs, seat_request("one@example.com"), join_only: true)
+
+      assert Repo.all(MeetingSchema) == []
+    end
+
+    test "with :join_only, still joins a live meeting", ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      {:ok, %{meeting: meeting}} =
+        GroupScheduling.book_seat(attrs, seat_request("one@example.com"))
+
+      assert {:ok, %{meeting: %{id: id}, created_meeting?: false}} =
+               GroupScheduling.book_seat(attrs, seat_request("two@example.com"), join_only: true)
+
+      assert id == meeting.id
+    end
+
     test "returns :time_conflict when another meeting blocks the window", ctx do
       blocker_start = DateTime.add(ctx.start_time, -15, :minute)
 

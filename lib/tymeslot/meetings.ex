@@ -97,7 +97,7 @@ defmodule Tymeslot.Meetings do
   defdelegate group?(meeting), to: MeetingSchema
 
   @doc "The video link the organiser joins `meeting` with, or `nil` without video."
-  defdelegate organizer_join_url(meeting), to: MeetingSchema
+  defdelegate organizer_join_url(meeting), to: Tymeslot.Meetings.JoinUrl
 
   @doc """
   `meeting` (or each of a list of meetings) with its live participants

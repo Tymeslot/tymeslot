@@ -29,8 +29,10 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias UUID
@@ -203,16 +205,47 @@ defmodule Tymeslot.Bookings.Create do
              :ok <- validate_meeting_type_active(booking_data),
              :ok <- CreateGroup.ensure_taking_seats(booking_data),
              :ok <- validate_payments_available(booking_data, user_id) do
-          config = scheduling_config(booking_data)
-
-          # Time window validation
-          with :ok <-
-                 Validation.validate_booking_time(booking_data.start_datetime, config),
-               :ok <- validate_slot_on_schedule(booking_data, config),
-               :ok <- validate_booking_limits(booking_data, user_id) do
-            validate_calendar_availability(booking_data, config)
-          end
+          validate_time(booking_data, user_id)
         end
+    end
+  end
+
+  # A fixed-date type offers only the sessions its host planned, so the time
+  # booked must be one of them, still open for registration
+  # (`Tymeslot.Meetings.PlannedSessions`). Its schedule, notice, booking
+  # limits and the host's calendar play no part: the session is the host's
+  # own plan, already on their calendar. A session that filled up has no join
+  # target, so it is refused here as a lost race would be.
+  #
+  # This reads the session unlocked; `GroupScheduling.book_seat/3` reads its
+  # registration close again under the row lock, so a booking validated just
+  # before the close that commits after it is still refused.
+  defp validate_time(booking_data, user_id) do
+    if FixedDates.enabled?(Map.get(booking_data, :meeting_type)),
+      do: validate_session(booking_data),
+      else: validate_schedule_time(booking_data, user_id)
+  end
+
+  defp validate_session(booking_data) do
+    case Map.get(booking_data, :join_target) do
+      %{planned: true} = session ->
+        if PlannedSessions.open?(session),
+          do: {:ok, :validated},
+          else: {:error, :slot_unavailable}
+
+      _no_open_session ->
+        {:error, :slot_unavailable}
+    end
+  end
+
+  defp validate_schedule_time(booking_data, user_id) do
+    config = scheduling_config(booking_data)
+
+    # Time window validation
+    with :ok <- Validation.validate_booking_time(booking_data.start_datetime, config),
+         :ok <- validate_slot_on_schedule(booking_data, config),
+         :ok <- validate_booking_limits(booking_data, user_id) do
+      validate_calendar_availability(booking_data, config)
     end
   end
 

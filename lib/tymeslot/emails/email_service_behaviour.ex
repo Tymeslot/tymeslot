@@ -32,6 +32,12 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               appointment_details()
             ) ::
               {:ok, any()} | {:error, any()}
+  @callback send_registration_closed(
+              String.t(),
+              appointment_details(),
+              [Tymeslot.Emails.Templates.RegistrationClosed.entry()]
+            ) ::
+              {:ok, any()} | {:error, any()}
   @callback send_guest_reschedule(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
   @callback send_guest_cancellation(String.t(), appointment_details()) ::

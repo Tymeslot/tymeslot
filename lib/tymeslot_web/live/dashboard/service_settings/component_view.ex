@@ -12,8 +12,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.OneOffEvents
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
+  alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
@@ -27,7 +29,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
         icon="hero-squares-2x2"
         title={dgettext("dashboard_common", "Meeting Types")}
       >
-        <:actions :if={!@show_add_form and !@editing_type and @meeting_types != []}>
+        <:actions :if={
+          !@show_add_form and !@editing_type and
+            Enum.any?(@meeting_types, &(not OneOffEvents.one_off?(&1)))
+        }>
           <MeetingTypesListComponent.add_meeting_type_button parent_myself={@myself} />
         </:actions>
         <%= if (@show_edit_overlay && @editing_type) || @show_add_form do %>
@@ -127,16 +132,28 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
             <%!-- Meeting Types Section --%>
             <div class="space-y-6">
               <MeetingTypesListComponent.meeting_types_section
-                meeting_types={@meeting_types}
+                meeting_types={Enum.reject(@meeting_types, &OneOffEvents.one_off?/1)}
                 show_add_form={@show_add_form}
                 editing_type={@editing_type}
                 currency={@payment_currency}
                 venues={@venues}
                 group_bookings_allowed={@group_bookings_allowed}
+                next_dates={@next_dates}
+                timezone={(@profile && @profile.timezone) || "Etc/UTC"}
+                time_format={@time_format}
                 payments_accepted={@payments_accepted}
                 parent_myself={@myself}
               />
             </div>
+
+            <EventsListComponent.events_section
+              events={@events}
+              booking_base_url={booking_base_url(@profile)}
+              timezone={(@profile && @profile.timezone) || "Etc/UTC"}
+              time_format={@time_format}
+              venues={@venues}
+              parent_myself={@myself}
+            />
 
             <%!-- Scheduling Settings --%>
             <div>
@@ -154,6 +171,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
           <DeleteMeetingTypeModal.delete_meeting_type_modal
             show={@show_delete_meeting_type_modal}
             meeting_type={@delete_meeting_type_modal_data}
+            sign_ups={@delete_sign_ups}
             myself={@myself}
           />
         <% end %>
