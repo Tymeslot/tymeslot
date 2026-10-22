@@ -33,7 +33,6 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Scheduling.{RescheduleContext, SeatMoveContext}
 
-  @default_duration_minutes Request.default_duration_minutes()
   @max_range_days Range.max_range_days()
 
   @typedoc """
@@ -219,7 +218,8 @@ defmodule Tymeslot.Availability.Offer do
   The resolved meeting type's current duration is authoritative. Only when
   there is none does `fallback` (a duration slug such as `"30min"`, or a
   persisted length in minutes) decide, and that is bounded to a day, with
-  anything unparseable resolving to #{@default_duration_minutes} minutes.
+  anything unparseable resolving to the default length
+  (`Offer.Request.default_duration_minutes/0`).
 
   The booking page, the booking submit and the reschedule submit all resolve
   the duration here, so the grid a time was offered from and the grid it is
@@ -311,7 +311,7 @@ defmodule Tymeslot.Availability.Offer do
           |> Request.config(
             meeting_type,
             Request.limit_checker(request, moving_uid, start_date, end_date),
-            duration_minutes || @default_duration_minutes
+            duration_minutes || Request.default_duration_minutes()
           )
 
         busy = Request.busy_periods(events, user_id, start_date, end_date, moving)
