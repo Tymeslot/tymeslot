@@ -36,7 +36,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   @spec build_params(map()) :: map()
   def build_params(assigns) do
     form_data = Map.get(assigns, :form_data) || %{}
-    booking_limits = Map.get(assigns, :booking_limits) || %{}
 
     %{
       "name" => Map.get(form_data, "name", ""),
@@ -61,11 +60,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),
       "show_seat_availability" => to_string(Map.get(assigns, :show_seat_availability, true)),
       "last_spots_threshold" => to_param(Map.get(assigns, :last_spots_threshold)),
-      "max_bookings_per_day" => to_param(booking_limits["max_bookings_per_day"]),
-      "max_bookings_per_week" => to_param(booking_limits["max_bookings_per_week"]),
-      "max_bookings_per_month" => to_param(booking_limits["max_bookings_per_month"]),
       "reminder_config" => Enum.map(assigns.reminders, &reminder_param/1)
     }
+    |> Map.merge(booking_limit_params(assigns))
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
     |> maybe_put_max_participants(assigns)
@@ -156,6 +153,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   defp to_param(nil), do: ""
   defp to_param(value), do: to_string(value)
+
+  # Each booking limit, posted empty when the host set none.
+  defp booking_limit_params(assigns) do
+    limits = Map.get(assigns, :booking_limits) || %{}
+
+    Map.new(
+      ~w(max_bookings_per_day max_bookings_per_week max_bookings_per_month),
+      &{&1, to_param(limits[&1])}
+    )
+  end
 
   # Toggle off means a solo type — the canonical param is always "1" then,
   # regardless of what the (hidden) input last held.
