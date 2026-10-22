@@ -6,6 +6,7 @@ defmodule Tymeslot.Polls.PollSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Reminders
@@ -145,6 +146,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :reminder_config,
       :meeting_type_id
     ])
+    |> start_updates_from_now()
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
     # nil as well as trim: a title of "   " arrives here as a nil *change*, and
     # `validate_required/2` is what turns it into an error.
@@ -180,6 +182,18 @@ defmodule Tymeslot.Polls.PollSchema do
 
   # Only a deadline being set is judged: an untouched one that has passed must
   # not stop the host fixing a typo in the title.
+  # Turning updates on starts them from now: a vote cast before is not news
+  # the host asked to hear, however long ago the last update went out.
+  defp start_updates_from_now(changeset) do
+    case get_change(changeset, :notify_on_vote) do
+      true ->
+        put_change(changeset, :vote_digest_sent_at, DateTime.truncate(Clock.utc_now(), :second))
+
+      _unchanged_or_off ->
+        changeset
+    end
+  end
+
   defp validate_future_deadline(changeset) do
     validate_change(changeset, :deadline_at, fn :deadline_at, deadline_at ->
       if DateTime.compare(deadline_at, DateTime.utc_now()) == :gt,

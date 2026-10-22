@@ -240,6 +240,25 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
 
       assert DateTime.compare(Repo.reload(ctx.poll).vote_digest_sent_at, since) == :eq
     end
+
+    test "turning updates on reports only the votes cast from then on", ctx do
+      Repo.update!(Changeset.change(ctx.poll, notify_on_vote: false, vote_digest_sent_at: nil))
+      now = whole_second_now()
+      voter(ctx.poll, "Before", DateTime.add(now, -600, :second))
+
+      freeze_clock(now)
+
+      assert {:ok, _poll} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{notify_on_vote: true})
+
+      voter(ctx.poll, "After", DateTime.add(now, 120, :second))
+
+      freeze_clock(DateTime.add(now, 16 * 60, :second))
+      assert :ok = perform_digest(ctx.poll)
+      assert_receive {:email, email}, 1000
+      assert email.text_body =~ "Responses from: After"
+      refute email.text_body =~ "Before"
+    end
   end
 
   defp in_hours(hours) do
