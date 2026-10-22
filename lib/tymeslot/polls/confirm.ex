@@ -83,7 +83,7 @@ defmodule Tymeslot.Polls.Confirm do
     with {:ok, poll} <- lock_poll(poll_id, user_id),
          :ok <- ensure_open(poll),
          {:ok, slot} <- resolve_slot(poll, slot_id),
-         :ok <- ensure_outside_time_off(poll, slot),
+         :ok <- TimeOff.ensure_clear(poll.user_id, slot.start_time, slot.end_time),
          {:ok, primary} <- resolve_primary(poll, slot),
          {:ok, meeting, pending} <- create_meeting(poll, slot, primary),
          {:ok, _poll} <-
@@ -128,13 +128,6 @@ defmodule Tymeslot.Polls.Confirm do
       {:ok, slot}
     else
       {:error, :slot_in_past}
-    end
-  end
-
-  defp ensure_outside_time_off(poll, slot) do
-    case TimeOff.clashing_ranges(poll.user_id, [{slot.start_time, slot.end_time}]) do
-      [] -> :ok
-      [_clash] -> {:error, :time_off}
     end
   end
 

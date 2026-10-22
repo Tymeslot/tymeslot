@@ -15,6 +15,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Bookings.{Cancel, HostMove, Reschedule, RescheduleRequest}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.{GuestQueries, Guests, GuestSchema, MeetingSchema}
@@ -238,6 +239,32 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       # padded by.
       assert {:ok, moved} = HostMove.move(ctx.meeting.uid, other.end_time, ctx.user.id)
       assert moved.start_time == other.end_time
+    end
+
+    test "refuses a time inside the host's time off, as confirming the poll does", ctx do
+      Repo.update!(Changeset.change(ctx.profile, timezone: "Etc/UTC"))
+      day = Date.add(Date.utc_today(), 5)
+      {:ok, _period} = TimeOff.create(ctx.profile.id, %{starts_on: day, ends_on: day})
+
+      assert {:error, :time_off} =
+               HostMove.move(
+                 ctx.meeting.uid,
+                 DateTime.new!(day, ~T[10:00:00], "Etc/UTC"),
+                 ctx.user.id
+               )
+
+      assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"})
+    end
+
+    test "moves onto the day before the host's time off", ctx do
+      Repo.update!(Changeset.change(ctx.profile, timezone: "Etc/UTC"))
+      day = Date.add(Date.utc_today(), 5)
+      {:ok, _period} = TimeOff.create(ctx.profile.id, %{starts_on: day, ends_on: day})
+      new_start = DateTime.new!(Date.add(day, -1), ~T[10:00:00], "Etc/UTC")
+
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
+      assert moved.start_time == new_start
     end
 
     test "refuses a time that has started", ctx do

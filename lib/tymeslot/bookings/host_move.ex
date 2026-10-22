@@ -5,8 +5,9 @@ defmodule Tymeslot.Bookings.HostMove do
 
   The host chooses the time, as they did when they confirmed the poll, so the
   schedule the booking page offers is not consulted, nor are their booking
-  limits or buffers; only another meeting of theirs overlapping that time
-  refuses it (`:slot_taken`). Everything else follows the
+  limits or buffers. Two things still refuse it, as they refuse confirming
+  the poll: their time off (`:time_off`), and another meeting of theirs
+  overlapping that time (`:slot_taken`). Everything else follows the
   reschedule path (`Tymeslot.Bookings.Reschedule.apply_new_time/5`): the
   calendar entry and any video room move, reminders are pinned to the new
   time, and the host and every guest get the new time with an updated
@@ -14,6 +15,7 @@ defmodule Tymeslot.Bookings.HostMove do
   """
 
   alias Tymeslot.Auth
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Bookings.{Errors, Policy, Reschedule}
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
@@ -22,22 +24,26 @@ defmodule Tymeslot.Bookings.HostMove do
   Moves the host's meeting `meeting_uid` to start at `new_start`.
 
   Returns `{:error, :not_managed_by_host}` for a meeting with a booker, who
-  moves it themselves, and `{:error, :slot_in_past}` for a time that has
-  started.
+  moves it themselves, `{:error, :slot_in_past}` for a time that has
+  started, and `{:error, :time_off}` for a time inside the host's time off.
   """
   @spec move(String.t(), DateTime.t(), integer()) ::
           {:ok, MeetingSchema.t()}
           | {:error,
-             Errors.classified_error() | :not_managed_by_host | :slot_in_past | String.t()}
+             Errors.classified_error()
+             | :not_managed_by_host
+             | :slot_in_past
+             | :time_off
+             | String.t()}
   def move(meeting_uid, %DateTime{} = new_start, organizer_user_id)
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
     with {:ok, original} <- fetch_meeting(meeting_uid, organizer_user_id),
          :ok <- ensure_host_managed(original),
          :ok <- Policy.can_reschedule_meeting?(original),
-         :ok <- ensure_future(new_start) do
-      Reschedule.apply_new_time(original, host_times(original, new_start), nil, %{},
-        host_chosen: true
-      )
+         :ok <- ensure_future(new_start),
+         new_times = host_times(original, new_start),
+         :ok <- TimeOff.ensure_clear(organizer_user_id, new_times.start_time, new_times.end_time) do
+      Reschedule.apply_new_time(original, new_times, nil, %{}, host_chosen: true)
     end
   end
 
