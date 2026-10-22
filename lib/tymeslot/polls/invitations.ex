@@ -58,7 +58,11 @@ defmodule Tymeslot.Polls.Invitations do
           | :recipient_rate_limited
           | :host_rate_limited
 
-  @separators ~r/[\n\r,;]+/
+  # One entry is a run of anything but a separator, where a double-quoted
+  # stretch (an RFC 5322 display name, `"Hopper, Grace" <grace@example.com>`)
+  # may hold separators too. A quote never spans lines, so an unclosed one
+  # cannot swallow the entries after it.
+  @entry ~r/(?:"[^"\n\r]*"|[^\n\r,;])+/
   @named ~r/^(.*?)\s*<\s*([^<>\s]+)\s*>$/
 
   @doc """
@@ -77,9 +81,9 @@ defmodule Tymeslot.Polls.Invitations do
              | :too_many_invitees}
   def parse(text) when is_binary(text) do
     entries =
-      text
-      |> String.split(@separators)
-      |> Enum.map(&String.trim/1)
+      @entry
+      |> Regex.scan(text)
+      |> Enum.map(fn [entry] -> String.trim(entry) end)
       |> Enum.reject(&(&1 == ""))
 
     parsed = Enum.map(entries, &{&1, parse_entry(&1)})

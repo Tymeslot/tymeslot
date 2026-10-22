@@ -42,6 +42,22 @@ defmodule Tymeslot.Polls.InvitationsTest do
       assert ada == %{name: "Ada", email: "ada@example.com"}
     end
 
+    test "reads a quoted name with a comma in it as one entry" do
+      assert {:ok, [grace, ada, alan]} =
+               Invitations.parse(
+                 ~s("Hopper, Grace" <grace@example.com>, "Lovelace, Ada" <ada@example.com>; alan@example.com)
+               )
+
+      assert grace == %{name: "Hopper, Grace", email: "grace@example.com"}
+      assert ada == %{name: "Lovelace, Ada", email: "ada@example.com"}
+      assert alan == %{name: nil, email: "alan@example.com"}
+    end
+
+    test "an unclosed quote does not swallow the entries on the lines after it" do
+      assert {:error, {:invalid_addresses, ["\"Hopper"]}} =
+               Invitations.parse("\"Hopper\nGrace <grace@example.com>")
+    end
+
     test "drops an address given twice, whatever its case" do
       assert {:ok, [%{email: "ada@example.com"}]} =
                Invitations.parse("ada@example.com\nADA@example.com")
