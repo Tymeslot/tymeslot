@@ -155,8 +155,10 @@ defmodule Tymeslot.Availability.Offer do
   The organiser's calendar reads its bookable windows from here
   (`Tymeslot.Availability.bookable_windows/4`), so the calendar and the
   booking page cannot disagree. A group type's live sessions with a seat
-  free are not added: a start is listed only where a new meeting fits. A
-  demo request is answered from the real engine like any other.
+  free are not added: a start is listed only where a new meeting fits, so a
+  fixed-date type (`Tymeslot.MeetingTypes.FixedDates`), whose planned
+  sessions are joined and never started, lists none. A demo request is
+  answered from the real engine like any other.
 
   `opts[:events]` picks where the host's calendar is read from: `:fresh`
   (the default, what `slots_for_range/4` does) asks the calendar, `:cached`

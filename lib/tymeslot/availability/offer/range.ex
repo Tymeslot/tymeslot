@@ -11,6 +11,7 @@ defmodule Tymeslot.Availability.Offer.Range do
   alias Tymeslot.Availability.Offer.Request
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.MeetingTypes.FixedDates
 
   # The longest range `Offer.slots_for_range/4` answers: six weeks, the month
   # grid's display range. A week view asks for seven days; the bound keeps a
@@ -31,10 +32,16 @@ defmodule Tymeslot.Availability.Offer.Range do
         ) ::
           {:ok, %{Date.t() => [DateTime.t()]}} | {:error, any()}
   def starts_in_range(request, %Date{} = start_date, %Date{} = end_date, duration, opts) do
-    with :ok <- check_range(start_date, end_date),
-         {:ok, %{starts: starts}} <-
-           range_starts(request, start_date, end_date, duration, opts[:events] || :fresh) do
-      {:ok, starts}
+    with :ok <- check_range(start_date, end_date) do
+      if FixedDates.enabled?(request[:meeting_type]) do
+        # A fixed-date type offers only the sessions its host planned, which
+        # are joined, never started: no new meeting fits anywhere.
+        {:ok, Map.new(Date.range(start_date, end_date), &{&1, []})}
+      else
+        with {:ok, %{starts: starts}} <-
+               range_starts(request, start_date, end_date, duration, opts[:events] || :fresh),
+             do: {:ok, starts}
+      end
     end
   end
 

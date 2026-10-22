@@ -163,6 +163,23 @@ defmodule Tymeslot.Availability.BookableWindowsTest do
                Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, saturday, saturday)
     end
 
+    # Its planned sessions are joined, never started, so the calendar shades
+    # nothing the booking page would not offer.
+    test "a fixed-date type has no windows and nothing bookable ahead", ctx do
+      fixed =
+        insert(:meeting_type,
+          user: ctx.user,
+          duration_minutes: 30,
+          fixed_dates: true,
+          max_participants: 5
+        )
+
+      assert {:ok, []} = Availability.bookable_windows(ctx.user.id, fixed.id, ctx.date, ctx.date)
+
+      assert {:ok, nil} =
+               Availability.next_bookable(ctx.user.id, fixed.id, at(ctx.date, ~T[00:00:00]))
+    end
+
     test "another user's meeting type is not found", ctx do
       other = insert(:meeting_type)
 
