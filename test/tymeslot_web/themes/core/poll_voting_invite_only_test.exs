@@ -45,6 +45,52 @@ defmodule TymeslotWeb.Themes.Core.PollVotingInviteOnlyTest do
       %{conn: conn, poll: poll, slot: slot, profile: profile}
     end
 
+    test "after the deadline the bare link shows no tallies", ctx do
+      past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+      ctx.poll |> Ecto.Changeset.change(deadline_at: past) |> Repo.update!()
+
+      {:ok, view, _html} = live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token))
+
+      assert has_element?(view, "[data-testid='poll-invite-only']")
+      refute has_element?(view, "[data-testid='poll-voting-ended']")
+      refute has_element?(view, "[data-testid='poll-slot']")
+    end
+
+    test "after the deadline a confirmed invitee still sees the final responses", ctx do
+      now = DateTime.utc_now(:second)
+
+      ctx.poll
+      |> Ecto.Changeset.change(deadline_at: DateTime.add(now, -1, :hour))
+      |> Repo.update!()
+
+      invitee =
+        insert(:poll_participant,
+          poll: ctx.poll,
+          name: "Grace",
+          confirmed_at: now,
+          invited_at: now
+        )
+
+      {:ok, view, _html} =
+        live(ctx.conn, poll_path(ctx.profile.username, ctx.poll.token) <> "?p=#{invitee.token}")
+
+      assert has_element?(view, "[data-testid='poll-voting-ended']")
+      assert has_element?(view, "[data-testid='poll-slot']")
+    end
+
+    test "after the deadline an open poll still shows the final responses", %{conn: conn} do
+      %{user: user, profile: profile} = seed_booking_account("1", "open-ended-host", "Etc/UTC")
+      past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+      poll = insert(:poll, user: user, invite_only: false, deadline_at: past)
+      insert(:poll_time_slot, poll: poll)
+
+      {:ok, view, _html} = live(conn, poll_path(profile.username, poll.token))
+
+      assert has_element?(view, "[data-testid='poll-voting-ended']")
+      assert has_element?(view, "[data-testid='poll-slot']")
+      refute has_element?(view, "[data-testid='poll-invite-only']")
+    end
+
     test "an invitee's personal link opens the vote form and saves", ctx do
       now = DateTime.utc_now(:second)
 

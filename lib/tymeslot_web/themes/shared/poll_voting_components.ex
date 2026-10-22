@@ -457,15 +457,17 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
 
   defp voting_view(%{poll: %{status: :cancelled}}), do: :closed
   defp voting_view(%{poll: %{status: :confirmed}}), do: :closed
-  defp voting_view(%{voting_open: false}), do: :voting_ended
   # Only a confirmed personal link votes on an invite-only poll. A pending
   # request's link (one that slipped in as the host switched) cannot confirm
-  # (`Tymeslot.Polls.Voting.cast_votes/4`), so it gets the notice too.
+  # (`Tymeslot.Polls.Voting.cast_votes/4`), so it gets the notice too. These
+  # come before the deadline check so a bare link never shows the tallies
+  # once voting has ended.
   defp voting_view(%{poll: %{invite_only: true}, participant: nil}), do: :invite_only
 
   defp voting_view(%{poll: %{invite_only: true}, participant: %{confirmed_at: nil}}),
     do: :invite_only
 
+  defp voting_view(%{voting_open: false}), do: :voting_ended
   defp voting_view(%{participant: nil}), do: :register
   defp voting_view(_assigns), do: :vote
 
