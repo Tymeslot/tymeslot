@@ -861,4 +861,4 @@ msgstr "Tymeslot nie mógł przenieść tej rezerwacji. Spróbuj ponownie."
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
-msgstr ""
+msgstr "Ten termin przypada w czasie nieobecności. Zmień lub usuń nieobecność, aby przenieść tu spotkanie."

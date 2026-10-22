@@ -865,4 +865,4 @@ msgstr "Tymeslot не вдалося перенести це бронюванн�
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
-msgstr ""
+msgstr "Цей час припадає на вашу відсутність. Змініть або видаліть відсутність, щоб перенести зустріч на цей час."

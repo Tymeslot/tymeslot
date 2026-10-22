@@ -855,4 +855,4 @@ msgstr "O Tymeslot não conseguiu mover este agendamento. Tente novamente."
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
-msgstr ""
+msgstr "Esse horário coincide com sua ausência. Altere ou remova a ausência para mover a reunião para lá."
