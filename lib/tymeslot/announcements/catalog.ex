@@ -50,7 +50,7 @@ defmodule Tymeslot.Announcements.Catalog do
 
   defp meeting_polls do
     %Announcement{
-      key: "meeting_polls_2026_10", # gitleaks:allow
+      key: "meeting_polls",
       title: dgettext("onboarding", "Polls that invite, confirm and keep you posted"),
       body:
         dgettext(
