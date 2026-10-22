@@ -978,3 +978,8 @@ msgid "Without a limit, each booking may bring up to %{count} guest."
 msgid_plural "Without a limit, each booking may bring up to %{count} guests."
 msgstr[0] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gast mitbringen."
 msgstr[1] "Ohne Begrenzung darf jede Buchung bis zu %{count} Gäste mitbringen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the planned dates to turn group bookings off."
+msgstr "Sagen Sie die geplanten Termine ab, um Gruppenbuchungen auszuschalten."

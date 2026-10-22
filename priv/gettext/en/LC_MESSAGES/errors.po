@@ -793,3 +793,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr ""
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr ""

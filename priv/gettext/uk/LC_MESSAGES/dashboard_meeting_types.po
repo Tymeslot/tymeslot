@@ -413,3 +413,19 @@ msgstr "Не з’явиться на сторінці бронювання, д�
 #, elixir-autogen
 msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
 msgstr "Цей тип зустрічі не пропонується гостям, доки ви знову не підключите прийом оплати. Наявні бронювання залишаються без змін."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Its upcoming date is cancelled."
+msgid_plural "Its %{count} upcoming dates are cancelled."
+msgstr[0] "Буде скасовано %{count} майбутню дату цього типу."
+msgstr[1] "Буде скасовано %{count} майбутні дати цього типу."
+msgstr[2] "Буде скасовано %{count} майбутніх дат цього типу."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The %{count} person who signed up is told by email."
+msgid_plural "The %{count} people who signed up are told by email."
+msgstr[0] "%{count} зареєстрована особа отримає сповіщення електронною поштою."
+msgstr[1] "%{count} зареєстровані особи отримають сповіщення електронною поштою."
+msgstr[2] "%{count} зареєстрованих осіб отримають сповіщення електронною поштою."

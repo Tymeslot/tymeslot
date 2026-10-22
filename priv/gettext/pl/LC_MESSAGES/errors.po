@@ -815,3 +815,8 @@ msgstr "Odpowiedź jest za długa"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Nieznany typ pola"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "odwołaj zaplanowane terminy przed wyłączeniem stałych terminów"

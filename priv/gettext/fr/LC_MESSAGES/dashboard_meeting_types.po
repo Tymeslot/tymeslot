@@ -410,3 +410,17 @@ msgstr "N’apparaît pas sur votre page de réservation tant qu’aucune de ses
 #, elixir-autogen
 msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
 msgstr "Ce type de réunion n'est pas proposé aux invités tant que les paiements ne sont pas reconnectés. Les réservations existantes ne sont pas concernées."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Its upcoming date is cancelled."
+msgid_plural "Its %{count} upcoming dates are cancelled."
+msgstr[0] "Sa date à venir est annulée."
+msgstr[1] "Ses %{count} dates à venir sont annulées."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The %{count} person who signed up is told by email."
+msgid_plural "The %{count} people who signed up are told by email."
+msgstr[0] "La personne inscrite est prévenue par e-mail."
+msgstr[1] "Les %{count} personnes inscrites sont prévenues par e-mail."

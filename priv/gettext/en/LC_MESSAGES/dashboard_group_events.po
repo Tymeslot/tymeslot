@@ -115,3 +115,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You already have a booking at that time."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "An event lasts a multiple of %{step} minutes."
+msgstr ""
