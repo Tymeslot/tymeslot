@@ -139,6 +139,20 @@ defmodule Tymeslot.Meetings.GuestQueries do
 
   @doc """
   Lists the guests belonging to one participant whose confirmation email has
+  gone out, oldest first. A follow-up about the meeting (such as a moved
+  session) goes only to these: a guest never told of the booking must not
+  learn of it from a change notice.
+  """
+  @spec list_notified_for_participant(binary()) :: [Guest.t()]
+  def list_notified_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id and not is_nil(g.confirmation_sent_at))
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the guests belonging to one participant whose confirmation email has
   not yet been sent.
   """
   @spec list_unsent_for_participant(binary()) :: [Guest.t()]
@@ -177,6 +191,30 @@ defmodule Tymeslot.Meetings.GuestQueries do
     {count, _rows} =
       Guest
       |> where([g], g.meeting_id == ^meeting_id)
+      |> Repo.update_all(
+        set: [
+          status: "pending",
+          responded_at: nil,
+          reminders_sent: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    count
+  end
+
+  @doc """
+  `reset_for_new_time/1` for a planned session its host moved
+  (`Tymeslot.Meetings.SessionMove`): the guests answer for the new time,
+  except that a guest who declined keeps their answer. They are told the
+  new time like everyone else and can still say yes, which then has to
+  find a free seat; reset to pending, they would take one unasked.
+  """
+  @spec reset_for_moved_session(binary()) :: non_neg_integer()
+  def reset_for_moved_session(meeting_id) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id and g.status != "declined")
       |> Repo.update_all(
         set: [
           status: "pending",

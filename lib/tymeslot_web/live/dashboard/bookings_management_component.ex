@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     case ModalMeeting.fetch(
            socket.assigns.current_user.id,
            params,
-           &Policy.can_reschedule_meeting?/1
+           &Policy.can_request_reschedule?/1
          ) do
       {:ok, meeting} ->
         :telemetry.execute(

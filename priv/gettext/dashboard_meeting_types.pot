@@ -58,6 +58,7 @@ msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessa
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr ""
@@ -86,6 +87,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
@@ -97,6 +99,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
@@ -322,6 +325,7 @@ msgid "Paused"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr ""
@@ -332,16 +336,91 @@ msgid "Delete meeting type"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Over"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration open"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr ""
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
+msgid "Next date: %{date}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
 msgid "Not offered"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
+msgid "No open dates"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
 msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Its upcoming date is cancelled."
+msgid_plural "Its %{count} upcoming dates are cancelled."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The %{count} person who signed up is told by email."
+msgid_plural "The %{count} people who signed up are told by email."
+msgstr[0] ""
+msgstr[1] ""
