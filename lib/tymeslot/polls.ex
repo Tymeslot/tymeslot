@@ -186,9 +186,11 @@ defmodule Tymeslot.Polls do
           :ok | {:error, :not_found | :not_open | :no_username | Invitations.resend_error()}
   def resend_invitation(id, user_id, participant_id) do
     with {:ok, participant_id} <- cast_participant_id(participant_id),
-         :ok <- ensure_username(user_id, [participant_id]),
          {:ok, _poll} <-
-           with_open_poll_locked(id, user_id, &Invitations.resend(&1, participant_id)) do
+           with_open_poll_locked(id, user_id, fn poll ->
+             with :ok <- ensure_username(user_id, [participant_id]),
+                  do: Invitations.resend(poll, participant_id)
+           end) do
       :ok
     end
   end
@@ -249,14 +251,11 @@ defmodule Tymeslot.Polls do
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def invite_participants(id, user_id, entries) do
-    with :ok <- ensure_username(user_id, entries),
-         {:ok, result} <-
+    with {:ok, result} <-
            with_open_poll_locked(id, user_id, fn poll ->
-             if voting_open?(poll) do
-               {:ok, Invitations.insert(poll, entries)}
-             else
-               {:error, :voting_closed}
-             end
+             with :ok <- ensure_voting_open(poll),
+                  :ok <- ensure_username(user_id, entries),
+                  do: {:ok, Invitations.insert(poll, entries)}
            end) do
       :ok = Invitations.send_invitations(result.invited)
       {:ok, result}
@@ -529,6 +528,9 @@ defmodule Tymeslot.Polls do
       _profile -> {:error, :no_username}
     end
   end
+
+  defp ensure_voting_open(poll),
+    do: if(voting_open?(poll), do: :ok, else: {:error, :voting_closed})
 
   defp cast_participant_id(participant_id) do
     case UUID.cast(participant_id) do
