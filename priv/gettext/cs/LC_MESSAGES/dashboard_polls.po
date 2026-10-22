@@ -783,3 +783,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your own address is on this poll as a participant, and the meeting can't be sent to you as a guest. Remove yourself from the participants and try again."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closed"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closed %{deadline}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closes %{deadline}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Confirm a time, or move the deadline in Edit poll to let people keep voting."
+msgstr ""

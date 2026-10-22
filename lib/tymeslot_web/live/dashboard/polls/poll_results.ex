@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   alias TymeslotWeb.Dashboard.Polls.PollInvite
   alias TymeslotWeb.Dashboard.Polls.PollShareLink
   alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @responses [:yes, :if_need_be, :no]
   @bar_responses [:yes, :if_need_be, :no, :none]
@@ -149,7 +150,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         </div>
       </div>
 
-      <.state_banner poll={@poll} meetings_path={@meetings_path} />
+      <.state_banner poll={@poll} voting_open?={@voting_open?} meetings_path={@meetings_path} />
+
+      <p
+        :if={@open? && @poll.deadline_at}
+        class="flex items-center gap-1.5 text-token-sm text-tymeslot-600"
+        data-testid="poll-deadline"
+      >
+        <Icons.icon name="hero-clock-mini" class="w-4 h-4 text-tymeslot-400 shrink-0" />
+        {deadline_line(@poll, @voting_open?)}
+      </p>
 
       <p
         :if={@slot_health_loading}
@@ -249,6 +259,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   # --- Lifecycle banner ---
 
   attr :poll, :map, required: true
+  attr :voting_open?, :boolean, required: true
   attr :meetings_path, :string, required: true
 
   defp state_banner(%{poll: %{status: :confirmed}} = assigns) do
@@ -275,9 +286,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     """
   end
 
+  # Past its deadline an open poll takes no more votes but still waits for
+  # the host to confirm a time; moving the deadline lets people vote again.
+  defp state_banner(%{voting_open?: false} = assigns) do
+    ~H"""
+    <div
+      class="rounded-token-lg bg-amber-50 border border-amber-100 px-4 py-3 text-token-sm text-amber-800 flex items-center gap-2"
+      data-testid="poll-state-banner"
+    >
+      <Icons.icon name="hero-clock" class="w-5 h-5 text-amber-500 shrink-0" />
+      <span>{dgettext(
+        "dashboard_polls",
+        "Voting has closed. Confirm a time, or move the deadline in Edit poll to let people keep voting."
+      )}</span>
+    </div>
+    """
+  end
+
   defp state_banner(assigns) do
     ~H"""
-    <div class="rounded-token-lg bg-turquoise-50 border border-turquoise-100 px-4 py-3 text-token-sm text-turquoise-800 flex items-center gap-2">
+    <div
+      class="rounded-token-lg bg-turquoise-50 border border-turquoise-100 px-4 py-3 text-token-sm text-turquoise-800 flex items-center gap-2"
+      data-testid="poll-state-banner"
+    >
       <Icons.icon name="hero-hand-raised" class="w-5 h-5 text-turquoise-500 shrink-0" />
       <span>{dgettext(
         "dashboard_polls",
@@ -285,6 +316,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       )}</span>
     </div>
     """
+  end
+
+  defp deadline_line(poll, voting_open?) do
+    deadline = LocalizationHelpers.format_meeting_datetime(poll.deadline_at, poll.timezone)
+
+    if voting_open?,
+      do: dgettext("dashboard_polls", "Voting closes %{deadline}", deadline: deadline),
+      else: dgettext("dashboard_polls", "Voting closed %{deadline}", deadline: deadline)
   end
 
   # --- Slot summary card ---

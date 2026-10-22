@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
               {@poll.title}
             </h2>
-            <.status_pill status={@poll.status} />
+            <.status_pill status={status(@poll)} />
           </div>
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-token-xs text-tymeslot-600">
@@ -164,15 +164,27 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   @spec status_pill(map()) :: Phoenix.LiveView.Rendered.t()
   defp status_pill(assigns) do
     ~H"""
-    <Feedback.pill tone={status_tone(@status)} uppercase>{status_label(@status)}</Feedback.pill>
+    <Feedback.pill tone={status_tone(@status)} uppercase data-testid="poll-status">
+      {status_label(@status)}
+    </Feedback.pill>
     """
   end
 
+  # An open poll past its deadline takes no more votes, though it still
+  # waits for the host to confirm a time.
+  defp status(%{status: :open} = poll) do
+    if Polls.voting_open?(poll), do: :open, else: :voting_closed
+  end
+
+  defp status(%{status: status}), do: status
+
   defp status_tone(:open), do: :brand
+  defp status_tone(:voting_closed), do: :warning
   defp status_tone(:confirmed), do: :info
   defp status_tone(:cancelled), do: :neutral
 
   defp status_label(:open), do: dgettext("dashboard_polls", "Open")
+  defp status_label(:voting_closed), do: dgettext("dashboard_polls", "Voting closed")
   defp status_label(:confirmed), do: dgettext("dashboard_polls", "Confirmed")
   defp status_label(:cancelled), do: dgettext("dashboard_polls", "Cancelled")
 
