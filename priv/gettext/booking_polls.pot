@@ -220,3 +220,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This poll is by invitation only, and voting has closed."
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This personal voting link isn't valid or no longer works."
+msgstr ""

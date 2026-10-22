@@ -99,6 +99,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       voting_open={@voting_open}
       participant={@participant}
       link_request={@link_request}
+      invalid_link={@invalid_link}
     />
     """
   end

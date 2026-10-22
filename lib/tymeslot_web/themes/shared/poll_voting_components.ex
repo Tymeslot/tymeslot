@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
   attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
+  attr :invalid_link, :boolean, default: false
 
   @doc """
   Renders the whole voting page body, choosing the right view from poll state.
@@ -61,6 +62,16 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           <span>{tz(@poll)}</span>
         </p>
       </div>
+
+      <%!-- A personal link that matches nobody on this poll (mistyped, or
+            its holder was removed) falls back to the bare link's view; say
+            so, or the visitor cannot tell why their responses are gone. --%>
+      <p :if={@invalid_link} class="poll-invalid-link" role="status" data-testid="poll-invalid-link">
+        <.icon name="hero-exclamation-triangle" class="poll-invalid-link-icon" />
+        <span>
+          {dgettext("booking_polls", "This personal voting link isn't valid or no longer works.")}
+        </span>
+      </p>
 
       <%= case @view do %>
         <% :closed -> %>

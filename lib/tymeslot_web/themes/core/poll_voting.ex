@@ -48,7 +48,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   The participant is resolved from the `"p"` param (a participant token) only
   when that participant belongs to this poll; a token from another poll is
   ignored and the participant is left `nil`, so identity can never leak across
-  polls. Subscribes to poll updates once the socket is connected.
+  polls; `invalid_link` then tells the page to say the link did not work.
+  Subscribes to poll updates once the socket is connected.
 
   Also keeps the timezone the visitor's browser reported when the socket
   connected (`voter_timezone`), which a link request stores on the
@@ -58,12 +59,14 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   @spec assign_poll_state(socket(), Polls.PollSchema.t(), map()) :: socket()
   def assign_poll_state(socket, poll, params) do
     if connected?(socket), do: Polls.subscribe(poll.id)
+    participant = Voting.get_participant(poll, params["p"])
 
     assign(socket,
       poll: poll,
       tallies: Polls.tallies(poll),
       voting_open: Polls.voting_open?(poll),
-      participant: Voting.get_participant(poll, params["p"]),
+      participant: participant,
+      invalid_link: params["p"] not in [nil, ""] and is_nil(participant),
       link_request: nil,
       voter_timezone: browser_timezone(socket)
     )

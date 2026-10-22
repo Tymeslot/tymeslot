@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert socket.assigns.voting_open == true
       assert map_size(socket.assigns.tallies) == 1
       assert socket.assigns.participant == nil
+      refute socket.assigns.invalid_link
     end
 
     test "resolves the ?p= token to the poll's participant" do
@@ -46,6 +47,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => participant.token})
 
       assert socket.assigns.participant.id == participant.id
+      refute socket.assigns.invalid_link
     end
 
     test "ignores a token that belongs to a different poll" do
@@ -57,6 +59,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => other_participant.token})
 
       assert socket.assigns.participant == nil
+      assert socket.assigns.invalid_link
     end
 
     test "ignores an unknown token" do
@@ -66,6 +69,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => "does-not-exist"})
 
       assert socket.assigns.participant == nil
+      assert socket.assigns.invalid_link
     end
   end
 

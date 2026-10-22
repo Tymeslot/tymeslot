@@ -84,6 +84,27 @@ html.scheduling-app .poll-deadline-icon {
   color: var(--theme-warning);
 }
 
+/* A personal link that matches nobody on the poll */
+html.scheduling-app .poll-invalid-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--poll-panel-surface);
+  border: var(--border-width-thin) solid var(--line-1);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-invalid-link-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--theme-warning);
+}
+
 /* Registration form */
 html.scheduling-app .poll-identity-form {
   display: flex;
