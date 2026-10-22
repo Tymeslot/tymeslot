@@ -286,10 +286,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("form_change", %{"poll" => params}, socket) do
+  def handle_event("form_change", %{"poll" => params} = event, socket) do
     meeting_type_id = Map.get(params, "meeting_type_id", socket.assigns.meeting_type_id)
     duration = resolve_duration(params, meeting_type_id, socket)
-    {access, access_chosen?} = resolve_access(params, socket)
+    {access, access_chosen?} = resolve_access(params, event["_target"], socket)
 
     {:noreply,
      socket
@@ -436,7 +436,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
       reminder_config: PollReminders.to_config(socket.assigns.reminder_picker),
-      invite_only: params |> resolve_access(socket) |> elem(0) |> PollAccess.invite_only?(),
+      invite_only: params |> resolve_access(nil, socket) |> elem(0) |> PollAccess.invite_only?(),
       slots: build_slots(Map.get(params, "slots", %{}), timezone)
     }
   end
@@ -499,22 +499,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   # --- Who can vote ---
 
   # The host's choice, or until they make one, the default for the invitees
-  # typed so far. The form always sends whichever radio is checked, so a
-  # submitted value counts as a choice only when it differs from the one on
-  # screen.
-  defp resolve_access(params, socket) do
-    %{access: shown, access_chosen?: chosen?} = socket.assigns
+  # typed so far. The form always sends whichever radio is checked, and a
+  # change event can carry the value the page showed before the server's
+  # default flipped, so only a change the radio itself triggered is a choice.
+  # A submit (no target) keeps the host's choice, or else the default.
+  defp resolve_access(%{"access" => value}, ["poll", "access"], _socket)
+       when value in ["anyone", "invited"],
+       do: {value, true}
 
-    case Map.get(params, "access") do
-      value when value in ["anyone", "invited"] and value != shown ->
-        {value, true}
+  defp resolve_access(_params, _target, %{assigns: %{access: shown, access_chosen?: true}}),
+    do: {shown, true}
 
-      _same when chosen? ->
-        {shown, true}
-
-      _same ->
-        {default_access(Map.get(params, "invitees", socket.assigns.invitees)), false}
-    end
+  defp resolve_access(params, _target, socket) do
+    {default_access(Map.get(params, "invitees", socket.assigns.invitees)), false}
   end
 
   # An unreadable list is still a list of people the host means to invite.
