@@ -11,8 +11,8 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema

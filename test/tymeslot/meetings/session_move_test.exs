@@ -178,7 +178,8 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
       {:ok, "sent"}
     end)
 
-    expect(Tymeslot.EmailServiceMock, :send_guest_reschedule, 2, fn "charles@example.com", _ ->
+    expect(Tymeslot.EmailServiceMock, :send_guest_reschedule, 2, fn "charles@example.com",
+                                                                    _details ->
       case Process.get(:guest_attempts, 0) do
         0 ->
           Process.put(:guest_attempts, 1)
