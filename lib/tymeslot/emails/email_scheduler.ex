@@ -15,6 +15,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
   - `PollScheduler`: poll deadline reminders and host nudges
+  - `SessionScheduler`: a planned session's participant list, at its
+    registration close
   - `IntegrationScheduler` — integration health notifications and admin alerts
 
   Callers should reference this module directly — no delegation functions exist
@@ -28,6 +30,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.EmailScheduler.SessionScheduler
 
   # Meeting emails
 
@@ -108,6 +111,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   defdelegate schedule_calendar_invitation(params), to: CalendarScheduler
   defdelegate schedule_event_update_notification(params), to: CalendarScheduler
+
+  # Planned sessions
+
+  defdelegate schedule_registration_closed(session), to: SessionScheduler
 
   # Poll emails
 

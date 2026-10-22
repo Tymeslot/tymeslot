@@ -15,10 +15,11 @@ defmodule Tymeslot.Meetings.SessionMove do
   future, the host has no other booking then, and registration closes no
   later than the start. It then owes what any rescheduled meeting does:
   the host's calendar event and the video room follow the new time, the
-  reminders are pinned to it again, each seat's calendar entry gets a new
-  revision, and every participant (and their guests) is emailed the new
-  time with an updated calendar entry, one job per seat
-  (`Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails`). Guests'
+  reminders and the host's participant list are pinned to it again, each
+  seat's calendar entry gets a new revision, and every participant (and
+  their guests) is emailed the new time with an updated calendar entry,
+  one job per seat
+  (`Tymeslot.Notifications.Email.GroupMeetingEmails`). Guests'
   answers applied to the old time and are reset, except a decline, which
   stands until the guest answers again.
   """
@@ -113,6 +114,7 @@ defmodule Tymeslot.Meetings.SessionMove do
 
   defp after_move(moved, original) do
     SeatEffects.broadcast_and_invalidate(moved)
+    :ok = EmailScheduler.schedule_registration_closed(moved)
     sync_video_room(moved)
     repin_reminders(moved)
     tell_participants(moved, original)

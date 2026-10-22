@@ -194,6 +194,7 @@ msgstr "Cieszę się na nasze spotkanie!"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "SZCZEGÓŁY SPOTKANIA:"
@@ -558,6 +559,7 @@ msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "Spotkanie, na które zaprasza cię %{organizer}, zostało przeniesione na nowy termin."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
 msgstr "Otwórz w panelu"
@@ -686,6 +688,92 @@ msgstr "Sprawdź obraz i dźwięk, jeśli spotkanie jest online"
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (before Stripe processing fees)"
 msgstr "Otrzymano: %{amount} (przed odliczeniem opłat Stripe)"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person signed up for %{event}. Here is who is coming."
+msgid_plural "%{count} people signed up for %{event}. Here is who is coming."
+msgstr[0] "Na %{event} zapisała się %{count} osoba. Oto kto przyjdzie."
+msgstr[1] "Na %{event} zapisały się %{count} osoby. Oto kto przyjdzie."
+msgstr[2] "Na %{event} zapisało się %{count} osób. Oto kto przyjdzie."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "%{taken} of %{count} spot taken"
+msgid_plural "%{taken} of %{count} spots taken"
+msgstr[0] "Zajęte miejsca: %{taken} z %{count}"
+msgstr[1] "Zajęte miejsca: %{taken} z %{count}"
+msgstr[2] "Zajęte miejsca: %{taken} z %{count}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Company"
+msgstr "Firma"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "E-mail"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Goście"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Guests: %{guests}"
+msgstr "Goście: %{guests}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Message"
+msgstr "Wiadomość"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Message: %{message}"
+msgstr "Wiadomość: %{message}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Imię i nazwisko"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody signed up for %{event}. If it is not going ahead, you can cancel it in your dashboard."
+msgstr "Nikt nie zapisał się na %{event}. Jeśli wydarzenie się nie odbędzie, można je odwołać w panelu."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Uczestnicy"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Telefon"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Zapisy zamknięte"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed: %{event} - %{date}"
+msgstr "Zapisy zamknięte: %{event} - %{date}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration has closed"
+msgstr "Zapisy zostały zamknięte"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "The list is also attached as a CSV file for a spreadsheet."
+msgstr "Lista jest też załączona jako plik CSV do arkusza kalkulacyjnego."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
