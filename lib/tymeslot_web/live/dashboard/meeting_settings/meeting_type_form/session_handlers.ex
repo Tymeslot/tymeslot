@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave
 
   @doc "Assigns the type's planned dates, the host's time zone and the input row's state."
@@ -77,17 +78,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   @spec rows(map() | nil) :: [map()]
   def rows(%{id: id} = type) when is_integer(id) do
     now = Clock.utc_now()
+    sessions = PlannedSessions.list(type)
+    counts = sessions |> Enum.map(& &1.id) |> Seats.counts_by_meeting()
 
-    type
-    |> PlannedSessions.list()
-    |> Enum.map(fn session ->
+    Enum.map(sessions, fn session ->
+      %{participants: participants, seats_taken: seats_taken} = counts[session.id]
+
       %{
         id: session.id,
         start_time: session.start_time,
         registration_closes_at: session.registration_closes_at,
         capacity: session.capacity,
-        seats_taken: Seats.seats_taken(session.id),
-        participants: PlannedSessions.participant_count(session),
+        seats_taken: seats_taken,
+        participants: participants,
         past?: DateTime.compare(session.start_time, now) != :gt,
         open?: PlannedSessions.open?(session, now)
       }
@@ -144,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
          {:ok, starts_at} <- parse_start(input, timezone),
          {:ok, closes_at} <- parse_close(input["closes_at"], timezone),
          {:ok, _session} <-
-           PlannedSessions.add(type, starts_at, registration_closes_at: closes_at) do
+           PlannedSessions.add(type, user_id, starts_at, registration_closes_at: closes_at) do
       socket
       |> Component.assign(new_session: %{}, session_error: nil)
       |> assign_sessions()
@@ -154,12 +157,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     end
   end
 
+  @doc """
+  Cancels a date nobody is booked on at once, and asks first otherwise. The
+  count is read at the click, not from the rows on screen, so a date someone
+  booked a moment ago asks too; the rows are refreshed with it, so the
+  question names everyone booked.
+  """
   @spec ask_to_cancel(String.t(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def ask_to_cancel(id, socket) do
-    case Enum.find(socket.assigns[:session_rows] || [], &(&1.id == id)) do
-      %{participants: 0} -> cancel(id, socket)
-      %{} -> Component.assign(socket, :confirming_session_id, id)
-      nil -> socket
+    case owned_session(socket, id) do
+      nil ->
+        socket
+
+      session ->
+        if PlannedSessions.participant_count(session) == 0,
+          do: cancel(id, socket),
+          else: socket |> Component.assign(:confirming_session_id, id) |> assign_sessions()
     end
   end
 
@@ -169,17 +182,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   @doc "Cancels a planned date of this type, telling everyone booked on it."
   @spec cancel(String.t(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def cancel(id, socket) do
-    user_id = socket.assigns.current_user.id
-    type_id = socket.assigns.type && socket.assigns.type.id
-
-    with %{} = type <- type_id && MeetingTypes.get_meeting_type(type_id, user_id),
-         %{} = session <- Enum.find(PlannedSessions.list(type), &(&1.id == id)) do
-      PlannedSessions.cancel(session, user_id)
+    with %{} = session <- owned_session(socket, id) do
+      PlannedSessions.cancel(session, socket.assigns.current_user.id)
     end
 
     socket
     |> Component.assign(:confirming_session_id, nil)
     |> assign_sessions()
+  end
+
+  # The planned date `id` of the form's type, re-read and scoped to the host,
+  # or nil for an id that is not one of theirs.
+  defp owned_session(socket, id) do
+    user_id = socket.assigns.current_user.id
+    type_id = socket.assigns.type && socket.assigns.type.id
+
+    with %{} = type <- type_id && MeetingTypes.get_meeting_type(type_id, user_id) do
+      Enum.find(PlannedSessions.list(type), &(&1.id == id))
+    end
   end
 
   # Opens a row for editing, prefilled with its date, time and registration
@@ -208,7 +228,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
          {:ok, closes_at} <- parse_close(input["closes_at"], timezone),
          %{} = type <- type && MeetingTypes.get_meeting_type(type.id, user_id),
          %{} = session <- Enum.find(PlannedSessions.list(type), &(&1.id == id)),
-         {:ok, _session} <- apply_edit(session, starts_at, closes_at) do
+         {:ok, _session} <- apply_edit(session, user_id, starts_at, closes_at) do
       socket
       |> Component.assign(:editing_session, nil)
       |> assign_sessions()
@@ -223,20 +243,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
 
   defp save_edit(socket), do: socket
 
-  defp apply_edit(session, starts_at, closes_at) do
+  defp apply_edit(session, user_id, starts_at, closes_at) do
     if DateTime.compare(starts_at, session.start_time) == :eq,
-      do: PlannedSessions.set_registration_close(session, closes_at),
-      else: PlannedSessions.move(session, starts_at, closes_at)
+      do: PlannedSessions.set_registration_close(session, user_id, closes_at),
+      else: PlannedSessions.move(session, user_id, starts_at, closes_at)
   end
 
   defp local_input(datetime, timezone),
     do: datetime |> DateTime.shift_zone!(timezone) |> Calendar.strftime("%Y-%m-%dT%H:%M")
 
+  # A local time the clock change skips or repeats resolves as everywhere
+  # else in the app (`DateTimeUtils.resolve_local/3`): to the end of the
+  # gap, or to its first occurrence.
   defp parse_start(%{"date" => date, "time" => time}, timezone)
        when is_binary(date) and is_binary(time) do
     with {:ok, date} <- Date.from_iso8601(date),
          {:ok, time} <- Time.from_iso8601(pad_seconds(time)),
-         {:ok, local} <- DateTime.new(date, time, timezone) do
+         {:ok, local} <- DateTimeUtils.resolve_local(date, time, timezone) do
       {:ok, DateTime.shift_zone!(local, "Etc/UTC")}
     else
       _invalid -> {:error, :invalid_start}
@@ -251,7 +274,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     with [date, time] <- String.split(value, "T", parts: 2),
          {:ok, date} <- Date.from_iso8601(date),
          {:ok, time} <- Time.from_iso8601(pad_seconds(time)),
-         {:ok, local} <- DateTime.new(date, time, timezone) do
+         {:ok, local} <- DateTimeUtils.resolve_local(date, time, timezone) do
       {:ok, DateTime.shift_zone!(local, "Etc/UTC")}
     else
       _invalid -> {:error, :invalid_registration_close}

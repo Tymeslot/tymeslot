@@ -45,3 +45,13 @@ msgstr "Iscrizioni fino al %{datetime}"
 #, elixir-autogen, elixir-format
 msgid "This event has ended."
 msgstr "Questo evento è terminato."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "All dates are fully booked."
+msgstr "Tutte le date sono al completo."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "None of the dates can be booked any more."
+msgstr "Nessuna delle date è più prenotabile."

@@ -46,7 +46,15 @@ defmodule Tymeslot.Emails.EmailScheduler.SessionScheduler do
           keys: [:action, :meeting_id],
           states: :incomplete
         ],
-        replace: [scheduled: [:scheduled_at], available: [:scheduled_at]]
+        # A retryable list has a backoff time in `scheduled_at`; a moved
+        # close replaces it too, so the list goes at the new close rather
+        # than waiting out the backoff. The job keeps its id, so its
+        # `DeliveryClaims` still stop a retry re-sending a copy that went.
+        replace: [
+          scheduled: [:scheduled_at],
+          available: [:scheduled_at],
+          retryable: [:scheduled_at]
+        ]
       )
 
     _result = Helpers.insert(job, meeting_id: session.id)

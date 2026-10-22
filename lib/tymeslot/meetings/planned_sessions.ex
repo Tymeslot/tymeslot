@@ -11,6 +11,11 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   reminders and video room are its own, and the host cancels it like any
   other group meeting, telling everyone booked on it.
 
+  Every function that changes a session takes the acting user's id and
+  refuses with `{:error, :not_found}` a type or session that user does not
+  own, so a caller that read the struct carelessly cannot act on another
+  host's plan.
+
   What is different is that the session exists because it was planned, not
   because somebody booked it:
 
@@ -21,7 +26,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
       or, without one, at its start (`open?/2`), rather than by the type's
       availability schedule;
     * the host moves it from the meeting type, with everyone on it
-      (`move/3`), rather than asking each participant to book again;
+      (`move/4`), rather than asking each participant to book again;
     * when registration closes, the host is emailed who signed up
       (`Tymeslot.Notifications.Email.PlannedSessionEmails`).
   """
@@ -58,6 +63,28 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   def upcoming(%{id: meeting_type_id}, now \\ Clock.utc_now()),
     do: GroupMeetingQueries.list_planned_for_type(meeting_type_id, now)
 
+  @doc """
+  `list/1` for each of `meeting_types` in one query, keyed by type id; a
+  type without sessions maps to `[]`.
+  """
+  @spec list_by_type([map()]) :: %{integer() => [Meeting.t()]}
+  def list_by_type(meeting_types), do: by_type(meeting_types, nil)
+
+  @doc "`upcoming/2` for each of `meeting_types` in one query, keyed by type id."
+  @spec upcoming_by_type([map()], DateTime.t()) :: %{integer() => [Meeting.t()]}
+  def upcoming_by_type(meeting_types, now \\ Clock.utc_now()), do: by_type(meeting_types, now)
+
+  defp by_type(meeting_types, from) do
+    ids = Enum.map(meeting_types, & &1.id)
+
+    grouped =
+      ids
+      |> GroupMeetingQueries.list_planned_for_types(from)
+      |> Enum.group_by(& &1.meeting_type_id)
+
+    Map.new(ids, &{&1, Map.get(grouped, &1, [])})
+  end
+
   @doc "How many people are booked on `session`: its live participants, not their guests."
   @spec participant_count(Meeting.t()) :: non_neg_integer()
   def participant_count(%Meeting{id: id}), do: ParticipantQueries.count_live_for_meeting(id)
@@ -79,8 +106,9 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   end
 
   @doc """
-  Plans a session of `meeting_type` starting at `starts_at` (UTC), lasting
-  the type's duration and holding its participant limit.
+  Plans a session of `meeting_type`, which `user_id` must own, starting at
+  `starts_at` (UTC), lasting the type's duration and holding its
+  participant limit.
 
   `:registration_closes_at` is optional; when given it must lie in the
   future and not after the start. The session must not overlap another of
@@ -90,8 +118,11 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   Once it is stored, its calendar event, reminders and video room are
   scheduled exactly as for a slot a first booking created.
   """
-  @spec add(map(), DateTime.t(), keyword()) :: {:ok, Meeting.t()} | {:error, add_error()}
-  def add(meeting_type, %DateTime{} = starts_at, opts \\ []) do
+  @spec add(map(), integer(), DateTime.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_found | add_error()}
+  def add(meeting_type, user_id, starts_at, opts \\ [])
+
+  def add(%{user_id: user_id} = meeting_type, user_id, %DateTime{} = starts_at, opts) do
     now = Keyword.get(opts, :now, Clock.utc_now())
     starts_at = DateTime.truncate(starts_at, :second)
 
@@ -113,18 +144,28 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     end
   end
 
+  def add(_meeting_type, _user_id, _starts_at, _opts), do: {:error, :not_found}
+
   @doc """
-  Moves when registration for `session` closes: to `closes_at`, or to its
-  start when `nil`.
+  Moves when registration for `session`, which `user_id` must own, closes:
+  to `closes_at`, or to its start when `nil`.
 
   Any time up to the start will do, so the host can extend registration,
   reopen it, or close it at once with a time already past. A session that
   has started keeps its close. The booking page follows at once.
   """
-  @spec set_registration_close(Meeting.t(), DateTime.t() | nil, DateTime.t()) ::
+  @spec set_registration_close(Meeting.t(), integer(), DateTime.t() | nil, DateTime.t()) ::
           {:ok, Meeting.t()}
-          | {:error, :session_started | :invalid_registration_close | Ecto.Changeset.t()}
-  def set_registration_close(%Meeting{planned: true} = session, closes_at, now \\ Clock.utc_now()) do
+          | {:error,
+             :not_found | :session_started | :invalid_registration_close | Ecto.Changeset.t()}
+  def set_registration_close(session, user_id, closes_at, now \\ Clock.utc_now())
+
+  def set_registration_close(
+        %Meeting{planned: true, organizer_user_id: user_id} = session,
+        user_id,
+        closes_at,
+        now
+      ) do
     closes_at = closes_at && DateTime.truncate(closes_at, :second)
 
     cond do
@@ -143,19 +184,29 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     end
   end
 
+  def set_registration_close(_session, _user_id, _closes_at, _now), do: {:error, :not_found}
+
   @doc """
-  Moves `session` to `starts_at` with everyone booked on it, registration
-  closing at `closes_at` (`nil`: at the new start). See
-  `Tymeslot.Meetings.SessionMove`.
+  Moves `session`, which `user_id` must own, to `starts_at` with everyone
+  booked on it, registration closing at `closes_at` (`nil`: at the new
+  start). See `Tymeslot.Meetings.SessionMove`.
   """
-  @spec move(Meeting.t(), DateTime.t(), DateTime.t() | nil) ::
+  @spec move(Meeting.t(), integer(), DateTime.t(), DateTime.t() | nil) ::
           {:ok, Meeting.t()} | {:error, SessionMove.error()}
-  defdelegate move(session, starts_at, closes_at), to: SessionMove
+  defdelegate move(session, user_id, starts_at, closes_at), to: SessionMove
 
   @doc "The type's next session people can still sign up for, or `nil`."
   @spec next_open(map(), DateTime.t()) :: Meeting.t() | nil
   def next_open(meeting_type, now \\ Clock.utc_now()),
     do: meeting_type |> upcoming(now) |> Enum.find(&open?(&1, now))
+
+  @doc "`next_open/2` for each of `meeting_types` in one query, keyed by type id."
+  @spec next_open_by_type([map()], DateTime.t()) :: %{integer() => Meeting.t() | nil}
+  def next_open_by_type(meeting_types, now \\ Clock.utc_now()) do
+    meeting_types
+    |> upcoming_by_type(now)
+    |> Map.new(fn {id, sessions} -> {id, Enum.find(sessions, &open?(&1, now))} end)
+  end
 
   @doc """
   Cancels a planned session the host owns, through the host's own cancel

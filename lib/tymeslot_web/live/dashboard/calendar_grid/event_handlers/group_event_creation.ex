@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
   The form's fields are parsed and checked here, in the organiser's time
   zone, before anything is written. On success the dialog closes, the grid
   reloads with the event on it, and the organiser is shown the event's
-  booking link to share. Failures stay on the open dialog as a message.
+  booking link to share. A failure is shown as an error flash on the page,
+  as Quick Add's other modes show theirs, and the dialog stays open with
+  what was entered, to correct and save again.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

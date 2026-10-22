@@ -9,12 +9,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
   any group type. A session that is full, or whose registration has closed,
   is listed but cannot be chosen. With nothing left to choose the calendar
   is not shown at all (`show_calendar?/1`), and the list says why: the
-  event has ended, registration is closed, or no dates are planned yet.
+  event has ended, every date is fully booked, registration is closed, or
+  no dates are planned yet.
 
   `load/3` is what the page assigns as `:planned_sessions`, once per
   availability fetch rather than per render; it is `nil` for every other
-  type, which renders nothing. The markup is theme-neutral, styled by each
-  theme's own `group-session.css`, as `GroupSession` is.
+  type, which renders nothing. The markup is theme-neutral, styled by the
+  shared `assets/css/scheduling/shared/components/group-session.css`, as
+  `GroupSession` is.
   """
 
   use Phoenix.Component
@@ -35,6 +37,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
           seats_left: non_neg_integer(),
           capacity: pos_integer(),
           seats: Seats.display(),
+          registration_open?: boolean(),
           open?: boolean()
         }
 
@@ -48,20 +51,24 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
   @spec load(map() | nil, String.t(), DateTime.t()) :: t() | nil
   def load(meeting_type, timezone, now \\ Clock.utc_now()) do
     if FixedDates.enabled?(meeting_type) do
-      entries =
-        meeting_type
-        |> PlannedSessions.upcoming(now)
-        |> Enum.map(&entry(&1, meeting_type, timezone, now))
+      # One read of every session: the upcoming ones are listed, and the
+      # past ones only tell an ended event from one with nothing planned.
+      sessions = PlannedSessions.list(meeting_type)
+      upcoming = Enum.filter(sessions, &(DateTime.compare(&1.start_time, now) != :lt))
+      seats_left = Seats.seats_left_by_meeting(upcoming)
 
-      %{entries: entries, ended?: entries == [] and PlannedSessions.list(meeting_type) != []}
+      entries =
+        Enum.map(upcoming, &entry(&1, seats_left[&1.id], meeting_type, timezone, now))
+
+      %{entries: entries, ended?: entries == [] and sessions != []}
     end
   end
 
   # `seats` is what the type's spots display shows for the session, as for
   # any group slot (`SeatBadge.display/2`).
-  defp entry(session, meeting_type, timezone, now) do
+  defp entry(session, seats_left, meeting_type, timezone, now) do
     local = DateTime.shift_zone!(session.start_time, timezone)
-    seats_left = Seats.seats_left(session, session.capacity)
+    registration_open? = PlannedSessions.open?(session, now)
 
     %{
       date: local |> DateTime.to_date() |> Date.to_iso8601(),
@@ -72,7 +79,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
       capacity: session.capacity,
       seats:
         SeatBadge.display(%{seats_left: seats_left, capacity: session.capacity}, meeting_type),
-      open?: seats_left > 0 and PlannedSessions.open?(session, now)
+      registration_open?: registration_open?,
+      open?: seats_left > 0 and registration_open?
     }
   end
 
@@ -113,9 +121,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
         :if={@sessions.entries != [] and not show_calendar?(@sessions)}
         class="session-list-notice"
         role="status"
-        data-testid="registration-closed"
+        data-testid={"sessions-#{nothing_open(@sessions)}"}
       >
-        {dgettext("booking_sessions", "Registration is closed.")}
+        {nothing_open_notice(nothing_open(@sessions))}
       </p>
 
       <ul :if={@sessions.entries != []} class="session-list-items">
@@ -141,6 +149,24 @@ defmodule TymeslotWeb.Themes.Shared.Components.SessionList do
     </section>
     """
   end
+
+  # Why no listed date can be chosen: every one is full while registration
+  # is still open, registration has closed on every one, or some of each.
+  defp nothing_open(%{entries: entries}) do
+    case Enum.split_with(entries, & &1.registration_open?) do
+      {_full, []} -> "full"
+      {[], _closed} -> "closed"
+      {_full, _closed} -> "unavailable"
+    end
+  end
+
+  defp nothing_open_notice("full"),
+    do: dgettext("booking_sessions", "All dates are fully booked.")
+
+  defp nothing_open_notice("closed"), do: dgettext("booking_sessions", "Registration is closed.")
+
+  defp nothing_open_notice("unavailable"),
+    do: dgettext("booking_sessions", "None of the dates can be booked any more.")
 
   defp status(%{seats_left: 0}, _timezone), do: dgettext("booking_sessions", "Fully booked")
 

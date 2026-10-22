@@ -64,7 +64,9 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
     closes_at = DateTime.add(starts_at, -2, :day)
 
     {:ok, session} =
-      PlannedSessions.add(meeting_type, starts_at, registration_closes_at: closes_at)
+      PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at,
+        registration_closes_at: closes_at
+      )
 
     %{meeting_type: meeting_type, session: session, starts_at: starts_at, closes_at: closes_at}
   end
@@ -107,7 +109,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
 
     test "without a deadline, the list is due at the start", ctx do
       starts_at = DateTime.add(ctx.starts_at, 7, :day)
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, starts_at)
+      {:ok, session} = PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, starts_at)
 
       assert [job] =
                all_enqueued(
@@ -120,9 +122,36 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
 
     test "moving the registration close moves the pending list with it", ctx do
       new_close = DateTime.add(ctx.closes_at, 1, :day)
-      {:ok, _session} = PlannedSessions.set_registration_close(ctx.session, new_close)
+
+      {:ok, _session} =
+        PlannedSessions.set_registration_close(
+          ctx.session,
+          ctx.session.organizer_user_id,
+          new_close
+        )
 
       assert [job] = list_jobs(ctx.session)
+      assert DateTime.compare(job.scheduled_at, new_close) == :eq
+    end
+
+    test "moving the close while the list awaits a retry moves the retry to the new close",
+         ctx do
+      [pending] = list_jobs(ctx.session)
+      backoff = DateTime.add(ctx.closes_at, 5, :day)
+
+      Repo.update_all(Oban.Job, set: [state: "retryable", attempt: 1, scheduled_at: backoff])
+
+      new_close = DateTime.add(ctx.closes_at, 1, :day)
+
+      {:ok, _session} =
+        PlannedSessions.set_registration_close(
+          ctx.session,
+          ctx.session.organizer_user_id,
+          new_close
+        )
+
+      # The same job, so a copy its first attempt sent stays claimed.
+      assert %{state: "retryable"} = job = Repo.get!(Oban.Job, pending.id)
       assert DateTime.compare(job.scheduled_at, new_close) == :eq
     end
 
@@ -135,12 +164,18 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
       Repo.update_all(Oban.Job, set: [state: "completed"])
 
       {:ok, session} =
-        PlannedSessions.set_registration_close(session, DateTime.add(closed, 30))
+        PlannedSessions.set_registration_close(
+          session,
+          session.organizer_user_id,
+          DateTime.add(closed, 30)
+        )
 
       assert list_jobs(session) == []
 
       reopened = DateTime.add(DateTime.utc_now(:second), 3600)
-      {:ok, _session} = PlannedSessions.set_registration_close(session, reopened)
+
+      {:ok, _session} =
+        PlannedSessions.set_registration_close(session, session.organizer_user_id, reopened)
 
       assert [job] = list_jobs(session)
       assert DateTime.compare(job.scheduled_at, reopened) == :eq
@@ -148,7 +183,9 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
 
     test "moving the session moves the pending list to its new close", ctx do
       new_start = DateTime.add(ctx.starts_at, 3, :day)
-      {:ok, _moved} = PlannedSessions.move(ctx.session, new_start, nil)
+
+      {:ok, _moved} =
+        PlannedSessions.move(ctx.session, ctx.session.organizer_user_id, new_start, nil)
 
       assert [job] = list_jobs(ctx.session)
       assert DateTime.compare(job.scheduled_at, new_start) == :eq

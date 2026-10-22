@@ -32,6 +32,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias UUID
@@ -215,11 +216,17 @@ defmodule Tymeslot.Bookings.Create do
   # limits and the host's calendar play no part: the session is the host's
   # own plan, already on their calendar. A session that filled up has no join
   # target, so it is refused here as a lost race would be.
-  defp validate_time(
-         %{meeting_type: %{fixed_dates: true, max_participants: max}} = booking_data,
-         _user_id
-       )
-       when is_integer(max) and max > 1 do
+  #
+  # This reads the session unlocked; `GroupScheduling.book_seat/3` reads its
+  # registration close again under the row lock, so a booking validated just
+  # before the close that commits after it is still refused.
+  defp validate_time(booking_data, user_id) do
+    if FixedDates.enabled?(Map.get(booking_data, :meeting_type)),
+      do: validate_session(booking_data),
+      else: validate_schedule_time(booking_data, user_id)
+  end
+
+  defp validate_session(booking_data) do
     case Map.get(booking_data, :join_target) do
       %{planned: true} = session ->
         if PlannedSessions.open?(session),
@@ -231,7 +238,7 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp validate_time(booking_data, user_id) do
+  defp validate_schedule_time(booking_data, user_id) do
     config = scheduling_config(booking_data)
 
     # Time window validation

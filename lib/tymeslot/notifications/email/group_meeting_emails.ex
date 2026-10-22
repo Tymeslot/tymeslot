@@ -284,6 +284,15 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
 
   defp send_session_moved(meeting, participant, from, job_id) do
     {:ok, previous, _offset} = DateTime.from_iso8601(from)
+
+    # Moves that fold into one pending notice can end where they began, and
+    # then there is nothing to tell.
+    if DateTime.compare(previous, meeting.start_time) == :eq,
+      do: :ok,
+      else: send_session_moved(meeting, participant, previous, from, job_id)
+  end
+
+  defp send_session_moved(meeting, participant, previous, from, job_id) do
     recipient = Recipient.from_participant(participant)
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
 
@@ -297,16 +306,21 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
     email_service = Config.email_service_module()
     metadata = seat_metadata(meeting, participant)
 
+    # Claims name the time announced as well: a later move that folds into
+    # this job after a copy went out (a partial send awaiting its retry) is
+    # news that copy did not carry, so the retry sends it.
+    claim = "session_moved:#{from}>#{DateTime.to_iso8601(meeting.start_time)}"
+
     attendee =
       job_id
-      |> DeliveryClaims.once("session_moved:participant", fn ->
+      |> DeliveryClaims.once("#{claim}:participant", fn ->
         email_service.send_reschedule_email_to_attendee(recipient.email, details)
       end)
       |> SeatJobs.send_result("session moved", metadata)
 
     guest_results =
-      for guest <- GuestQueries.list_for_participant(participant.id) do
-        DeliveryClaims.once(job_id, "session_moved:guest:#{guest.id}", fn ->
+      for guest <- GuestQueries.list_notified_for_participant(participant.id) do
+        DeliveryClaims.once(job_id, "#{claim}:guest:#{guest.id}", fn ->
           email_service.send_guest_reschedule(
             guest.email,
             GuestNotifications.guest_details(details, guest)

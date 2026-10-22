@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   test "cancels a date nobody booked at once", %{conn: conn, user: user} do
     meeting_type = group_type(user, fixed_dates: true)
     starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
-    {:ok, session} = PlannedSessions.add(meeting_type, starts_at)
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
     view = edit(conn, meeting_type)
 
     view |> element("[data-testid='remove-session']") |> render_click()
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   test "asks before cancelling a date people booked", %{conn: conn, user: user} do
     meeting_type = group_type(user, fixed_dates: true)
     starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
-    {:ok, session} = PlannedSessions.add(meeting_type, starts_at)
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
 
     {:ok, _seat} =
       Create.execute(
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   test "group bookings cannot be turned off while dates are planned", %{conn: conn, user: user} do
     meeting_type = group_type(user, fixed_dates: true)
     starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
-    {:ok, _session} = PlannedSessions.add(meeting_type, starts_at)
+    {:ok, _session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
 
     view = edit(conn, meeting_type)
 
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   test "the type refuses to stop offering fixed dates while dates are planned", %{user: user} do
     meeting_type = group_type(user, fixed_dates: true)
     starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
-    {:ok, session} = PlannedSessions.add(meeting_type, starts_at)
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
 
     assert {:error, %Ecto.Changeset{errors: errors}} =
              MeetingTypes.update_meeting_type(meeting_type, %{max_participants: 1})
@@ -240,7 +240,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
   } do
     meeting_type = group_type(user, fixed_dates: true)
     starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
-    {:ok, session} = PlannedSessions.add(meeting_type, starts_at)
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
     book_seat(user, meeting_type, starts_at)
 
     {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")

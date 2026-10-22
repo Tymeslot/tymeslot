@@ -282,14 +282,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     end
   end
 
-  # A group type saved while the host had group bookings, kept after they lost
-  # access: it keeps its bookings but takes no new ones (see
-  # `Tymeslot.MeetingTypes.GroupAccess`).
   defp next_date_label(datetime, timezone, time_format) do
     date = datetime |> DashboardFormat.local_date(timezone) |> DashboardFormat.short_date()
     "#{date}, #{DashboardFormat.clock(datetime, timezone, time_format)}"
   end
 
+  # A group type saved while the host had group bookings, kept after they lost
+  # access: it keeps its bookings but takes no new ones (see
+  # `Tymeslot.MeetingTypes.GroupAccess`).
   defp group_paused?(type, group_bookings_allowed),
     do: not group_bookings_allowed and MeetingTypes.group_type?(type)
 

@@ -14,10 +14,14 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
+  alias Ecto.UUID
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.{CancelSeat, Create, RescheduleSeat}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
@@ -61,7 +65,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
     do: Date.utc_today() |> Date.add(days) |> DateTime.new!(time, "Etc/UTC")
 
   defp plan!(meeting_type, starts_at, opts \\ []) do
-    {:ok, session} = PlannedSessions.add(meeting_type, starts_at, opts)
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at, opts)
     session
   end
 
@@ -117,18 +121,22 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       starts_at = at(5, ~T[18:00:00])
       plain = insert(:meeting_type, user: ctx.user, max_participants: 2)
 
-      assert {:error, :not_fixed_dates} = PlannedSessions.add(plain, starts_at)
+      assert {:error, :not_fixed_dates} = PlannedSessions.add(plain, ctx.user.id, starts_at)
 
       assert {:error, :start_in_past} =
-               PlannedSessions.add(ctx.meeting_type, DateTime.add(DateTime.utc_now(), -60))
+               PlannedSessions.add(
+                 ctx.meeting_type,
+                 ctx.user.id,
+                 DateTime.add(DateTime.utc_now(), -60)
+               )
 
       assert {:error, :invalid_registration_close} =
-               PlannedSessions.add(ctx.meeting_type, starts_at,
+               PlannedSessions.add(ctx.meeting_type, ctx.user.id, starts_at,
                  registration_closes_at: DateTime.add(starts_at, 60)
                )
 
       assert {:error, :invalid_registration_close} =
-               PlannedSessions.add(ctx.meeting_type, starts_at,
+               PlannedSessions.add(ctx.meeting_type, ctx.user.id, starts_at,
                  registration_closes_at: DateTime.add(DateTime.utc_now(), -60)
                )
 
@@ -140,7 +148,11 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       plan!(ctx.meeting_type, starts_at)
 
       assert {:error, _conflict} =
-               PlannedSessions.add(ctx.meeting_type, DateTime.add(starts_at, 30, :minute))
+               PlannedSessions.add(
+                 ctx.meeting_type,
+                 ctx.user.id,
+                 DateTime.add(starts_at, 30, :minute)
+               )
     end
   end
 
@@ -284,19 +296,19 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       session = plan!(ctx.meeting_type, starts_at, registration_closes_at: at(2, ~T[12:00:00]))
 
       assert {:ok, extended} =
-               PlannedSessions.set_registration_close(session, at(9, ~T[12:00:00]))
+               PlannedSessions.set_registration_close(session, ctx.user.id, at(9, ~T[12:00:00]))
 
       assert extended.registration_closes_at == at(9, ~T[12:00:00])
       assert PlannedSessions.open?(extended)
 
       assert {:ok, closed} =
-               PlannedSessions.set_registration_close(extended, at(-1, ~T[12:00:00]))
+               PlannedSessions.set_registration_close(extended, ctx.user.id, at(-1, ~T[12:00:00]))
 
       refute PlannedSessions.open?(closed)
       assert PlannedSessions.next_open(ctx.meeting_type) == nil
       assert offered(ctx, starts_at) == []
 
-      assert {:ok, until_start} = PlannedSessions.set_registration_close(closed, nil)
+      assert {:ok, until_start} = PlannedSessions.set_registration_close(closed, ctx.user.id, nil)
       assert until_start.registration_closes_at == nil
       assert PlannedSessions.next_open(ctx.meeting_type).id == session.id
     end
@@ -306,10 +318,15 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
       session = plan!(ctx.meeting_type, starts_at)
 
       assert {:error, :invalid_registration_close} =
-               PlannedSessions.set_registration_close(session, at(11, ~T[12:00:00]))
+               PlannedSessions.set_registration_close(session, ctx.user.id, at(11, ~T[12:00:00]))
 
       assert {:error, :session_started} =
-               PlannedSessions.set_registration_close(session, nil, at(10, ~T[18:30:00]))
+               PlannedSessions.set_registration_close(
+                 session,
+                 ctx.user.id,
+                 nil,
+                 at(10, ~T[18:30:00])
+               )
 
       assert Repo.get!(MeetingSchema, session.id).registration_closes_at == nil
     end
@@ -317,7 +334,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
 
   describe "a session nobody has signed up for" do
     test "sends no reminder, and is no booking in the analytics", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(3, ~T[10:00:00]))
+      {:ok, session} = PlannedSessions.add(ctx.meeting_type, ctx.user.id, at(3, ~T[10:00:00]))
       window = {DateTime.add(DateTime.utc_now(), -3600), DateTime.add(DateTime.utc_now(), 3600)}
 
       # The email service mock has no expectation: any send would fail the test.
@@ -332,6 +349,118 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
 
       insert(:participant, meeting: session, email: "ada@example.com")
       assert Meetings.count_bookings(ctx.user.id, elem(window, 0), elem(window, 1)) == 1
+    end
+
+    test "counts in the analytics when people signed up, not when it was planned", ctx do
+      session = plan!(ctx.meeting_type, at(3, ~T[10:00:00]))
+      now = DateTime.utc_now(:second)
+      planned_at = DateTime.add(now, -10, :day)
+
+      session
+      |> Changeset.change(inserted_at: planned_at)
+      |> Repo.update!()
+
+      insert(:participant, meeting: session, email: "ada@example.com")
+      insert(:participant, meeting: session, email: "bob@example.com")
+
+      assert Meetings.count_bookings(ctx.user.id, DateTime.add(now, -7, :day), now) == 1
+
+      assert Meetings.count_bookings(
+               ctx.user.id,
+               DateTime.add(planned_at, -1, :day),
+               DateTime.add(planned_at, 1, :day)
+             ) == 0
+    end
+  end
+
+  describe "the host's booking limits" do
+    test "count a planned session only once someone holds a seat, and then once", ctx do
+      # A cap of one a day, across the host's whole account.
+      profile = %{ctx.profile | max_bookings_per_day: 1}
+      other_type = insert(:meeting_type, user: ctx.user, duration_minutes: 30)
+      session = plan!(ctx.meeting_type, at(5, ~T[18:00:00]))
+      morning = at(5, ~T[10:00:00])
+
+      assert :ok = Checker.check_booking_allowed(ctx.user.id, profile, other_type, morning)
+
+      insert(:participant, meeting: session, email: "one@example.com")
+      insert(:participant, meeting: session, email: "two@example.com")
+
+      assert {:error, :booking_limit_reached} =
+               Checker.check_booking_allowed(ctx.user.id, profile, other_type, morning)
+
+      profile = %{profile | max_bookings_per_day: 2}
+      assert :ok = Checker.check_booking_allowed(ctx.user.id, profile, other_type, morning)
+    end
+  end
+
+  describe "registration closing while a booking commits" do
+    test "the seat is refused once registration has closed, read under the lock", ctx do
+      starts_at = at(5, ~T[18:00:00])
+      session = plan!(ctx.meeting_type, starts_at)
+      # Registration closes after the booker's pre-check would have passed:
+      # `book_seat/3` is then all that stands between them and the session.
+      {:ok, _closed} =
+        PlannedSessions.set_registration_close(session, ctx.user.id, at(-1, ~T[12:00:00]))
+
+      attrs = %{
+        uid: UUID.generate(),
+        title: ctx.meeting_type.name,
+        start_time: starts_at,
+        end_time: DateTime.add(starts_at, 90, :minute),
+        duration: 90,
+        status: "confirmed",
+        organizer_user_id: ctx.user.id,
+        organizer_name: "Host",
+        organizer_email: "host@example.com",
+        meeting_type_id: ctx.meeting_type.id
+      }
+
+      seat = %{
+        participant: %{
+          name: "Late",
+          email: "late@example.com",
+          timezone: "Etc/UTC",
+          locale: "en",
+          custom_field_answers: %{}
+        },
+        guest_emails: [],
+        max_participants: 2
+      }
+
+      assert {:error, :slot_full} = GroupScheduling.book_seat(attrs, seat, join_only: true)
+      assert ParticipantQueries.list_live_for_meeting(session.id) == []
+    end
+  end
+
+  describe "acting on another host's plan" do
+    setup ctx do
+      %{session: plan!(ctx.meeting_type, at(10, ~T[18:00:00])), stranger: insert(:user)}
+    end
+
+    test "planning a date on their type is refused", ctx do
+      assert {:error, :not_found} =
+               PlannedSessions.add(ctx.meeting_type, ctx.stranger.id, at(12, ~T[18:00:00]))
+
+      assert Repo.aggregate(MeetingSchema, :count) == 1
+    end
+
+    test "moving their registration close is refused", ctx do
+      assert {:error, :not_found} =
+               PlannedSessions.set_registration_close(
+                 ctx.session,
+                 ctx.stranger.id,
+                 at(-1, ~T[12:00:00])
+               )
+
+      assert Repo.reload!(ctx.session).registration_closes_at == nil
+    end
+
+    test "moving their session is refused", ctx do
+      assert {:error, :not_found} =
+               PlannedSessions.move(ctx.session, ctx.stranger.id, at(12, ~T[09:00:00]), nil)
+
+      assert Repo.reload!(ctx.session).start_time == at(10, ~T[18:00:00])
     end
   end
 

@@ -272,7 +272,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   # The target of a fixed-date move is one of the type's planned sessions,
   # open for registration with room for the seat and its guests. The host's
-  # calendar plays no part: the session is already the host's own.
+  # calendar plays no part: the session is already the host's own. The
+  # registration close is read unlocked here and again under the row lock
+  # by `GroupScheduling.book_seat/3`, which refuses a session that closed in
+  # between as `:slot_full`, bounced as `:slot_taken`.
   defp check_target(old_meeting, participant, new_times, meeting_type, config) do
     guest_emails = guest_emails(participant)
 

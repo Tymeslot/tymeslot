@@ -44,12 +44,25 @@ defmodule Tymeslot.Meetings.SessionMove do
           | term()
 
   @doc """
-  Moves `session` to start at `starts_at`, keeping its length, with
-  registration closing at `closes_at` (`nil`: at the new start).
+  Moves `session`, which `user_id` must own, to start at `starts_at`,
+  keeping its length, with registration closing at `closes_at` (`nil`: at
+  the new start).
+
+  A session of another host, or one cancelled or no longer planned by the
+  time the write takes its row lock (cancelled in another tab, say), is
+  refused with `{:error, :not_found}` and nothing is written or scheduled.
   """
-  @spec move(Meeting.t(), DateTime.t(), DateTime.t() | nil, DateTime.t()) ::
-          {:ok, Meeting.t()} | {:error, error()}
-  def move(%Meeting{planned: true} = session, starts_at, closes_at, now \\ Clock.utc_now()) do
+  @spec move(Meeting.t(), integer(), DateTime.t(), DateTime.t() | nil, DateTime.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_found | error()}
+  def move(session, user_id, starts_at, closes_at, now \\ Clock.utc_now())
+
+  def move(
+        %Meeting{planned: true, organizer_user_id: user_id} = session,
+        user_id,
+        starts_at,
+        closes_at,
+        now
+      ) do
     starts_at = DateTime.truncate(starts_at, :second)
     closes_at = closes_at && DateTime.truncate(closes_at, :second)
 
@@ -59,6 +72,8 @@ defmodule Tymeslot.Meetings.SessionMove do
       {:ok, moved}
     end
   end
+
+  def move(_session, _user_id, _starts_at, _closes_at, _now), do: {:error, :not_found}
 
   defp check(session, starts_at, closes_at, now) do
     cond do
@@ -100,17 +115,27 @@ defmodule Tymeslot.Meetings.SessionMove do
     Repo.transaction(fn ->
       with {:ok, moved} <-
              Scheduling.update_meeting_with_conflict_check(session, attrs,
-               enforce_booking_limits: false
+               enforce_booking_limits: false,
+               guard: &still_planned/1
              ),
            _seats = ParticipantQueries.bump_ical_sequence_for_meeting(moved.id),
            _guests = GuestQueries.reset_for_moved_session(moved.id),
            {:ok, _job} <- CalendarJobs.schedule_job(moved, "update") do
         moved
       else
+        {:error, {:refused, reason}} -> Repo.rollback(reason)
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end
+
+  # The row as it stands under its lock must still be a live planned
+  # session: the struct the host's form holds may predate a cancel.
+  defp still_planned(%Meeting{planned: true} = current) do
+    if MeetingState.slot_void?(current), do: {:error, :not_found}, else: :ok
+  end
+
+  defp still_planned(_current), do: {:error, :not_found}
 
   defp after_move(moved, original) do
     SeatEffects.broadcast_and_invalidate(moved)

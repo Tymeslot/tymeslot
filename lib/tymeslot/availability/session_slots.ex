@@ -56,14 +56,37 @@ defmodule Tymeslot.Availability.SessionSlots do
   def any_open?(meeting_type, now \\ Clock.utc_now()),
     do: open_sessions(meeting_type, "Etc/UTC", now) != []
 
+  @doc """
+  The ids of those `meeting_types` that have a session anyone can still
+  sign up for (`any_open?/2` for each), in two queries whatever their
+  number.
+  """
+  @spec open_type_ids([map()], DateTime.t()) :: MapSet.t(integer())
+  def open_type_ids(meeting_types, now \\ Clock.utc_now()) do
+    meeting_types
+    |> PlannedSessions.upcoming_by_type(now)
+    |> Enum.flat_map(fn {_type_id, sessions} -> sessions end)
+    |> with_seats_left(now)
+    |> MapSet.new(fn {session, _seats_left} -> session.meeting_type_id end)
+  end
+
   defp open_sessions(meeting_type, user_timezone, now) do
     meeting_type
     |> PlannedSessions.upcoming(now)
-    |> Enum.filter(&PlannedSessions.open?(&1, now))
-    |> Enum.map(&{&1, Seats.seats_left(&1, &1.capacity)})
-    |> Enum.filter(fn {_session, seats_left} -> seats_left > 0 end)
+    |> with_seats_left(now)
     |> Enum.map(fn {session, seats_left} ->
       {DateTime.shift_zone!(session.start_time, user_timezone), session, seats_left}
     end)
+  end
+
+  # The sessions open for registration with a seat left, each with its seats
+  # left, counted for all of them in one query.
+  defp with_seats_left(sessions, now) do
+    open = Enum.filter(sessions, &PlannedSessions.open?(&1, now))
+    seats_left = Seats.seats_left_by_meeting(open)
+
+    open
+    |> Enum.map(&{&1, Map.fetch!(seats_left, &1.id)})
+    |> Enum.filter(fn {_session, left} -> left > 0 end)
   end
 end

@@ -88,9 +88,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   # registration, or nil: the card says when that is, or that the type is
   # off the booking page for want of one.
   defp next_dates(meeting_types) do
-    for type <- meeting_types, FixedDates.enabled?(type), into: %{} do
-      {type.id, with(%{start_time: start} <- PlannedSessions.next_open(type), do: start)}
-    end
+    meeting_types
+    |> Enum.filter(&FixedDates.enabled?/1)
+    |> PlannedSessions.next_open_by_type()
+    |> Map.new(fn {id, session} -> {id, session && session.start_time} end)
   end
 
   # The open editor is handed `editing_type` on every render, and it saves

@@ -36,24 +36,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
   @spec rows([map()]) :: [row()]
   def rows(meeting_types) do
     now = Clock.utc_now()
+    events = Enum.filter(meeting_types, &OneOffEvents.one_off?/1)
+    sessions = PlannedSessions.list_by_type(events)
+
+    seats =
+      sessions
+      |> Enum.flat_map(fn {_type_id, list} -> Enum.take(list, 1) end)
+      |> Enum.map(& &1.id)
+      |> Seats.counts_by_meeting()
 
     {upcoming, rest} =
-      meeting_types
-      |> Enum.filter(&OneOffEvents.one_off?/1)
-      |> Enum.map(&row(&1, now))
+      events
+      |> Enum.map(&row(&1, sessions[&1.id], seats, now))
       |> Enum.split_with(&(&1.status in [:open, :closed]))
 
     Enum.sort_by(upcoming, & &1.starts_at, DateTime) ++
       Enum.sort_by(rest, &(&1.starts_at || ~U[1970-01-01 00:00:00Z]), {:desc, DateTime})
   end
 
-  defp row(type, now) do
-    case PlannedSessions.list(type) do
+  defp row(type, sessions, seats, now) do
+    case sessions do
       [session | _rest] ->
         %{
           type: type,
           starts_at: session.start_time,
-          seats_taken: Seats.seats_taken(session.id),
+          seats_taken: seats[session.id].seats_taken,
           capacity: session.capacity,
           status: status(session, now)
         }

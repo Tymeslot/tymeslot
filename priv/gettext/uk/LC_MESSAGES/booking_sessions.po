@@ -45,3 +45,13 @@ msgstr "Реєстрація до %{datetime}"
 #, elixir-autogen, elixir-format
 msgid "This event has ended."
 msgstr "Ця подія завершилася."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "All dates are fully booked."
+msgstr "На всі дати місць немає."
+
+#: lib/tymeslot_web/themes/shared/components/session_list.ex
+#, elixir-autogen, elixir-format
+msgid "None of the dates can be booked any more."
+msgstr "Жодну з дат більше не можна забронювати."

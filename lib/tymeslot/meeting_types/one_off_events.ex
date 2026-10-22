@@ -64,7 +64,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
       Repo.transaction(fn ->
         with {:ok, meeting_type} <- MeetingTypes.create_meeting_type(attrs),
              {:ok, session} <-
-               PlannedSessions.add(meeting_type, params.starts_at,
+               PlannedSessions.add(meeting_type, user_id, params.starts_at,
                  registration_closes_at: Map.get(params, :registration_closes_at)
                ) do
           %{meeting_type: meeting_type, session: session}
@@ -94,15 +94,12 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   @spec order_for_listing([map()]) :: [map()]
   def order_for_listing(meeting_types) do
     {events, regular} = Enum.split_with(meeting_types, &one_off?/1)
-    regular ++ Enum.sort_by(events, &first_start/1, &sooner?/2)
+    upcoming = PlannedSessions.upcoming_by_type(events)
+    regular ++ Enum.sort_by(events, &first_start(upcoming[&1.id]), &sooner?/2)
   end
 
-  defp first_start(meeting_type) do
-    case PlannedSessions.upcoming(meeting_type) do
-      [session | _later] -> session.start_time
-      [] -> nil
-    end
-  end
+  defp first_start([session | _later]), do: session.start_time
+  defp first_start([]), do: nil
 
   defp sooner?(nil, _other), do: false
   defp sooner?(_start, nil), do: true

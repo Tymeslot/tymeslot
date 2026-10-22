@@ -102,6 +102,23 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  `list_planned_for_type/2` for several meeting types in one query, in start
+  order across all of them.
+  """
+  @spec list_planned_for_types([integer()], DateTime.t() | nil) :: [Meeting.t()]
+  def list_planned_for_types(meeting_type_ids, from \\ nil)
+  def list_planned_for_types([], _from), do: []
+
+  def list_planned_for_types(meeting_type_ids, from) when is_list(meeting_type_ids) do
+    Meeting
+    |> MeetingState.where_slot_live()
+    |> where([m], m.planned and m.meeting_type_id in ^meeting_type_ids)
+    |> then(fn query -> if from, do: where(query, [m], m.start_time >= ^from), else: query end)
+    |> order_by([m], asc: m.start_time)
+    |> Repo.all()
+  end
+
+  @doc """
   Sets when registration for a planned session closes (`nil`: at its
   start). A plain change rather than `MeetingSchema.changeset/2`, which
   asks for the attendee fields a group meeting does not carry.

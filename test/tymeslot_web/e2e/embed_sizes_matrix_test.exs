@@ -293,7 +293,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
     for day <- 1..count do
       starts_at = Date.utc_today() |> Date.add(day * 2) |> DateTime.new!(~T[16:00:00], "Etc/UTC")
-      {:ok, _session} = PlannedSessions.add(meeting_type, starts_at)
+      {:ok, _session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
     end
 
     {profile, Slugs.to_slug(meeting_type)}

@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
   describe "the meeting-type form" do
     test "moves a date's registration close, and closes it at once", ctx do
       {:ok, session} =
-        PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]),
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]),
           registration_closes_at: at(2, ~T[12:00:00])
         )
 
@@ -95,7 +95,9 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
     end
 
     test "refuses a close after the start and says why", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
+
       view = edit(ctx.conn, ctx.meeting_type)
 
       move_close(view, session, local(at(11, ~T[12:00:00])))
@@ -107,7 +109,9 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
 
   describe "moving a date" do
     test "moves it with everyone booked on it, who are told", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
+
       participant = insert(:participant, meeting: session, name: "Ada Lovelace")
       view = edit(ctx.conn, ctx.meeting_type)
 
@@ -132,8 +136,12 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
     end
 
     test "says when the host has another booking at the new time", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
-      {:ok, _other} = PlannedSessions.add(ctx.meeting_type, at(12, ~T[09:00:00]))
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
+
+      {:ok, _other} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(12, ~T[09:00:00]))
+
       view = edit(ctx.conn, ctx.meeting_type)
 
       edit_date(view, session, %{
@@ -148,7 +156,8 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
 
   describe "the meeting type card" do
     test "names the next date open for registration", ctx do
-      {:ok, _session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      {:ok, _session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meeting-settings")
 
@@ -157,8 +166,15 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
     end
 
     test "says when no date is open for registration", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
-      {:ok, _closed} = PlannedSessions.set_registration_close(session, at(-1, ~T[12:00:00]))
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
+
+      {:ok, _closed} =
+        PlannedSessions.set_registration_close(
+          session,
+          session.organizer_user_id,
+          at(-1, ~T[12:00:00])
+        )
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meeting-settings")
 
@@ -169,7 +185,9 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
 
   describe "the meetings list" do
     test "offers no reschedule request for a session, which moves from its type", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
+
       insert(:participant, meeting: session, name: "Ada Lovelace")
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meetings")
@@ -178,13 +196,20 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
     end
 
     test "marks an upcoming session whose registration has closed", ctx do
-      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(10, ~T[18:00:00]))
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
+
       insert(:participant, meeting: session, name: "Ada Lovelace")
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meetings")
       refute has_element?(view, "[data-testid='registration-closed-badge']")
 
-      {:ok, _closed} = PlannedSessions.set_registration_close(session, at(-1, ~T[12:00:00]))
+      {:ok, _closed} =
+        PlannedSessions.set_registration_close(
+          session,
+          session.organizer_user_id,
+          at(-1, ~T[12:00:00])
+        )
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meetings")
 

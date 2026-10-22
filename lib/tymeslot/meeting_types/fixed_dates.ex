@@ -34,7 +34,8 @@ defmodule Tymeslot.MeetingTypes.FixedDates do
   """
   @spec reject_unbookable([map()]) :: [map()]
   def reject_unbookable(meeting_types) do
-    Enum.reject(meeting_types, &(enabled?(&1) and not SessionSlots.any_open?(&1)))
+    open_ids = meeting_types |> Enum.filter(&enabled?/1) |> SessionSlots.open_type_ids()
+    Enum.reject(meeting_types, &(enabled?(&1) and not MapSet.member?(open_ids, &1.id)))
   end
 
   @doc """

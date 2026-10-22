@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :fixed_dates, :boolean, required: true
@@ -161,30 +162,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                   {dgettext("dashboard_meeting_form", "Keep it")}
                 </.action_button>
               <% true -> %>
-                <button
-                  type="button"
-                  class="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-turquoise-700 hover:border-turquoise-300"
+                <Buttons.icon_button
+                  icon="hero-pencil-square"
+                  size={:sm}
+                  class="ml-auto"
+                  label={dgettext("dashboard_meeting_form", "Edit this date")}
                   phx-click="edit_session"
                   phx-value-id={session.id}
                   phx-target={@myself}
-                  aria-label={dgettext("dashboard_meeting_form", "Edit this date")}
-                  title={dgettext("dashboard_meeting_form", "Edit this date")}
                   data-testid="edit-session-button"
-                >
-                  <.icon name="hero-pencil-square" class="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-red-600 hover:border-red-300"
+                />
+                <Buttons.icon_button
+                  icon="hero-x-mark"
+                  variant={:danger}
+                  size={:sm}
+                  label={dgettext("dashboard_meeting_form", "Cancel this date")}
                   phx-click="remove_session"
                   phx-value-id={session.id}
                   phx-target={@myself}
-                  aria-label={dgettext("dashboard_meeting_form", "Cancel this date")}
-                  title={dgettext("dashboard_meeting_form", "Cancel this date")}
                   data-testid="remove-session"
-                >
-                  <.icon name="hero-x-mark" class="h-4 w-4" />
-                </button>
+                />
             <% end %>
           </li>
         </ul>

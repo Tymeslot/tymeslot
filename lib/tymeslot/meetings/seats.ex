@@ -57,6 +57,29 @@ defmodule Tymeslot.Meetings.Seats do
   end
 
   @doc """
+  Live participants and seats taken (`seats_taken/1`) on each of
+  `meeting_ids`, in one query rather than one per meeting. Every id is in
+  the result; one nobody is booked on counts zero of each.
+  """
+  @spec counts_by_meeting([binary()]) :: %{
+          binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
+        }
+  def counts_by_meeting(meeting_ids) do
+    counts = ParticipantQueries.counts_by_meeting(meeting_ids)
+    Map.new(meeting_ids, &{&1, Map.get(counts, &1, %{participants: 0, seats_taken: 0})})
+  end
+
+  @doc """
+  `seats_left/2` for each of `meetings` against its own `capacity`, keyed by
+  meeting id, in one query.
+  """
+  @spec seats_left_by_meeting([MeetingSchema.t()]) :: %{binary() => non_neg_integer()}
+  def seats_left_by_meeting(meetings) do
+    counts = meetings |> Enum.map(& &1.id) |> counts_by_meeting()
+    Map.new(meetings, &{&1.id, max(&1.capacity - counts[&1.id].seats_taken, 0)})
+  end
+
+  @doc """
   Map of meeting `start_time` to seats taken for confirmed meetings of the
   given meeting type whose start falls in `[from_utc, to_utc)`. Slots with
   no participants are absent from the map.

@@ -139,6 +139,20 @@ defmodule Tymeslot.Meetings.GuestQueries do
 
   @doc """
   Lists the guests belonging to one participant whose confirmation email has
+  gone out, oldest first. A follow-up about the meeting (such as a moved
+  session) goes only to these: a guest never told of the booking must not
+  learn of it from a change notice.
+  """
+  @spec list_notified_for_participant(binary()) :: [Guest.t()]
+  def list_notified_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id and not is_nil(g.confirmation_sent_at))
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the guests belonging to one participant whose confirmation email has
   not yet been sent.
   """
   @spec list_unsent_for_participant(binary()) :: [Guest.t()]

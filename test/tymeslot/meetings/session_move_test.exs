@@ -54,7 +54,7 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
         locations: [in_person_location([venue])]
       )
 
-    {:ok, session} = PlannedSessions.add(meeting_type, at(10, ~T[18:00:00]))
+    {:ok, session} = PlannedSessions.add(meeting_type, user.id, at(10, ~T[18:00:00]))
     %{user: user, meeting_type: meeting_type, session: session}
   end
 
@@ -74,7 +74,12 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
       insert(:participant, meeting: ctx.session, name: "Ada Lovelace", email: "ada@example.com")
 
     assert {:ok, moved} =
-             PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), at(11, ~T[12:00:00]))
+             PlannedSessions.move(
+               ctx.session,
+               ctx.user.id,
+               at(12, ~T[09:30:00]),
+               at(11, ~T[12:00:00])
+             )
 
     assert moved.start_time == at(12, ~T[09:30:00])
     assert moved.end_time == at(12, ~T[11:00:00])
@@ -102,7 +107,7 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     {:ok, _accepted} = Guests.record_rsvp(coming.rsvp_token, "accepted")
     {:ok, _declined} = Guests.record_rsvp(not_coming.rsvp_token, "declined")
 
-    {:ok, _moved} = PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), nil)
+    {:ok, _moved} = PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
 
     assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(coming.rsvp_token)
     assert {:ok, %{status: "declined"}} = GuestQueries.get_by_token(not_coming.rsvp_token)
@@ -111,21 +116,41 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   test "refuses a start in the past, a close after the new start and a cancelled session",
        ctx do
     assert {:error, :start_in_past} =
-             PlannedSessions.move(ctx.session, at(-1, ~T[09:00:00]), nil)
+             PlannedSessions.move(ctx.session, ctx.user.id, at(-1, ~T[09:00:00]), nil)
 
     assert {:error, :invalid_registration_close} =
-             PlannedSessions.move(ctx.session, at(12, ~T[09:00:00]), at(13, ~T[09:00:00]))
+             PlannedSessions.move(
+               ctx.session,
+               ctx.user.id,
+               at(12, ~T[09:00:00]),
+               at(13, ~T[09:00:00])
+             )
 
     cancelled = ctx.session |> Changeset.change(status: "cancelled") |> Repo.update!()
 
     assert {:error, :session_started} =
-             PlannedSessions.move(cancelled, at(12, ~T[09:00:00]), nil)
+             PlannedSessions.move(cancelled, ctx.user.id, at(12, ~T[09:00:00]), nil)
+  end
+
+  test "refuses a session cancelled since the host's copy of it was read", ctx do
+    # Cancelled in another tab: the row is cancelled, the struct the form
+    # holds still reads as a live session.
+    Repo.update!(Changeset.change(ctx.session, status: "cancelled"))
+
+    assert {:error, :not_found} =
+             PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
+
+    assert %{status: "cancelled", start_time: start_time} = Repo.reload!(ctx.session)
+    assert start_time == at(10, ~T[18:00:00])
+    refute_enqueued(worker: CalendarEventWorker, args: %{"action" => "update"})
   end
 
   test "refuses a time the host already has a booking at", ctx do
-    {:ok, _other} = PlannedSessions.add(ctx.meeting_type, at(12, ~T[09:00:00]))
+    {:ok, _other} = PlannedSessions.add(ctx.meeting_type, ctx.user.id, at(12, ~T[09:00:00]))
 
-    assert {:error, _conflict} = PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), nil)
+    assert {:error, _conflict} =
+             PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
+
     assert Repo.reload!(ctx.session).start_time == at(10, ~T[18:00:00])
   end
 
@@ -133,10 +158,12 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     ada =
       insert(:participant, meeting: ctx.session, name: "Ada Lovelace", email: "ada@example.com")
 
-    {:ok, _guests} =
+    {:ok, [charles]} =
       Guests.create_for_participant(ctx.session.id, ada.id, ["charles@example.com"])
 
-    {:ok, _moved} = PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), nil)
+    {:ok, _invited} = GuestQueries.mark_confirmation_sent(charles, DateTime.utc_now(:second))
+
+    {:ok, _moved} = PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
 
     expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_attendee, fn email, details ->
       assert email == "ada@example.com"
@@ -166,10 +193,12 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     ada =
       insert(:participant, meeting: ctx.session, name: "Ada Lovelace", email: "ada@example.com")
 
-    {:ok, _guests} =
+    {:ok, [charles]} =
       Guests.create_for_participant(ctx.session.id, ada.id, ["charles@example.com"])
 
-    {:ok, _moved} = PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), nil)
+    {:ok, _invited} = GuestQueries.mark_confirmation_sent(charles, DateTime.utc_now(:second))
+
+    {:ok, _moved} = PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
 
     [job] =
       all_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_session_moved"})

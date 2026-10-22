@@ -158,6 +158,30 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   end
 
   @doc """
+  Live participants and seats taken (`count_seats_taken/1`'s count) on each
+  of `meeting_ids`, in one grouped query. A meeting without live
+  participants does not appear in the result.
+  """
+  @spec counts_by_meeting([binary()]) :: %{
+          binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
+        }
+  def counts_by_meeting([]), do: %{}
+
+  def counts_by_meeting(meeting_ids) when is_list(meeting_ids) do
+    from(p in Participant,
+      left_join: g in Guest,
+      on: g.participant_id == p.id and g.status != "declined",
+      where: p.meeting_id in ^meeting_ids and is_nil(p.cancelled_at),
+      group_by: p.meeting_id,
+      select: {p.meeting_id, count(p.id, :distinct), count(p.id, :distinct) + count(g.id)}
+    )
+    |> Repo.all()
+    |> Map.new(fn {id, participants, seats} ->
+      {id, %{participants: participants, seats_taken: seats}}
+    end)
+  end
+
+  @doc """
   Seats taken per meeting start time for live meetings of a meeting type
   whose `start_time` falls in `[from_utc, to_utc)`, counted as
   `count_seats_taken/1` does. One grouped query over meetings, participants
