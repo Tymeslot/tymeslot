@@ -68,6 +68,18 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     end
   end
 
+  test "the booking page opened with its uid sends the visitor away with an explanation",
+       ctx do
+    assert {:error, {_redirect, %{to: to, flash: flash}}} =
+             live(
+               build_conn(),
+               "/#{ctx.profile.username}?timezone=UTC&reschedule_meeting_uid=#{ctx.meeting.uid}"
+             )
+
+    assert to == "/#{ctx.profile.username}?timezone=UTC"
+    assert flash["error"] =~ "only its host can move it"
+  end
+
   test "the dashboard card names the poll, not a booker, and lists everyone as a guest", ctx do
     conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
     {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")

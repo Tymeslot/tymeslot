@@ -16,7 +16,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOff
-  alias Tymeslot.Bookings.{Cancel, HostMove, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, HostMove, Orchestrator, Reschedule, RescheduleRequest}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.{GuestQueries, Guests, GuestSchema, MeetingSchema}
   alias Tymeslot.Notifications.EmailHandlers
@@ -129,6 +129,11 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     test "cannot cancel it from the public page, the host can", ctx do
       assert {:error, :managed_by_host} = Cancel.validate_cancellation(ctx.meeting)
       assert :ok = Cancel.validate_cancellation(ctx.meeting, caller: :organizer)
+    end
+
+    test "is not given the booking page's reschedule form", ctx do
+      assert {:error, :managed_by_host} =
+               Orchestrator.get_meeting_for_reschedule(ctx.meeting.uid, ctx.user.id)
     end
 
     test "cannot move it through the booking page", ctx do

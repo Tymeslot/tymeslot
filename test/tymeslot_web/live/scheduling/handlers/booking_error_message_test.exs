@@ -60,6 +60,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     {:not_reschedulable, :past} => "Cannot reschedule a meeting that has already occurred",
     {:not_reschedulable, :awaiting_approval} =>
       "Cannot request a reschedule while the booking awaits approval",
+    :managed_by_host =>
+      "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation.",
     :invalid_datetime => "Invalid date/time",
     :in_past => "Booking time must be in the future",
     {:too_soon, 12} => "Booking requires at least 12 hours in advance",

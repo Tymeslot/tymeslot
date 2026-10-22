@@ -1,7 +1,8 @@
 defmodule Tymeslot.Bookings.Policy do
   @moduledoc """
   The booking rules: whether a meeting can still be cancelled, rescheduled or
-  asked to move, and whether a booking may bring guests.
+  asked to move, whether its booker may move it at all, and whether a booking
+  may bring guests.
 
   The verdict predicates read the system clock (`Tymeslot.Clock`) and log
   their blocked branches. The scheduling policy a booking time is checked
@@ -10,6 +11,7 @@ defmodule Tymeslot.Bookings.Policy do
   `Tymeslot.Bookings.MeetingLinks`.
   """
   alias Tymeslot.Clock
+  alias Tymeslot.Meetings.MeetingSchema
 
   require Logger
 
@@ -40,6 +42,7 @@ defmodule Tymeslot.Bookings.Policy do
           :cancelled | :completed | :expired | :awaiting_approval | :started | :past
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
+  @type booker_move_refusal :: :managed_by_host
 
   @doc """
   Determines if a meeting can be cancelled.
@@ -144,6 +147,17 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
+
+  @doc """
+  Whether the booker may move `meeting` themselves. A meeting confirmed from
+  a poll (`MeetingSchema.managed_by_host?/1`) has no booker: only its host
+  moves it (`Tymeslot.Bookings.HostMove`). The flag never changes, so the
+  answer needs no repeating under the meeting's lock.
+  """
+  @spec can_booker_move_meeting?(map()) :: :ok | {:error, booker_move_refusal()}
+  def can_booker_move_meeting?(meeting) do
+    if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
+  end
 
   @doc """
   Checks if a meeting is currently happening.

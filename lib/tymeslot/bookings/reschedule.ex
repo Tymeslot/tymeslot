@@ -121,7 +121,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
     with {:ok, original_meeting} <- fetch_meeting(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
-         :ok <- refuse_host_managed(original_meeting),
+         :ok <- Policy.can_booker_move_meeting?(original_meeting),
          meeting_type <-
            fetch_meeting_type(
              original_meeting.meeting_type_id,
@@ -425,13 +425,6 @@ defmodule Tymeslot.Bookings.Reschedule do
     with :ok <- Policy.can_reschedule_meeting?(meeting) do
       refuse_group_meeting(meeting)
     end
-  end
-
-  # A meeting confirmed from a poll has no booker to move it: the host does
-  # (`Tymeslot.Bookings.HostMove`). Its flag never changes, so the check
-  # needs no repeating under the meeting's lock.
-  defp refuse_host_managed(meeting) do
-    if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
   end
 
   # A group slot is shared, so moving the meeting row would move everybody on

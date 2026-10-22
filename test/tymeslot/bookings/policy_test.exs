@@ -189,6 +189,17 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
   end
 
+  describe "can_booker_move_meeting?/1" do
+    test "refuses a meeting its host manages" do
+      assert Policy.can_booker_move_meeting?(%MeetingSchema{managed_by_host: true}) ==
+               {:error, :managed_by_host}
+    end
+
+    test "allows a meeting with a booker" do
+      assert Policy.can_booker_move_meeting?(%MeetingSchema{managed_by_host: false}) == :ok
+    end
+  end
+
   describe "meeting_is_current?/1" do
     test "returns true for ongoing meeting" do
       current_meeting = %{
