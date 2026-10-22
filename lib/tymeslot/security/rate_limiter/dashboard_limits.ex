@@ -180,7 +180,8 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
       scope: :user,
       limit: 20,
       window_ms: 10 * @minute,
-      operation: "reschedule request"
+      operation: "reschedule request",
+      action: dgettext_noop("errors", "meeting moves")
     ],
     dashboard_add_guests: [
       prefix: "dashboard_add_guests",

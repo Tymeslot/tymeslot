@@ -813,3 +813,8 @@ msgstr "Odpověď je příliš dlouhá"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Neznámý typ pole"
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr ""

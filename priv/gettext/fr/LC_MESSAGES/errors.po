@@ -788,3 +788,8 @@ msgstr "La réponse est trop longue"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Type de champ inconnu"
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr ""
