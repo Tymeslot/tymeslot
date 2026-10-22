@@ -15,6 +15,12 @@ defmodule Tymeslot.Availability.BookabilityTest do
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Bookability
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.EventRole
+  alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Repo
 
   setup do
     user = insert(:user)
@@ -112,6 +118,89 @@ defmodule Tymeslot.Availability.BookabilityTest do
       :ok = Bookability.clear(ctx.user.id, ctx.integration.id, "h-1")
       assert_receive {:availability_changed, user_id} when user_id == ctx.user.id
     end
+  end
+
+  describe "a choice on an event that is gone" do
+    setup ctx do
+      for uid <- ["gone", "kept"] do
+        insert(:provider_calendar_event,
+          calendar_integration: ctx.integration,
+          uid: uid,
+          provider_event_id: "evt-" <> uid,
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: ~D[2026-12-25],
+          end_date: ~D[2026-12-26],
+          transparency: "transparent"
+        )
+
+        :ok = Bookability.set(ctx.user.id, ctx.integration.id, uid, false)
+      end
+
+      :ok
+    end
+
+    test "goes when a sync reports the event deleted, and another event's stays", ctx do
+      :ok = Sync.reconcile_deletions(ctx.integration, [%{uid: "gone", provider_event_id: nil}])
+
+      assert Bookability.for_user(ctx.user.id) == %{{ctx.integration.id, "kept"} => false}
+    end
+
+    test "goes when the event is deleted by its provider id", ctx do
+      ProviderCalendarEventQueries.delete_by_provider_event_ids(ctx.integration.id, ["evt-gone"])
+
+      assert Bookability.for_user(ctx.user.id) == %{{ctx.integration.id, "kept"} => false}
+    end
+
+    test "goes when the event is deleted here", ctx do
+      {:ok, :deleted} = ProviderCalendarEventQueries.delete_by_uid(ctx.integration.id, "gone")
+
+      assert Bookability.for_user(ctx.user.id) == %{{ctx.integration.id, "kept"} => false}
+    end
+
+    test "goes when a feed refresh drops the event, and stays on the event it puts back", ctx do
+      {:ok, 1} =
+        IntegrationCacheQueries.replace_cached_rows(ctx.integration.id, :all, [
+          row_attrs(ctx.integration, "kept")
+        ])
+
+      assert Bookability.for_user(ctx.user.id) == %{{ctx.integration.id, "kept"} => false}
+    end
+
+    test "stays when a refresh scoped to part of the integration leaves the event out", ctx do
+      {:ok, 0} =
+        IntegrationCacheQueries.replace_cached_rows(
+          ctx.integration.id,
+          {:role, EventRole.both()},
+          []
+        )
+
+      assert map_size(Bookability.for_user(ctx.user.id)) == 2
+    end
+
+    test "stays when the sync that deleted the event fails and rolls back", ctx do
+      {:error, :failed} =
+        Repo.transaction(fn ->
+          2 = ProviderCalendarEventQueries.delete_by_uids(ctx.integration.id, ["gone", "kept"])
+          assert Bookability.for_user(ctx.user.id) == %{}
+          Repo.rollback(:failed)
+        end)
+
+      assert map_size(Bookability.for_user(ctx.user.id)) == 2
+    end
+
+    test "stays when the event only ages out of the cache", ctx do
+      assert IntegrationCacheQueries.prune_ended_before(~U[2027-06-01 00:00:00Z]) == 2
+
+      assert map_size(Bookability.for_user(ctx.user.id)) == 2
+    end
+  end
+
+  defp row_attrs(integration, uid) do
+    %{uid: uid, calendar_integration_id: integration.id, provider_event_id: "evt-" <> uid}
+    |> event()
+    |> ProviderCalendarEventSchema.from_calendar_event()
   end
 
   describe "read_only?/2" do

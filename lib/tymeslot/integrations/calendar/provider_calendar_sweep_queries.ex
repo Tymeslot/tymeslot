@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSweepQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Availability.BookabilityOverrideQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
@@ -59,7 +60,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSweepQueries do
   @doc """
   Deletes the rows `ids` of the integration filed under
   `provider_calendar_id` that are still unwritten since `unwritten_since`.
-  Returns the uids of the rows deleted.
+  Returns the uids of the rows deleted. The listing showed their events
+  gone, so the bookability choices no remaining row carries go with them
+  (`BookabilityOverrideQueries.delete_orphaned/2`).
   """
   @spec delete_candidates(integer(), String.t(), [integer()], DateTime.t()) :: [String.t()]
   def delete_candidates(_calendar_integration_id, _provider_calendar_id, [], _unwritten_since),
@@ -76,6 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSweepQueries do
         |> select([e], e.uid)
         |> Repo.delete_all()
 
+      BookabilityOverrideQueries.delete_orphaned(calendar_integration_id, uids)
       uids
     end)
   end

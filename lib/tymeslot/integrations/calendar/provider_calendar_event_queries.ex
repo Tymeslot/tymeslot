@@ -4,11 +4,23 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   Provides read and write operations for the provider_calendar_events table, which stores
   events fetched from external calendar providers keyed by (calendar_integration_id, uid).
+
+  ## Deleting rows
+
+  The deletes here (`delete_by_uid/2`, `delete_by_uids/2`,
+  `delete_by_provider_event_ids/2`, `delete_by_recurring_event_ids/2`) are
+  for events confirmed gone: deleted here, reported deleted by a sync, or
+  missing from a complete listing of their calendar. Each also deletes the
+  organiser's bookability choices (`event_bookability_overrides`) that no
+  remaining row of the integration carries, since the table has no foreign
+  key to the event. A row that is only temporarily absent (a failed read,
+  a deselected calendar) must not go through them.
   """
 
   import Ecto.Query, warn: false
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.BookabilityOverrideQueries
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -450,18 +462,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   Deletes a single event identified by its integration and uid.
 
   Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.
+
+  Like every delete in this module, it is for an event that is gone (see
+  "Deleting rows" in the moduledoc), so it takes the event's bookability
+  choice with it.
   """
   @spec delete_by_uid(integer(), String.t()) :: {:ok, :deleted | :not_found}
   def delete_by_uid(calendar_integration_id, uid) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid
-      )
-      |> Repo.delete_all()
-
-    if count > 0, do: {:ok, :deleted}, else: {:ok, :not_found}
+    case delete_rows(calendar_integration_id, dynamic([e], e.uid == ^uid)) do
+      0 -> {:ok, :not_found}
+      _count -> {:ok, :deleted}
+    end
   end
 
   @doc """
@@ -496,17 +507,25 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   defp delete_where_in(calendar_integration_id, field, values) do
     values
     |> Enum.chunk_every(@upsert_chunk_size)
-    |> Enum.reduce(0, fn chunk, acc ->
-      {count, _rows} =
-        ProviderCalendarEventSchema
-        |> where(
-          [e],
-          e.calendar_integration_id == ^calendar_integration_id and field(e, ^field) in ^chunk
-        )
-        |> Repo.delete_all()
-
-      acc + count
+    |> Enum.sum_by(fn chunk ->
+      delete_rows(calendar_integration_id, dynamic([e], field(e, ^field) in ^chunk))
     end)
+  end
+
+  # Deletes the integration's rows matching `condition`, then the
+  # bookability choices that no remaining row carries, and returns the
+  # number of rows deleted. In the caller's transaction when there is one,
+  # so a sync that rolls back keeps the choices too.
+  defp delete_rows(calendar_integration_id, condition) do
+    {count, uids} =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where(^condition)
+      |> select([e], e.uid)
+      |> Repo.delete_all()
+
+    BookabilityOverrideQueries.delete_orphaned(calendar_integration_id, uids)
+    count
   end
 
   # Fields updated on conflict — everything except the surrogate key, inserted_at,
