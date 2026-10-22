@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarMessages do
   @moduledoc """
   The calendar's share of `TymeslotWeb.DashboardLive`'s mailbox: sync and
-  event-change broadcasts, write and delete results, and create and import
-  results.
+  event-change broadcasts, write and delete results, booking moves, and
+  create and import results.
 
   Each message goes to the module that acts on it, mostly
   `TymeslotWeb.Dashboard.CalendarEventHandlers`,
@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   import Phoenix.LiveView, only: [put_flash: 3]
 
   alias TymeslotWeb.Dashboard.AgendaRefresh
+  alias TymeslotWeb.Dashboard.BookingsManagement.CalendarMove
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.CalendarRouting
@@ -88,6 +89,18 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
           {kind, message} = Creation.outcome_message(title, result)
           put_flash(socket, kind, message)
       end
+
+    rebuild_agenda({:noreply, socket})
+  end
+
+  # A booking move the calendar's preview started
+  # (`TymeslotWeb.Dashboard.Calendar.BookingMove`) finished: settled on the
+  # surface if it is on screen, and otherwise flashed here.
+  def handle_info({:booking_move_result, meeting_id, result}, socket) do
+    case CalendarRouting.booking_move_settled(socket, meeting_id, result) do
+      :ok -> :ok
+      :off_screen -> _outcome = CalendarMove.report(socket, meeting_id, result)
+    end
 
     rebuild_agenda({:noreply, socket})
   end

@@ -449,3 +449,8 @@ msgstr "Considerato libero per le prenotazioni a ogni ripetizione. Gli ospiti po
 #, elixir-autogen, elixir-format
 msgid "You can block at most a week at a time."
 msgstr "Puoi bloccare al massimo una settimana alla volta."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Moving…"
+msgstr "Spostamento in corso…"

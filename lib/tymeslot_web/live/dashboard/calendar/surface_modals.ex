@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
   The calendar surface's dialogs: which events of a repeating series a
   change applies to, the delete confirmation, moving a series to another
   calendar, removing a guest, and the booking dialogs (decline a request,
-  cancel a booking, ask for a reschedule). Each shows while its prompt or
+  cancel a booking, ask for a reschedule, move a booking to its calendar
+  time). Each shows while its prompt or
   modal data is set. All are core modals, which become bottom sheets on a
   phone.
   """
@@ -12,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
 
   alias TymeslotWeb.Dashboard.Calendar.BookingCancelModal
   alias TymeslotWeb.Dashboard.Calendar.BookingDeclineModal
+  alias TymeslotWeb.Dashboard.Calendar.BookingMoveModal
   alias TymeslotWeb.Dashboard.Calendar.BookingRescheduleModal
   alias TymeslotWeb.Dashboard.Calendar.DeleteConfirmModal
   alias TymeslotWeb.Dashboard.Calendar.RemoveGuestModal
@@ -26,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
   attr :cancel_meeting_modal_data, :map, default: nil
   attr :cancel_booking_payment, :any, default: nil
   attr :reschedule_request_modal_data, :map, default: nil
+  attr :calendar_move_modal_data, :map, default: nil
   attr :answering_request, :any, required: true, doc: "the request ids being answered"
   attr :sending_reschedule, :any, default: nil
   attr :timezone, :string, required: true
@@ -75,6 +78,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
       :if={@reschedule_request_modal_data}
       meeting={@reschedule_request_modal_data}
       sending={not is_nil(@sending_reschedule)}
+      timezone={@timezone}
+      time_format={@time_format}
+      target={@target}
+    />
+    <BookingMoveModal.booking_move_modal
+      :if={@calendar_move_modal_data}
+      data={@calendar_move_modal_data}
       timezone={@timezone}
       time_format={@time_format}
       target={@target}

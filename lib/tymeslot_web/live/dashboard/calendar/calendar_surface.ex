@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
+  alias TymeslotWeb.Dashboard.Calendar.BookingMove
   alias TymeslotWeb.Dashboard.Calendar.CalendarsSheet
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
@@ -201,6 +202,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do:
         {:ok, socket |> Creation.settled(draft, title, result) |> PanelNew.settled(draft, result)}
 
+  # A booking move started from the preview has answered (see `BookingMove`).
+  def update(%{action: :booking_move_settled, meeting_id: id, result: result}, socket),
+    do: {:ok, BookingMove.settled(socket, id, result)}
+
   def update(%{action: :toast_expired, toast: id}, socket), do: {:ok, Toast.expire(socket, id)}
 
   def update(%{action: :event_writes_released, release: release}, socket),
@@ -362,6 +367,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         :if={@preview}
         preview={@preview}
         answering={@answering_request}
+        moving={@moving_booking}
         target={@myself}
       />
       <CalendarsSheet.calendars_sheet
@@ -410,6 +416,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         cancel_meeting_modal_data={@cancel_meeting_modal_data}
         cancel_booking_payment={@cancel_booking_payment}
         reschedule_request_modal_data={@reschedule_request_modal_data}
+        calendar_move_modal_data={@calendar_move_modal_data}
         answering_request={@answering_request}
         sending_reschedule={@sending_reschedule}
         timezone={@timezone}

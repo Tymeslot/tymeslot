@@ -449,3 +449,8 @@ msgstr "Bei jeder Wiederholung für Buchungen als frei behandelt. Gäste können
 #, elixir-autogen, elixir-format
 msgid "You can block at most a week at a time."
 msgstr "Sie können höchstens eine Woche auf einmal sperren."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Moving…"
+msgstr "Wird verschoben…"

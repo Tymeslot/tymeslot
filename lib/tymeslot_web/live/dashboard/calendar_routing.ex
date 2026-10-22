@@ -65,6 +65,21 @@ defmodule TymeslotWeb.Dashboard.CalendarRouting do
     end
   end
 
+  @doc """
+  A booking move the calendar started (`Calendar.BookingMove`) answered.
+  Off the calendar page the answer is `:off_screen`, for the LiveView to
+  tell the organiser itself.
+  """
+  @spec booking_move_settled(Phoenix.LiveView.Socket.t(), Ecto.UUID.t(), term()) ::
+          :ok | :off_screen
+  def booking_move_settled(socket, meeting_id, result) do
+    if surface_on_screen?(socket) do
+      to_mounted(socket, action: :booking_move_settled, meeting_id: meeting_id, result: result)
+    else
+      :off_screen
+    end
+  end
+
   @doc "A delete was scheduled in another tab of the organiser."
   @spec delete_scheduled(Phoenix.LiveView.Socket.t(), pos_integer(), map(), atom()) :: :ok
   def delete_scheduled(socket, token, address, scope),

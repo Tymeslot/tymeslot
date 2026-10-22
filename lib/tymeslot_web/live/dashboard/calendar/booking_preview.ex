@@ -7,6 +7,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
   longer be cancelled or moved, and its time row already says "Happening
   now".
 
+  A booking whose event the host moved in their own calendar also offers
+  "Move booking to …" (`BookingMove`), whatever its state, as the Meetings
+  page's card does: a secondary action under the notice that says the event
+  moved, offered only when `Tymeslot.Meetings.calendar_move_offers/1` made an
+  offer for it.
+
   The server checks again on every action (`BookingActions`), so a preview
   left open past the moment cannot act on it.
   """
@@ -55,11 +61,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
     default: MapSet.new(),
     doc: "the ids of the meetings whose answer is in flight"
 
+  attr :moving, :any, default: MapSet.new(), doc: "the ids of the bookings being moved"
+
   attr :target, :any, required: true
 
   @spec booking_actions(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_actions(assigns) do
     ~H"""
+    <div
+      :if={@preview.move_to}
+      id="calendar-preview-moved"
+      class="mt-4 border-t border-tymeslot-100 pt-3"
+    >
+      <p class="flex items-start gap-2 text-token-sm text-amber-800">
+        <.icon name="hero-exclamation-triangle-mini" class="mt-0.5 h-4 w-4 shrink-0" />
+        {dgettext(
+          "dashboard_bookings",
+          "This meeting's event was rescheduled in your external calendar."
+        )}
+      </p>
+      <div class="mt-2 flex justify-end">
+        <.loading_button
+          id="calendar-preview-move"
+          variant={:secondary}
+          size={:sm}
+          icon="hero-calendar-days"
+          class="whitespace-normal text-left"
+          loading={MapSet.member?(@moving, @preview.meeting_id)}
+          loading_text={dgettext("dashboard_calendar_booking", "Moving…")}
+          phx-click="booking:move"
+          phx-value-id={@preview.meeting_id}
+          phx-target={@target}
+        >
+          {dgettext("dashboard_bookings", "Move booking to %{time}", time: @preview.move_to)}
+        </.loading_button>
+      </div>
+    </div>
     <p
       :if={match?({:note, _text}, @preview.booking)}
       id="calendar-preview-note"

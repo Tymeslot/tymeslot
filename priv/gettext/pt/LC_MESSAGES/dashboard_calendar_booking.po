@@ -449,3 +449,8 @@ msgstr "Tratado como livre para agendamentos sempre que se repete. Os convidados
 #, elixir-autogen, elixir-format
 msgid "You can block at most a week at a time."
 msgstr "Você pode bloquear no máximo uma semana por vez."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Moving…"
+msgstr "Movendo…"

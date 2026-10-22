@@ -9,7 +9,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
   time the calendar has now rather than the one the list was drawn with,
   moves the booking only to the time the dialog showed, and turns the outcome
   into a flash. The reload is passed in because the list belongs to the
-  component.
+  component. The calendar's preview (`TymeslotWeb.Dashboard.Calendar.BookingMove`)
+  opens and settles its moves here too, running the move itself off its
+  process.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -92,7 +94,51 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
   end
 
   defp move(socket, meeting_id, user_id, offer, reload) do
-    case Meetings.move_to_calendar_time(meeting_id, user_id, offer) do
+    result = Meetings.move_to_calendar_time(meeting_id, user_id, offer)
+    settle(socket, meeting_id, result, reload)
+  end
+
+  @doc """
+  Settles a move of `meeting_id` that answered `result` (the return of
+  `Tymeslot.Meetings.move_to_calendar_time/3`), wherever it ran: reports it
+  (`report/3`), reloads with `reload`, and closes the dialog, unless the
+  calendar time changed again since it opened: then it shows the new time
+  for the host to confirm. The calendar runs the move off its process and
+  settles it here once it answers.
+  """
+  @spec settle(
+          Phoenix.LiveView.Socket.t(),
+          Ecto.UUID.t(),
+          {:ok, term()} | {:error, term()},
+          (Phoenix.LiveView.Socket.t() -> Phoenix.LiveView.Socket.t())
+        ) :: Phoenix.LiveView.Socket.t()
+  def settle(socket, meeting_id, result, reload) when is_function(reload, 1) do
+    case report(socket, meeting_id, result) do
+      # The event moved again while the dialog was open. Its new time is
+      # offered afresh; should it no longer be movable at all, `open/3` says
+      # why instead.
+      :offer_changed ->
+        user_id = socket.assigns.current_user.id
+        {_opened_or_closed, socket} = socket |> reload.() |> open(meeting_id, user_id)
+        socket
+
+      _moved_or_refused ->
+        socket |> reload.() |> ModalHook.hide_modal(:calendar_move)
+    end
+  end
+
+  @doc """
+  Tells the host how a move of `meeting_id` ended, with a flash and a
+  telemetry event, and answers which way it went. Needs only the signed-in
+  user, the profile and the time format from the socket, so it also serves
+  once the host has left the page the move was made from.
+  """
+  @spec report(Phoenix.LiveView.Socket.t(), Ecto.UUID.t(), {:ok, term()} | {:error, term()}) ::
+          :moved | :offer_changed | :refused
+  def report(socket, meeting_id, result) do
+    user_id = socket.assigns.current_user.id
+
+    case result do
       {:ok, moved} ->
         emit(user_id, meeting_id, :confirm, :ok)
 
@@ -102,21 +148,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
           )
         )
 
-        socket |> reload.() |> ModalHook.hide_modal(:calendar_move)
+        :moved
 
-      # The event moved again while the dialog was open. Its new time is
-      # offered afresh; should it no longer be movable at all, `open/3` says
-      # why instead.
       {:error, :offer_changed} ->
         emit(user_id, meeting_id, :confirm, :offer_changed)
         Flash.warning(refusal_message(:offer_changed))
-        {_opened_or_closed, socket} = socket |> reload.() |> open(meeting_id, user_id)
-        socket
+        :offer_changed
 
       {:error, reason} ->
         emit(user_id, meeting_id, :confirm, reason)
         Flash.error(refusal_message(reason))
-        socket |> reload.() |> ModalHook.hide_modal(:calendar_move)
+        :refused
     end
   end
 

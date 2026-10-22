@@ -30,10 +30,15 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
   def list_for_range(user_id, start_dt, end_dt, opts \\ []) do
     now = Clock.utc_now()
 
-    user_id
-    |> meetings(start_dt, end_dt, Keyword.get(opts, :include_expired, false))
-    |> Meetings.with_live_people()
-    |> Enum.map(&to_event(&1, now))
+    meetings =
+      user_id
+      |> meetings(start_dt, end_dt, Keyword.get(opts, :include_expired, false))
+      |> Meetings.with_live_people()
+
+    # Only a booking whose event the host moved costs a query here.
+    offers = Meetings.calendar_move_offers(meetings)
+
+    Enum.map(meetings, &to_event(&1, now, offers[&1.id]))
   end
 
   defp meetings(user_id, start_dt, end_dt, false),
@@ -48,7 +53,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     |> Enum.sort_by(& &1.start_time, DateTime)
   end
 
-  defp to_event(meeting, now) do
+  defp to_event(meeting, now, move_offer) do
     %BookingEvent{
       id: "booking-#{meeting.id}",
       meeting_id: meeting.id,
@@ -71,7 +76,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       seats_taken: seats_taken(meeting),
       status: meeting.status,
       request: MeetingState.awaiting_approval?(meeting),
-      expired: expired_request?(meeting, now)
+      expired: expired_request?(meeting, now),
+      move_offer: move_offer
     }
   end
 

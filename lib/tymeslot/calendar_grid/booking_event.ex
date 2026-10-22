@@ -26,6 +26,10 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
   `capacity` and the `seats_taken` (participants plus their guests) beside
   them. A one-to-one booking keeps a capacity of 1 and no seat count.
 
+  `move_offer` is the time the booking can follow its calendar event to
+  (`Tymeslot.Meetings.calendar_move_offers/1`), when the host moved that
+  event in their own calendar, and nil otherwise.
+
   `guests` are the people invited to the meeting through Tymeslot whose
   invitation still stands, each with the answer they gave (`status`:
   `"pending"`, `"accepted"` or `"declined"`), read by the preview
@@ -47,6 +51,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
     :provider_event_id,
     :meeting_type,
     :approval_deadline_at,
+    :move_offer,
     participants: [],
     guests: [],
     capacity: 1,
@@ -78,6 +83,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvent do
           provider_event_id: String.t() | nil,
           meeting_type: String.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
+          move_offer: nil | %{start_time: DateTime.t(), end_time: DateTime.t()},
           participants: [%{name: String.t() | nil, email: String.t()}],
           guests: [%{name: String.t() | nil, email: String.t(), status: String.t()}],
           capacity: pos_integer(),

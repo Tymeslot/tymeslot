@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
 
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Ecto.UUID
   alias Tymeslot.Workers.CalendarEventDeleteWorker
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.CalendarRouting
@@ -90,6 +91,20 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
                :off_screen
 
       refute_received {:phoenix, :send_update, _update}
+    end
+  end
+
+  describe "a booking move's result, in the dashboard" do
+    test "is flashed off the calendar page", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
+
+      send(lv.pid, {:booking_move_result, UUID.generate(), {:error, :slot_taken}})
+
+      assert settled(lv) =~
+               "Tymeslot could not move this booking. Another booking already starts at that time."
+
+      refute_push_event(lv, "calendar:events", %{}, 100)
     end
   end
 

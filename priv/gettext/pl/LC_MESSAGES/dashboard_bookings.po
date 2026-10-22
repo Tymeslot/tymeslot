@@ -268,6 +268,7 @@ msgid "This meeting's event was deleted from your external calendar."
 msgstr "Wydarzenie tego spotkania zostało usunięte z zewnętrznego kalendarza."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Wydarzenie tego spotkania zostało przeniesione na inny termin w zewnętrznym kalendarzu."
@@ -768,6 +769,7 @@ msgid "Move booking"
 msgstr "Przenieś rezerwację"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Move booking to %{time}"
 msgstr "Przenieś rezerwację na %{time}"

@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   @moduledoc """
   The preview's actions on a booking (`BookingPreview`): Accept and Decline a
-  request, Reschedule and Cancel a booking, reached as `"booking:" <> name`
+  request, Reschedule and Cancel a booking, and Move one whose event the host
+  moved in their calendar (`BookingMove`), reached as `"booking:" <> name`
   events from `CalendarSurface`.
 
   Each runs the Meetings page's own path, so the two pages cannot differ on
@@ -28,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
+  alias TymeslotWeb.Dashboard.Calendar.BookingMove
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
@@ -38,7 +40,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   @modals %{
     "decline" => :decline_request,
     "cancel" => :cancel_meeting,
-    "reschedule" => :reschedule_request
+    "reschedule" => :reschedule_request,
+    "move" => :calendar_move
   }
 
   @doc "The assigns the actions and their dialogs read, before any is used."
@@ -48,10 +51,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
     |> ModalHook.mount_modal(
       decline_request: false,
       cancel_meeting: false,
-      reschedule_request: false
+      reschedule_request: false,
+      calendar_move: false
     )
     |> assign(
       answering_request: MapSet.new(),
+      moving_booking: MapSet.new(),
       answering_opts: %{},
       cancel_booking_payment: nil,
       sending_reschedule: nil
@@ -149,6 +154,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
       end
     end)
   end
+
+  def handle("move", %{"id" => id}, socket) when is_binary(id), do: BookingMove.open(socket, id)
+
+  def handle("confirm_move", _params, socket), do: BookingMove.confirm(socket)
 
   # Focus goes back to the event the dialog was opened from, as when the
   # preview itself closes.

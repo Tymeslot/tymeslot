@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   (see `Deletion`), and a Busy/Free toggle unless it is a booking or a
   booking's calendar copy (`FreeBusy`). A booking offers what
   `BookingPreview` allows: Accept and Decline on a request, Reschedule and
-  Cancel on a booking still ahead, or a quiet line once it has passed.
+  Cancel on a booking still ahead, or a quiet line once it has passed, and
+  Move booking when the host moved its event in their calendar.
   A read-only all-day event offers "Treat as Busy | Free" instead (`TreatAs`), a choice
   kept in Tymeslot.
   """
@@ -76,7 +77,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       free: Map.get(event, :transparency) == "transparent",
       treat_as: TreatAs.state(event, blocking?(integration, entry), context),
       meeting_id: Map.get(event, :meeting_id),
-      booking: BookingPreview.state(event, context.now)
+      booking: BookingPreview.state(event, context.now),
+      move_to: move_to(event, context)
     }
   end
 
@@ -86,6 +88,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   attr :answering, :any,
     default: MapSet.new(),
     doc: "the ids of the meetings whose request answer is in flight"
+
+  attr :moving, :any, default: MapSet.new(), doc: "the ids of the bookings being moved"
 
   @spec preview(map()) :: Phoenix.LiveView.Rendered.t()
   def preview(assigns) do
@@ -190,7 +194,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Join")}
         </.link>
       </div>
-      <BookingPreview.booking_actions preview={@preview} answering={@answering} target={@target} />
+      <BookingPreview.booking_actions
+        preview={@preview}
+        answering={@answering}
+        moving={@moving}
+        target={@target}
+      />
       <div
         :if={@preview.editable}
         class="mt-4 flex justify-end gap-2 border-t border-tymeslot-100 pt-3"
@@ -298,6 +307,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           end_time: end_time
         )
   end
+
+  # The time the host moved a booking's event to in their calendar, worded
+  # like the time row above it; nil when the booking cannot follow it.
+  defp move_to(%{kind: :booking, move_offer: %{start_time: start_at, end_time: end_at}}, context),
+    do: when_text(%{start_at: start_at, end_at: end_at}, context)
+
+  defp move_to(_event, _context), do: nil
 
   defp relative(%{all_day: true}, _now), do: nil
 
