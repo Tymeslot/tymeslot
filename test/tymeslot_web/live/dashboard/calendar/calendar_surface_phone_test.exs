@@ -244,19 +244,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       assert has_element?(lv, "#calendar-phone-calendars svg")
     end
 
-    test "a long period wraps to a second line instead of being cut", %{conn: conn} do
+    test "the period stays on one line, in full for screen readers", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
 
-      assert has_element?(lv, "#calendar-phone-title span[class~='line-clamp-2']", "14 to 16 Oct")
-      refute has_element?(lv, "#calendar-phone-title span[class~='truncate']")
+      assert has_element?(lv, "#calendar-phone-title span[class~='truncate']", "14 – 16 Oct")
+      refute has_element?(lv, "#calendar-phone-title span[class~='line-clamp-2']")
+      assert has_element?(lv, "#calendar-phone-title[aria-label='Choose a date, 14 to 16 Oct']")
+    end
+
+    test "Today shows today's date and is named Today", %{conn: conn} do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#calendar-phone-today[aria-label='Today'][title='Today']")
+      assert has_element?(lv, "#calendar-phone-today span[aria-hidden='true']", "14")
     end
 
     test "shows the period between 44px previous and next buttons", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
 
-      assert has_element?(lv, "#calendar-phone-title", "14 to 16 Oct")
+      assert has_element?(lv, "#calendar-phone-title", "14 – 16 Oct")
 
       for id <- ~w(calendar-phone-prev calendar-phone-next calendar-phone-today) do
         assert has_element?(lv, "##{id}[class~='h-11'][class~='min-w-11']")
@@ -273,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       lv |> element("#calendar-phone-next") |> render_click()
 
       assert_patch(lv, ~p"/dashboard/calendar?view=three_day&date=2026-10-17")
-      assert has_element?(lv, "#calendar-phone-title", "17 to 19 Oct")
+      assert has_element?(lv, "#calendar-phone-title", "17 – 19 Oct")
     end
 
     test "Today goes back to today", %{conn: conn} do
@@ -282,7 +291,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       {:ok, lv, _html} =
         live(phone(conn), ~p"/dashboard/calendar?view=three_day&date=2026-10-30")
 
-      assert has_element?(lv, "#calendar-phone-title", "30 Oct to 1 Nov")
+      assert has_element?(lv, "#calendar-phone-title", "30 Oct – 1 Nov")
 
       lv |> element("#calendar-phone-today") |> render_click()
 
@@ -301,7 +310,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      assert has_element?(lv, "#calendar-phone-title", "12 to 18 Oct")
+      assert has_element?(lv, "#calendar-phone-title", "12 – 18 Oct")
     end
   end
 

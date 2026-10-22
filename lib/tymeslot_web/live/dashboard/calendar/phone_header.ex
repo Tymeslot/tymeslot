@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
   @moduledoc """
   The calendar's header on a phone, in place of the toolbar: previous, the
-  period (which opens `DateSheet`), next, search (the command bar), Today
-  and Calendars (which turns amber with the active set's name, or a count
+  period on one line (which opens `DateSheet`), next, search (the command
+  bar), Today (today's date on a tile) and Calendars (which turns amber with the active set's name, or a count
   while calendars are hidden), each at least 44px.
   Rendered at every width and shown only below 40rem (`sm:hidden`), where
   the toolbar is hidden (`max-sm:hidden`), so a phone's first paint is
@@ -35,7 +35,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
     assigns =
       assign(assigns,
         control: @control,
-        title: PeriodLabels.short_title(assigns.view, assigns.date, assigns.days, assigns.locale)
+        title: PeriodLabels.short_title(assigns.view, assigns.date, assigns.days, assigns.locale),
+        compact_title:
+          PeriodLabels.compact_title(assigns.view, assigns.date, assigns.days, assigns.locale)
       )
 
     ~H"""
@@ -55,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
       <button
         type="button"
         id="calendar-phone-title"
-        class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-token-lg px-2 text-token-base font-semibold text-tymeslot-900 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400"
+        class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-0.5 rounded-token-lg px-1 text-token-sm font-semibold text-tymeslot-900 hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-turquoise-400"
         aria-haspopup="dialog"
         aria-expanded={to_string(@open_menu == :date_sheet)}
         aria-label={dgettext("dashboard_calendar", "Choose a date, %{period}", period: @title)}
@@ -63,8 +65,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
         phx-value-menu="date_sheet"
         phx-target={@target}
       >
-        <%!-- Wraps to a second line rather than cutting the period mid-word. --%>
-        <span class="line-clamp-2 min-w-0 text-balance text-center leading-tight">{@title}</span>
+        <%!-- One line: the dash form fits 360px in English, and a longer
+             translation ends in an ellipsis; the aria-label has it in full. --%>
+        <span class="min-w-0 truncate">{@compact_title}</span>
         <.icon name="hero-chevron-down-mini" class="h-4 w-4 shrink-0 text-tymeslot-500" />
       </button>
       <button
@@ -86,13 +89,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
       >
         <.icon name="hero-magnifying-glass" class="h-5 w-5" />
       </button>
+      <%!-- Today's date on a calendar tile, as phone calendars show it: the
+           word took the period's room at 360px. --%>
       <button
         type="button"
         id="calendar-phone-today"
-        class={[@control, "px-3 text-token-sm font-semibold"]}
+        class={@control}
+        aria-label={dgettext("dashboard_calendar", "Today")}
+        title={dgettext("dashboard_calendar", "Today")}
         phx-click={Navigation.js(@view, @today, from: {@view, @date})}
       >
-        {dgettext("dashboard_calendar", "Today")}
+        <span
+          aria-hidden="true"
+          class="inline-flex h-6 w-6 items-center justify-center rounded-token-md border-2 border-current text-token-xs font-bold tabular-nums"
+        >
+          {@today.day}
+        </span>
       </button>
       <%!-- Filters never hide silently: amber, with the count, while calendars are hidden. --%>
       <button

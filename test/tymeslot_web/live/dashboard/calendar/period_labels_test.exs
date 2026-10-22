@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabelsTest do
 
   defp title(view, date), do: label(&PeriodLabels.title/4, view, date)
   defp short(view, date), do: label(&PeriodLabels.short_title/4, view, date)
+  defp compact(view, date), do: label(&PeriodLabels.compact_title/4, view, date)
 
   defp label(fun, view, date), do: fun.(view, date, Period.days(view, date, :monday, true), "en")
 
@@ -52,6 +53,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabelsTest do
 
     test "names both months when the days cross into the next" do
       assert short(:three_day, ~D[2026-10-30]) == "30 Oct to 1 Nov"
+    end
+  end
+
+  describe "compact_title/4" do
+    test "gives a range a dash in place of its words and keeps the other titles short" do
+      assert compact(:three_day, ~D[2026-10-19]) == "19 – 21 Oct"
+      assert compact(:week, ~D[2026-10-14]) == "12 – 18 Oct"
+      assert compact(:three_day, ~D[2026-10-30]) == "30 Oct – 1 Nov"
+      assert compact(:day, ~D[2026-10-19]) == "Mon 19 Oct"
+      assert compact(:month, ~D[2026-10-14]) == "Oct 2026"
+      assert compact(:agenda, ~D[2026-10-19]) == "From 19 Oct"
     end
   end
 

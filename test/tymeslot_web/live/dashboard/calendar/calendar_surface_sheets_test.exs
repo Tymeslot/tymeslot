@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSheetsTest do
       assert has_element?(
                lv,
                "button#calendar-phone-title[aria-haspopup='dialog']",
-               "14 to 16 Oct"
+               "14 – 16 Oct"
              )
 
       assert has_element?(lv, "#calendar-phone-title[aria-label='Choose a date, 14 to 16 Oct']")

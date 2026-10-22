@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
   @moduledoc """
   The words for a calendar period: the toolbar's title (`title/4`), the
-  phone header's shorter one (`short_title/4`), what previous and next step
+  phone header's shorter one (`short_title/4`, shown as `compact_title/4`), what previous and next step
   by (`step_label/2`) and each view's name (`view_label/1`). Shared by the
   toolbar and the phone header, so the two never disagree.
 
@@ -68,18 +68,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
     do: from(LocaleFormat.format_short_date(date, locale))
 
   def short_title(_view, _date, days, locale) do
-    first = List.first(days)
-    last = List.last(days)
+    {first, last} = day_range(days, locale)
+    dgettext("dashboard_calendar_views", "%{first} to %{last}", first: first, last: last)
+  end
 
-    first_text =
-      if {first.year, first.month} == {last.year, last.month},
-        do: LocaleFormat.format_day_of_month(first.day, locale),
-        else: LocaleFormat.format_short_date(first, locale)
+  @doc """
+  What the phone header shows, on one line at 360px: `short_title/4` with
+  a range's words given way to a dash ("19 – 21 Oct", "30 Oct – 1 Nov").
+  The header's accessible name keeps `short_title/4`.
+  """
+  @spec compact_title(Period.view(), Date.t(), [Date.t()], String.t()) :: String.t()
+  def compact_title(view, date, days, locale) when view in [:day, :month, :agenda],
+    do: short_title(view, date, days, locale)
 
-    dgettext("dashboard_calendar_views", "%{first} to %{last}",
-      first: first_text,
-      last: LocaleFormat.format_short_date(last, locale)
-    )
+  def compact_title(_view, _date, days, locale) do
+    {first, last} = day_range(days, locale)
+    range_title(first, last)
   end
 
   @doc "The accessible name of the previous (`:previous`) or next (`:next`) control."
@@ -105,6 +109,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
   def view_label(:week), do: dgettext("dashboard_calendar", "Week")
   def view_label(:month), do: dgettext("dashboard_calendar", "Month")
   def view_label(:agenda), do: dgettext("dashboard_calendar", "Agenda")
+
+  # The first and last day, the first without its month when both share it.
+  defp day_range(days, locale) do
+    first = List.first(days)
+    last = List.last(days)
+
+    first_text =
+      if {first.year, first.month} == {last.year, last.month},
+        do: LocaleFormat.format_day_of_month(first.day, locale),
+        else: LocaleFormat.format_short_date(first, locale)
+
+    {first_text, LocaleFormat.format_short_date(last, locale)}
+  end
 
   defp from(date), do: dgettext("dashboard_calendar_views", "From %{date}", date: date)
 
