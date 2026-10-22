@@ -11,14 +11,19 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
   @moduletag :emails
 
   import Swoosh.TestAssertions
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
   import Tymeslot.Factory
   import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Notifications.Email.PollEmails
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Repo
+  alias Tymeslot.Test.FailingMailerAdapter
   alias Tymeslot.Workers.EmailWorker
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
@@ -216,6 +221,25 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
       assert_receive {:email, next}, 1000
       assert next.text_body =~ "Responses from: Meanwhile"
     end
+
+    test "a nudge that fails to send leaves its votes to the update", ctx do
+      with_config(:tymeslot, Tymeslot.Mailer, adapter: FailingMailerAdapter)
+      breaker = CircuitBreakerSupervisor.email_breaker_name()
+      CircuitBreaker.reset(breaker)
+      on_exit(fn -> CircuitBreaker.reset(breaker) end)
+
+      since = DateTime.add(whole_second_now(), -3600, :second)
+      Repo.update!(Changeset.change(ctx.poll, vote_digest_sent_at: since))
+      voter(ctx.poll, "Ada", DateTime.add(whole_second_now(), -600, :second))
+
+      assert {:error, _reason} =
+               PollEmails.handle_host_nudge(
+                 %{"poll_id" => ctx.poll.id, "variant" => "all_voted"},
+                 nil
+               )
+
+      assert DateTime.compare(Repo.reload(ctx.poll).vote_digest_sent_at, since) == :eq
+    end
   end
 
   defp in_hours(hours) do
@@ -244,5 +268,5 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
   defp perform_digest(poll),
     do: perform_job(EmailWorker, %{"action" => "send_poll_vote_digest", "poll_id" => poll.id})
 
-  defp whole_second_now, do: DateTime.utc_now() |> DateTime.truncate(:second)
+  defp whole_second_now, do: DateTime.utc_now(:second)
 end
