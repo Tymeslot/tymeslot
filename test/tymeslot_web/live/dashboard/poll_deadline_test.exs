@@ -3,7 +3,9 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
   What the host sees of a poll's voting deadline: the results panel says when
   voting closes, and once the deadline has passed both the panel and the poll
   list say voting has closed rather than that it is open. A panel already open
-  when the deadline passes turns closed there and then, with no reload.
+  when the deadline passes turns closed there and then, with no reload, and
+  so does the list. The deadline timer belongs to the dashboard and is
+  cancelled when the host leaves the Polls section.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -59,6 +61,73 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
   defp deadline_reached(view, poll) do
     send(view.pid, {:poll_deadline_reached, poll.id})
     render(view)
+  end
+
+  # The component reports the next deadline to the LiveView in a message to
+  # itself; a render queued behind it lets it land before the state is read.
+  defp deadline_timer(view) do
+    render(view)
+    :sys.get_state(view.pid).socket.assigns[:poll_deadline_timer]
+  end
+
+  defp in_an_hour, do: DateTime.utc_now() |> DateTime.add(1, :hour) |> DateTime.truncate(:second)
+
+  test "the dashboard arms a timer for the next deadline among the listed polls", %{
+    conn: conn,
+    user: user
+  } do
+    soon = in_an_hour()
+    poll_with_deadline(user, DateTime.add(soon, 1, :day))
+    poll_with_deadline(user, soon)
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+    assert %{ref: ref, deadline: ^soon} = deadline_timer(view)
+    expected_ms = DateTime.diff(soon, DateTime.utc_now(), :millisecond)
+    assert_in_delta Process.read_timer(ref), expected_ms, 2_000
+  end
+
+  test "the timer follows the poll on screen, not its stale copy in the list", %{
+    conn: conn,
+    user: user
+  } do
+    poll = poll_with_deadline(user, in_an_hour())
+    view = open_results(conn, poll)
+    later = DateTime.add(poll.deadline_at, 1, :day)
+
+    # A live update refreshes only the poll on screen; its list copy keeps
+    # the old deadline.
+    poll |> Changeset.change(deadline_at: later) |> Repo.update!()
+    send(view.pid, {:poll_updated, poll.id})
+
+    assert %{deadline: ^later} = deadline_timer(view)
+  end
+
+  describe "when the host leaves the Polls section" do
+    setup %{conn: conn, user: user} do
+      poll = poll_with_deadline(user, in_an_hour())
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      %{ref: ref} = deadline_timer(view)
+
+      render_patch(view, ~p"/dashboard/settings")
+      {:ok, view: view, poll: poll, ref: ref}
+    end
+
+    test "the deadline timer is cancelled", %{view: view, ref: ref} do
+      assert Process.read_timer(ref) == false
+      assert deadline_timer(view) == nil
+    end
+
+    test "a deadline message that was already on its way is dropped", %{
+      view: view,
+      poll: poll
+    } do
+      send(view.pid, {:poll_deadline_reached, poll.id})
+      send(view.pid, {:poll_deadline_next, {poll.id, poll.deadline_at}})
+
+      assert deadline_timer(view) == nil
+      assert Process.alive?(view.pid)
+    end
   end
 
   test "an open poll before its deadline says voting is open and when it closes", %{
@@ -137,7 +206,8 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
       deadline: deadline
     } do
       # Moved without a broadcast, so only the reload on waking can see it.
-      poll |> Changeset.change(deadline_at: DateTime.add(deadline, 1, :day)) |> Repo.update!()
+      # 10:00 UTC in January is 12:00 in Tallinn (EET, UTC+2).
+      poll |> Changeset.change(deadline_at: ~U[2099-01-15 10:00:00Z]) |> Repo.update!()
 
       freeze_clock(DateTime.add(deadline, 1, :second))
       deadline_reached(view, poll)
@@ -145,6 +215,46 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
       assert has_element?(view, "[data-testid='poll-state-banner']", "Voting is open")
       assert has_element?(view, "[data-testid='poll-invite-form']")
       assert has_element?(view, "[data-testid='poll-status']", "Open")
+      assert has_element?(view, "[data-testid='poll-deadline']", "Voting closes 15 January 2099")
+      assert has_element?(view, "[data-testid='poll-deadline']", "12:00")
+    end
+  end
+
+  describe "when a listed poll that is not on screen reaches its deadline" do
+    setup %{conn: conn, user: user} do
+      shown = poll_with_deadline(user, DateTime.add(in_an_hour(), 1, :day))
+      insert(:poll_participant, poll: shown, name: "Grace", voted_at: DateTime.utc_now(:second))
+      closing = poll_with_deadline(user, in_an_hour())
+
+      view = open_results(conn, shown)
+      view |> element("button[phx-click='toggle_slot_voters']") |> render_click()
+      view |> element("button[phx-click='edit_poll_details']") |> render_click()
+
+      assert has_element?(view, "button[phx-click='toggle_slot_voters'][aria-expanded='true']")
+      assert has_element?(view, "[data-testid='poll-editor']")
+      refute has_element?(view, "[data-testid='poll-status']", "Voting closed")
+      {:ok, view: view, closing: closing}
+    end
+
+    test "its list pill turns to voting closed", %{view: view, closing: closing} do
+      freeze_clock(DateTime.add(closing.deadline_at, 1, :second))
+      deadline_reached(view, closing)
+
+      assert has_element?(view, "[data-testid='poll-status']", "Voting closed")
+      # The poll on screen is still open, in the list and in its panel.
+      assert has_element?(view, "[data-testid='poll-status']", "Open")
+      assert has_element?(view, "[data-testid='poll-state-banner']", "Voting is open")
+    end
+
+    test "the expanded slot and the open editor stay as they were", %{
+      view: view,
+      closing: closing
+    } do
+      freeze_clock(DateTime.add(closing.deadline_at, 1, :second))
+      deadline_reached(view, closing)
+
+      assert has_element?(view, "button[phx-click='toggle_slot_voters'][aria-expanded='true']")
+      assert has_element?(view, "[data-testid='poll-editor']")
     end
   end
 end
