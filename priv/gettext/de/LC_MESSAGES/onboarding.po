@@ -172,3 +172,13 @@ msgstr "Webinare, Workshops und Kurse anbieten"
 #, elixir-autogen, elixir-format
 msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
 msgstr "Machen Sie aus jedem Termintyp eine Gruppensitzung. Legen Sie fest, wie viele Personen teilnehmen können, und jedes Zeitfenster bleibt offen, bis es voll ist. So bedient eine einzige Buchungsseite Ihr Webinar, Ihren Workshop, Ihren Kurs oder Ihre Sprechstunde. Alle buchen sich selbst ein, erhalten eine eigene Bestätigung samt Kalendereinladung und können absagen oder verschieben, ohne bei Ihnen nachzufragen."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Invite people to a poll by email and keep it to the people you invite. Anyone else gets a voting link by email, and you can be emailed as votes arrive, with the standings. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Polls that invite, confirm and keep you posted"
+msgstr ""

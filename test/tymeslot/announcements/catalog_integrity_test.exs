@@ -161,6 +161,16 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
 
       assert long_expired(entries) == ["stale"]
     end
+
+    test "the catalogue announces poll invitations and management, linking to the polls guide",
+         %{entries: entries} do
+      entry = Enum.find(entries, &(&1.key == "meeting_polls_2026_10")) # gitleaks:allow
+
+      assert entry, "expected a meeting_polls_2026_10 announcement"
+      assert entry.cta_docs_slug == "meeting-polls"
+      assert entry.image_path == "/images/announcements/meeting-polls.svg"
+      assert DateTime.after?(entry.expires_at, entry.published_at)
+    end
   end
 
   defp long_expired([]), do: []
