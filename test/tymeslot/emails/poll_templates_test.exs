@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
     PollVoteReceipt
   }
 
+  alias Tymeslot.Mailer
   alias Tymeslot.Repo
 
   import Tymeslot.Factory
@@ -160,6 +161,10 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.html_body =~ url
       assert email.text_body =~ poll.title
       assert email.text_body =~ url
+    end
+
+    test "carries no open tracking", %{poll: poll, results_url: url} do
+      assert Mailer.tracking(PollHostNudge.render(poll, :all_voted, url)) == :transactional
     end
 
     test "the two variants produce distinct subjects and bodies", %{poll: poll, results_url: url} do
@@ -341,6 +346,8 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.text_body =~ ": 2 yes, 0 if need be, 0 no"
       assert email.text_body =~ "turn them off"
       assert email.html_body =~ "https://tymeslot.app/dashboard/polls"
+      # An update the host asked for, about their own poll: no open tracking.
+      assert Mailer.tracking(email) == :transactional
     end
   end
 
