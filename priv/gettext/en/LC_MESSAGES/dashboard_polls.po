@@ -700,7 +700,7 @@ msgid "%{name} was sent their link a few minutes ago. Please wait a little befor
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend invitation"
 msgstr ""
 
@@ -720,6 +720,6 @@ msgid "Voting on this poll has closed. Move the deadline to send links again."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You have sent too many invitations recently. Please try again later."
 msgstr ""

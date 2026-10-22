@@ -692,34 +692,34 @@ msgstr "Les rappels sont envoyés aux personnes invitées qui n'ont pas encore v
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has had too many emails recently. Please try again later."
-msgstr ""
+msgstr "%{name} a reçu trop d'e-mails récemment. Veuillez réessayer plus tard."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} was sent their link a few minutes ago. Please wait a little before sending it again."
-msgstr ""
+msgstr "%{name} a reçu son lien il y a quelques minutes. Veuillez patienter un peu avant de le renvoyer."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend invitation"
-msgstr "Envoyer les invitations"
+msgstr "Renvoyer l'invitation"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Resend voting link"
-msgstr ""
+msgstr "Renvoyer le lien de vote"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Sent %{name} their link again."
-msgstr ""
+msgstr "Lien renvoyé à %{name}."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Voting on this poll has closed. Move the deadline to send links again."
-msgstr ""
+msgstr "Le vote est clos pour ce sondage. Repoussez la date limite pour pouvoir renvoyer des liens."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You have sent too many invitations recently. Please try again later."
-msgstr "Vous ne pouvez plus inviter personne pour le moment. Veuillez réessayer plus tard."
+msgstr "Vous avez envoyé trop d'invitations récemment. Veuillez réessayer plus tard."

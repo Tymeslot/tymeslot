@@ -705,34 +705,34 @@ msgstr "Připomínky dostávají pozvaní, kteří ještě nehlasovali. Anketa b
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has had too many emails recently. Please try again later."
-msgstr ""
+msgstr "%{name} v poslední době dostává příliš mnoho e-mailů. Zkuste to prosím později."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} was sent their link a few minutes ago. Please wait a little before sending it again."
-msgstr ""
+msgstr "Odkaz odešel před několika minutami (příjemce: %{name}). Než ho pošlete znovu, chvíli prosím počkejte."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend invitation"
-msgstr "Odeslat pozvánky"
+msgstr "Znovu odeslat pozvánku"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Resend voting link"
-msgstr ""
+msgstr "Znovu odeslat odkaz k hlasování"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Sent %{name} their link again."
-msgstr ""
+msgstr "%{name} dostane svůj odkaz znovu."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Voting on this poll has closed. Move the deadline to send links again."
-msgstr ""
+msgstr "Hlasování v této anketě je uzavřené. Chcete-li odkazy znovu posílat, posuňte uzávěrku."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You have sent too many invitations recently. Please try again later."
-msgstr "Momentálně už nemůžete pozvat nikoho dalšího. Zkuste to prosím později."
+msgstr "V poslední době odešlo příliš mnoho vašich pozvánek. Zkuste to prosím později."
