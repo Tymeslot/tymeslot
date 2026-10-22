@@ -95,6 +95,32 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
                Scheduling.create_meeting_with_conflict_check(attrs(user, buffer_start))
     end
 
+    test "buffers: false counts only meetings at the time itself", %{user: user} do
+      base = future_time(2, :day)
+      insert_meeting(user, base)
+
+      # existing ends at base+30m; new starts at base+35m, inside the 15m buffer
+      buffer_start = DateTime.add(base, 35, :minute)
+
+      assert {:ok, meeting} =
+               Scheduling.create_meeting_with_conflict_check(attrs(user, buffer_start),
+                 buffers: false
+               )
+
+      assert DateTime.compare(meeting.start_time, buffer_start) == :eq
+    end
+
+    test "buffers: false still refuses a meeting overlapping the time", %{user: user} do
+      base = future_time(2, :day)
+      insert_meeting(user, base)
+
+      assert {:error, :time_conflict} =
+               Scheduling.create_meeting_with_conflict_check(
+                 attrs(user, DateTime.add(base, 15, :minute)),
+                 buffers: false
+               )
+    end
+
     test "allows meeting outside the buffer window", %{user: user} do
       base = future_time(2, :day)
       insert_meeting(user, base)
