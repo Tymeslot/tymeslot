@@ -433,6 +433,9 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:poll_slot_health, poll_id, health}, socket),
     do: PollEventHandlers.handle_poll_slot_health(poll_id, health, socket)
 
+  def handle_info({:poll_deadline_reached, poll_id}, socket),
+    do: PollEventHandlers.handle_poll_deadline_reached(poll_id, socket)
+
   # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
 
   def handle_info({:guest_rsvp_updated, _meeting_id}, socket) do

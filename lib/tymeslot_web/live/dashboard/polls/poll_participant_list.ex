@@ -107,7 +107,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
-    {:ok, assign(socket, :voting_open?, Polls.voting_open?(socket.assigns.poll))}
+    # `now` comes from the dashboard, which moves it on at the poll's
+    # deadline, so the resend actions close with voting.
+    %{poll: poll, now: now} = socket.assigns
+    {:ok, assign(socket, :voting_open?, Polls.voting_open?(poll, now))}
   end
 
   @impl Phoenix.LiveComponent

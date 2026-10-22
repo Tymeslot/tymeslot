@@ -16,11 +16,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   here (via `Polls.subscribe/1`) but the message is delivered to
   `DashboardLive.handle_info/2`, which routes it back with
   `send_update(__MODULE__, poll_updated: poll_id)`.
+
+  Voting on an open poll closes at its deadline without any write, so nothing
+  is broadcast then. The component keeps a `PollDeadlineTimer` for the next
+  deadline among the polls on screen; it fires at the LiveView, which routes
+  it back as `poll_deadline_reached: poll_id`, and the component reloads so
+  the list and the results panel show voting as closed. Every render reads
+  "open" against the `now` assigned at the last load, so the reload that
+  moves `now` past the deadline is what re-renders them.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.UUID
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
@@ -41,6 +50,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   }
 
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.PollDeadlineTimer
 
   require Logger
 
@@ -71,6 +81,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     else
       {:ok, socket}
     end
+  end
+
+  def update(%{poll_deadline_reached: _poll_id}, socket) do
+    # Some poll on screen reached its deadline, or the timer woke early to
+    # re-arm a long wait. Reloading derives "voting open" afresh from the
+    # stored deadline (the host may have moved it) and arms the next timer.
+    socket =
+      if socket.assigns[:selected_poll_id],
+        do: reload_selected(socket, refresh_health: false),
+        else: socket
+
+    {:ok, load_polls(socket)}
   end
 
   def update(%{poll_slot_health: {poll_id, health}}, socket) do
@@ -104,6 +126,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:show_delete_modal, fn -> false end)
      |> assign_new(:expanded_slots, fn -> MapSet.new() end)
      |> assign_new(:editing_details?, fn -> false end)
+     |> assign_new(:deadline_timer, fn -> nil end)
      |> load_polls()}
   end
 
@@ -155,6 +178,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             integration_status={@integration_status}
             meetings_path={~p"/dashboard/meetings"}
             time_format={@time_format}
+            now={@now}
             myself={@myself}
           />
 
@@ -185,6 +209,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             profile={@profile}
             integration_status={@integration_status}
             selected_poll_id={@selected_poll_id}
+            now={@now}
             myself={@myself}
           />
         </div>
@@ -448,6 +473,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
         |> assign(:tallies, Polls.tallies(poll))
         |> assign_winning_slot(poll)
         |> sync_slot_health(poll, opts)
+        |> sync_deadline()
 
       {:error, :not_found} ->
         clear_selection(socket)
@@ -550,6 +576,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   end
 
   defp load_polls(socket) do
-    assign(socket, :polls, Polls.list_polls(socket.assigns.current_user.id))
+    socket
+    |> assign(:polls, Polls.list_polls(socket.assigns.current_user.id))
+    |> sync_deadline()
+  end
+
+  # Fixes the instant every render judges "voting open" by, and arms the timer
+  # for the next deadline among the listed polls and the one on screen.
+  defp sync_deadline(socket) do
+    now = Clock.utc_now()
+
+    polls =
+      Enum.reject([socket.assigns[:selected_poll] | socket.assigns[:polls] || []], &is_nil/1)
+
+    assign(socket,
+      now: now,
+      deadline_timer: PollDeadlineTimer.sync(socket.assigns[:deadline_timer], polls, now)
+    )
   end
 end

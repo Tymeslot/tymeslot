@@ -161,13 +161,29 @@ defmodule Tymeslot.Polls.PollSchema do
     |> foreign_key_constraint(:meeting_type_id)
   end
 
-  @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."
-  @spec voting_open?(%__MODULE__{} | map()) :: boolean()
-  def voting_open?(%{status: status}) when status != :open, do: false
-  def voting_open?(%{deadline_at: nil}), do: true
+  @doc """
+  Whether voting is open at `now`: open status and no deadline, or a deadline
+  still ahead of `now`.
+  """
+  @spec voting_open?(%__MODULE__{} | map(), DateTime.t()) :: boolean()
+  def voting_open?(poll, now \\ Clock.utc_now())
+  def voting_open?(%{status: status}, _now) when status != :open, do: false
+  def voting_open?(%{deadline_at: nil}, _now), do: true
 
-  def voting_open?(%{deadline_at: deadline_at}) do
-    DateTime.compare(DateTime.utc_now(), deadline_at) == :lt
+  def voting_open?(%{deadline_at: deadline_at}, now) do
+    DateTime.compare(now, deadline_at) == :lt
+  end
+
+  @doc """
+  Of `polls`, the one whose voting closes next after `now`: the earliest
+  deadline among those still open to votes. Nil when none of them has a
+  deadline still ahead.
+  """
+  @spec next_to_close([%__MODULE__{}], DateTime.t()) :: %__MODULE__{} | nil
+  def next_to_close(polls, now) do
+    polls
+    |> Enum.filter(&(&1.deadline_at && voting_open?(&1, now)))
+    |> Enum.min_by(& &1.deadline_at, DateTime, fn -> nil end)
   end
 
   @doc """

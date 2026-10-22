@@ -62,6 +62,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   attr :parent_id, :string, required: true
   attr :meetings_path, :string, required: true
   attr :time_format, :string, default: nil
+
+  attr :now, DateTime,
+    required: true,
+    doc: "the instant voting is judged open at; the owner moves it on at each deadline"
+
   attr :myself, :any, required: true
 
   @spec results_panel(map()) :: Phoenix.LiveView.Rendered.t()
@@ -70,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       assigns
       |> assign(:votes, vote_index(assigns.poll.participants))
       |> assign(:open?, assigns.poll.status == :open)
-      |> assign(:voting_open?, Polls.voting_open?(assigns.poll))
+      |> assign(:voting_open?, Polls.voting_open?(assigns.poll, assigns.now))
       |> assign(:participant_count, length(assigns.poll.participants))
       |> assign(:voted_count, Enum.count(assigns.poll.participants, & &1.voted_at))
       |> assign(:leaders, Polls.leading_slot_ids(assigns.poll.time_slots, assigns.tallies))
@@ -86,6 +91,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         user_id={@user_id}
         parent_id={@parent_id}
         parent_myself={@myself}
+        now={@now}
       />
 
       <div :if={!@editing_details?} class="flex items-start justify-between gap-3">

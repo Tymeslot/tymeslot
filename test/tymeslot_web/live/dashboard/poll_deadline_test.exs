@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
   @moduledoc """
   What the host sees of a poll's voting deadline: the results panel says when
   voting closes, and once the deadline has passed both the panel and the poll
-  list say voting has closed rather than that it is open.
+  list say voting has closed rather than that it is open. A panel already open
+  when the deadline passes turns closed there and then, with no reload.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -11,7 +12,10 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
 
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
+  alias Ecto.Changeset
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
   setup %{conn: conn} do
@@ -47,6 +51,14 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
     |> render_click()
 
     view
+  end
+
+  # What the panel's own deadline timer sends. The LiveView routes it to the
+  # component with `send_update`, a message to itself that can queue behind
+  # the next render request, so one render first lets it land.
+  defp deadline_reached(view, poll) do
+    send(view.pid, {:poll_deadline_reached, poll.id})
+    render(view)
   end
 
   test "an open poll before its deadline says voting is open and when it closes", %{
@@ -89,5 +101,50 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
 
     assert has_element?(view, "[data-testid='poll-state-banner']", "Voting is open")
     refute has_element?(view, "[data-testid='poll-deadline']")
+  end
+
+  describe "when the deadline passes with the results panel open" do
+    setup %{conn: conn, user: user} do
+      deadline = DateTime.utc_now() |> DateTime.add(1, :hour) |> DateTime.truncate(:second)
+      poll = poll_with_deadline(user, deadline)
+      insert(:poll_participant, poll: poll, name: "Grace")
+      view = open_results(conn, poll)
+
+      assert has_element?(view, "[data-testid='poll-state-banner']", "Voting is open")
+      assert has_element?(view, "[data-testid='poll-invite-form']")
+      {:ok, view: view, poll: poll, deadline: deadline}
+    end
+
+    test "the panel and the list turn to voting closed without a reload", %{
+      view: view,
+      poll: poll,
+      deadline: deadline
+    } do
+      # The LiveView reads the clock this test freezes.
+      freeze_clock(DateTime.add(deadline, 1, :second))
+      deadline_reached(view, poll)
+
+      assert has_element?(view, "[data-testid='poll-state-banner']", "Voting has closed")
+      assert has_element?(view, "[data-testid='poll-deadline']", "Voting closed")
+      assert has_element?(view, "[data-testid='poll-invite-closed']")
+      refute has_element?(view, "[data-testid='poll-invite-form']")
+      assert has_element?(view, "[data-testid='poll-status']", "Voting closed")
+    end
+
+    test "a deadline the host moved later keeps voting open past the old one", %{
+      view: view,
+      poll: poll,
+      deadline: deadline
+    } do
+      # Moved without a broadcast, so only the reload on waking can see it.
+      poll |> Changeset.change(deadline_at: DateTime.add(deadline, 1, :day)) |> Repo.update!()
+
+      freeze_clock(DateTime.add(deadline, 1, :second))
+      deadline_reached(view, poll)
+
+      assert has_element?(view, "[data-testid='poll-state-banner']", "Voting is open")
+      assert has_element?(view, "[data-testid='poll-invite-form']")
+      assert has_element?(view, "[data-testid='poll-status']", "Open")
+    end
   end
 end

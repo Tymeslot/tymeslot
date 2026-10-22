@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :selected_poll_id, :any, default: nil
+  attr :now, DateTime, required: true, doc: "the instant voting is judged open at"
   attr :myself, :any, required: true
 
   @spec poll_list(map()) :: Phoenix.LiveView.Rendered.t()
@@ -55,6 +56,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
         profile={@profile}
         integration_status={@integration_status}
         selected={@selected_poll_id == poll.id}
+        now={@now}
         myself={@myself}
       />
     </div>
@@ -81,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :selected, :boolean, default: false
+  attr :now, DateTime, required: true
   attr :myself, :any, required: true
 
   @spec poll_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -101,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
               {@poll.title}
             </h2>
-            <.status_pill status={status(@poll)} />
+            <.status_pill status={status(@poll, @now)} />
           </div>
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-token-xs text-tymeslot-600">
@@ -172,11 +175,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   # An open poll past its deadline takes no more votes, though it still
   # waits for the host to confirm a time.
-  defp status(%{status: :open} = poll) do
-    if Polls.voting_open?(poll), do: :open, else: :voting_closed
+  defp status(%{status: :open} = poll, now) do
+    if Polls.voting_open?(poll, now), do: :open, else: :voting_closed
   end
 
-  defp status(%{status: status}), do: status
+  defp status(%{status: status}, _now), do: status
 
   defp status_tone(:open), do: :brand
   defp status_tone(:voting_closed), do: :warning

@@ -2,9 +2,9 @@ defmodule TymeslotWeb.Dashboard.PollEventHandlers do
   @moduledoc """
   Routes poll-related `handle_info/2` messages for `DashboardLive`.
 
-  Both messages arrive at the LiveView because it owns the process that
-  subscribed on the host's behalf, but neither touches LiveView state: each
-  simply forwards to `PollsComponent`. Keeping the routing here leaves
+  Each message arrives at the LiveView because it owns the process that
+  subscribed, or armed a timer, on the host's behalf, but none touches
+  LiveView state: each simply forwards to `PollsComponent`. Keeping the routing here leaves
   `DashboardLive` focused on lifecycle and rendering.
   """
 
@@ -32,6 +32,17 @@ defmodule TymeslotWeb.Dashboard.PollEventHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_poll_slot_health(poll_id, health, socket) do
     send_update(PollsComponent, id: component_id(), poll_slot_health: {poll_id, health})
+    {:noreply, socket}
+  end
+
+  @doc """
+  The Polls component's deadline timer fired (see `PollDeadlineTimer`);
+  this routes it to the component, which reloads and re-arms.
+  """
+  @spec handle_poll_deadline_reached(Ecto.UUID.t(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_poll_deadline_reached(poll_id, socket) do
+    send_update(PollsComponent, id: component_id(), poll_deadline_reached: poll_id)
     {:noreply, socket}
   end
 

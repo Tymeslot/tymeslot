@@ -8,6 +8,7 @@ defmodule Tymeslot.Polls do
 
   alias Ecto.UUID
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.MeetingTypes
 
@@ -349,9 +350,16 @@ defmodule Tymeslot.Polls do
     if length(leaders) == map_size(scores), do: [], else: leaders
   end
 
-  @doc "Whether voting is currently open: open status and no deadline, or a deadline still in the future."
-  @spec voting_open?(PollSchema.t()) :: boolean()
-  defdelegate voting_open?(poll), to: PollSchema
+  @doc """
+  Whether voting is open at `now` (by default the current time): open status
+  and no deadline, or a deadline still in the future.
+  """
+  @spec voting_open?(PollSchema.t(), DateTime.t()) :: boolean()
+  defdelegate voting_open?(poll, now \\ Clock.utc_now()), to: PollSchema
+
+  @doc "Of `polls`, the one whose voting closes next after `now`, or nil."
+  @spec next_to_close([PollSchema.t()], DateTime.t()) :: PollSchema.t() | nil
+  defdelegate next_to_close(polls, now), to: PollSchema
 
   @doc "Subscribes the calling process to updates for a poll."
   @spec subscribe(Ecto.UUID.t()) :: :ok | {:error, term()}

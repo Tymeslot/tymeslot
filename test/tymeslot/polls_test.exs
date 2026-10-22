@@ -401,6 +401,37 @@ defmodule Tymeslot.PollsTest do
     end
   end
 
+  describe "voting_open?/2" do
+    test "judges the deadline against the instant given, not the wall clock" do
+      poll = build(:poll, status: :open, deadline_at: ~U[2030-01-01 12:00:00Z])
+
+      assert Polls.voting_open?(poll, ~U[2030-01-01 11:59:59Z])
+      refute Polls.voting_open?(poll, ~U[2030-01-01 12:00:00Z])
+    end
+  end
+
+  describe "next_to_close/2" do
+    @now ~U[2030-01-01 12:00:00Z]
+
+    test "picks the earliest deadline still ahead among the polls open to votes" do
+      later = build(:poll, status: :open, deadline_at: ~U[2030-01-03 12:00:00Z])
+      sooner = build(:poll, status: :open, deadline_at: ~U[2030-01-02 12:00:00Z])
+
+      assert Polls.next_to_close([later, sooner], @now) == sooner
+    end
+
+    test "skips polls without a deadline, past their deadline, or no longer open" do
+      polls = [
+        build(:poll, status: :open, deadline_at: nil),
+        build(:poll, status: :open, deadline_at: ~U[2030-01-01 11:00:00Z]),
+        build(:poll, status: :cancelled, deadline_at: ~U[2030-01-02 12:00:00Z]),
+        build(:poll, status: :confirmed, deadline_at: ~U[2030-01-02 12:00:00Z])
+      ]
+
+      assert Polls.next_to_close(polls, @now) == nil
+    end
+  end
+
   defp create_basic_poll(user, start_time) do
     Polls.create_poll(user.id, %{
       title: "Team sync",

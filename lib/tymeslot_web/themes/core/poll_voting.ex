@@ -22,6 +22,14 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   On an invite-only poll the bare link asks nobody for an address: it says
   the poll is by invitation and the personal link from the invitation email
   is the only way in. A request sent to it anyway is refused by the domain.
+
+  ## Closing at the deadline
+
+  Voting closes at the poll's deadline without any write, so no broadcast
+  says so. A connected page keeps a `PollDeadlineTimer` for the deadline and,
+  when it fires, reloads the poll as a broadcast would: the page turns to
+  "voting has ended" while the voter still has it open, unless the host has
+  moved the deadline meanwhile, in which case the timer is armed again.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -29,6 +37,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [connected?: 1, get_connect_params: 1, put_flash: 3]
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
@@ -36,6 +45,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Live.Shared.PollDeadlineTimer
   alias TymeslotWeb.Themes.Shared.PollVotingComponents
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -61,15 +71,29 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     if connected?(socket), do: Polls.subscribe(poll.id)
     participant = Voting.get_participant(poll, params["p"])
 
-    assign(socket,
+    socket
+    |> assign(
       poll: poll,
       tallies: Polls.tallies(poll),
-      voting_open: Polls.voting_open?(poll),
       participant: participant,
       invalid_link: params["p"] not in [nil, ""] and is_nil(participant),
       link_request: nil,
       voter_timezone: browser_timezone(socket)
     )
+    |> assign_voting_open(poll)
+  end
+
+  # One instant decides both what the page shows and when it next wakes.
+  # Only a connected page arms the timer: the static render's process ends
+  # with the response.
+  defp assign_voting_open(socket, poll) do
+    now = Clock.utc_now()
+
+    timer =
+      if connected?(socket),
+        do: PollDeadlineTimer.sync(socket.assigns[:deadline_timer], [poll], now)
+
+    assign(socket, voting_open: Polls.voting_open?(poll, now), deadline_timer: timer)
   end
 
   # The static render has no connect params; the browser reports its zone
@@ -174,11 +198,19 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   end
 
   @doc """
-  Reloads the poll and tallies when a `{:poll_updated, poll_id}` broadcast is for
-  the assigned poll; otherwise leaves the socket untouched.
+  Reloads the poll and tallies when a `{:poll_updated, poll_id}` broadcast, or
+  the page's own `{:poll_deadline_reached, poll_id}` timer, is for the
+  assigned poll; otherwise leaves the socket untouched.
   """
   @spec handle_poll_info(term(), socket()) :: {:noreply, socket()}
   def handle_poll_info({:poll_updated, poll_id}, %{assigns: %{poll: %{id: poll_id}}} = socket) do
+    {:noreply, reload_tallies(socket)}
+  end
+
+  def handle_poll_info(
+        {:poll_deadline_reached, poll_id},
+        %{assigns: %{poll: %{id: poll_id}}} = socket
+      ) do
     {:noreply, reload_tallies(socket)}
   end
 
@@ -270,9 +302,9 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         |> assign(
           poll: poll,
           tallies: Polls.tallies(poll),
-          voting_open: Polls.voting_open?(poll),
           participant: reload_participant(poll, socket.assigns[:participant])
         )
+        |> assign_voting_open(poll)
         |> reset_link_request(poll)
 
       {:error, :not_found} ->
