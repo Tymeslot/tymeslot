@@ -397,3 +397,8 @@ msgstr "Non l'hai richiesto? Puoi ignorare questa email. Le risposte che hai sal
 #, elixir-autogen, elixir-format
 msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
 msgstr "Ecco di nuovo il tuo link per votare su %{title} per %{host}. Le risposte che hai già salvato vengono conteggiate e puoi modificarle in qualsiasi momento tramite questo link."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
+msgstr ""

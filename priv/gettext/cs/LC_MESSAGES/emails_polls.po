@@ -399,3 +399,8 @@ msgstr "Tento e-mail nečekáte? Pak ho můžete ignorovat. Vaše uložené odpo
 #, elixir-autogen, elixir-format
 msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
 msgstr "Zde je znovu váš odkaz k hlasování v anketě %{title} od %{host}. Vaše již uložené odpovědi se započítávají a přes tento odkaz je můžete kdykoli změnit."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
+msgstr ""

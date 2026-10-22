@@ -209,7 +209,7 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   `cancel_deadline_jobs/1`, which would otherwise delete it.
 
   The job carries what the email needs: the poll's title, its host, and each
-  participant's name, address and language. The host may then delete the
+  participant's name, address, language and whether they voted. The host may then delete the
   poll straight after cancelling it, and the participants are still told.
   Its `user_id` also lets an account deletion clear it with the rest of the
   host's jobs.
@@ -248,7 +248,8 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
       "id" => participant.id,
       "name" => participant.name,
       "email" => participant.email,
-      "locale" => participant.locale
+      "locale" => participant.locale,
+      "voted_at" => participant.voted_at && DateTime.to_iso8601(participant.voted_at)
     }
   end
 

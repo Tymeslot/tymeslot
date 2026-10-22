@@ -367,8 +367,18 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       id: args["id"],
       name: args["name"],
       email: args["email"],
-      locale: args["locale"]
+      locale: args["locale"],
+      voted_at: parse_datetime(args["voted_at"])
     }
+  end
+
+  defp parse_datetime(nil), do: nil
+
+  defp parse_datetime(iso) do
+    case DateTime.from_iso8601(iso) do
+      {:ok, datetime, _offset} -> datetime
+      {:error, _reason} -> nil
+    end
   end
 
   # Who voted since the host's last update and before `cutoff`, in the order

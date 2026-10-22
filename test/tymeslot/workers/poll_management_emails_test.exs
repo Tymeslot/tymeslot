@@ -131,6 +131,27 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
                ["ada@example.com", "grace@example.com"]
     end
 
+    test "thanks only those who answered for their responses", ctx do
+      insert_invitee(ctx.poll, email: "silent@example.com")
+      insert_invitee(ctx.poll, email: "voter@example.com", voted_at: DateTime.utc_now(:second))
+
+      assert {:ok, _cancelled} = Polls.cancel_poll(ctx.poll.id, ctx.user.id)
+      assert :ok = perform_job(EmailWorker, cancellation_args(ctx.poll))
+
+      assert_receive {:email, first}, 1000
+      assert_receive {:email, second}, 1000
+      by_address = Map.new([first, second], fn email -> {hd(email.to) |> elem(1), email} end)
+
+      voter = by_address["voter@example.com"]
+      assert voter.text_body =~ "Thank you for your responses."
+      assert voter.html_body =~ "Thank you for your responses."
+
+      silent = by_address["silent@example.com"]
+      assert silent.text_body =~ "no meeting will be scheduled from it."
+      refute silent.text_body =~ "Thank you"
+      refute silent.html_body =~ "Thank you"
+    end
+
     test "still emails everyone from a job queued before it carried the host", ctx do
       insert_invitee(ctx.poll, email: "ada@example.com")
       insert(:poll_participant, poll: ctx.poll, email: "grace@example.com")

@@ -399,3 +399,8 @@ msgstr "Ви цього не запитували? Тоді просто про�
 #, elixir-autogen, elixir-format
 msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
 msgstr "Ось знову ваше посилання, щоб проголосувати в опитуванні %{title} від %{host}. Ваші вже збережені відповіді враховано, і ви можете будь-коли змінити їх через нього."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
+msgstr ""
