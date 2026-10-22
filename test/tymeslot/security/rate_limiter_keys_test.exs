@@ -132,7 +132,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     assert %{webhook_write: _dashboard, own: [limit: 1]} =
              DashboardLimits.merge_disjoint(%{own: [limit: 1]})
 
-    assert_raise ArgumentError, ~r/:webhook_write is defined twice/, fn ->
+    assert_raise ArgumentError, ~r/defined twice: \[:webhook_write\]/, fn ->
       DashboardLimits.merge_disjoint(%{webhook_write: [limit: 1]})
     end
   end

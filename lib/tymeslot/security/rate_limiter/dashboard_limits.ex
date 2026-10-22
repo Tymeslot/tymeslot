@@ -206,8 +206,9 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
   """
   @spec merge_disjoint(%{atom() => keyword()}) :: %{atom() => keyword()}
   def merge_disjoint(limits) do
-    Map.merge(@limits, limits, fn name, _dashboard, _other ->
-      raise ArgumentError, "rate limit #{inspect(name)} is defined twice"
-    end)
+    case @limits |> Map.take(Map.keys(limits)) |> Map.keys() do
+      [] -> Map.merge(@limits, limits)
+      names -> raise ArgumentError, "rate limits defined twice: #{inspect(names)}"
+    end
   end
 end
