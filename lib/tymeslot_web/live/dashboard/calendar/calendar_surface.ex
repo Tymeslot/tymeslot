@@ -360,6 +360,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           video_integrations={@video_integrations}
           guest_form_key={@guest_form_key}
           moving={not is_nil(@transfer)}
+          group_allowed={assigns[:group_bookings_allowed] == true}
+          timezone={@timezone}
           surface={@myself}
         />
       </div>

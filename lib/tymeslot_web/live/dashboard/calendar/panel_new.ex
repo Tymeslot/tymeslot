@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   (`Creation.start/3`); the draft then belongs to the pending create, and
   once that answers the panel edits the new event. With a guest and "Send as a
   Tymeslot meeting" ticked, Create books a Tymeslot meeting instead
-  (`PanelMeeting`).
+  (`PanelMeeting`); with "Group event" ticked, Create makes a one-off event
+  people sign up for (`PanelGroupEvent`).
 
   Duplicate creates a copy of the panel's event at the same time the next
   day through the same path, without its guests (nobody is emailed) or its
@@ -33,7 +34,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.EventVideo
   alias TymeslotWeb.Dashboard.Calendar.Creation
+  alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.Calendar.Deletion
+  alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -71,6 +74,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         "guests" => guests
       })
       |> Map.merge(PanelMeeting.defaults(socket.assigns.current_user))
+      |> Map.merge(PanelGroupEvent.defaults())
 
     {draft, status} = cast(socket, form, nil)
     status = if status == :idle, do: guests_status, else: status
@@ -92,7 +96,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         errors: %{},
         repeat: %{custom_open: false, draft: nil, version: 0},
         calendar_version: 0,
-        video_version: 0
+        video_version: 0,
+        venues: group_venues(socket)
       },
       preview: nil,
       open_menu: nil
@@ -116,6 +121,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       form
       |> Map.merge(form_fields(params, form))
       |> Map.merge(PanelMeeting.fields(params))
+      |> Map.merge(PanelGroupEvent.fields(params))
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
 
@@ -297,13 +303,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   defp create(%{assigns: %{panel: %{mode: :new, status: status} = panel}} = socket)
        when status != :saving do
     cond do
-      Map.has_key?(socket.assigns.pending_creates, panel.draft_id) -> socket
-      PanelMeeting.on?(panel.form) -> PanelMeeting.create(socket, panel)
-      true -> start_create(socket, panel)
+      Map.has_key?(socket.assigns.pending_creates, panel.draft_id) ->
+        socket
+
+      PanelGroupEvent.on?(group_allowed?(socket), panel.form) ->
+        PanelGroupEvent.create(socket, panel)
+
+      PanelMeeting.on?(panel.form) ->
+        PanelMeeting.create(socket, panel)
+
+      true ->
+        start_create(socket, panel)
     end
   end
 
   defp create(socket), do: socket
+
+  @doc "Whether the organiser's plan includes group bookings, which a group event is."
+  @spec group_allowed?(socket()) :: boolean()
+  def group_allowed?(socket), do: socket.assigns[:group_bookings_allowed] == true
+
+  # Where a group event can take place, read once per draft and only for an
+  # organiser who may make one.
+  defp group_venues(socket) do
+    if group_allowed?(socket),
+      do: Venues.list_venues(socket.assigns.current_user.id),
+      else: []
+  end
 
   defp start_create(socket, panel) do
     with {:ok, create} <- cast_params(socket, panel.form),

@@ -280,6 +280,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           video_integrations={@video_integrations}
           guest_form_key={@guest_form_key}
           surface={@surface}
+          group_allowed={@group_allowed}
+          venues={Map.get(@panel, :venues, [])}
+          timezone={@timezone}
         />
       </div>
     </aside>

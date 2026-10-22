@@ -331,6 +331,7 @@ msgstr "Langue de l’invitation"
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
 msgstr "La langue de tous les e-mails concernant cette réunion, pour l’invité comme pour les autres personnes conviées."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many new meetings. Please wait a moment."
