@@ -13,11 +13,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Shared.Flash
+
+  require Refusal
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -135,6 +139,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
         "dashboard_bookings",
         "This time falls within your time off. Change or remove the time off to move the meeting there."
       )
+
+  # The meeting was cancelled, began or ended while the dialog was open, or
+  # has gone: the booking rules' own wording says which. Their guest-facing
+  # refusals (`:managed_by_host`) never come back from a host's move.
+  defp error_message(reason) when Refusal.is_refusal(reason) or reason == :meeting_not_found,
+    do: BookingErrorMessage.message(reason)
 
   defp error_message(_reason),
     do: dgettext("dashboard_bookings", "The meeting could not be moved. Please try again.")

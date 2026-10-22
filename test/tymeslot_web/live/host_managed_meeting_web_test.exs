@@ -136,6 +136,28 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
   end
 
+  test "the dashboard says why when the meeting was cancelled while the dialog was open", ctx do
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view
+    |> element("[phx-click='show_reschedule_modal'][phx-value-id='#{ctx.meeting.id}']")
+    |> render_click()
+
+    Repo.update!(Changeset.change(ctx.meeting, status: "cancelled"))
+
+    html =
+      view
+      |> form("[data-testid='host-move-form']", %{
+        "move" => %{"start" => local(DateTime.add(ctx.meeting.start_time, 1, :day))}
+      })
+      |> render_submit()
+
+    assert html =~ "Cannot reschedule a cancelled meeting"
+    refute html =~ "could not be moved"
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+  end
+
   test "the dashboard explains a time inside the host's time off", ctx do
     away = DateTime.add(ctx.meeting.start_time, 1, :day)
     day = DateTime.to_date(away)
