@@ -104,14 +104,22 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   @doc """
   Schedules an immediate "everyone has voted" nudge to the host.
 
-  Keyed so it fires at most once per poll, no matter how many times a participant
-  re-submits their votes.
+  Keyed so it fires at most once per round, no matter how many times a
+  participant re-submits their votes. `round` names the invitations the poll
+  held (`PollParticipantQueries.invitation_round/1`): once the host invites
+  more people and they all vote too, that is a new round and the host hears
+  of it again.
   """
-  @spec schedule_all_voted_nudge(map()) :: :ok
-  def schedule_all_voted_nudge(poll) do
+  @spec schedule_all_voted_nudge(map(), String.t()) :: :ok
+  def schedule_all_voted_nudge(poll, round) when is_binary(round) do
     insert_job(
-      %{"action" => "send_poll_host_nudge", "poll_id" => poll.id, "variant" => "all_voted"},
-      unique: unique_opts([:action, :poll_id, :variant])
+      %{
+        "action" => "send_poll_host_nudge",
+        "poll_id" => poll.id,
+        "variant" => "all_voted",
+        "round" => round
+      },
+      unique: unique_opts([:action, :poll_id, :variant, :round])
     )
   end
 

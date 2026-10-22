@@ -118,7 +118,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate cancel_poll_reminders(poll_id), to: PollScheduler, as: :cancel_reminders
   defdelegate cancel_poll_deadline_jobs(poll_id), to: PollScheduler, as: :cancel_deadline_jobs
 
-  defdelegate schedule_poll_all_voted_nudge(poll),
+  defdelegate schedule_poll_all_voted_nudge(poll, round),
     to: PollScheduler,
     as: :schedule_all_voted_nudge
 

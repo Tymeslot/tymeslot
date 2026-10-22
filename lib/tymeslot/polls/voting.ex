@@ -501,12 +501,16 @@ defmodule Tymeslot.Polls.Voting do
 
   Reads the database rather than `poll`, so it sees the write that prompted
   it: a vote just saved, or someone the host just took off the poll. The
-  nudge is keyed to go out once per poll.
+  nudge is keyed to go out once per round of invitations, so people the host
+  invites later, once they have all voted, are reported as well.
   """
   @spec notify_host_if_all_voted(PollSchema.t()) :: :ok
   def notify_host_if_all_voted(poll) do
     if all_participants_voted?(poll) do
-      EmailScheduler.schedule_poll_all_voted_nudge(poll)
+      EmailScheduler.schedule_poll_all_voted_nudge(
+        poll,
+        PollParticipantQueries.invitation_round(poll.id)
+      )
     end
 
     :ok

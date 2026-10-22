@@ -201,6 +201,22 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     |> Repo.exists?()
   end
 
+  @doc """
+  Names the invitations `poll_id` holds: how many people the host has invited
+  and when the latest was. It changes whenever the host invites someone new,
+  which starts a new round for the "everyone has voted" nudge.
+  """
+  @spec invitation_round(Ecto.UUID.t()) :: String.t()
+  def invitation_round(poll_id) do
+    {count, latest} =
+      PollParticipantSchema
+      |> where([p], p.poll_id == ^poll_id and not is_nil(p.invited_at))
+      |> select([p], {count(p.id), max(p.invited_at)})
+      |> Repo.one()
+
+    "#{count}:#{latest && DateTime.to_iso8601(latest)}"
+  end
+
   @doc "Deletes unconfirmed participants first requested at or before `cutoff`."
   @spec delete_expired_unconfirmed(DateTime.t()) :: {non_neg_integer(), nil}
   def delete_expired_unconfirmed(%DateTime{} = cutoff) do

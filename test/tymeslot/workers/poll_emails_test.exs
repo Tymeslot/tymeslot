@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
+  alias Tymeslot.Profiles
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.PollParticipantQueries
@@ -120,6 +121,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   describe "all-voted nudge" do
     test "enqueues exactly once when the last invitee votes, even on re-submit" do
       user = insert(:user)
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
       poll = insert(:poll, status: :open, user: user)
       start_one = in_hours(48)
       slot_one = insert(:poll_time_slot, poll: poll, start_time: start_one)
@@ -156,8 +158,40 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       assert enqueued_all_voted_count(poll.id) == 1
     end
 
+    test "nudges again when more people are invited and they all vote too" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user, username: "hostname")
+      poll = insert(:poll, status: :open, user: user)
+      slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+
+      {:ok, %{invited: [alice]}} =
+        Polls.invite_participants(poll.id, poll.user_id, [
+          %{name: "Alice", email: "a@example.com"}
+        ])
+
+      {:ok, _vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
+      assert enqueued_all_voted_count(poll.id) == 1
+
+      {:ok, %{invited: [carol]}} =
+        Polls.invite_participants(poll.id, poll.user_id, [
+          %{name: "Carol", email: "c@example.com"}
+        ])
+
+      # Alice changing her answer while Carol is out reports nothing new.
+      {:ok, _vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :no})
+      assert enqueued_all_voted_count(poll.id) == 1
+
+      {:ok, _vote} = Voting.cast_votes(poll, carol.token, %{slot.id => :yes})
+      assert enqueued_all_voted_count(poll.id) == 2
+
+      {:ok, _vote} = Voting.cast_votes(poll, carol.token, %{slot.id => :no})
+      assert enqueued_all_voted_count(poll.id) == 2
+    end
+
     test "a link request still open holds the nudge back, an expired one does not" do
       user = insert(:user)
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
       poll = insert(:poll, status: :open, user: user)
       slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
@@ -394,6 +428,9 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   # --- Helpers ---
 
   defp create_poll(user, deadline_at, invitees \\ []) do
+    if is_nil(Profiles.get_profile(user.id)),
+      do: insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+
     future = in_hours(72)
 
     attrs =
