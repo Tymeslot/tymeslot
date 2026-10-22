@@ -224,11 +224,15 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       profile: profile
     } do
       grace = insert(:poll_participant, poll: poll, name: "Grace")
+      insert(:poll_vote, participant: grace, time_slot: slot, response: :yes)
 
       {:ok, view, _html} =
         live(conn, poll_path(profile.username, poll.token) <> "?p=#{grace.token}")
 
-      # Deleted directly, so no broadcast reloads the page first.
+      assert has_element?(view, ".poll-tally--yes .poll-tally-count", "1")
+
+      # Deleted directly, as the host's removal lands while the vote is on its
+      # way: no broadcast reloads the page first. Grace's vote goes with her.
       Repo.delete!(Repo.get!(PollParticipantSchema, grace.id))
 
       html =
@@ -239,6 +243,9 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       assert html =~ "no longer valid"
       assert has_element?(view, "form[data-testid='poll-register-form']")
       refute has_element?(view, "form[data-testid='poll-vote-form']")
+
+      # The tallies are the poll's as it now stands, without her vote.
+      assert has_element?(view, ".poll-tally--yes .poll-tally-count", "0")
     end
 
     test "asking for a link creates an unconfirmed participant and never shows the link", %{
