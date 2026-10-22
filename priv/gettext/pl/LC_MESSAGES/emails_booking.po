@@ -723,3 +723,13 @@ msgstr "Twoja ankieta jest potwierdzona, a wszyscy jej uczestnicy są zaproszeni
 #, elixir-autogen, elixir-format
 msgid "⏰ %{title} in %{time_until}"
 msgstr "⏰ %{title} za %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
+msgstr "Cześć, %{guest} – spotkanie, na które zaprasza cię %{organizer}, odbędzie się już wkrótce."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to is coming up."
+msgstr "Spotkanie, na które zaprasza cię %{organizer}, odbędzie się już wkrótce."
