@@ -31,7 +31,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:calendar_integration_id) => pos_integer() | nil,
           optional(:calendar_path) => String.t() | nil,
           optional(:video_integration_id) => pos_integer() | nil,
-          optional(:guest_emails) => [String.t()],
+          optional(:guest_emails) => [Guests.entry()],
           optional(:organizer_note) => String.t() | nil,
           optional(:attendee_locale) => String.t() | nil,
           optional(:reminders) => [%{value: pos_integer(), unit: String.t()}],

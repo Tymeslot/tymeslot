@@ -159,11 +159,12 @@ defmodule Tymeslot.Polls.Confirm do
     end)
   end
 
-  # Everyone, the primary included: they are a guest like the rest.
-  defp guest_emails(participants) do
+  # Everyone, the primary included: they are a guest like the rest, under the
+  # name they gave, so their emails and the host's name them.
+  defp guests(participants) do
     participants
-    |> Enum.map(&String.downcase(&1.email))
-    |> Enum.uniq()
+    |> Enum.map(&%{email: String.downcase(&1.email), name: &1.name})
+    |> Enum.uniq_by(& &1.email)
   end
 
   # The calendar the meeting is written to is chosen as a booking of the
@@ -213,7 +214,7 @@ defmodule Tymeslot.Polls.Confirm do
       # The meeting carries one language for all its emails, so the primary
       # participant's stands for everyone: guests have no locale of their own.
       attendee_locale: primary.locale,
-      guest_emails: guest_emails(poll.participants),
+      guest_emails: guests(poll.participants),
       managed_by_host: true,
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.

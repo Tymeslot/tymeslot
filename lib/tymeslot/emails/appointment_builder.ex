@@ -132,7 +132,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   nobody booked it: the person in its attendee fields is one of its guests.
   So the copy is about the meeting and its guests instead, named after its
   title (`:attendee_name`, which the organiser's templates name the other
-  party by), with `:host_managed` and `:guest_emails` set, no attendee to
+  party by), with `:host_managed` and `:guests` (each `%{name:, email:}`, the
+  name nil where the guest gave none) set, no attendee to
   reply to, and its links pointing at the dashboard, since the public
   booking links are refused for such a meeting. Any other meeting's
   `details` come back unchanged.
@@ -144,7 +145,10 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.merge(organizer_group_links())
       |> Map.merge(%{
         host_managed: true,
-        guest_emails: meeting.id |> GuestQueries.list_for_meeting() |> Enum.map(& &1.email),
+        guests:
+          meeting.id
+          |> GuestQueries.list_for_meeting()
+          |> Enum.map(&%{name: &1.name, email: &1.email}),
         attendee_name: meeting.title,
         attendee_email: nil,
         attendee_phone: nil,

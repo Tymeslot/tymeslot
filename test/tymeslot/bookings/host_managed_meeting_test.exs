@@ -53,7 +53,12 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     assert details.host_managed
     assert details.attendee_name == meeting.title
     assert details.attendee_email == nil
-    assert details.guest_emails == ["ada@example.com", "bob@example.com"]
+
+    assert details.guests == [
+             %{name: nil, email: "ada@example.com"},
+             %{name: nil, email: "bob@example.com"}
+           ]
+
     assert details.cancel_url == nil
     assert details.reschedule_url == nil
   end
