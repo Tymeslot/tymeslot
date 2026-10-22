@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 2]
-  import Phoenix.LiveView, only: [connected?: 1, put_flash: 3]
+  import Phoenix.LiveView, only: [connected?: 1, get_connect_params: 1, put_flash: 3]
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Polls
@@ -49,6 +49,11 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   when that participant belongs to this poll; a token from another poll is
   ignored and the participant is left `nil`, so identity can never leak across
   polls. Subscribes to poll updates once the socket is connected.
+
+  Also keeps the timezone the visitor's browser reported when the socket
+  connected (`voter_timezone`), which a link request stores on the
+  participant. The page itself shows times in the poll's timezone. Reads the
+  connect params, so it can only be called during `mount/3`.
   """
   @spec assign_poll_state(socket(), Polls.PollSchema.t(), map()) :: socket()
   def assign_poll_state(socket, poll, params) do
@@ -59,8 +64,15 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       tallies: Polls.tallies(poll),
       voting_open: Polls.voting_open?(poll),
       participant: Voting.get_participant(poll, params["p"]),
-      link_request: nil
+      link_request: nil,
+      voter_timezone: browser_timezone(socket)
     )
+  end
+
+  # The static render has no connect params; the browser reports its zone
+  # only once the socket connects.
+  defp browser_timezone(socket) do
+    if connected?(socket), do: get_connect_params(socket)["timezone"]
   end
 
   @doc """
@@ -138,11 +150,16 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     do: dgettext("booking_polls", "Security verification failed. Please try again.")
 
   # The page's locale is the one the voter reads, so their emails use it too.
+  # The timezone is the one their browser reported; an unknown one is dropped
+  # by `Voting`.
   defp do_register(socket, params) do
     attrs =
       params
-      |> Map.take(["name", "email", "timezone"])
-      |> Map.put("locale", socket.assigns[:locale])
+      |> Map.take(["name", "email"])
+      |> Map.merge(%{
+        "locale" => socket.assigns[:locale],
+        "timezone" => socket.assigns[:voter_timezone]
+      })
 
     case Voting.request_link(socket.assigns.poll, attrs) do
       {:ok, outcome} ->
