@@ -58,6 +58,7 @@ msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessa
 msgstr "Usa lettere minuscole, numeri e trattini. Con \"Genera link casuale\" ottieni un link impossibile da indovinare."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
@@ -86,6 +87,7 @@ msgstr "Crea tipi di riunione per offrire diverse opzioni di appuntamento"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Elimina"
@@ -97,6 +99,7 @@ msgstr "Elimina tipo di riunione"
 
 #: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Modifica"
@@ -322,6 +325,7 @@ msgid "Paused"
 msgstr "In pausa"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}"
 msgstr "Elimina %{name}"
@@ -332,16 +336,91 @@ msgid "Delete meeting type"
 msgstr "Elimina tipo di riunione"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr "Modifica %{name}"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr "Link di prenotazione copiato!"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Annullato"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Copia link"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr "Eventi"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
+msgstr "Eventi unici creati con l'aggiunta rapida. Ognuno ha il proprio link di prenotazione e termina da solo una volta concluso."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Over"
+msgstr "Concluso"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Iscrizioni chiuse"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Registration open"
+msgstr "Iscrizioni aperte"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} posti occupati"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
+msgid "Next date: %{date}"
+msgstr "Prossima data: %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
 msgid "Not offered"
 msgstr "Non offerto"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
+msgid "No open dates"
+msgstr "Nessuna data aperta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Not on your booking page until one of its dates is open for registration. Plan a date, or move a registration close."
+msgstr "Non compare sulla tua pagina di prenotazione finché nessuna delle sue date è aperta alle iscrizioni. Pianifica una data o sposta una chiusura delle iscrizioni."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
 msgid "Not offered to guests until payments are reconnected. Existing bookings are unaffected."
 msgstr "Questo tipo di riunione non viene proposto agli ospiti finché non ricolleghi i pagamenti. Le prenotazioni esistenti non sono interessate."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Its upcoming date is cancelled."
+msgid_plural "Its %{count} upcoming dates are cancelled."
+msgstr[0] "La sua prossima data viene annullata."
+msgstr[1] "Le sue %{count} prossime date vengono annullate."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The %{count} person who signed up is told by email."
+msgid_plural "The %{count} people who signed up are told by email."
+msgstr[0] "La persona iscritta viene avvisata via email."
+msgstr[1] "Le %{count} persone iscritte vengono avvisate via email."

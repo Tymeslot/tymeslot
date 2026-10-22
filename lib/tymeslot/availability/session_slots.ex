@@ -1,0 +1,92 @@
+defmodule Tymeslot.Availability.SessionSlots do
+  @moduledoc """
+  What a fixed-date meeting type offers (`Tymeslot.MeetingTypes.FixedDates`):
+  the sessions its host planned (`Tymeslot.Meetings.PlannedSessions`) that
+  are still open for registration and have a seat left, in the slot shape
+  the booking page already renders for a group type,
+  `%{time: label, seats_left: n, capacity: c}`.
+
+  The type's availability schedule plays no part, and neither do the host's
+  calendar and bookings: a planned session is the host's own commitment, on
+  their calendar from the moment it was planned. Each session is listed
+  under the date it starts on in the booker's time zone.
+  """
+
+  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Clock
+  alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Meetings.Seats
+
+  @doc "The open sessions starting on `date` in `user_timezone`."
+  @spec day_slots(map(), Date.t(), String.t(), DateTime.t()) :: [map()]
+  def day_slots(meeting_type, %Date{} = date, user_timezone, now \\ Clock.utc_now()) do
+    meeting_type
+    |> open_sessions(user_timezone, now)
+    |> Enum.filter(fn {local_start, _session, _seats_left} ->
+      DateTime.to_date(local_start) == date
+    end)
+    |> Enum.map(fn {local_start, session, seats_left} ->
+      %{
+        time: TimeSlots.format_datetime_slot(local_start),
+        seats_left: seats_left,
+        capacity: session.capacity
+      }
+    end)
+  end
+
+  @doc """
+  Which days in `start_date..end_date` have an open session, as the map of
+  ISO 8601 dates to booleans the booking calendar reads.
+  """
+  @spec days(map(), Date.t(), Date.t(), String.t(), DateTime.t()) :: %{String.t() => boolean()}
+  def days(meeting_type, start_date, end_date, user_timezone, now \\ Clock.utc_now()) do
+    open_days =
+      meeting_type
+      |> open_sessions(user_timezone, now)
+      |> MapSet.new(fn {local_start, _session, _seats_left} -> DateTime.to_date(local_start) end)
+
+    Map.new(
+      Date.range(start_date, end_date),
+      &{Date.to_iso8601(&1), MapSet.member?(open_days, &1)}
+    )
+  end
+
+  @doc "Whether `meeting_type` has a session anyone can still sign up for."
+  @spec any_open?(map(), DateTime.t()) :: boolean()
+  def any_open?(meeting_type, now \\ Clock.utc_now()),
+    do: open_sessions(meeting_type, "Etc/UTC", now) != []
+
+  @doc """
+  The ids of those `meeting_types` that have a session anyone can still
+  sign up for (`any_open?/2` for each), in two queries whatever their
+  number.
+  """
+  @spec open_type_ids([map()], DateTime.t()) :: MapSet.t(integer())
+  def open_type_ids(meeting_types, now \\ Clock.utc_now()) do
+    meeting_types
+    |> PlannedSessions.upcoming_by_type(now)
+    |> Enum.flat_map(fn {_type_id, sessions} -> sessions end)
+    |> with_seats_left(now)
+    |> MapSet.new(fn {session, _seats_left} -> session.meeting_type_id end)
+  end
+
+  defp open_sessions(meeting_type, user_timezone, now) do
+    meeting_type
+    |> PlannedSessions.upcoming(now)
+    |> with_seats_left(now)
+    |> Enum.map(fn {session, seats_left} ->
+      {DateTime.shift_zone!(session.start_time, user_timezone), session, seats_left}
+    end)
+  end
+
+  # The sessions open for registration with a seat left, each with its seats
+  # left, counted for all of them in one query.
+  defp with_seats_left(sessions, now) do
+    open = Enum.filter(sessions, &PlannedSessions.open?(&1, now))
+    seats_left = Seats.seats_left_by_meeting(open)
+
+    open
+    |> Enum.map(&{&1, Map.fetch!(seats_left, &1.id)})
+    |> Enum.filter(fn {_session, left} -> left > 0 end)
+  end
+end

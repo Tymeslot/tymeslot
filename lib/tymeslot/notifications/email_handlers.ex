@@ -15,6 +15,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
   alias Tymeslot.Notifications.Email.GuestEmails
   alias Tymeslot.Notifications.Email.IntegrationEmails
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.Email.PlannedSessionEmails
   alias Tymeslot.Notifications.Email.PollEmails
   alias Tymeslot.Notifications.Email.RescheduleEmails
   alias Tymeslot.Notifications.Email.RescheduleRequestEmails
@@ -29,6 +30,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
     GuestEmails,
     IntegrationEmails,
     MeetingEmails,
+    PlannedSessionEmails,
     PollEmails,
     RescheduleEmails,
     RescheduleRequestEmails,

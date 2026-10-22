@@ -26,13 +26,14 @@ defmodule Tymeslot.Availability.Offer do
   capture it whole and nothing here depends on the web layer.
   """
 
-  alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, TimeSlots}
+  alias Tymeslot.Availability.{Calculate, GroupSlots, Reach, Schedules, SessionSlots, TimeSlots}
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.{RescheduleContext, SeatMoveContext, SharedAvailability}
@@ -86,11 +87,9 @@ defmodule Tymeslot.Availability.Offer do
       fetch, provided it is the seat that token names; whether the move
       vacates its meeting is still decided afresh.
     * `:demo_mode?` - whether the page is running as a demo.
-    * `:shared_availability_guests` - further users who must be free as well,
-      resolved from a `?with=` booking link
-      (`Tymeslot.Scheduling.SharedAvailability`). Only times every one of them
-      can make are offered, under the strictest scheduling rules of everyone
-      involved.
+    * `:shared_availability_guests` - users named in a `?with=` booking link
+      (`Tymeslot.Scheduling.SharedAvailability`), who must be free as well,
+      under the strictest scheduling rules of everyone involved.
   """
   @type request :: %{
           required(:profile) => %{required(:user_id) => integer(), optional(atom()) => any()},
@@ -119,17 +118,22 @@ defmodule Tymeslot.Availability.Offer do
           {:ok, [term()]} | {:error, any()}
   def slots_for_date(%{profile: %{user_id: user_id} = profile} = request, date_string, duration) do
     with {:ok, date} <- Date.from_iso8601(date_string) do
-      if demo?(request) do
-        Demo.get_available_slots(
-          date_string,
-          duration,
-          request.user_timezone,
-          user_id,
-          profile,
-          context(request)
-        )
-      else
-        free_slots(request, date, duration)
+      cond do
+        FixedDates.enabled?(request[:meeting_type]) ->
+          {:ok, SessionSlots.day_slots(request.meeting_type, date, request.user_timezone)}
+
+        demo?(request) ->
+          Demo.get_available_slots(
+            date_string,
+            duration,
+            request.user_timezone,
+            user_id,
+            profile,
+            context(request)
+          )
+
+        true ->
+          free_slots(request, date, duration)
       end
     end
   end
@@ -188,6 +192,10 @@ defmodule Tymeslot.Availability.Offer do
         duration_minutes
       ) do
     cond do
+      FixedDates.enabled?(request[:meeting_type]) ->
+        {:ok,
+         SessionSlots.days(request.meeting_type, start_date, end_date, request.user_timezone)}
+
       demo?(request) ->
         demo_days(request, start_date, end_date, duration_minutes)
 
@@ -292,12 +300,9 @@ defmodule Tymeslot.Availability.Offer do
     end
   end
 
-  # Booking together with other users (`?with=`) answers the calendar grid from
-  # the days' actual times (`free_slots_in_range/4`, which `slots_for_range/4`
-  # answers with), because a day is only bookable when the host's times and
-  # every guest's overlap. It stays off the range cache: that key knows nothing
-  # about the guests, and a combined map must never be served to the host's
-  # plain link or the other way round.
+  # A `?with=` link answers the grid from the days' times (`free_slots_in_range/4`):
+  # a day is bookable only where everyone's times overlap. The range cache's key
+  # knows nothing about the guests, so this stays off it.
   defp shared_days(request, start_date, end_date, duration_minutes) do
     with {:ok, days} <- free_slots_in_range(request, start_date, end_date, duration_minutes) do
       {:ok, Map.new(days, fn {date, slots} -> {date, slots != []} end)}

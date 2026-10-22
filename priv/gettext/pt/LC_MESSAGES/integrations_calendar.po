@@ -807,3 +807,8 @@ msgstr "Conexão com o mailbox.org bem-sucedida"
 #, elixir-autogen, elixir-format
 msgid "%{provider} refused the change. The connection is working, but the calendar would not accept this request."
 msgstr "%{provider} recusou a alteração. A conexão está funcionando, mas o calendário não aceitou esta requisição."
+
+#: lib/tymeslot/integrations/calendar/domain/management.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar connection does not allow Tymeslot to add bookings to it. Please reconnect the integration and allow Tymeslot to create and edit events."
+msgstr "A conexão do seu calendário não permite que o Tymeslot adicione agendamentos a ele. Reconecte a integração e permita que o Tymeslot crie e edite eventos."

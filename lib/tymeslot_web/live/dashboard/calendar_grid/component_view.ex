@@ -157,6 +157,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           user_timezone={@user_timezone}
           myself={@myself}
           video_integrations={@video_integrations}
+          venues={@venues}
+          group_allowed={assigns[:group_bookings_allowed] == true}
         />
         <ImportIcsModal.import_ics_modal
           :if={@ics_import && @ics_import.open}
