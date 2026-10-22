@@ -118,7 +118,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
     """
     #{Text.section_title(dgettext("emails_polls", "Note from the host"))}
     <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="1.6" padding="0 0 8px 0">
-      #{Sanitise.sanitize_for_email(description)}
+      #{Sanitise.sanitize_multiline_for_email(description)}
     </mj-text>
     """
   end

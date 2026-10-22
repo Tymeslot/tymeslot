@@ -407,6 +407,16 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       %{poll: poll, url: url}
     end
 
+    test "keeps the line breaks the host wrote in their note", ctx do
+      poll = %{ctx.poll | description: "Bring the roadmap.\nAnd <b>snacks</b>."}
+      invitee = insert(:poll_participant, poll: ctx.poll, name: "Dana", email: "dana@example.com")
+
+      email = PollInvitation.render(poll, invitee, ctx.url)
+
+      assert email.html_body =~ ~r{Bring the roadmap\.<br\s*/?>And &lt;b&gt;snacks&lt;/b&gt;\.}
+      assert email.text_body =~ "Bring the roadmap.\nAnd <b>snacks</b>."
+    end
+
     test "carries the times in the invitee's zone, the deadline, the note and the link", ctx do
       invitee =
         insert(:poll_participant,
