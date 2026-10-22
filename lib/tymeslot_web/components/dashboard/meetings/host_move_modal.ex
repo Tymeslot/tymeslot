@@ -8,6 +8,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   in the host's timezone and the meeting keeps its length. On a move, or when
   the host closes it, it tells the owning `BookingsManagementComponent`
   (`host_move: :moved | :closed`).
+
+  A move counts against the host's `:dashboard_reschedule` rate limit, the
+  bucket the dashboard's other moves and reschedule requests share.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -15,6 +18,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Meetings
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
@@ -102,11 +106,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
     %{meeting: meeting, timezone: timezone, user_id: user_id} = socket.assigns
 
     with {:ok, new_start} <- parse(value, timezone),
+         :ok <- RateLimiter.check(:dashboard_reschedule, user_id),
          {:ok, _moved} <- Meetings.move_by_host(meeting.uid, new_start, user_id) do
       Flash.info(dgettext("dashboard_bookings", "Meeting moved. Everyone invited has been told."))
       send_update(socket.assigns.parent_module, id: socket.assigns.parent_id, host_move: :moved)
       {:noreply, socket}
     else
+      {:error, :rate_limited, message} -> {:noreply, assign(socket, :error, message)}
       {:error, reason} -> {:noreply, assign(socket, :error, error_message(reason))}
     end
   end

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Meetings.{Guests, MeetingSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.EmailWorker
 
   setup :set_mox_global
@@ -179,6 +180,32 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
              "This time falls within your time off. Change or remove the time off to move the meeting there."
 
     refute html =~ "could not be moved"
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+  end
+
+  test "the host's moves count against the dashboard reschedule limit", ctx do
+    RateLimiter.clear_all()
+    on_exit(&RateLimiter.clear_all/0)
+
+    for _i <- 1..20 do
+      assert :ok = RateLimiter.check(:dashboard_reschedule, ctx.user.id)
+    end
+
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view
+    |> element("[phx-click='show_reschedule_modal'][phx-value-id='#{ctx.meeting.id}']")
+    |> render_click()
+
+    html =
+      view
+      |> form("[data-testid='host-move-form']", %{
+        "move" => %{"start" => local(DateTime.add(ctx.meeting.start_time, 1, :day))}
+      })
+      |> render_submit()
+
+    assert html =~ "reached the limit"
     assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
   end
 
