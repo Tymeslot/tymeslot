@@ -200,7 +200,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket),
-    do: {:noreply, RescheduleRequest.show(socket, params, &Policy.can_reschedule_meeting?/1)}
+    do: {:noreply, RescheduleRequest.show(socket, params, &Policy.can_host_change_time?/1)}
 
   def handle_event("hide_reschedule_modal", _params, socket) do
     {:noreply, ModalHook.hide_modal(socket, :reschedule_request)}

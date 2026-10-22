@@ -820,3 +820,13 @@ msgstr "Neznámý typ pole"
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
 msgstr "přesuny schůzek"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "pevné termíny vyžadují skupinové rezervace"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "před vypnutím pevných termínů zrušte naplánované termíny"

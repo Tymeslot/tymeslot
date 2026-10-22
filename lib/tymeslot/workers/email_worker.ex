@@ -121,6 +121,9 @@ defmodule Tymeslot.Workers.EmailWorker do
       {:discard, reason} ->
         {:discard, reason}
 
+      {:snooze, seconds} when is_integer(seconds) and seconds > 0 ->
+        {:snooze, seconds}
+
       _other ->
         handle_unexpected_email_result(result)
     end

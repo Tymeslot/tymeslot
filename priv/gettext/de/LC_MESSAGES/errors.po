@@ -795,3 +795,13 @@ msgstr "Unbekannter Feldtyp"
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
 msgstr "Terminverschiebungen"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "feste Termine erfordern Gruppenbuchungen"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "sagen Sie die geplanten Termine ab, bevor Sie feste Termine ausschalten"

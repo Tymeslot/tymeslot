@@ -866,3 +866,13 @@ msgstr "Tymeslot nemohl tuto rezervaci přesunout. Zkuste to prosím znovu."
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
 msgstr "Tento čas spadá do vaší nepřítomnosti. Chcete-li sem schůzku přesunout, nepřítomnost upravte nebo odeberte."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Registrace uzavřena"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Pevný termín přesunete v jeho typu schůzky."

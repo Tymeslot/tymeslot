@@ -797,3 +797,13 @@ msgstr "Tipo di campo sconosciuto"
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
 msgstr "spostamenti di riunioni"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "le date fisse richiedono le prenotazioni di gruppo"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "annulla le date pianificate prima di disattivare le date fisse"

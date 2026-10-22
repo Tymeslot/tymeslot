@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.ClientIP
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   defp validate_meeting_action(meeting, action) when action in [:cancel, :reschedule] do
     cond do
       Meetings.group?(meeting) -> {:error, :group_meeting}
-      MeetingSchema.managed_by_host?(meeting) -> {:error, :managed_by_host}
+      HostManaged.managed_by_host?(meeting) -> {:error, :managed_by_host}
       true -> permitted(meeting, action)
     end
   end

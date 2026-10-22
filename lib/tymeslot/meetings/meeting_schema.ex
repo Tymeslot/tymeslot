@@ -34,6 +34,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           address_to_arrange: boolean(),
           meeting_type: String.t() | nil,
           capacity: pos_integer(),
+          planned: boolean(),
+          registration_closes_at: DateTime.t() | nil,
           seat:
             %{
               participant_id: binary(),
@@ -148,6 +150,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # A solo meeting is always `1`. `Tymeslot.Meetings.group?/1` is the one
     # place that turns this into a group/solo predicate — see its @doc.
     field(:capacity, :integer, default: 1)
+
+    # A session the host planned on a fixed-date group type
+    # (`Tymeslot.Meetings.PlannedSessions`), created before anyone booked:
+    # it stays when its last participant leaves, and is offered until
+    # `registration_closes_at` (or its start, when that is nil).
+    field(:planned, :boolean, default: false)
+    field(:registration_closes_at, :utc_datetime)
 
     # Set only on the view of a group meeting as one seat sees it
     # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
@@ -305,7 +314,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # A meeting confirmed from a poll: it has no booker. Everyone who answered
     # the poll is a guest, the person in the attendee fields included (they
     # are there because a calendar entry needs one), and only the host moves
-    # or cancels it. See `managed_by_host?/1`.
+    # or cancels it. See `Tymeslot.Meetings.HostManaged.managed_by_host?/1`.
     field(:managed_by_host, :boolean, default: false)
 
     # Snapshot of the meeting type's show_as_free setting at booking time —
@@ -365,6 +374,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :meeting_type,
     :meeting_type_id,
     :capacity,
+    :planned,
+    :registration_closes_at,
     :organizer_title,
     :organizer_user_id,
     :calendar_integration_id,
@@ -633,16 +644,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   """
   @spec group?(t()) :: boolean
   def group?(%__MODULE__{capacity: capacity}), do: capacity > 1
-
-  @doc """
-  Whether only the host manages the meeting: one confirmed from a poll. Its
-  attendee is a guest like everyone else, so they are sent no booking emails
-  and the public cancel and reschedule pages refuse it; the host moves it
-  from the dashboard instead (`Tymeslot.Bookings.HostMove.move/3`).
-  """
-  @spec managed_by_host?(map()) :: boolean()
-  def managed_by_host?(%{managed_by_host: true}), do: true
-  def managed_by_host?(_meeting), do: false
 
   defp supported_locale_codes, do: Locales.supported_codes()
 end

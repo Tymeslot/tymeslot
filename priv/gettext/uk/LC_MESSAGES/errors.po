@@ -813,3 +813,13 @@ msgstr "Невідомий тип поля"
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
 msgstr "перенесень зустрічей"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "фіксовані дати потребують групових бронювань"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "скасуйте заплановані дати, перш ніж вимкнути фіксовані дати"

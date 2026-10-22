@@ -9,9 +9,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Clock
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Seats
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -41,7 +43,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         timezone: timezone,
         guests: guest_list(assigns.meeting),
         group?: Helpers.group_meeting?(assigns.meeting),
-        managed?: MeetingSchema.managed_by_host?(assigns.meeting),
+        managed?: HostManaged.managed_by_host?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting)
       )
@@ -89,6 +91,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               data-testid="group-seats-badge"
             >
               {seats_label(@meeting, @guests)}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={registration_closed?(@meeting)}
+              tone={:danger}
+              size={:sm}
+              icon="hero-lock-closed"
+              data-testid="registration-closed-badge"
+            >
+              {dgettext("dashboard_bookings", "Registration closed")}
             </Feedback.pill>
             <Feedback.pill
               :if={Meetings.organizer_join_url(@meeting)}
@@ -371,13 +382,23 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     )
   end
 
+  # A planned session (`PlannedSessions`) that has not started yet but takes
+  # no more sign-ups. Once it has started, the card's status says enough.
+  defp registration_closed?(%{planned: true, status: status} = session)
+       when status != "cancelled" do
+    now = Clock.utc_now()
+    DateTime.compare(session.start_time, now) == :gt and not PlannedSessions.open?(session, now)
+  end
+
+  defp registration_closed?(_meeting), do: false
+
   # A solo card is titled after its attendee. A group card has no single
   # attendee, and a meeting from a poll none that matters, so they are named
   # after what was booked: `title` is a required field on every meeting,
   # snapshotted at creation, so it survives the meeting type being edited or
   # deleted.
   defp meeting_title(meeting) do
-    if Helpers.group_meeting?(meeting) or MeetingSchema.managed_by_host?(meeting),
+    if Helpers.group_meeting?(meeting) or HostManaged.managed_by_host?(meeting),
       do: group_title(meeting),
       else: solo_title(meeting)
   end

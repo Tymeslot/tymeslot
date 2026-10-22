@@ -240,3 +240,8 @@ msgstr "Esta reunião foi marcada por uma enquete, então só o anfitrião pode 
 #, elixir-autogen, elixir-format
 msgid "The reminders for this meeting are not valid"
 msgstr "Os lembretes desta reunião não são válidos"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
+msgstr "A data fixa é remarcada pelo tipo de reunião dela, junto com todas as pessoas agendadas nela"

@@ -856,3 +856,13 @@ msgstr "Tymeslot n’a pas pu déplacer cette réservation. Veuillez réessayer.
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
 msgstr "Cet horaire tombe pendant votre absence. Modifiez ou retirez l'absence pour y déplacer la réunion."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Inscriptions closes"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Déplacez une date fixe depuis son type de réunion."

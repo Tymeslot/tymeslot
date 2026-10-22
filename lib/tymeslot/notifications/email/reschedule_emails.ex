@@ -26,7 +26,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.MeetingEmails
@@ -152,7 +152,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   # person in its attendee fields is a guest and hears of the move with the
   # other guests.
   defp attendee_copy(meeting, service, content) do
-    if MeetingSchema.managed_by_host?(meeting),
+    if HostManaged.managed_by_host?(meeting),
       do: {:ok, :skipped},
       else: service.send_reschedule_email_to_attendee(content.attendee_email, content)
   end

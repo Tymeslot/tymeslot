@@ -19,6 +19,9 @@ defmodule Tymeslot.Integrations.Calendar.OAuthEventErrorContractTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
+  alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
@@ -126,6 +129,75 @@ defmodule Tymeslot.Integrations.Calendar.OAuthEventErrorContractTest do
       end)
 
       assert :ok = CalendarEventSync.delete(meeting.id, 1)
+    end
+  end
+
+  # A Google row connected before write access was required still holds a
+  # read-only scope. Its client is still built from the stored integration, so
+  # a write reaches Google and its 403 comes back as an error, rather than the
+  # call crashing on a client that is not one.
+  for {label, scope} <- [
+        {"a read-only scope", "https://www.googleapis.com/auth/calendar.readonly"},
+        {"no scope", nil}
+      ] do
+    describe "a Google integration with #{label}" do
+      setup %{user: user, integration: integration} do
+        integration = Repo.update!(Changeset.change(integration, oauth_scope: unquote(scope)))
+
+        meeting =
+          insert(:meeting,
+            organizer_user_id: user.id,
+            calendar_integration_id: integration.id,
+            calendar_path: "primary"
+          )
+
+        %{integration: integration, meeting: meeting}
+      end
+
+      test "a create Google refuses for its scope comes back as an error", %{meeting: meeting} do
+        expect(GoogleCalendarAPIMock, :create_event, fn %CalendarIntegrationSchema{},
+                                                        "primary",
+                                                        _attrs ->
+          {:error, :unauthorized, "Request had insufficient authentication scopes."}
+        end)
+
+        event_data = CalendarEventBuilder.build_event_data(meeting)
+
+        assert {:error, :unauthorized} = Operations.create_event(event_data, meeting)
+      end
+
+      test "a update Google refuses for its scope comes back as an error", %{
+        user: user,
+        integration: integration
+      } do
+        expect(GoogleCalendarAPIMock, :update_event, fn %CalendarIntegrationSchema{},
+                                                        "primary",
+                                                        "event-123",
+                                                        _attrs ->
+          {:error, :unauthorized, "Request had insufficient authentication scopes."}
+        end)
+
+        assert {:error, :unauthorized} =
+                 Operations.update_event(
+                   "event-123",
+                   %{summary: "Updated"},
+                   {integration.id, user.id}
+                 )
+      end
+
+      test "a delete Google refuses for its scope comes back as an error", %{
+        user: user,
+        integration: integration
+      } do
+        expect(GoogleCalendarAPIMock, :delete_event, fn %CalendarIntegrationSchema{},
+                                                        "primary",
+                                                        "event-123" ->
+          {:error, :unauthorized, "Request had insufficient authentication scopes."}
+        end)
+
+        assert {:error, :unauthorized} =
+                 Operations.delete_event("event-123", {integration.id, user.id}, [])
+      end
     end
   end
 end

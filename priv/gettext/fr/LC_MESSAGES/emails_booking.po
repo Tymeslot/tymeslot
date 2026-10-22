@@ -194,6 +194,7 @@ msgstr "Au plaisir de vous rencontrer !"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "DÉTAILS DE LA RÉUNION :"
@@ -560,6 +561,7 @@ msgstr "La réunion pour laquelle %{organizer} vous a envoyé une invitation a �
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
 msgstr "Ouvrir dans le tableau de bord"
@@ -733,3 +735,87 @@ msgstr "Bonjour %{guest}, la réunion pour laquelle %{organizer} vous a envoyé 
 #, elixir-autogen, elixir-format
 msgid "The meeting %{organizer} invited you to is coming up."
 msgstr "La réunion pour laquelle %{organizer} vous a envoyé une invitation approche."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} person signed up for %{event}. Here is who is coming."
+msgid_plural "%{count} people signed up for %{event}. Here is who is coming."
+msgstr[0] "%{count} personne s’est inscrite à %{event}. Voici qui vient."
+msgstr[1] "%{count} personnes se sont inscrites à %{event}. Voici qui vient."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "%{taken} of %{count} spot taken"
+msgid_plural "%{taken} of %{count} spots taken"
+msgstr[0] "%{taken} place prise sur %{count}"
+msgstr[1] "%{taken} places prises sur %{count}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Company"
+msgstr "Entreprise"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "E-mail"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Invités"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Guests: %{guests}"
+msgstr "Invités : %{guests}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Message"
+msgstr "Message"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Message: %{message}"
+msgstr "Message : %{message}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nom"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody signed up for %{event}. If it is not going ahead, you can cancel it in your dashboard."
+msgstr "Personne ne s’est inscrit à %{event}. Si l’événement n’a pas lieu, vous pouvez l’annuler depuis votre tableau de bord."
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Participants"
+msgstr "Participants"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Phone"
+msgstr "Téléphone"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Inscriptions closes"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed: %{event} - %{date}"
+msgstr "Inscriptions closes : %{event} - %{date}"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "Registration has closed"
+msgstr "Les inscriptions sont closes"
+
+#: lib/tymeslot/emails/templates/registration_closed.ex
+#, elixir-autogen, elixir-format
+msgid "The list is also attached as a CSV file for a spreadsheet."
+msgstr "La liste est aussi jointe en fichier CSV pour un tableur."

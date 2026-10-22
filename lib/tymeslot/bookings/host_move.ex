@@ -1,6 +1,6 @@
 defmodule Tymeslot.Bookings.HostMove do
   @moduledoc """
-  Moves a meeting the host manages (`MeetingSchema.managed_by_host?/1`, one
+  Moves a meeting the host manages (`Tymeslot.Meetings.HostManaged.managed_by_host?/1`, one
   confirmed from a poll) to a new start, keeping its length.
 
   The host chooses the time, as they did when they confirmed the poll, so the
@@ -19,6 +19,7 @@ defmodule Tymeslot.Bookings.HostMove do
   alias Tymeslot.Bookings.{Errors, Policy, Reschedule}
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
+  alias Tymeslot.Meetings.HostManaged
 
   @doc """
   Moves the host's meeting `meeting_uid` to start at `new_start`.
@@ -59,7 +60,7 @@ defmodule Tymeslot.Bookings.HostMove do
   end
 
   defp ensure_host_managed(meeting) do
-    if MeetingSchema.managed_by_host?(meeting), do: :ok, else: {:error, :not_managed_by_host}
+    if HostManaged.managed_by_host?(meeting), do: :ok, else: {:error, :not_managed_by_host}
   end
 
   defp ensure_future(start) do

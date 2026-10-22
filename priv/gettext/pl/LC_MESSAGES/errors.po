@@ -817,3 +817,13 @@ msgstr "Nieznany typ pola"
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
 msgstr "przeniesień spotkań"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "stałe terminy wymagają rezerwacji grupowych"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "cancel the planned dates before turning fixed dates off"
+msgstr "odwołaj zaplanowane terminy przed wyłączeniem stałych terminów"

@@ -13,6 +13,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Meetings.Seats
@@ -128,7 +129,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   @doc """
   The organiser's copy of `details` for `meeting`. For a meeting the host
-  manages (`MeetingSchema.managed_by_host?/1`, one confirmed from a poll)
+  manages (`Tymeslot.Meetings.HostManaged.managed_by_host?/1`, one confirmed from a poll)
   nobody booked it: the person in its attendee fields is one of its guests.
   So the copy is about the meeting and its guests instead, named after its
   title (`:attendee_name`, which the organiser's templates name the other
@@ -140,7 +141,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
   @spec organizer_copy(map(), MeetingSchema.t()) :: map()
   def organizer_copy(details, %MeetingSchema{} = meeting) do
-    if MeetingSchema.managed_by_host?(meeting) do
+    if HostManaged.managed_by_host?(meeting) do
       details
       |> Map.merge(organizer_group_links())
       |> Map.merge(%{

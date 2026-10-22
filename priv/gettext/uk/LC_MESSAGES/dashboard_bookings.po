@@ -866,3 +866,13 @@ msgstr "Tymeslot не вдалося перенести це бронюванн�
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
 msgstr "Цей час припадає на вашу відсутність. Змініть або видаліть відсутність, щоб перенести зустріч на цей час."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Реєстрацію закрито"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Фіксовану дату переносять у її типі зустрічі."
