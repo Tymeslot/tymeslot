@@ -662,29 +662,29 @@ msgstr "Vous ne pouvez plus inviter personne pour le moment. Veuillez réessayer
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unavailable for new polls)"
-msgstr ""
+msgstr "%{name} (indisponible pour les nouveaux sondages)"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} is switched off or takes payment, so new polls can't use it. This poll keeps it until you choose another."
-msgstr ""
+msgstr "%{name} est désactivé ou payant : les nouveaux sondages ne peuvent donc pas l'utiliser. Ce sondage le conserve jusqu'à ce que vous en choisissiez un autre."
 
 #: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Keep"
-msgstr "Conserver le sondage"
+msgstr "Conserver"
 
 #: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove"
-msgstr "Supprimer le créneau"
+msgstr "Retirer"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "They are no longer on this poll."
-msgstr ""
+msgstr "Cette personne ne fait plus partie de ce sondage."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
-msgstr ""
+msgstr "Les rappels sont envoyés aux personnes invitées qui n'ont pas encore voté. Un sondage sans date limite n'en envoie aucun."

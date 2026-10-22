@@ -675,29 +675,29 @@ msgstr "Momentálně už nemůžete pozvat nikoho dalšího. Zkuste to prosím p
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unavailable for new polls)"
-msgstr ""
+msgstr "%{name} (pro nové ankety nelze použít)"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} is switched off or takes payment, so new polls can't use it. This poll keeps it until you choose another."
-msgstr ""
+msgstr "Typ schůzky %{name} je vypnutý nebo placený, takže ho nové ankety nemohou použít. Tato anketa si ho ponechá, dokud nezvolíte jiný."
 
 #: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Keep"
-msgstr "Ponechat anketu"
+msgstr "Ponechat"
 
 #: lib/tymeslot_web/live/dashboard/polls/remove_participant_modal.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove"
-msgstr "Odebrat termín"
+msgstr "Odebrat"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "They are no longer on this poll."
-msgstr ""
+msgstr "Tato osoba už v anketě není."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
-msgstr ""
+msgstr "Připomínky dostávají pozvaní, kteří ještě nehlasovali. Anketa bez uzávěrky žádné neposílá."
