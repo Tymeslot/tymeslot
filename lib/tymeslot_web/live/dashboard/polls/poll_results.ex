@@ -391,10 +391,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           size={:sm}
           icon="hero-check"
           class="shrink-0"
-          phx-click="confirm_slot"
+          phx-click="request_confirm_slot"
           phx-value-slot={@slot.id}
           phx-target={@myself}
-          phx-disable-with={dgettext("common", "Processing...")}
         >
           {dgettext("dashboard_polls", "Confirm this time")}
         </Buttons.action_button>
@@ -560,9 +559,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
   defp empty_counts, do: %{yes: 0, if_need_be: 0, no: 0}
 
-  # The weekday and month follow the organiser's language and the clock their
-  # own 12/24-hour preference, as everywhere else on the dashboard.
-  defp format_slot(slot, timezone, time_format) do
+  @doc """
+  A candidate time as the host reads it on the dashboard: the weekday and
+  month follow the organiser's language and the clock their own 12/24-hour
+  preference, as everywhere else on the dashboard.
+  """
+  @spec format_slot(map(), String.t(), String.t() | nil) :: String.t()
+  def format_slot(slot, timezone, time_format) do
     local = DateTimeUtils.convert_to_timezone(slot.start_time, timezone)
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
 

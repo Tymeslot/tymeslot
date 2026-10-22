@@ -99,6 +99,7 @@ msgstr "Kalender wird auf Konflikte geprüft …"
 msgid "Close results"
 msgstr "Ergebnisse schließen"
 
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm this time"
@@ -789,4 +790,24 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Confirm a time, or move the deadline in Edit poll to let people keep voting."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm this time?"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone on the poll will be emailed the meeting."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Not yet"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” will be confirmed for %{time} (%{timezone}) and voting will close."
 msgstr ""

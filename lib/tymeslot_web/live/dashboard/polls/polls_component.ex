@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   alias TymeslotWeb.Dashboard.Polls.{
     CancelPollModal,
+    ConfirmSlotModal,
     DeletePollModal,
     PollForm,
     PollInvite,
@@ -96,6 +97,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:winning_slot_id, fn -> nil end)
      |> assign_new(:meeting_types, fn -> [] end)
      |> assign_new(:show_cancel_modal, fn -> false end)
+     |> assign_new(:confirming_slot, fn -> nil end)
      |> assign_new(:show_delete_modal, fn -> false end)
      |> assign_new(:expanded_slots, fn -> MapSet.new() end)
      |> assign_new(:editing_details?, fn -> false end)
@@ -159,6 +161,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             myself={@myself}
           />
 
+          <ConfirmSlotModal.confirm_slot_modal
+            poll={@selected_poll}
+            slot={@confirming_slot}
+            time_format={@time_format}
+            myself={@myself}
+          />
+
           <CancelPollModal.cancel_poll_modal
             :if={@selected_poll}
             open={@show_cancel_modal}
@@ -205,7 +214,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("request_confirm_slot", %{"slot" => slot_id}, socket) do
+    slots = if poll = socket.assigns.selected_poll, do: poll.time_slots, else: []
+    {:noreply, assign(socket, :confirming_slot, Enum.find(slots, &(&1.id == slot_id)))}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_confirm_slot_modal", _params, socket) do
+    {:noreply, assign(socket, :confirming_slot, nil)}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("confirm_slot", %{"slot" => slot_id}, socket) do
+    socket = assign(socket, :confirming_slot, nil)
     poll_id = socket.assigns.selected_poll_id
     user_id = socket.assigns.current_user.id
 
@@ -505,6 +526,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       winning_slot_id: nil,
       show_cancel_modal: false,
       show_delete_modal: false,
+      confirming_slot: nil,
       expanded_slots: MapSet.new(),
       editing_details?: false,
       invite_value: "",

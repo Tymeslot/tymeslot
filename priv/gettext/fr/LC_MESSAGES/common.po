@@ -97,7 +97,6 @@ msgid "Password must contain:"
 msgstr "Le mot de passe doit contenir :"
 
 #: lib/tymeslot_web/components/core_components/buttons.ex
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
 msgstr "Traitement en cours..."

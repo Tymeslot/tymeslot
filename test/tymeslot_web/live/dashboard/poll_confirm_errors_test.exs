@@ -35,9 +35,10 @@ defmodule TymeslotWeb.Dashboard.PollConfirmErrorsTest do
     |> render_click()
 
     view
-    |> element("button[phx-click='confirm_slot'][phx-value-slot='#{slot.id}']")
+    |> element("button[phx-click='request_confirm_slot'][phx-value-slot='#{slot.id}']")
     |> render_click()
 
+    view |> element("#confirm-slot-modal [data-testid='confirm-slot']") |> render_click()
     view
   end
 

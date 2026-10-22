@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
       assert has_element?(view, "button[phx-click='select_poll']")
     end
 
-    test "confirming a slot id that is not a UUID is refused and the poll stays open", %{
+    test "a slot id that is not a UUID is refused and the poll stays open", %{
       conn: conn
     } do
       %{user: user} = host()
@@ -147,10 +147,24 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
       select_poll(view, poll)
 
       view
-      |> element("button[phx-click='confirm_slot'][phx-value-slot='#{slot.id}']")
+      |> element("button[phx-click='request_confirm_slot'][phx-value-slot='#{slot.id}']")
       |> render_click(%{"slot" => "not-a-uuid"})
 
-      assert has_element?(view, "button[phx-click='confirm_slot'][phx-value-slot='#{slot.id}']")
+      refute has_element?(view, "#confirm-slot-modal")
+
+      view
+      |> element("button[phx-click='request_confirm_slot'][phx-value-slot='#{slot.id}']")
+      |> render_click()
+
+      view
+      |> element("#confirm-slot-modal [data-testid='confirm-slot']")
+      |> render_click(%{"slot" => "not-a-uuid"})
+
+      assert has_element?(
+               view,
+               "button[phx-click='request_confirm_slot'][phx-value-slot='#{slot.id}']"
+             )
+
       assert {:ok, %{status: :open}} = Polls.get_poll_for_host(poll.id, user.id)
     end
 

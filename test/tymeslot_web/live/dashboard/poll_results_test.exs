@@ -26,6 +26,15 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
     conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
   end
 
+  # "Confirm this time" opens a confirmation; confirming it settles the poll.
+  defp confirm_slot(view, slot) do
+    view
+    |> element("#poll-slot-#{slot.id} button[phx-click='request_confirm_slot']")
+    |> render_click()
+
+    view |> element("#confirm-slot-modal [data-testid='confirm-slot']") |> render_click()
+  end
+
   describe "Poll results" do
     setup %{conn: conn} do
       # Empty calendar by default; the conflict test re-stubs with an event.
@@ -382,9 +391,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       select_poll(view, poll)
 
       html =
-        view
-        |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
-        |> render_click()
+        confirm_slot(view, slot1)
 
       # The poll is confirmed and points at a meeting owned by the host.
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
@@ -396,7 +403,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       # The panel switches to the confirmed state and highlights the winning slot.
       assert html =~ "This poll is confirmed"
       assert has_element?(view, "#poll-slot-#{slot1.id}.bg-blue-50")
-      refute has_element?(view, "button[phx-click='confirm_slot']")
+      refute has_element?(view, "button[phx-click='request_confirm_slot']")
     end
 
     test "confirming a taken slot shows an inline error and keeps the poll open", %{
@@ -417,9 +424,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       select_poll(view, poll)
 
       html =
-        view
-        |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
-        |> render_click()
+        confirm_slot(view, slot1)
 
       assert html =~ "This time is no longer free"
 
@@ -447,9 +452,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       select_poll(view, poll)
 
-      view
-      |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
-      |> render_click()
+      confirm_slot(view, slot1)
 
       assert view
              |> element("#poll-slot-#{slot1.id}")
@@ -610,9 +613,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       # The poll closes without the on-screen panel being notified (stale render).
       poll |> Changeset.change(status: :confirmed) |> Repo.update!()
 
-      view
-      |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
-      |> render_click()
+      confirm_slot(view, slot1)
 
       html = render(view)
       assert html =~ "This poll is no longer open"
