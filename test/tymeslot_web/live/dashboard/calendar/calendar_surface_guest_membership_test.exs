@@ -50,14 +50,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestMembershipTest do
       assert_receive {:write_started, write, _uid, %{attendees: attendees}}, @write_timeout
       assert "new@example.com" in emails(attendees)
 
-      # Nothing is sent while the calendar has not answered.
+      # Nothing is sent, nor claimed, while the calendar has not answered.
       settled(lv)
       assert invitations() == []
+      refute has_element?(lv, "#calendar-toast", "Invited new@example.com.")
 
       answer(write, :ok)
       settled(lv)
 
       assert [%{"attendee_email" => "new@example.com", "method" => "request"}] = invitations()
+      assert has_element?(lv, "#calendar-toast", "Invited new@example.com.")
     end
 
     test "emails nobody when the calendar refuses the write", %{conn: conn, review: review} do
@@ -69,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestMembershipTest do
 
       assert settled(lv) =~ "Failed to update event"
       refute has_element?(lv, "#calendar-panel-guests li", "new@example.com")
+      refute has_element?(lv, "#calendar-toast", "Invited new@example.com.")
       assert invitations() == []
     end
 
@@ -84,6 +87,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestMembershipTest do
         fn -> assert render(lv) =~ "Attendee added, but their invitation could not be sent." end,
         timeout: @write_timeout
       )
+
+      refute has_element?(lv, "#calendar-toast", "Invited new@example.com.")
     end
 
     # Each write carries its own notification, so the second invite cannot
@@ -151,11 +156,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestMembershipTest do
       assert_receive {:write_started, write, _uid, %{attendees: []}}, @write_timeout
       settled(lv)
       assert invitations() == []
+      refute has_element?(lv, "#calendar-toast", "Removed guest@example.com.")
 
       answer(write, :ok)
       settled(lv)
 
       assert [%{"attendee_email" => "guest@example.com", "method" => "cancel"}] = invitations()
+      assert has_element?(lv, "#calendar-toast", "Removed guest@example.com.")
     end
 
     test "tells nobody when the calendar refuses the write", %{conn: conn, review: review} do
@@ -166,6 +173,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestMembershipTest do
       answer(write, {:error, :unauthorized})
 
       assert settled(lv) =~ "Failed to update event"
+      refute has_element?(lv, "#calendar-toast", "Removed guest@example.com.")
       assert invitations() == []
     end
   end

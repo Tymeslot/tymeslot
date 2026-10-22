@@ -387,16 +387,6 @@ msgstr "Ця серія змінилася, поки ви її редагува�
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Attendee added. They were not invited, as you don't organise this event."
-msgstr "Учасника додано. Запрошення не надіслано, оскільки ви не є організатором цієї події."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#, elixir-autogen, elixir-format
-msgid "Attendee removed. They were not notified, as you don't organise this event."
-msgstr "Учасника видалено. Сповіщення не надіслано, оскільки ви не є організатором цієї події."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#, elixir-autogen, elixir-format
 msgid "Attendee added, but their invitation could not be sent."
 msgstr "Учасника додано, але не вдалося надіслати запрошення."
 

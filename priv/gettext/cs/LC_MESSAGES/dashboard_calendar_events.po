@@ -387,16 +387,6 @@ msgstr "Tato série se během vašich úprav změnila, takže už nelze spočít
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Attendee added. They were not invited, as you don't organise this event."
-msgstr "Účastník byl přidán. Pozvánka nebyla odeslána, protože nejste organizátorem této události."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#, elixir-autogen, elixir-format
-msgid "Attendee removed. They were not notified, as you don't organise this event."
-msgstr "Účastník byl odebrán. Oznámení nebylo odesláno, protože nejste organizátorem této události."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#, elixir-autogen, elixir-format
 msgid "Attendee added, but their invitation could not be sent."
 msgstr "Účastník byl přidán, ale pozvánku se nepodařilo odeslat."
 

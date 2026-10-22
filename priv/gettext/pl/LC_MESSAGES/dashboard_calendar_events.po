@@ -383,16 +383,6 @@ msgstr "Ta seria zmieniła się w trakcie edycji, więc nie można już policzy�
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
-msgid "Attendee added. They were not invited, as you don't organise this event."
-msgstr "Uczestnik dodany. Nie wysłano zaproszenia, ponieważ nie jesteś organizatorem tego wydarzenia."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#, elixir-autogen, elixir-format
-msgid "Attendee removed. They were not notified, as you don't organise this event."
-msgstr "Uczestnik usunięty. Nie wysłano powiadomienia, ponieważ nie jesteś organizatorem tego wydarzenia."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
-#, elixir-autogen, elixir-format
 msgid "Attendee added, but their invitation could not be sent."
 msgstr "Uczestnik dodany, ale nie udało się wysłać zaproszenia."
 
