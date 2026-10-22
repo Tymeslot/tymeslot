@@ -149,6 +149,13 @@ defmodule Tymeslot.Meetings.Scheduling do
   changes derived from the row's current values (a counter to advance, say);
   they are merged over `attrs`.
 
+  The organiser's booking limits are enforced as on creation; pass
+  `enforce_booking_limits: false` to skip them. The new time is padded with
+  the buffers of the schedule its meeting type is booked against before
+  meetings are counted; pass `buffers: false` to count only the meetings
+  overlapping the time itself, for a time the organiser chose rather than a
+  booker.
+
   ## Examples
 
       iex> update_meeting_with_conflict_check(meeting, %{start_time: ~U[2024-01-01 10:00:00Z], end_time: ~U[2024-01-01 11:00:00Z]})
@@ -189,7 +196,8 @@ defmodule Tymeslot.Meetings.Scheduling do
             end_time: end_time,
             organizer_user_id: meeting.organizer_user_id,
             meeting_type_id: meeting.meeting_type_id,
-            exclude_uid: meeting.uid
+            exclude_uid: meeting.uid,
+            buffered?: Keyword.get(opts, :buffers, true)
           },
           build_limit_check(
             meeting.organizer_user_id,
@@ -261,13 +269,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   # count and any row the write locks: see
   # `MeetingConflictQueries.lock_organizer_schedule/1`.
   defp conflict_checked_transaction(slot, limit_check, write_fn, log_conflict_fn) do
-    {buffered_start, buffered_end} =
-      compute_buffered_window(
-        slot.start_time,
-        slot.end_time,
-        slot.organizer_user_id,
-        slot.meeting_type_id
-      )
+    {buffered_start, buffered_end} = conflict_window(slot)
 
     Repo.transaction(fn ->
       :ok = MeetingConflictQueries.lock_organizer_schedule(slot.organizer_user_id)
@@ -345,10 +347,14 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   # The new meeting is padded, never the meetings it is checked against: an
-  # existing meeting's own buffers are not re-applied.
-  defp compute_buffered_window(start_time, end_time, organizer_user_id, meeting_type_id) do
-    {buffer_before, buffer_after} = buffers(organizer_user_id, meeting_type_id)
-    TimeRange.add_buffer(start_time, end_time, buffer_before, buffer_after)
+  # existing meeting's own buffers are not re-applied. A time the organiser
+  # chose themselves (`buffers: false`) is checked as it stands. The create
+  # and reinstate slots carry no `buffered?` key and are always padded.
+  defp conflict_window(%{buffered?: false} = slot), do: {slot.start_time, slot.end_time}
+
+  defp conflict_window(slot) do
+    {buffer_before, buffer_after} = buffers(slot.organizer_user_id, slot.meeting_type_id)
+    TimeRange.add_buffer(slot.start_time, slot.end_time, buffer_before, buffer_after)
   end
 
   defp create_meeting_in_transaction(attrs) do

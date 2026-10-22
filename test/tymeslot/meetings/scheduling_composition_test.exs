@@ -189,6 +189,47 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
                })
     end
 
+    test "pads the new time with the organiser's buffers", %{user: user} do
+      other = insert_meeting(user, future_time(5, :day))
+      meeting = insert_meeting(user, future_time(2, :day))
+
+      # Five minutes after `other` ends: inside its 15-minute buffer.
+      new_start = DateTime.add(other.end_time, 5, :minute)
+
+      assert {:error, :time_conflict} =
+               Scheduling.update_meeting_with_conflict_check(meeting, %{
+                 start_time: new_start,
+                 end_time: DateTime.add(new_start, 30, :minute)
+               })
+    end
+
+    test "buffers: false counts only meetings at the time itself", %{user: user} do
+      other = insert_meeting(user, future_time(5, :day))
+      meeting = insert_meeting(user, future_time(2, :day))
+      new_start = DateTime.add(other.end_time, 5, :minute)
+
+      assert {:ok, updated} =
+               Scheduling.update_meeting_with_conflict_check(
+                 meeting,
+                 %{start_time: new_start, end_time: DateTime.add(new_start, 30, :minute)},
+                 buffers: false
+               )
+
+      assert DateTime.compare(updated.start_time, new_start) == :eq
+    end
+
+    test "buffers: false still refuses a meeting at the same time", %{user: user} do
+      other = insert_meeting(user, future_time(5, :day))
+      meeting = insert_meeting(user, future_time(2, :day))
+
+      assert {:error, :time_conflict} =
+               Scheduling.update_meeting_with_conflict_check(
+                 meeting,
+                 %{start_time: other.start_time, end_time: other.end_time},
+                 buffers: false
+               )
+    end
+
     test "skips conflict check when attrs contain no time fields", %{user: user} do
       # `meeting` and `_blocker` are in overlapping slots for the same organiser.
       # Because the blocker has a different uid it is not excluded from the
