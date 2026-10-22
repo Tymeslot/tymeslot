@@ -506,6 +506,13 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:connection_failed, _details} ->
         {:error, :connection_failed}
 
+      # Declined outright, so the worker ends the job now rather than on the
+      # fifth attempt, and the owner hears of it now too.
+      :refused ->
+        Logger.error("Calendar refused the event", meeting_id: meeting_id)
+        send_calendar_error_notification(meeting, :refused)
+        {:error, :refused}
+
       reason ->
         Logger.error("Failed to create calendar event",
           meeting_id: meeting_id,

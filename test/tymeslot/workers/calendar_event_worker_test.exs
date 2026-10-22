@@ -135,6 +135,24 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
                })
     end
 
+    test "discards a refused create on its first attempt and tells the owner" do
+      meeting = insert(:meeting)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, :refused}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, :refused ->
+        :ok
+      end)
+
+      assert {:discard, "Calendar refused the request"} =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "create",
+                 "meeting_id" => meeting.id
+               })
+    end
+
     test "sends notification on final failure" do
       meeting = insert(:meeting)
 
