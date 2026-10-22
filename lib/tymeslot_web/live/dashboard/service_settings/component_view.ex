@@ -133,6 +133,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 currency={@payment_currency}
                 venues={@venues}
                 group_bookings_allowed={@group_bookings_allowed}
+                next_dates={@next_dates}
+                timezone={(@profile && @profile.timezone) || "Etc/UTC"}
+                time_format={@time_format}
                 payments_accepted={@payments_accepted}
                 parent_myself={@myself}
               />

@@ -382,6 +382,11 @@ msgstr "les réservations de groupe ne peuvent pas exiger de paiement"
 msgid "You already have a meeting type with this name"
 msgstr "Vous avez déjà un type de réunion portant ce nom"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "les dates fixes nécessitent les réservations de groupe"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"

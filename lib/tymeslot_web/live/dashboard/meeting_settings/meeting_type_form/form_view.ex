@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     Autosave,
     AvailabilitySection,
     CustomQuestionsSection,
+    FixedDatesSection,
     GroupBookingsSection,
     GroupRules,
     GuestsSection,
@@ -47,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
+  import FixedDatesSection, only: [fixed_dates_section: 1]
   import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
   import LimitsSection, only: [limits_section: 1]
@@ -336,6 +338,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             form_id={@id}
             current_user={@current_user}
             form_errors={@form_errors}
+            myself={@myself}
+          />
+
+          <.fixed_dates_section
+            :if={@group_bookings_enabled}
+            fixed_dates={@fixed_dates}
+            is_edit={@is_edit}
+            sessions={@session_rows}
+            timezone={@host_timezone}
+            new_session={@new_session}
+            session_error={@session_error}
+            confirming_session_id={@confirming_session_id}
+            editing_session={@editing_session}
+            form_id={@id}
             myself={@myself}
           />
 

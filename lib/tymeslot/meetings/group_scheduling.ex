@@ -75,6 +75,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       target slot's row, in id order, before either is read, so that two
       moves in opposite directions between the same two meetings queue
       behind each other instead of deadlocking.
+    * `:join_only`: when true, the seat only joins a live meeting and never
+      creates one: with nobody's slot to join it is refused as `:slot_full`.
+      A fixed-date type's sessions are planned by the host
+      (`Tymeslot.Meetings.PlannedSessions`), so a booking for one that was
+      cancelled in the meantime must not bring it back as an unplanned slot.
     * `:exclude_from_conflicts`: a function `(-> uid | nil)` run inside the
       transaction once the rows are locked, naming a meeting a newly
       created slot's conflict check and booking-limit count leave out. For
@@ -95,6 +100,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     hooks = %{
       on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
       also_lock: Keyword.get(opts, :also_lock),
+      join_only: Keyword.get(opts, :join_only, false),
       exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end)
     }
 
@@ -158,6 +164,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
 
         booking =
           case live_meeting do
+            nil when hooks.join_only ->
+              Repo.rollback(:slot_full)
+
             nil ->
               create_meeting_with_first_seat(
                 meeting_attrs,

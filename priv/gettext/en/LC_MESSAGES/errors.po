@@ -382,6 +382,11 @@ msgstr ""
 msgid "You already have a meeting type with this name"
 msgstr ""
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr ""
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"

@@ -315,6 +315,23 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules one live participant's notice that the host moved their planned
+  session (`Tymeslot.Meetings.SessionMove`). `from` (the previous start, as
+  ISO 8601) names the move, so a second move of the same session is a new
+  email.
+  """
+  @spec schedule_seat_session_moved(term(), term(), String.t()) :: :ok | {:error, String.t()}
+  def schedule_seat_session_moved(meeting_id, participant_id, from) do
+    schedule_seat_email(
+      seat_action(:seat_session_moved),
+      meeting_id,
+      participant_id,
+      %{"from" => from},
+      [:from]
+    )
+  end
+
+  @doc """
   Schedules one live participant's reschedule request.
 
   Dispatched (one call per live participant) from the meeting-level

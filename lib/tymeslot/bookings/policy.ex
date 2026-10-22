@@ -143,6 +143,9 @@ defmodule Tymeslot.Bookings.Policy do
     {:error, {:not_reschedulable, :awaiting_approval}}
   end
 
+  # A fixed date moves from its meeting type, keeping everyone booked on it.
+  def can_request_reschedule?(%{planned: true}), do: {:error, "Move a fixed date from its type"}
+
   def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
 
   @doc """

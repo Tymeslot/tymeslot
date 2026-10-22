@@ -398,6 +398,11 @@ msgstr "групові бронювання не можуть вимагати �
 msgid "You already have a meeting type with this name"
 msgstr "У вас уже є тип зустрічі з такою назвою"
 
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "фіксовані дати потребують групових бронювань"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"

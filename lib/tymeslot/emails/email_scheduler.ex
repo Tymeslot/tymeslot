@@ -65,6 +65,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
               ),
               to: MeetingScheduler
 
+  defdelegate schedule_seat_session_moved(meeting_id, participant_id, from),
+    to: MeetingScheduler
+
   defdelegate schedule_seat_reschedule_request(meeting_id, participant_id, requested_at),
     to: MeetingScheduler
 
