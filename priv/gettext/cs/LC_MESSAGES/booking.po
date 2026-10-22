@@ -855,11 +855,6 @@ msgstr "Plní se"
 msgid "Plenty left"
 msgstr "Hodně míst"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
-msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
-msgstr "Tato schůzka byla naplánována anketou, proto ji může přesunout jen hostitel. Pokud vám nový čas nevyhovuje, odpovězte na pozvánku."
-
 #: lib/tymeslot_web/themes/core/error_boundary.ex
 #, elixir-autogen, elixir-format
 msgid "This page could not be updated. Please try again."

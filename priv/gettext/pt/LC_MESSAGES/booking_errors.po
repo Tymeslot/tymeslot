@@ -230,3 +230,8 @@ msgstr "Você já tem uma vaga neste horário. Confira seu e-mail para ver a con
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Você não pode agendar com mais de %{days} dias de antecedência"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
+msgstr "Esta reunião foi marcada por uma enquete, então só o anfitrião pode remarcá-la. Se o novo horário não funcionar para você, responda ao seu convite."

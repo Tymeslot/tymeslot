@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
 
   def message(:managed_by_host) do
     dgettext(
-      "booking",
+      "booking_errors",
       "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
     )
   end

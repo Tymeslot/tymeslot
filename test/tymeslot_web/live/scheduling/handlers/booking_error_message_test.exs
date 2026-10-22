@@ -114,4 +114,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
                "Failed to create appointment. Please try again."
     end
   end
+
+  describe "message(:managed_by_host)" do
+    test "is translated from the booking errors catalogue" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert BookingErrorMessage.message(:managed_by_host) ==
+                 "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben. Wenn Ihnen die neue Zeit nicht passt, antworten Sie auf Ihre Einladung."
+      end)
+    end
+  end
 end
