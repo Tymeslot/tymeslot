@@ -10,8 +10,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
   moves the booking only to the time the dialog showed, and turns the outcome
   into a flash. The reload is passed in because the list belongs to the
   component. The calendar's preview (`TymeslotWeb.Dashboard.Calendar.BookingMove`)
-  opens and settles its moves here too, running the move itself off its
-  process.
+  opens its moves here and tells their outcome with `announce/3`, running
+  the move itself off its process and emitting `emit_confirm/3` there.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -129,19 +129,38 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
 
   @doc """
   Tells the host how a move of `meeting_id` ended, with a flash and a
-  telemetry event, and answers which way it went. Needs only the signed-in
-  user, the profile and the time format from the socket, so it also serves
-  once the host has left the page the move was made from.
+  telemetry event (`emit_confirm/3` then `announce/3`), and answers which
+  way it went.
   """
   @spec report(Phoenix.LiveView.Socket.t(), Ecto.UUID.t(), {:ok, term()} | {:error, term()}) ::
           :moved | :offer_changed | :refused
   def report(socket, meeting_id, result) do
-    user_id = socket.assigns.current_user.id
+    :ok = emit_confirm(socket.assigns.current_user.id, meeting_id, result)
+    announce(socket, meeting_id, result)
+  end
 
+  @doc """
+  The telemetry event for a confirmed move of `meeting_id` that answered
+  `result`. Needs no socket, so a move run off the LiveView's process (the
+  calendar's) records it where it ran, even once the host has left.
+  """
+  @spec emit_confirm(integer(), Ecto.UUID.t(), {:ok, term()} | {:error, term()}) :: :ok
+  def emit_confirm(user_id, meeting_id, {:ok, _moved}),
+    do: emit(user_id, meeting_id, :confirm, :ok)
+
+  def emit_confirm(user_id, meeting_id, {:error, reason}),
+    do: emit(user_id, meeting_id, :confirm, reason)
+
+  @doc """
+  The flash for a move of `meeting_id` that answered `result`, and which
+  way it went. Needs only the profile and the time format from the socket,
+  so it also serves once the host has left the page the move was made from.
+  """
+  @spec announce(Phoenix.LiveView.Socket.t(), Ecto.UUID.t(), {:ok, term()} | {:error, term()}) ::
+          :moved | :offer_changed | :refused
+  def announce(socket, _meeting_id, result) do
     case result do
       {:ok, moved} ->
-        emit(user_id, meeting_id, :confirm, :ok)
-
         Flash.info(
           dgettext("dashboard_bookings", "Booking moved to %{time}",
             time: time_phrase(socket, moved)
@@ -151,12 +170,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
         :moved
 
       {:error, :offer_changed} ->
-        emit(user_id, meeting_id, :confirm, :offer_changed)
         Flash.warning(refusal_message(:offer_changed))
         :offer_changed
 
       {:error, reason} ->
-        emit(user_id, meeting_id, :confirm, reason)
         Flash.error(refusal_message(reason))
         :refused
     end

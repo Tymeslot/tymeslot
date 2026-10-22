@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   def handle_info({:booking_move_result, meeting_id, result}, socket) do
     case CalendarRouting.booking_move_settled(socket, meeting_id, result) do
       :ok -> :ok
-      :off_screen -> _outcome = CalendarMove.report(socket, meeting_id, result)
+      :off_screen -> _outcome = CalendarMove.announce(socket, meeting_id, result)
     end
 
     rebuild_agenda({:noreply, socket})
