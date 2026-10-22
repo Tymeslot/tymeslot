@@ -280,14 +280,6 @@ defmodule Tymeslot.Bookings.Reschedule do
     end
   end
 
-  # A time the host picked is theirs to pick: the limits and buffers that
-  # shape what a booker is offered do not apply to it.
-  defp host_choice_opts(opts) do
-    if Keyword.get(opts, :host_chosen, false),
-      do: [enforce_booking_limits: false, buffers: false],
-      else: []
-  end
-
   # A held request this reschedule confirms outright (see
   # `RescheduleGate.attributes/3`) is a new booking nobody has been told
   # about, so its emails and reminders commit with the reschedule, as an
@@ -518,6 +510,14 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, {:refused, _reason} = refused} -> {:error, refused}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
+  end
+
+  # A time the host picked is theirs to pick: the limits and buffers that
+  # shape what a booker is offered do not apply to it.
+  defp host_choice_opts(opts) do
+    if Keyword.get(opts, :host_chosen, false),
+      do: [enforce_booking_limits: false, buffers: false],
+      else: []
   end
 
   defp schedule_calendar_job(updated) do

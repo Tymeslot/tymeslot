@@ -140,13 +140,25 @@ defmodule Tymeslot.Bookings.Policy do
   has no reschedule action until they have approved it — voiding the slot
   here would leave a request that still reads as approvable pointing at
   time that no longer holds.
+
+  A meeting confirmed from a poll (`MeetingSchema.managed_by_host?/1`) has
+  nobody to ask for a new time: its host picks one with
+  `Tymeslot.Bookings.HostMove.move/3`, so a request is refused with
+  `:managed_by_host`.
   """
-  @spec can_request_reschedule?(meeting_record()) :: :ok | {:error, reschedule_refusal()}
-  def can_request_reschedule?(%{status: "awaiting_approval"}) do
-    {:error, {:not_reschedulable, :awaiting_approval}}
+  @spec can_request_reschedule?(meeting_record()) ::
+          :ok | {:error, reschedule_refusal() | booker_move_refusal()}
+  def can_request_reschedule?(%{status: "awaiting_approval"} = meeting) do
+    with :ok <- can_booker_move_meeting?(meeting) do
+      {:error, {:not_reschedulable, :awaiting_approval}}
+    end
   end
 
-  def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
+  def can_request_reschedule?(meeting) do
+    with :ok <- can_booker_move_meeting?(meeting) do
+      can_reschedule_meeting?(meeting)
+    end
+  end
 
   @doc """
   Whether the booker may move `meeting` themselves. A meeting confirmed from

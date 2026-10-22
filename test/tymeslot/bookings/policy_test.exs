@@ -200,6 +200,31 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
   end
 
+  describe "can_request_reschedule?/1" do
+    test "refuses a meeting its host manages, whatever its state" do
+      future = DateTime.add(DateTime.utc_now(), 7200, :second)
+
+      for status <- ["confirmed", "awaiting_approval"] do
+        meeting = %{
+          status: status,
+          managed_by_host: true,
+          start_time: future,
+          end_time: DateTime.add(future, 1800, :second)
+        }
+
+        assert Policy.can_request_reschedule?(meeting) == {:error, :managed_by_host}
+      end
+    end
+
+    test "still refuses a held request for a meeting with a booker" do
+      assert Policy.can_request_reschedule?(%{
+               status: "awaiting_approval",
+               managed_by_host: false
+             }) ==
+               {:error, {:not_reschedulable, :awaiting_approval}}
+    end
+  end
+
   describe "meeting_is_current?/1" do
     test "returns true for ongoing meeting" do
       current_meeting = %{
