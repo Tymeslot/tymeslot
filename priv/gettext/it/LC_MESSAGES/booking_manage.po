@@ -630,4 +630,4 @@ msgstr "Il tuo posto è stato assegnato a qualcun altro dopo il tuo rifiuto. La 
 #: lib/tymeslot_web/themes/core/meeting_management.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
-msgstr "Questo incontro è stato fissato tramite un sondaggio, quindi solo l'organizzatore può spostarlo o annullarlo. Se non puoi partecipare, usa \"Non riesco a esserci\" nel tuo invito oppure rispondi all'invito."
+msgstr "Questa riunione è stata fissata tramite un sondaggio, quindi solo l'organizzatore può spostarla o annullarla. Se non puoi partecipare, usa «Non riesco a esserci» nel tuo invito oppure rispondi all'invito."
