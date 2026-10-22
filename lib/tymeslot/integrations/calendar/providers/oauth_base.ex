@@ -50,19 +50,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.OAuthBase do
   end
 
   @doc """
-  Creates a new OAuth provider instance with validated configuration.
-  """
-  @spec new(map(), (map() -> :ok | {:error, String.t()})) ::
-          {:ok, oauth_config()} | {:error, String.t()}
-  def new(config, scope_validator_fn)
-      when is_map(config) and is_function(scope_validator_fn, 1) do
-    case validate_config(config, scope_validator_fn) do
-      :ok -> {:ok, config}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  @doc """
   Wraps API calls with standardized error handling.
 
   Provider API modules classify a failure as `{:error, type, message}`: an atom
@@ -162,10 +149,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.OAuthBase do
       @impl Tymeslot.Integrations.Calendar.Provider
       def config_schema, do: OAuthBase.config_schema()
 
+      # The client is the stored integration. Its scope is checked when it is
+      # connected (`validate_config/1`), not each time it is used: a row
+      # connected with a read-only scope still reads, and a write it cannot
+      # make comes back from the provider as a refusal.
       @impl Tymeslot.Integrations.Calendar.Provider
-      def new(config) do
-        OAuthBase.new(config, &validate_oauth_scope/1)
-      end
+      def new(config), do: {:ok, config}
 
       @impl Tymeslot.Integrations.Calendar.Provider
       def validate_config(config) do

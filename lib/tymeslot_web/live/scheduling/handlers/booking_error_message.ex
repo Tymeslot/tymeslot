@@ -180,6 +180,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     do:
       dgettext("booking_errors", "Cannot request a reschedule while the booking awaits approval")
 
+  def message({:not_reschedulable, :planned}),
+    do:
+      dgettext(
+        "booking_errors",
+        "A fixed date is moved from its meeting type, together with everyone booked on it"
+      )
+
   # Reuses the msgid `localization_helpers.ex` already defines (and every
   # locale already translates) for the same problem.
   def message(:invalid_datetime), do: dgettext("booking_errors", "Invalid date/time")

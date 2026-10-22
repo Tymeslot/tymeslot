@@ -43,12 +43,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.ApiStatus do
     end
   end
 
+  # Google's throttling and quota reasons (`rateLimitExceeded`,
+  # `userRateLimitExceeded`, `quotaExceeded`, `dailyLimitExceeded`) and the
+  # messages it sends with them ("Calendar usage limits exceeded.", "Daily
+  # Limit Exceeded") all clear once the window passes, so they are retried.
+  @rate_limit_reason_fragments ["ratelimit", "quotaexceeded", "limitexceeded", "usagelimits"]
+  @rate_limit_message_fragments ["quota", "rate limit", "usage limits", "limit exceeded"]
+
   defp rate_limited?(error_msg, reason_strings) do
     msg = String.downcase(error_msg)
 
-    Enum.any?(reason_strings, &String.contains?(&1, "ratelimit")) or
-      String.contains?(msg, "quota") or
-      String.contains?(msg, "rate")
+    Enum.any?(reason_strings, &String.contains?(&1, @rate_limit_reason_fragments)) or
+      String.contains?(msg, @rate_limit_message_fragments)
   end
 
   defp unauthorized_forbidden?(error_msg, reason_strings) do

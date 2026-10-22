@@ -9,9 +9,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Clock
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Seats
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
@@ -89,6 +91,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               data-testid="group-seats-badge"
             >
               {seats_label(@meeting, @guests)}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={registration_closed?(@meeting)}
+              tone={:danger}
+              size={:sm}
+              icon="hero-lock-closed"
+              data-testid="registration-closed-badge"
+            >
+              {dgettext("dashboard_bookings", "Registration closed")}
             </Feedback.pill>
             <Feedback.pill
               :if={Meetings.organizer_join_url(@meeting)}
@@ -370,6 +381,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
       capacity: meeting.capacity
     )
   end
+
+  # A planned session (`PlannedSessions`) that has not started yet but takes
+  # no more sign-ups. Once it has started, the card's status says enough.
+  defp registration_closed?(%{planned: true, status: status} = session)
+       when status != "cancelled" do
+    now = Clock.utc_now()
+    DateTime.compare(session.start_time, now) == :gt and not PlannedSessions.open?(session, now)
+  end
+
+  defp registration_closed?(_meeting), do: false
 
   # A solo card is titled after its attendee. A group card has no single
   # attendee, and a meeting from a poll none that matters, so they are named
