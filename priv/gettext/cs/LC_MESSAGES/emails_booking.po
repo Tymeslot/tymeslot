@@ -691,3 +691,13 @@ msgstr "Obdrželi jste: %{amount} (před odečtením poplatků Stripe za zpracov
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting in your calendar."
 msgstr "Přesun této schůzky proběhl ve vašem kalendáři."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
+msgstr "Dobrý den, %{guest}, blíží se schůzka, na kterou vás zve %{organizer}."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to is coming up."
+msgstr "Blíží se schůzka, na kterou vás zve %{organizer}."

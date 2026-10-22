@@ -691,3 +691,13 @@ msgstr "Vous avez reçu : %{amount} (avant déduction des frais de traitement St
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting in your calendar."
 msgstr "Vous avez déplacé ce rendez-vous dans votre calendrier."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
+msgstr "Bonjour %{guest}, la réunion pour laquelle %{organizer} vous a envoyé une invitation approche."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to is coming up."
+msgstr "La réunion pour laquelle %{organizer} vous a envoyé une invitation approche."
