@@ -94,8 +94,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMonthTest do
       assert_receive {:held, fetcher}, 2_000
 
       render_patch(lv, ~p"/dashboard/calendar?view=month&date=2026-10-14")
+
+      # The fetch runs in the load's own task, which still computes the
+      # windows once released: wait for that task to end, then render so
+      # the LiveView has taken its answer, rather than racing the
+      # computation against `render_async/1`'s default timeout.
+      ref = Process.monitor(fetcher)
       send(fetcher, :release)
-      render_async(lv)
+      assert_receive {:DOWN, ^ref, :process, ^fetcher, _reason}, 5_000
+      render(lv)
 
       refute_push_event(lv, "calendar:bookable", _layer)
     end

@@ -374,7 +374,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
       test_pid = self()
 
       stub(Tymeslot.CalendarMock, :update_event, fn uid, payload, _context ->
-        send(test_pid, {:written, uid, payload})
+        send(test_pid, {:written, self(), uid, payload})
         :ok
       end)
 
@@ -398,14 +398,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
     } do
       open_panel(lv, id)
       lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
-      assert_receive {:written, _uid, %{summary: "Renamed"}}, @task_timeout
+      assert_receive {:written, _writer, _uid, %{summary: "Renamed"}}, @task_timeout
       eventually(fn -> assert panel_status(lv) =~ "Saved" end)
 
       start_held_move(lv, integration)
       undo(lv)
 
       assert render(lv) =~ "moving to another calendar"
-      refute_receive {:written, _uid, _payload}, 200
+      refute_receive {:written, _writer, _uid, _payload}, 200
 
       # Still on the stack: asked again, it is refused again rather than gone.
       undo(lv)
@@ -420,7 +420,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
     } do
       open_panel(lv, id)
       lv |> element("#calendar-panel-title") |> render_blur(%{"value" => "Renamed"})
-      assert_receive {:written, _uid, %{summary: "Renamed"}}, @task_timeout
+      assert_receive {:written, _writer, _uid, %{summary: "Renamed"}}, @task_timeout
       eventually(fn -> assert panel_status(lv) =~ "Saved" end)
 
       hold_creates()
@@ -446,7 +446,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
 
       # Beneath it, the title change, on the event as it is now.
       undo(lv)
-      assert_receive {:written, _uid, %{summary: "Design review"}}, @task_timeout
+      assert_receive {:written, _writer, _uid, %{summary: "Design review"}}, @task_timeout
     end
 
     test "a drag is not taken back", %{lv: lv, integration: integration, id: id} do
@@ -458,7 +458,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
         "end" => "2026-10-14T12:00"
       })
 
-      assert_receive {:written, _uid, _payload}, @task_timeout
+      # The drag must have answered before the move starts, or the move is
+      # refused as overlapping a write still in flight.
+      assert_receive {:written, writer, _uid, _payload}, @task_timeout
+      ref = Process.monitor(writer)
+      assert_receive {:DOWN, ^ref, :process, ^writer, _reason}, @task_timeout
       render(lv)
       render(lv)
 
@@ -467,7 +471,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferTest do
       undo(lv)
 
       assert render(lv) =~ "moving to another calendar"
-      refute_receive {:written, _uid, _payload}, 200
+      refute_receive {:written, _writer, _uid, _payload}, 200
     end
   end
 
