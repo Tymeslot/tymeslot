@@ -78,7 +78,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
          max_participants: max_participants,
          location: location,
          registration_closes_at: closes_at,
-         calendar_integration_id: creating[:integration_id],
+         # A connection with no calendar picked in it leaves the type on the
+         # host's default booking calendar, as a meeting type without one is.
+         calendar_integration_id: creating[:calendar_id] && creating[:integration_id],
          target_calendar_id: creating[:integration_id] && creating[:calendar_id]
        }}
     end
@@ -250,6 +252,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
 
   defp error_message(:time_conflict),
     do: dgettext("dashboard_group_events", "You already have a booking at that time.")
+
+  defp error_message(:no_calendar),
+    do:
+      dgettext(
+        "dashboard_group_events",
+        "Connect a calendar first: people book the event on your booking page, which needs one."
+      )
 
   defp error_message(:group_bookings_not_allowed),
     do: dgettext("dashboard_group_events", "Group events are not included in your plan.")

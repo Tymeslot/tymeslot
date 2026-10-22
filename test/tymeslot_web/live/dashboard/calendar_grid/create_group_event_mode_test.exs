@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -36,6 +37,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     insert(:profile, user: user, username: "trainer", timezone: "Etc/UTC")
     venue = insert(:venue, user: user, name: "Main Hall")
+    # People book a group event on the public page, which needs a calendar.
+    insert(:calendar_integration, user: user, is_active: true)
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user, venue: venue}
@@ -68,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
     render(lv)
   end
 
-  test "offers the mode without a connected calendar and asks for its details", %{conn: conn} do
+  test "offers the mode and asks for its details", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard")
 
     html = open_group_event_form(lv)
@@ -78,6 +81,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
     assert html =~ "Main Hall"
     refute html =~ ~s(id="create-meeting-guest-name")
     refute html =~ ~s(id="create-event-all-day")
+  end
+
+  test "is not offered without a calendar people can book through", %{conn: conn} do
+    Repo.delete_all(CalendarIntegrationSchema)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+    html = lv |> element("#calendar-grid") |> render_hook("show_create_form", %{})
+
+    assert html =~ "New Meeting"
+    refute html =~ ~s(data-testid="create-mode-group-event")
+
+    # A stale or forged switch to the mode changes nothing.
+    html =
+      lv
+      |> element(~s{#create-event-modal [data-testid="create-mode-meeting"]})
+      |> render_click(%{"mode" => "group_event"})
+
+    refute html =~ ~s(id="create-group-event-form")
   end
 
   test "is not offered when group bookings are not allowed", %{conn: conn} do
@@ -92,7 +113,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
 
     html = lv |> element("#calendar-grid") |> render_hook("show_create_form", %{})
 
-    assert html =~ "New Meeting"
     refute html =~ ~s(data-testid="create-mode-group-event")
   end
 

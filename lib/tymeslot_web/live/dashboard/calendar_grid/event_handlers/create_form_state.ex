@@ -153,8 +153,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       mode == "event" and not writable?(socket) ->
         {:noreply, socket}
 
-      # A group event is a group meeting type, which may sit behind a plan.
-      mode == "group_event" and not Map.get(socket.assigns, :group_bookings_allowed, false) ->
+      # A group event is a group meeting type, which may sit behind a plan,
+      # and people book it on the public page, which needs a calendar.
+      mode == "group_event" and
+          (not Map.get(socket.assigns, :group_bookings_allowed, false) or not writable?(socket)) ->
         {:noreply, socket}
 
       true ->

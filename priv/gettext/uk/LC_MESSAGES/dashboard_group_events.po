@@ -120,3 +120,8 @@ msgstr "У вас уже є бронювання на цей час."
 #, elixir-autogen, elixir-format
 msgid "An event lasts a multiple of %{step} minutes."
 msgstr "Тривалість події кратна %{step} хвилинам."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar first: people book the event on your booking page, which needs one."
+msgstr "Спершу підключіть календар: подію бронюють на вашій сторінці бронювання, а їй він потрібен."

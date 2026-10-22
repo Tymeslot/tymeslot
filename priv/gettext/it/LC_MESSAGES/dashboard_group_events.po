@@ -120,3 +120,8 @@ msgstr "Hai già una prenotazione a quell'ora."
 #, elixir-autogen, elixir-format
 msgid "An event lasts a multiple of %{step} minutes."
 msgstr "Un evento dura un multiplo di %{step} minuti."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar first: people book the event on your booking page, which needs one."
+msgstr "Collega prima un calendario: l’evento si prenota dalla tua pagina di prenotazione, che ne ha bisogno."

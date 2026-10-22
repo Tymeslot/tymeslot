@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -23,6 +24,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
     TestMocks.setup_all_mocks()
     user = insert(:user)
     insert(:profile, user: user, timezone: "Etc/UTC")
+    insert(:calendar_integration, user: user, is_active: true)
     venue = insert(:venue, user: user, name: "Main Hall")
     %{user: user, venue: venue}
   end
@@ -110,6 +112,13 @@ defmodule Tymeslot.MeetingTypes.OneOffEventsTest do
 
     assert Repo.all(MeetingTypeSchema) == []
     assert Repo.all(MeetingSchema) == []
+  end
+
+  test "refuses a host without a calendar people can book through", ctx do
+    Repo.delete_all(CalendarIntegrationSchema)
+
+    assert {:error, :no_calendar} = OneOffEvents.create(params(ctx))
+    assert Repo.all(MeetingTypeSchema) == []
   end
 
   test "refuses a venue of another host", ctx do

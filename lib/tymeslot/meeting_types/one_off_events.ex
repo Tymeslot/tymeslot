@@ -14,9 +14,14 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   The type is checked like one saved from the meeting-type form
   (`FormValidation.check/3`: group-bookings access, ownership of the venue,
   video integration and calendar), and the type and its session are stored
-  together or not at all.
+  together or not at all. The host needs a calendar people can book
+  through (`BookingEligibility`), as the public booking page does
+  (`Tymeslot.Scheduling.LinkAccessPolicy.check_public_readiness/1`):
+  without one, nobody could sign up for the event.
   """
 
+  alias Tymeslot.Integrations.Calendar.BookingEligibility
+  alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.{FormValidation, MeetingTypeQueries, Slugs}
@@ -54,7 +59,8 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   def create(%{user_id: user_id} = params) do
     attrs = type_attrs(params, MeetingTypeQueries.list_all_meeting_types(user_id))
 
-    with :ok <- FormValidation.check(user_id, attrs) do
+    with :ok <- check_bookable_calendar(user_id),
+         :ok <- FormValidation.check(user_id, attrs) do
       Repo.transaction(fn ->
         with {:ok, meeting_type} <- MeetingTypes.create_meeting_type(attrs),
              {:ok, session} <-
@@ -67,6 +73,15 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
         end
       end)
     end
+  end
+
+  defp check_bookable_calendar(user_id) do
+    bookable =
+      user_id
+      |> Management.list_active_calendar_integrations()
+      |> BookingEligibility.filter_bookable()
+
+    if bookable != [], do: :ok, else: {:error, :no_calendar}
   end
 
   @doc """

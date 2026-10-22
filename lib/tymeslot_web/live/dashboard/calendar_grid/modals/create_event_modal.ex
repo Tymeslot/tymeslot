@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             testid="create-mode-meeting"
           />
           <:option
-            :if={@group_allowed}
+            :if={@group_allowed and @targets != []}
             value="group_event"
             label={dgettext("dashboard_group_events", "Group event")}
             testid="create-mode-group-event"
