@@ -553,6 +553,7 @@ msgid "Removed from the poll"
 msgstr "Removido da enquete"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline must be in the future"
 msgstr "O prazo precisa estar no futuro"
@@ -754,3 +755,18 @@ msgstr "A votação foi encerrada. Mude o prazo em Editar enquete para convidar 
 #, elixir-autogen, elixir-format
 msgid "Set a username in your profile first: the links in the emails are built from it."
 msgstr "Defina primeiro um nome de usuário no seu perfil: os links dos e-mails são criados a partir dele."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "No one has joined this poll yet, so there is no one to send the meeting to."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time has already passed"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your own address is on this poll as a participant, and the meeting can't be sent to you as a guest. Remove yourself from the participants and try again."
+msgstr ""
