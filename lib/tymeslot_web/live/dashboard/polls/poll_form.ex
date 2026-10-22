@@ -585,6 +585,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
+  defp errors_for(:no_username), do: %{invitees: [PollInvite.error_message(:no_username)]}
 
   defp errors_for({:rate_limited, _remaining} = reason),
     do: %{invitees: [PollInvite.error_message(reason)]}

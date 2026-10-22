@@ -20,7 +20,9 @@ defmodule Tymeslot.Polls.ReminderSchedulingTest do
   alias Tymeslot.Workers.EmailWorker
 
   setup do
-    %{user: insert(:user), deadline: in_days(5)}
+    user = insert(:user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    %{user: user, deadline: in_days(5)}
   end
 
   describe "at creation" do

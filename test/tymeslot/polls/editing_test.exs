@@ -17,6 +17,7 @@ defmodule Tymeslot.Polls.EditingTest do
 
   setup do
     user = insert(:user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
     deadline = in_days(5)
 
     poll =

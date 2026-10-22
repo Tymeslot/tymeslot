@@ -23,6 +23,7 @@ defmodule Tymeslot.Polls do
     Voting
   }
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
 
@@ -65,10 +66,12 @@ defmodule Tymeslot.Polls do
              | :too_many_slots
              | :slot_in_past
              | :poll_full
+             | :no_username
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def create_poll(user_id, attrs) do
-    with {:ok, attrs} <- apply_meeting_type(user_id, attrs),
+    with :ok <- ensure_username(user_id, Map.get(attrs, :invitees, [])),
+         {:ok, attrs} <- apply_meeting_type(user_id, attrs),
          {:ok, slots} <- prepare_slots(attrs) do
       insert_poll(user_id, attrs, slots)
     end
@@ -180,9 +183,10 @@ defmodule Tymeslot.Polls do
   is not a UUID at all, is `{:error, :not_found}`.
   """
   @spec resend_invitation(Ecto.UUID.t(), integer(), String.t()) ::
-          :ok | {:error, :not_found | :not_open | Invitations.resend_error()}
+          :ok | {:error, :not_found | :not_open | :no_username | Invitations.resend_error()}
   def resend_invitation(id, user_id, participant_id) do
     with {:ok, participant_id} <- cast_participant_id(participant_id),
+         :ok <- ensure_username(user_id, [participant_id]),
          {:ok, _poll} <-
            with_open_poll_locked(id, user_id, &Invitations.resend(&1, participant_id)) do
       :ok
@@ -241,10 +245,12 @@ defmodule Tymeslot.Polls do
              | :not_open
              | :voting_closed
              | :poll_full
+             | :no_username
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def invite_participants(id, user_id, entries) do
-    with {:ok, result} <-
+    with :ok <- ensure_username(user_id, entries),
+         {:ok, result} <-
            with_open_poll_locked(id, user_id, fn poll ->
              if voting_open?(poll) do
                {:ok, Invitations.insert(poll, entries)}
@@ -508,6 +514,19 @@ defmodule Tymeslot.Polls do
     with {:ok, {poll_id, updated}} <- result do
       broadcast_update(poll_id)
       {:ok, updated}
+    end
+  end
+
+  # Every email to a participant carries a link under the host's username, and
+  # one sent without it is discarded (`Tymeslot.Notifications.Email.PollEmails`)
+  # after the invitation has been counted against the host's limits. Refused up
+  # front instead, when anyone is to be emailed.
+  defp ensure_username(_user_id, []), do: :ok
+
+  defp ensure_username(user_id, _recipients) do
+    case Profiles.get_profile(user_id) do
+      %{username: username} when is_binary(username) -> :ok
+      _profile -> {:error, :no_username}
     end
   end
 

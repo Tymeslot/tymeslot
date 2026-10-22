@@ -66,6 +66,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
   describe "invite/2" do
     setup do
       user = insert(:user, locale: "de")
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
       poll = insert(:poll, user: user, timezone: "Europe/Berlin")
       %{poll: poll}
     end
@@ -176,7 +177,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
 
     test "tells the host to move the deadline when voting has closed" do
       past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
-      poll = insert(:poll, status: :open, deadline_at: past)
+      poll = insert(:poll, status: :open, deadline_at: past, user: host_with_username())
 
       assert {:error, :voting_closed} =
                Polls.invite_participants(poll.id, poll.user_id, [
@@ -187,7 +188,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
     end
 
     test "refuses a poll that is no longer open" do
-      poll = insert(:poll, status: :cancelled)
+      poll = insert(:poll, status: :cancelled, user: host_with_username())
 
       assert {:error, :not_open} =
                Polls.invite_participants(poll.id, poll.user_id, [
@@ -207,7 +208,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
         slots: [%{start_time: start_time}]
       }
 
-      %{user: insert(:user), attrs: attrs}
+      user = insert(:user)
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      %{user: user, attrs: attrs}
     end
 
     test "invites them with the poll and emails them once it is saved", %{
@@ -237,5 +240,11 @@ defmodule Tymeslot.Polls.InvitationsTest do
 
       assert all_enqueued(worker: EmailWorker) == []
     end
+  end
+
+  defp host_with_username do
+    user = insert(:user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    user
   end
 end

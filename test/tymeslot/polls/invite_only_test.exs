@@ -36,7 +36,9 @@ defmodule Tymeslot.Polls.InviteOnlyTest do
 
   describe "create_poll/2" do
     setup do
-      %{user: insert(:user)}
+      user = insert(:user)
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      %{user: user}
     end
 
     test "is invite-only when people are invited with it and the host did not say", %{user: user} do

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.PollEmailLimitsTest do
 
   setup do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    insert(:profile, user: user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
 
     conn =
       build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)

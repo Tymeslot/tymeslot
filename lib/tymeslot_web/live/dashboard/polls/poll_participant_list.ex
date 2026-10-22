@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
 
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantSchema
-  alias TymeslotWeb.Dashboard.Polls.{PollsComponent, RemoveParticipantModal}
+  alias TymeslotWeb.Dashboard.Polls.{PollInvite, PollsComponent, RemoveParticipantModal}
   alias TymeslotWeb.Live.Shared.Flash
 
   @impl Phoenix.LiveComponent
@@ -188,6 +188,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
         "dashboard_polls",
         "Voting on this poll has closed. Move the deadline to send links again."
       )
+
+  defp resend_message(:no_username, _participant), do: PollInvite.error_message(:no_username)
 
   defp resend_message(reason, _participant) when reason in [:not_found, :not_open],
     do: removal_error(reason)

@@ -202,6 +202,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
   def error_message(:no_invitees),
     do: dgettext("dashboard_polls", "Enter at least one email address.")
 
+  def error_message(:no_username),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "Set a username in your profile first: the links in the emails are built from it."
+      )
+
   def error_message(:not_open), do: dgettext("dashboard_polls", "This poll is no longer open.")
 
   def error_message(:voting_closed),

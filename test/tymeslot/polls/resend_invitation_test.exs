@@ -20,6 +20,7 @@ defmodule Tymeslot.Polls.ResendInvitationTest do
 
   setup do
     user = insert(:user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
     poll = insert(:poll, user: user, deadline_at: from_now(3 * 24 * 60))
     %{user: user, poll: poll}
   end

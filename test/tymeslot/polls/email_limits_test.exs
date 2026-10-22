@@ -89,6 +89,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
   describe "invitations" do
     setup do
       user = insert(:user)
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
       %{user: user, poll: insert(:poll, user: user)}
     end
 
@@ -312,7 +313,9 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       ada = address("ada")
       before = RateLimiter.remaining(:poll_recipient_email, ada)
 
-      target = insert(:poll)
+      host = insert(:user)
+      insert(:profile, user: host, username: "host#{System.unique_integer([:positive])}")
+      target = insert(:poll, user: host)
 
       {:ok, _result} =
         Polls.invite_participants(target.id, target.user_id, [%{email: ada, name: nil}])

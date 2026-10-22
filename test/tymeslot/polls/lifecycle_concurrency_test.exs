@@ -37,7 +37,7 @@ defmodule Tymeslot.Polls.LifecycleConcurrencyTest do
     {user, poll, slot, participant} =
       unboxed(fn ->
         user = insert(:user)
-        insert(:profile, user: user)
+        insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
 
         poll =
           insert(:poll, user: user, status: :open, timezone: "Etc/UTC", meeting_type_id: nil)

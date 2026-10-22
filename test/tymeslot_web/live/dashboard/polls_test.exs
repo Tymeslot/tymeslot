@@ -15,11 +15,11 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
-  # A host with a profile but no calendar integration and no username: the
+  # A host with a profile and a username but no calendar integration: the
   # baseline for list/create/validation tests.
   defp setup_host(_context) do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    profile = insert(:profile, user: user)
+    profile = insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
     {:ok, conn: log_in(build_conn(), user), user: user, profile: profile}
   end
 
