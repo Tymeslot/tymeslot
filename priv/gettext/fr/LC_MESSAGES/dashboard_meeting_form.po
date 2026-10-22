@@ -489,31 +489,6 @@ msgstr "Le calendrier dans lequel ce type de réunion réserve est désormais en
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Le prix de %{amount} est conservé et s'appliquera de nouveau une fois Stripe connecté."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Additional duration (minutes)"
-msgstr "Durée supplémentaire (minutes)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Bookers choose one of these durations before picking a time. Each booking lasts the duration chosen; the price is the same for all."
-msgstr "Les personnes qui réservent choisissent l'une de ces durées avant de choisir un horaire. Chaque réservation dure le temps choisi ; le prix est le même pour toutes."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Offer another duration"
-msgstr "Proposer une autre durée"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Remove this duration"
-msgstr "Supprimer cette durée"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
-#, elixir-autogen, elixir-format
-msgid "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
-msgstr "Les heures de début suivent la durée choisie par la personne qui réserve, chaque durée propose donc des horaires différents. Choisissez un intervalle fixe pour proposer les mêmes heures de début pour toutes les durées."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
 #, elixir-autogen, elixir-format
 msgid "In person"
@@ -665,11 +640,6 @@ msgid "%{time} (+%{count} day)"
 msgid_plural "%{time} (+%{count} days)"
 msgstr[0] "%{time} (+%{count} jour)"
 msgstr[1] "%{time} (+%{count} jours)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "A group meeting type offers a single duration."
-msgstr "Un type de réunion de groupe ne propose qu'une seule durée."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -951,11 +921,6 @@ msgid "A time shows how many spots are left, such as \"3 spots left\", only once
 msgstr "Un créneau n’indique le nombre de places restantes (par exemple « 3 places restantes ») qu’une fois arrivé à ses dernières places."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Remove the additional durations to enable group bookings."
-msgstr "Supprimez les durées supplémentaires pour activer les réservations de groupe."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen
 msgid "Last spots"
 msgstr "Dernières places"
@@ -1006,21 +971,6 @@ msgstr "Les semaines commencent le lundi, comme défini dans les Paramètres du 
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Les semaines commencent le dimanche, comme défini dans les Paramètres du calendrier."
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Each additional duration must be a number of minutes"
-msgstr "Chaque durée supplémentaire doit être un nombre de minutes"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Each duration can only be offered once"
-msgstr "Chaque durée ne peut être proposée qu'une seule fois"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "You can offer at most %{max} durations"
-msgstr "Vous pouvez proposer au plus %{max} durées"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format

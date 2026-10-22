@@ -491,31 +491,6 @@ msgstr "Kalendář, do kterého tento typ schůzky rezervuje, je nyní jen pro �
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Cena %{amount} zůstává uložena a začne znovu platit po připojení Stripe."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Additional duration (minutes)"
-msgstr "Další délka (minuty)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Bookers choose one of these durations before picking a time. Each booking lasts the duration chosen; the price is the same for all."
-msgstr "Rezervující si před výběrem času zvolí jednu z těchto délek. Každá rezervace trvá zvolenou dobu; cena je pro všechny stejná."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Offer another duration"
-msgstr "Nabídnout další délku"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "Remove this duration"
-msgstr "Odebrat tuto délku"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
-#, elixir-autogen, elixir-format
-msgid "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
-msgstr "Časy začátku se řídí délkou, kterou si vybere rezervující, takže každá délka nabízí jiné časy. Zvolte pevný interval, aby byly časy začátku pro všechny délky stejné."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
 #, elixir-autogen, elixir-format
 msgid "In person"
@@ -668,11 +643,6 @@ msgid_plural "%{time} (+%{count} days)"
 msgstr[0] "%{time} (+%{count} den)"
 msgstr[1] "%{time} (+%{count} dny)"
 msgstr[2] "%{time} (+%{count} dní)"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
-#, elixir-autogen, elixir-format
-msgid "A group meeting type offers a single duration."
-msgstr "Skupinový typ schůzky nabízí jen jednu délku."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -956,11 +926,6 @@ msgid "A time shows how many spots are left, such as \"3 spots left\", only once
 msgstr "Termín ukáže, kolik míst zbývá (třeba „3 volná místa“), až když zbývá jen posledních několik."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Remove the additional durations to enable group bookings."
-msgstr "Odeberte další délky, chcete-li zapnout skupinové rezervace."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen
 msgid "Last spots"
 msgstr "Poslední místa"
@@ -1012,21 +977,6 @@ msgstr "Týdny začínají v pondělí, jak je nastaveno v Nastavení kalendář
 #, elixir-autogen, elixir-format
 msgid "Weeks start on Sunday, as set in Calendar Settings."
 msgstr "Týdny začínají v neděli, jak je nastaveno v Nastavení kalendáře."
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Each additional duration must be a number of minutes"
-msgstr "Každá další délka musí být počet minut"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Each duration can only be offered once"
-msgstr "Každou délku lze nabídnout jen jednou"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "You can offer at most %{max} durations"
-msgstr "Můžete nabídnout nejvýše %{max} délek"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format

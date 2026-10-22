@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SlotIntervalFiel
     case {interval, duration} do
       {nil, _duration} when extra_lengths != [] ->
         dgettext(
-          "dashboard_meeting_form",
+          "dashboard_meeting_lengths",
           "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
         )
 

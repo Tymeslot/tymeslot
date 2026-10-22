@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
             max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
             required
             placeholder="60"
-            aria-label={dgettext("dashboard_meeting_form", "Additional duration (minutes)")}
+            aria-label={dgettext("dashboard_meeting_lengths", "Additional duration (minutes)")}
             phx-change="validate_meeting_type"
             phx-debounce="500"
             phx-target={@myself}
@@ -96,8 +96,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
             phx-value-index={index}
             phx-target={@myself}
             class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-token-full border border-tymeslot-200 bg-white text-tymeslot-500 hover:text-red-600 hover:border-red-300"
-            aria-label={dgettext("dashboard_meeting_form", "Remove this duration")}
-            title={dgettext("dashboard_meeting_form", "Remove this duration")}
+            aria-label={dgettext("dashboard_meeting_lengths", "Remove this duration")}
+            title={dgettext("dashboard_meeting_lengths", "Remove this duration")}
             data-testid="remove-length"
           >
             <.icon name="hero-trash" class="h-4 w-4" />
@@ -117,8 +117,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
             phx-click="add_length"
             phx-target={@myself}
             class="inline-flex h-9 w-9 items-center justify-center rounded-token-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
-            aria-label={dgettext("dashboard_meeting_form", "Offer another duration")}
-            title={dgettext("dashboard_meeting_form", "Offer another duration")}
+            aria-label={dgettext("dashboard_meeting_lengths", "Offer another duration")}
+            title={dgettext("dashboard_meeting_lengths", "Offer another duration")}
             data-testid="add-length"
           >
             <.icon name="hero-plus" class="h-5 w-5" />
@@ -141,13 +141,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LengthsField do
         )}
         <span :if={@group_bookings_enabled}>
           {dgettext(
-            "dashboard_meeting_form",
+            "dashboard_meeting_lengths",
             "A group meeting type offers a single duration."
           )}
         </span>
         <span :if={@extra_lengths != []}>
           {dgettext(
-            "dashboard_meeting_form",
+            "dashboard_meeting_lengths",
             "Bookers choose one of these durations before picking a time. Each booking lasts the duration chosen; the price is the same for all."
           )}
         </span>

@@ -245,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   defp blocker_message(:lengths),
     do:
       dgettext(
-        "dashboard_meeting_form",
+        "dashboard_meeting_lengths",
         "Remove the additional durations to enable group bookings."
       )
 

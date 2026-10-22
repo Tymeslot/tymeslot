@@ -364,7 +364,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
       {:error,
        %{
          extra_lengths:
-           dgettext("dashboard_meeting_form", "You can offer at most %{max} durations", max: max)
+           dgettext("dashboard_meeting_lengths", "You can offer at most %{max} durations",
+             max: max
+           )
        }}
 
   defp check_extra_count(_values, _max), do: :ok
@@ -386,7 +388,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
             %{
               extra_lengths:
                 dgettext(
-                  "dashboard_meeting_form",
+                  "dashboard_meeting_lengths",
                   "Each additional duration must be a number of minutes"
                 )
             }}}
@@ -407,7 +409,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         {:error,
          %{
            extra_lengths:
-             dgettext("dashboard_meeting_form", "Each duration can only be offered once")
+             dgettext("dashboard_meeting_lengths", "Each duration can only be offered once")
          }}
   end
 
