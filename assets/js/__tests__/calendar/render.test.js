@@ -291,6 +291,13 @@ describe("renderGrid", () => {
     expect(block.querySelector(".cal-ev-title").textContent).toBe("Hiring sync");
   });
 
+  test("a one-row block drops its time before it cuts the title short", () => {
+    const block = draw({ events: [timed("event-1", "Weekly planning with design", "2026-10-14T10:15", "2026-10-14T10:45")] }).querySelector('[data-event-id="event-1"]');
+    expect(block.classList.contains("is-short")).toBe(true);
+    expect(block.querySelector(".cal-ev-time")).toBeNull();
+    expect(block.querySelector(".cal-ev-title").textContent).toBe("Weekly planning with design");
+  });
+
   test("a one-row block with room for both keeps its time beside the title", () => {
     const block = draw({ events: [timed("event-1", "Hiring sync", "2026-10-14T10:15", "2026-10-14T10:45")] }).querySelector('[data-event-id="event-1"]');
     expect(block.classList.contains("is-short")).toBe(true);

@@ -49,9 +49,11 @@ const FLAG_CHROME = 10;
 // A compact flag's badge (calendar-booking.css `.is-compact`): a dot in the
 // block's top-right corner, and the room the title leaves it.
 const BADGE_ROOM = 12;
-// Below this a one-row block's title is a letter or two: the time beside it
-// gives way. The time is 10px against the 12px the title is measured at.
-const SHORT_TITLE_ROOM = 40;
+// The room a one-row draft's title keeps beside its start time: below it the
+// title is a letter or two and the time gives way. An event's title keeps all
+// the room it needs (shortRowFits). The time is 10px against the 12px the
+// title is measured at.
+const DRAFT_TITLE_ROOM = 40;
 const TIME_SCALE = 10 / 12;
 const SHORT_GAP = 5;
 // Resize hit areas: transparent strips at a draggable block's top and bottom
@@ -336,11 +338,14 @@ function textFit(item, title, wantsTime, measureWidth, inset = TITLE_INSET) {
   return { lines: Math.min(wanted, without), time: false };
 }
 
-// Whether a one-row block keeps its start time beside the title: only while
-// the title keeps enough room to be recognised, or all the room it needs.
-function shortRowFits(item, title, time, measureWidth, inset = TITLE_INSET) {
+// Whether a one-row block keeps its start time beside the title: an event's
+// only while the whole title still fits, so the time goes first (the block's
+// place on the axis already tells it) and the title then has the full width.
+// A draft, whose time is what the organiser is choosing, keeps it while the
+// title keeps `need` px.
+function shortRowFits(item, title, time, measureWidth, inset = TITLE_INSET, need = measureWidth(title)) {
   const room = item.width - inset - SHORT_GAP - measureWidth(time) * TIME_SCALE;
-  return room >= Math.min(SHORT_TITLE_ROOM, measureWidth(title));
+  return room >= Math.min(need, measureWidth(title));
 }
 
 // The title, with every word too wide for its line marked to truncate on a
@@ -428,9 +433,9 @@ function draftBlock(segment, event, { strings, settings, scale, colWidth, measur
   const title = event.title || strings.new_event;
   const short = height < 38;
   const start = formatMinutes(event.startMin % MINUTES_PER_DAY, tf);
-  // A one-row draft keeps its title readable as an event block does: the
-  // start time only, and none when the title would lose its room to it.
-  const time = !short ? `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}` : shortRowFits({ width }, title, start, measureWidth) ? start : "";
+  // A one-row draft shows its start time only, and none when the title would
+  // shrink to a letter or two beside it.
+  const time = !short ? `${start}–${formatMinutes(event.endMin % MINUTES_PER_DAY, tf)}` : shortRowFits({ width }, title, start, measureWidth, TITLE_INSET, DRAFT_TITLE_ROOM) ? start : "";
   const classes = ["cal-ev", "is-draft", event.opening && "is-opening", event.pending && "is-pending", event.free && "is-free", short && "is-short"].filter(Boolean).join(" ");
   return (
     `<div class="${classes}" data-draft-id="${escapeHtml(event.id)}" aria-hidden="true" style="top:${top}px;height:${height}px;--l:1px;--w:${width}px;--z:${z};--cal-ev:${colour(event.colour)}">` +
