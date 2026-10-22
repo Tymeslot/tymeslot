@@ -28,6 +28,9 @@ defmodule TymeslotWeb.Dashboard.PollsInviteClosedTest do
 
   setup %{conn: conn} do
     TestMocks.setup_calendar_mocks(events: [])
+    Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _id, _from, _to ->
+      {:ok, []}
+    end)
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     insert(:profile, user: user)
     %{conn: conn, user: user}

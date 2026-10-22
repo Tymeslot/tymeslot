@@ -17,6 +17,9 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
 
   setup %{conn: conn} do
     TestMocks.setup_calendar_mocks(events: [])
+    Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _id, _from, _to ->
+      {:ok, []}
+    end)
     Gettext.put_locale(TymeslotWeb.Gettext, "en")
     %{conn: conn}
   end
