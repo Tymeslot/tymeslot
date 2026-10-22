@@ -17,10 +17,12 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.{CancelSeat, Create, RescheduleSeat}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
@@ -310,6 +312,26 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
                PlannedSessions.set_registration_close(session, nil, at(10, ~T[18:30:00]))
 
       assert Repo.get!(MeetingSchema, session.id).registration_closes_at == nil
+    end
+  end
+
+  describe "a session nobody has signed up for" do
+    test "sends no reminder, and is no booking in the analytics", ctx do
+      {:ok, session} = PlannedSessions.add(ctx.meeting_type, at(3, ~T[10:00:00]))
+      window = {DateTime.add(DateTime.utc_now(), -3600), DateTime.add(DateTime.utc_now(), 3600)}
+
+      # The email service mock has no expectation: any send would fail the test.
+      assert :ok =
+               EmailHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => session.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      assert Meetings.count_bookings(ctx.user.id, elem(window, 0), elem(window, 1)) == 0
+
+      insert(:participant, meeting: session, email: "ada@example.com")
+      assert Meetings.count_bookings(ctx.user.id, elem(window, 0), elem(window, 1)) == 1
     end
   end
 

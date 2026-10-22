@@ -23,6 +23,7 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
@@ -161,6 +162,40 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     assert :ok = perform_job(EmailWorker, seat_job_args(ctx.session, ada))
   end
 
+  test "a guest's failed copy retries the seat job without resending the participant's", ctx do
+    ada =
+      insert(:participant, meeting: ctx.session, name: "Ada Lovelace", email: "ada@example.com")
+
+    {:ok, _guests} =
+      Guests.create_for_participant(ctx.session.id, ada.id, ["charles@example.com"])
+
+    {:ok, _moved} = PlannedSessions.move(ctx.session, at(12, ~T[09:30:00]), nil)
+
+    [job] =
+      all_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_session_moved"})
+
+    expect(Tymeslot.EmailServiceMock, :send_reschedule_email_to_attendee, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    expect(Tymeslot.EmailServiceMock, :send_guest_reschedule, 2, fn "charles@example.com", _ ->
+      case Process.get(:guest_attempts, 0) do
+        0 ->
+          Process.put(:guest_attempts, 1)
+          {:error, :smtp_unavailable}
+
+        _retry ->
+          {:ok, "sent"}
+      end
+    end)
+
+    assert {:error, _reason} =
+             EmailHandlers.execute_email_action("send_seat_session_moved", job.args, job.id)
+
+    # The retry sends the guest's copy only; the participant's is not repeated.
+    assert :ok = EmailHandlers.execute_email_action("send_seat_session_moved", job.args, job.id)
+  end
+
   test "the seat job sends nothing to someone who has left", ctx do
     ada =
       insert(:participant,
@@ -174,6 +209,6 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   end
 
   test "a planned session takes no host reschedule request", ctx do
-    assert {:error, _reason} = Policy.can_request_reschedule?(ctx.session)
+    assert Policy.can_request_reschedule?(ctx.session) == {:error, {:not_reschedulable, :planned}}
   end
 end

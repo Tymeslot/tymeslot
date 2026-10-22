@@ -16,12 +16,26 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   @doc """
   Returns the count of bookings created for an organizer within the given
   window. Used by the analytics dashboard to compute conversion rate.
+
+  A session the host planned on a fixed-date type
+  (`Tymeslot.Meetings.PlannedSessions`) is a row before anyone books it, so
+  it counts only once someone has signed up for it.
   """
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   def count_bookings(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
-    Meeting
+    from(m in Meeting, as: :meeting)
     |> where([m], m.organizer_user_id == ^organizer_user_id)
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
+    |> where(
+      [meeting: m],
+      not m.planned or
+        exists(
+          from(p in ParticipantSchema,
+            where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+            select: 1
+          )
+        )
+    )
     |> Repo.aggregate(:count, :id)
   end
 

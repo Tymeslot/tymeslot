@@ -37,7 +37,7 @@ defmodule Tymeslot.Bookings.Policy do
   layer renders a refusal (`TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`).
   """
   @type meeting_state ::
-          :cancelled | :completed | :expired | :awaiting_approval | :started | :past
+          :cancelled | :completed | :expired | :awaiting_approval | :started | :past | :planned
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
 
@@ -144,7 +144,7 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   # A fixed date moves from its meeting type, keeping everyone booked on it.
-  def can_request_reschedule?(%{planned: true}), do: {:error, "Move a fixed date from its type"}
+  def can_request_reschedule?(%{planned: true}), do: {:error, {:not_reschedulable, :planned}}
 
   def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
 

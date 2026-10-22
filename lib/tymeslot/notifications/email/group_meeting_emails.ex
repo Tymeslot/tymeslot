@@ -195,10 +195,14 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
 
   @doc """
   Dispatches one reminder job per live participant plus one organiser
-  reminder sent inline.
+  reminder sent inline. A session the host planned that nobody has signed
+  up for has no one to remind, so it sends nothing: the host heard about it
+  when registration closed.
   """
   @spec send_group_reminder_emails(MeetingSchema.t(), [Recipient.t()], pos_integer(), String.t()) ::
           :ok | {:error, term()}
+  def send_group_reminder_emails(%MeetingSchema{planned: true}, [], _value, _unit), do: :ok
+
   def send_group_reminder_emails(meeting, participants, reminder_value, reminder_unit) do
     with :ok <-
            dispatch_seat_jobs(participants, fn recipient ->
@@ -291,22 +295,30 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
       })
 
     email_service = Config.email_service_module()
+    metadata = seat_metadata(meeting, participant)
 
-    result =
-      DeliveryClaims.once(job_id, "session_moved:participant", fn ->
+    attendee =
+      job_id
+      |> DeliveryClaims.once("session_moved:participant", fn ->
         email_service.send_reschedule_email_to_attendee(recipient.email, details)
       end)
+      |> SeatJobs.send_result("session moved", metadata)
 
-    for guest <- GuestQueries.list_for_participant(participant.id) do
-      DeliveryClaims.once(job_id, "session_moved:guest:#{guest.id}", fn ->
-        email_service.send_guest_reschedule(
-          guest.email,
-          GuestNotifications.guest_details(details, guest)
-        )
-      end)
-    end
+    guest_results =
+      for guest <- GuestQueries.list_for_participant(participant.id) do
+        DeliveryClaims.once(job_id, "session_moved:guest:#{guest.id}", fn ->
+          email_service.send_guest_reschedule(
+            guest.email,
+            GuestNotifications.guest_details(details, guest)
+          )
+        end)
+      end
 
-    SeatJobs.send_result(result, "session moved", seat_metadata(meeting, participant))
+    guests = DeliveryOutcome.from_results("session moved guest", metadata, guest_results)
+
+    # Every copy is claimed as it goes out, so a retry writes only to whoever
+    # was missed, and a guest's failed copy retries like the participant's.
+    DeliveryOutcome.combine("session moved", metadata, [attendee, guests])
   end
 
   defp seat_metadata(meeting, participant),
