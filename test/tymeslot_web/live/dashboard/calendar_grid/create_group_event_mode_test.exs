@@ -91,12 +91,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
 
     assert html =~ "New Meeting"
     refute html =~ ~s(data-testid="create-mode-group-event")
+    # Meeting is the only kind left, so there is no toggle offering one option.
+    refute has_element?(lv, "#create-event-modal #create-mode")
 
     # A stale or forged switch to the mode changes nothing.
     html =
       lv
-      |> element(~s{#create-event-modal [data-testid="create-mode-meeting"]})
-      |> render_click(%{"mode" => "group_event"})
+      |> element("#calendar-grid")
+      |> render_hook("set_create_mode", %{"mode" => "group_event"})
 
     refute html =~ ~s(id="create-group-event-form")
   end

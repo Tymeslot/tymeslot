@@ -70,10 +70,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         <% end %>
       </:header>
 
-      <%!-- Mode toggle: a bare provider event vs an ad-hoc Tymeslot meeting.
-            Hidden when no calendar is connected — the form is then fixed to
-            meeting mode, the only kind that can exist without one. --%>
-      <div :if={@targets != [] or @group_allowed} class="mb-4">
+      <%!-- Mode toggle: a bare provider event, an ad-hoc Tymeslot meeting, or
+            a group event. Hidden when no calendar is writable: both other
+            kinds need one, so the form is then fixed to meeting mode, the
+            only kind that can exist without one. --%>
+      <div :if={@targets != []} class="mb-4">
         <.segmented_control
           id="create-mode"
           value={Atom.to_string(@creating_event[:mode] || :event)}
@@ -83,7 +84,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           aria_label={dgettext("dashboard_calendar_events", "What to create")}
         >
           <:option
-            :if={@targets != []}
             value="event"
             label={dgettext("dashboard_calendar_events", "Event")}
           />
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             testid="create-mode-meeting"
           />
           <:option
-            :if={@group_allowed and @targets != []}
+            :if={@group_allowed}
             value="group_event"
             label={dgettext("dashboard_group_events", "Group event")}
             testid="create-mode-group-event"
