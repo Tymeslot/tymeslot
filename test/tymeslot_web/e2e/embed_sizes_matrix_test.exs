@@ -355,8 +355,15 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
   end
 
+  # Picking a duration focuses its card, which turns on the booking pages'
+  # `html:focus-within { scroll-behavior: smooth }`. Where Next sits below the
+  # fold, chromedriver scrolls it into view and clicks before the animated
+  # scroll arrives, so the click misses. An inline style on <html> makes that
+  # scroll instant for this page without touching the stylesheet.
   defp click_next_step(session) do
-    click(session, css("[data-testid='next-step']"))
+    session
+    |> execute_script("document.documentElement.style.scrollBehavior = 'auto';")
+    |> click(css("[data-testid='next-step']"))
   end
 
   defp pick_first_calendar_day(session) do
