@@ -393,9 +393,9 @@ msgstr "Якщо маєте запитання, просто дайте відп
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Didn't ask for this? Then you can ignore this email. Your saved responses stay as they are."
-msgstr ""
+msgstr "Ви цього не запитували? Тоді просто проігноруйте цей лист. Ваші збережені відповіді залишаться без змін."
 
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
-msgstr ""
+msgstr "Ось знову ваше посилання, щоб проголосувати в опитуванні %{title} від %{host}. Ваші вже збережені відповіді враховано, і ви можете будь-коли змінити їх через нього."

@@ -391,9 +391,9 @@ msgstr "Per qualsiasi domanda, rispondi semplicemente a questa email: la rispost
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Didn't ask for this? Then you can ignore this email. Your saved responses stay as they are."
-msgstr ""
+msgstr "Non l'hai richiesto? Puoi ignorare questa email. Le risposte che hai salvato restano invariate."
 
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
-msgstr ""
+msgstr "Ecco di nuovo il tuo link per votare su %{title} per %{host}. Le risposte che hai già salvato vengono conteggiate e puoi modificarle in qualsiasi momento tramite questo link."

@@ -726,21 +726,21 @@ msgid "You have sent too many invitations recently. Please try again later."
 msgstr "Hai inviato troppi inviti di recente. Riprova più tardi."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove %{name} from the poll"
-msgstr "Rimuovi dal sondaggio"
+msgstr "Rimuovi %{name} dal sondaggio"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend invitation to %{name}"
-msgstr "Invia di nuovo l'invito"
+msgstr "Invia di nuovo l'invito a %{name}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend voting link to %{name}"
-msgstr "Invia di nuovo il link di voto"
+msgstr "Invia di nuovo il link di voto a %{name}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "These names can't be used: %{names}"
-msgstr ""
+msgstr "Questi nomi non possono essere usati: %{names}"

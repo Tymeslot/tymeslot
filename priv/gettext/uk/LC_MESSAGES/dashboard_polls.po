@@ -739,21 +739,21 @@ msgid "You have sent too many invitations recently. Please try again later."
 msgstr "Останнім часом ви надіслали забагато запрошень. Спробуйте пізніше."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove %{name} from the poll"
-msgstr "Видалити з опитування"
+msgstr "Видалити %{name} з опитування"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend invitation to %{name}"
-msgstr "Надіслати запрошення ще раз"
+msgstr "Надіслати запрошення ще раз (отримувач: %{name})"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Resend voting link to %{name}"
-msgstr "Надіслати посилання для голосування ще раз"
+msgstr "Надіслати посилання для голосування ще раз (отримувач: %{name})"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "These names can't be used: %{names}"
-msgstr ""
+msgstr "Ці імена не можна використати: %{names}"
