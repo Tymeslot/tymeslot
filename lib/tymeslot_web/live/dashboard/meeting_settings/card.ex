@@ -305,14 +305,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   defp described?(%{description: nil}), do: false
   defp described?(%{description: description}), do: String.trim(description) != ""
 
-  # One location is named; several are counted. Naming them all would push
-  # the calendar and question badges off the row on a card that is already a
-  # single line of metadata.
+  @doc """
+  Where a meeting type takes place, as its card's metadata row shows it. One
+  location is named; several are counted. Naming them all would push the
+  calendar and question badges off the row on a card that is already a
+  single line of metadata.
+  """
   attr :type, :map, required: true
   attr :icon_size, :string, required: true
   attr :venues, :list, required: true
 
-  defp location_summary(assigns) do
+  @spec location_summary(map()) :: Phoenix.LiveView.Rendered.t()
+  def location_summary(assigns) do
     assigns = assign(assigns, :locations, MeetingTypes.location_options(assigns.type))
 
     ~H"""

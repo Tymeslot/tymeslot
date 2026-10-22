@@ -19,6 +19,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.OneOffEvents
   alias Tymeslot.MeetingTypes.PaymentAccess
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
@@ -237,6 +238,7 @@ defmodule Tymeslot.MeetingTypes do
     |> GroupAccess.reject_paused()
     |> FixedDates.reject_unbookable()
     |> PaymentAccess.reject_unsellable()
+    |> OneOffEvents.order_for_listing()
   end
 
   @doc """
