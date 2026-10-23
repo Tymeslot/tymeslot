@@ -286,6 +286,23 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
                )
     end
 
+    test "refuses the time it already has, so nobody is told of a move or asked again", ctx do
+      Repo.update_all(
+        from(g in GuestSchema, where: g.meeting_id == ^ctx.meeting.id),
+        set: [status: "accepted"]
+      )
+
+      assert {:error, :same_time} =
+               HostMove.move(ctx.meeting.uid, ctx.meeting.start_time, ctx.user.id)
+
+      assert all_enqueued(worker: EmailWorker) == []
+
+      assert Repo.get!(MeetingSchema, ctx.meeting.id).ical_sequence == ctx.meeting.ical_sequence
+
+      assert ctx.meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.status) ==
+               ["accepted", "accepted"]
+    end
+
     test "is not for a meeting with a booker, who moves it themselves", ctx do
       start = DateTime.add(ctx.meeting.start_time, 3, :day)
 

@@ -136,6 +136,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   defp error_message(:slot_in_past),
     do: dgettext("dashboard_bookings", "The new time must be in the future.")
 
+  defp error_message(:same_time),
+    do: dgettext("dashboard_bookings", "The meeting is already at that time.")
+
   defp error_message(:slot_taken),
     do: dgettext("dashboard_bookings", "You already have a meeting at that time.")
 

@@ -25,7 +25,9 @@ defmodule Tymeslot.Bookings.HostMove do
 
   Returns `{:error, :not_managed_by_host}` for a meeting with a booker, who
   moves it themselves, `{:error, :slot_in_past}` for a time that has
-  started, and `{:error, :time_off}` for a time inside the host's time off.
+  started, `{:error, :same_time}` for the time it already has (a move would
+  only email everyone the time they have and ask them to answer again), and
+  `{:error, :time_off}` for a time inside the host's time off.
   """
   @spec move(String.t(), DateTime.t(), integer()) ::
           {:ok, MeetingSchema.t()}
@@ -33,6 +35,7 @@ defmodule Tymeslot.Bookings.HostMove do
              Errors.classified_error()
              | :not_managed_by_host
              | :slot_in_past
+             | :same_time
              | :time_off}
   def move(meeting_uid, %DateTime{} = new_start, organizer_user_id)
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
@@ -41,6 +44,7 @@ defmodule Tymeslot.Bookings.HostMove do
          :ok <- Policy.can_reschedule_meeting?(original),
          :ok <- ensure_future(new_start),
          new_times = host_times(original, new_start),
+         :ok <- ensure_moved(original, new_times),
          :ok <- TimeOff.ensure_clear(organizer_user_id, new_times.start_time, new_times.end_time) do
       Reschedule.apply_new_time(original, new_times, nil, %{}, host_chosen: true)
     end
@@ -64,6 +68,12 @@ defmodule Tymeslot.Bookings.HostMove do
 
   defp ensure_future(start) do
     if DateTime.compare(start, Clock.utc_now()) == :gt, do: :ok, else: {:error, :slot_in_past}
+  end
+
+  defp ensure_moved(meeting, %{start_time: start}) do
+    if DateTime.compare(start, meeting.start_time) == :eq,
+      do: {:error, :same_time},
+      else: :ok
   end
 
   defp host_times(meeting, new_start) do
