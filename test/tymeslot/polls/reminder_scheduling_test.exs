@@ -54,6 +54,27 @@ defmodule Tymeslot.Polls.ReminderSchedulingTest do
       assert reminder_times(poll.id) == [DateTime.add(ctx.deadline, -1, :day)]
     end
 
+    test "a reminder still waiting from v1.30.0 is replaced, not doubled", ctx do
+      poll = create_poll_for(ctx, [])
+      reminder_at = DateTime.add(ctx.deadline, -1, :day)
+
+      # The shape v1.30.0 queued: no deadline, unique on action and poll only.
+      {:ok, _legacy} =
+        %{"action" => "send_poll_deadline_reminders", "poll_id" => poll.id}
+        |> EmailWorker.new(queue: :emails, scheduled_at: reminder_at)
+        |> Oban.insert()
+
+      assert {:ok, _result} =
+               Polls.invite_participants(poll.id, ctx.user.id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
+
+      assert [%{args: %{"deadline_at" => _carried}}] =
+               jobs(poll.id, "send_poll_deadline_reminders")
+
+      assert reminder_times(poll.id) == [reminder_at]
+    end
+
     test "later invitees add no second set", ctx do
       poll = create_poll_for(ctx, [%{email: "ada@example.com", name: nil}])
 

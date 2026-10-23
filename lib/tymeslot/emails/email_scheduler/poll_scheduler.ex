@@ -39,12 +39,14 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   without a deadline schedules none. Each job carries the deadline it was
   scheduled for and is unique for it, so scheduling again for the same
   deadline adds nothing, and a job sent for an earlier deadline neither
-  blocks one for a new deadline nor goes out against it.
+  blocks one for a new deadline nor goes out against it. A reminder still
+  waiting from before jobs carried their deadline is replaced, not doubled.
   """
   @spec schedule_reminders(map()) :: :ok
   def schedule_reminders(%{deadline_at: nil}), do: :ok
 
   def schedule_reminders(poll) do
+    {_deleted, _rows} = Jobs.delete_legacy_poll_reminders(poll.id, EmailWorker)
     poll |> PollSchema.reminders() |> Enum.each(&maybe_schedule_reminder(poll, &1))
   end
 
