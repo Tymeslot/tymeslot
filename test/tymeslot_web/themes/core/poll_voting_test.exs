@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
   alias Ecto.UUID
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Themes.Core.PollVoting
 
@@ -114,6 +115,20 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
 
       assert {:noreply, ^socket} =
                PollVoting.handle_poll_event("cast_votes", %{"votes" => nil}, socket)
+    end
+
+    test "cast_votes with nothing ticked asks for an answer and saves nothing" do
+      poll = insert(:poll)
+      insert(:poll_time_slot, poll: poll)
+      participant = insert(:poll_participant, poll: poll)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+      socket = socket(%{poll: poll, participant: participant})
+
+      # A form with no answer ticked submits no `votes` key at all.
+      assert {:noreply, updated} = PollVoting.handle_poll_event("cast_votes", %{}, socket)
+
+      assert flash(updated, :error) =~ "Choose an answer for at least one time"
+      assert Repo.reload!(participant).voted_at == nil
     end
 
     test "cast_votes without a participant's link flashes and does not crash" do

@@ -138,6 +138,17 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end)
   end
 
+  # Nothing ticked: the form sends no `votes` at all, and saving it would
+  # otherwise do nothing without a word. A malformed `votes` stays ignored.
+  def handle_poll_event("cast_votes", params, socket) when not is_map_key(params, "votes") do
+    {:noreply,
+     put_flash(
+       socket,
+       :error,
+       dgettext("booking_polls", "Choose an answer for at least one time, then save.")
+     )}
+  end
+
   def handle_poll_event(_event, _params, socket), do: {:noreply, socket}
 
   defp register_participant(socket, params) do
