@@ -522,4 +522,30 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
       ~U[2026-06-30 23:59:59Z]
     )
   end
+
+  describe "get_by_identifiers/2" do
+    test "finds the cached event by either identifier on the integration" do
+      integration = insert(:calendar_integration, user: insert(:user))
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "ical-uid",
+          provider_event_id: "provider-id"
+        )
+
+      assert {:ok, %{id: id}} =
+               ProviderCalendarEventQueries.get_by_identifiers(integration.id, ["provider-id"])
+
+      assert id == event.id
+    end
+
+    test "finds nothing, rather than raising, for a meeting with no calendar" do
+      integration = insert(:calendar_integration, user: insert(:user))
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "ical-uid")
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_identifiers(nil, ["ical-uid"])
+    end
+  end
 end

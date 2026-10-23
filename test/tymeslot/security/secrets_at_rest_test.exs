@@ -108,13 +108,13 @@ defmodule Tymeslot.Security.SecretsAtRestTest do
       poll = insert(:poll)
       attrs = %{"name" => "Ada", "email" => "ada@example.com"}
 
-      :ok = Voting.request_link(poll, attrs)
+      {:ok, :sent} = Voting.request_link(poll, attrs)
       participant = PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com")
 
       assert_encrypted_and_hashed("poll_participants", participant.id, "token", participant.token)
       assert Voting.get_participant(poll, participant.token).id == participant.id
 
-      :ok = Voting.request_link(poll, attrs)
+      {:ok, :throttled} = Voting.request_link(poll, attrs)
 
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").token ==
                participant.token

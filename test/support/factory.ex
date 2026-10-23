@@ -579,16 +579,29 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  # Someone the host invited, unless the test says otherwise: confirmed at once
+  # and still owing a vote, which is the participant nearly every test wants.
+  # The app confirms anyone else only when they vote, so a confirmed
+  # participant always has `invited_at` or `voted_at`:
+  #
+  #   * `confirmed_at: nil` (with a `link_sent_at`) is a pending link request,
+  #     never invited either;
+  #   * `invited_at: nil` with a `voted_at` is someone who asked for their link
+  #     and voted;
+  #   * `invited_at: nil` alone is a participant from before confirmation, whom
+  #     the confirmation migration confirmed without a vote. Only legacy rows
+  #     have that shape; say so where a test builds one.
   @spec poll_participant_factory(map()) :: Tymeslot.Polls.PollParticipantSchema.t()
   def poll_participant_factory(attrs) do
+    confirmed_at = Map.get(attrs, :confirmed_at, DateTime.utc_now(:second))
+
     %PollParticipantSchema{
       name: sequence(:poll_participant_name, &"Participant #{&1}"),
       email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
       token: Token.generate(24),
       locale: "en",
-      # Confirmed, as nearly every test wants a participant who counts. Pass
-      # `confirmed_at: nil` (and a `link_sent_at`) for one still unconfirmed.
-      confirmed_at: DateTime.utc_now(:second),
+      confirmed_at: confirmed_at,
+      invited_at: confirmed_at,
       poll: build(:poll)
     }
     |> merge_attributes(attrs)

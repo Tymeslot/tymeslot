@@ -14,12 +14,16 @@ defmodule TymeslotWeb.Dashboard.PollParticipationTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Polls
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
   defp log_in(conn, user) do
     conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
   end
+
+  defp leave(name, key, room),
+    do: :ok = RateLimiter.consume(name, key, RateLimiter.remaining(name, key) - room)
 
   describe "Poll participation" do
     setup %{conn: conn} do
@@ -78,6 +82,7 @@ defmodule TymeslotWeb.Dashboard.PollParticipationTest do
         poll: poll,
         name: "Expired",
         confirmed_at: nil,
+        inserted_at: DateTime.add(now, -3, :day),
         link_sent_at: DateTime.add(now, -3, :day)
       )
 
@@ -145,6 +150,84 @@ defmodule TymeslotWeb.Dashboard.PollParticipationTest do
         |> render_submit()
 
       assert html =~ "Enter at least one email address."
+    end
+
+    test "names the invitee names that can't be used and invites nobody", %{
+      conn: conn,
+      user: user
+    } do
+      %{poll: poll} = open_poll_with_votes(user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      view
+      |> form("form[data-testid='poll-invite-form']", %{
+        "invite" => %{"emails" => "grace@example.com\nA <a@example.com>"}
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "form[data-testid='poll-invite-form'] [data-testid='poll-invitees']",
+               "These names can't be used: A"
+             )
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+
+      refute Enum.any?(
+               reloaded.participants,
+               &(&1.email in ["grace@example.com", "a@example.com"])
+             )
+    end
+
+    test "refuses the whole list and says how many more the host can invite", %{
+      conn: conn,
+      user: user
+    } do
+      %{poll: poll} = open_poll_with_votes(user)
+      leave(:poll_host_invitations, user.id, 1)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      html =
+        view
+        |> form("form[data-testid='poll-invite-form']", %{
+          "invite" => %{"emails" => "grace@example.com, hedy@example.com"}
+        })
+        |> render_submit()
+
+      assert html =~ "You can invite up to 1 more person right now."
+      assert html =~ "grace@example.com, hedy@example.com"
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      refute Enum.any?(reloaded.participants, &(&1.email == "grace@example.com"))
+      assert all_enqueued(worker: EmailWorker, args: %{"action" => "send_poll_invitation"}) == []
+    end
+
+    test "invites the rest and reports an address that has had too many emails", %{
+      conn: conn,
+      user: user
+    } do
+      %{poll: poll} = open_poll_with_votes(user)
+      leave(:poll_recipient_email, "grace@example.com", 0)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      view
+      |> form("form[data-testid='poll-invite-form']", %{
+        "invite" => %{"emails" => "grace@example.com\nhedy@example.com"}
+      })
+      |> render_submit()
+
+      assert render(view) =~
+               "Invitation sent to 1 person. 1 address has had too many emails recently and was not invited."
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      refute Enum.any?(reloaded.participants, &(&1.email == "grace@example.com"))
+      assert Enum.any?(reloaded.participants, &(&1.email == "hedy@example.com"))
     end
   end
 end

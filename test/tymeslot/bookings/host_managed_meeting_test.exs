@@ -15,7 +15,8 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Bookings.{Cancel, HostMove, Reschedule, RescheduleRequest}
+  alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Bookings.{Cancel, HostMove, Orchestrator, Reschedule, RescheduleRequest}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.{GuestQueries, Guests, GuestSchema, MeetingSchema}
   alias Tymeslot.Notifications.EmailHandlers
@@ -26,7 +27,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
 
   setup do
     user = insert(:user)
-    insert(:profile, user: user)
+    profile = insert(:profile, user: user)
 
     meeting =
       insert(:meeting,
@@ -43,7 +44,7 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     {:ok, guests} =
       Guests.create_for_meeting(meeting.id, ["ada@example.com", "bob@example.com"], :organizer)
 
-    %{user: user, meeting: meeting, guests: guests}
+    %{user: user, profile: profile, meeting: meeting, guests: guests}
   end
 
   # The host's copy is about the meeting and its guests: nobody booked it
@@ -52,7 +53,12 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
     assert details.host_managed
     assert details.attendee_name == meeting.title
     assert details.attendee_email == nil
-    assert details.guest_emails == ["ada@example.com", "bob@example.com"]
+
+    assert details.guests == [
+             %{name: nil, email: "ada@example.com"},
+             %{name: nil, email: "bob@example.com"}
+           ]
+
     assert details.cancel_url == nil
     assert details.reschedule_url == nil
   end
@@ -130,6 +136,11 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
       assert :ok = Cancel.validate_cancellation(ctx.meeting, caller: :organizer)
     end
 
+    test "is not given the booking page's reschedule form", ctx do
+      assert {:error, :managed_by_host} =
+               Orchestrator.get_meeting_for_reschedule(ctx.meeting.uid, ctx.user.id)
+    end
+
     test "cannot move it through the booking page", ctx do
       assert {:error, :managed_by_host} =
                Reschedule.execute(ctx.meeting.uid, %{}, ctx.user.id)
@@ -195,6 +206,75 @@ defmodule Tymeslot.Bookings.HostManagedMeetingTest do
                HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
 
       assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+    end
+
+    test "is not held to the host's booking limits, which govern what bookers pick", ctx do
+      Repo.update!(Changeset.change(ctx.profile, max_bookings_per_day: 1, timezone: "Etc/UTC"))
+      day = Date.add(Date.utc_today(), 5)
+
+      insert(:meeting,
+        organizer_user: ctx.user,
+        organizer_email: ctx.user.email,
+        status: "confirmed",
+        start_time: DateTime.new!(day, ~T[09:00:00], "Etc/UTC"),
+        end_time: DateTime.new!(day, ~T[10:00:00], "Etc/UTC")
+      )
+
+      new_start = DateTime.new!(day, ~T[14:00:00], "Etc/UTC")
+
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
+      assert moved.start_time == new_start
+    end
+
+    test "is not padded by the host's buffers: only a meeting at that time refuses it", ctx do
+      insert(:availability_schedule,
+        profile: ctx.profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
+
+      other_start = DateTime.add(ctx.meeting.start_time, 2, :day)
+
+      other =
+        insert(:meeting,
+          organizer_user: ctx.user,
+          organizer_email: ctx.user.email,
+          status: "confirmed",
+          start_time: other_start,
+          end_time: DateTime.add(other_start, 30, :minute)
+        )
+
+      # Back to back with `other`: inside the 15 minutes a booker's time is
+      # padded by.
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, other.end_time, ctx.user.id)
+      assert moved.start_time == other.end_time
+    end
+
+    test "refuses a time inside the host's time off, as confirming the poll does", ctx do
+      Repo.update!(Changeset.change(ctx.profile, timezone: "Etc/UTC"))
+      day = Date.add(Date.utc_today(), 5)
+      {:ok, _period} = TimeOff.create(ctx.profile.id, %{starts_on: day, ends_on: day})
+
+      assert {:error, :time_off} =
+               HostMove.move(
+                 ctx.meeting.uid,
+                 DateTime.new!(day, ~T[10:00:00], "Etc/UTC"),
+                 ctx.user.id
+               )
+
+      assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_reschedule_emails"})
+    end
+
+    test "moves onto the day before the host's time off", ctx do
+      Repo.update!(Changeset.change(ctx.profile, timezone: "Etc/UTC"))
+      day = Date.add(Date.utc_today(), 5)
+      {:ok, _period} = TimeOff.create(ctx.profile.id, %{starts_on: day, ends_on: day})
+      new_start = DateTime.new!(Date.add(day, -1), ~T[10:00:00], "Etc/UTC")
+
+      assert {:ok, moved} = HostMove.move(ctx.meeting.uid, new_start, ctx.user.id)
+      assert moved.start_time == new_start
     end
 
     test "refuses a time that has started", ctx do

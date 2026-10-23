@@ -81,8 +81,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
         {11_910, &RateLimiter.check(:integration_appearance, &1), 150, "integration_appearance"},
         {11_906, &RateLimiter.check(:meeting_type_write, &1), 60, "meeting_type_write"},
         {11_907, &RateLimiter.check(:avatar_upload, &1), 20, "avatar_upload"},
-        {11_908, &RateLimiter.check(:dashboard_cancel, &1), 20, "dashboard_cancel"},
-        {11_909, &RateLimiter.check(:dashboard_reschedule, &1), 20, "dashboard_reschedule"}
+        {11_908, &RateLimiter.check(:dashboard_cancel, &1), 20, "dashboard_cancel"}
       ]
 
       for {user_id, fun, limit, bucket_prefix} <- cases do

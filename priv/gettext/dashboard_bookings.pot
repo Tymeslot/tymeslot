@@ -759,16 +759,6 @@ msgstr ""
 msgid "Poll"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
-#, elixir-autogen, elixir-format
-msgid "Registration closed"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Move a fixed date from its meeting type."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "This booking was already cancelled, so no refund was issued."
@@ -860,4 +850,19 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
 msgstr ""

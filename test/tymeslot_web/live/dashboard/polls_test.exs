@@ -14,11 +14,11 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
-  # A host with a profile but no calendar integration and no username: the
+  # A host with a profile and a username but no calendar integration: the
   # baseline for list/create/validation tests.
   defp setup_host(_context) do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    profile = insert(:profile, user: user)
+    profile = insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
     {:ok, conn: log_in(build_conn(), user), user: user, profile: profile}
   end
 
@@ -199,6 +199,32 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
         |> render_submit()
 
       assert html =~ "Not valid email addresses: not-an-address"
+      assert Polls.list_polls(user.id) == []
+    end
+
+    test "names the invitee names that can't be used and creates nothing", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      view
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{
+          "title" => "Launch planning",
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"},
+          "invitees" => "ada@example.com, A <a@example.com>"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-invitees']", "These names can't be used: A")
       assert Polls.list_polls(user.id) == []
     end
 

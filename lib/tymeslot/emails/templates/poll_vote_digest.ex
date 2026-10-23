@@ -49,7 +49,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteDigest do
           stage_subtitle: poll.title
         )
 
-      MjmlEmail.base_email(tracking: :lifecycle)
+      MjmlEmail.base_email()
       |> to({host_name, poll.user.email})
       |> subject(dgettext("emails_polls", "New responses on \"%{title}\"", title: poll.title))
       |> html_body(html_body)

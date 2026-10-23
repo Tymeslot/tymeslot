@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert socket.assigns.voting_open == true
       assert map_size(socket.assigns.tallies) == 1
       assert socket.assigns.participant == nil
+      refute socket.assigns.invalid_link
     end
 
     test "resolves the ?p= token to the poll's participant" do
@@ -46,6 +47,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => participant.token})
 
       assert socket.assigns.participant.id == participant.id
+      refute socket.assigns.invalid_link
     end
 
     test "ignores a token that belongs to a different poll" do
@@ -57,6 +59,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => other_participant.token})
 
       assert socket.assigns.participant == nil
+      assert socket.assigns.invalid_link
     end
 
     test "ignores an unknown token" do
@@ -66,10 +69,32 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = PollVoting.assign_poll_state(socket(), poll, %{"p" => "does-not-exist"})
 
       assert socket.assigns.participant == nil
+      assert socket.assigns.invalid_link
     end
   end
 
   describe "handle_poll_event/3" do
+    test "register on an invite-only poll flashes where the link is and registers nobody" do
+      poll = insert(:poll, invite_only: true)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+
+      client_ip = "invite-only-test-#{System.unique_integer([:positive])}"
+      socket = socket(%{poll: poll, participant: nil, client_ip: client_ip})
+
+      assert {:noreply, updated} =
+               PollVoting.handle_poll_event(
+                 "register_participant",
+                 %{"name" => "Mallory", "email" => "mallory@example.com"},
+                 socket
+               )
+
+      assert flash(updated, :error) =~ "personal link from your email"
+      # The socket helper's base assigns carry no `link_request`, so read
+      # it with the access syntax: a successful request would have set it.
+      assert updated.assigns[:link_request] == nil
+      assert Polls.count_unconfirmed(poll) == 0
+    end
+
     test "unknown event returns the socket unchanged" do
       socket = socket(%{poll: :sentinel})
 

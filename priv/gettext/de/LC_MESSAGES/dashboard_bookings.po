@@ -759,16 +759,6 @@ msgstr "Zu dieser Zeit haben Sie bereits einen Termin."
 msgid "Poll"
 msgstr "Umfrage"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
-#, elixir-autogen, elixir-format
-msgid "Registration closed"
-msgstr "Anmeldung geschlossen"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Move a fixed date from its meeting type."
-msgstr "Feste Termine verlegen Sie im Termintyp."
-
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "This booking was already cancelled, so no refund was issued."
@@ -861,3 +851,18 @@ msgstr "Tymeslot konnte diese Buchung nicht verschieben. Zu diesem Zeitpunkt beg
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot konnte diese Buchung nicht verschieben. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
+msgstr "Dieser Zeitpunkt fällt in Ihre Abwesenheit. Ändern oder entfernen Sie die Abwesenheit, um den Termin dorthin zu verschieben."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Anmeldung geschlossen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Feste Termine verlegen Sie im Termintyp."

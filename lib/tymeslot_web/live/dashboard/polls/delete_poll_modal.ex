@@ -24,22 +24,22 @@ defmodule TymeslotWeb.Dashboard.Polls.DeletePollModal do
       :if={@open && @poll}
       id="delete-poll-modal"
       show
-      title={dgettext("dashboard_common", "Delete this poll")}
-      confirm_label={dgettext("dashboard_common", "Delete poll")}
-      cancel_label={dgettext("dashboard_common", "Keep poll")}
+      title={dgettext("dashboard_polls", "Delete this poll")}
+      confirm_label={dgettext("dashboard_polls", "Delete poll")}
+      cancel_label={dgettext("dashboard_polls", "Keep poll")}
       on_cancel={JS.push("close_delete_poll_modal", target: @myself)}
       on_confirm={JS.push("delete_poll", target: @myself)}
       data-testid="confirm-delete-poll"
     >
       <p>
         {dgettext(
-          "dashboard_common",
+          "dashboard_polls",
           "“%{title}” will be removed with its times and everyone's responses. This cannot be undone.",
           title: @poll.title
         )}
       </p>
       <p :if={@poll.status == :confirmed} class="mt-2">
-        {dgettext("dashboard_common", "The meeting it scheduled stays in your calendar.")}
+        {dgettext("dashboard_polls", "The meeting it scheduled stays in your calendar.")}
       </p>
     </.confirm_modal>
     """

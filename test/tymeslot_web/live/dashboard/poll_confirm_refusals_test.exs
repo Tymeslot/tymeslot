@@ -82,6 +82,15 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
       |> render_click()
     end
 
+    # The slot's Confirm opens the confirmation modal; its own button confirms.
+    defp confirm_slot(view, slot) do
+      view
+      |> element("#poll-slot-#{slot.id} button[phx-click='request_confirm_slot']")
+      |> render_click()
+
+      view |> element("#confirm-slot-modal [data-testid='confirm-slot']") |> render_click()
+    end
+
     test "confirming a poll the host answered first books the next voter, not the host", %{
       conn: conn,
       user: user
@@ -102,10 +111,7 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       select_poll(view, poll)
 
-      html =
-        view
-        |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
-        |> render_click()
+      html = confirm_slot(view, slot1)
 
       assert html =~ "This poll is confirmed"
 
@@ -136,9 +142,7 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       select_poll(view, poll)
 
-      view
-      |> element("#poll-slot-#{slot.id} button[phx-click='confirm_slot']")
-      |> render_click()
+      confirm_slot(view, slot)
 
       assert render(view) =~ "Nobody but you has joined this poll yet"
 
@@ -158,9 +162,7 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
       past = DateTime.utc_now() |> DateTime.add(-60) |> DateTime.truncate(:second)
       slot1 |> Changeset.change(start_time: past) |> Repo.update!()
 
-      view
-      |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
-      |> render_click()
+      confirm_slot(view, slot1)
 
       assert view |> element("#poll-slot-#{slot1.id}") |> render() =~
                "This time has already begun."

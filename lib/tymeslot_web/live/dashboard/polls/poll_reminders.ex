@@ -1,28 +1,21 @@
 defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
   @moduledoc """
-  The reminder picker as the poll create form and the poll editor use it:
-  reminders go out before the voting deadline to everyone who has not voted,
-  so the one-click choices are days rather than minutes.
+  The reminder picker as the poll create form and the poll editor use it.
+  Reminders go out before the voting deadline to invited people who have
+  not voted, so the picker is shown only where there are some, and its
+  one-click choices are days rather than minutes.
 
   The owning LiveComponent keeps a `ReminderPickerState` and routes the
-  picker's events (`events/0`) through `apply_event/3`. The picker sits in a
-  form of its own, so it must be rendered outside the poll's main form.
+  picker's events (`PollReminders.Events.all/0`) through `apply_event/3`.
+  Before saving the poll it runs `commit_pending/1`, so a lead time typed
+  into the custom row but never added is not lost. The picker sits in a form of its own, so it
+  must be rendered outside the poll's main form.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias TymeslotWeb.Components.Shared.{ReminderPicker, ReminderPickerState}
-
-  # `poll_commit_custom_reminder` comes from the picker's `ReminderCustomRow`
-  # hook when focus leaves the custom row with a value still in it.
-  @events ~w(poll_add_quick_reminder poll_add_reminder poll_remove_reminder
-             poll_toggle_custom_reminder poll_update_reminder_input
-             poll_commit_custom_reminder)
-
-  @doc "The picker events, prefixed `poll_`, that the owner routes to `apply_event/3`."
-  @spec events() :: [String.t()]
-  def events, do: @events
 
   @doc "A picker holding `reminders`."
   @spec new([map()]) :: ReminderPickerState.t()
@@ -48,6 +41,26 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
   @spec to_config(ReminderPickerState.t()) :: [map()]
   def to_config(%{reminders: reminders}),
     do: Enum.map(reminders, &%{"value" => &1.value, "unit" => &1.unit})
+
+  @doc """
+  Adds what the open custom row still holds, for an owner about to save the
+  poll, as the meeting type form and Quick Add do: a typed lead time is the
+  host's intent even if Add was never pressed. A value that fails
+  validation answers `{:error, state}` with the picker's own message, and
+  the save should stop there.
+  """
+  @spec commit_pending(ReminderPickerState.t()) ::
+          {:ok, ReminderPickerState.t()} | {:error, ReminderPickerState.t()}
+  def commit_pending(state) do
+    if ReminderPickerState.pending?(state) do
+      case ReminderPickerState.add_custom(state) do
+        {:ok, added} -> {:ok, added}
+        {:noop, rejected} -> {:error, rejected}
+      end
+    else
+      {:ok, state}
+    end
+  end
 
   attr :id, :string, required: true
   attr :state, :map, required: true
@@ -76,8 +89,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
         reminder_confirmation={@state.reminder_confirmation}
         description={
           dgettext(
-            "dashboard_common",
-            "Sent before the voting deadline to everyone who has not voted yet. A poll without a deadline sends none."
+            "dashboard_polls",
+            "Reminders go to invited people who haven't voted yet. A poll without a deadline sends none."
           )
         }
         presets={[%{value: 1, unit: "days"}, %{value: 3, unit: "days"}]}

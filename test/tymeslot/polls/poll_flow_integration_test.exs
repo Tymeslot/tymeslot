@@ -47,6 +47,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
     # Confirmation runs through the ad-hoc booking path, which checks the host's
     # calendar for conflicts — stub that external boundary for the whole module.
     TestMocks.setup_calendar_mocks()
+    TestMocks.resolve_booking_calendars()
     :ok
   end
 
@@ -96,7 +97,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   # Asks for a link and returns the participant it created, as following the
   # emailed link would resolve them.
   defp request(poll, attrs) do
-    assert :ok = Voting.request_link(poll, attrs)
+    assert {:ok, _outcome} = Voting.request_link(poll, attrs)
     Repo.get_by!(PollParticipantSchema, poll_id: poll.id, email: attrs.email)
   end
 
@@ -143,8 +144,9 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       [slot1, slot2, slot3] = poll.time_slots
 
-      # Both deadline jobs are scheduled at creation.
-      assert_enqueued(
+      # Shared only by its link, the poll has nobody to remind: whoever
+      # counts has voted. The host's deadline nudge is scheduled.
+      refute_enqueued(
         worker: EmailWorker,
         args: %{"action" => "send_poll_deadline_reminders", "poll_id" => poll.id}
       )

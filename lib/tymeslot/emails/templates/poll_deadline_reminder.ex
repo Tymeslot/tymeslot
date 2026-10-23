@@ -110,8 +110,12 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
 
   defp formatted_deadline(%PollSchema{deadline_at: nil}, _participant, _locale), do: nil
 
-  defp formatted_deadline(%PollSchema{deadline_at: deadline_at}, participant, locale) do
-    timezone = participant.timezone || "UTC"
+  defp formatted_deadline(
+         %PollSchema{deadline_at: deadline_at, timezone: poll_timezone},
+         participant,
+         locale
+       ) do
+    timezone = participant.timezone || poll_timezone || "UTC"
 
     deadline_at
     |> DateTimeUtils.convert_to_timezone(timezone)

@@ -17,6 +17,7 @@ defmodule Tymeslot.Polls.EditingTest do
 
   setup do
     user = insert(:user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
     deadline = in_days(5)
 
     poll =
@@ -47,11 +48,14 @@ defmodule Tymeslot.Polls.EditingTest do
           timezone: "Etc/UTC",
           deadline_at: deadline,
           reminder_config: [%{"value" => 3, "unit" => "days"}, %{"value" => 1, "unit" => "days"}],
+          invitees: [%{email: "ada@example.com", name: nil}],
           slots: [%{start_time: in_days(14)}]
         })
 
-      assert reminder_times(poll.id) ==
-               Enum.sort([DateTime.add(deadline, -3, :day), DateTime.add(deadline, -1, :day)])
+      assert reminder_times(poll.id) == [
+               DateTime.add(deadline, -3, :day),
+               DateTime.add(deadline, -1, :day)
+             ]
     end
 
     test "none are scheduled when the host removed them all", %{user: user} do
@@ -62,6 +66,7 @@ defmodule Tymeslot.Polls.EditingTest do
           timezone: "Etc/UTC",
           deadline_at: in_days(10),
           reminder_config: [],
+          invitees: [%{email: "ada@example.com", name: nil}],
           slots: [%{start_time: in_days(14)}]
         })
 
@@ -80,7 +85,9 @@ defmodule Tymeslot.Polls.EditingTest do
 
   describe "update_details/4 with a new deadline" do
     test "replaces the pending reminders and deadline nudge for the new deadline", ctx do
-      PollScheduler.schedule_deadline_jobs(ctx.poll)
+      insert_invitee(ctx.poll)
+      PollScheduler.schedule_reminders(ctx.poll)
+      PollScheduler.schedule_deadline_nudge(ctx.poll)
       new_deadline = in_days(8)
 
       assert {:ok, updated} =
@@ -108,7 +115,9 @@ defmodule Tymeslot.Polls.EditingTest do
     end
 
     test "cleared, leaves voting open with nothing scheduled", ctx do
-      PollScheduler.schedule_deadline_jobs(ctx.poll)
+      insert_invitee(ctx.poll)
+      PollScheduler.schedule_reminders(ctx.poll)
+      PollScheduler.schedule_deadline_nudge(ctx.poll)
 
       assert {:ok, updated} =
                Polls.update_details(ctx.poll.id, ctx.user.id, %{"deadline_at" => nil})
@@ -205,7 +214,44 @@ defmodule Tymeslot.Polls.EditingTest do
       assert cleared.meeting_type_id == nil
     end
 
-    test "refuses another host's type and a paid one", ctx do
+    test "an empty id, as a form sends for no type, clears it", ctx do
+      meeting_type = insert(:meeting_type, user: ctx.user)
+      Repo.update!(Changeset.change(ctx.poll, meeting_type_id: meeting_type.id))
+
+      assert {:ok, cleared} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => ""})
+
+      assert cleared.meeting_type_id == nil
+    end
+
+    test "keeps a type switched off since, when the edit leaves it alone", ctx do
+      switched_off = insert(:meeting_type, user: ctx.user, is_active: false)
+      Repo.update!(Changeset.change(ctx.poll, meeting_type_id: switched_off.id))
+
+      assert {:ok, updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{
+                 "title" => "Renamed",
+                 "meeting_type_id" => switched_off.id
+               })
+
+      assert updated.title == "Renamed"
+      assert updated.meeting_type_id == switched_off.id
+    end
+
+    test "keeps a type that has started taking payment, when the edit leaves it alone", ctx do
+      paid = insert(:meeting_type, user: ctx.user, payment_required: true)
+      Repo.update!(Changeset.change(ctx.poll, meeting_type_id: paid.id))
+
+      assert {:ok, updated} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{
+                 "title" => "Renamed",
+                 "meeting_type_id" => to_string(paid.id)
+               })
+
+      assert updated.meeting_type_id == paid.id
+    end
+
+    test "refuses another host's type, a paid one and a one-off event", ctx do
       foreign = insert(:meeting_type, user: insert(:user))
       paid = insert(:meeting_type, user: ctx.user, payment_required: true)
 
@@ -214,6 +260,11 @@ defmodule Tymeslot.Polls.EditingTest do
 
       assert {:error, :payment_required_type} =
                Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => paid.id})
+
+      one_off = insert(:meeting_type, user: ctx.user, one_off: true)
+
+      assert {:error, :meeting_type_not_found} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"meeting_type_id" => one_off.id})
 
       assert Repo.get!(PollSchema, ctx.poll.id).meeting_type_id == nil
     end
@@ -229,6 +280,39 @@ defmodule Tymeslot.Polls.EditingTest do
       assert Repo.get(PollParticipantSchema, participant.id) == nil
       {:ok, poll} = Polls.get_poll_for_voting(ctx.poll.token)
       assert Polls.tallies(poll)[ctx.slot.id].yes == 0
+    end
+
+    test "takes an id that is not a UUID as no participant of the poll", ctx do
+      assert {:error, :not_found} =
+               Polls.remove_participant(ctx.poll.id, ctx.user.id, "not-a-uuid")
+    end
+
+    test "nudges the host once everyone left has voted", ctx do
+      insert_invitee(ctx.poll, voted_at: DateTime.utc_now(:second))
+      owing = insert_invitee(ctx.poll)
+
+      assert :ok = Polls.remove_participant(ctx.poll.id, ctx.user.id, owing.id)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_poll_host_nudge",
+          "poll_id" => ctx.poll.id,
+          "variant" => "all_voted"
+        }
+      )
+    end
+
+    test "does not nudge the host while someone left still owes a vote", ctx do
+      voted = insert_invitee(ctx.poll, voted_at: DateTime.utc_now(:second))
+      insert_invitee(ctx.poll)
+
+      assert :ok = Polls.remove_participant(ctx.poll.id, ctx.user.id, voted.id)
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_poll_host_nudge", "variant" => "all_voted"}
+      )
     end
 
     test "does not reach a participant of another poll", ctx do
@@ -285,6 +369,19 @@ defmodule Tymeslot.Polls.EditingTest do
 
       assert {:error, :not_found} = Polls.delete_poll(ctx.poll.id, insert(:user).id)
     end
+  end
+
+  # Someone the host invited who has not voted: who the reminders are for.
+  defp insert_invitee(poll, attrs \\ []) do
+    now = DateTime.utc_now(:second)
+
+    insert(
+      :poll_participant,
+      Keyword.merge(
+        [poll: poll, invited_at: now, confirmed_at: now, link_sent_at: now, voted_at: nil],
+        attrs
+      )
+    )
   end
 
   defp in_days(days), do: DateTime.add(DateTime.utc_now(:second), days, :day)

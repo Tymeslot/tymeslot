@@ -769,16 +769,6 @@ msgstr "На цей час у вас уже є зустріч."
 msgid "Poll"
 msgstr "Опитування"
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
-#, elixir-autogen, elixir-format
-msgid "Registration closed"
-msgstr "Реєстрацію закрито"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Move a fixed date from its meeting type."
-msgstr "Фіксовану дату переносять у її типі зустрічі."
-
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "This booking was already cancelled, so no refund was issued."
@@ -871,3 +861,18 @@ msgstr "Tymeslot не вдалося перенести це бронюванн�
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot не вдалося перенести це бронювання. Спробуйте ще раз."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
+msgstr "Цей час припадає на вашу відсутність. Змініть або видаліть відсутність, щоб перенести зустріч на цей час."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Реєстрацію закрито"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Фіксовану дату переносять у її типі зустрічі."

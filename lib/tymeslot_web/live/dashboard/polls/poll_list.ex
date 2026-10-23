@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :selected_poll_id, :any, default: nil
+  attr :open_poll_ids, :any, required: true, doc: "MapSet of the ids of polls taking votes"
   attr :myself, :any, required: true
 
   @spec poll_list(map()) :: Phoenix.LiveView.Rendered.t()
@@ -33,10 +34,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       icon="hero-hand-raised"
       size={:lg}
       data-testid="polls-empty"
-      title={dgettext("dashboard_common", "No polls yet")}
+      title={dgettext("dashboard_polls", "No polls yet")}
       description={
         dgettext(
-          "dashboard_common",
+          "dashboard_polls",
           "Create a poll to propose a few times and let your guests vote."
         )
       }
@@ -55,6 +56,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
         profile={@profile}
         integration_status={@integration_status}
         selected={@selected_poll_id == poll.id}
+        voting_open?={MapSet.member?(@open_poll_ids, poll.id)}
         myself={@myself}
       />
     </div>
@@ -72,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   def new_poll_button(assigns) do
     ~H"""
     <Buttons.action_button icon="hero-plus" phx-click="new_poll" phx-target={@myself} {@rest}>
-      {dgettext("dashboard_common", "New poll")}
+      {dgettext("dashboard_polls", "New poll")}
     </Buttons.action_button>
     """
   end
@@ -81,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :profile, :any, required: true
   attr :integration_status, :map, required: true
   attr :selected, :boolean, default: false
+  attr :voting_open?, :boolean, required: true
   attr :myself, :any, required: true
 
   @spec poll_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -101,14 +104,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <h2 class="text-token-lg font-semibold text-tymeslot-900 truncate">
               {@poll.title}
             </h2>
-            <.status_pill status={@poll.status} />
+            <.status_pill status={status(@poll, @voting_open?)} />
           </div>
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-token-xs text-tymeslot-600">
             <span class="flex items-center gap-1">
               <Icons.icon name="hero-clock-mini" class="w-3.5 h-3.5" />
               {dngettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "%{count} time option",
                 "%{count} time options",
                 @slot_count,
@@ -118,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <span class="flex items-center gap-1">
               <Icons.icon name="hero-users-mini" class="w-3.5 h-3.5" />
               {dngettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "%{count} participant",
                 "%{count} participants",
                 @participant_count,
@@ -128,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
             <span class="flex items-center gap-1">
               <Icons.icon name="hero-check-circle-mini" class="w-3.5 h-3.5" />
               {dngettext(
-                "dashboard_common",
+                "dashboard_polls",
                 "%{count} vote",
                 "%{count} votes",
                 @vote_count,
@@ -148,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
           <Buttons.icon_button
             icon="hero-chart-bar"
-            label={dgettext("dashboard_common", "View results")}
+            label={dgettext("dashboard_polls", "View results")}
             phx-click="select_poll"
             phx-value-id={@poll.id}
             phx-target={@myself}
@@ -164,17 +167,27 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   @spec status_pill(map()) :: Phoenix.LiveView.Rendered.t()
   defp status_pill(assigns) do
     ~H"""
-    <Feedback.pill tone={status_tone(@status)} uppercase>{status_label(@status)}</Feedback.pill>
+    <Feedback.pill tone={status_tone(@status)} uppercase data-testid="poll-status">
+      {status_label(@status)}
+    </Feedback.pill>
     """
   end
 
+  # An open poll past its deadline takes no more votes, though it still
+  # waits for the host to confirm a time.
+  defp status(%{status: :open}, true = _voting_open?), do: :open
+  defp status(%{status: :open}, false = _voting_open?), do: :voting_closed
+  defp status(%{status: status}, _voting_open?), do: status
+
   defp status_tone(:open), do: :brand
+  defp status_tone(:voting_closed), do: :warning
   defp status_tone(:confirmed), do: :info
   defp status_tone(:cancelled), do: :neutral
 
-  defp status_label(:open), do: dgettext("dashboard_common", "Open")
-  defp status_label(:confirmed), do: dgettext("dashboard_common", "Confirmed")
-  defp status_label(:cancelled), do: dgettext("dashboard_common", "Cancelled")
+  defp status_label(:open), do: dgettext("dashboard_polls", "Open")
+  defp status_label(:voting_closed), do: dgettext("dashboard_polls", "Voting closed")
+  defp status_label(:confirmed), do: dgettext("dashboard_polls", "Confirmed")
+  defp status_label(:cancelled), do: dgettext("dashboard_polls", "Cancelled")
 
   defp total_votes(tallies) do
     Enum.reduce(tallies, 0, fn {_slot_id, counts}, acc ->

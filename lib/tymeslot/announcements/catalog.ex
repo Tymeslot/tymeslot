@@ -32,16 +32,41 @@ defmodule Tymeslot.Announcements.Catalog do
   @group_bookings_published_at ~U[2026-10-07 00:00:00Z]
   @group_bookings_expires_at ~U[2026-11-06 00:00:00Z]
 
+  @meeting_polls_published_at ~U[2026-10-23 00:00:00Z]
+  @meeting_polls_expires_at ~U[2026-11-22 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
+      meeting_polls(),
       group_bookings(),
       meeting_locations(),
       video_providers(),
       time_off()
     ]
+  end
+
+  defp meeting_polls do
+    %Announcement{
+      key: "meeting_polls",
+      title: dgettext("onboarding", "Polls that invite, confirm and keep you posted"),
+      body:
+        dgettext(
+          "onboarding",
+          "A poll can be open, so anyone with the link asks for a voting link by email, or " <>
+            "invite-only. You can be emailed as votes arrive. After sending you can change " <>
+            "the deadline, add times, resend an invitation and remove people; reminders go to " <>
+            "invited people who haven't voted. The meeting a poll confirms is yours: everyone " <>
+            "on it is a guest, and only you can move or cancel it."
+        ),
+      image_path: "/images/announcements/meeting-polls.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "meeting-polls",
+      published_at: @meeting_polls_published_at,
+      expires_at: @meeting_polls_expires_at
+    }
   end
 
   defp group_bookings do

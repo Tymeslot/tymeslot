@@ -691,6 +691,51 @@ msgstr "Vyzkoušejte zvuk a video, pokud jde o videohovor"
 msgid "You received: %{amount} (before Stripe processing fees)"
 msgstr "Obdrželi jste: %{amount} (před odečtením poplatků Stripe za zpracování plateb)"
 
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting in your calendar."
+msgstr "Přesun této schůzky proběhl ve vašem kalendáři."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed"
+msgstr "Anketa potvrzena"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed: %{title} - %{date}"
+msgstr "Anketa potvrzena: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting."
+msgstr "Tuto schůzku jste přesunuli."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your guests have been notified of the new time."
+msgstr "Vaši hosté byli informováni o novém termínu."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your poll is confirmed, and everyone on it is invited."
+msgstr "Vaše anketa je potvrzena a všichni její účastníci jsou pozváni."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "⏰ %{title} in %{time_until}"
+msgstr "⏰ %{title} za %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
+msgstr "Dobrý den, %{guest}, blíží se schůzka, na kterou vás zve %{organizer}."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting %{organizer} invited you to is coming up."
+msgstr "Blíží se schůzka, na kterou vás zve %{organizer}."
+
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} person signed up for %{event}. Here is who is coming."
@@ -776,48 +821,3 @@ msgstr "Registrace je uzavřena"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "Seznam je přiložen také jako soubor CSV pro tabulkový procesor."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "You moved this meeting in your calendar."
-msgstr "Přesun této schůzky proběhl ve vašem kalendáři."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Poll confirmed"
-msgstr "Anketa potvrzena"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Poll confirmed: %{title} - %{date}"
-msgstr "Anketa potvrzena: %{title} – %{date}"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "You moved this meeting."
-msgstr "Tuto schůzku jste přesunuli."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Your guests have been notified of the new time."
-msgstr "Vaši hosté byli informováni o novém termínu."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Your poll is confirmed, and everyone on it is invited."
-msgstr "Vaše anketa je potvrzena a všichni její účastníci jsou pozváni."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
-msgstr "Dobrý den, %{guest}, blíží se schůzka, na kterou vás zve %{organizer}."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "⏰ %{title} in %{time_until}"
-msgstr "⏰ %{title} za %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen
-msgid "The meeting %{organizer} invited you to is coming up."
-msgstr "Blíží se schůzka, na kterou vás zve %{organizer}."

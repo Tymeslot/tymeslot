@@ -58,6 +58,39 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
         assert html =~ "Monday 15 June, 10:00"
         refute html =~ "15 June 2026"
       end
+
+      test "never shows a voter's address in the #{theme.slug} theme", %{conn: conn} do
+        %{user: user, profile: profile} =
+          seed_booking_account(unquote(theme.id), "noaddr-#{unquote(theme.slug)}", "Etc/UTC")
+
+        poll = insert(:poll, user: user)
+        insert(:poll_time_slot, poll: poll)
+        invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+        {:ok, personal, _html} =
+          live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
+
+        refute render(personal) =~ "ada@example.com"
+
+        assert has_element?(
+                 personal,
+                 "[data-testid='poll-participant-name']",
+                 "voting with your personal link"
+               )
+
+        {:ok, shared, _html} = live(conn, poll_path(profile.username, poll.token))
+
+        html =
+          shared
+          |> form("form[data-testid='poll-register-form']", %{
+            "name" => "Grace Hopper",
+            "email" => "grace@example.com"
+          })
+          |> render_submit()
+
+        assert has_element?(shared, "[data-testid='poll-link-sent']")
+        refute html =~ "grace@example.com"
+      end
     end
   end
 
@@ -110,6 +143,111 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       %{view: view, poll: poll, slot: slot, profile: profile}
     end
 
+    test "a name the rules refuse on a first vote is named in the message", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
+
+      html =
+        view
+        |> form("form[data-testid='poll-vote-form']", %{
+          "name" => "A",
+          "votes" => %{slot.id => "yes"}
+        })
+        |> render_submit()
+
+      assert html =~ "Name is too short (minimum 2 characters)"
+      refute html =~ "Please enter your name"
+      assert Repo.get!(PollParticipantSchema, invitee.id).voted_at == nil
+    end
+
+    test "a missing name on a first vote asks for one", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
+
+      html = render_submit(view, "cast_votes", %{"name" => "", "votes" => %{slot.id => "yes"}})
+
+      assert html =~ "Please enter your name, then save your responses again."
+    end
+
+    test "a link request with a refused name or address says which and why", %{view: view} do
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "A",
+          "email" => "ada@example.com"
+        })
+
+      assert html =~ "Name is too short (minimum 2 characters)"
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "Ada Lovelace",
+          "email" => "not-an-address"
+        })
+
+      assert html =~ "Email format is invalid"
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "",
+          "email" => "ada@example.com"
+        })
+
+      assert html =~ "Please enter your name."
+
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "Ada Lovelace",
+          "email" => ""
+        })
+
+      assert html =~ "Please enter your email address."
+    end
+
+    test "a voter whose link died while the page was open is sent back to the request form", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      grace = insert(:poll_participant, poll: poll, name: "Grace")
+      insert(:poll_vote, participant: grace, time_slot: slot, response: :yes)
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{grace.token}")
+
+      assert has_element?(view, ".poll-tally--yes .poll-tally-count", "1")
+
+      # Deleted directly, as the host's removal lands while the vote is on its
+      # way: no broadcast reloads the page first. Grace's vote goes with her.
+      Repo.delete!(Repo.get!(PollParticipantSchema, grace.id))
+
+      html =
+        view
+        |> form("form[data-testid='poll-vote-form']", %{"votes" => %{slot.id => "yes"}})
+        |> render_submit()
+
+      assert html =~ "no longer valid"
+      assert has_element?(view, "form[data-testid='poll-register-form']")
+      refute has_element?(view, "form[data-testid='poll-vote-form']")
+
+      # The tallies are the poll's as it now stands, without her vote.
+      assert has_element?(view, ".poll-tally--yes .poll-tally-count", "0")
+    end
+
     test "asking for a link creates an unconfirmed participant and never shows the link", %{
       view: view,
       poll: poll
@@ -127,11 +265,12 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       assert participant.confirmed_at == nil
 
       refute html =~ participant.token
-      assert has_element?(view, "[data-testid='poll-link-sent']", "ada@example.com")
+      assert has_element?(view, "[data-testid='poll-link-sent']", "the address you entered")
+      refute html =~ "ada@example.com"
       refute has_element?(view, "form[data-testid='poll-vote-form']")
     end
 
-    test "an address already on the poll gets the same answer and nobody's link", %{
+    test "an address already on the poll is told so and gets nobody's link", %{
       view: view,
       poll: poll
     } do
@@ -147,8 +286,61 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
 
       refute html =~ ada.token
       refute html =~ "Ada Lovelace"
-      assert has_element?(view, "[data-testid='poll-link-sent']", "ada@example.com")
+      refute html =~ "ada@example.com"
+
+      assert has_element?(
+               view,
+               "[data-testid='poll-link-sent']",
+               "sent its voting link again"
+             )
+
       refute has_element?(view, "form[data-testid='poll-vote-form']")
+    end
+
+    test "a known address whose link went out minutes ago is told to check that inbox", %{
+      view: view,
+      poll: poll
+    } do
+      insert(:poll_participant,
+        poll: poll,
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        confirmed_at: nil,
+        link_sent_at: DateTime.utc_now(:second)
+      )
+
+      view
+      |> form("form[data-testid='poll-register-form']", %{
+        "name" => "Ada Lovelace",
+        "email" => "ada@example.com"
+      })
+      |> render_submit()
+
+      assert has_element?(view, "[data-testid='poll-link-sent']", "sent a few minutes ago")
+    end
+
+    test "a visitor giving someone else's address cannot change that person's responses", %{
+      view: view,
+      poll: poll,
+      slot: slot
+    } do
+      ada = insert(:poll_participant, poll: poll, name: "Ada Lovelace", email: "ada@example.com")
+      insert(:poll_vote, participant: ada, time_slot: slot, response: :yes)
+
+      view
+      |> form("form[data-testid='poll-register-form']", %{
+        "name" => "Mallory",
+        "email" => "ada@example.com"
+      })
+      |> render_submit()
+
+      html = render_submit(view, "cast_votes", %{"votes" => %{slot.id => "no"}})
+
+      assert html =~ "personal voting link"
+
+      ada = PollParticipantSchema |> Repo.get!(ada.id) |> Repo.preload(:votes)
+      assert [%{response: :yes}] = ada.votes
+      assert ada.name == "Ada Lovelace"
     end
 
     test "the emailed link opens the vote form, and saving through it confirms the participant",
@@ -197,7 +389,13 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       {:ok, view, _html} =
         live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
 
-      assert has_element?(view, "[data-testid='poll-participant-name']", "ada@example.com")
+      assert has_element?(
+               view,
+               "[data-testid='poll-participant-name']",
+               "voting with your personal link"
+             )
+
+      refute render(view) =~ "ada@example.com"
       assert has_element?(view, "[data-testid='poll-voter-name']")
 
       view
@@ -212,40 +410,6 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       refute has_element?(view, "[data-testid='poll-voter-name']")
     end
 
-    test "marks a time added after someone voted as new to them, and only to them", %{
-      conn: conn,
-      poll: poll,
-      slot: slot,
-      profile: profile
-    } do
-      added =
-        insert(:poll_time_slot,
-          poll: poll,
-          start_time: DateTime.add(slot.start_time, 1, :day),
-          end_time: DateTime.add(slot.end_time, 1, :day)
-        )
-
-      voted = insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
-      insert(:poll_vote, participant: voted, time_slot: slot, response: :yes)
-      not_yet = insert(:poll_participant, poll: poll)
-
-      {:ok, view, _html} =
-        live(conn, poll_path(profile.username, poll.token) <> "?p=#{voted.token}")
-
-      assert [_one] =
-               view
-               |> render()
-               |> Floki.parse_document!()
-               |> Floki.find("[data-testid='poll-slot-new']")
-
-      assert has_element?(view, "input[data-testid='vote-#{added.id}-yes']")
-
-      {:ok, fresh, _html} =
-        live(conn, poll_path(profile.username, poll.token) <> "?p=#{not_yet.token}")
-
-      refute has_element?(fresh, "[data-testid='poll-slot-new']")
-    end
-
     test "an unconfirmed link past its lifetime opens the request form instead", %{
       conn: conn,
       poll: poll,
@@ -255,6 +419,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(), -3, :day),
           link_sent_at: DateTime.add(DateTime.utc_now(), -3, :day)
         )
 
@@ -278,6 +443,32 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
                from(p in PollParticipantSchema, where: p.poll_id == ^poll.id),
                :count
              ) == 0
+    end
+
+    test "a bot sending a non-text address to the honeypot gets the fake success, not a crash",
+         %{view: view, poll: poll} do
+      render_submit(view, "register_participant", %{
+        "name" => "Bot",
+        "email" => %{"nested" => "value"},
+        "website" => "http://spam.example"
+      })
+
+      assert has_element?(view, "[data-testid='poll-link-sent']")
+      assert participant_count(poll) == 0
+    end
+
+    test "a non-text address outside the honeypot is refused with a message, not a crash", %{
+      view: view,
+      poll: poll
+    } do
+      html =
+        render_submit(view, "register_participant", %{
+          "name" => "Ada Lovelace",
+          "email" => %{"nested" => "value"}
+        })
+
+      assert html =~ "Please check your name and email"
+      assert participant_count(poll) == 0
     end
   end
 

@@ -159,6 +159,33 @@ defmodule Tymeslot.PollsTest do
 
       assert {:error, :payment_required_type} = Polls.create_poll(user.id, attrs)
     end
+
+    test "refuses a one-off event's type", %{user: user, future: future} do
+      one_off = insert(:meeting_type, user: user, one_off: true)
+
+      attrs = %{
+        title: "Webinar",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        meeting_type_id: one_off.id,
+        slots: [slot(future)]
+      }
+
+      assert {:error, :meeting_type_not_found} = Polls.create_poll(user.id, attrs)
+    end
+  end
+
+  describe "meeting_types_for_poll/1" do
+    test "offers the host's active types, but no paid type or one-off event", %{user: user} do
+      offered = insert(:meeting_type, user: user)
+      insert(:meeting_type, user: user, payment_required: true)
+      insert(:meeting_type, user: user, one_off: true)
+      insert(:meeting_type, user: user, is_active: false)
+      insert(:meeting_type, user: insert(:user))
+
+      assert [%{id: id}] = Polls.meeting_types_for_poll(user.id)
+      assert id == offered.id
+    end
   end
 
   describe "create_poll/2 slot validation" do
@@ -184,6 +211,22 @@ defmodule Tymeslot.PollsTest do
       }
 
       assert {:error, :slot_in_past} = Polls.create_poll(user.id, attrs)
+    end
+
+    test "rejects a deadline that has already passed", %{user: user, future: future} do
+      past = DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:second)
+
+      attrs = %{
+        title: "T",
+        duration_minutes: 30,
+        timezone: "Etc/UTC",
+        deadline_at: past,
+        slots: [slot(future)]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} = Polls.create_poll(user.id, attrs)
+      assert %{deadline_at: ["must be in the future"]} = errors_on(changeset)
+      assert Polls.list_polls(user.id) == []
     end
 
     test "rolls back when two slots share the same start_time", %{user: user, future: future} do
@@ -314,6 +357,7 @@ defmodule Tymeslot.PollsTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(now, -49, :hour),
           link_sent_at: DateTime.add(now, -49, :hour)
         )
 
@@ -381,6 +425,37 @@ defmodule Tymeslot.PollsTest do
 
     test "false for a cancelled poll" do
       refute Polls.voting_open?(build(:poll, status: :cancelled, deadline_at: nil))
+    end
+  end
+
+  describe "voting_open?/2" do
+    test "judges the deadline against the instant given, not the wall clock" do
+      poll = build(:poll, status: :open, deadline_at: ~U[2030-01-01 12:00:00Z])
+
+      assert Polls.voting_open?(poll, ~U[2030-01-01 11:59:59Z])
+      refute Polls.voting_open?(poll, ~U[2030-01-01 12:00:00Z])
+    end
+  end
+
+  describe "next_to_close/2" do
+    @now ~U[2030-01-01 12:00:00Z]
+
+    test "picks the earliest deadline still ahead among the polls open to votes" do
+      later = build(:poll, status: :open, deadline_at: ~U[2030-01-03 12:00:00Z])
+      sooner = build(:poll, status: :open, deadline_at: ~U[2030-01-02 12:00:00Z])
+
+      assert Polls.next_to_close([later, sooner], @now) == sooner
+    end
+
+    test "skips polls without a deadline, past their deadline, or no longer open" do
+      polls = [
+        build(:poll, status: :open, deadline_at: nil),
+        build(:poll, status: :open, deadline_at: ~U[2030-01-01 11:00:00Z]),
+        build(:poll, status: :cancelled, deadline_at: ~U[2030-01-02 12:00:00Z]),
+        build(:poll, status: :confirmed, deadline_at: ~U[2030-01-02 12:00:00Z])
+      ]
+
+      assert Polls.next_to_close(polls, @now) == nil
     end
   end
 

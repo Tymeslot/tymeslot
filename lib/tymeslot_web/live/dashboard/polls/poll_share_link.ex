@@ -42,10 +42,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollShareLink do
       :if={@can_link?}
       id={@id}
       icon="hero-clipboard"
-      label={dgettext("dashboard_common", "Copy poll link to clipboard")}
+      label={dgettext("dashboard_polls", "Copy poll link to clipboard")}
       phx-hook="CopyOnClick"
       data-copy-text={@share_url}
-      data-copy-feedback={dgettext("dashboard_common", "Poll link copied to clipboard!")}
+      data-copy-feedback={dgettext("dashboard_polls", "Poll link copied to clipboard!")}
     />
     <%!-- `aria-disabled` rather than `disabled`, so the control stays focusable
           and its tooltip still explains why the link is unavailable. The
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollShareLink do
     <Buttons.icon_button
       :if={!@can_link?}
       icon="hero-clipboard"
-      label={dgettext("dashboard_common", "Copy poll link to clipboard")}
+      label={dgettext("dashboard_polls", "Copy poll link to clipboard")}
       tooltip={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
       aria-disabled="true"
       class="opacity-60"

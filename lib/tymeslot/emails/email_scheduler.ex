@@ -121,10 +121,16 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   # Poll emails
 
-  defdelegate schedule_poll_deadline_jobs(poll), to: PollScheduler, as: :schedule_deadline_jobs
+  defdelegate schedule_poll_reminders(poll), to: PollScheduler, as: :schedule_reminders
+
+  defdelegate schedule_poll_deadline_nudge(poll),
+    to: PollScheduler,
+    as: :schedule_deadline_nudge
+
+  defdelegate cancel_poll_reminders(poll_id), to: PollScheduler, as: :cancel_reminders
   defdelegate cancel_poll_deadline_jobs(poll_id), to: PollScheduler, as: :cancel_deadline_jobs
 
-  defdelegate schedule_poll_all_voted_nudge(poll),
+  defdelegate schedule_poll_all_voted_nudge(poll, round),
     to: PollScheduler,
     as: :schedule_all_voted_nudge
 
@@ -142,7 +148,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
     to: PollScheduler,
     as: :schedule_invitation
 
-  defdelegate reschedule_poll_deadline_jobs(poll),
+  defdelegate schedule_poll_invitation_again(participant),
+    to: PollScheduler,
+    as: :schedule_invitation_again
+
+  defdelegate reschedule_poll_deadline_jobs(poll, invited?),
     to: PollScheduler,
     as: :reschedule_deadline_jobs
 

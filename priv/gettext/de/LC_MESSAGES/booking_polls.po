@@ -166,11 +166,6 @@ msgstr "Diese Umfrage erhält gerade sehr viele Anfragen. Bitte versuchen Sie es
 msgid "This voting link is no longer valid. Please ask for a new one on the poll's page."
 msgstr "Dieser Abstimmungslink ist nicht mehr gültig. Bitte fordern Sie auf der Seite der Umfrage einen neuen an."
 
-#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
-#, elixir-autogen, elixir-format
-msgid "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there."
-msgstr "Wir haben einen persönlichen Abstimmungslink an %{email} geschickt. Öffnen Sie ihn zum Abstimmen; Ihre Antworten zählen, sobald Sie sie dort speichern."
-
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter your name, then save your responses again."
@@ -180,3 +175,53 @@ msgstr "Bitte geben Sie Ihren Namen ein und speichern Sie Ihre Antworten dann er
 #, elixir-autogen, elixir-format
 msgid "New"
 msgstr "Neu"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
+msgstr "Diese Adresse ist bereits für die Umfrage eingetragen, und der Abstimmungslink wurde vor wenigen Minuten an sie gesendet. Bitte sehen Sie in diesem Postfach nach, auch im Spam-Ordner."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This address is already on the poll; we've sent its voting link again."
+msgstr "Diese Adresse ist bereits für die Umfrage eingetragen; wir haben den Abstimmungslink noch einmal an sie gesendet."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
+msgstr "Wir haben einen persönlichen Abstimmungslink an die angegebene Adresse gesendet. Über diesen Link stimmen Sie ab; Ihre Antworten zählen, sobald Sie sie dort gespeichert haben."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "You're voting with your personal link."
+msgstr "Sie stimmen über Ihren persönlichen Link ab."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your email address."
+msgstr "Bitte geben Sie Ihre E-Mail-Adresse ein."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name."
+msgstr "Bitte geben Sie Ihren Namen ein."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only. Use the personal link from your email to vote."
+msgstr "An dieser Umfrage können nur eingeladene Personen teilnehmen. Nutzen Sie zum Abstimmen den persönlichen Link aus Ihrer E-Mail."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Too many emails to this address recently; try again later."
+msgstr "An diese Adresse wurden in letzter Zeit zu viele E-Mails gesendet. Bitte versuchen Sie es später noch einmal."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll is by invitation only, and voting has closed."
+msgstr "Diese Umfrage ist nur mit Einladung zugänglich, und die Abstimmung ist beendet."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This personal voting link isn't valid or no longer works."
+msgstr "Dieser persönliche Abstimmungslink ist ungültig oder funktioniert nicht mehr."

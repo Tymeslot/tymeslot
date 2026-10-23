@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
     PollVoteReceipt
   }
 
+  alias Tymeslot.Mailer
   alias Tymeslot.Repo
 
   import Tymeslot.Factory
@@ -162,6 +163,10 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.text_body =~ url
     end
 
+    test "carries no open tracking", %{poll: poll, results_url: url} do
+      assert Mailer.tracking(PollHostNudge.render(poll, :all_voted, url)) == :transactional
+    end
+
     test "the two variants produce distinct subjects and bodies", %{poll: poll, results_url: url} do
       all_voted = PollHostNudge.render(poll, :all_voted, url)
       deadline_passed = PollHostNudge.render(poll, :deadline_passed, url)
@@ -233,6 +238,39 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
         )
 
       %{poll: poll, participant: participant, url: "https://tymeslot.app/h/poll/t?p=personal-123"}
+    end
+
+    test "tells someone yet to save responses that they count once saved", %{
+      poll: poll,
+      participant: participant,
+      url: url
+    } do
+      email = PollParticipantLink.render(poll, participant, url)
+
+      assert email.text_body =~ "Your responses count once you save them through it."
+      assert email.text_body =~ "Nothing is recorded unless the link is used."
+    end
+
+    test "tells someone who already voted that their responses count", %{poll: poll, url: url} do
+      voted_at = DateTime.utc_now(:second)
+
+      voter =
+        insert(:poll_participant,
+          poll: poll,
+          email: "returning@example.com",
+          locale: "en",
+          confirmed_at: voted_at,
+          voted_at: voted_at
+        )
+
+      email = PollParticipantLink.render(poll, voter, url)
+
+      for body <- [email.text_body, email.html_body] do
+        assert body =~ "The responses you saved already count"
+        assert body =~ "Your saved responses stay as they are."
+        refute body =~ "count once you save them"
+        refute body =~ "Nothing is recorded"
+      end
     end
 
     test "carries the link and the poll title in both bodies", %{
@@ -341,6 +379,8 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.text_body =~ ": 2 yes, 0 if need be, 0 no"
       assert email.text_body =~ "turn them off"
       assert email.html_body =~ "https://tymeslot.app/dashboard/polls"
+      # An update the host asked for, about their own poll: no open tracking.
+      assert Mailer.tracking(email) == :transactional
     end
   end
 
@@ -365,6 +405,16 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       poll = Repo.preload(poll, [:time_slots, user: :profile])
       url = "https://tymeslot.app/h/poll/t?p=personal-123"
       %{poll: poll, url: url}
+    end
+
+    test "keeps the line breaks the host wrote in their note", ctx do
+      poll = %{ctx.poll | description: "Bring the roadmap.\nAnd <b>snacks</b>."}
+      invitee = insert(:poll_participant, poll: ctx.poll, name: "Dana", email: "dana@example.com")
+
+      email = PollInvitation.render(poll, invitee, ctx.url)
+
+      assert email.html_body =~ ~r{Bring the roadmap\.<br\s*/?>And &lt;b&gt;snacks&lt;/b&gt;\.}
+      assert email.text_body =~ "Bring the roadmap.\nAnd <b>snacks</b>."
     end
 
     test "carries the times in the invitee's zone, the deadline, the note and the link", ctx do

@@ -12,158 +12,6 @@ defmodule Tymeslot.Polls.VotingTest do
   alias Tymeslot.Polls.{PollParticipantQueries, PollSchema, Voting}
   alias Tymeslot.Workers.EmailWorker
 
-  describe "request_link/2" do
-    test "creates an unconfirmed participant and emails them their link" do
-      poll = insert(:poll)
-
-      assert :ok = Voting.request_link(poll, %{name: "Alice", email: "Alice@Example.com "})
-
-      participant = PollParticipantQueries.get_by_poll_and_email(poll.id, "alice@example.com")
-      assert participant.name == "Alice"
-      assert is_binary(participant.token) and participant.token != ""
-      assert participant.confirmed_at == nil
-      assert %DateTime{} = participant.link_sent_at
-
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{"action" => "send_poll_participant_link", "participant_id" => participant.id}
-      )
-
-      assert PollParticipantQueries.count_confirmed(poll.id) == 0
-      assert PollParticipantQueries.count_unconfirmed(poll.id) == 1
-    end
-
-    test "an unconfirmed participant counts nowhere on the poll" do
-      poll = insert(:poll)
-      :ok = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-
-      {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
-      assert loaded.participants == []
-    end
-
-    test "an address already on the poll gets its link again, unchanged and without a duplicate" do
-      poll = insert(:poll)
-      first = insert(:poll_participant, poll: poll, name: "Alice", email: "alice@example.com")
-
-      assert :ok = Voting.request_link(poll, %{name: "Mallory", email: " ALICE@example.com "})
-
-      again = PollParticipantQueries.get_by_poll_and_email(poll.id, "alice@example.com")
-      assert again.id == first.id
-      assert again.name == "Alice"
-      assert again.token == first.token
-      assert PollParticipantQueries.count_confirmed(poll.id) == 1
-      assert PollParticipantQueries.count_unconfirmed(poll.id) == 0
-
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{"action" => "send_poll_participant_link", "participant_id" => first.id}
-      )
-    end
-
-    test "sends a link at most once per address within the resend window" do
-      poll = insert(:poll)
-
-      :ok = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-      :ok = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-      :ok = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-
-      assert length(link_jobs()) == 1
-    end
-
-    test "sends the link again once the resend window has passed" do
-      poll = insert(:poll)
-
-      participant =
-        insert(:poll_participant,
-          poll: poll,
-          email: "alice@example.com",
-          link_sent_at: DateTime.add(DateTime.utc_now(), -11, :minute)
-        )
-
-      :ok = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-
-      assert [%{args: %{"participant_id" => id}}] = link_jobs()
-      assert id == participant.id
-    end
-
-    test "a request for an expired unconfirmed address brings its link back to life" do
-      poll = insert(:poll)
-
-      participant =
-        insert(:poll_participant,
-          poll: poll,
-          email: "alice@example.com",
-          confirmed_at: nil,
-          link_sent_at: DateTime.add(DateTime.utc_now(), -3, :day)
-        )
-
-      assert Voting.get_participant(poll, participant.token) == nil
-
-      :ok = Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-
-      assert %{id: id} = Voting.get_participant(poll, participant.token)
-      assert id == participant.id
-    end
-
-    test "returns {:error, :voting_closed} when the poll is not open" do
-      poll = insert(:poll, status: :cancelled)
-
-      assert {:error, :voting_closed} =
-               Voting.request_link(poll, %{name: "Alice", email: "alice@example.com"})
-    end
-
-    test "returns the changeset for an invalid address and sends nothing" do
-      poll = insert(:poll)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Voting.request_link(poll, %{name: "Alice", email: "not-an-address"})
-
-      assert {:error, %Ecto.Changeset{}} = Voting.request_link(poll, %{name: "Alice"})
-      assert link_jobs() == []
-    end
-
-    test "returns {:error, :poll_full} for a new address once the confirmed cap is reached" do
-      poll = insert(:poll)
-      insert_list(PollSchema.max_participants(), :poll_participant, poll: poll)
-
-      assert {:error, :poll_full} =
-               Voting.request_link(poll, %{name: "Late", email: "late@example.com"})
-    end
-
-    test "unconfirmed requests do not fill the poll" do
-      poll = insert(:poll)
-      insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
-      insert_list(5, :poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
-
-      assert :ok = Voting.request_link(poll, %{name: "Real", email: "real@example.com"})
-    end
-
-    test "returns {:error, :too_many_requests} once too many links are out unconfirmed" do
-      poll = insert(:poll)
-
-      insert_list(PollSchema.max_unconfirmed_participants(), :poll_participant,
-        poll: poll,
-        confirmed_at: nil,
-        link_sent_at: now()
-      )
-
-      assert {:error, :too_many_requests} =
-               Voting.request_link(poll, %{name: "Late", email: "late@example.com"})
-    end
-
-    test "expired unconfirmed requests do not count against that limit" do
-      poll = insert(:poll)
-
-      insert_list(PollSchema.max_unconfirmed_participants(), :poll_participant,
-        poll: poll,
-        confirmed_at: nil,
-        link_sent_at: DateTime.add(now(), -3, :day)
-      )
-
-      assert :ok = Voting.request_link(poll, %{name: "Real", email: "real@example.com"})
-    end
-  end
-
   describe "get_participant/2" do
     test "returns the poll's participant for their token, with votes loaded" do
       poll = insert(:poll)
@@ -416,6 +264,7 @@ defmodule Tymeslot.Polls.VotingTest do
         insert(:poll_participant,
           poll: poll,
           confirmed_at: nil,
+          inserted_at: DateTime.add(now(), -49, :hour),
           link_sent_at: DateTime.add(now(), -49, :hour)
         )
 
@@ -466,13 +315,6 @@ defmodule Tymeslot.Polls.VotingTest do
     Enum.filter(
       all_enqueued(worker: EmailWorker),
       &(&1.args["action"] == "send_poll_vote_receipt")
-    )
-  end
-
-  defp link_jobs do
-    Enum.filter(
-      all_enqueued(worker: EmailWorker),
-      &(&1.args["action"] == "send_poll_participant_link")
     )
   end
 end

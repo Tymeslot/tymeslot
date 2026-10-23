@@ -6,15 +6,19 @@ defmodule Tymeslot.Polls.ConfirmTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
+  alias Tymeslot.Profiles
+  alias Tymeslot.TestMocks
 
   @moduletag :integration
   @moduletag :polls
 
   setup do
+    TestMocks.resolve_booking_calendars()
     user = insert(:user)
     _profile = insert(:profile, user: user)
 
@@ -135,6 +139,15 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.attendee_timezone == poll.timezone
     end
 
+    test "writes the meeting's emails in the primary's language",
+         %{user: user, poll: poll, slot: slot} do
+      participant = insert(:poll_participant, poll: poll, email: "solo@example.com", locale: "de")
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.attendee_locale == "de"
+    end
+
     test "names the primary by address when they were invited without a name and never voted",
          %{user: user, poll: poll, slot: slot} do
       insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
@@ -229,6 +242,20 @@ defmodule Tymeslot.Polls.ConfirmTest do
       other_slot = insert(:poll_time_slot)
 
       assert {:error, :invalid_slot} = Confirm.confirm(poll.id, other_slot.id, user.id)
+    end
+
+    test "returns :invalid_slot for a slot id that is not a UUID, and leaves the poll open",
+         %{user: user, poll: poll} do
+      insert(:poll_participant, poll: poll)
+
+      assert {:error, :invalid_slot} = Confirm.confirm(poll.id, "not-a-uuid", user.id)
+      assert {:error, :invalid_slot} = Confirm.confirm(poll.id, nil, user.id)
+      assert Repo.reload!(poll).status == :open
+    end
+
+    test "returns :not_found for a poll id that is not a UUID", %{user: user, slot: slot} do
+      assert {:error, :not_found} = Confirm.confirm("not-a-uuid", slot.id, user.id)
+      assert {:error, :not_found} = Confirm.confirm(nil, slot.id, user.id)
     end
 
     test "returns :not_found for a different owner", %{poll: poll, slot: slot} do
@@ -410,6 +437,113 @@ defmodule Tymeslot.Polls.ConfirmTest do
 
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.status == :confirmed
+    end
+  end
+
+  describe "confirm/3 next to another of the host's meetings" do
+    # The host pads what bookers may pick by 15 minutes either side, and has a
+    # meeting the poll's time starts five minutes after.
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
+        buffer_before_minutes: 15,
+        buffer_after_minutes: 15
+      )
+
+      other_start = DateTime.utc_now() |> DateTime.add(4, :day) |> DateTime.truncate(:second)
+
+      other =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          start_time: other_start,
+          end_time: DateTime.add(other_start, 30, :minute)
+        )
+
+      slot_start = DateTime.add(other.end_time, 5, :minute)
+
+      %{user: user, slot_start: slot_start, slot_end: DateTime.add(slot_start, 30, :minute)}
+    end
+
+    test "confirms a time inside the host's buffers, which shape only what bookers pick", ctx do
+      poll =
+        insert(:poll,
+          user: ctx.user,
+          status: :open,
+          timezone: "Europe/Berlin",
+          meeting_type_id: nil
+        )
+
+      slot =
+        insert(:poll_time_slot, poll: poll, start_time: ctx.slot_start, end_time: ctx.slot_end)
+
+      participant = insert(:poll_participant, poll: poll, email: "voter@example.com")
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, ctx.user.id)
+      assert DateTime.compare(meeting.start_time, ctx.slot_start) == :eq
+      assert meeting_count(ctx.user.id) == 2
+    end
+
+    test "Quick Add at that time is still padded by the buffers and refused", ctx do
+      assert {:error, :time_conflict} =
+               EventCreation.run_create_ad_hoc_meeting(%{
+                 title: "Quick sync",
+                 start_time: ctx.slot_start,
+                 end_time: ctx.slot_end,
+                 attendee_name: "Jane Doe",
+                 attendee_email: "jane@example.com",
+                 organizer_user_id: ctx.user.id
+               })
+
+      assert meeting_count(ctx.user.id) == 1
+    end
+  end
+
+  describe "confirm/3 choosing the meeting's calendar" do
+    setup %{user: user, poll: poll, slot: slot} do
+      primary = insert(:calendar_integration, user: user)
+
+      user.id
+      |> Profiles.get_profile()
+      |> Changeset.change(primary_calendar_integration_id: primary.id)
+      |> Repo.update!()
+
+      participant = insert(:poll_participant, poll: poll)
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+
+      %{primary: primary}
+    end
+
+    test "books into the host's calendar when the poll's meeting type names none",
+         %{user: user, poll: poll, slot: slot, primary: primary} do
+      meeting_type = insert(:meeting_type, user: user, calendar_integration_id: nil)
+      poll |> Changeset.change(meeting_type_id: meeting_type.id) |> Repo.update!()
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.calendar_integration_id == primary.id
+    end
+
+    test "books into the calendar the poll's meeting type names",
+         %{user: user, poll: poll, slot: slot} do
+      chosen = insert(:calendar_integration, user: user)
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          calendar_integration_id: chosen.id,
+          target_calendar_id: "team-calendar"
+        )
+
+      poll |> Changeset.change(meeting_type_id: meeting_type.id) |> Repo.update!()
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.calendar_integration_id == chosen.id
+      assert meeting.calendar_path == "team-calendar"
     end
   end
 end

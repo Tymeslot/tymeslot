@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -243,7 +244,7 @@ defmodule Tymeslot.Bookings.Cancel do
   # everyone: only the host may, from their dashboard. Each invitee answers
   # for themselves with the RSVP links in their invitation.
   defp refuse_host_managed(meeting, opts) do
-    if Meeting.managed_by_host?(meeting) and Keyword.get(opts, :caller) != :organizer do
+    if HostManaged.managed?(meeting) and Keyword.get(opts, :caller) != :organizer do
       {:error, :managed_by_host}
     else
       :ok

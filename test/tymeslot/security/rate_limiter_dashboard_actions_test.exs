@@ -324,7 +324,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
 
       assert message =~ "20"
       assert message =~ "10 minutes"
-      assert message =~ "reschedule request"
+      assert message =~ "meeting moves"
     end
 
     test "is scoped per user" do

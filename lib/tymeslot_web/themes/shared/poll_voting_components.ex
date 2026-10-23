@@ -10,9 +10,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   The single entry point is `poll_content/1`, which decides which sub-view to
   render from the poll's status, the voting-open flag, and whether the page was
   opened through a participant's personal link. The sub-views
-  (`identity_form/1`, `link_sent/1`, `slot_grid/1`, `poll_closed/1`,
-  `deadline_banner/1`) are public so themes may compose them directly if they
-  need a different arrangement.
+  (`identity_form/1`, `link_sent/1`, `invitation_only/1`, `slot_grid/1`,
+  `poll_closed/1`, `deadline_banner/1`) are public so themes may compose them
+  directly if they need a different arrangement.
   """
 
   use Phoenix.Component
@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
-  attr :link_requested_for, :string, default: nil
+  attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
+  attr :invalid_link, :boolean, default: false
 
   @doc """
   Renders the whole voting page body, choosing the right view from poll state.
@@ -62,6 +63,16 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         </p>
       </div>
 
+      <%!-- A personal link that matches nobody on this poll (mistyped, or
+            its holder was removed) falls back to the bare link's view; say
+            so, or the visitor cannot tell why their responses are gone. --%>
+      <p :if={@invalid_link} class="poll-invalid-link" role="status" data-testid="poll-invalid-link">
+        <.icon name="hero-exclamation-triangle" class="poll-invalid-link-icon" />
+        <span>
+          {dgettext("booking_polls", "This personal voting link isn't valid or no longer works.")}
+        </span>
+      </p>
+
       <%= case @view do %>
         <% :closed -> %>
           <.poll_closed poll={@poll} tallies={@tallies} />
@@ -77,10 +88,13 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
               editable={false}
             />
           </div>
+        <% :invite_only -> %>
+          <.deadline_banner :if={@voting_open} poll={@poll} />
+          <.invitation_only voting_open={@voting_open} />
         <% :register -> %>
           <.deadline_banner poll={@poll} />
-          <%= if @link_requested_for do %>
-            <.link_sent email={@link_requested_for} />
+          <%= if @link_request do %>
+            <.link_sent outcome={@link_request} />
           <% else %>
             <.identity_form />
           <% end %>
@@ -88,9 +102,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <% :vote -> %>
           <.deadline_banner poll={@poll} />
           <p class="poll-voting-greeting" data-testid="poll-participant-name">
-            {dgettext("booking_polls", "Voting as %{name}",
-              name: PollParticipantSchema.display_name(@participant)
-            )}
+            {greeting(@participant)}
           </p>
           <p class="poll-voting-notice" data-testid="poll-link-notice">
             <%= if @participant.confirmed_at do %>
@@ -134,25 +146,20 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     """
   end
 
-  attr :email, :string, required: true
+  attr :outcome, :atom, required: true, values: [:sent, :resent, :throttled]
 
   @doc """
-  Shown in place of the form once a voting link was requested. Reads the same
-  whether the address was new to the poll or already on it.
+  Shown in place of the form once a voting link was requested. Says whether
+  the address was new to the poll or already on it, and never repeats the
+  address itself: the public page shows no addresses.
   """
   @spec link_sent(map()) :: Phoenix.LiveView.Rendered.t()
   def link_sent(assigns) do
     ~H"""
-    <div class="poll-link-sent" role="status" data-testid="poll-link-sent">
+    <div class="poll-link-sent" role="status" data-testid="poll-link-sent" data-outcome={@outcome}>
       <.icon name="hero-envelope" class="poll-link-sent-icon" />
-      <p class="poll-voting-notice">
-        {dgettext(
-          "booking_polls",
-          "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there.",
-          email: @email
-        )}
-      </p>
-      <p class="poll-voting-notice">
+      <p class="poll-voting-notice">{link_sent_message(@outcome)}</p>
+      <p :if={@outcome != :throttled} class="poll-voting-notice">
         {dgettext(
           "booking_polls",
           "Nothing there after a few minutes? Check your spam folder."
@@ -161,6 +168,58 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     </div>
     """
   end
+
+  @doc """
+  Shown on an invite-only poll to anyone without a personal link: there is
+  no form to ask for one, and the tallies are for the people invited.
+  """
+  attr :voting_open, :boolean, default: true
+
+  @spec invitation_only(map()) :: Phoenix.LiveView.Rendered.t()
+  def invitation_only(assigns) do
+    ~H"""
+    <div class="poll-invite-only" role="status" data-testid="poll-invite-only">
+      <.icon name="hero-envelope" class="poll-invite-only-icon" />
+      <p class="poll-voting-notice">
+        <%= if @voting_open do %>
+          {invite_only_message()}
+        <% else %>
+          {dgettext("booking_polls", "This poll is by invitation only, and voting has closed.")}
+        <% end %>
+      </p>
+    </div>
+    """
+  end
+
+  @doc "The notice for an invite-only poll, shared by the page and the flash."
+  @spec invite_only_message() :: String.t()
+  def invite_only_message do
+    dgettext(
+      "booking_polls",
+      "This poll is by invitation only. Use the personal link from your email to vote."
+    )
+  end
+
+  defp link_sent_message(:sent),
+    do:
+      dgettext(
+        "booking_polls",
+        "We've sent a personal voting link to the address you entered. Open it to vote; your responses count once you save them there."
+      )
+
+  defp link_sent_message(:resent),
+    do:
+      dgettext(
+        "booking_polls",
+        "This address is already on the poll; we've sent its voting link again."
+      )
+
+  defp link_sent_message(:throttled),
+    do:
+      dgettext(
+        "booking_polls",
+        "This address is already on the poll, and its voting link was sent a few minutes ago. Please check that inbox, including the spam folder."
+      )
 
   @doc """
   Renders the name + email form that asks for a personal voting link.
@@ -415,16 +474,38 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
 
   defp voting_view(%{poll: %{status: :cancelled}}), do: :closed
   defp voting_view(%{poll: %{status: :confirmed}}), do: :closed
+  # Only a confirmed personal link votes on an invite-only poll. A pending
+  # request's link (one that slipped in as the host switched) cannot confirm
+  # (`Tymeslot.Polls.Voting.cast_votes/4`), so it gets the notice too. These
+  # come before the deadline check so a bare link never shows the tallies
+  # once voting has ended.
+  defp voting_view(%{poll: %{invite_only: true}, participant: nil}), do: :invite_only
+
+  defp voting_view(%{poll: %{invite_only: true}, participant: %{confirmed_at: nil}}),
+    do: :invite_only
+
   defp voting_view(%{voting_open: false}), do: :voting_ended
   defp voting_view(%{participant: nil}), do: :register
   defp voting_view(_assigns), do: :vote
 
   # --- Data helpers ---
 
-  # A time is new to someone who has voted but not on it: the host added it
-  # after they last answered.
-  defp new_to?(%{voted_at: %DateTime{}}, current_votes, slot),
-    do: not Map.has_key?(current_votes, slot.id)
+  # Someone invited by address alone has no name yet; the page greets them
+  # without one rather than show their address.
+  defp greeting(participant) do
+    case PollParticipantSchema.public_name(participant) do
+      nil -> dgettext("booking_polls", "You're voting with your personal link.")
+      name -> dgettext("booking_polls", "Voting as %{name}", name: name)
+    end
+  end
+
+  # A time is new to someone who has voted when the host added it after they
+  # last saved their responses and they have not answered it since. A time
+  # they left unanswered when they voted was there to answer, so it is not new.
+  defp new_to?(%{voted_at: %DateTime{} = voted_at}, current_votes, slot) do
+    not Map.has_key?(current_votes, slot.id) and
+      DateTime.compare(slot.inserted_at, voted_at) == :gt
+  end
 
   defp new_to?(_participant, _current_votes, _slot), do: false
 

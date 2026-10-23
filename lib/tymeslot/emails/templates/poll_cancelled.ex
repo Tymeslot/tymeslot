@@ -24,7 +24,7 @@ defmodule Tymeslot.Emails.Templates.PollCancelled do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       headline = dgettext("emails_polls", "%{title} has been cancelled", title: poll.title)
-      body = Enum.join([body(poll, host_name) | reply_note(poll, host_name)], " ")
+      body = Enum.join([body(poll, participant, host_name) | reply_note(poll, host_name)], " ")
 
       html_body =
         TemplateHelper.compile_system_template(
@@ -47,7 +47,17 @@ defmodule Tymeslot.Emails.Templates.PollCancelled do
     end)
   end
 
-  defp body(poll, host_name) do
+  # Thanks for responses only someone who gave some.
+  defp body(poll, %PollParticipantSchema{voted_at: nil}, host_name) do
+    dgettext(
+      "emails_polls",
+      "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it.",
+      host: host_name,
+      title: poll.title
+    )
+  end
+
+  defp body(poll, _participant, host_name) do
     dgettext(
       "emails_polls",
       "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it. Thank you for your responses.",

@@ -201,11 +201,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     end)
   end
 
-  # Every action the payload has a link for; the bar leaves out the rest. A
-  # group meeting's reminder (`AppointmentBuilder.for_organizer_of_group/3`)
-  # carries only the dashboard link, since the public links to reschedule or
-  # cancel a booking are refused for a group meeting; a one-to-one booking
-  # carries those two and no dashboard link.
   # A meeting the host manages is named after itself: it has guests, not an
   # attendee who booked it (`AppointmentBuilder.organizer_copy/2`).
   defp organizer_stage_title(%{host_managed: true} = appointment_details),
@@ -229,6 +224,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     )
   end
 
+  # Every action the payload has a link for; the bar leaves out the rest. A
+  # group meeting's reminder (`AppointmentBuilder.for_organizer_of_group/3`)
+  # and a meeting the host manages (`AppointmentBuilder.organizer_copy/2`)
+  # carry only the dashboard link, since the public links to reschedule or
+  # cancel are refused for both; a one-to-one booking carries those two and
+  # no dashboard link.
   defp organizer_actions(appointment_details) do
     [
       %{

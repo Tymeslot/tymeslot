@@ -3,10 +3,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   LiveComponent for editing an open poll from its results panel.
 
   Covers what can change while people vote (see `Tymeslot.Polls.Editing`):
-  the title and description, whether the host is emailed about new votes, the
+  the title and description, whether the host is emailed about new votes, who
+  can vote (switching to invited people only withdraws pending link requests,
+  which the editor warns about with the count it reads when the choice is made), the
   voting deadline (moved, removed, or set again to reopen voting), the
   reminders before it, and new candidate times. Everything is saved at once.
-  The participant list beside it removes someone straight away.
+  The participant list beside it (`PollParticipantList`) takes someone off
+  the poll or sends them their link again.
 
   The editor keeps its own state across re-renders: a vote arriving while the
   host edits refreshes the poll it is given, not what the host has typed.
@@ -17,22 +20,31 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollParticipantSchema, PollSchema}
-  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollReminders, PollsComponent}
+  alias Tymeslot.Polls.PollSchema
+
+  alias TymeslotWeb.Dashboard.Polls.{
+    LocalTime,
+    PollAccess,
+    PollParticipantList,
+    PollReminders,
+    PollsComponent
+  }
+
+  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
-  @reminder_events PollReminders.events()
+  @reminder_events PollReminders.Events.all()
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
+    socket = if socket.assigns[:initialized?], do: socket, else: init(socket, assigns.poll)
 
-    if socket.assigns[:initialized?] do
-      {:ok, socket}
-    else
-      {:ok, init(socket, assigns.poll)}
-    end
+    # Read on every update: someone invited while the host edits brings
+    # the reminders with them.
+    {:ok, assign(socket, :invited?, Polls.has_invitees?(socket.assigns.poll))}
   end
 
   defp init(socket, poll) do
@@ -42,7 +54,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       description: poll.description || "",
       deadline: LocalTime.to_input(poll.deadline_at, poll.timezone),
       notify_on_vote: poll.notify_on_vote,
+      access: PollAccess.value(poll.invite_only),
+      unconfirmed_count: 0,
       meeting_type_id: poll.meeting_type_id,
+      kept_meeting_type:
+        kept_meeting_type(poll, socket.assigns.meeting_types, socket.assigns.user_id),
       new_times: [],
       time_counter: 0,
       reminder_picker: PollReminders.new(PollSchema.reminders(poll)),
@@ -66,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         <.input
           type="text"
           name="poll[title]"
-          label={dgettext("dashboard_common", "Title")}
+          label={dgettext("dashboard_polls", "Title")}
           value={@title}
           required
           errors={error_list(@errors, :title)}
@@ -76,22 +92,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         <.input
           type="textarea"
           name="poll[description]"
-          label={dgettext("dashboard_common", "Description (optional)")}
+          label={dgettext("dashboard_polls", "Description (optional)")}
           value={@description}
-          placeholder={dgettext("dashboard_common", "Add any context for your guests")}
+          placeholder={dgettext("dashboard_polls", "Add any context for your guests")}
           errors={error_list(@errors, :description)}
         />
 
         <.input
           type="datetime-local"
           name="poll[deadline]"
-          label={dgettext("dashboard_common", "Voting deadline (optional)")}
+          label={dgettext("dashboard_polls", "Voting deadline (optional)")}
           value={@deadline}
           errors={error_list(@errors, :deadline_at)}
         >
           <:description>
             {dgettext(
-              "dashboard_common",
+              "dashboard_polls",
               "Move it, clear it, or set it again after it has passed to reopen voting. Times in %{timezone}.",
               timezone: @poll.timezone
             )}
@@ -101,41 +117,60 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
         <.input
           type="select"
           name="poll[meeting_type_id]"
-          label={dgettext("dashboard_common", "Meeting type (optional)")}
+          label={dgettext("dashboard_polls", "Meeting type (optional)")}
           value={@meeting_type_id}
-          prompt={dgettext("dashboard_common", "No meeting type")}
-          options={Enum.map(@meeting_types, &{&1.name, &1.id})}
+          prompt={dgettext("dashboard_polls", "No meeting type")}
+          options={meeting_type_options(@meeting_types, @kept_meeting_type)}
           errors={error_list(@errors, :meeting_type_id)}
         >
           <:description>
             {dgettext(
-              "dashboard_common",
+              "dashboard_polls",
               "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
             )}
+            <span
+              :if={kept_selected?(@kept_meeting_type, @meeting_type_id)}
+              class="mt-1 block"
+              data-testid="poll-kept-meeting-type"
+            >
+              {dgettext(
+                "dashboard_polls",
+                "%{name} is switched off or takes payment, so new polls can't use it. This poll keeps it until you choose another.",
+                name: @kept_meeting_type.name
+              )}
+            </span>
           </:description>
         </.input>
 
+        <PollAccess.access_input
+          id={"poll-access-#{@poll.id}"}
+          name="poll[access]"
+          value={@access}
+          hint={withdraw_hint(@poll, @access, @unconfirmed_count)}
+        />
+
         <div class="space-y-2" data-testid="poll-new-times">
           <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_common", "Add times")}
+            {dgettext("dashboard_polls", "Add times")}
           </p>
           <p class="text-token-xs text-tymeslot-500">
             {dgettext(
-              "dashboard_common",
+              "dashboard_polls",
               "Existing times stay as they are. Everyone who has voted is emailed about the new ones."
             )}
           </p>
           <div :for={time <- @new_times} class="flex items-center gap-2">
-            <input
-              type="datetime-local"
-              name={"poll[new_times][#{time.key}]"}
-              value={time.value}
-              class="input py-1.5 px-3 text-token-sm"
-              aria-label={dgettext("dashboard_common", "New time")}
-            />
+            <div class="flex-1">
+              <.input
+                type="datetime-local"
+                name={"poll[new_times][#{time.key}]"}
+                value={time.value}
+                aria-label={dgettext("dashboard_polls", "New time")}
+              />
+            </div>
             <.icon_button
               icon="hero-x-mark"
-              label={dgettext("dashboard_common", "Remove time")}
+              label={dgettext("dashboard_polls", "Remove time")}
               phx-click="remove_time"
               phx-value-key={time.key}
               phx-target={@myself}
@@ -148,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
             phx-click="add_time"
             phx-target={@myself}
           >
-            {dgettext("dashboard_common", "Add time")}
+            {dgettext("dashboard_polls", "Add time")}
           </.action_button>
           <p :for={error <- error_list(@errors, :new_times)} class="form-error">{error}</p>
         </div>
@@ -158,18 +193,27 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           id={"poll-notify-on-vote-#{@poll.id}"}
           name="poll[notify_on_vote]"
           value={@notify_on_vote}
-          label={dgettext("dashboard_common", "Email me about new votes")}
+          label={dgettext("dashboard_polls", "Email me about new votes")}
         />
+        <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
       </form>
 
       <PollReminders.reminders_form
+        :if={@invited?}
         id={"poll-edit-reminders-#{@poll.id}"}
         state={@reminder_picker}
         myself={@myself}
       />
       <p :for={error <- error_list(@errors, :reminder_config)} class="form-error">{error}</p>
 
-      <.participants poll={@poll} myself={@myself} />
+      <.live_component
+        module={PollParticipantList}
+        id={"poll-participant-list-#{@poll.id}"}
+        poll={@poll}
+        user_id={@user_id}
+        parent_id={@parent_id}
+        voting_open?={@voting_open?}
+      />
 
       <div class="flex justify-end gap-2">
         <.action_button
@@ -178,63 +222,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           phx-click="cancel_edit_poll_details"
           phx-target={@parent_myself}
         >
-          {dgettext("dashboard_common", "Cancel")}
+          {dgettext("dashboard_polls", "Cancel")}
         </.action_button>
         <.action_button type="submit" size={:sm} form={"poll-details-form-#{@poll.id}"}>
-          {dgettext("dashboard_common", "Save changes")}
+          {dgettext("dashboard_polls", "Save changes")}
         </.action_button>
       </div>
     </div>
-    """
-  end
-
-  attr :poll, :map, required: true
-  attr :myself, :any, required: true
-
-  # Everyone counted on the poll, with a way to take someone off it.
-  defp participants(assigns) do
-    ~H"""
-    <details :if={@poll.participants != []} class="text-token-sm" data-testid="poll-participants">
-      <summary class="cursor-pointer font-medium text-tymeslot-700">
-        {dngettext(
-          "dashboard_common",
-          "%{count} participant",
-          "%{count} participants",
-          length(@poll.participants)
-        )}
-      </summary>
-      <ul class="mt-2 divide-y divide-tymeslot-100">
-        <li
-          :for={participant <- @poll.participants}
-          class="flex items-center justify-between gap-3 py-2"
-          data-testid="poll-participant"
-        >
-          <div class="min-w-0">
-            <p class="truncate text-tymeslot-800">
-              {PollParticipantSchema.display_name(participant)}
-            </p>
-            <p class="truncate text-token-xs text-tymeslot-500">
-              {participant.email} · {status_label(participant)}
-            </p>
-          </div>
-          <.icon_button
-            icon="hero-user-minus"
-            label={dgettext("dashboard_common", "Remove from the poll")}
-            phx-click="remove_participant"
-            phx-value-id={participant.id}
-            phx-target={@myself}
-            data-confirm={
-              dgettext(
-                "dashboard_common",
-                "Remove %{name} and their responses from this poll? They are not told.",
-                name: PollParticipantSchema.display_name(participant)
-              )
-            }
-            data-testid="poll-remove-participant"
-          />
-        </li>
-      </ul>
-    </details>
     """
   end
 
@@ -249,12 +243,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   def handle_event("change", %{"poll" => params}, socket) do
+    access = valid_access(Map.get(params, "access"), socket.assigns.access)
+
     {:noreply,
-     assign(socket,
+     socket
+     |> count_pending_requests(access, socket.assigns.access)
+     |> assign(
        title: Map.get(params, "title", socket.assigns.title),
        description: Map.get(params, "description", socket.assigns.description),
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
        notify_on_vote: Map.get(params, "notify_on_vote", "false") == "true",
+       access: access,
        meeting_type_id: parse_id(Map.get(params, "meeting_type_id")),
        new_times: merge_times(socket.assigns.new_times, Map.get(params, "new_times", %{}))
      )}
@@ -271,38 +270,32 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   def handle_event("remove_time", %{"key" => key}, socket) do
-    key = String.to_integer(key)
+    case Integer.parse(key) do
+      {key, ""} ->
+        {:noreply,
+         assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
 
-    {:noreply,
-     assign(socket, :new_times, Enum.reject(socket.assigns.new_times, &(&1.key == key)))}
-  end
-
-  def handle_event("remove_participant", %{"id" => participant_id}, socket) do
-    %{poll: poll, user_id: user_id} = socket.assigns
-
-    case Polls.remove_participant(poll.id, user_id, participant_id) do
-      :ok ->
-        Flash.info(dgettext("dashboard_common", "Removed from the poll"))
-
-      {:error, _reason} ->
-        Flash.error(dgettext("dashboard_common", "This poll is no longer open."))
+      _forged ->
+        {:noreply, socket}
     end
-
-    send_update(PollsComponent, id: socket.assigns.parent_id, poll_updated: poll.id)
-    {:noreply, socket}
   end
+
+  def handle_event("save", %{"poll" => params}, %{assigns: %{invited?: false}} = socket),
+    # The picker is hidden without invitees: whatever it holds unsaved must
+    # not stop the save through an error nobody can see.
+    do: save(socket, params)
 
   def handle_event("save", %{"poll" => params}, socket) do
+    case PollReminders.commit_pending(socket.assigns.reminder_picker) do
+      {:ok, picker} -> save(assign(socket, :reminder_picker, picker), params)
+      {:error, rejected} -> {:noreply, assign(socket, :reminder_picker, rejected)}
+    end
+  end
+
+  defp save(socket, params) do
     %{poll: poll, user_id: user_id} = socket.assigns
 
-    attrs = %{
-      "title" => Map.get(params, "title"),
-      "description" => Map.get(params, "description"),
-      "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
-      "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
-      "meeting_type_id" => parse_id(Map.get(params, "meeting_type_id")),
-      "reminder_config" => PollReminders.to_config(socket.assigns.reminder_picker)
-    }
+    attrs = save_attrs(params, socket.assigns)
 
     new_starts =
       params
@@ -313,18 +306,32 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
     case Polls.update_details(poll.id, user_id, attrs, new_starts) do
       {:ok, _poll} ->
-        Flash.info(dgettext("dashboard_common", "Poll updated"))
+        Flash.info(dgettext("dashboard_polls", "Poll updated"))
         send_update(PollsComponent, id: socket.assigns.parent_id, poll_edited: true)
         {:noreply, socket}
 
       {:error, :not_open} ->
-        Flash.warning(dgettext("dashboard_common", "This poll is no longer open."))
+        Flash.warning(dgettext("dashboard_polls", "This poll is no longer open."))
         send_update(PollsComponent, id: socket.assigns.parent_id, poll_edited: true)
         {:noreply, socket}
 
       {:error, reason} ->
         {:noreply, assign(socket, :errors, errors_for(reason))}
     end
+  end
+
+  defp save_attrs(params, %{poll: poll} = assigns) do
+    Map.merge(
+      %{
+        "title" => Map.get(params, "title"),
+        "description" => Map.get(params, "description"),
+        "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
+        "invite_only" => PollAccess.invite_only?(Map.get(params, "access", assigns.access)),
+        "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
+        "reminder_config" => PollReminders.to_config(assigns.reminder_picker)
+      },
+      meeting_type_change(params, poll)
+    )
   end
 
   defp parse_id(value) when value in [nil, ""], do: nil
@@ -338,43 +345,104 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
 
   defp parse_id(value), do: value
 
+  # Only a type the host changed is sent: the domain checks a type being
+  # set, and the poll's own may no longer pass that check.
+  defp meeting_type_change(params, %{meeting_type_id: current}) do
+    with {:ok, raw} <- Map.fetch(params, "meeting_type_id"),
+         id when id != current <- parse_id(raw) do
+      %{"meeting_type_id" => id}
+    else
+      _unchanged -> %{}
+    end
+  end
+
+  # The type the poll already has, when the types a poll may take leave it
+  # out because it has been switched off or has started taking payment.
+  # Kept selectable, so that saving the poll's other details does not clear it.
+  defp kept_meeting_type(%{meeting_type_id: nil}, _meeting_types, _user_id), do: nil
+
+  defp kept_meeting_type(%{meeting_type_id: id}, meeting_types, user_id) do
+    if Enum.any?(meeting_types, &(&1.id == id)),
+      do: nil,
+      else: MeetingTypes.get_meeting_type(id, user_id)
+  end
+
+  defp meeting_type_options(meeting_types, nil), do: Enum.map(meeting_types, &{&1.name, &1.id})
+
+  defp meeting_type_options(meeting_types, kept) do
+    meeting_type_options(meeting_types, nil) ++
+      [
+        {dgettext("dashboard_polls", "%{name} (unavailable for new polls)", name: kept.name),
+         kept.id}
+      ]
+  end
+
+  defp kept_selected?(nil, _meeting_type_id), do: false
+  defp kept_selected?(kept, meeting_type_id), do: kept.id == meeting_type_id
+
   defp merge_times(times, values) do
     Enum.map(times, fn %{key: key} = time ->
       %{time | value: Map.get(values, Integer.to_string(key), time.value)}
     end)
   end
 
-  defp status_label(%{voted_at: %DateTime{}}), do: dgettext("dashboard_common", "voted")
-  defp status_label(%{invited_at: %DateTime{}}), do: dgettext("dashboard_common", "invited")
-  defp status_label(_participant), do: dgettext("dashboard_common", "not voted yet")
+  defp valid_access(value, _previous) when value in ["anyone", "invited"], do: value
+  defp valid_access(_value, previous), do: previous
+
+  # Requests can arrive while the editor is open and nothing broadcasts them,
+  # so the count the warning shows is read when the host switches to invited
+  # people only, not carried over from when the panel loaded.
+  defp count_pending_requests(socket, "invited", previous) when previous != "invited" do
+    case socket.assigns.poll do
+      %{invite_only: false} = poll ->
+        assign(socket, :unconfirmed_count, Polls.count_unconfirmed(poll))
+
+      _invite_only ->
+        socket
+    end
+  end
+
+  defp count_pending_requests(socket, _access, _previous), do: socket
+
+  # Warns before the switch that withdraws the requests waiting on the poll.
+  defp withdraw_hint(%{invite_only: false}, "invited", count) when count > 0 do
+    dngettext(
+      "dashboard_polls",
+      "%{count} person who asked for a voting link but hasn't voted with it yet will be removed.",
+      "%{count} people who asked for a voting link but haven't voted with it yet will be removed.",
+      count
+    )
+  end
+
+  defp withdraw_hint(_poll, _access, _count), do: nil
 
   defp errors_for(:too_many_slots),
     do: %{
       new_times: [
-        dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())
+        dgettext("dashboard_polls", "Up to %{max} times", max: PollSchema.max_slots())
       ]
     }
 
   defp errors_for(:meeting_type_not_found),
-    do: %{meeting_type_id: [dgettext("dashboard_common", "That meeting type is unavailable")]}
+    do: %{meeting_type_id: [dgettext("dashboard_polls", "That meeting type is unavailable")]}
 
   defp errors_for(:payment_required_type),
     do: %{
       meeting_type_id: [
-        dgettext("dashboard_common", "Paid meeting types can't be used for polls")
+        dgettext("dashboard_polls", "Paid meeting types can't be used for polls")
       ]
     }
 
   defp errors_for(:slot_in_past),
-    do: %{new_times: [dgettext("dashboard_common", "Times must be in the future")]}
+    do: %{new_times: [dgettext("dashboard_polls", "Times must be in the future")]}
 
   defp errors_for(%Changeset{data: %PollSchema{}} = changeset) do
-    errors = changeset_errors(changeset)
+    errors = FormErrors.to_map(changeset)
 
     if Map.has_key?(errors, :deadline_at),
       do:
         Map.put(errors, :deadline_at, [
-          dgettext("dashboard_common", "The deadline must be in the future")
+          dgettext("dashboard_polls", "The deadline must be in the future")
         ]),
       else: errors
   end
@@ -382,18 +450,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   # A time clashing with one the poll already has fails on the slot's unique
   # index.
   defp errors_for(%Changeset{}),
-    do: %{new_times: [dgettext("dashboard_common", "The poll already has this time")]}
+    do: %{new_times: [dgettext("dashboard_polls", "The poll already has this time")]}
 
   defp errors_for(_reason),
-    do: %{base: [dgettext("dashboard_common", "Couldn't save this poll. Please try again.")]}
-
-  defp changeset_errors(changeset) do
-    Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Regex.replace(~r"%{(\w+)}", message, fn _whole, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), "") |> to_string()
-      end)
-    end)
-  end
+    do: %{base: [dgettext("dashboard_polls", "Couldn't save this poll. Please try again.")]}
 
   defp error_list(errors, field), do: Map.get(errors, field, [])
 end

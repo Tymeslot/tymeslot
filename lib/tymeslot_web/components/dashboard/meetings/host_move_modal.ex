@@ -1,23 +1,31 @@
 defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   @moduledoc """
   LiveComponent in which the host picks a new time for a meeting they manage,
-  one confirmed from a poll (`MeetingSchema.managed_by_host?/1`).
+  one confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed?/1`).
 
   Such a meeting has no booker to ask for a new time, so the dashboard's
   Reschedule opens this instead of the reschedule request. The time is read
   in the host's timezone and the meeting keeps its length. On a move, or when
   the host closes it, it tells the owning `BookingsManagementComponent`
   (`host_move: :moved | :closed`).
+
+  A move counts against the host's `:dashboard_reschedule` rate limit, the
+  bucket the dashboard's other moves and reschedule requests share.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Meetings
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Shared.Flash
+
+  require Refusal
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -98,11 +106,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
     %{meeting: meeting, timezone: timezone, user_id: user_id} = socket.assigns
 
     with {:ok, new_start} <- parse(value, timezone),
+         :ok <- RateLimiter.check(:dashboard_reschedule, user_id),
          {:ok, _moved} <- Meetings.move_by_host(meeting.uid, new_start, user_id) do
       Flash.info(dgettext("dashboard_bookings", "Meeting moved. Everyone invited has been told."))
       send_update(socket.assigns.parent_module, id: socket.assigns.parent_id, host_move: :moved)
       {:noreply, socket}
     else
+      {:error, :rate_limited, message} -> {:noreply, assign(socket, :error, message)}
       {:error, reason} -> {:noreply, assign(socket, :error, error_message(reason))}
     end
   end
@@ -128,6 +138,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
 
   defp error_message(:slot_taken),
     do: dgettext("dashboard_bookings", "You already have a meeting at that time.")
+
+  defp error_message(:time_off),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "This time falls within your time off. Change or remove the time off to move the meeting there."
+      )
+
+  # The meeting was cancelled, began or ended while the dialog was open, or
+  # has gone: the booking rules' own wording says which. Their guest-facing
+  # refusals (`:managed_by_host`) never come back from a host's move.
+  defp error_message(reason) when Refusal.is_refusal(reason) or reason == :meeting_not_found,
+    do: BookingErrorMessage.message(reason)
 
   defp error_message(_reason),
     do: dgettext("dashboard_bookings", "The meeting could not be moved. Please try again.")

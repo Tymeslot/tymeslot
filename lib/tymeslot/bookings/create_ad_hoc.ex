@@ -31,7 +31,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:calendar_integration_id) => pos_integer() | nil,
           optional(:calendar_path) => String.t() | nil,
           optional(:video_integration_id) => pos_integer() | nil,
-          optional(:guest_emails) => [String.t()],
+          optional(:guest_emails) => [Guests.entry()],
           optional(:organizer_note) => String.t() | nil,
           optional(:attendee_locale) => String.t() | nil,
           optional(:reminders) => [%{value: pos_integer(), unit: String.t()}],
@@ -65,11 +65,16 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   caller to hand to `Tymeslot.Bookings.Activation.after_commit/1` once its
   transaction has committed, and the host's cached availability is left for
   the caller to invalidate then.
+
+  The time is padded with the host's buffers before their other meetings are
+  counted, as on the calendar grid. Pass `buffers: false` to count only the
+  meetings overlapping the time itself, for a time the host settled on
+  rather than placed on their calendar (a poll they confirmed).
   """
-  @spec execute_deferred(params()) ::
+  @spec execute_deferred(params(), keyword()) ::
           {:ok, Tymeslot.Meetings.MeetingSchema.t(), Tymeslot.Notifications.Events.pending()}
           | {:error, error()}
-  def execute_deferred(params) do
+  def execute_deferred(params, opts \\ []) do
     # The organiser's details are resolved once and threaded through: validation
     # needs the organiser email to reject self-booking, and the meeting attrs
     # need all three fields. Looking them up twice would risk the check and the
@@ -83,7 +88,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       params
       |> Map.put(:reminders, reminders)
       |> build_meeting_attrs(organizer)
-      |> run_transaction(guest_emails)
+      |> run_transaction(guest_emails, opts)
     end
   end
 
@@ -202,7 +207,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     })
   end
 
-  defp run_transaction(meeting_attrs, guest_emails) do
+  defp run_transaction(meeting_attrs, guest_emails, opts) do
     result =
       Repo.transaction(fn ->
         # Guests are inserted after the meeting exists and before notifications
@@ -210,7 +215,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
         # caller pre-validates the list, so emails are passed through as-is.
         # The host is the one inviting them, whatever brought them here (Quick
         # Add, or a poll the host confirmed), and their invitation says so.
-        with {:ok, meeting} <- create_meeting(meeting_attrs),
+        with {:ok, meeting} <- create_meeting(meeting_attrs, opts),
              {:ok, _guests} <- Guests.create_for_meeting(meeting.id, guest_emails, :organizer),
              {:ok, _job} <- schedule_calendar_job(meeting),
              {:ok, pending} <- Activation.activate_in_transaction(meeting, with_video_room: true) do
@@ -241,10 +246,14 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     map_result(result)
   end
 
-  defp create_meeting(attrs) do
+  defp create_meeting(attrs, opts) do
     # Booking limits guard the host's public capacity; a host deliberately
-    # creating a meeting from their own dashboard may exceed their caps.
-    case Scheduling.create_meeting_with_conflict_check(attrs, enforce_booking_limits: false) do
+    # creating a meeting from their own dashboard may exceed their caps. The
+    # buffers stay unless the caller turns them off (`execute_deferred/2`).
+    case Scheduling.create_meeting_with_conflict_check(
+           attrs,
+           [enforce_booking_limits: false] ++ Keyword.take(opts, [:buffers])
+         ) do
       {:ok, meeting} -> {:ok, meeting}
       {:error, reason} -> {:error, reason}
     end

@@ -30,23 +30,23 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
       :if={@open && @poll}
       id="cancel-poll-modal"
       show
-      title={dgettext("dashboard_common", "Cancel this poll")}
-      confirm_label={dgettext("dashboard_common", "Cancel poll")}
-      cancel_label={dgettext("dashboard_common", "Keep poll")}
+      title={dgettext("dashboard_polls", "Cancel this poll")}
+      confirm_label={dgettext("dashboard_polls", "Cancel poll")}
+      cancel_label={dgettext("dashboard_polls", "Keep poll")}
       on_cancel={JS.push("close_cancel_poll_modal", target: @myself)}
       on_confirm={JS.push("cancel_poll", target: @myself)}
       data-testid="confirm-cancel-poll"
     >
       <p>
         {dgettext(
-          "dashboard_common",
+          "dashboard_polls",
           "“%{title}” will stop accepting responses and everyone holding the voting link will see it as cancelled. This cannot be undone.",
           title: @poll.title
         )}
       </p>
       <p class="mt-2">
         {dgettext(
-          "dashboard_common",
+          "dashboard_polls",
           "Everyone on the poll is told by email that it will not go ahead."
         )}
       </p>
@@ -54,9 +54,9 @@ defmodule TymeslotWeb.Dashboard.Polls.CancelPollModal do
       <:extra :if={@participant_count > 0}>
         <.info_box variant={:warning}>
           {dngettext(
-            "dashboard_common",
-            "%{count} guest has already voted. Their responses will be discarded.",
-            "%{count} guests have already voted. Their responses will be discarded.",
+            "dashboard_polls",
+            "%{count} guest has already voted. Their responses stay visible to you here, but no time will be confirmed.",
+            "%{count} guests have already voted. Their responses stay visible to you here, but no time will be confirmed.",
             @participant_count
           )}
         </.info_box>

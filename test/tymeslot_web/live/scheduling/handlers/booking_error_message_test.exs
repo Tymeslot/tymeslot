@@ -60,6 +60,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     {:not_reschedulable, :past} => "Cannot reschedule a meeting that has already occurred",
     {:not_reschedulable, :awaiting_approval} =>
       "Cannot request a reschedule while the booking awaits approval",
+    :managed_by_host =>
+      "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation.",
     :invalid_datetime => "Invalid date/time",
     :in_past => "Booking time must be in the future",
     {:too_soon, 12} => "Booking requires at least 12 hours in advance",
@@ -111,6 +113,15 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     test "falls back to generic copy for an unmapped atom" do
       assert BookingErrorMessage.message(:some_unmapped_atom) ==
                "Failed to create meeting. Please try again."
+    end
+  end
+
+  describe "message(:managed_by_host)" do
+    test "is translated from the booking errors catalogue" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert BookingErrorMessage.message(:managed_by_host) ==
+                 "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben. Wenn Ihnen die neue Zeit nicht passt, antworten Sie auf Ihre Einladung."
+      end)
     end
   end
 end

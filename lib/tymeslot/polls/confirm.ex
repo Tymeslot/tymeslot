@@ -7,7 +7,7 @@ defmodule Tymeslot.Polls.Confirm do
   sync, notifications and optional video provisioning as any other booking. On
   success the poll transitions to `:confirmed` and subscribers are notified.
 
-  The meeting is managed by the host (`MeetingSchema.managed_by_host?/1`): it
+  The meeting is managed by the host (`Tymeslot.Meetings.HostManaged.managed?/1`): it
   has no booker. Every participant is invited as a guest and answers yes or no
   like one, and only the host can move or cancel it. The first participant
   available for the slot fills the meeting's attendee fields, which a calendar
@@ -26,11 +26,13 @@ defmodule Tymeslot.Polls.Confirm do
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantSchema, PollQueries, PollSchema, PollTimeSlotQueries}
   alias Tymeslot.Repo
+  alias Tymeslot.Timezones
 
   @available_responses [:yes, :if_need_be]
 
@@ -175,11 +177,32 @@ defmodule Tymeslot.Polls.Confirm do
   end
 
   # Every invitee, the primary included: they are a guest like the rest, under the
-  # name they gave, so their emails and the host's name them.
-  defp guests(participants) do
+  # name they gave, so their emails and the host's name them. Each keeps their
+  # own language and timezone (the poll's where they gave none, as for the
+  # primary), so their emails reach them as they read the poll.
+  defp guests(participants, poll) do
     participants
-    |> Enum.map(&%{email: String.downcase(&1.email), name: &1.name})
+    |> Enum.map(
+      &%{
+        email: String.downcase(&1.email),
+        name: &1.name,
+        locale: supported_locale(&1.locale),
+        timezone: participant_timezone(&1, poll)
+      }
+    )
     |> Enum.uniq_by(& &1.email)
+  end
+
+  # A participant's language and zone are conveniences, not something the
+  # guest row may refuse: one stored before a locale was retired, or a zone the
+  # tz database has since dropped, falls back (the attendee's language, the
+  # poll's zone) rather than abort the whole confirm.
+  defp supported_locale(locale) do
+    if locale in Locales.supported_codes(), do: locale
+  end
+
+  defp participant_timezone(%{timezone: timezone}, poll) do
+    if Timezones.valid?(timezone), do: timezone, else: poll.timezone
   end
 
   # The calendar the meeting is written to is chosen as a booking of the
@@ -225,11 +248,9 @@ defmodule Tymeslot.Polls.Confirm do
       organizer_user_id: poll.user_id,
       attendee_name: PollParticipantSchema.display_name(primary),
       attendee_email: primary.email,
-      attendee_timezone: primary.timezone || poll.timezone,
-      # The meeting carries one language for all its emails, so the primary
-      # participant's stands for everyone: guests have no locale of their own.
+      attendee_timezone: participant_timezone(primary, poll),
       attendee_locale: primary.locale,
-      guest_emails: guests(invitees),
+      guest_emails: guests(invitees, poll),
       managed_by_host: true,
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.

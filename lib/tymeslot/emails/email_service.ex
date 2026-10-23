@@ -28,7 +28,7 @@ defmodule Tymeslot.Emails.EmailService do
 
   @type appointment_details :: %{
           required(:attendee_name) => String.t(),
-          required(:attendee_email) => String.t(),
+          required(:attendee_email) => String.t() | nil,
           required(:organizer_name) => String.t(),
           required(:organizer_email) => String.t(),
           required(:date) => Date.t(),

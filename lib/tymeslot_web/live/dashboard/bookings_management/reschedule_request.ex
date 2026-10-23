@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
@@ -64,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   end
 
   defp open(socket, meeting) do
-    if MeetingSchema.managed_by_host?(meeting),
+    if HostManaged.managed?(meeting),
       do: assign(socket, :host_move_meeting, meeting),
       else: ModalHook.show_modal(socket, :reschedule_request, meeting)
   end

@@ -152,7 +152,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       """
 
       #{dgettext("emails", "GUESTS:")}
-      #{Enum.map_join(appointment_details.guest_emails, "\n", &"- #{&1}")}
+      #{Enum.map_join(appointment_details.guests, "\n", &"- #{guest_line(&1)}")}
       """
     end)
   end
@@ -295,4 +295,11 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     do: "#{dgettext("emails", "Time:")} #{Formatting.format_time_short(to, locale)}"
 
   defp format_current_detail(_other, _locale), do: nil
+
+  # A guest of a host-managed meeting as a text line: their name and address,
+  # or the address alone when they gave no name.
+  defp guest_line(%{name: name, email: email}) when is_binary(name) and name != "",
+    do: "#{name} <#{email}>"
+
+  defp guest_line(%{email: email}), do: email
 end

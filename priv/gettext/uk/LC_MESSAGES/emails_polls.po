@@ -389,3 +389,18 @@ msgstr "%{host} скасовує опитування %{title}, тож зуст�
 #, elixir-autogen, elixir-format
 msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
 msgstr "Якщо маєте запитання, просто дайте відповідь на цей лист – вона надійде безпосередньо до %{host}."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Didn't ask for this? Then you can ignore this email. Your saved responses stay as they are."
+msgstr "Ви цього не запитували? Тоді просто проігноруйте цей лист. Ваші збережені відповіді залишаться без змін."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
+msgstr "Ось знову ваше посилання, щоб проголосувати в опитуванні %{title} від %{host}. Ваші вже збережені відповіді враховано, і ви можете будь-коли змінити їх через нього."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
+msgstr "%{host} скасовує опитування %{title}, тож зустріч за ним не буде призначено."

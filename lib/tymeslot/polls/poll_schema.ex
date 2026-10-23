@@ -6,6 +6,7 @@ defmodule Tymeslot.Polls.PollSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Reminders
@@ -42,6 +43,11 @@ defmodule Tymeslot.Polls.PollSchema do
     # (`Tymeslot.Emails.EmailScheduler.schedule_poll_vote_digest/1`),
     # and when they last were, so the next update names only who voted since.
     field(:notify_on_vote, :boolean, default: false)
+    # Whether only the people the host invited by email can vote. When set,
+    # the shared link asks nobody for their address
+    # (`Tymeslot.Polls.Voting.request_link/2` refuses), and switching it on
+    # withdraws the requests already waiting (`Tymeslot.Polls.Editing`).
+    field(:invite_only, :boolean, default: false)
     # When participants who have not voted are reminded, as lead times before
     # `deadline_at`. Nil for a poll from before the host could choose: see
     # `reminders/1`.
@@ -100,6 +106,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :deadline_at,
       :timezone,
       :notify_on_vote,
+      :invite_only,
       :reminder_config
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
@@ -107,6 +114,7 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_length(:title, max: 255)
     |> validate_description_length()
     |> validate_reminder_config()
+    |> validate_future_deadline()
     |> put_new_token()
     |> Token.put_hash(:token, :token_hash)
     |> unique_constraint(:token_hash)
@@ -118,11 +126,11 @@ defmodule Tymeslot.Polls.PollSchema do
   Changeset for a host editing an open poll.
 
   Covers the title, the description, whether the host is told about new votes,
-  the voting deadline, the reminders before it, and the meeting type whose
-  calendar and video the confirmed meeting uses (checked by
-  `Tymeslot.Polls.Editing`, which knows the host). A deadline may be moved,
-  removed, or set again after it passed, which reopens voting, but never into
-  the past. The candidate times, duration and timezone stay as they are:
+  who can vote (`invite_only`), the voting deadline, the reminders before it,
+  and the meeting type whose calendar and video the confirmed meeting uses
+  (checked by `Tymeslot.Polls.Editing`, which knows the host). A deadline may
+  be moved, removed, or set again after it passed, which reopens voting, but
+  never into the past. The candidate times, duration and timezone stay as they are:
   guests voted against the slots they were shown, so changing those under an
   in-flight poll would silently invalidate votes already cast. Times can only
   be added (`Tymeslot.Polls.Editing`).
@@ -134,10 +142,12 @@ defmodule Tymeslot.Polls.PollSchema do
       :title,
       :description,
       :notify_on_vote,
+      :invite_only,
       :deadline_at,
       :reminder_config,
       :meeting_type_id
     ])
+    |> start_updates_from_now()
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
     # nil as well as trim: a title of "   " arrives here as a nil *change*, and
     # `validate_required/2` is what turns it into an error.
@@ -149,6 +159,31 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_future_deadline()
     |> validate_reminder_config()
     |> foreign_key_constraint(:meeting_type_id)
+  end
+
+  @doc """
+  Whether voting is open at `now`: open status and no deadline, or a deadline
+  still ahead of `now`.
+  """
+  @spec voting_open?(%__MODULE__{} | map(), DateTime.t()) :: boolean()
+  def voting_open?(poll, now \\ Clock.utc_now())
+  def voting_open?(%{status: status}, _now) when status != :open, do: false
+  def voting_open?(%{deadline_at: nil}, _now), do: true
+
+  def voting_open?(%{deadline_at: deadline_at}, now) do
+    DateTime.compare(now, deadline_at) == :lt
+  end
+
+  @doc """
+  Of `polls`, the one whose voting closes next after `now`: the earliest
+  deadline among those still open to votes. Nil when none of them has a
+  deadline still ahead.
+  """
+  @spec next_to_close([%__MODULE__{}], DateTime.t()) :: %__MODULE__{} | nil
+  def next_to_close(polls, now) do
+    polls
+    |> Enum.filter(&(&1.deadline_at && voting_open?(&1, now)))
+    |> Enum.min_by(& &1.deadline_at, DateTime, fn -> nil end)
   end
 
   @doc """
@@ -170,6 +205,18 @@ defmodule Tymeslot.Polls.PollSchema do
         do: [],
         else: [deadline_at: "must be in the future"]
     end)
+  end
+
+  # Turning updates on starts them from now: a vote cast before is not news
+  # the host asked to hear, however long ago the last update went out.
+  defp start_updates_from_now(changeset) do
+    case get_change(changeset, :notify_on_vote) do
+      true ->
+        put_change(changeset, :vote_digest_sent_at, DateTime.truncate(Clock.utc_now(), :second))
+
+      _unchanged_or_off ->
+        changeset
+    end
   end
 
   defp validate_reminder_config(changeset) do
@@ -203,11 +250,6 @@ defmodule Tymeslot.Polls.PollSchema do
     |> cast(attrs, [:status, :confirmed_meeting_id, :confirmed_at])
     |> validate_required([:status, :confirmed_meeting_id, :confirmed_at])
   end
-
-  @doc "Marks the host as told about every vote cast up to `sent_at`."
-  @spec vote_digest_sent_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
-  def vote_digest_sent_changeset(poll, sent_at),
-    do: change(poll, vote_digest_sent_at: DateTime.truncate(sent_at, :second))
 
   @spec cancel_changeset(%__MODULE__{}) :: Ecto.Changeset.t()
   def cancel_changeset(poll), do: change(poll, status: :cancelled)

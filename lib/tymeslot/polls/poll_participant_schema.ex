@@ -5,8 +5,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   Their personal `?p=` link reaches them only by email, so holding it proves
   they own the address. Until they first save responses through it they are
   unconfirmed: they do not count anywhere (`PollSchema`'s `:participants` leaves
-  them out), and once their link is older than `unconfirmed_ttl_seconds/0`
-  it stops working and the row is pruned.
+  them out), and `unconfirmed_ttl_seconds/0` after their first request, their
+  link stops working and the row is pruned, however often it was sent again.
 
   A participant the host invited by address is confirmed from the start: the
   host vouches for the address, and the invitation carries the link. They may
@@ -30,8 +30,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   @type t :: %__MODULE__{}
 
-  # How long an unconfirmed participant's link stays valid, counted from the
-  # last time it was sent.
+  # How long an unconfirmed participant's link stays valid, counted from
+  # their first request (`inserted_at`). Sending it again never extends it.
   @unconfirmed_ttl_seconds 48 * 60 * 60
 
   schema "poll_participants" do
@@ -48,8 +48,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     # When the participant first saved responses through their emailed link.
     # Nil until then; their responses count only once it is set.
     field(:confirmed_at, :utc_datetime)
-    # When their link was last emailed: throttles repeat requests and starts
-    # the clock on an unconfirmed participant's link.
+    # When their link was last emailed. Throttles repeat requests only; the
+    # unconfirmed link's lifetime runs from `inserted_at`.
     field(:link_sent_at, :utc_datetime)
     # When the host invited them by address; nil for someone who asked for a
     # link on the voting page.
@@ -77,6 +77,24 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     |> cast(attrs, [:poll_id, :name, :email, :timezone, :locale])
     |> validate_required([:name])
     |> common_creation()
+  end
+
+  @doc """
+  The details a valid link request gives (`creation_changeset/2`) that replace
+  an unconfirmed participant's: the name, and the timezone and locale when
+  they were valid, since `creation_changeset/2` drops unknown ones.
+  """
+  @spec request_details(Ecto.Changeset.t()) :: keyword()
+  def request_details(%Ecto.Changeset{changes: changes, params: params} = changeset) do
+    details = changes |> Map.take([:name, :timezone]) |> Keyword.new()
+
+    # The struct defaults the locale to "en", so a request for "en" records no
+    # change; a supplied locale that survived validation is read from the field.
+    locale = get_field(changeset, :locale)
+
+    if is_binary(locale) and Map.get(params, "locale") == locale,
+      do: Keyword.put(details, :locale, locale),
+      else: details
   end
 
   @doc """
@@ -132,12 +150,34 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   def email_recipient(%__MODULE__{email: email}), do: email
 
-  @doc "The participant's name, or their address while they have none."
+  @doc """
+  The participant's name, or their address while they have none.
+
+  For the host and for emails only. The public voting page must never show an
+  address; it uses `public_name/1`.
+  """
   @spec display_name(%__MODULE__{}) :: String.t()
   def display_name(%__MODULE__{name: name}) when is_binary(name) and name != "", do: name
   def display_name(%__MODULE__{email: email}), do: email
 
-  @doc "How long an unconfirmed participant's link stays valid after it was last sent."
+  @doc """
+  Whether the participant was invited by the host and has not voted yet.
+  Sending their link again sends the invitation; anyone else gets the
+  voting-link email (see `Tymeslot.Polls.Invitations.resend/2`).
+  """
+  @spec unanswered_invitee?(%__MODULE__{}) :: boolean()
+  def unanswered_invitee?(%__MODULE__{invited_at: %DateTime{}, voted_at: nil}), do: true
+  def unanswered_invitee?(%__MODULE__{}), do: false
+
+  @doc """
+  The participant's name as the public voting page may show it, or nil while
+  they have none. Never their address.
+  """
+  @spec public_name(%__MODULE__{}) :: String.t() | nil
+  def public_name(%__MODULE__{name: name}) when is_binary(name) and name != "", do: name
+  def public_name(%__MODULE__{}), do: nil
+
+  @doc "How long an unconfirmed participant's link stays valid after their first request."
   @spec unconfirmed_ttl_seconds() :: pos_integer()
   def unconfirmed_ttl_seconds, do: @unconfirmed_ttl_seconds
 
@@ -157,11 +197,31 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   defp put_confirmed_at(changeset, nil, at), do: put_change(changeset, :confirmed_at, at)
   defp put_confirmed_at(changeset, _confirmed_at, _at), do: changeset
 
-  @doc "Confirms and marks invited a participant who asked for a link before the host invited them."
-  @spec invited_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
-  def invited_changeset(participant, now) do
+  @doc """
+  Confirms and marks invited a participant who asked for a link before the
+  host invited them. The name the host typed, when they gave one, replaces
+  the one the participant gave when asking.
+  """
+  @spec invited_changeset(%__MODULE__{}, String.t() | nil, DateTime.t()) :: Ecto.Changeset.t()
+  def invited_changeset(participant, host_name, now) do
     now = DateTime.truncate(now, :second)
-    change(participant, confirmed_at: now, invited_at: now)
+
+    participant
+    |> change(confirmed_at: now, invited_at: now)
+    |> put_host_name(host_name)
+  end
+
+  defp put_host_name(changeset, nil), do: changeset
+
+  # Forced so the host's name is written even when it equals the stored one:
+  # a concurrent request could have rewritten the name since it was read.
+  defp put_host_name(changeset, name) do
+    trimmed = String.trim(name)
+
+    changeset
+    |> cast(%{name: trimmed}, [:name])
+    |> validate_name()
+    |> force_change(:name, trimmed)
   end
 
   @doc "Stamps `link_sent_at` on a participant or on a changeset building one."

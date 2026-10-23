@@ -22,12 +22,40 @@ defmodule Tymeslot.Polls.InvitationsTest do
       assert Enum.all?(entries, &is_nil(&1.name))
     end
 
+    test "names every name a participant could not be given" do
+      assert {:error, {:invalid_names, ["A", "Bob%"]}} =
+               Invitations.parse(
+                 "A <a@example.com>\nBob% <bob@example.com>\nGrace <grace@example.com>"
+               )
+    end
+
+    test "reports addresses before names" do
+      assert {:error, {:invalid_addresses, ["nope"]}} =
+               Invitations.parse("A <a@example.com>\nnope")
+    end
+
     test "reads a name given as Name <address>, quoted or not" do
       assert {:ok, [grace, ada]} =
                Invitations.parse("Grace Hopper <Grace@Example.com>\n\"Ada\" <ada@example.com>")
 
       assert grace == %{name: "Grace Hopper", email: "grace@example.com"}
       assert ada == %{name: "Ada", email: "ada@example.com"}
+    end
+
+    test "reads a quoted name with a comma in it as one entry" do
+      assert {:ok, [grace, ada, alan]} =
+               Invitations.parse(
+                 ~s("Hopper, Grace" <grace@example.com>, "Lovelace, Ada" <ada@example.com>; alan@example.com)
+               )
+
+      assert grace == %{name: "Hopper, Grace", email: "grace@example.com"}
+      assert ada == %{name: "Lovelace, Ada", email: "ada@example.com"}
+      assert alan == %{name: nil, email: "alan@example.com"}
+    end
+
+    test "an unclosed quote does not swallow the entries on the lines after it" do
+      assert {:error, {:invalid_addresses, ["\"Hopper"]}} =
+               Invitations.parse("\"Hopper\nGrace <grace@example.com>")
     end
 
     test "drops an address given twice, whatever its case" do
@@ -54,6 +82,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
   describe "invite/2" do
     setup do
       user = insert(:user, locale: "de")
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
       poll = insert(:poll, user: user, timezone: "Europe/Berlin")
       %{poll: poll}
     end
@@ -61,7 +90,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
     test "adds each invitee as a confirmed participant and emails them", %{poll: poll} do
       {:ok, entries} = Invitations.parse("Grace <grace@example.com>\nada@example.com")
 
-      assert {:ok, %{invited: invited, skipped: []}} = Invitations.invite(poll, entries)
+      assert {:ok, %{invited: invited, skipped: []}} =
+               Polls.invite_participants(poll.id, poll.user_id, entries)
+
       assert length(invited) == 2
 
       grace = PollParticipantQueries.get_by_poll_and_email(poll.id, "grace@example.com")
@@ -93,16 +124,20 @@ defmodule Tymeslot.Polls.InvitationsTest do
       insert(:poll_participant, poll: poll, email: "ada@example.com")
 
       assert {:ok, %{invited: [], skipped: ["ada@example.com"]}} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
 
       assert all_enqueued(worker: EmailWorker) == []
     end
 
     test "confirms and invites someone who asked for a link but never voted", %{poll: poll} do
-      :ok = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
+      {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
 
       assert {:ok, %{invited: [ada], skipped: []}} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
 
       assert %DateTime{} = ada.confirmed_at
       assert %DateTime{} = ada.invited_at
@@ -114,20 +149,67 @@ defmodule Tymeslot.Polls.InvitationsTest do
       )
     end
 
+    test "the host's name for someone wins over the one they gave when asking", %{poll: poll} do
+      {:ok, :sent} = Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
+
+      assert {:ok, %{invited: [ada], skipped: []}} =
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: "Ada Lovelace"}
+               ])
+
+      assert ada.name == "Ada Lovelace"
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").name ==
+               "Ada Lovelace"
+
+      assert {:ok, _outcome} =
+               Voting.request_link(poll, %{name: "Mallory", email: "ada@example.com"})
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com").name ==
+               "Ada Lovelace"
+    end
+
+    test "a host's name the rules refuse invites nobody and changes nothing", %{poll: poll} do
+      {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
+
+      assert {:error, %Ecto.Changeset{}} =
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: "Ada%"}
+               ])
+
+      unchanged = PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com")
+      assert unchanged.name == "Ada"
+      assert unchanged.confirmed_at == nil
+    end
+
     test "invites nobody when the invitees would overfill the poll", %{poll: poll} do
       insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
       {:ok, entries} = Invitations.parse("ada@example.com, grace@example.com")
 
-      assert {:error, :poll_full} = Invitations.invite(poll, entries)
+      assert {:error, :poll_full} = Polls.invite_participants(poll.id, poll.user_id, entries)
       assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com") == nil
       assert all_enqueued(worker: EmailWorker) == []
     end
 
+    test "tells the host to move the deadline when voting has closed" do
+      past = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+      poll = insert(:poll, status: :open, deadline_at: past, user: host_with_username())
+
+      assert {:error, :voting_closed} =
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
+
+      assert PollParticipantQueries.get_by_poll_and_email(poll.id, "ada@example.com") == nil
+    end
+
     test "refuses a poll that is no longer open" do
-      poll = insert(:poll, status: :cancelled)
+      poll = insert(:poll, status: :cancelled, user: host_with_username())
 
       assert {:error, :not_open} =
-               Invitations.invite(poll, [%{email: "ada@example.com", name: nil}])
+               Polls.invite_participants(poll.id, poll.user_id, [
+                 %{email: "ada@example.com", name: nil}
+               ])
     end
   end
 
@@ -142,7 +224,9 @@ defmodule Tymeslot.Polls.InvitationsTest do
         slots: [%{start_time: start_time}]
       }
 
-      %{user: insert(:user), attrs: attrs}
+      user = insert(:user)
+      insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      %{user: user, attrs: attrs}
     end
 
     test "invites them with the poll and emails them once it is saved", %{
@@ -172,5 +256,11 @@ defmodule Tymeslot.Polls.InvitationsTest do
 
       assert all_enqueued(worker: EmailWorker) == []
     end
+  end
+
+  defp host_with_username do
+    user = insert(:user)
+    insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    user
   end
 end

@@ -387,3 +387,18 @@ msgstr "%{host} hat die Umfrage %{title} abgesagt, es wird also kein Termin dara
 #, elixir-autogen, elixir-format
 msgid "If you have questions, just reply to this email; your reply goes straight to %{host}."
 msgstr "Bei Fragen antworten Sie einfach auf diese E-Mail – die Antwort geht direkt an %{host}."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Didn't ask for this? Then you can ignore this email. Your saved responses stay as they are."
+msgstr "Sie haben das nicht angefordert? Dann können Sie diese E-Mail ignorieren. Ihre gespeicherten Antworten bleiben unverändert."
+
+#: lib/tymeslot/emails/templates/poll_participant_link.ex
+#, elixir-autogen, elixir-format
+msgid "Here is your link to vote on %{title} for %{host} again. The responses you saved already count, and you can change them through it at any time."
+msgstr "Hier ist noch einmal Ihr Link, um für %{host} über %{title} abzustimmen. Ihre bereits gespeicherten Antworten zählen, und Sie können sie darüber jederzeit ändern."
+
+#: lib/tymeslot/emails/templates/poll_cancelled.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
+msgstr "%{host} hat die Umfrage %{title} abgesagt, es wird also kein Termin daraus festgelegt."

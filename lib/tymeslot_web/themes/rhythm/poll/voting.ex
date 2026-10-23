@@ -20,7 +20,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
-  attr :link_requested_for, :string, default: nil
+  attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
+  attr :invalid_link, :boolean, default: false
 
   @doc "Renders the poll voting page in Rhythm theme style."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -41,7 +42,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
                 tallies={@tallies}
                 voting_open={@voting_open}
                 participant={@participant}
-                link_requested_for={@link_requested_for}
+                link_request={@link_request}
+                invalid_link={@invalid_link}
               />
             </div>
           </div>

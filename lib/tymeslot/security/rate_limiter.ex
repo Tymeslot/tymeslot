@@ -8,6 +8,11 @@ defmodule Tymeslot.Security.RateLimiter do
       RateLimiter.check(:meeting_cancel, client_ip)
       RateLimiter.check(:webhook_write, user_id)
 
+  `consume/3` charges several units at once, all or none, for a request
+  refused whole:
+
+      RateLimiter.consume(:poll_host_invitations, user_id, length(addresses))
+
   A caller outside this application, which cannot add to that table, uses
   `check_bucket/2` with its own key and budget. Login and connection tests
   keep their own functions: one charges several related buckets and a
@@ -24,6 +29,8 @@ defmodule Tymeslot.Security.RateLimiter do
   alias Tymeslot.Security.RateLimiter.Helpers
   alias Tymeslot.Security.RateLimiter.Integrations
   alias Tymeslot.Security.RateLimiter.Limits
+
+  require Logger
 
   @type bucket_key :: String.t()
   @type result :: :ok | {:error, :rate_limited, String.t()}
@@ -60,6 +67,76 @@ defmodule Tymeslot.Security.RateLimiter do
       Keyword.fetch!(opts, :window_ms),
       opts
     )
+  end
+
+  @doc """
+  Charges `count` units against the named limit at once, all or none, for
+  `key` as in `check/2`.
+
+  When they do not all fit in every window, nothing is charged and the answer
+  is `{:error, {:rate_limited, remaining}}`, how many would have fitted, so
+  the caller can say so. Unlike `check/2`, a refusal charges nothing.
+  """
+  @spec consume(Limits.name(), term(), non_neg_integer()) ::
+          :ok
+          | {:error, {:rate_limited, non_neg_integer()}}
+          | {:error, :invalid_user_id}
+          | {:error, :invalid_id}
+  def consume(name, key, count) when is_integer(count) and count >= 0 do
+    entry = Limits.fetch!(name)
+
+    with {:ok, buckets} <- buckets(entry, key) do
+      case RateLimit.take(buckets, count) do
+        :ok ->
+          :ok
+
+        {:deny, remaining} ->
+          if Keyword.get(entry, :log, true) do
+            Logger.warning(
+              "Rate limit exceeded",
+              [operation: entry[:operation], requested: count, remaining: remaining] ++
+                user_metadata(entry[:scope], key)
+            )
+          end
+
+          {:error, {:rate_limited, remaining}}
+      end
+    end
+  end
+
+  # Only a user id is logged; an address or source never is.
+  defp user_metadata(:user, user_id), do: [user_id: user_id]
+  defp user_metadata(_scope, _key), do: []
+
+  @doc """
+  How many more units the named limit allows `key` right now, in its
+  tightest window. Charges nothing.
+  """
+  @spec remaining(Limits.name(), term()) ::
+          non_neg_integer() | {:error, :invalid_user_id} | {:error, :invalid_id}
+  def remaining(name, key) do
+    with {:ok, buckets} <- buckets(Limits.fetch!(name), key),
+         do: RateLimit.available(buckets)
+  end
+
+  # Every window the entry charges, as `RateLimit.take/3` takes them. The
+  # keys are the ones `check/2` builds, so a limit must be charged by one
+  # pair only: `check/2` (`hit/3`) or `consume/3` (`take/3`). Mixing them on
+  # one bucket would count a refused `check/2` hit against later takes.
+  defp buckets(entry, key) do
+    with {:ok, suffix, _identifier} <- scope_key(entry[:scope], key, entry[:operation]) do
+      {:ok, windows("#{entry[:prefix]}:#{suffix}", entry)}
+    end
+  end
+
+  defp windows(bucket_key, entry) do
+    case entry[:tiers] do
+      nil ->
+        [{bucket_key, entry[:window_ms], entry[:limit]}]
+
+      tiers ->
+        for {label, limit, window_ms} <- tiers, do: {"#{bucket_key}:#{label}", window_ms, limit}
+    end
   end
 
   defp scope_key(:source, ip, _operation), do: {:ok, Helpers.source_key(ip), ip}
