@@ -298,15 +298,23 @@ defmodule Tymeslot.Polls.Voting do
   # write its row, then wait for the host's lock on the poll while the host
   # waits on that row: a deadlock. Taken first, the request waits for the
   # host's invitations to commit and then meets the address as a known one.
+  # The lock also settles a host switching the poll to invite-only meanwhile:
+  # the request reads the poll as the switch left it, so it cannot write a
+  # row the switch's withdrawal has already passed over.
   defp insert_under_poll_lock(changeset, poll) do
     Repo.transaction(fn ->
-      PollQueries.lock_shared(poll.id)
-
-      case PollParticipantQueries.insert(changeset) do
-        {:ok, participant} -> participant
-        {:error, changeset} -> Repo.rollback(changeset)
+      case PollQueries.lock_shared(poll.id) do
+        %PollSchema{invite_only: true} -> Repo.rollback(:invite_only)
+        _open_or_gone -> insert_or_rollback(changeset)
       end
     end)
+  end
+
+  defp insert_or_rollback(changeset) do
+    case PollParticipantQueries.insert(changeset) do
+      {:ok, participant} -> participant
+      {:error, changeset} -> Repo.rollback(changeset)
+    end
   end
 
   defp participant_attrs(poll, attrs) do
@@ -325,6 +333,8 @@ defmodule Tymeslot.Polls.Voting do
     EmailScheduler.schedule_poll_participant_link(participant)
     {:ok, :sent}
   end
+
+  defp handle_insert({:error, :invite_only} = refused, _poll, _request), do: refused
 
   # On the unique-constraint race a concurrent request for the same address
   # inserted first, so this one turns out to be a request for a known

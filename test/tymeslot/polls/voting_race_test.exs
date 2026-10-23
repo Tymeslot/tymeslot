@@ -260,6 +260,34 @@ defmodule Tymeslot.Polls.VotingRaceTest do
     assert fresh_id == to_string(fresh.id)
   end
 
+  test "a link request overtaken by the switch to invite-only is refused and leaves no row", %{
+    poll: poll
+  } do
+    test_pid = self()
+
+    request =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(RaceConductor.park_here(test_pid), &address_lookup?/1)
+          Voting.request_link(poll, %{name: "Ada", email: "ada@example.com"})
+        end)
+      end)
+
+    # The request has passed the invite-only check and found no row for the
+    # address; the host shuts the door before it writes one.
+    assert_receive {:parked, request_pid}, 5_000
+
+    assert {:ok, _switched} =
+             unboxed(fn ->
+               Polls.update_details(poll.id, poll.user_id, %{"invite_only" => true})
+             end)
+
+    send(request_pid, :release)
+
+    assert {:error, :invite_only} = Task.await(request)
+    assert {[], []} = unboxed(fn -> participants_and_link_jobs(poll) end)
+  end
+
   test "deleting a poll while a vote is being saved waits for the vote, then takes it with the poll",
        %{poll: poll} do
     {participant, slot, loaded} = voter_on(poll)
