@@ -97,12 +97,14 @@ msgid "Voting closed"
 msgstr "Голосування завершено"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes"
 msgstr "Голосування завершується"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes:"
@@ -123,6 +125,7 @@ msgstr "Голосування щодо %{title} завершено"
 msgid "Your vote is needed"
 msgstr "Потрібен ваш голос"
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -164,6 +167,7 @@ msgstr "Ні"
 msgid "No answer"
 msgstr "Немає відповіді"
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #: lib/tymeslot/emails/templates/poll_vote_receipt.ex
 #, elixir-autogen, elixir-format
@@ -180,16 +184,19 @@ msgstr "Дякуємо за голос"
 msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it."
 msgstr "Це посилання лише для вас: будь-хто, хто його має, може змінити ваші відповіді, тож не діліться ним."
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "This link is yours alone: anyone who has it can change your responses, so please don't share it. Keep this email to come back later."
 msgstr "Це посилання лише для вас: будь-хто, хто його має, може змінити ваші відповіді, тож не діліться ним. Збережіть цей лист, щоб повернутися пізніше."
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote Now"
 msgstr "Проголосувати"
 
+#: lib/tymeslot/emails/templates/poll_invitation.ex
 #: lib/tymeslot/emails/templates/poll_participant_link.ex
 #, elixir-autogen, elixir-format
 msgid "Vote here:"
@@ -300,3 +307,28 @@ msgstr "Ви отримуєте ці оновлення не частіше ні
 #, elixir-autogen, elixir-format
 msgid "most votes"
 msgstr "найбільше голосів"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} invites you to vote on \"%{title}\""
+msgstr "%{host} запрошує вас проголосувати в опитуванні «%{title}»"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} would like to know which of these times suit you. Open your personal link, mark each time, and save."
+msgstr "%{host} хоче знати, який із цих варіантів часу вам підходить. Відкрийте особисте посилання, позначте відповідь для кожного варіанта й збережіть."
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Help pick a time"
+msgstr "Допоможіть обрати час"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the host"
+msgstr "Повідомлення від організатора"
+
+#: lib/tymeslot/emails/templates/poll_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Proposed times"
+msgstr "Запропонований час"

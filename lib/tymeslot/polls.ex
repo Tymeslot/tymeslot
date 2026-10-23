@@ -11,6 +11,7 @@ defmodule Tymeslot.Polls do
   alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Polls.{
+    Invitations,
     PollParticipantQueries,
     PollParticipantSchema,
     PollQueries,
@@ -38,7 +39,9 @@ defmodule Tymeslot.Polls do
   `attrs` carries `:title`, `:duration_minutes`, `:timezone`, and `:slots` (a
   list of `%{start_time: dt, end_time: dt}`; `end_time` may be omitted and then
   defaults to `start_time` plus the poll duration). `:description`,
-  `:deadline_at`, and `:meeting_type_id` are optional.
+  `:deadline_at`, and `:meeting_type_id` are optional, and so is `:invitees`,
+  entries from `Tymeslot.Polls.Invitations.parse/1` invited with the poll and
+  emailed once it is saved.
 
   When `:meeting_type_id` is given it is loaded scoped to `user_id`; the poll
   snapshots the type's name and duration unless those are given explicitly.
@@ -51,6 +54,7 @@ defmodule Tymeslot.Polls do
              | :no_slots
              | :too_many_slots
              | :slot_in_past
+             | :poll_full
              | Ecto.Changeset.t()}
   def create_poll(user_id, attrs) do
     with {:ok, attrs} <- apply_meeting_type(user_id, attrs),
@@ -124,6 +128,27 @@ defmodule Tymeslot.Polls do
   def update_details(id, user_id, attrs) do
     with_open_poll_locked(id, user_id, fn poll ->
       PollQueries.update(PollSchema.details_changeset(poll, attrs))
+    end)
+  end
+
+  @doc """
+  Invites `entries` (from `Tymeslot.Polls.Invitations.parse/1`) to the user's
+  open poll and emails each new invitee their link. See
+  `Tymeslot.Polls.Invitations.invite/2`.
+  """
+  @spec invite_participants(Ecto.UUID.t(), integer(), [Invitations.entry()]) ::
+          {:ok, Invitations.result()}
+          | {:error, :not_found | :not_open | :poll_full | Ecto.Changeset.t()}
+  def invite_participants(id, user_id, entries) do
+    with_poll(id, user_id, fn poll ->
+      case Invitations.invite(poll, entries) do
+        {:ok, result} ->
+          broadcast_update(poll.id)
+          {:ok, result}
+
+        error ->
+          error
+      end
     end)
   end
 
@@ -291,6 +316,7 @@ defmodule Tymeslot.Polls do
   end
 
   defp insert_poll(user_id, attrs, slots) do
+    {invitees, attrs} = Map.pop(attrs, :invitees, [])
     poll_attrs = attrs |> Map.put(:user_id, user_id) |> Map.drop([:slots])
 
     transaction =
@@ -298,15 +324,16 @@ defmodule Tymeslot.Polls do
         with {:ok, poll} <-
                PollQueries.insert(PollSchema.creation_changeset(%PollSchema{}, poll_attrs)),
              :ok <- insert_slots(poll, slots) do
-          poll
+          {poll, Invitations.insert(poll, invitees)}
         else
           {:error, changeset} -> Repo.rollback(changeset)
         end
       end)
 
     case transaction do
-      {:ok, poll} ->
+      {:ok, {poll, invitations}} ->
         :ok = EmailScheduler.schedule_poll_deadline_jobs(poll)
+        :ok = Invitations.send_invitations(invitations.invited)
         {:ok, PollQueries.get_for_user(poll.id, user_id)}
 
       {:error, reason} ->

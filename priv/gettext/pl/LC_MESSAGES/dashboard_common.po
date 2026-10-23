@@ -450,6 +450,7 @@ msgstr "Ten typ spotkania jest niedostępny"
 msgid "This poll is confirmed. The winning time is highlighted below."
 msgstr "Ta ankieta jest potwierdzona. Zwycięski termin jest wyróżniony poniżej."
 
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is no longer open."
@@ -763,3 +764,64 @@ msgstr "Najwyżej jeden e-mail co 15 minut, z listą głosujących i aktualnymi 
 #, elixir-autogen, elixir-format
 msgid "Email me about new votes"
 msgstr "Powiadamiaj e-mailem o nowych głosach"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} address was already on the poll."
+msgid_plural "%{count} addresses were already on the poll."
+msgstr[0] "%{count} adres był już w ankiecie."
+msgstr[1] "%{count} adresy były już w ankiecie."
+msgstr[2] "%{count} adresów było już w ankiecie."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "A poll can have up to %{max} participants."
+msgstr "Ankieta może mieć maksymalnie %{max} uczestników."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't send the invitations. Please try again."
+msgstr "Nie udało się wysłać zaproszeń. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Enter at least one email address."
+msgstr "Podaj co najmniej jeden adres e-mail."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{count} person."
+msgid_plural "Invitations sent to %{count} people."
+msgstr[0] "Wysłano zaproszenie do %{count} osoby."
+msgstr[1] "Wysłano zaproszenia do %{count} osób."
+msgstr[2] "Wysłano zaproszenia do %{count} osób."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Invite by email (optional)"
+msgstr "Zaproś e-mailem (opcjonalnie)"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid email addresses: %{entries}"
+msgstr "Nieprawidłowe adresy e-mail: %{entries}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "One address per line or separated by commas. Each person gets an email with their own voting link."
+msgstr "Jeden adres w wierszu lub adresy oddzielone przecinkami. Każda osoba otrzyma e-mail z własnym linkiem do głosowania."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitations"
+msgstr "Wyślij zaproszenia"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for: %{names}"
+msgstr "Oczekiwanie na: %{names}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "ada@example.com, Grace Hopper <grace@example.com>"
+msgstr "jan.kowalski@example.com, Anna Nowak <anna@example.com>"

@@ -31,6 +31,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Polls.PollVoteSchema
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Repo
@@ -398,11 +399,11 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
                })
     end
 
-    test "a link for a 41st participant is refused once the cap is reached" do
+    test "a link for one participant more than the cap is refused" do
       %{user: user} = seed_booking_account("1", "partcap-host", "Etc/UTC")
       poll = insert(:poll, user: user, status: :open)
 
-      for n <- 1..40 do
+      for n <- 1..PollSchema.max_participants() do
         insert(:poll_participant, poll: poll, email: "full-#{n}@example.com")
       end
 

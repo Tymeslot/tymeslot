@@ -21,6 +21,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
+  alias Tymeslot.Polls.Invitations
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Repo
@@ -119,7 +120,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   # --- All-voted nudge on the last vote ---
 
   describe "all-voted nudge" do
-    test "enqueues exactly once when the final participant votes, even on re-submit" do
+    test "enqueues exactly once when the last invitee votes, even on re-submit" do
       user = insert(:user)
       poll = insert(:poll, status: :open, user: user)
       start_one = in_hours(48)
@@ -130,8 +131,11 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
 
-      alice = request(poll, %{name: "Alice", email: "a@example.com"})
-      bob = request(poll, %{name: "Bob", email: "b@example.com"})
+      {:ok, %{invited: [alice, bob]}} =
+        Invitations.invite(poll, [
+          %{name: "Alice", email: "a@example.com"},
+          %{name: "Bob", email: "b@example.com"}
+        ])
 
       {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot_one.id => :yes})
 
@@ -154,22 +158,42 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       assert enqueued_all_voted_count(poll.id) == 1
     end
 
-    test "a link request that expired unconfirmed does not hold the nudge back" do
+    test "a link request still open holds the nudge back, an expired one does not" do
       user = insert(:user)
       poll = insert(:poll, status: :open, user: user)
       slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
 
-      insert(:poll_participant,
-        poll: poll,
-        confirmed_at: nil,
-        link_sent_at: DateTime.add(DateTime.utc_now(:second), -3, :day)
-      )
+      expired =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: nil,
+          link_sent_at: DateTime.add(DateTime.utc_now(:second), -3, :day)
+        )
+
+      pending = request(poll, %{name: "Bob", email: "b@example.com"})
+
+      {:ok, %{invited: [alice]}} =
+        Invitations.invite(poll, [%{name: "Alice", email: "a@example.com"}])
+
+      {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
+      assert enqueued_all_voted_count(poll.id) == 0
+
+      {:ok, _bob_vote} = Voting.cast_votes(poll, pending.token, %{slot.id => :yes})
+      assert enqueued_all_voted_count(poll.id) == 1
+      assert expired.voted_at == nil
+    end
+
+    test "a poll shared only by link never claims everyone has voted" do
+      user = insert(:user)
+      poll = insert(:poll, status: :open, user: user)
+      slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
 
       alice = request(poll, %{name: "Alice", email: "a@example.com"})
       {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot.id => :yes})
 
-      assert enqueued_all_voted_count(poll.id) == 1
+      assert enqueued_all_voted_count(poll.id) == 0
     end
   end
 

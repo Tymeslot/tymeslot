@@ -170,3 +170,8 @@ msgstr "Questo link di voto non è più valido. Richiedine uno nuovo dalla pagin
 #, elixir-autogen, elixir-format
 msgid "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there."
 msgstr "Abbiamo inviato un link di voto personale a %{email}. Aprilo per votare; le tue risposte vengono conteggiate non appena le salvi lì."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name, then save your responses again."
+msgstr "Inserisci il tuo nome, poi salva di nuovo le tue risposte."

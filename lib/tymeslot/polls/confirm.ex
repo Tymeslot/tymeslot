@@ -19,7 +19,7 @@ defmodule Tymeslot.Polls.Confirm do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries}
+  alias Tymeslot.Polls.{PollParticipantSchema, PollQueries, PollSchema, PollTimeSlotQueries}
   alias Tymeslot.Repo
 
   @available_responses [:yes, :if_need_be]
@@ -181,7 +181,7 @@ defmodule Tymeslot.Polls.Confirm do
       start_time: slot.start_time,
       end_time: slot.end_time,
       organizer_user_id: poll.user_id,
-      attendee_name: primary.name,
+      attendee_name: PollParticipantSchema.display_name(primary),
       attendee_email: primary.email,
       attendee_timezone: primary.timezone || poll.timezone,
       calendar_integration_id: calendar_integration_id,

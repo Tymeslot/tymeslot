@@ -26,8 +26,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
+  alias Tymeslot.Polls.Invitations
   alias Tymeslot.Polls.SlotHealth
-  alias TymeslotWeb.Dashboard.Polls.{CancelPollModal, PollForm, PollList, PollResults}
+
+  alias TymeslotWeb.Dashboard.Polls.{
+    CancelPollModal,
+    PollForm,
+    PollInvite,
+    PollList,
+    PollResults
+  }
+
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -69,6 +78,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:selected_poll_id, fn -> nil end)
      |> assign_new(:selected_poll, fn -> nil end)
      |> assign_new(:unconfirmed_count, fn -> 0 end)
+     |> assign_new(:invite_value, fn -> "" end)
+     |> assign_new(:invite_error, fn -> nil end)
      |> assign_new(:tallies, fn -> %{} end)
      |> assign_new(:slot_health, fn -> %{} end)
      |> assign_new(:slot_health_loading, fn -> false end)
@@ -114,6 +125,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             :if={@selected_poll}
             poll={@selected_poll}
             unconfirmed_count={@unconfirmed_count}
+            invite_value={@invite_value}
+            invite_error={@invite_error}
             tallies={@tallies}
             slot_health={@slot_health}
             slot_health_loading={@slot_health_loading}
@@ -133,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             :if={@selected_poll}
             open={@show_cancel_modal}
             poll={@selected_poll}
-            participant_count={length(@selected_poll.participants)}
+            participant_count={Enum.count(@selected_poll.participants, & &1.voted_at)}
             myself={@myself}
           />
 
@@ -262,6 +275,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("invite_participants", %{"invite" => %{"emails" => text}}, socket) do
+    poll_id = socket.assigns.selected_poll_id
+    user_id = socket.assigns.current_user.id
+
+    with {:ok, [_entry | _rest] = entries} <- parse_invitees(text),
+         {:ok, result} <- Polls.invite_participants(poll_id, user_id, entries) do
+      Flash.info(PollInvite.invited_message(result))
+
+      {:noreply,
+       socket
+       |> assign(invite_value: "", invite_error: nil)
+       |> reload_selected(refresh_health: false)
+       |> load_polls()}
+    else
+      {:error, :not_open} ->
+        {:noreply, poll_no_longer_open(socket)}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket, invite_value: text, invite_error: PollInvite.error_message(reason))}
+    end
+  end
+
   def handle_event("toggle_slot_voters", %{"slot" => slot_id}, socket) do
     # Expansion is per slot and additive: a host comparing two close times wants
     # both breakdowns open at once.
@@ -321,8 +357,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   defp open_results(socket, poll_id) do
     socket
     |> assign(:selected_poll_id, poll_id)
-    |> assign(:slot_errors, %{})
+    |> assign(slot_errors: %{}, invite_value: "", invite_error: nil)
     |> reload_selected(refresh_health: true)
+  end
+
+  defp parse_invitees(text) do
+    case Invitations.parse(text) do
+      {:ok, []} -> {:error, :no_invitees}
+      result -> result
+    end
   end
 
   defp reload_selected(socket, opts) do
@@ -418,7 +461,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       show_cancel_modal: false,
       expanded_slots: MapSet.new(),
       editing_details?: false,
-      detail_errors: %{}
+      detail_errors: %{},
+      invite_value: "",
+      invite_error: nil
     )
   end
 

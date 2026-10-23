@@ -138,6 +138,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   defdelegate schedule_poll_vote_digest(poll), to: PollScheduler, as: :schedule_vote_digest
 
+  defdelegate schedule_poll_invitation(participant),
+    to: PollScheduler,
+    as: :schedule_invitation
+
   # Integration emails
 
   defdelegate schedule_integration_unhealthy_notification(user, integration, type),

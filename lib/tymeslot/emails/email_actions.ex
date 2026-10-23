@@ -109,6 +109,7 @@ defmodule Tymeslot.Emails.EmailActions do
     "send_poll_vote_digest" => {["poll_id"], {PollEmails, :handle_vote_digest, :with_job_id}},
     "send_poll_participant_link" => {["participant_id"], {PollEmails, :handle_participant_link}},
     "send_poll_vote_receipt" => {["participant_id"], {PollEmails, :handle_vote_receipt}},
+    "send_poll_invitation" => {["participant_id"], {PollEmails, :handle_invitation}},
     # Accounts
     "send_email_verification" =>
       {["user_id", "verification_url_encrypted"], {AuthEmails, :handle_email_verification}},

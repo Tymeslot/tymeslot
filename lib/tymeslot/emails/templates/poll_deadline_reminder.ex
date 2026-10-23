@@ -59,7 +59,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
         )
 
       MjmlEmail.base_email()
-      |> to({participant.name, participant.email})
+      |> to(PollParticipantSchema.email_recipient(participant))
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title))

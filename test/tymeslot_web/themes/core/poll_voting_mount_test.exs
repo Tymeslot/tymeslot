@@ -186,6 +186,32 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       assert has_element?(view, "[data-testid='poll-link-notice']", "your personal link")
     end
 
+    test "someone invited without a name is asked for it with their first responses", %{
+      conn: conn,
+      poll: poll,
+      slot: slot,
+      profile: profile
+    } do
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      {:ok, view, _html} =
+        live(conn, poll_path(profile.username, poll.token) <> "?p=#{invitee.token}")
+
+      assert has_element?(view, "[data-testid='poll-participant-name']", "ada@example.com")
+      assert has_element?(view, "[data-testid='poll-voter-name']")
+
+      view
+      |> form("form[data-testid='poll-vote-form']", %{
+        "name" => "Ada Lovelace",
+        "votes" => %{slot.id => "yes"}
+      })
+      |> render_submit()
+
+      assert Repo.get!(PollParticipantSchema, invitee.id).name == "Ada Lovelace"
+      assert has_element?(view, "[data-testid='poll-participant-name']", "Ada Lovelace")
+      refute has_element?(view, "[data-testid='poll-voter-name']")
+    end
+
     test "an unconfirmed link past its lifetime opens the request form instead", %{
       conn: conn,
       poll: poll,

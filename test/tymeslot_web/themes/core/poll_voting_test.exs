@@ -102,10 +102,10 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert flash(updated, :error) =~ "personal voting link"
     end
 
-    test "cast_votes saves responses and reloads tallies for a confirmed participant" do
+    test "cast_votes saves responses and reloads tallies for a returning participant" do
       poll = insert(:poll)
       slot = insert(:poll_time_slot, poll: poll)
-      participant = insert(:poll_participant, poll: poll)
+      participant = insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
       socket = socket(%{poll: poll, participant: participant})
 

@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
+  alias Tymeslot.Polls.PollParticipantSchema
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -87,7 +88,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <% :vote -> %>
           <.deadline_banner poll={@poll} />
           <p class="poll-voting-greeting" data-testid="poll-participant-name">
-            {dgettext("booking_polls", "Voting as %{name}", name: @participant.name)}
+            {dgettext("booking_polls", "Voting as %{name}",
+              name: PollParticipantSchema.display_name(@participant)
+            )}
           </p>
           <p class="poll-voting-notice" data-testid="poll-link-notice">
             <%= if @participant.confirmed_at do %>
@@ -268,6 +271,22 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     ~H"""
     <%= if @editable do %>
       <form phx-submit="cast_votes" class="poll-slot-form" data-testid="poll-vote-form">
+        <%!-- Someone the host invited by address alone gives their name with
+              their first responses. --%>
+        <div :if={@participant && is_nil(@participant.name)} class="poll-field">
+          <label class="poll-field-label" for="poll-voter-name">
+            {dgettext("booking_polls", "Your name")}
+          </label>
+          <input
+            id="poll-voter-name"
+            class="poll-field-input"
+            type="text"
+            name="name"
+            autocomplete="name"
+            required
+            data-testid="poll-voter-name"
+          />
+        </div>
         <div class="poll-slot-grid">
           <.slot_row
             :for={slot <- @slots}

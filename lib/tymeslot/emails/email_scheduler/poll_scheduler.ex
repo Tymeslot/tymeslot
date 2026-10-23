@@ -72,6 +72,18 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   end
 
   @doc """
+  Sends an invitee their invitation now. Keyed so it goes out once per
+  participant; someone who loses it asks for their link on the voting page.
+  """
+  @spec schedule_invitation(map()) :: :ok
+  def schedule_invitation(participant) do
+    insert_job(
+      %{"action" => "send_poll_invitation", "participant_id" => participant.id},
+      unique: unique_opts([:action, :participant_id])
+    )
+  end
+
+  @doc """
   Sends a participant the receipt for their first saved responses now. Keyed
   so it goes out once per participant.
   """

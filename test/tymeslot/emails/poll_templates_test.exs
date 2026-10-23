@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
   alias Tymeslot.Emails.Templates.{
     PollDeadlineReminder,
     PollHostNudge,
+    PollInvitation,
     PollParticipantLink,
     PollVoteDigest,
     PollVoteReceipt
@@ -340,6 +341,60 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       assert email.text_body =~ ": 2 yes, 0 if need be, 0 no"
       assert email.text_body =~ "turn them off"
       assert email.html_body =~ "https://tymeslot.app/dashboard/polls"
+    end
+  end
+
+  describe "PollInvitation.render/3" do
+    setup do
+      poll =
+        insert(:poll,
+          title: "Sprint Planning",
+          description: "<script>alert(1)</script>Bring the roadmap.",
+          timezone: "Europe/Berlin",
+          deadline_at: ~U[2030-03-01 17:00:00Z]
+        )
+
+      start_time = ~U[2030-03-04 10:00:00Z]
+
+      insert(:poll_time_slot,
+        poll: poll,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 1, :hour)
+      )
+
+      poll = Repo.preload(poll, [:time_slots, user: :profile])
+      url = "https://tymeslot.app/h/poll/t?p=personal-123"
+      %{poll: poll, url: url}
+    end
+
+    test "carries the times in the invitee's zone, the deadline, the note and the link", ctx do
+      invitee =
+        insert(:poll_participant,
+          poll: ctx.poll,
+          name: nil,
+          email: "dana@example.com",
+          timezone: "Europe/Berlin"
+        )
+
+      email = PollInvitation.render(ctx.poll, invitee, ctx.url)
+
+      assert email.to == [{"", "dana@example.com"}]
+      assert email.subject =~ "Sprint Planning"
+      assert email.html_body =~ ctx.url
+      assert email.text_body =~ ctx.url
+      # 10:00 UTC is 11:00 in Berlin in March.
+      assert email.text_body =~ "11:00"
+      assert email.text_body =~ "Voting closes"
+      assert email.html_body =~ "Bring the roadmap."
+      refute email.html_body =~ "<script>"
+    end
+
+    test "addresses an invitee by name when the host gave one", ctx do
+      invitee = insert(:poll_participant, poll: ctx.poll, name: "Dana", email: "dana@example.com")
+
+      assert PollInvitation.render(ctx.poll, invitee, ctx.url).to == [
+               {"Dana", "dana@example.com"}
+             ]
     end
   end
 

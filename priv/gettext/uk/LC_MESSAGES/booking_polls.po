@@ -170,3 +170,8 @@ msgstr "Це посилання для голосування більше не�
 #, elixir-autogen, elixir-format
 msgid "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there."
 msgstr "Ми надіслали особисте посилання для голосування на %{email}. Відкрийте його, щоб проголосувати; ваші відповіді враховуватимуться, щойно ви збережете їх там."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter your name, then save your responses again."
+msgstr "Введіть своє ім'я, а потім збережіть відповіді ще раз."
