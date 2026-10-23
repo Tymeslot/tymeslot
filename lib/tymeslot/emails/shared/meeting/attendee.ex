@@ -1,7 +1,8 @@
 defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   @moduledoc """
   Attendee blocks for organiser-facing meeting emails — the contact information
-  table and the optional attendee-message callout.
+  table, the optional attendee-message callout, and, for a meeting nobody
+  booked, the list of its guests.
 
   Both components take an explicit intent so colouring (link, tint, rail)
   matches the surrounding stage band.
@@ -58,6 +59,42 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   end
 
   @doc """
+  Who the organiser's copy is about: the attendee, or, for a meeting the
+  host manages (`:host_managed`, see
+  `Tymeslot.Emails.AppointmentBuilder.organizer_copy/2`), its guests, since
+  nobody booked it.
+  """
+  @spec counterpart_section(Tokens.intent(), map()) :: String.t()
+  def counterpart_section(intent, %{host_managed: true} = details),
+    do: guests_section(intent, details.guests)
+
+  def counterpart_section(intent, details),
+    do:
+      attendee_info_section(intent, %{name: details.attendee_name, email: details.attendee_email})
+
+  defp guests_section(intent, guests) do
+    """
+    <mj-section padding="8px 0 20px 0">
+      <mj-column>
+        <mj-text
+          font-size="11px"
+          font-weight="700"
+          color="#{Styles.ink_muted()}"
+          letter-spacing="0.14em"
+          text-transform="uppercase"
+          padding="0 0 12px 0"
+        >
+          #{dgettext("emails", "Guests")}
+        </mj-text>
+        <mj-table #{Styles.table_attributes()} css-class="responsive-table">
+          #{Enum.map_join(guests, "", &guest_row(intent, &1))}
+        </mj-table>
+      </mj-column>
+    </mj-section>
+    """
+  end
+
+  @doc """
   A small tinted callout for the attendee's message left during booking. The
   caller supplies the email `intent` so the tint matches the stage band.
   """
@@ -74,10 +111,21 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
     """
   end
 
-  defp attendee_email_row(intent, safe_email) do
+  defp attendee_email_row(intent, safe_email),
+    do: email_row(intent, dgettext("emails", "Email"), safe_email)
+
+  # A guest who gave a name is listed under it; one who gave none, under
+  # "Email", as their address alone.
+  defp guest_row(intent, %{name: name, email: email}) when is_binary(name) and name != "",
+    do: email_row(intent, Sanitise.sanitize_for_email(name), Sanitise.sanitize_for_email(email))
+
+  defp guest_row(intent, %{email: email}),
+    do: attendee_email_row(intent, Sanitise.sanitize_for_email(email))
+
+  defp email_row(intent, label, safe_email) do
     """
     <tr style="#{Styles.table_row_style()}">
-      <td style="#{Styles.table_label_style()}">#{dgettext("emails", "Email")}</td>
+      <td style="#{Styles.table_label_style()}">#{label}</td>
       <td style="#{Styles.table_value_style()}">
         <a href="mailto:#{safe_email}" style="color: #{Styles.intent_accent_deep(intent)}; font-weight: 600; text-decoration: none;">#{safe_email}</a>
       </td>

@@ -117,6 +117,9 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   def handle_info({:poll_updated, _poll_id} = msg, socket),
     do: PollVoting.handle_poll_info(msg, socket)
 
+  def handle_info({:poll_deadline_reached, _poll_id} = msg, socket),
+    do: PollVoting.handle_poll_info(msg, socket)
+
   def handle_info(msg, socket) do
     theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
     delegate_to_theme(theme_id, :handle_info, [msg, socket])

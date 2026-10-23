@@ -272,7 +272,7 @@ msgstr ""
 msgid "bookings"
 msgstr ""
 
-#: lib/tymeslot/security/rate_limiter/limits.ex
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr ""
@@ -380,11 +380,6 @@ msgstr ""
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
-msgstr ""
-
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
 msgstr ""
 
 #: lib/tymeslot/security/universal_sanitizer.ex
@@ -520,6 +515,7 @@ msgid "is not a supported language"
 msgstr ""
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
@@ -531,6 +527,7 @@ msgstr ""
 msgid "is not a valid palette key"
 msgstr ""
 
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid timezone"
@@ -792,6 +789,16 @@ msgstr ""
 #: lib/tymeslot/custom_fields/validator.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
 msgstr ""
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex

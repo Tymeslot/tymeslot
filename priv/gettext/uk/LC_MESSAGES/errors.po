@@ -283,7 +283,7 @@ msgstr "перевірок сервера відеозв'язку"
 msgid "bookings"
 msgstr "бронювань"
 
-#: lib/tymeslot/security/rate_limiter/limits.ex
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr "переміщень подій календаря"
@@ -397,11 +397,6 @@ msgstr "групові бронювання не можуть вимагати �
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "У вас уже є тип зустрічі з такою назвою"
-
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
-msgstr "фіксовані дати потребують групових бронювань"
 
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
@@ -537,6 +532,7 @@ msgid "is not a supported language"
 msgstr "не є підтримуваною мовою"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
@@ -548,6 +544,7 @@ msgstr "не є підтримуваною мовою"
 msgid "is not a valid palette key"
 msgstr "не є коректним ключем палітри"
 
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid timezone"
@@ -811,6 +808,16 @@ msgstr "Відповідь задовга"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Невідомий тип поля"
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr "перенесень зустрічей"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "фіксовані дати потребують групових бронювань"
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex
 #, elixir-autogen, elixir-format

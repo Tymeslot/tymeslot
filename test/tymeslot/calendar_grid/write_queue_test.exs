@@ -598,5 +598,38 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
 
       assert {_queue, []} = WriteQueue.settle(queue, plain.ref, {:ok, @event})
     end
+
+    test "a write saved to sync later asks for it from the event as the replay will leave it, without its saved message" do
+      updated = %{@event | summary: "Renamed"}
+
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], @notify)
+
+      assert {_queue, [{:notify, notify, ^updated, :this_only}]} =
+               WriteQueue.settle(queue, write.ref, :queued)
+
+      assert notify == %{@notify | saved_message: nil}
+    end
+
+    test "a change of who attends tells them once accepted or saved to sync later, never once failed" do
+      event = Map.put(@event, :attendees, [])
+      guest = %{email: "guest@example.com"}
+      changes = %{attendees: [guest]}
+      updated = %{event | attendees: [guest]}
+
+      for outcome <- [{:ok, updated}, :queued] do
+        {queue, [{:start, write, _event}]} =
+          WriteQueue.update(WriteQueue.new(), event, changes, [], :membership)
+
+        assert {_queue, [{:membership_changed, ^event, ^updated}]} =
+                 WriteQueue.settle(queue, write.ref, outcome)
+      end
+
+      {queue, [{:start, write, _event}]} =
+        WriteQueue.update(WriteQueue.new(), event, changes, [], :membership)
+
+      assert {_queue, effects} = WriteQueue.settle(queue, write.ref, :failed)
+      refute Enum.any?(effects, &match?({:membership_changed, _, _}, &1))
+    end
   end
 end

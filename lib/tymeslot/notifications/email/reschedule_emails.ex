@@ -26,6 +26,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.MeetingEmails
@@ -113,7 +114,10 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   # participants' copies, and a retry writes only to whoever was missed.
   defp send_reschedule_emails(meeting, args, job_id) do
     original = Map.get(args, "original")
-    content = meeting |> content(original) |> put_moved_by(args["moved_by"])
+    # The same payload for any view of the meeting: a guest with a language
+    # and timezone of their own is told in those.
+    build = &(&1 |> content(original) |> put_moved_by(args["moved_by"]))
+    content = build.(meeting)
     service = Config.email_service_module()
 
     participants =
@@ -121,22 +125,37 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
         job_id,
         "reschedule",
         meeting.id,
-        fn -> service.send_reschedule_email_to_organizer(content.organizer_email, content) end,
-        fn -> service.send_reschedule_email_to_attendee(content.attendee_email, content) end
+        fn -> organizer_copy(meeting, service, content) end,
+        fn -> attendee_copy(meeting, service, content) end
       )
 
-    guests = notify_guests(meeting, content, original, &DeliveryClaims.once(job_id, &1, &2))
+    once = &DeliveryClaims.once(job_id, &1, &2)
+
+    guests =
+      if original,
+        do: GuestNotifications.notify_rescheduled(meeting, content, build, once),
+        else: GuestNotifications.notify_reapproved(meeting, content, build, once)
 
     # Every copy was attempted; a failure that a retry can fix outweighs a
     # rejected address, so a suppressed attendee never stops a guest's retry.
     DeliveryOutcome.combine("reschedule", [meeting_id: meeting.id], [participants, guests])
   end
 
-  defp notify_guests(meeting, content, nil, once),
-    do: GuestNotifications.notify_reapproved(meeting, content, once)
+  defp organizer_copy(meeting, service, content) do
+    service.send_reschedule_email_to_organizer(
+      content.organizer_email,
+      AppointmentBuilder.organizer_copy(content, meeting)
+    )
+  end
 
-  defp notify_guests(meeting, content, _original, once),
-    do: GuestNotifications.notify_rescheduled(meeting, content, once)
+  # A meeting the host manages (confirmed from a poll) has no booker: the
+  # person in its attendee fields is a guest and hears of the move with the
+  # other guests.
+  defp attendee_copy(meeting, service, content) do
+    if HostManaged.managed?(meeting),
+      do: {:ok, :skipped},
+      else: service.send_reschedule_email_to_attendee(content.attendee_email, content)
+  end
 
   defp content(meeting, nil), do: AppointmentBuilder.for_reapproval(meeting)
 

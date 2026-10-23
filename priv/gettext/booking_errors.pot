@@ -88,11 +88,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr ""
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
 msgstr ""
 
@@ -233,10 +228,20 @@ msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
 msgid "The reminders for this meeting are not valid"
 msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
 msgstr ""

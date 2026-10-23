@@ -374,7 +374,7 @@ msgstr "Il mio calendario in abbonamento"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Paste the feed link your calendar gives you when you publish a calendar: Google's secret address in iCal format, Outlook's published calendar link, or any .ics URL. We check it for busy time only, and never write to it."
-msgstr "Incolla il link del feed che il tuo calendario ti fornisce quando pubblichi un calendario: l’indirizzo segreto in formato iCal di Google, il link del calendario pubblicato di Outlook o qualsiasi URL .ics. Lo controlliamo solo per gli orari occupati e non ci scriviamo mai nulla."
+msgstr "Incolla il link del feed che il tuo calendario ti fornisce quando pubblichi un calendario: l'indirizzo segreto in formato iCal di Google, il link del calendario pubblicato di Outlook o qualsiasi URL .ics. Lo controlliamo solo per gli orari occupati e non ci scriviamo mai nulla."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format

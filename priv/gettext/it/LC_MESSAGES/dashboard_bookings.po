@@ -704,15 +704,60 @@ msgstr "Ha lasciato questo orario"
 msgid "Cancel meeting"
 msgstr "Annulla riunione"
 
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Currently: %{date}, %{time}"
+msgstr "Attualmente: %{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the new date and time."
+msgstr "Inserisci la nuova data e ora."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "It was arranged by a poll, so you choose its new time. Everyone invited is sent the new time with an updated calendar entry and asked again whether they can come."
+msgstr "È stato fissato tramite un sondaggio, quindi scegli tu il nuovo orario. Tutti gli invitati ricevono il nuovo orario con l'evento del calendario aggiornato e viene chiesto loro di nuovo se possono partecipare."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting moved. Everyone invited has been told."
+msgstr "Riunione spostata. Tutti gli invitati sono stati avvisati."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move meeting"
+msgstr "Sposta la riunione"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move this meeting"
+msgstr "Sposta questa riunione"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New start (%{timezone})"
+msgstr "Nuovo inizio (%{timezone})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting could not be moved. Please try again."
+msgstr "Impossibile spostare la riunione. Riprova."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The new time must be in the future."
+msgstr "Il nuovo orario deve essere nel futuro."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a meeting at that time."
+msgstr "Hai già una riunione a quell'orario."
+
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
-msgid "Registration closed"
-msgstr "Iscrizioni chiuse"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Move a fixed date from its meeting type."
-msgstr "Sposta una data fissa dal suo tipo di riunione."
+msgid "Poll"
+msgstr "Sondaggio"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
@@ -780,7 +825,7 @@ msgstr "Sposta la prenotazione al nuovo orario"
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "This booking can no longer be moved to its calendar time."
-msgstr "Questa prenotazione non può più essere spostata all’orario del suo calendario."
+msgstr "Questa prenotazione non può più essere spostata all'orario del suo calendario."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
@@ -790,7 +835,7 @@ msgstr "Tymeslot sta ancora aggiornando il tuo calendario per questa prenotazion
 #: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar now has this meeting at %{time}. Tymeslot will move the booking there, reschedule its reminders and email %{attendee_name} and any guests the new time."
-msgstr "Il tuo calendario ora ha questa riunione a %{time}. Tymeslot sposterà la prenotazione a quell’orario, riprogrammerà i promemoria e avviserà via e-mail %{attendee_name} e gli eventuali ospiti del nuovo orario."
+msgstr "Il tuo calendario ora ha questa riunione a %{time}. Tymeslot sposterà la prenotazione a quell'orario, riprogrammerà i promemoria e avviserà via email %{attendee_name} e gli eventuali ospiti del nuovo orario."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
@@ -800,9 +845,29 @@ msgstr "La riunione è stata spostata di nuovo nel tuo calendario. Controlla il 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Another booking already starts at that time."
-msgstr "Tymeslot non è riuscito a spostare questa prenotazione. A quell’orario inizia già un’altra prenotazione."
+msgstr "Tymeslot non è riuscito a spostare questa prenotazione. A quell'orario inizia già un'altra prenotazione."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot non è riuscito a spostare questa prenotazione. Riprova."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to move the meeting there."
+msgstr "Questo orario rientra nella tua assenza. Modifica o rimuovi l'assenza per spostare lì la riunione."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Registration closed"
+msgstr "Iscrizioni chiuse"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Move a fixed date from its meeting type."
+msgstr "Sposta una data fissa dal suo tipo di riunione."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is already at that time."
+msgstr "La riunione è già fissata a quell'orario."

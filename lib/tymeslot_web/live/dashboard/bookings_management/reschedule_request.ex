@@ -14,7 +14,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Shared.Flash
@@ -24,6 +27,57 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   require Logger
 
   @event [:tymeslot, :dashboard, :meetings, :reschedule, :confirm]
+
+  @doc """
+  Opens the way to a new time for the host's meeting `params["id"]`, if
+  `policy` allows one: the dialog asking its attendee, or, for a meeting
+  confirmed from a poll, which has nobody to ask, the host's own move
+  (`HostMoveModal`, through `:host_move_meeting`). A refusal is flashed.
+  """
+  @spec show(Phoenix.LiveView.Socket.t(), map(), (MeetingSchema.t() -> :ok | {:error, term()})) ::
+          Phoenix.LiveView.Socket.t()
+  def show(socket, params, policy) do
+    user_id = socket.assigns.current_user.id
+
+    case ModalMeeting.fetch(user_id, params, policy) do
+      {:ok, meeting} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :reschedule, :open],
+          %{},
+          %{user_id: user_id, meeting_id: meeting.id}
+        )
+
+        open(socket, meeting)
+
+      {:error, :policy_blocked, reason} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :reschedule, :blocked],
+          %{},
+          %{user_id: user_id, reason: inspect(reason)}
+        )
+
+        Flash.error(ModalMeeting.refusal_message(reason))
+        socket
+
+      {:error, _not_found_or_invalid, _reason} ->
+        socket
+    end
+  end
+
+  defp open(socket, meeting) do
+    if HostManaged.managed?(meeting),
+      do: assign(socket, :host_move_meeting, meeting),
+      else: ModalHook.show_modal(socket, :reschedule_request, meeting)
+  end
+
+  @doc "Closes the host's move, refreshing the list once the meeting moved."
+  @spec close_host_move(Phoenix.LiveView.Socket.t(), atom(), (Phoenix.LiveView.Socket.t() ->
+                                                                Phoenix.LiveView.Socket.t())) ::
+          Phoenix.LiveView.Socket.t()
+  def close_host_move(socket, result, reload) do
+    socket = assign(socket, :host_move_meeting, nil)
+    if result == :moved, do: reload.(socket), else: socket
+  end
 
   @doc """
   Sends the request and settles the dialog: closed and the list refreshed on

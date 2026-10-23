@@ -144,6 +144,13 @@ defmodule Tymeslot.TestMocks do
   defdelegate stub_no_calendar_events(), to: Mocks.Calendar, as: :stub_no_events
 
   @doc """
+  Resolves the calendar a booking is written to as production does, from the
+  host's integrations and meeting type, instead of reporting none.
+  """
+  @spec resolve_booking_calendars() :: term()
+  defdelegate resolve_booking_calendars(), to: Mocks.Calendar
+
+  @doc """
   Sets up Email Service mocks for all notification types.
 
   ## Options

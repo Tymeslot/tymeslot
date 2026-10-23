@@ -1,5 +1,6 @@
 defmodule Tymeslot.Polls.VotingTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :unit
   @moduletag :polls
@@ -8,53 +9,8 @@ defmodule Tymeslot.Polls.VotingTest do
 
   alias Ecto.UUID
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollParticipantQueries, Voting}
-
-  describe "register_participant/2" do
-    test "creates a participant with a generated token" do
-      poll = insert(:poll)
-
-      assert {:ok, participant} =
-               Voting.register_participant(poll, %{name: "Alice", email: "Alice@Example.com "})
-
-      assert participant.poll_id == poll.id
-      assert participant.name == "Alice"
-      assert participant.email == "alice@example.com"
-      assert is_binary(participant.token) and participant.token != ""
-      assert PollParticipantQueries.count_for_poll(poll.id) == 1
-    end
-
-    test "resumes an existing registration for the same email without duplicating" do
-      poll = insert(:poll)
-
-      assert {:ok, first} =
-               Voting.register_participant(poll, %{name: "Alice", email: "alice@example.com"})
-
-      assert {:ok, second} =
-               Voting.register_participant(poll, %{
-                 name: "Alice Again",
-                 email: " ALICE@example.com "
-               })
-
-      assert second.id == first.id
-      assert PollParticipantQueries.count_for_poll(poll.id) == 1
-    end
-
-    test "returns {:error, :voting_closed} when the poll is not open" do
-      poll = insert(:poll, status: :cancelled)
-
-      assert {:error, :voting_closed} =
-               Voting.register_participant(poll, %{name: "Alice", email: "alice@example.com"})
-    end
-
-    test "returns {:error, :poll_full} once the participant cap is reached" do
-      poll = insert(:poll)
-      insert_list(40, :poll_participant, poll: poll)
-
-      assert {:error, :poll_full} =
-               Voting.register_participant(poll, %{name: "Late", email: "late@example.com"})
-    end
-  end
+  alias Tymeslot.Polls.{PollParticipantQueries, PollSchema, Voting}
+  alias Tymeslot.Workers.EmailWorker
 
   describe "get_participant/2" do
     test "returns the poll's participant for their token, with votes loaded" do
@@ -240,6 +196,95 @@ defmodule Tymeslot.Polls.VotingTest do
                Voting.cast_votes(poll, other_participant.token, %{slot_a.id => "yes"})
     end
 
+    test "the first responses an unconfirmed participant saves confirm them and send one receipt",
+         ctx do
+      %{poll: poll, slot_a: slot_a} = ctx
+      pending = insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
+
+      assert {:ok, confirmed} = Voting.cast_votes(poll, pending.token, %{slot_a.id => "yes"})
+      assert %DateTime{} = confirmed.confirmed_at
+
+      {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
+      assert pending.id in Enum.map(loaded.participants, & &1.id)
+      assert Polls.tallies(loaded)[slot_a.id].yes == 1
+
+      assert {:ok, again} = Voting.cast_votes(poll, pending.token, %{slot_a.id => "no"})
+      assert again.confirmed_at == confirmed.confirmed_at
+
+      assert [%{args: %{"participant_id" => id}}] = receipt_jobs()
+      assert id == pending.id
+    end
+
+    test "a participant's first responses send a receipt, later changes do not", ctx do
+      %{poll: poll, slot_a: slot_a, participant: participant} = ctx
+
+      assert {:ok, _first} = Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"})
+      assert [_receipt] = receipt_jobs()
+
+      returning =
+        insert(:poll_participant, poll: poll, voted_at: DateTime.utc_now(:second))
+
+      assert {:ok, _again} = Voting.cast_votes(poll, returning.token, %{slot_a.id => "no"})
+      assert [_still_one] = receipt_jobs()
+    end
+
+    test "someone invited without a name gives it with their first responses", ctx do
+      %{poll: poll, slot_a: slot_a} = ctx
+      invitee = insert(:poll_participant, poll: poll, name: nil, email: "ada@example.com")
+
+      assert {:error, %Ecto.Changeset{}} =
+               Voting.cast_votes(poll, invitee.token, %{slot_a.id => "yes"})
+
+      assert {:error, %Ecto.Changeset{}} =
+               Voting.cast_votes(poll, invitee.token, %{slot_a.id => "yes"}, name: "  ")
+
+      unsaved = PollParticipantQueries.get_by_poll_and_token(poll.id, invitee.token)
+      assert unsaved.votes == [] and unsaved.voted_at == nil and unsaved.name == nil
+
+      assert {:ok, voted} =
+               Voting.cast_votes(poll, invitee.token, %{slot_a.id => "yes"}, name: " Ada ")
+
+      assert voted.name == "Ada"
+      assert %DateTime{} = voted.voted_at
+    end
+
+    test "a name sent with the responses leaves an existing name alone", ctx do
+      %{poll: poll, slot_a: slot_a, participant: participant} = ctx
+
+      assert {:ok, voted} =
+               Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"}, name: "Mallory")
+
+      assert voted.name == participant.name
+    end
+
+    test "an unconfirmed participant whose link expired cannot vote", ctx do
+      %{poll: poll, slot_a: slot_a} = ctx
+
+      expired =
+        insert(:poll_participant,
+          poll: poll,
+          confirmed_at: nil,
+          inserted_at: DateTime.add(now(), -49, :hour),
+          link_sent_at: DateTime.add(now(), -49, :hour)
+        )
+
+      assert {:error, :unknown_participant} =
+               Voting.cast_votes(poll, expired.token, %{slot_a.id => "yes"})
+    end
+
+    test "confirming is refused once the poll is full, and nothing is written", ctx do
+      %{poll: poll, slot_a: slot_a} = ctx
+      insert_list(PollSchema.max_participants() - 1, :poll_participant, poll: poll)
+      pending = insert(:poll_participant, poll: poll, confirmed_at: nil, link_sent_at: now())
+
+      assert {:error, :poll_full} = Voting.cast_votes(poll, pending.token, %{slot_a.id => "yes"})
+
+      reloaded = PollParticipantQueries.get_by_poll_and_token(poll.id, pending.token)
+      assert reloaded.votes == []
+      assert reloaded.confirmed_at == nil
+      assert receipt_jobs() == []
+    end
+
     test "returns {:error, :voting_closed} on a past-deadline poll", ctx do
       %{slot_a: slot_a, participant: participant} = ctx
       past = DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:second)
@@ -262,5 +307,14 @@ defmodule Tymeslot.Polls.VotingTest do
       assert PollParticipantQueries.get_by_poll_and_token(participant.poll_id, participant.token).votes ==
                []
     end
+  end
+
+  defp now, do: DateTime.utc_now(:second)
+
+  defp receipt_jobs do
+    Enum.filter(
+      all_enqueued(worker: EmailWorker),
+      &(&1.args["action"] == "send_poll_vote_receipt")
+    )
   end
 end

@@ -15,10 +15,11 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     * `:reload`: reload the grid's events;
     * `{:notify, notify, updated_event, scope}`: ask the organiser whether to
       tell the event's attendees, once a write made with `notify` was
-      accepted in `scope`;
+      accepted in `scope` or saved to sync later;
     * `{:membership_changed, original_event, updated_event}`: tell the
       attendees a write made with `:membership` added or removed, once
-      accepted, from the event as it found it and left it;
+      accepted or saved to sync later, from the event as it found it and
+      left it;
     * `{:dropped, :series_write | :series_move, count}`: tell the organiser
       that `count` changes were not applied.
 
@@ -548,14 +549,12 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     Enum.reduce(held, acc, fn {event, write}, acc -> submit(acc, event, write) end)
   end
 
-  # See "Telling the attendees" in `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
-  defp notified(acc, %{kind: :update, notify: %{} = notify, opts: opts}, _before, {:ok, updated}),
-    do: emit(acc, {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)})
-
-  defp notified(acc, %{kind: :update, notify: :membership}, before, {:ok, updated}),
-    do: emit(acc, {:membership_changed, before, updated})
-
-  defp notified(acc, _write, _before, _outcome), do: acc
+  defp notified(acc, write, before, outcome) do
+    case QueuedWrite.attendee_effect(write, before, outcome) do
+      nil -> acc
+      effect -> emit(acc, effect)
+    end
+  end
 
   defp advance(acc, key, chain, outcome) do
     cond do

@@ -99,6 +99,22 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
     end
   end
 
+  describe "dashboard reschedule" do
+    test "the refusal names meeting moves rather than the bucket's operation label" do
+      user_id = 99_502
+
+      for _i <- 1..20, do: assert(:ok = RateLimiter.check(:dashboard_reschedule, user_id))
+
+      assert {:error, :rate_limited, message} = RateLimiter.check(:dashboard_reschedule, user_id)
+
+      assert message ==
+               "You've reached the limit of 20 meeting moves per 10 minutes. " <>
+                 "Please try again in 10 minutes."
+
+      refute message =~ "reschedule request actions"
+    end
+  end
+
   describe "locale" do
     test "the refusal arrives in the reader's language, label and all" do
       ip = "203.0.113.93"

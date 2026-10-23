@@ -38,6 +38,7 @@ defmodule Tymeslot.Announcements do
 
     * the user has not already marked it seen;
     * it has not expired (`expires_at` is `nil` or still in the future);
+    * it has been published (`published_at` is not in the future);
     * the user signed up before it was published.
 
   Admins are gated by signup date exactly like everyone else — there is no
@@ -56,7 +57,7 @@ defmodule Tymeslot.Announcements do
     candidates =
       catalogs()
       |> Enum.flat_map(&safe_list/1)
-      |> Enum.reject(&expired?(&1, now))
+      |> Enum.reject(&(expired?(&1, now) or unpublished?(&1, now)))
       |> Enum.filter(&published_after_signup?(&1, user_inserted_at))
 
     case candidates do
@@ -87,6 +88,9 @@ defmodule Tymeslot.Announcements do
 
   defp expired?(%Announcement{expires_at: expires_at}, now),
     do: not DateTime.after?(expires_at, now)
+
+  defp unpublished?(%Announcement{published_at: published_at}, now),
+    do: DateTime.after?(published_at, now)
 
   defp published_after_signup?(%Announcement{published_at: published_at}, user_inserted_at),
     do: DateTime.after?(published_at, user_inserted_at)

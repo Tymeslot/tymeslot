@@ -88,11 +88,6 @@ msgstr "Die Endzeit muss nach der Startzeit liegen"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr "Termin konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
 msgstr "Der Termin konnte nicht erstellt werden"
 
@@ -233,6 +228,11 @@ msgstr "Sie können nicht mehr als %{days} Tage im Voraus buchen"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move it. If the new time doesn't suit you, reply to your invitation."
+msgstr "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben. Wenn Ihnen die neue Zeit nicht passt, antworten Sie auf Ihre Einladung."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
 msgid "The reminders for this meeting are not valid"
 msgstr "Die Erinnerungen für diesen Termin sind ungültig"
 
@@ -240,3 +240,8 @@ msgstr "Die Erinnerungen für diesen Termin sind ungültig"
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
 msgstr "Einen festen Termin verlegen Sie im Termintyp, zusammen mit allen, die ihn gebucht haben"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
+msgstr "Der Termin konnte nicht erstellt werden. Bitte versuchen Sie es erneut."

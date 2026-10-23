@@ -172,3 +172,13 @@ msgstr "Animez webinaires, ateliers et cours"
 #, elixir-autogen, elixir-format
 msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
 msgstr "Transformez n'importe quel type de rendez-vous en session de groupe. Fixez le nombre de participants et chaque créneau reste ouvert jusqu'à ce qu'il soit complet, si bien qu'une seule page de réservation suffit pour votre webinaire, atelier, cours ou permanence. Chacun s'inscrit seul, reçoit sa propre confirmation et son invitation de calendrier, et peut annuler ou reporter sans vous solliciter."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Polls that invite, confirm and keep you posted"
+msgstr "Des sondages qui invitent, confirment et vous tiennent au courant"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A poll can be open, so anyone with the link asks for a voting link by email, or invite-only. You can be emailed as votes arrive. After sending you can change the deadline, add times, resend an invitation and remove people; reminders go to invited people who haven't voted. The meeting a poll confirms is yours: everyone on it is a guest, and only you can move or cancel it."
+msgstr "Un sondage peut être ouvert, auquel cas toute personne disposant du lien demande par e-mail un lien de vote, ou réservé aux invités. Vous pouvez recevoir un e-mail à chaque nouveau vote. Après l'envoi, vous pouvez modifier la date limite, ajouter des créneaux, renvoyer une invitation et retirer des personnes ; les rappels sont envoyés aux invités qui n'ont pas encore voté. La réunion qu'un sondage confirme est la vôtre : tous les participants y sont des invités, et vous seul pouvez la déplacer ou l'annuler."

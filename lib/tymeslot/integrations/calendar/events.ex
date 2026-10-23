@@ -248,13 +248,17 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   can still be reported once the reconciliation has cancelled it. Nothing is
   reconciled when the delete fails.
 
-  An event the calendar no longer has is not a failed delete: it is already
+  An event the account no longer has is not a failed delete: it is already
   off the calendar, removed by another client or a sync race, and its booking
   is reconciled exactly as a successful delete's would be, the result marked
-  `already_gone: true`. Only the delete's own `:not_found` counts. The
-  request addresses the event, so its 404 is the event's (`ApiResponse`
-  names a bare 404 by its path); a calendar that is gone from the integration
-  never reaches the provider, and fails as `:no_calendar_integration`.
+  `already_gone: true`. The delete's `:not_found` does not prove that on its
+  own: it says only that nothing was at the address the delete used, which
+  is also what a stale calendar id gets, for an event moved to another
+  calendar since it was synced. So the event is looked for in
+  every writable calendar of the account (`fetch_event/2`) first: only when
+  none has it is it already gone. When one does, or the lookup itself
+  fails, the delete fails and nothing is reconciled. A provider that cannot
+  fetch a single event has only the 404 to go on.
 
   Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
   `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
@@ -281,7 +285,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       ) do
     linked_meeting = Sync.find_meeting(integration_id, provider_event_id, uid)
 
-    with {:ok, deleted} <- deleted(delete_event(uid, context, opts)) do
+    with {:ok, deleted} <- delete_found(uid, provider_event_id, context, opts) do
       reconcile_result = reconcile_deleted(integration_id, provider_event_id, uid)
 
       result =
@@ -298,9 +302,32 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     end
   end
 
+  defp delete_found(uid, provider_event_id, context, opts) do
+    case delete_event(uid, context, opts) do
+      {:error, :not_found} -> confirm_gone(uid, provider_event_id, context, opts)
+      result -> deleted(result)
+    end
+  end
+
+  # An event found anywhere is still on the calendar, so the delete's 404
+  # stands as the failure it is. `:unsupported` leaves only the 404 to go on.
+  defp confirm_gone(uid, provider_event_id, context, opts) do
+    event_ref = %{
+      uid: uid,
+      ical_uid: uid,
+      provider_event_id: provider_event_id,
+      calendar_id: opts[:calendar_id]
+    }
+
+    case fetch_event(event_ref, context) do
+      {:ok, _found} -> {:error, :not_found}
+      {:error, reason} when reason in [:not_found, :unsupported] -> {:ok, %{already_gone: true}}
+      {:error, _reason} = error -> error
+    end
+  end
+
   defp deleted(:ok), do: {:ok, %{}}
   defp deleted({:ok, %{document: document}}), do: {:ok, %{document: document}}
-  defp deleted({:error, :not_found}), do: {:ok, %{already_gone: true}}
   defp deleted(error), do: error
 
   # The event is already off the calendar by the time this runs, so a raise
