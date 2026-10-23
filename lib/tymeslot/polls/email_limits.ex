@@ -10,8 +10,9 @@ defmodule Tymeslot.Polls.EmailLimits do
     polls (`:poll_host_invitations`);
   - an address is sent so many poll emails an hour and a day, invitations and
     voting links alike, across every poll (`:poll_recipient_email`);
-  - a poll takes so many voting-link requests an hour (`:poll_link_request`),
-    on top of the per-client limit on the voting page.
+  - a poll takes so many voting-link requests from addresses new to it an
+    hour (`:poll_link_request`), on top of the per-client limit on the
+    voting page.
 
   The numbers are `config :tymeslot, :poll_email_limits`, which a deployment
   overrides key by key. `Tymeslot.Polls.Invitations` and
@@ -26,9 +27,11 @@ defmodule Tymeslot.Polls.EmailLimits do
   @type reservation :: %{allowed: [String.t()], limited: [String.t()]}
 
   @doc """
-  Charges a voting-link request to `poll`'s budget. Refused requests count
-  too, like every per-client limit. Answers `{:error, :too_many_requests}`,
-  the voting page's "receiving a lot of requests" refusal, once it is spent.
+  Charges a voting-link request from an address new to `poll` to its budget.
+  Requests for an address already on the poll are not charged here; the
+  resend interval and the address's own limit bound those. Answers
+  `{:error, :too_many_requests}`, the voting page's "receiving a lot of
+  requests" refusal, once it is spent.
   """
   @spec charge_link_request(PollSchema.t()) :: :ok | {:error, :too_many_requests}
   def charge_link_request(%PollSchema{id: poll_id}) do

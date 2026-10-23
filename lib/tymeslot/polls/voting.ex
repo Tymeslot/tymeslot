@@ -81,7 +81,7 @@ defmodule Tymeslot.Polls.Voting do
   is pending account deletion; and, for a new address or one whose pending
   link has expired, `{:error, :poll_full}` at the participant cap and
   `{:error, :too_many_requests}` when too many links are out unconfirmed or
-  the poll has taken its share of requests this hour, and
+  the poll has taken its share of new participants this hour, and
   `{:error, :recipient_rate_limited}` when the address has had too many poll
   emails lately.
   """
@@ -99,8 +99,7 @@ defmodule Tymeslot.Polls.Voting do
     # sent, so a new check (who may ask, how often) is one more clause.
     with :ok <- ensure_requests_accepted(poll),
          :ok <- ensure_open(poll),
-         {:ok, request} <- validate_request(poll, attrs),
-         :ok <- EmailLimits.charge_link_request(poll) do
+         {:ok, request} <- validate_request(poll, attrs) do
       route_request(poll, request)
     end
   end
@@ -281,9 +280,14 @@ defmodule Tymeslot.Polls.Voting do
       true ->
         # Charged before the row is written, so a refused address leaves no
         # participant waiting for a link that never comes. A write that then
-        # fails or loses the unique-constraint race keeps the charge,
-        # deliberately: it is rare and errs towards sending less.
-        with :ok <- EmailLimits.charge_recipient(request_email(request)) do
+        # fails or loses the unique-constraint race keeps the charges,
+        # deliberately: it is rare and errs towards sending less. Only a new
+        # row draws on the poll's budget: a request for an address already
+        # on the poll is bounded by the resend interval and the address's own
+        # limit, and counting it would let one visitor repeating one address
+        # spend the budget and turn every newcomer away.
+        with :ok <- EmailLimits.charge_link_request(poll),
+             :ok <- EmailLimits.charge_recipient(request_email(request)) do
           request
           |> PollParticipantSchema.link_sent_changeset(DateTime.utc_now())
           |> insert_under_poll_lock(poll)
