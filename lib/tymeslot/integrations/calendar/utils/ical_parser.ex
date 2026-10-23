@@ -223,15 +223,25 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_alarms(components) do
     for [first | _rest] = lines <- components, String.upcase(first) == "BEGIN:VALARM" do
-      trigger = extract_datetime_property(lines, "TRIGGER")
-
-      %{
-        action: extract_property(lines, "ACTION"),
-        trigger: trigger && trigger.value,
-        trigger_related: trigger_param(lines, "RELATED", "START"),
-        trigger_value: trigger_param(lines, "VALUE", "DURATION")
-      }
+      parse_alarm(lines)
     end
+  end
+
+  @doc """
+  Reads one VALARM, given as its unfolded content lines, into the map
+  `parse/1` lists under an event's `:valarm`: its `ACTION` and its `TRIGGER`
+  with the trigger's `RELATED` and `VALUE` parameters.
+  """
+  @spec parse_alarm([String.t()]) :: map()
+  def parse_alarm(lines) when is_list(lines) do
+    trigger = extract_datetime_property(lines, "TRIGGER")
+
+    %{
+      action: extract_property(lines, "ACTION"),
+      trigger: trigger && trigger.value,
+      trigger_related: trigger_param(lines, "RELATED", "START"),
+      trigger_value: trigger_param(lines, "VALUE", "DURATION")
+    }
   end
 
   # RFC 5545 §3.8.6.3: TRIGGER is relative to the start unless RELATED=END,

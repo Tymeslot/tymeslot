@@ -304,6 +304,23 @@ defmodule Tymeslot.Availability.TimeOff do
     end
   end
 
+  @doc """
+  `:ok` when `user_id`'s time off leaves `start_time` to `end_time` clear,
+  `{:error, :time_off}` when it reaches into any of it, measured as
+  `clashing_ranges/2` measures.
+
+  For one time the host chose: a poll's slot when they confirm it
+  (`Tymeslot.Polls.Confirm`), and the new time when they move the meeting it
+  made (`Tymeslot.Bookings.HostMove`).
+  """
+  @spec ensure_clear(integer(), DateTime.t(), DateTime.t()) :: :ok | {:error, :time_off}
+  def ensure_clear(user_id, start_time, end_time) do
+    case clashing_ranges(user_id, [{start_time, end_time}]) do
+      [] -> :ok
+      [_clash] -> {:error, :time_off}
+    end
+  end
+
   defp clashing_for_profile(profile, ranges) do
     window_start = ranges |> Enum.map(&elem(&1, 0)) |> Enum.min(DateTime)
     window_end = ranges |> Enum.map(&elem(&1, 1)) |> Enum.max(DateTime)

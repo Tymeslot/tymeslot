@@ -591,11 +591,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp map_partstat("tentative"), do: :tentative
   defp map_partstat(_other), do: :needs_action
 
+  @doc """
+  The reminder the sync reads from one VALARM, given as its unfolded content
+  lines, or `nil` for an alarm a reminder cannot express.
+
+  `ICalBuilder.Patcher` matches a document's alarms to an edit's reminders
+  with it, so an alarm is recognised by exactly the reading the sync cached
+  for it, approximations included.
+  """
+  @spec alarm_reminder([String.t()]) :: Reminder.t() | nil
+  def alarm_reminder(lines) when is_list(lines),
+    do: lines |> ICalParser.parse_alarm() |> map_alarm() |> List.first()
+
   # A reminder is a lead time before the start, so only an alarm whose
   # TRIGGER is a duration relative to the start, at or before it, maps to
   # one. An alarm at a fixed time, relative to the end, or after the start is
-  # left out of the cache; the server's copy keeps it, because a write that
-  # does not change reminders leaves the stored VALARMs alone.
+  # left out of the cache; the server's copy keeps it, because a write keeps
+  # every alarm a reminder cannot express.
   defp map_reminders(alarms) when is_list(alarms), do: Enum.flat_map(alarms, &map_alarm/1)
   defp map_reminders(_other), do: []
 

@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   alias Phoenix.LiveView
 
+  alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
   alias TymeslotWeb.Dashboard.BookingsManagement.CalendarMove
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
@@ -63,10 +65,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
        add_guests: false
      )
      |> assign(:staged_guests, [])
-     |> assign(:add_guests_existing, [])}
+     |> assign(:add_guests_existing, [])
+     |> assign(:host_move_meeting, nil)}
   end
 
   @impl Phoenix.LiveComponent
+  def update(%{host_move: result}, socket),
+    do: {:ok, RescheduleRequest.close_host_move(socket, result, &load_meetings/1)}
+
   def update(assigns, socket) do
     # Apply incoming assigns first
     socket = assign(socket, assigns)
@@ -193,38 +199,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
-  def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket) do
-    case ModalMeeting.fetch(
-           socket.assigns.current_user.id,
-           params,
-           &Policy.can_request_reschedule?/1
-         ) do
-      {:ok, meeting} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :open],
-          %{},
-          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id}
-        )
-
-        {:noreply, ModalHook.show_modal(socket, :reschedule_request, meeting)}
-
-      {:error, :validation_failed, _error} ->
-        {:noreply, socket}
-
-      {:error, :policy_blocked, reason} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :blocked],
-          %{},
-          %{user_id: socket.assigns.current_user.id, reason: inspect(reason)}
-        )
-
-        Flash.error(ModalMeeting.refusal_message(reason))
-        {:noreply, socket}
-
-      {:error, :not_found, _reason} ->
-        {:noreply, socket}
-    end
-  end
+  def handle_event("show_reschedule_modal", %{"id" => _id} = params, socket),
+    do: {:noreply, RescheduleRequest.show(socket, params, &Policy.can_host_change_time?/1)}
 
   def handle_event("hide_reschedule_modal", _params, socket) do
     {:noreply, ModalHook.hide_modal(socket, :reschedule_request)}
@@ -472,6 +448,18 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         profile={@profile}
         time_format={@time_format}
         target={@myself}
+      />
+
+      <.live_component
+        :if={@host_move_meeting}
+        module={HostMoveModal}
+        id="host-move-modal"
+        meeting={@host_move_meeting}
+        timezone={Helpers.get_meeting_timezone(@host_move_meeting, @profile)}
+        time_format={@time_format}
+        user_id={@current_user.id}
+        parent_module={__MODULE__}
+        parent_id={@id}
       />
     </div>
     """

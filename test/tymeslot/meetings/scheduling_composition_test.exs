@@ -95,6 +95,32 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
                Scheduling.create_meeting_with_conflict_check(attrs(user, buffer_start))
     end
 
+    test "buffers: false counts only meetings at the time itself", %{user: user} do
+      base = future_time(2, :day)
+      insert_meeting(user, base)
+
+      # existing ends at base+30m; new starts at base+35m, inside the 15m buffer
+      buffer_start = DateTime.add(base, 35, :minute)
+
+      assert {:ok, meeting} =
+               Scheduling.create_meeting_with_conflict_check(attrs(user, buffer_start),
+                 buffers: false
+               )
+
+      assert DateTime.compare(meeting.start_time, buffer_start) == :eq
+    end
+
+    test "buffers: false still refuses a meeting overlapping the time", %{user: user} do
+      base = future_time(2, :day)
+      insert_meeting(user, base)
+
+      assert {:error, :time_conflict} =
+               Scheduling.create_meeting_with_conflict_check(
+                 attrs(user, DateTime.add(base, 15, :minute)),
+                 buffers: false
+               )
+    end
+
     test "allows meeting outside the buffer window", %{user: user} do
       base = future_time(2, :day)
       insert_meeting(user, base)
@@ -187,6 +213,47 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
                  start_time: other.start_time,
                  end_time: other.end_time
                })
+    end
+
+    test "pads the new time with the organiser's buffers", %{user: user} do
+      other = insert_meeting(user, future_time(5, :day))
+      meeting = insert_meeting(user, future_time(2, :day))
+
+      # Five minutes after `other` ends: inside its 15-minute buffer.
+      new_start = DateTime.add(other.end_time, 5, :minute)
+
+      assert {:error, :time_conflict} =
+               Scheduling.update_meeting_with_conflict_check(meeting, %{
+                 start_time: new_start,
+                 end_time: DateTime.add(new_start, 30, :minute)
+               })
+    end
+
+    test "buffers: false counts only meetings at the time itself", %{user: user} do
+      other = insert_meeting(user, future_time(5, :day))
+      meeting = insert_meeting(user, future_time(2, :day))
+      new_start = DateTime.add(other.end_time, 5, :minute)
+
+      assert {:ok, updated} =
+               Scheduling.update_meeting_with_conflict_check(
+                 meeting,
+                 %{start_time: new_start, end_time: DateTime.add(new_start, 30, :minute)},
+                 buffers: false
+               )
+
+      assert DateTime.compare(updated.start_time, new_start) == :eq
+    end
+
+    test "buffers: false still refuses a meeting at the same time", %{user: user} do
+      other = insert_meeting(user, future_time(5, :day))
+      meeting = insert_meeting(user, future_time(2, :day))
+
+      assert {:error, :time_conflict} =
+               Scheduling.update_meeting_with_conflict_check(
+                 meeting,
+                 %{start_time: other.start_time, end_time: other.end_time},
+                 buffers: false
+               )
     end
 
     test "skips conflict check when attrs contain no time fields", %{user: user} do

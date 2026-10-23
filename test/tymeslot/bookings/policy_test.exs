@@ -189,6 +189,77 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
   end
 
+  describe "can_booker_move_meeting?/1" do
+    test "refuses a meeting its host manages" do
+      assert Policy.can_booker_move_meeting?(%MeetingSchema{managed_by_host: true}) ==
+               {:error, :managed_by_host}
+    end
+
+    test "allows a meeting with a booker" do
+      assert Policy.can_booker_move_meeting?(%MeetingSchema{managed_by_host: false}) == :ok
+    end
+  end
+
+  describe "can_request_reschedule?/1" do
+    test "refuses a meeting its host manages, whatever its state" do
+      future = DateTime.add(DateTime.utc_now(), 7200, :second)
+
+      for status <- ["confirmed", "awaiting_approval"] do
+        meeting = %{
+          status: status,
+          managed_by_host: true,
+          start_time: future,
+          end_time: DateTime.add(future, 1800, :second)
+        }
+
+        assert Policy.can_request_reschedule?(meeting) == {:error, :managed_by_host}
+      end
+    end
+
+    test "still refuses a held request for a meeting with a booker" do
+      assert Policy.can_request_reschedule?(%{
+               status: "awaiting_approval",
+               managed_by_host: false
+             }) ==
+               {:error, {:not_reschedulable, :awaiting_approval}}
+    end
+  end
+
+  describe "can_host_change_time?/1" do
+    setup do
+      start_time = DateTime.add(DateTime.utc_now(), 7200, :second)
+      %{start_time: start_time, end_time: DateTime.add(start_time, 1800, :second)}
+    end
+
+    test "lets the host move an upcoming meeting they manage", times do
+      meeting = Map.merge(times, %{status: "confirmed", managed_by_host: true})
+
+      assert Policy.can_host_change_time?(meeting) == :ok
+    end
+
+    test "refuses the host a meeting they manage once it has ended" do
+      ended = DateTime.add(DateTime.utc_now(), -3600, :second)
+
+      meeting = %{
+        status: "confirmed",
+        managed_by_host: true,
+        start_time: DateTime.add(ended, -1800, :second),
+        end_time: ended
+      }
+
+      assert {:error, _reason} = Policy.can_host_change_time?(meeting)
+    end
+
+    test "asks the attendee of a booked meeting, refusing a fixed date", times do
+      booked = Map.merge(times, %{status: "confirmed", managed_by_host: false})
+
+      assert Policy.can_host_change_time?(booked) == :ok
+
+      assert Policy.can_host_change_time?(Map.put(booked, :planned, true)) ==
+               {:error, {:not_reschedulable, :planned}}
+    end
+  end
+
   describe "meeting_is_current?/1" do
     test "returns true for ongoing meeting" do
       current_meeting = %{

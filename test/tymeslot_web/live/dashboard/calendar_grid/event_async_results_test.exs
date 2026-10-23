@@ -368,7 +368,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       send(lv.pid, {:create_ad_hoc_meeting_result, {:error, "Calendar unavailable"}})
 
       html = render(lv)
-      assert html =~ "Failed to create appointment. Please try again."
+      assert html =~ "Failed to create meeting. Please try again."
       refute html =~ "Calendar unavailable"
     end
   end

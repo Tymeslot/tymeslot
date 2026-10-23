@@ -450,7 +450,7 @@ msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di registrazio
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Accent colour used across transactional emails: buttons, links, the confirmation banner, and badge backgrounds. The darker and lighter shades of the family are derived from it. Amber and red are not affected - they signal \"needs attention\" and \"cancelled\", and recolouring them would make a cancellation read as a confirmation. Leave blank for the stock turquoise."
-msgstr "Colore d’accento usato in tutte le email transazionali: pulsanti, link, banner di conferma e sfondi dei badge. Le tonalità più scure e più chiare della famiglia derivano da questo colore. Ambra e rosso non vengono modificati: segnalano «richiede attenzione» e «annullato», e ricolorarli farebbe sembrare un annullamento una conferma. Lascia vuoto per il turchese predefinito."
+msgstr "Colore d'accento usato in tutte le email transazionali: pulsanti, link, banner di conferma e sfondi dei badge. Le tonalità più scure e più chiare della famiglia derivano da questo colore. Ambra e rosso non vengono modificati: segnalano «richiede attenzione» e «annullato», e ricolorarli farebbe sembrare un annullamento una conferma. Lascia vuoto per il turchese predefinito."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -470,7 +470,7 @@ msgstr "Logo email attuale"
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Email accent colour"
-msgstr "Colore d’accento delle email"
+msgstr "Colore d'accento delle email"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -510,7 +510,7 @@ msgstr "Logo mostrato in cima a ogni email transazionale. Viene convertito in PN
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
-msgstr "Nome mostrato nella riga di anteprima della posta in arrivo, nel testo alternativo del logo e nel titolo dell’email. Non cambia il nome del mittente: per quello imposta EMAIL_FROM_NAME. Lascia vuoto per usare «Tymeslot»."
+msgstr "Nome mostrato nella riga di anteprima della posta in arrivo, nel testo alternativo del logo e nel titolo dell'email. Non cambia il nome del mittente: per quello imposta EMAIL_FROM_NAME. Lascia vuoto per usare «Tymeslot»."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -530,7 +530,7 @@ msgstr "Sostituisci"
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "That file is not a valid image and was not saved."
-msgstr "Questo file non è un’immagine valida e non è stato salvato."
+msgstr "Questo file non è un'immagine valida e non è stato salvato."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -540,7 +540,7 @@ msgstr "Questo tipo di file non è supportato."
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "That image could not be read. Try a PNG or JPEG."
-msgstr "Impossibile leggere l’immagine. Prova con un PNG o un JPEG."
+msgstr "Impossibile leggere l'immagine. Prova con un PNG o un JPEG."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format

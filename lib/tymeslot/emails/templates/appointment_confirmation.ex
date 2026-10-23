@@ -207,7 +207,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       meeting_details = TemplateHelper.organizer_meeting_details(appointment_details)
 
       mjml_content = """
-      #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
+      #{MeetingComponents.counterpart_section(@intent, appointment_details)}
 
       #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
 
@@ -225,18 +225,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       #{Text.section_title(dgettext("emails_booking", "Preparation reminders"))}
       #{Text.bullet_list(organizer_prep_items(appointment_details))}
 
-      #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Need to make changes?"), [%{text: dgettext("emails_booking", "Reschedule"), url: Map.get(appointment_details, :reschedule_url), style: :secondary}, %{text: dgettext("emails_booking", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url), style: :danger}])}
+      #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Need to make changes?"), [%{text: dgettext("emails_booking", "Open in dashboard"), url: Map.get(appointment_details, :dashboard_url), style: :primary}, %{text: dgettext("emails_booking", "Reschedule"), url: Map.get(appointment_details, :reschedule_url), style: :secondary}, %{text: dgettext("emails_booking", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url), style: :danger}])}
       """
 
       organizer_details =
-        TemplateHelper.build_organizer_details(appointment_details,
-          intent: @intent,
-          eyebrow: dgettext("emails_booking", "New booking"),
-          stage_title: dgettext("emails_booking", "New Appointment Booked!"),
-          stage_subtitle:
-            dgettext("emails_booking", "%{name} has scheduled a meeting with you.",
-              name: appointment_details.attendee_name
-            )
+        TemplateHelper.build_organizer_details(
+          appointment_details,
+          [intent: @intent] ++ organizer_stage(appointment_details)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -254,13 +249,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         appointment_details.attendee_email
       )
       |> subject(
-        dgettext("emails_booking", "New Appointment: %{name} - %{date}",
-          name: appointment_details.attendee_name,
-          date:
-            Formatting.format_date_short(
-              meeting_details.date,
-              organizer_locale(appointment_details)
-            )
+        organizer_subject(
+          appointment_details,
+          Formatting.format_date_short(
+            meeting_details.date,
+            organizer_locale(appointment_details)
+          )
         )
       )
       |> html_body(html_body)
@@ -395,10 +389,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         payment -> "\n#{PaymentBlocks.organizer_summary_text(payment)}\n"
       end
 
-    """
-    #{dgettext("emails_booking", "New Appointment Booked!")}
+    stage = organizer_stage(appointment_details)
 
-    #{dgettext("emails_booking", "%{name} has scheduled a meeting with you.", name: appointment_details.attendee_name)}#{attendee_info}
+    """
+    #{stage[:stage_title]}
+
+    #{stage[:stage_subtitle]}#{attendee_info}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
     #{meeting_details}#{video_section}#{custom_answers}#{action_links}#{payment_section}
@@ -409,6 +405,44 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails_booking", "Best,")}
     #{appointment_details.organizer_name}
     """
+  end
+
+  # A meeting the host confirmed from their poll was not booked by anyone,
+  # so the organiser's copy says the poll is confirmed rather than naming
+  # one of its guests as the one who booked
+  # (`AppointmentBuilder.organizer_copy/2`).
+  defp organizer_stage(%{host_managed: true} = appointment_details) do
+    [
+      eyebrow: dgettext("emails_booking", "Poll confirmed"),
+      stage_title: appointment_details.attendee_name,
+      stage_subtitle:
+        dgettext("emails_booking", "Your poll is confirmed, and everyone on it is invited.")
+    ]
+  end
+
+  defp organizer_stage(appointment_details) do
+    [
+      eyebrow: dgettext("emails_booking", "New booking"),
+      stage_title: dgettext("emails_booking", "New Appointment Booked!"),
+      stage_subtitle:
+        dgettext("emails_booking", "%{name} has scheduled a meeting with you.",
+          name: appointment_details.attendee_name
+        )
+    ]
+  end
+
+  defp organizer_subject(%{host_managed: true} = appointment_details, date) do
+    dgettext("emails_booking", "Poll confirmed: %{title} - %{date}",
+      title: appointment_details.attendee_name,
+      date: date
+    )
+  end
+
+  defp organizer_subject(appointment_details, date) do
+    dgettext("emails_booking", "New Appointment: %{name} - %{date}",
+      name: appointment_details.attendee_name,
+      date: date
+    )
   end
 
   @doc """

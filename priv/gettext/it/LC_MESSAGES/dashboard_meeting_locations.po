@@ -147,7 +147,7 @@ msgstr "Telefonata"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Phone call: the booker gives their number"
-msgstr "Telefonata: chi prenota indica il proprio numero"
+msgstr "Telefonata: chi prenota indica il suo numero"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/venue_picker.ex
 #, elixir-autogen, elixir-format
@@ -232,12 +232,12 @@ msgstr "Ciò che chi prenota vede nell'elenco delle sedi."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Where this meeting is held. Add a second location and bookers will be asked to choose."
-msgstr "Dove si svolge questo incontro. Aggiungi una seconda sede e a chi prenota verrà chiesto di scegliere."
+msgstr "Dove si svolge questa riunione. Aggiungi una seconda sede e a chi prenota verrà chiesto di scegliere."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Where this meeting is held. Group bookings use one location, fixed in advance, so everyone in a slot meets in the same place."
-msgstr "Dove si svolge questo incontro. Le prenotazioni di gruppo usano un solo luogo, fissato in anticipo, così tutti in un orario si incontrano nello stesso posto."
+msgstr "Dove si svolge questa riunione. Le prenotazioni di gruppo usano un solo luogo, fissato in anticipo, così tutti in un orario si incontrano nello stesso posto."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format

@@ -330,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :queue_unavailable}})
       html = render(lv)
 
-      assert html =~ "Failed to create appointment. Please try again."
+      assert html =~ "Failed to create meeting. Please try again."
       refute html =~ "queue_unavailable"
     end
   end

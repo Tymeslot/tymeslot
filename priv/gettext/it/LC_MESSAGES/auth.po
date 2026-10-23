@@ -815,7 +815,7 @@ msgstr "La password deve contenere almeno una lettera maiuscola"
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
-msgstr "Se esiste un account con questo indirizzo e-mail, le istruzioni per reimpostare la password sono state inviate."
+msgstr "Se esiste un account con questo indirizzo email, le istruzioni per reimpostare la password sono state inviate."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format

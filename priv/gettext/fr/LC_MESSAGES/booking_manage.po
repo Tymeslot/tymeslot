@@ -219,7 +219,7 @@ msgstr "Lien non reconnu"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
-msgstr "Rendez-vous"
+msgstr "Réunion"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel_confirmed.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel_confirmed.ex
@@ -344,12 +344,12 @@ msgstr "Cette réunion n’accepte plus de réponses"
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's start time has already passed."
-msgstr "L'heure de début de ce rendez-vous est déjà passée."
+msgstr "L’heure de début de cette réunion est déjà passée."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's start time has passed, so it can no longer be confirmed."
-msgstr "L'heure de début est passée : ce rendez-vous ne peut plus être confirmé."
+msgstr "L’heure de début est passée : cette réunion ne peut plus être confirmée."
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
@@ -531,7 +531,7 @@ msgstr "Elle a été annulée ou déplacée vers un autre créneau, il n'y a don
 #: lib/tymeslot_web/controllers/seat_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled"
-msgstr "Rendez-vous annulé"
+msgstr "Réunion annulée"
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
@@ -551,7 +551,7 @@ msgstr "La place ne peut pas être déplacée"
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "The host cancelled this meeting, so your spot no longer needs cancelling. Please contact the meeting host if you have any questions."
-msgstr "L'organisateur a annulé ce rendez-vous, votre place n'a donc plus besoin d'être annulée. Pour toute question, veuillez contacter l'organisateur."
+msgstr "L’organisateur a annulé cette réunion, votre place n’a donc plus besoin d’être annulée. Pour toute question, veuillez contacter l’organisateur."
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
@@ -561,17 +561,17 @@ msgstr "Il n'y a plus de place à annuler."
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting has already started"
-msgstr "Ce rendez-vous a déjà commencé"
+msgstr "Cette réunion a déjà commencé"
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting has already taken place"
-msgstr "Ce rendez-vous a déjà eu lieu"
+msgstr "Cette réunion a déjà eu lieu"
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting has been cancelled"
-msgstr "Ce rendez-vous a été annulé"
+msgstr "Cette réunion a été annulée"
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
@@ -626,3 +626,8 @@ msgstr "Cette réunion est désormais complète"
 #, elixir-autogen, elixir-format
 msgid "Your seat was given to someone else after you declined. Your answer stays as it was; please contact the person who invited you or the meeting host."
 msgstr "Votre place a été attribuée à quelqu’un d’autre après votre refus. Votre réponse reste inchangée ; veuillez contacter la personne qui vous a invité ou l’organisateur."
+
+#: lib/tymeslot_web/themes/core/meeting_management.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr "Cette réunion a été fixée par un sondage : seul son organisateur peut la déplacer ou l'annuler. Si vous ne pouvez pas venir, utilisez « Je ne pourrai pas venir » dans votre invitation, ou répondez-y."

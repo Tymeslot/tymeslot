@@ -39,6 +39,21 @@ defmodule Tymeslot.Meetings.Guests do
 
   @max_guests Constraints.guests_per_booking_range().last
 
+  @typedoc """
+  A guest to insert: a bare address, or an address with the name its owner
+  gave, which their emails and the host's dashboard then use, and optionally
+  the guest's own `locale` and `timezone`, which their emails are then
+  written in rather than the attendee's.
+  """
+  @type entry ::
+          String.t()
+          | %{
+              required(:email) => String.t(),
+              required(:name) => String.t() | nil,
+              optional(:locale) => String.t() | nil,
+              optional(:timezone) => String.t() | nil
+            }
+
   @typedoc "Aggregate RSVP counts for a meeting's guest list."
   @type summary :: GuestSchema.summary()
 
@@ -89,7 +104,8 @@ defmodule Tymeslot.Meetings.Guests do
   def valid_email?(email), do: EmailValidator.validate(email) == :ok
 
   @doc """
-  Inserts the given sanitised guest emails for a meeting.
+  Inserts the given sanitised guests for a meeting, each a bare address or an
+  address with a name (`t:entry/0`).
 
   `invited_by` records who is inviting them (`:booker` for the person booking
   on the public page, `:organizer` for the host), so their invitation names
@@ -99,7 +115,7 @@ defmodule Tymeslot.Meetings.Guests do
   failure rolls the whole booking back. Returns `{:ok, guests}` with the
   inserted rows, or `{:error, changeset}` on the first failure.
   """
-  @spec create_for_meeting(binary(), [String.t()], GuestSchema.inviter()) ::
+  @spec create_for_meeting(binary(), [entry()], GuestSchema.inviter()) ::
           {:ok, [GuestSchema.t()]} | {:error, Ecto.Changeset.t()}
   def create_for_meeting(meeting_id, emails, invited_by \\ :booker)
 
@@ -364,10 +380,10 @@ defmodule Tymeslot.Meetings.Guests do
     end)
   end
 
-  defp insert_guests(base_attrs, emails) do
+  defp insert_guests(base_attrs, entries) do
     result =
-      Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
-        case GuestQueries.insert_guest(Map.put(base_attrs, :email, email)) do
+      Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, acc} ->
+        case GuestQueries.insert_guest(Map.merge(base_attrs, guest_attrs(entry))) do
           {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
           {:error, changeset} -> {:halt, {:error, changeset}}
         end
@@ -378,6 +394,11 @@ defmodule Tymeslot.Meetings.Guests do
       error -> error
     end
   end
+
+  defp guest_attrs(%{email: _email, name: _name} = entry),
+    do: Map.take(entry, [:email, :name, :locale, :timezone])
+
+  defp guest_attrs(email) when is_binary(email), do: %{email: email}
 
   defp broadcast_rsvp_update(%{organizer_user_id: user_id, id: meeting_id})
        when is_integer(user_id) do

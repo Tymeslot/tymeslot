@@ -274,7 +274,7 @@ msgstr "verifiche del server video"
 msgid "bookings"
 msgstr "prenotazioni"
 
-#: lib/tymeslot/security/rate_limiter/limits.ex
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr "spostamenti di eventi del calendario"
@@ -383,11 +383,6 @@ msgstr "le prenotazioni di gruppo non possono richiedere un pagamento"
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
 msgstr "Hai già un tipo di riunione con questo nome"
-
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
-msgstr "le date fisse richiedono le prenotazioni di gruppo"
 
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
@@ -522,6 +517,7 @@ msgid "is not a supported language"
 msgstr "non è una lingua supportata"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
@@ -533,6 +529,7 @@ msgstr "non è una lingua supportata"
 msgid "is not a valid palette key"
 msgstr "non è una chiave della palette valida"
 
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid timezone"
@@ -795,6 +792,16 @@ msgstr "La risposta è troppo lunga"
 #, elixir-autogen, elixir-format
 msgid "Unknown field type"
 msgstr "Tipo di campo sconosciuto"
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr "spostamenti di riunioni"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "le date fisse richiedono le prenotazioni di gruppo"
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex
 #, elixir-autogen, elixir-format

@@ -543,7 +543,7 @@ msgstr "Usata da %{meeting_types}."
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "Used by every meeting type that has no schedule of its own."
-msgstr "Usata da ogni tipo di riunione che non ha una pianificazione propria."
+msgstr "Usata da ogni tipo di riunione che non ha una sua pianificazione."
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
@@ -563,7 +563,7 @@ msgstr "Accetta prenotazioni il %{day}"
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
-msgstr "Usata da %{meeting_types} e da ogni tipo di riunione che non ha una pianificazione propria."
+msgstr "Usata da %{meeting_types} e da ogni tipo di riunione che non ha una sua pianificazione."
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format

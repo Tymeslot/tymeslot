@@ -24,12 +24,16 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.one()
   end
 
-  @doc "Fetches a poll by id with its host (user and profile) preloaded, for email sending."
+  @doc """
+  Fetches a poll by id for email sending, with its host (user and profile),
+  its slots and its participants' votes preloaded, the last two for the
+  standings the host's emails carry.
+  """
   @spec get_with_host(Ecto.UUID.t()) :: PollSchema.t() | nil
   def get_with_host(id) do
     PollSchema
     |> where([p], p.id == ^id)
-    |> preload(user: :profile)
+    |> preload([:time_slots, user: :profile, participants: :votes])
     |> Repo.one()
   end
 
@@ -59,6 +63,25 @@ defmodule Tymeslot.Polls.PollQueries do
     |> preload_associations()
   end
 
+  @doc """
+  Reads poll `id` and holds it `FOR SHARE` until the caller's transaction
+  ends, or returns nil.
+
+  Must be called inside `Repo.transaction/1`. A participant's write takes it
+  before locking their own row, the same order as `lock_for_user/2` and then
+  participants on the host's side, so a host closing, editing or confirming
+  the poll waits for the write in progress, and a write starting after the
+  host's commits sees the poll as the host left it. Shared, so voters do not
+  queue behind one another. No associations are loaded.
+  """
+  @spec lock_shared(Ecto.UUID.t()) :: PollSchema.t() | nil
+  def lock_shared(id) do
+    PollSchema
+    |> where([p], p.id == ^id)
+    |> lock("FOR SHARE")
+    |> Repo.one()
+  end
+
   defp preload_associations(nil), do: nil
   defp preload_associations(poll), do: Repo.preload(poll, @preloads)
 
@@ -86,11 +109,45 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.aggregate(:count)
   end
 
+  @doc """
+  Whether `poll_id` takes votes only from people its host invited, read from
+  the database rather than from a struct that may predate the host's switch.
+  """
+  @spec invite_only?(Ecto.UUID.t()) :: boolean()
+  def invite_only?(poll_id) do
+    PollSchema
+    |> where([p], p.id == ^poll_id and p.invite_only)
+    |> Repo.exists?()
+  end
+
   @spec insert(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def insert(changeset), do: Repo.insert(changeset)
 
   @spec update(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(changeset), do: Repo.update(changeset)
+
+  @doc """
+  Records that the host has been told of the votes before `cutoff`. Never moves
+  the mark back, however a concurrent nudge and update interleave: the
+  comparison is made by the database, not against a struct that may be stale.
+  """
+  @spec mark_vote_digest_sent(Ecto.UUID.t(), DateTime.t()) :: :ok
+  def mark_vote_digest_sent(poll_id, cutoff) do
+    cutoff = DateTime.truncate(cutoff, :second)
+
+    PollSchema
+    |> where(
+      [p],
+      p.id == ^poll_id and (is_nil(p.vote_digest_sent_at) or p.vote_digest_sent_at < ^cutoff)
+    )
+    |> Repo.update_all(set: [vote_digest_sent_at: cutoff])
+
+    :ok
+  end
+
+  @doc "Deletes a poll; its slots, participants and votes go with it."
+  @spec delete(PollSchema.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
+  def delete(poll), do: Repo.delete(poll)
 
   # A host whose account waits to be deleted is frozen: their poll's public
   # token answers as if the poll did not exist.
