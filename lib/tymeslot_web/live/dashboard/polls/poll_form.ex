@@ -172,13 +172,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
                 {dgettext("dashboard_polls", "Candidate times")}
               </label>
               <span class="text-token-xs text-tymeslot-500">
+                <%!-- The noun counts the maximum ("1 of 40 times"), so the
+                      plural follows it rather than the times added. --%>
                 {dngettext(
                   "dashboard_polls",
-                  "%{count} of %{max} time",
-                  "%{count} of %{max} times",
-                  length(@slots),
-                  count: length(@slots),
-                  max: PollSchema.max_slots()
+                  "%{used} of %{count} time",
+                  "%{used} of %{count} times",
+                  PollSchema.max_slots(),
+                  used: length(@slots)
                 )}
               </span>
             </div>
