@@ -52,8 +52,10 @@ defmodule Tymeslot.Polls.EditingTest do
           slots: [%{start_time: in_days(14)}]
         })
 
-      assert reminder_times(poll.id) ==
-               Enum.sort([DateTime.add(deadline, -3, :day), DateTime.add(deadline, -1, :day)])
+      assert reminder_times(poll.id) == [
+               DateTime.add(deadline, -3, :day),
+               DateTime.add(deadline, -1, :day)
+             ]
     end
 
     test "none are scheduled when the host removed them all", %{user: user} do
