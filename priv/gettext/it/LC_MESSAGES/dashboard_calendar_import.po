@@ -30,9 +30,9 @@ msgstr[1] "%{count} eventi si ripetono in un modo che Outlook non può salvare, 
 msgid "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day."
 msgid_plural "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day."
 msgstr[0] ""
-"1 si ripete in un giorno che alcuni mesi non hanno e Outlook lo sposterebbe all’ultimo giorno del mese."
+"1 si ripete in un giorno che alcuni mesi non hanno e Outlook lo sposterebbe all'ultimo giorno del mese."
 msgstr[1] ""
-"%{count} si ripetono in un giorno che alcuni mesi non hanno e Outlook li sposterebbe all’ultimo giorno del mese."
+"%{count} si ripetono in un giorno che alcuni mesi non hanno e Outlook li sposterebbe all'ultimo giorno del mese."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
@@ -44,7 +44,7 @@ msgstr[1] "%{count} di questi si ripetono."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "An import is still running. Please wait for it to finish before importing another file."
-msgstr "Un’importazione è ancora in corso. Attendi che termini prima di importare un altro file."
+msgstr "Un'importazione è ancora in corso. Attendi che termini prima di importare un altro file."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
@@ -150,22 +150,22 @@ msgstr "Il file è troppo grande. Si possono importare file fino a %{size} MB."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "The import could not be finished. Some of its events may already be in your calendar."
-msgstr "Non è stato possibile completare l’importazione. Alcuni dei suoi eventi potrebbero essere già nel tuo calendario."
+msgstr "Non è stato possibile completare l'importazione. Alcuni dei suoi eventi potrebbero essere già nel tuo calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "The import stopped because the calendar could not be written to."
-msgstr "L’importazione si è interrotta perché non è stato possibile scrivere nel calendario."
+msgstr "L'importazione si è interrotta perché non è stato possibile scrivere nel calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "The import stopped because your calendar is not responding. Please try again later."
-msgstr "L’importazione si è interrotta perché il tuo calendario non risponde. Riprova più tardi."
+msgstr "L'importazione si è interrotta perché il tuo calendario non risponde. Riprova più tardi."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "The import stopped because your calendar needs to be reconnected."
-msgstr "L’importazione si è interrotta perché il tuo calendario deve essere ricollegato."
+msgstr "L'importazione si è interrotta perché il tuo calendario deve essere ricollegato."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
@@ -185,9 +185,9 @@ msgstr "Impossibile leggere questo file come calendario. Scegli un file .ics."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/ics_import.ex
 #, elixir-autogen, elixir-format
 msgid "Too many imports. Please wait a while before importing another file."
-msgstr "Troppe importazioni. Attendi un po’ prima di importare un altro file."
+msgstr "Troppe importazioni. Attendi un po' prima di importare un altro file."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/import_ics_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You can close this window; the import carries on."
-msgstr "Puoi chiudere questa finestra; l’importazione continua."
+msgstr "Puoi chiudere questa finestra; l'importazione continua."

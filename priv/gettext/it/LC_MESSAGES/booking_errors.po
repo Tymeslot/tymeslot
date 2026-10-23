@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
-msgstr "L’indirizzo email del partecipante è obbligatorio"
+msgstr "L'indirizzo email del partecipante è obbligatorio"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -29,7 +29,7 @@ msgstr "La prenotazione richiede almeno %{hours} ore di anticipo"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Booking time must be in the future"
-msgstr "L’orario della prenotazione deve essere nel futuro"
+msgstr "L'orario della prenotazione deve essere nel futuro"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -84,12 +84,7 @@ msgstr "Impossibile riprogrammare una riunione scaduta"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr "L’orario di fine deve essere successivo all’orario di inizio"
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr "Impossibile creare l'appuntamento. Riprova."
+msgstr "L'orario di fine deve essere successivo all'orario di inizio"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -119,7 +114,7 @@ msgstr "Data/ora non valide"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting duration selected"
-msgstr "Durata dell’incontro selezionata non valida"
+msgstr "Durata della riunione selezionata non valida"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -149,7 +144,7 @@ msgstr "Seleziona una data e un orario"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration"
-msgstr "Seleziona la durata dell’incontro"
+msgstr "Seleziona la durata della riunione"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -159,7 +154,7 @@ msgstr "Seleziona un orario"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "The guest email must differ from your own address"
-msgstr "L’indirizzo email dell’ospite deve essere diverso dal tuo"
+msgstr "L'indirizzo email dell'ospite deve essere diverso dal tuo"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -174,7 +169,7 @@ msgstr "Questa prenotazione è già stata annullata o spostata."
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
-msgstr "Questa è una prenotazione di gruppo: ogni partecipante sposta il proprio posto dalla propria e-mail di conferma."
+msgstr "Questa è una prenotazione di gruppo: ogni partecipante sposta il suo posto dalla sua email di conferma."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -224,7 +219,7 @@ msgstr "Non è stato possibile avviare il processo di pagamento. Riprova."
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a spot at this time. Check your email for your booking confirmation."
-msgstr "Hai già un posto a quest'ora. Controlla la tua e-mail per la conferma della prenotazione."
+msgstr "Hai già un posto a quest'ora. Controlla la tua email per la conferma della prenotazione."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -245,3 +240,8 @@ msgstr "I promemoria per questa riunione non sono validi"
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
 msgstr "Una data fissa si sposta dal suo tipo di riunione, insieme a tutti quelli che l'hanno prenotata"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
+msgstr "Impossibile creare la riunione. Riprova."

@@ -68,8 +68,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   end
 
   @doc """
-  Invites the attendees a write accepted by the calendar added to the
-  event and tells the ones it removed (`AttendeeNotifications.membership_changed/3`),
+  Invites the attendees a write accepted by the calendar, or saved to sync
+  later, added to the event and tells the ones it removed (`AttendeeNotifications.membership_changed/3`),
   from `original_event`, the event as the write found it, and
   `updated_event`, as it left it, then tells the organiser what was sent.
   """
@@ -117,6 +117,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   defp added_flash({:ok, :sent}),
     do: {:info, dgettext("dashboard_calendar_events", "Attendee added and invited.")}
 
+  defp added_flash({:ok, :after_sync}),
+    do:
+      {:info,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee added. They will be invited once the change has synced to your calendar."
+       )}
+
   defp added_flash({:error, _reason}),
     do:
       {:warning,
@@ -137,6 +145,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
   defp removed_flash({:ok, :sent}),
     do: {:info, dgettext("dashboard_calendar_events", "Attendee removed and notified.")}
+
+  defp removed_flash({:ok, :after_sync}),
+    do:
+      {:info,
+       dgettext(
+         "dashboard_calendar_events",
+         "Attendee removed. They will be notified once the change has synced to your calendar."
+       )}
 
   defp removed_flash({:error, _reason}),
     do:

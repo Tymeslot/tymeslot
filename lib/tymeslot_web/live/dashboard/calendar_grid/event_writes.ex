@@ -28,6 +28,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   the write dropped. Only a grid on screen asks: with the LiveView gone,
   the guardian finishes the write and asks nobody.
 
+  An edit the provider could not take but that was saved to sync later is
+  told about the same way, from the event as the replay will leave it: the
+  organiser is asked, and guests added or removed are owed their emails.
+  `Tymeslot.Meetings.AttendeeNotifications` holds every one of those emails
+  until the replay has reached the calendar.
+
   A write made with `notify: :membership` (an attendee added or removed,
   see `EventHandlers.AttendeeManagement`) asks nobody: once the provider has
   accepted it, the guests it added are invited and the ones it removed are

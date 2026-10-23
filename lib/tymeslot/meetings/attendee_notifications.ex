@@ -29,7 +29,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       attends, and `{:error, reason}` when an email could not be scheduled.
     * `membership_changed/3` — the same, worked out from the event before
       and after a write that changed who attends: called once the calendar
-      has accepted that write, never before.
+      has accepted that write or saved it to sync later, never before; a
+      saved write's emails wait for its replay.
     * `event_deleted/3` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
       nobody to notify, and `{:ok, :not_organiser}` for an event the user
@@ -54,6 +55,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.Recipients
+  alias Tymeslot.Meetings.AttendeeNotifications.ReplayWait
 
   @type event :: map
   @type attendee ::
@@ -211,26 +213,69 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   `updated_event` does not, both from the organiser `owner_user_id` (see
   `attendees_added/3`). Addresses are compared trimmed and lower-cased.
 
-  Call it only once the calendar has accepted the write, with the event as
-  the write found it and as it left it: an invitation to an event the guest
-  was never put on, or a cancellation while they are still on it, cannot be
-  taken back. Working the change out from the two, rather than from the
-  edit that was asked for, also tells a guest added by an earlier edit whose
-  own write failed, when a later write carried them on.
+  Call it only once the calendar has accepted the write, or saved it to
+  sync later, with the event as the write found it and as it left it: an
+  invitation to an event the guest was never put on, or a cancellation
+  while they are still on it, cannot be taken back. Working the change out
+  from the two, rather than from the edit that was asked for, also tells a
+  guest added by an earlier edit whose own write failed, when a later write
+  carried them on.
+
+  While the event's cached row holds a change not yet replayed to the
+  calendar, the emails wait for that replay (`MembershipWorker`), and each
+  side that has anyone to tell answers `{:ok, :after_sync}`.
   """
   @spec membership_changed(event, event, pos_integer()) :: %{
-          added: membership_result,
-          removed: membership_result
+          added: membership_result | {:ok, :after_sync},
+          removed: membership_result | {:ok, :after_sync}
         }
   def membership_changed(original_event, updated_event, owner_user_id) do
     before = attendee_list(original_event)
     now = attendee_list(updated_event)
+    added = missing_from(now, before)
+    removed = missing_from(before, now)
 
-    %{
-      added: attendees_added(updated_event, missing_from(now, before), owner_user_id),
-      removed: attendees_removed(updated_event, missing_from(before, now), owner_user_id)
-    }
+    cond do
+      added == [] and removed == [] ->
+        %{added: {:ok, :noop}, removed: {:ok, :noop}}
+
+      ReplayWait.awaiting_replay?(updated_event) ->
+        membership_after_replay(before, updated_event, owner_user_id, added, removed)
+
+      true ->
+        %{
+          added: attendees_added(updated_event, added, owner_user_id),
+          removed: attendees_removed(updated_event, removed, owner_user_id)
+        }
+    end
   end
+
+  # Held back until the change saved to sync later reaches the calendar. Only
+  # the organiser's guests are owed anything, so nothing is held for anyone
+  # else's event.
+  defp membership_after_replay(before, event, owner_user_id, added, removed) do
+    result =
+      if Recipients.organised_by?(event, owner_user_id),
+        do: hold_membership(before, event, owner_user_id),
+        else: {:ok, :not_organiser}
+
+    %{added: unless_none(added, result), removed: unless_none(removed, result)}
+  end
+
+  defp hold_membership(before, event, owner_user_id) do
+    case Dispatcher.schedule_membership(
+           event.calendar_integration_id,
+           event.uid,
+           before,
+           owner_user_id
+         ) do
+      {:ok, :scheduled} -> {:ok, :after_sync}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp unless_none([], _result), do: {:ok, :noop}
+  defp unless_none(_attendees, result), do: result
 
   defp attendee_list(event),
     do: Enum.map(Map.get(event, :attendees) || [], &Attendee.normalise/1)

@@ -88,11 +88,6 @@ msgstr "Čas ukončení musí být pozdější než čas začátku"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to create appointment. Please try again."
-msgstr "Schůzku se nepodařilo vytvořit. Zkuste to prosím znovu."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
 msgstr "Schůzku se nepodařilo vytvořit"
 
@@ -245,3 +240,8 @@ msgstr "Připomínky pro tuto schůzku nejsou platné"
 #, elixir-autogen, elixir-format
 msgid "A fixed date is moved from its meeting type, together with everyone booked on it"
 msgstr "Pevný termín se přesouvá v jeho typu schůzky, a to se všemi, kdo si ho rezervovali"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create meeting. Please try again."
+msgstr "Schůzku se nepodařilo vytvořit. Zkuste to prosím znovu."

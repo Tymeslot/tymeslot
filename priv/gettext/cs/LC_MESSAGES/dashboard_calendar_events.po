@@ -1002,3 +1002,13 @@ msgstr "Účastník byl přidán, ale pozvánku se nepodařilo odeslat."
 #, elixir-autogen, elixir-format
 msgid "Attendee removed, but they could not be notified."
 msgstr "Účastník byl odebrán, ale nepodařilo se ho informovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added. They will be invited once the change has synced to your calendar."
+msgstr "Účastník byl přidán. Bude pozván, jakmile se změna synchronizuje s vaším kalendářem."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed. They will be notified once the change has synced to your calendar."
+msgstr "Účastník byl odebrán. Bude informován, jakmile se změna synchronizuje s vaším kalendářem."

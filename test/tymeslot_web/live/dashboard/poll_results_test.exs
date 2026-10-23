@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
   import Ecto, only: [assoc: 2]
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import TymeslotWeb.PollDashboardHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOff
@@ -104,9 +105,13 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
     end
 
     defp select_poll(view, poll) do
-      view
-      |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
-      |> render_click()
+      html =
+        view
+        |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
+        |> render_click()
+
+      await_slot_health(view)
+      html
     end
 
     defp toggle_voters(view, slot) do
@@ -426,6 +431,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
       html =
         confirm_slot(view, slot1)
 
+      await_slot_health(view)
       assert html =~ "This time is no longer free"
 
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)

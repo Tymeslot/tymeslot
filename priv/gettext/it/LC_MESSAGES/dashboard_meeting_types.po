@@ -364,7 +364,7 @@ msgstr "Eventi"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "One-off events created from Quick Add. Each has its own booking link and ends on its own once it is over."
-msgstr "Eventi unici creati con l'aggiunta rapida. Ognuno ha il proprio link di prenotazione e termina da solo una volta concluso."
+msgstr "Eventi unici creati con l'aggiunta rapida. Ognuno ha il suo link di prenotazione e termina da solo una volta concluso."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
 #, elixir-autogen, elixir-format

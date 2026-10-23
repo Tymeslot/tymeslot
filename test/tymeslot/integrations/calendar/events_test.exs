@@ -100,13 +100,23 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
         {:error, :not_found}
       end)
 
+      # The 404 is confirmed against the account before the booking goes.
+      expect(Tymeslot.CalendarMock, :fetch_event, fn ref, _context ->
+        send(self(), {:looked_up, ref})
+        {:error, :not_found}
+      end)
+
       assert {:ok, result} =
                Events.delete_event_and_reconcile(
                  "uid-gone",
                  "prov-gone",
                  {integration.id, integration.user_id},
-                 provider_event_id: "prov-gone"
+                 provider_event_id: "prov-gone",
+                 calendar_id: "cal-gone"
                )
+
+      assert_received {:looked_up,
+                       %{uid: "uid-gone", provider_event_id: "prov-gone", calendar_id: "cal-gone"}}
 
       assert %{already_gone: true, reconcile_result: :ok} = result
 
@@ -126,6 +136,59 @@ defmodule Tymeslot.Integrations.Calendar.EventsTest do
                )
 
       assert result == %{uid: "uid-free", integration_id: integration.id, reconcile_result: :ok}
+    end
+
+    test "takes a 404 at its word when the provider cannot look the event up", %{
+      integration: integration
+    } do
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :not_found}
+      end)
+
+      expect(Tymeslot.CalendarMock, :fetch_event, fn _ref, _context -> {:error, :unsupported} end)
+
+      assert {:ok, %{already_gone: true}} =
+               Events.delete_event_and_reconcile(
+                 "uid-unsupported",
+                 nil,
+                 {integration.id, integration.user_id},
+                 []
+               )
+    end
+
+    # A 404 says only that nothing was at the address the delete used: an
+    # event the account still has, or whose absence could not be checked, is
+    # not gone, and its booking stands.
+    for {lookup, reason} <- [
+          {{:ok, [:found_elsewhere]}, :not_found},
+          {{:error, :network_error}, :network_error}
+        ] do
+      test "leaves the linked meeting alone when the 404's lookup answers #{inspect(lookup)}",
+           %{integration: integration} do
+        meeting =
+          insert(:meeting,
+            calendar_integration_id: integration.id,
+            provider_event_id: "prov-elsewhere"
+          )
+
+        expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+          {:error, :not_found}
+        end)
+
+        expect(Tymeslot.CalendarMock, :fetch_event, fn _ref, _context -> unquote(lookup) end)
+
+        assert {:error, unquote(reason)} =
+                 Events.delete_event_and_reconcile(
+                   "uid-elsewhere",
+                   "prov-elsewhere",
+                   {integration.id, integration.user_id},
+                   provider_event_id: "prov-elsewhere"
+                 )
+
+        {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
+        assert unchanged.status == meeting.status
+        assert unchanged.calendar_sync_status == nil
+      end
     end
 
     # A calendar that is gone from the integration is not an event that is
