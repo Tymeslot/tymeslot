@@ -230,6 +230,15 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       "END:VALARM"
     ]
 
+    # An alarm no reminder can express, so the sync reads nothing from it.
+    @end_alarm [
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "TRIGGER;RELATED=END:-PT5M",
+      "DESCRIPTION:Wrap up",
+      "END:VALARM"
+    ]
+
     @read_ical """
     BEGIN:VCALENDAR\r
     VERSION:2.0\r
@@ -242,6 +251,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
     SUMMARY:Board meeting\r
     #{Enum.join(@email_alarm, "\r\n")}\r
     #{Enum.join(@display_alarm, "\r\n")}\r
+    #{Enum.join(@end_alarm, "\r\n")}\r
     END:VEVENT\r
     END:VCALENDAR\r
     """
@@ -328,7 +338,44 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
 
       lines = put_lines()
       assert "TRIGGER:-PT10M" in lines
-      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 1
+      refute contains_block?(lines, @email_alarm)
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @end_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 2
+    end
+
+    test "adding a reminder keeps every stored alarm exactly as the server wrote it", %{
+      user: user,
+      event: event
+    } do
+      capture_put()
+
+      assert {:ok, _updated} =
+               EventEdit.update_event(user.id, event, %{
+                 reminders: @read_reminders ++ [%{method: :popup, minutes_before: 10}]
+               })
+
+      lines = put_lines()
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @end_alarm)
+      assert "TRIGGER:-PT10M" in lines
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 4
+    end
+
+    test "removing the pop-up reminder removes its alarm alone", %{user: user, event: event} do
+      capture_put()
+
+      assert {:ok, _updated} =
+               EventEdit.update_event(user.id, event, %{
+                 reminders: [%{method: :email, minutes_before: 30}]
+               })
+
+      lines = put_lines()
+      refute contains_block?(lines, @display_alarm)
+      assert contains_block?(lines, @email_alarm)
+      assert contains_block?(lines, @end_alarm)
+      assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 2
     end
 
     test "moving the email alert keeps it addressed to the recipient the client chose", %{

@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Alarms do
   VALARM (reminder) serialisation for iCalendar events.
 
   Used by the `ICalBuilder.build_simple_event/3` CalDAV write path and by the
-  patcher when a payload replaces an event's reminders.
+  patcher for the reminders a payload adds to an event.
 
   RFC 5545 §3.6.6 requires an `EMAIL` alarm to carry a `SUMMARY` (the mail's
   subject) and at least one `ATTENDEE` (its recipient). The recipient is the

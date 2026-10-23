@@ -352,13 +352,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp merges_attendees?(provider, _payload) when provider in [:outlook, "outlook"], do: true
   defp merges_attendees?(provider, payload), do: patches_document?(provider, payload)
 
-  # The patcher replaces every VALARM whenever the payload carries
-  # `:reminders`, and the cached reminders are only what a reminder can hold
-  # of each alarm (none at all on a row cached before the sync read them), so
-  # sending them with an edit that is not about reminders would delete or
-  # strip the alarms on the organiser's server. A patched document keeps the
-  # alarms a payload leaves out, so those writes carry reminders only when
-  # the edit changes them. Google and Outlook read
+  # The patcher removes the alarms a reminder can express that the payload's
+  # `:reminders` leaves out, and a row cached before the sync read alarms
+  # holds no reminders at all, so sending them with an edit that is not
+  # about reminders could delete the reminders on the organiser's server. A
+  # patched document keeps the alarms a payload leaves out, so those writes
+  # carry reminders only when the edit changes them. Google and Outlook read
   # their reminders back on sync and treat a missing key as a reset (Google's
   # calendar defaults, Outlook's reminder switched off), so they keep it.
   defp scope_reminders(payload, _event, %{reminders: _reminders}), do: payload
