@@ -866,3 +866,8 @@ msgstr "Iscrizioni chiuse"
 #, elixir-autogen, elixir-format
 msgid "Move a fixed date from its meeting type."
 msgstr "Sposta una data fissa dal suo tipo di riunione."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is already at that time."
+msgstr "La riunione è già fissata a quell'orario."

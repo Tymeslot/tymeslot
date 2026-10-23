@@ -876,3 +876,8 @@ msgstr "Реєстрацію закрито"
 #, elixir-autogen, elixir-format
 msgid "Move a fixed date from its meeting type."
 msgstr "Фіксовану дату переносять у її типі зустрічі."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is already at that time."
+msgstr "Зустріч уже призначено на цей час."

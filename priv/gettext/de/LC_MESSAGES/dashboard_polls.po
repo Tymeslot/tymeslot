@@ -11,13 +11,6 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} of %{max} time"
-msgid_plural "%{count} of %{max} times"
-msgstr[0] "%{count} von %{max} Zeit"
-msgstr[1] "%{count} von %{max} Zeiten"
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
@@ -806,3 +799,35 @@ msgstr "Außer Ihnen ist noch niemand dieser Umfrage beigetreten, es gibt also n
 #, elixir-autogen, elixir-format
 msgid "This time has already begun."
 msgstr "Diese Zeit hat bereits begonnen."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{used} of %{count} time"
+msgid_plural "%{used} of %{count} times"
+msgstr[0] "%{used} von %{count} Zeit"
+msgstr[1] "%{used} von %{count} Zeiten"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Kalender verbinden"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar first: guests vote on a page that opens once you have."
+msgstr "Verbinden Sie zuerst einen Kalender: Gäste stimmen auf einer Seite ab, die erst danach verfügbar ist."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to start a poll"
+msgstr "Verbinden Sie einen Kalender, um eine Umfrage zu starten"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Guests vote on a page that opens once your calendar is connected, so Tymeslot can flag the times you're busy and book the winner without double-booking you."
+msgstr "Gäste stimmen auf einer Seite ab, die erst verfügbar ist, wenn Ihr Kalender verbunden ist. So kann Tymeslot die Zeiten markieren, zu denen Sie belegt sind, und die Gewinnerzeit ohne Doppelbuchung buchen."
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time clashes with an event on your calendar. Confirming books it anyway."
+msgstr "Diese Zeit überschneidet sich mit einem Ereignis in Ihrem Kalender. Wenn Sie bestätigen, wird sie trotzdem gebucht."

@@ -11,13 +11,6 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} of %{max} time"
-msgid_plural "%{count} of %{max} times"
-msgstr[0] ""
-msgstr[1] ""
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
@@ -805,4 +798,36 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This time has already begun."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{used} of %{count} time"
+msgid_plural "%{used} of %{count} times"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar first: guests vote on a page that opens once you have."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to start a poll"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Guests vote on a page that opens once your calendar is connected, so Tymeslot can flag the times you're busy and book the winner without double-booking you."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time clashes with an event on your calendar. Confirming books it anyway."
 msgstr ""

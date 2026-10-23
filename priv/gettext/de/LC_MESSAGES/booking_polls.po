@@ -225,3 +225,8 @@ msgstr "Diese Umfrage ist nur mit Einladung zugänglich, und die Abstimmung ist 
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
 msgstr "Dieser persönliche Abstimmungslink ist ungültig oder funktioniert nicht mehr."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr "Wählen Sie für mindestens eine Zeit eine Antwort und speichern Sie dann."

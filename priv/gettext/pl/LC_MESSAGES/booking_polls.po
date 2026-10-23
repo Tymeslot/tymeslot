@@ -225,3 +225,8 @@ msgstr "Ta ankieta jest dostępna tylko na zaproszenie, a głosowanie zostało z
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
 msgstr "Ten osobisty link do głosowania jest nieprawidłowy lub już nie działa."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr "Wybierz odpowiedź dla co najmniej jednego terminu, a potem zapisz."

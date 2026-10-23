@@ -225,3 +225,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
 msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr ""

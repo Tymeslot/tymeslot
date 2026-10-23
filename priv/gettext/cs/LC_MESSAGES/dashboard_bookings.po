@@ -876,3 +876,8 @@ msgstr "Registrace uzavřena"
 #, elixir-autogen, elixir-format
 msgid "Move a fixed date from its meeting type."
 msgstr "Pevný termín přesunete v jeho typu schůzky."
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is already at that time."
+msgstr "Schůzka už je na tento čas naplánovaná."

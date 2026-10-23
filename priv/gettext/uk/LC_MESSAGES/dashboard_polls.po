@@ -11,14 +11,6 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} of %{max} time"
-msgid_plural "%{count} of %{max} times"
-msgstr[0] "%{count} із %{max} варіантів часу"
-msgstr[1] "%{count} із %{max} варіантів часу"
-msgstr[2] "%{count} із %{max} варіантів часу"
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
@@ -819,3 +811,36 @@ msgstr "Окрім вас, до цього опитування ще ніхто 
 #, elixir-autogen, elixir-format
 msgid "This time has already begun."
 msgstr "Цей час уже почався."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{used} of %{count} time"
+msgid_plural "%{used} of %{count} times"
+msgstr[0] "%{used} із %{count} варіанта часу"
+msgstr[1] "%{used} із %{count} варіантів часу"
+msgstr[2] "%{used} із %{count} варіантів часу"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Підключити календар"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar first: guests vote on a page that opens once you have."
+msgstr "Спершу підключіть календар: гості голосують на сторінці, яка відкривається лише після цього."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to start a poll"
+msgstr "Підключіть календар, щоб створити опитування"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Guests vote on a page that opens once your calendar is connected, so Tymeslot can flag the times you're busy and book the winner without double-booking you."
+msgstr "Гості голосують на сторінці, яка відкривається лише після підключення вашого календаря. Так Tymeslot зможе позначити час, коли ви зайняті, і забронювати варіант-переможець без накладок у розкладі."
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time clashes with an event on your calendar. Confirming books it anyway."
+msgstr "Цей час перетинається з подією у вашому календарі. Якщо ви підтвердите, його все одно буде заброньовано."

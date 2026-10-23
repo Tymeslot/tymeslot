@@ -866,3 +866,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Move a fixed date from its meeting type."
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is already at that time."
+msgstr ""

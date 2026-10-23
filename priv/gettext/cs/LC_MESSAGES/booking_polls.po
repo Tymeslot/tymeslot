@@ -225,3 +225,8 @@ msgstr "Tato anketa je jen pro pozvané a hlasování je ukončeno."
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
 msgstr "Tento osobní odkaz k hlasování není platný nebo už nefunguje."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr "Vyberte odpověď alespoň u jednoho termínu a pak uložte."

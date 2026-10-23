@@ -225,3 +225,8 @@ msgstr "Esta enquete é apenas por convite, e a votação foi encerrada."
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
 msgstr "Este link pessoal de votação não é válido ou não funciona mais."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr "Escolha uma resposta para pelo menos um horário e depois salve."

@@ -11,14 +11,6 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} of %{max} time"
-msgid_plural "%{count} of %{max} times"
-msgstr[0] "%{count} z %{max} termínů"
-msgstr[1] "%{count} z %{max} termínů"
-msgstr[2] "%{count} z %{max} termínů"
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_participant_list.ex
 #, elixir-autogen, elixir-format
@@ -819,3 +811,36 @@ msgstr "Kromě vás se k této anketě zatím nikdo nepřipojil, takže zatím n
 #, elixir-autogen, elixir-format
 msgid "This time has already begun."
 msgstr "Tento termín už začal."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "%{used} of %{count} time"
+msgid_plural "%{used} of %{count} times"
+msgstr[0] "%{used} z %{count} termínu"
+msgstr[1] "%{used} z %{count} termínů"
+msgstr[2] "%{used} z %{count} termínů"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Připojit kalendář"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar first: guests vote on a page that opens once you have."
+msgstr "Nejdřív připojte kalendář: hosté hlasují na stránce, která se otevře až potom."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to start a poll"
+msgstr "Pro založení ankety připojte kalendář"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#, elixir-autogen, elixir-format
+msgid "Guests vote on a page that opens once your calendar is connected, so Tymeslot can flag the times you're busy and book the winner without double-booking you."
+msgstr "Hosté hlasují na stránce, která se otevře až po připojení vašeho kalendáře. Tymeslot pak může označit termíny, kdy máte obsazeno, a vítězný termín zarezervovat bez dvojí rezervace."
+
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time clashes with an event on your calendar. Confirming books it anyway."
+msgstr "Tento termín se překrývá s událostí ve vašem kalendáři. Potvrzením ho přesto zarezervujete."

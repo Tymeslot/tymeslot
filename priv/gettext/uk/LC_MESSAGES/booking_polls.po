@@ -225,3 +225,8 @@ msgstr "Це опитування лише за запрошенням, і го�
 #, elixir-autogen, elixir-format
 msgid "This personal voting link isn't valid or no longer works."
 msgstr "Це особисте посилання для голосування недійсне або більше не працює."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Choose an answer for at least one time, then save."
+msgstr "Виберіть відповідь хоча б для одного варіанта часу, а потім збережіть."
