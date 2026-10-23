@@ -211,7 +211,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
         "Voting on this poll has closed. Move the deadline to send links again."
       )
 
-  defp resend_message(:no_username, _participant), do: PollInvite.error_message(:no_username)
+  defp resend_message(reason, _participant) when reason in [:no_username, :no_calendar],
+    do: PollInvite.error_message(reason)
 
   defp resend_message(reason, _participant) when reason in [:not_found, :not_open],
     do: removal_error(reason)

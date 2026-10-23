@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
   defp setup_host(_context) do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     profile = insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user, provider: "debug")
     {:ok, conn: log_in(build_conn(), user), user: user, profile: profile}
   end
 

@@ -46,23 +46,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
   attr :value, :string, default: ""
   attr :error, :string, default: nil
   attr :voting_open?, :boolean, default: true
+  attr :calendar_connected?, :boolean, default: true
   attr :myself, :any, required: true
 
   @doc """
   Invites more people to an open poll, from its results panel. Once the
-  deadline has passed the form gives way to a hint to move the deadline.
+  deadline has passed, or while the host has no calendar connected (the
+  voting page is closed then), the form gives way to a hint saying why.
   """
   @spec invite_form(map()) :: Phoenix.LiveView.Rendered.t()
-  def invite_form(%{voting_open?: false} = assigns) do
-    ~H"""
-    <p
-      class="text-token-sm text-tymeslot-600 pt-2 border-t border-tymeslot-100"
-      data-testid="poll-invite-closed"
-    >
-      {error_message(:voting_closed)}
-    </p>
-    """
-  end
+  def invite_form(%{voting_open?: false} = assigns),
+    do: invite_unavailable(assigns, :voting_closed)
+
+  def invite_form(%{calendar_connected?: false} = assigns),
+    do: invite_unavailable(assigns, :no_calendar)
 
   def invite_form(assigns) do
     ~H"""
@@ -81,6 +78,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
         </Buttons.action_button>
       </div>
     </form>
+    """
+  end
+
+  defp invite_unavailable(assigns, reason) do
+    assigns = assign(assigns, :reason, reason)
+
+    ~H"""
+    <p
+      class="text-token-sm text-tymeslot-600 pt-2 border-t border-tymeslot-100"
+      data-testid="poll-invite-closed"
+    >
+      {error_message(@reason)}
+    </p>
     """
   end
 
@@ -207,6 +217,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollInvite do
       dgettext(
         "dashboard_polls",
         "Set a username in your profile first: the links in the emails are built from it."
+      )
+
+  def error_message(:no_calendar),
+    do:
+      dgettext(
+        "dashboard_polls",
+        "Connect a calendar first: guests vote on a page that opens once you have."
       )
 
   def error_message(:not_open), do: dgettext("dashboard_polls", "This poll is no longer open.")

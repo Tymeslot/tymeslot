@@ -122,6 +122,17 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
     end
   end
 
+  @doc """
+  Whether the dashboard's integration status has a calendar connected, the
+  half of `can_link?/2` that features needing a calendar but not a username
+  gate on.
+  """
+  @spec has_calendar?(map() | nil) :: boolean()
+  def has_calendar?(integration_status) when is_map(integration_status),
+    do: integration_status[:has_calendar] || false
+
+  def has_calendar?(_integration_status), do: false
+
   # --- Private helpers ---
 
   defp has_username?(nil), do: false
@@ -130,9 +141,4 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
     do: String.trim(username) != ""
 
   defp has_username?(_user), do: false
-
-  defp has_calendar?(integration_status) when is_map(integration_status),
-    do: integration_status[:has_calendar] || false
-
-  defp has_calendar?(_integration_status), do: false
 end

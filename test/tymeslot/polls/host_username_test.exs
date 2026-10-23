@@ -17,6 +17,7 @@ defmodule Tymeslot.Polls.HostUsernameTest do
   setup do
     user = insert(:user)
     insert(:profile, user: user, username: nil)
+    insert(:calendar_integration, user: user, provider: "debug")
 
     start_time = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
 

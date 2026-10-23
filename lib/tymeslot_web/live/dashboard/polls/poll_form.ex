@@ -371,7 +371,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
       {:noreply, socket}
     else
-      {:error, reason} -> {:noreply, assign(socket, :errors, errors_for(reason))}
+      # The calendar went while the form was open: nothing in the form can fix
+      # that, so it is said once rather than under a field.
+      {:error, :no_calendar} ->
+        Flash.error(PollInvite.error_message(:no_calendar))
+        {:noreply, socket}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :errors, errors_for(reason))}
     end
   end
 

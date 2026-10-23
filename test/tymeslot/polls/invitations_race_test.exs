@@ -29,6 +29,7 @@ defmodule Tymeslot.Polls.InvitationsRaceTest do
       unboxed(fn ->
         user = insert(:user)
         insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+        insert(:calendar_integration, user: user, provider: "debug")
         insert(:poll, user: user, status: :open)
       end)
 

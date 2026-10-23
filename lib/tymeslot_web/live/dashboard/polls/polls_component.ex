@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.Invitations
   alias Tymeslot.Polls.SlotHealth
+  alias Tymeslot.Scheduling.LinkAccessPolicy
 
   alias TymeslotWeb.Dashboard.Polls.{
     CancelPollModal,
@@ -129,8 +130,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     ~H"""
     <div>
       <.dashboard_page icon="hero-hand-raised" title={dgettext("dashboard_polls", "Polls")}>
-        <%!-- With no polls yet, the empty state below carries the action. --%>
-        <:actions :if={!@show_form and @polls != []}>
+        <%!-- With no polls yet, the empty state below carries the action, and
+              without a calendar there is none: `PollList` asks for one. --%>
+        <:actions :if={
+          !@show_form and @polls != [] and LinkAccessPolicy.has_calendar?(@integration_status)
+        }>
           <PollList.new_poll_button myself={@myself} data-testid="new-poll" />
         </:actions>
         <p class="text-tymeslot-600 mb-6">
@@ -215,7 +219,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("new_poll", _params, socket) do
-    {:noreply, assign(socket, show_form: true, meeting_types: poll_meeting_types(socket))}
+    if LinkAccessPolicy.has_calendar?(socket.assigns.integration_status),
+      do: {:noreply, assign(socket, show_form: true, meeting_types: poll_meeting_types(socket))},
+      else: {:noreply, socket}
   end
 
   @impl Phoenix.LiveComponent

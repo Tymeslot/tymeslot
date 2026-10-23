@@ -10,6 +10,7 @@ defmodule Tymeslot.Polls do
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Polls.{
@@ -57,6 +58,9 @@ defmodule Tymeslot.Polls do
 
   When `:meeting_type_id` is given it is loaded scoped to `user_id`; the poll
   snapshots the type's name and duration unless those are given explicitly.
+
+  A host without a calendar connected is refused with `{:error, :no_calendar}`:
+  the voting page stays closed until they have one.
   """
   @spec create_poll(integer(), map()) ::
           {:ok, PollSchema.t()}
@@ -68,10 +72,12 @@ defmodule Tymeslot.Polls do
              | :slot_in_past
              | :poll_full
              | :no_username
+             | :no_calendar
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def create_poll(user_id, attrs) do
-    with :ok <- ensure_username(user_id, Map.get(attrs, :invitees, [])),
+    with :ok <- ensure_calendar(user_id),
+         :ok <- ensure_username(user_id, Map.get(attrs, :invitees, [])),
          {:ok, attrs} <- apply_meeting_type(user_id, attrs),
          {:ok, slots} <- prepare_slots(attrs) do
       insert_poll(user_id, attrs, slots)
@@ -197,9 +203,12 @@ defmodule Tymeslot.Polls do
   is not a UUID at all, is `{:error, :not_found}`.
   """
   @spec resend_invitation(Ecto.UUID.t(), integer(), String.t()) ::
-          :ok | {:error, :not_found | :not_open | :no_username | Invitations.resend_error()}
+          :ok
+          | {:error,
+             :not_found | :not_open | :no_username | :no_calendar | Invitations.resend_error()}
   def resend_invitation(id, user_id, participant_id) do
     with {:ok, participant_id} <- cast_participant_id(participant_id),
+         :ok <- ensure_calendar(user_id),
          {:ok, _poll} <-
            with_open_poll_locked(id, user_id, fn poll ->
              with :ok <- ensure_username(user_id, [participant_id]),
@@ -252,7 +261,9 @@ defmodule Tymeslot.Polls do
 
   Returns `{:error, :voting_closed}` for an open poll whose deadline has
   passed (the host can move the deadline to invite more people) and
-  `{:error, :not_open}` for one that is confirmed or cancelled.
+  `{:error, :not_open}` for one that is confirmed or cancelled, and
+  `{:error, :no_calendar}` while the host has no calendar connected, since the
+  voting page the invitations link to is closed until then.
   """
   @spec invite_participants(Ecto.UUID.t(), integer(), [Invitations.entry()]) ::
           {:ok, Invitations.result()}
@@ -262,10 +273,12 @@ defmodule Tymeslot.Polls do
              | :voting_closed
              | :poll_full
              | :no_username
+             | :no_calendar
              | {:rate_limited, non_neg_integer()}
              | Ecto.Changeset.t()}
   def invite_participants(id, user_id, entries) do
-    with {:ok, result} <-
+    with :ok <- ensure_calendar(user_id),
+         {:ok, result} <-
            with_open_poll_locked(id, user_id, fn poll ->
              with :ok <- ensure_voting_open(poll),
                   :ok <- ensure_username(user_id, entries),
@@ -536,6 +549,14 @@ defmodule Tymeslot.Polls do
       broadcast_update(poll_id)
       {:ok, updated}
     end
+  end
+
+  # Guests vote on the public page, which opens only once the host has a
+  # calendar connected (`Tymeslot.Scheduling.LinkAccessPolicy`). A poll
+  # created, or an invitation sent, before then hands out a link nobody can
+  # use, so both wait for the calendar the dashboard asks them to connect.
+  defp ensure_calendar(user_id) do
+    if Calendar.has_bookable_integration?(user_id), do: :ok, else: {:error, :no_calendar}
   end
 
   # Every email to a participant carries a link under the host's username, and

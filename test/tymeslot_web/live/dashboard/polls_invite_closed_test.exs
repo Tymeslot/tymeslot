@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.PollsInviteClosedTest do
 
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     insert(:profile, user: user)
+    insert(:calendar_integration, user: user, provider: "debug")
     %{conn: conn, user: user}
   end
 

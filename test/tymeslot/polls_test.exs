@@ -12,6 +12,7 @@ defmodule Tymeslot.PollsTest do
 
   setup do
     user = insert(:user)
+    insert(:calendar_integration, user: user, provider: "debug")
     future = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
     {:ok, user: user, future: future}
   end

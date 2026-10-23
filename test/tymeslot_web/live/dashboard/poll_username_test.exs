@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.PollUsernameTest do
   setup do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     insert(:profile, user: user, username: nil)
+    insert(:calendar_integration, user: user, provider: "debug")
     conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
     %{conn: conn, user: user}
   end

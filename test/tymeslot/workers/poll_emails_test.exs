@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.PollParticipantQueries
@@ -128,6 +129,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
     test "enqueues exactly once when the last invitee votes, even on re-submit" do
       user = insert(:user)
       insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user, provider: "debug")
       poll = insert(:poll, status: :open, user: user)
       start_one = in_hours(48)
       slot_one = insert(:poll_time_slot, poll: poll, start_time: start_one)
@@ -167,6 +169,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
     test "nudges again when more people are invited and they all vote too" do
       user = insert(:user)
       _profile = insert(:profile, user: user, username: "hostname")
+      insert(:calendar_integration, user: user, provider: "debug")
       poll = insert(:poll, status: :open, user: user)
       slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
@@ -198,6 +201,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
     test "a link request still open holds the nudge back, an expired one does not" do
       user = insert(:user)
       insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user, provider: "debug")
       poll = insert(:poll, status: :open, user: user)
       slot = insert(:poll_time_slot, poll: poll, start_time: in_hours(48))
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
@@ -436,6 +440,9 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   defp create_poll(user, deadline_at, invitees \\ []) do
     if is_nil(Profiles.get_profile(user.id)),
       do: insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+
+    unless Calendar.has_bookable_integration?(user.id),
+      do: insert(:calendar_integration, user: user, provider: "debug")
 
     future = in_hours(72)
 

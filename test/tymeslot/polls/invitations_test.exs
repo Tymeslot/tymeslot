@@ -83,6 +83,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
     setup do
       user = insert(:user, locale: "de")
       insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user, provider: "debug")
       poll = insert(:poll, user: user, timezone: "Europe/Berlin")
       %{poll: poll}
     end
@@ -226,6 +227,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
 
       user = insert(:user)
       insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user, provider: "debug")
       %{user: user, attrs: attrs}
     end
 
@@ -261,6 +263,7 @@ defmodule Tymeslot.Polls.InvitationsTest do
   defp host_with_username do
     user = insert(:user)
     insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user, provider: "debug")
     user
   end
 end

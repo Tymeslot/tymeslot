@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Components.CoreComponents.Buttons
@@ -229,6 +230,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
         value={@invite_value}
         error={@invite_error}
         voting_open?={@voting_open?}
+        calendar_connected?={LinkAccessPolicy.has_calendar?(@integration_status)}
         myself={@myself}
       />
 

@@ -90,6 +90,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
     setup do
       user = insert(:user)
       insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: user, provider: "debug")
       %{user: user, poll: insert(:poll, user: user)}
     end
 
@@ -315,6 +316,7 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
 
       host = insert(:user)
       insert(:profile, user: host, username: "host#{System.unique_integer([:positive])}")
+      insert(:calendar_integration, user: host, provider: "debug")
       target = insert(:poll, user: host)
 
       {:ok, _result} =

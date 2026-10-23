@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
 
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     insert(:profile, user: user, username: "deadlinehost", timezone: "Europe/Tallinn")
+    insert(:calendar_integration, user: user, provider: "debug")
 
     conn = conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
     {:ok, conn: conn, user: user}

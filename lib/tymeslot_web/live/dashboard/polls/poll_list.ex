@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
+  alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
@@ -19,6 +20,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   @doc """
   Renders the list of polls, or an empty state when there are none.
+
+  Guests vote on a page that opens only once the host has a calendar
+  connected, so without one the empty state asks for it instead of offering a
+  new poll, and a list of earlier polls carries the same request above it.
   """
   attr :polls, :list, required: true
   attr :profile, :any, required: true
@@ -29,6 +34,36 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
 
   @spec poll_list(map()) :: Phoenix.LiveView.Rendered.t()
   def poll_list(%{polls: []} = assigns) do
+    if LinkAccessPolicy.has_calendar?(assigns.integration_status),
+      do: empty_state(assigns),
+      else: connect_calendar_empty_state(assigns)
+  end
+
+  def poll_list(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :calendar_connected?,
+        LinkAccessPolicy.has_calendar?(assigns.integration_status)
+      )
+
+    ~H"""
+    <div class="space-y-4">
+      <.connect_calendar_notice :if={!@calendar_connected?} />
+      <.poll_card
+        :for={poll <- @polls}
+        poll={poll}
+        profile={@profile}
+        integration_status={@integration_status}
+        selected={@selected_poll_id == poll.id}
+        voting_open?={MapSet.member?(@open_poll_ids, poll.id)}
+        myself={@myself}
+      />
+    </div>
+    """
+  end
+
+  defp empty_state(assigns) do
     ~H"""
     <Feedback.empty_state
       icon="hero-hand-raised"
@@ -47,21 +82,53 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
     """
   end
 
-  def poll_list(assigns) do
+  defp connect_calendar_empty_state(assigns) do
     ~H"""
-    <div class="space-y-4">
-      <.poll_card
-        :for={poll <- @polls}
-        poll={poll}
-        profile={@profile}
-        integration_status={@integration_status}
-        selected={@selected_poll_id == poll.id}
-        voting_open?={MapSet.member?(@open_poll_ids, poll.id)}
-        myself={@myself}
-      />
-    </div>
+    <Feedback.empty_state
+      icon="hero-calendar-days"
+      size={:lg}
+      data-testid="polls-connect-calendar"
+      title={dgettext("dashboard_polls", "Connect a calendar to start a poll")}
+      description={connect_calendar_reason()}
+    >
+      <:action><.connect_calendar_link /></:action>
+    </Feedback.empty_state>
     """
   end
+
+  defp connect_calendar_notice(assigns) do
+    ~H"""
+    <Containers.card padding={:sm} data-testid="polls-connect-calendar">
+      <div class="flex flex-wrap items-center gap-3">
+        <Icons.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-600 shrink-0" />
+        <p class="flex-1 min-w-[12rem] text-token-sm text-tymeslot-700">
+          {connect_calendar_reason()}
+        </p>
+        <.connect_calendar_link />
+      </div>
+    </Containers.card>
+    """
+  end
+
+  defp connect_calendar_link(assigns) do
+    ~H"""
+    <Buttons.action_link
+      navigate="/dashboard/integrations?tab=calendars"
+      size={:sm}
+      icon="hero-plus"
+      class="shrink-0"
+    >
+      {dgettext("dashboard_polls", "Connect a calendar")}
+    </Buttons.action_link>
+    """
+  end
+
+  defp connect_calendar_reason,
+    do:
+      dgettext(
+        "dashboard_polls",
+        "Guests vote on a page that opens once your calendar is connected, so Tymeslot can flag the times you're busy and book the winner without double-booking you."
+      )
 
   @doc """
   The button that opens the new-poll form: in the empty state while there are

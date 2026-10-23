@@ -22,6 +22,7 @@ defmodule Tymeslot.Polls.ReminderSchedulingTest do
   setup do
     user = insert(:user)
     insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user, provider: "debug")
     %{user: user, deadline: in_days(5)}
   end
 

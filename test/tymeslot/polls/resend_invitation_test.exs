@@ -21,6 +21,7 @@ defmodule Tymeslot.Polls.ResendInvitationTest do
   setup do
     user = insert(:user)
     insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
+    insert(:calendar_integration, user: user, provider: "debug")
     poll = insert(:poll, user: user, deadline_at: from_now(3 * 24 * 60))
     %{user: user, poll: poll}
   end
@@ -177,8 +178,10 @@ defmodule Tymeslot.Polls.ResendInvitationTest do
 
     test "another host's poll is not found", ctx do
       grace = insert(:poll_participant, poll: ctx.poll)
+      other = insert(:user)
+      insert(:calendar_integration, user: other, provider: "debug")
 
-      assert Polls.resend_invitation(ctx.poll.id, insert(:user).id, grace.id) ==
+      assert Polls.resend_invitation(ctx.poll.id, other.id, grace.id) ==
                {:error, :not_found}
 
       assert email_jobs(grace) == []

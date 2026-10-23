@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
   defp host(attrs \\ [], profile_attrs \\ []) do
     user = insert(:user, [onboarding_completed_at: DateTime.utc_now()] ++ attrs)
     profile = insert(:profile, [user: user] ++ profile_attrs)
+    insert(:calendar_integration, user: user, provider: "debug")
     %{user: user, profile: profile}
   end
 
