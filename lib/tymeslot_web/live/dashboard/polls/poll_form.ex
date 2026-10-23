@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        meeting_type_id: "",
        duration: "30",
        deadline: "",
+       notify_on_vote: true,
        slots: [],
        slot_counter: 0,
        time_off_keys: MapSet.new(),
@@ -208,6 +209,21 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             </.action_button>
           </div>
 
+          <.input
+            type="checkbox"
+            id={"poll-notify-on-vote-#{@id}"}
+            name="poll[notify_on_vote]"
+            value={@notify_on_vote}
+            label={dgettext("dashboard_common", "Email me about new votes")}
+          >
+            <:description>
+              {dgettext(
+                "dashboard_common",
+                "At most one email every 15 minutes, naming who voted, with the current standings."
+              )}
+            </:description>
+          </.input>
+
           <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
 
           <div class="flex justify-end gap-3 pt-2">
@@ -241,6 +257,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        meeting_type_id: meeting_type_id,
        duration: duration,
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
+       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
        slots: merge_slot_values(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
@@ -339,6 +356,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       duration_minutes: parse_duration(Map.get(params, "duration", socket.assigns.duration)),
       meeting_type_id: parse_meeting_type_id(Map.get(params, "meeting_type_id")),
       deadline_at: to_utc(Map.get(params, "deadline"), timezone),
+      notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
       slots: build_slots(Map.get(params, "slots", %{}), timezone)
     }
   end
@@ -411,6 +429,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   defp parse_duration(_other), do: 30
+
+  defp checked?(params, key, default) do
+    case Map.get(params, key) do
+      nil -> default
+      value -> value == "true"
+    end
+  end
 
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value

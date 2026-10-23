@@ -9,24 +9,20 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   ## Two kinds of link
 
   The bare voting link, `/:username/poll/:token`, is the **shareable** one: the
-  host sends it to everyone, and anyone opening it can register and vote.
+  host sends it to everyone, and anyone opening it can ask for a voting link
+  with their name and email, and see the running tallies.
 
-  Once a person registers, their identity travels in the URL as a query param,
-  `?p=<participant_token>`. That `?p=` link is **per person** — it resumes their
-  registration and their previous responses on a refresh or bookmark, so it must
-  not be shared. Registration `push_patch`es to add `?p=` precisely so the
-  identity survives a reload.
+  The personal link adds `?p=<participant_token>` and is the only way to vote.
+  It is **emailed**, never shown on the page, so whoever holds it owns the
+  address; the first responses saved through it confirm the participant (see
+  `Tymeslot.Polls.Voting`). Asking again for the same address sends the same
+  link again, which is how a voter who lost it gets back in.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use Phoenix.VerifiedRoutes,
-    endpoint: TymeslotWeb.Endpoint,
-    router: TymeslotWeb.Router,
-    statics: TymeslotWeb.static_paths()
-
   import Phoenix.Component, only: [assign: 2]
-  import Phoenix.LiveView, only: [connected?: 1, push_patch: 2, put_flash: 3]
+  import Phoenix.LiveView, only: [connected?: 1, put_flash: 3]
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Polls
@@ -39,7 +35,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   @type socket :: Phoenix.LiveView.Socket.t()
 
   @doc """
-  Assigns the poll, its tallies, voting-open flag, and the resolved participant.
+  Assigns the poll, its tallies, voting-open flag, the resolved participant,
+  and whether a link was just requested on this page.
 
   The participant is resolved from the `"p"` param (a participant token) only
   when that participant belongs to this poll; a token from another poll is
@@ -54,7 +51,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       poll: poll,
       tallies: Polls.tallies(poll),
       voting_open: Polls.voting_open?(poll),
-      participant: Voting.get_participant(poll, params["p"])
+      participant: Voting.get_participant(poll, params["p"]),
+      link_requested_for: nil
     )
   end
 
@@ -80,12 +78,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       })
 
       with_rate_limit(socket, :poll_register, fn socket ->
-        {:noreply,
-         put_flash(
-           socket,
-           :info,
-           dgettext("booking_polls", "You're registered. Your responses are saved as you vote.")
-         )}
+        {:noreply, link_sent(socket, params["email"])}
       end)
     else
       register_participant(socket, params)
@@ -136,23 +129,22 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   defp recaptcha_error_message(_reason),
     do: dgettext("booking_polls", "Security verification failed. Please try again.")
 
+  # The page's locale is the one the voter reads, so their emails use it too.
   defp do_register(socket, params) do
-    attrs = Map.take(params, ["name", "email", "timezone", "locale"])
+    attrs =
+      params
+      |> Map.take(["name", "email", "timezone"])
+      |> Map.put("locale", socket.assigns[:locale])
 
-    case Voting.register_participant(socket.assigns.poll, attrs) do
-      {:ok, participant} ->
-        {:noreply,
-         socket
-         |> assign(participant: participant)
-         |> put_flash(
-           :info,
-           dgettext("booking_polls", "You're registered. Your responses are saved as you vote.")
-         )
-         |> push_patch(to: put_participant_in_url(socket, participant))}
-
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, register_error_message(reason))}
+    case Voting.request_link(socket.assigns.poll, attrs) do
+      :ok -> {:noreply, link_sent(socket, params["email"])}
+      {:error, reason} -> {:noreply, put_flash(socket, :error, register_error_message(reason))}
     end
+  end
+
+  # The same answer whether the address was new to the poll or already on it.
+  defp link_sent(socket, email) do
+    assign(socket, link_requested_for: email |> to_string() |> String.trim())
   end
 
   @doc """
@@ -189,7 +181,11 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   defp cast_votes_for(%{assigns: %{participant: nil}} = socket, _votes_map) do
     {:noreply,
-     put_flash(socket, :error, dgettext("booking_polls", "Please register before voting."))}
+     put_flash(
+       socket,
+       :error,
+       dgettext("booking_polls", "Please open the personal voting link we emailed you to vote.")
+     )}
   end
 
   defp cast_votes_for(socket, votes_map) do
@@ -200,12 +196,22 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         {:noreply,
          socket
          |> reload_tallies()
-         |> put_flash(:info, dgettext("booking_polls", "Your responses have been saved."))}
+         |> put_flash(:info, saved_message(participant))}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, cast_error_message(reason))}
     end
   end
+
+  defp saved_message(%{confirmed_at: nil}),
+    do:
+      dgettext(
+        "booking_polls",
+        "Thanks, your responses count now. We've emailed you a copy with your personal link."
+      )
+
+  defp saved_message(_participant),
+    do: dgettext("booking_polls", "Your responses have been saved.")
 
   # --- Reloading ---
 
@@ -227,19 +233,6 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   defp reload_participant(_poll, nil), do: nil
   defp reload_participant(poll, %{token: token}), do: Voting.get_participant(poll, token)
 
-  # --- URL building ---
-
-  # The page mounted on `/:username/poll/:token`, so both segments are already on
-  # the socket, and `username_context` is the username the router matched. There
-  # is no username-less form to fall back to: a bare `/poll/<token>` is swallowed
-  # by the catch-all `live "/:username/:slug"` in another live_session, so
-  # `push_patch/2` rejects it and takes the LiveView down with it.
-  defp put_participant_in_url(socket, participant) do
-    %{username_context: username, poll: poll} = socket.assigns
-
-    ~p"/#{username}/poll/#{poll.token}?p=#{participant.token}"
-  end
-
   # --- Flash messages ---
 
   defp register_error_message(:voting_closed),
@@ -248,14 +241,28 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   defp register_error_message(:poll_full),
     do: dgettext("booking_polls", "This poll has reached its participant limit.")
 
+  defp register_error_message(:too_many_requests),
+    do:
+      dgettext(
+        "booking_polls",
+        "This poll is receiving a lot of requests right now. Please try again later."
+      )
+
   defp register_error_message(_changeset),
     do: dgettext("booking_polls", "Please check your name and email, then try again.")
 
   defp cast_error_message(:voting_closed),
     do: dgettext("booking_polls", "Voting has closed for this poll.")
 
+  defp cast_error_message(:poll_full),
+    do: dgettext("booking_polls", "This poll has reached its participant limit.")
+
   defp cast_error_message(:unknown_participant),
-    do: dgettext("booking_polls", "We couldn't find your registration. Please register again.")
+    do:
+      dgettext(
+        "booking_polls",
+        "This voting link is no longer valid. Please ask for a new one on the poll's page."
+      )
 
   defp cast_error_message(:invalid_slot),
     do:

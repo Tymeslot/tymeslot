@@ -3,9 +3,10 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   End-to-end journey for meeting polls, exercising the real internal stack and
   stubbing only the external calendar boundary.
 
-  The happy path drives registration and voting through the public voting
-  LiveView (`/:username/poll/:token`) to prove the web wiring, then confirms a
-  winning slot through `Polls.Confirm`. The remaining scenarios (vote editing,
+  The happy path drives the link request and voting through the public voting
+  LiveView (`/:username/poll/:token`) to prove the web wiring, following the
+  personal link out of the email it arrives in, then confirms a winning slot
+  through `Polls.Confirm`. The remaining scenarios (vote editing,
   closed-poll rejection, the confirmation race, and the slot/participant caps)
   drive the domain directly where a full LiveView round-trip would add nothing.
   """
@@ -18,6 +19,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Ecto.Query
+  import Swoosh.TestAssertions
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
 
@@ -36,6 +38,10 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
 
+  # The link email is delivered inside the CircuitBreaker GenServer; global
+  # mode routes it to the test process.
+  setup :set_swoosh_global
+
   setup do
     # Confirmation runs through the ad-hoc booking path, which checks the host's
     # calendar for conflicts — stub that external boundary for the whole module.
@@ -45,20 +51,52 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
   defp poll_path(username, token), do: "/#{username}/poll/#{token}"
 
-  # Registers a participant and casts their votes through the public voting
-  # LiveView on a fresh connection, returning the connected view.
+  # Asks for a voting link on the public page, follows the link out of the
+  # email it arrives in, and casts the votes through it, each on a fresh
+  # connection. Returns the voting view.
   defp vote_via_liveview(username, token, %{name: name, email: email}, votes) do
     {:ok, view, _html} = live(ConnTest.build_conn(), poll_path(username, token))
 
-    view
-    |> form("form[data-testid='poll-register-form']", %{"name" => name, "email" => email})
-    |> render_submit()
+    html =
+      view
+      |> form("form[data-testid='poll-register-form']", %{"name" => name, "email" => email})
+      |> render_submit()
+
+    # The page never hands out the personal link; only the email does.
+    refute html =~ "?p="
+    assert has_element?(view, "[data-testid='poll-link-sent']")
+
+    {:ok, view, _html} = live(ConnTest.build_conn(), emailed_link(email))
 
     view
     |> form("form[data-testid='poll-vote-form']", %{"votes" => votes})
     |> render_submit()
 
     view
+  end
+
+  # Delivers the queued link email to `email` and returns the path of the
+  # personal link in it.
+  defp emailed_link(email) do
+    participant = Repo.get_by!(PollParticipantSchema, email: email)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_poll_participant_link",
+               "participant_id" => participant.id
+             })
+
+    assert_received {:email, %{to: [{_name, ^email}], text_body: text_body}}
+    [link] = Regex.run(~r{https?://\S+\?p=[\w-]+}, text_body)
+    uri = URI.parse(link)
+    "#{uri.path}?#{uri.query}"
+  end
+
+  # Asks for a link and returns the participant it created, as following the
+  # emailed link would resolve them.
+  defp request(poll, attrs) do
+    assert :ok = Voting.request_link(poll, attrs)
+    Repo.get_by!(PollParticipantSchema, poll_id: poll.id, email: attrs.email)
   end
 
   defp vote_count(poll_id) do
@@ -207,8 +245,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
 
-      {:ok, participant} =
-        Voting.register_participant(loaded, %{name: "Cy", email: "cy@example.com"})
+      participant = request(loaded, %{name: "Cy", email: "cy@example.com"})
 
       assert {:ok, _yes_vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
@@ -242,8 +279,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
 
-      {:ok, participant} =
-        Voting.register_participant(loaded, %{name: "Di", email: "di@example.com"})
+      participant = request(loaded, %{name: "Di", email: "di@example.com"})
 
       assert {:ok, _vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
@@ -277,8 +313,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
 
-      {:ok, participant} =
-        Voting.register_participant(loaded, %{name: "Eve", email: "eve@example.com"})
+      participant = request(loaded, %{name: "Eve", email: "eve@example.com"})
 
       assert {:ok, _vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
@@ -318,8 +353,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
 
-      {:ok, participant} =
-        Voting.register_participant(loaded, %{name: "Eve", email: "eve@example.com"})
+      participant = request(loaded, %{name: "Eve", email: "eve@example.com"})
 
       assert {:ok, _vote} =
                Voting.cast_votes(loaded, participant.token, %{
@@ -364,7 +398,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
                })
     end
 
-    test "registering the 41st participant is rejected once the cap is reached" do
+    test "a link for a 41st participant is refused once the cap is reached" do
       %{user: user} = seed_booking_account("1", "partcap-host", "Etc/UTC")
       poll = insert(:poll, user: user, status: :open)
 
@@ -375,7 +409,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
 
       assert {:error, :poll_full} =
-               Voting.register_participant(loaded, %{name: "Overflow", email: "over@example.com"})
+               Voting.request_link(loaded, %{name: "Overflow", email: "over@example.com"})
     end
   end
 end

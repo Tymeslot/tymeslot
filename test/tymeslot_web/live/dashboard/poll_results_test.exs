@@ -123,6 +123,33 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
              )
     end
 
+    test "counts unanswered link requests apart from the voters", %{conn: conn, user: user} do
+      %{poll: poll} = open_poll_with_votes(user)
+      now = DateTime.utc_now(:second)
+
+      insert(:poll_participant, poll: poll, name: "Pending", confirmed_at: nil, link_sent_at: now)
+
+      insert(:poll_participant,
+        poll: poll,
+        name: "Expired",
+        confirmed_at: nil,
+        link_sent_at: DateTime.add(now, -3, :day)
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      html = select_poll(view, poll)
+
+      assert html =~ "2 guests have voted so far."
+
+      assert has_element?(
+               view,
+               "[data-testid='poll-unconfirmed-count']",
+               "1 more person asked for a voting link"
+             )
+
+      refute html =~ "Pending"
+    end
+
     test "labels each slot on the organiser's chosen clock", %{conn: conn, user: user} do
       {:ok, _prefs} = CalendarGrid.save_preferences(user.id, %{time_format: "12h"})
 

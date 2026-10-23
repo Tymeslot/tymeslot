@@ -586,6 +586,9 @@ defmodule Tymeslot.Factory do
       email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
       token: Token.generate(24),
       locale: "en",
+      # Confirmed, as nearly every test wants a participant who counts. Pass
+      # `confirmed_at: nil` (and a `link_sent_at`) for one still unconfirmed.
+      confirmed_at: DateTime.utc_now(:second),
       poll: build(:poll)
     }
     |> merge_attributes(attrs)

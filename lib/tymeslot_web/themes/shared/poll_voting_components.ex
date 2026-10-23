@@ -8,10 +8,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   gettext domain, matching `TymeslotWeb.Themes.Core.PollVoting`.
 
   The single entry point is `poll_content/1`, which decides which sub-view to
-  render from the poll's status, the voting-open flag, and whether a participant
-  is registered. The sub-views (`identity_form/1`, `slot_grid/1`,
-  `poll_closed/1`, `deadline_banner/1`) are public so themes may compose them
-  directly if they need a different arrangement.
+  render from the poll's status, the voting-open flag, and whether the page was
+  opened through a participant's personal link. The sub-views
+  (`identity_form/1`, `link_sent/1`, `slot_grid/1`, `poll_closed/1`,
+  `deadline_banner/1`) are public so themes may compose them directly if they
+  need a different arrangement.
   """
 
   use Phoenix.Component
@@ -29,6 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
+  attr :link_requested_for, :string, default: nil
 
   @doc """
   Renders the whole voting page body, choosing the right view from poll state.
@@ -76,12 +78,29 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           </div>
         <% :register -> %>
           <.deadline_banner poll={@poll} />
-          <.identity_form />
+          <%= if @link_requested_for do %>
+            <.link_sent email={@link_requested_for} />
+          <% else %>
+            <.identity_form />
+          <% end %>
           <.slot_grid poll={@poll} tallies={@tallies} editable={false} />
         <% :vote -> %>
           <.deadline_banner poll={@poll} />
           <p class="poll-voting-greeting" data-testid="poll-participant-name">
             {dgettext("booking_polls", "Voting as %{name}", name: @participant.name)}
+          </p>
+          <p class="poll-voting-notice" data-testid="poll-link-notice">
+            <%= if @participant.confirmed_at do %>
+              {dgettext(
+                "booking_polls",
+                "This is your personal link. Please don't share it: anyone who has it can change your responses."
+              )}
+            <% else %>
+              {dgettext(
+                "booking_polls",
+                "Save your responses to confirm your email address. They count from then on."
+              )}
+            <% end %>
           </p>
           <.slot_grid
             poll={@poll}
@@ -112,8 +131,36 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
     """
   end
 
+  attr :email, :string, required: true
+
   @doc """
-  Renders the name + email registration form.
+  Shown in place of the form once a voting link was requested. Reads the same
+  whether the address was new to the poll or already on it.
+  """
+  @spec link_sent(map()) :: Phoenix.LiveView.Rendered.t()
+  def link_sent(assigns) do
+    ~H"""
+    <div class="poll-link-sent" role="status" data-testid="poll-link-sent">
+      <.icon name="hero-envelope" class="poll-link-sent-icon" />
+      <p class="poll-voting-notice">
+        {dgettext(
+          "booking_polls",
+          "We've sent a personal voting link to %{email}. Open it to vote; your responses count once you save them there.",
+          email: @email
+        )}
+      </p>
+      <p class="poll-voting-notice">
+        {dgettext(
+          "booking_polls",
+          "Nothing there after a few minutes? Check your spam folder."
+        )}
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the name + email form that asks for a personal voting link.
 
   Submits `register_participant` to the dispatcher. Includes a honeypot field to
   catch automated submissions, matching the booking form.
@@ -141,6 +188,13 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       data-testid="poll-register-form"
       {@recaptcha_attrs}
     >
+      <p class="poll-voting-notice">
+        {dgettext(
+          "booking_polls",
+          "Enter your name and email and we'll send you a personal link to vote with. Voted before? Enter the same email to get your link again."
+        )}
+      </p>
+
       <%!-- Honeypot: hidden from real users, tempting to bots. A non-empty
             value is silently rejected by the register handler. --%>
       <.honeypot_field id="poll-website" />
@@ -183,7 +237,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       </div>
 
       <button type="submit" class="poll-submit-button" data-testid="poll-register-submit">
-        {dgettext("booking_polls", "Continue to vote")}
+        {dgettext("booking_polls", "Email me my voting link")}
       </button>
 
       <SecurityFields.recaptcha_notice_block />

@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
                PollVoting.handle_poll_event("cast_votes", %{"votes" => nil}, socket)
     end
 
-    test "cast_votes without a registered participant flashes and does not crash" do
+    test "cast_votes without a participant's link flashes and does not crash" do
       poll = insert(:poll)
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
       socket = socket(%{poll: poll, participant: nil})
@@ -99,10 +99,10 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert {:noreply, updated} =
                PollVoting.handle_poll_event("cast_votes", %{"votes" => %{}}, socket)
 
-      assert flash(updated, :error) =~ "register"
+      assert flash(updated, :error) =~ "personal voting link"
     end
 
-    test "cast_votes saves responses and reloads tallies for a registered participant" do
+    test "cast_votes saves responses and reloads tallies for a confirmed participant" do
       poll = insert(:poll)
       slot = insert(:poll_time_slot, poll: poll)
       participant = insert(:poll_participant, poll: poll)

@@ -14,7 +14,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
     sign-up attempt with a registered address)
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
-  - `PollScheduler`: poll deadline reminders and host nudges
+  - `PollScheduler`: poll deadline reminders, host nudges and vote updates, and
+    participants' voting links and receipts
   - `SessionScheduler`: a planned session's participant list, at its
     registration close
   - `IntegrationScheduler` — integration health notifications and admin alerts
@@ -126,6 +127,16 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_poll_all_voted_nudge(poll),
     to: PollScheduler,
     as: :schedule_all_voted_nudge
+
+  defdelegate schedule_poll_participant_link(participant),
+    to: PollScheduler,
+    as: :schedule_participant_link
+
+  defdelegate schedule_poll_vote_receipt(participant),
+    to: PollScheduler,
+    as: :schedule_vote_receipt
+
+  defdelegate schedule_poll_vote_digest(poll), to: PollScheduler, as: :schedule_vote_digest
 
   # Integration emails
 

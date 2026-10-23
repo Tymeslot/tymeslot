@@ -1,5 +1,13 @@
 defmodule Tymeslot.Polls.PollParticipantSchema do
-  @moduledoc "A person who registered to vote on a poll via the shared link."
+  @moduledoc """
+  A person who asked to vote on a poll via the shared link.
+
+  Their personal `?p=` link reaches them only by email, so holding it proves
+  they own the address. Until they first save responses through it they are
+  unconfirmed: they do not count anywhere (`PollSchema`'s `:participants` leaves
+  them out), and once their link is older than `unconfirmed_ttl_seconds/0`
+  it stops working and the row is pruned.
+  """
 
   use Ecto.Schema
 
@@ -18,17 +26,27 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
 
   @type t :: %__MODULE__{}
 
+  # How long an unconfirmed participant's link stays valid, counted from the
+  # last time it was sent.
+  @unconfirmed_ttl_seconds 48 * 60 * 60
+
   schema "poll_participants" do
     field(:name, :string)
     field(:email, :string)
-    # The per-person `?p=` token. Registering again with the same address
-    # resumes the participant and hands their link back, so the token is
-    # encrypted rather than only hashed; it is looked up by `token_hash`.
+    # The per-person `?p=` token. Asking again with the same address emails the
+    # same link again, so the token is encrypted rather than only hashed; it is
+    # looked up by `token_hash`.
     field(:token, EncryptedString, source: :token_encrypted, redact: true)
     field(:token_hash, :string)
     field(:timezone, :string)
     field(:locale, :string, default: "en")
     field(:voted_at, :utc_datetime)
+    # When the participant first saved responses through their emailed link.
+    # Nil until then; their responses count only once it is set.
+    field(:confirmed_at, :utc_datetime)
+    # When their link was last emailed: throttles repeat requests and starts
+    # the clock on an unconfirmed participant's link.
+    field(:link_sent_at, :utc_datetime)
 
     belongs_to(:poll, PollSchema)
     has_many(:votes, PollVoteSchema, foreign_key: :poll_participant_id)
@@ -65,9 +83,31 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
     |> foreign_key_constraint(:poll_id)
   end
 
+  @doc "How long an unconfirmed participant's link stays valid after it was last sent."
+  @spec unconfirmed_ttl_seconds() :: pos_integer()
+  def unconfirmed_ttl_seconds, do: @unconfirmed_ttl_seconds
+
+  @doc """
+  Stamps `voted_at`, and `confirmed_at` the first time: saving responses
+  through the emailed link is what confirms the address.
+  """
   @spec voted_changeset(%__MODULE__{}, DateTime.t()) :: Ecto.Changeset.t()
   def voted_changeset(participant, voted_at) do
-    change(participant, voted_at: DateTime.truncate(voted_at, :second))
+    voted_at = DateTime.truncate(voted_at, :second)
+
+    participant
+    |> change(voted_at: voted_at)
+    |> put_confirmed_at(participant.confirmed_at, voted_at)
+  end
+
+  defp put_confirmed_at(changeset, nil, at), do: put_change(changeset, :confirmed_at, at)
+  defp put_confirmed_at(changeset, _confirmed_at, _at), do: changeset
+
+  @doc "Stamps `link_sent_at` on a participant or on a changeset building one."
+  @spec link_sent_changeset(%__MODULE__{} | Ecto.Changeset.t(), DateTime.t()) ::
+          Ecto.Changeset.t()
+  def link_sent_changeset(participant_or_changeset, sent_at) do
+    change(participant_or_changeset, link_sent_at: DateTime.truncate(sent_at, :second))
   end
 
   defp validate_name(changeset) do
