@@ -41,7 +41,7 @@ export function renderMonth({ days, date, today, events, settings, strings, phon
 // browser check look for).
 export function dotsHtml(dots, extra = "") {
   const cls = `cal-dot${extra ? ` ${extra}` : ""}`;
-  return `<span class="cal-dots" aria-hidden="true">${dots.map((d) => `<span class="${cls}${d.attention ? " is-attention" : ""}" style="--cal-ev:${colour(d.colour)}"></span>`).join("")}</span>`;
+  return `<span class="cal-dots" aria-hidden="true">${dots.map((d) => `<span class="${cls}${d.attention ? " is-attention" : ""}${d.free ? " is-free" : ""}" style="--cal-ev:${colour(d.colour)}"></span>`).join("")}</span>`;
 }
 
 function wideWeeks(weeks, cellHeight, ctx) {

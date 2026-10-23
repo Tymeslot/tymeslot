@@ -73,12 +73,13 @@ export function chipCapacity(cellHeight, { head = 24, row = 20 } = {}) {
   return Math.max(1, Math.floor((cellHeight - head) / row));
 }
 
-// A day's first `max` events as dots: what needs attention first.
+// A day's first `max` events as dots: what needs attention first. A free
+// event's dot is hollow, as its block is outlined.
 export function dayDots(events, iso, max = 3) {
   return eventsOnDay(events, iso)
     .sort((a, b) => needsAttention(b) - needsAttention(a))
     .slice(0, max)
-    .map((e) => ({ colour: e.colour, attention: needsAttention(e) }));
+    .map((e) => ({ colour: e.colour, attention: needsAttention(e), free: !!e.free && !e.expired }));
 }
 
 // The roving index after `key` in a grid of `total` days, seven to a row; a

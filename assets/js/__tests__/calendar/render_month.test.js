@@ -143,6 +143,14 @@ describe("phone", () => {
     expect(holder.querySelector('button[data-month-day="2026-10-15"]').getAttribute("aria-pressed")).toBe("false");
   });
 
+  test("a free event's dot is hollow, and so is its row in the chosen day", () => {
+    const free = [ev("event-9", "Focus", "2026-10-20T09:00", "2026-10-20T10:00", { free: true })];
+    const holder = draw({ phone: true, date: "2026-10-20", events: [...events, free[0]] });
+    expect(holder.querySelectorAll('button[data-month-day="2026-10-20"] .cal-month-dot.is-free')).toHaveLength(1);
+    expect(holder.querySelectorAll('button[data-month-day="2026-10-14"] .cal-month-dot.is-free')).toHaveLength(0);
+    expect(holder.querySelector('.cal-month-agenda [data-event-id="event-9"]').closest(".is-free")).not.toBeNull();
+  });
+
   test("the chosen day's events follow the grid", () => {
     const below = draw({ phone: true }).querySelector(".cal-month-agenda");
     expect([...below.querySelectorAll("button[data-event-id]")].map((b) => b.dataset.eventId)).toEqual(["event-3", "event-1", "event-2"]);

@@ -124,11 +124,16 @@ test("dayDots: up to three, what needs attention first, then all-day, then by st
     timed(`${WED}T18:00`, `${WED}T19:00`, { colour: "calendar-6", attention: true }),
   ];
   expect(dayDots(events, WED)).toEqual([
-    { colour: "calendar-6", attention: true },
-    { colour: "calendar-3", attention: false },
-    { colour: "calendar-5", attention: false },
+    { colour: "calendar-6", attention: true, free: false },
+    { colour: "calendar-3", attention: false, free: false },
+    { colour: "calendar-5", attention: false, free: false },
   ]);
   expect(dayDots(events, "2026-10-16")).toEqual([]);
+});
+
+test("dayDots marks a free event's dot, but not an expired request's", () => {
+  const events = [at("09", { free: true }), at("11", { free: true, expired: true })];
+  expect(dayDots(events, WED).map((d) => d.free)).toEqual([true, false]);
 });
 
 describe("monthStep", () => {
