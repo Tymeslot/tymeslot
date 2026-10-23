@@ -232,7 +232,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     kept = Enum.reject(properties, &MapSet.member?(replaced, ContentLines.property_name(&1)))
     added = Enum.flat_map(entries, fn {_names, lines} -> content_lines(lines) end)
 
-    kept ++ added ++ patched_alarms(alarms, patch_set.event_data)
+    kept ++ added ++ patched_alarms(alarms, properties, patch_set.event_data)
   end
 
   # Both spellings are always replaced in a block of Tymeslot's own, never just
@@ -375,13 +375,45 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   defp marked_ours?(properties),
     do: Enum.any?(properties, &(ContentLines.property_name(&1) == "X-TYMESLOT-ATTENDEES"))
 
-  defp patched_alarms(alarms, event_data) do
+  defp patched_alarms(alarms, properties, event_data) do
     if Map.has_key?(event_data, :reminders) do
-      event_data |> Alarms.build_reminders() |> content_lines()
+      event_data
+      |> Alarms.build_reminders(alarm_email(alarms, properties, event_data))
+      |> content_lines()
     else
       Enum.concat(alarms)
     end
   end
+
+  # An EMAIL alarm must name its recipient and subject, which a reminder does
+  # not hold, so they come from the stored document: the recipient of an
+  # email alarm it already carries (the address the user chose in their
+  # client), else the organiser, and the event's title. The stored `SUMMARY`
+  # is still escaped, as the alarm's must be.
+  defp alarm_email(alarms, properties, event_data) do
+    %{
+      recipient:
+        Enum.find_value(alarms, &email_alarm_recipient/1) ||
+          Map.get(event_data, :organizer_email) ||
+          stored_address(ContentLines.find("ORGANIZER", properties)),
+      summary:
+        if(Map.has_key?(event_data, :summary),
+          do: Format.escape_text(event_data.summary),
+          else: stored_value(ContentLines.find("SUMMARY", properties))
+        )
+    }
+  end
+
+  defp email_alarm_recipient(alarm) do
+    if String.upcase(stored_value(ContentLines.find("ACTION", alarm))) == "EMAIL",
+      do: stored_address(ContentLines.find("ATTENDEE", alarm))
+  end
+
+  defp stored_address(nil), do: nil
+  defp stored_address(line), do: line_address(line)
+
+  defp stored_value(nil), do: ""
+  defp stored_value(line), do: line |> ContentLines.split_value() |> elem(1)
 
   # VALARM is the only subcomponent a VEVENT may contain. Its own DESCRIPTION,
   # SUMMARY and DURATION lines must never be read as the event's, so the blocks

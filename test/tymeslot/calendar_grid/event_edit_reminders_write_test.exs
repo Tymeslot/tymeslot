@@ -330,6 +330,28 @@ defmodule Tymeslot.CalendarGrid.EventEditRemindersWriteTest do
       assert "TRIGGER:-PT10M" in lines
       assert Enum.count(lines, &(&1 == "BEGIN:VALARM")) == 1
     end
+
+    test "moving the email alert keeps it addressed to the recipient the client chose", %{
+      user: user,
+      event: event
+    } do
+      capture_put()
+
+      assert {:ok, _updated} =
+               EventEdit.update_event(user.id, event, %{
+                 reminders: [%{method: :email, minutes_before: 60}]
+               })
+
+      assert contains_block?(put_lines(), [
+               "BEGIN:VALARM",
+               "TRIGGER:-PT60M",
+               "ACTION:EMAIL",
+               "SUMMARY:Board meeting",
+               "DESCRIPTION:Reminder",
+               "ATTENDEE:mailto:host@example.com",
+               "END:VALARM"
+             ])
+    end
   end
 
   describe "replaying an edit of a CalDAV series with an edited occurrence" do
