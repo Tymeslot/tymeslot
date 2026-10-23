@@ -409,11 +409,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           do: {key, start_time}
 
     clashing =
-      Polls.starts_during_time_off(
-        socket.assigns.current_user.id,
-        Enum.map(starts, &elem(&1, 1)),
-        parse_duration(duration)
-      )
+      case parse_duration(duration) do
+        minutes when is_integer(minutes) and minutes > 0 ->
+          Polls.starts_during_time_off(
+            socket.assigns.current_user.id,
+            Enum.map(starts, &elem(&1, 1)),
+            minutes
+          )
+
+        # No usable length yet: the field shows its own error on save.
+        _invalid ->
+          []
+      end
 
     keys = for {key, start_time} <- starts, start_time in clashing, into: MapSet.new(), do: key
     assign(socket, :time_off_keys, keys)
@@ -535,16 +542,18 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   # --- Misc ---
 
+  # What the host typed, or nil when it is not a whole number: the changeset
+  # then says what is wrong, where a default would quietly replace it.
   defp parse_duration(value) when is_integer(value), do: value
 
   defp parse_duration(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {int, _rest} when int > 0 -> int
-      _other -> 30
+    case Integer.parse(String.trim(value)) do
+      {int, ""} -> int
+      _other -> nil
     end
   end
 
-  defp parse_duration(_other), do: 30
+  defp parse_duration(_other), do: nil
 
   defp checked?(params, key, default) do
     case Map.get(params, key) do
