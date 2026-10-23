@@ -82,12 +82,12 @@ msgstr "Modificato il:"
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Finish Signing Up"
-msgstr "Conferma l’email e completa la registrazione"
+msgstr "Conferma l'email e completa la registrazione"
 
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Finish Signing Up:"
-msgstr "Conferma l’email e completa la registrazione:"
+msgstr "Conferma l'email e completa la registrazione:"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format

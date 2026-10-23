@@ -198,6 +198,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         # yet. Here the user is told, and told access ends only when the
         # refund is for the subscription they hold now.
         revoked = should_revoke and refunds_current_subscription?(refund, subscription)
+        access = access_outcome(should_revoke, revoked)
 
         if !should_revoke do
           Logger.info("Refund below threshold - not revoking access",
@@ -224,11 +225,19 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
         # Send email notification to user, quoting the amount of THIS
         # refund rather than the cumulative total across the charge.
-        notify_unless_announced(subscription, event, charge, revoked)
+        notify_unless_announced(subscription, event, charge, access)
 
         {:ok, :refund_processed}
     end
   end
+
+  # What the refund email tells the customer about their access, as a
+  # string because it travels in the email job's JSON arguments. A refund
+  # past the threshold that revokes nothing (the subscription already ended,
+  # or the charge paid for an earlier one) is neither partial nor revoking.
+  defp access_outcome(false = _should_revoke, _revoked), do: "partial"
+  defp access_outcome(true, true = _revoked), do: "revoked"
+  defp access_outcome(true, false), do: "unaffected"
 
   # Whether the refunded charge paid for the subscription the customer holds
   # now, and that subscription is still live. A charge whose invoice billed
@@ -313,19 +322,19 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   # notice is never lost to an ambiguous match: a repeated notice is the
   # lesser harm next to a refund nobody is told about. The same holds when
   # the refunds cannot be read at all.
-  defp notify_unless_announced(subscription, event, charge, revoked) do
+  defp notify_unless_announced(subscription, event, charge, access) do
     delta = refunded_by_event(event, charge)
 
     case candidate_refunds(charge, delta) do
       [_first | _rest] = candidates ->
         unless Enum.all?(candidates, &customer_notified?/1) do
           amount = delta || newest_unannounced_amount(candidates, charge)
-          send_refund_email(subscription, amount, revoked, charge)
+          send_refund_email(subscription, amount, access, charge)
         end
 
       [] ->
         amount = delta || calculate_latest_refund_amount(charge)
-        send_refund_email(subscription, amount, revoked, charge)
+        send_refund_email(subscription, amount, access, charge)
     end
   end
 
@@ -435,14 +444,14 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     MapKeys.get(charge, :currency) || "eur"
   end
 
-  defp send_refund_email(subscription, refund_amount_cents, revoked, charge) do
+  defp send_refund_email(subscription, refund_amount_cents, access, charge) do
     currency = extract_charge_currency(charge)
 
     WebhookUtils.deliver_user_email(
       subscription.user_id,
       :refund_processed_template,
       :refund_processed_email,
-      [refund_amount_cents, currency, revoked],
+      [refund_amount_cents, currency, access],
       success_msg: "Refund notification sent to user #{subscription.user_id}",
       error_msg: "Failed to send refund notification: ",
       standalone_msg: "Refund processed template not configured (Standalone mode)"

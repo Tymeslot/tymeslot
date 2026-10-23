@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Helpers.FormErrorsTest do
       message =
         in_locale("de", fn ->
           FormErrors.first(changeset(%{}), %{
-            title: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_common", "Title")
+            title: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_polls", "Title")
           })
         end)
 

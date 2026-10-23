@@ -287,7 +287,7 @@ msgstr "sprawdzeń serwera wideo"
 msgid "bookings"
 msgstr "rezerwacji"
 
-#: lib/tymeslot/security/rate_limiter/limits.ex
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "calendar event moves"
 msgstr "przeniesień wydarzeń w kalendarzu"
@@ -546,6 +546,7 @@ msgid "is not a supported language"
 msgstr "nie jest obsługiwanym językiem"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
@@ -557,6 +558,7 @@ msgstr "nie jest obsługiwanym językiem"
 msgid "is not a valid palette key"
 msgstr "nie jest prawidłowym kluczem palety"
 
+#: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid timezone"
@@ -840,6 +842,11 @@ msgstr "muszą każdorazowo mieścić się między %{min} a %{max} min"
 #, elixir-autogen, elixir-format
 msgid "must not repeat a duration"
 msgstr "nie może powtarzać czasu trwania"
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "meeting moves"
+msgstr "przeniesień spotkań"
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex
 #, elixir-autogen, elixir-format

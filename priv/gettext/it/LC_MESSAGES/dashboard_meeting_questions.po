@@ -50,7 +50,7 @@ msgstr "La modifica del tipo cancellerà la configurazione definita (opzioni, co
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Controls how the booker enters their answer."
-msgstr "Determina come chi prenota inserisce la propria risposta."
+msgstr "Determina come chi prenota inserisce la sua risposta."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format

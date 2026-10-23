@@ -440,12 +440,12 @@ msgstr "Intervallo tra gli orari"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "How far apart booking start times are offered. Leave as default to match the meeting length."
-msgstr "Distanza tra gli orari di inizio proposti. Come impostazione predefinita corrisponde alla durata dell'incontro."
+msgstr "Distanza tra gli orari di inizio proposti. Come impostazione predefinita corrisponde alla durata della riunione."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "Same as meeting length"
-msgstr "Come la durata dell'incontro"
+msgstr "Come la durata della riunione"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -460,7 +460,7 @@ msgstr "Personalizzato…"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…"
-msgstr "In base alla durata dell'incontro, gli orari saranno proposti ogni %{minutes} minuti: %{examples}…"
+msgstr "In base alla durata della riunione, gli orari saranno proposti ogni %{minutes} minuti: %{examples}…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
@@ -771,7 +771,7 @@ msgstr "Modifica questa data"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "Leave the registration close empty to take sign-ups until the start. A time already past closes registration now."
-msgstr "Lascia vuota la chiusura delle iscrizioni per accettarle fino all’inizio. Un orario già passato chiude subito le iscrizioni."
+msgstr "Lascia vuota la chiusura delle iscrizioni per accettarle fino all'inizio. Un orario già passato chiude subito le iscrizioni."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -960,7 +960,7 @@ msgstr "Limita gli ospiti per prenotazione"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
 msgid "Each guest takes one of the time's seats, as the booker does."
-msgstr "Ogni ospite occupa uno dei posti dell’orario, come chi prenota."
+msgstr "Ogni ospite occupa uno dei posti dell'orario, come chi prenota."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_limit_fields.ex
 #, elixir-autogen, elixir-format

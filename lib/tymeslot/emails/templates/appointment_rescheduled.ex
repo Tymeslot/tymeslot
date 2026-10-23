@@ -189,7 +189,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
       meeting_details = TemplateHelper.organizer_meeting_details(appointment_details)
 
       mjml_content = """
-      #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
+      #{MeetingComponents.counterpart_section(@intent, appointment_details)}
 
       #{previous_time_callout(appointment_details, :organizer, locale)}
 
@@ -203,9 +203,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
         button_text: dgettext("emails_booking", "Start Meeting"))
       end}
 
-      #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Need to make changes?"), [%{text: dgettext("emails_booking", "Reschedule"), url: Map.get(appointment_details, :reschedule_url), style: :secondary}, %{text: dgettext("emails_booking", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url), style: :danger}])}
+      #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Need to make changes?"), [%{text: dgettext("emails_booking", "Open in dashboard"), url: Map.get(appointment_details, :dashboard_url), style: :primary}, %{text: dgettext("emails_booking", "Reschedule"), url: Map.get(appointment_details, :reschedule_url), style: :secondary}, %{text: dgettext("emails_booking", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url), style: :danger}])}
 
-      #{Text.system_footer_note(dgettext("emails_booking", "The attendee has been notified of the new time."))}
+      #{Text.system_footer_note(organizer_notified_line(appointment_details))}
       """
 
       organizer_details =
@@ -515,11 +515,22 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
   defp organizer_moved_line(%{moved_by: :host}),
     do: dgettext("emails_booking", "You moved this meeting in your calendar.")
 
+  # A meeting the host manages is only ever moved by the host
+  # (`Tymeslot.Bookings.HostMove`), and nobody booked it to be told.
+  defp organizer_moved_line(%{host_managed: true}),
+    do: dgettext("emails_booking", "You moved this meeting.")
+
   defp organizer_moved_line(appointment_details) do
     dgettext("emails_booking", "%{name} has moved your meeting.",
       name: appointment_details.attendee_name
     )
   end
+
+  defp organizer_notified_line(%{host_managed: true}),
+    do: dgettext("emails_booking", "Your guests have been notified of the new time.")
+
+  defp organizer_notified_line(_appointment_details),
+    do: dgettext("emails_booking", "The attendee has been notified of the new time.")
 
   defp build_organizer_text_body(appointment_details, meeting_details) do
     locale = organizer_locale(appointment_details)
@@ -541,7 +552,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     #{dgettext("emails_booking", "NEW MEETING DETAILS:")}
     #{meeting_details}#{video_section}#{custom_answers}#{action_links}
 
-    #{dgettext("emails_booking", "The attendee has been notified of the new time.")}
+    #{organizer_notified_line(appointment_details)}
     """
   end
 

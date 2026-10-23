@@ -34,12 +34,12 @@ msgstr "%{name} ha prenotato un posto nella tua riunione di gruppo."
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} cancelled their spot. Nobody is left on this slot, so the meeting has been cancelled and the time is free again."
-msgstr "%{name} ha annullato il proprio posto. Non è rimasto nessuno in questo orario, quindi la riunione è stata annullata e l'orario è di nuovo libero."
+msgstr "%{name} ha annullato il suo posto. Non è rimasto nessuno in questo orario, quindi la riunione è stata annullata e l'orario è di nuovo libero."
 
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} cancelled their spot. The meeting goes ahead for everyone else."
-msgstr "%{name} ha annullato il proprio posto. La riunione si svolge come previsto per tutti gli altri."
+msgstr "%{name} ha annullato il suo posto. La riunione si svolge come previsto per tutti gli altri."
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #, elixir-autogen, elixir-format
@@ -59,12 +59,12 @@ msgstr "%{name} ha modificato questa e tutte le occorrenze successive di un even
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} moved their spot from %{from} to %{to}."
-msgstr "%{name} ha spostato il proprio posto da %{from} a %{to}."
+msgstr "%{name} ha spostato il suo posto da %{from} a %{to}."
 
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} moved their spot to %{to}."
-msgstr "%{name} ha spostato il proprio posto a %{to}."
+msgstr "%{name} ha spostato il suo posto a %{to}."
 
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
@@ -106,12 +106,12 @@ msgstr "È stato emesso un rimborso parziale."
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "A participant cancelled their spot"
-msgstr "Un partecipante ha annullato il proprio posto"
+msgstr "Un partecipante ha annullato il suo posto"
 
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "A participant moved their spot"
-msgstr "Un partecipante ha spostato il proprio posto"
+msgstr "Un partecipante ha spostato il suo posto"
 
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
@@ -514,7 +514,7 @@ msgstr "La riunione di gruppo «%{title}» è stata riprogrammata nel tuo calend
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
 msgid "The last participant cancelled their spot"
-msgstr "L'ultimo partecipante ha annullato il proprio posto"
+msgstr "L'ultimo partecipante ha annullato il suo posto"
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -696,4 +696,19 @@ msgstr "l'organizzatore"
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. To move the booking to the new time, open it in your dashboard and choose <strong>Move booking</strong>: Tymeslot then reschedules its reminders and emails the attendee the new time. If <strong>Move booking</strong> is not offered there, send the attendee a reschedule request from your dashboard instead."
-msgstr "Questa riunione è stata <strong>riprogrammata nel tuo calendario esterno</strong>. Tymeslot mostra ancora l'orario originale qui sopra. Per spostare la prenotazione al nuovo orario, aprila nella tua dashboard e scegli <strong>Sposta la prenotazione</strong>: Tymeslot ripianifica quindi i suoi promemoria e invia al partecipante il nuovo orario via e-mail. Se l'opzione <strong>Sposta la prenotazione</strong> non compare, invia invece al partecipante una richiesta di riprogrammazione dalla tua dashboard."
+msgstr "Questa riunione è stata <strong>riprogrammata nel tuo calendario esterno</strong>. Tymeslot mostra ancora l'orario originale qui sopra. Per spostare la prenotazione al nuovo orario, aprila nella tua dashboard e scegli <strong>Sposta la prenotazione</strong>: Tymeslot ripianifica quindi i suoi promemoria e invia al partecipante il nuovo orario via email. Se l'opzione <strong>Sposta la prenotazione</strong> non compare, invia invece al partecipante una richiesta di riprogrammazione dalla tua dashboard."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} has been cancelled."
+msgstr "La riunione «%{title}» è stata annullata."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled - %{date}: %{title}"
+msgstr "Riunione annullata - %{date}: %{title}"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Your guests have been notified of the cancellation."
+msgstr "I tuoi ospiti sono stati informati dell'annullamento."

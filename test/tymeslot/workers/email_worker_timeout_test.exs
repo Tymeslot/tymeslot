@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
 
@@ -105,6 +106,13 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
     # finish inside the budget, cannot be made reliable at test scale: with
     # instant sends the job's own work already takes 130-170ms, and on a
     # contended machine over a second, more than the whole budget.
+    test "allows a send deadline for every participant of the fullest poll, and the other sends" do
+      assert PollSchema.max_participants() > Guests.max_guests()
+
+      assert EmailWorker.email_timeout_ms() ==
+               (PollSchema.max_participants() + 2 + 1) * @send_deadline_ms
+    end
+
     test "gives every recipient of the largest confirmation a full send deadline before giving up" do
       meeting = insert(:meeting, organizer_email_sent: false, attendee_email_sent: false)
       guest_emails = for n <- 1..Guests.max_guests(), do: "guest#{n}@example.com"

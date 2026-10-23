@@ -14,7 +14,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
     sign-up attempt with a registered address)
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
-  - `PollScheduler`: poll deadline reminders and host nudges
+  - `PollScheduler`: poll deadline reminders, host nudges and vote updates, and
+    participants' voting links and receipts
   - `SessionScheduler`: a planned session's participant list, at its
     registration close
   - `IntegrationScheduler` — integration health notifications and admin alerts
@@ -120,12 +121,43 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   # Poll emails
 
-  defdelegate schedule_poll_deadline_jobs(poll), to: PollScheduler, as: :schedule_deadline_jobs
+  defdelegate schedule_poll_reminders(poll), to: PollScheduler, as: :schedule_reminders
+
+  defdelegate schedule_poll_deadline_nudge(poll),
+    to: PollScheduler,
+    as: :schedule_deadline_nudge
+
+  defdelegate cancel_poll_reminders(poll_id), to: PollScheduler, as: :cancel_reminders
   defdelegate cancel_poll_deadline_jobs(poll_id), to: PollScheduler, as: :cancel_deadline_jobs
 
-  defdelegate schedule_poll_all_voted_nudge(poll),
+  defdelegate schedule_poll_all_voted_nudge(poll, round),
     to: PollScheduler,
     as: :schedule_all_voted_nudge
+
+  defdelegate schedule_poll_participant_link(participant),
+    to: PollScheduler,
+    as: :schedule_participant_link
+
+  defdelegate schedule_poll_vote_receipt(participant),
+    to: PollScheduler,
+    as: :schedule_vote_receipt
+
+  defdelegate schedule_poll_vote_digest(poll), to: PollScheduler, as: :schedule_vote_digest
+
+  defdelegate schedule_poll_invitation(participant),
+    to: PollScheduler,
+    as: :schedule_invitation
+
+  defdelegate schedule_poll_invitation_again(participant),
+    to: PollScheduler,
+    as: :schedule_invitation_again
+
+  defdelegate reschedule_poll_deadline_jobs(poll, invited?),
+    to: PollScheduler,
+    as: :reschedule_deadline_jobs
+
+  defdelegate schedule_poll_new_times(poll, slots), to: PollScheduler, as: :schedule_new_times
+  defdelegate schedule_poll_cancellation(poll), to: PollScheduler, as: :schedule_cancellation
 
   # Integration emails
 
