@@ -462,7 +462,7 @@ msgstr "Indirizzi email non validi: %{entries}"
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
 msgid "One address per line or separated by commas. Each person gets an email with their own voting link."
-msgstr "Un indirizzo per riga o separati da virgole. Ogni persona riceve un'email con il proprio link di voto."
+msgstr "Un indirizzo per riga o separati da virgole. Ogni persona riceve un'email con il suo link di voto."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_invite.ex
 #, elixir-autogen, elixir-format
