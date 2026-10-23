@@ -35,7 +35,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       reschedule: socket.assigns[:reschedule_context],
       reschedule_seat_token: socket.assigns[:reschedule_seat_token],
       seat_move: socket.assigns[:seat_move_context],
-      demo_mode?: Demo.demo_mode?(socket)
+      demo_mode?: Demo.demo_mode?(socket),
+      shared_availability_guests: socket.assigns[:shared_availability_guests] || []
     }
   end
 

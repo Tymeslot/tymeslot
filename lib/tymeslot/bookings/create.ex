@@ -4,6 +4,8 @@ defmodule Tymeslot.Bookings.Create do
   Combines validation, policy enforcement, and side effects.
   """
 
+  require Logger
+
   alias Tymeslot.Auth
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Offer
@@ -25,6 +27,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.CustomFields
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.BookingLimits.Checker
@@ -35,6 +38,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.Scheduling.SharedAvailability
   alias UUID
 
   @type meeting_params :: %{
@@ -119,7 +123,8 @@ defmodule Tymeslot.Bookings.Create do
     meeting_type = resolve_meeting_type_for_duration(meeting_params)
     duration_minutes = Offer.duration_minutes(meeting_type, meeting_params.duration)
 
-    with {:ok, date_string} <- normalize_date_input(meeting_params.date),
+    with {:ok, shared_availability_guests} <- resolve_shared_availability_guests(meeting_params),
+         {:ok, date_string} <- normalize_date_input(meeting_params.date),
          {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(
              date_string,
@@ -150,6 +155,7 @@ defmodule Tymeslot.Bookings.Create do
         custom_fields_snapshot: Map.get(meeting_params, :custom_fields_snapshot, []),
         custom_field_answers: Map.get(meeting_params, :custom_field_answers, %{}),
         guest_emails: Map.get(meeting_params, :guest_emails, []),
+        shared_availability_guests: shared_availability_guests,
         utm_source: Map.get(meeting_params, :utm_source),
         utm_medium: Map.get(meeting_params, :utm_medium),
         utm_campaign: Map.get(meeting_params, :utm_campaign),
@@ -171,6 +177,23 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp default_locale, do: Locales.booking_default_locale()
+
+  # The users named in the booking link (`?with=`) are resolved again here from
+  # their usernames rather than trusted from the page, which may have gone
+  # stale: one of them could have lost their public page since it rendered.
+  defp resolve_shared_availability_guests(meeting_params) do
+    case {Map.get(meeting_params, :shared_availability_usernames, []),
+          Map.get(meeting_params, :organizer_user_id)} do
+      {[], _organizer_user_id} ->
+        {:ok, []}
+
+      {usernames, organizer_user_id} when is_list(usernames) and is_integer(organizer_user_id) ->
+        SharedAvailability.resolve(usernames, organizer_user_id)
+
+      _unresolvable ->
+        {:error, :unavailable_guests}
+    end
+  end
 
   defp resolve_meeting_type_for_duration(meeting_params) do
     type_id = Map.get(meeting_params, :meeting_type_id)
@@ -244,8 +267,20 @@ defmodule Tymeslot.Bookings.Create do
     # Time window validation
     with :ok <- Validation.validate_booking_time(booking_data.start_datetime, config),
          :ok <- validate_slot_on_schedule(booking_data, config),
+         :ok <- validate_shared_availability_guests_allowed(booking_data),
          :ok <- validate_booking_limits(booking_data, user_id) do
-      validate_calendar_availability(booking_data, config)
+      validate_availability(booking_data, config)
+    end
+  end
+
+  # The host's calendar, then every user named in the booking link.
+  defp validate_availability(booking_data, config) do
+    with {:ok, :validated} <- validate_calendar_availability(booking_data, config) do
+      validate_shared_availability(
+        booking_data,
+        config,
+        SharedAvailability.fresh_events_fetcher()
+      )
     end
   end
 
@@ -289,6 +324,57 @@ defmodule Tymeslot.Bookings.Create do
       {:error, :payments_unavailable}
     else
       :ok
+    end
+  end
+
+  # Users named in the link join as guests, so a meeting type without guests,
+  # or a group type, cannot take them (`SharedAvailability.meeting_type_allowed?/1`).
+  # The booking page already refuses such a type; this is the server-side half.
+  defp validate_shared_availability_guests_allowed(
+         %{shared_availability_guests: [_first | _rest]} = data
+       ) do
+    if SharedAvailability.meeting_type_allowed?(Map.get(data, :meeting_type)),
+      do: :ok,
+      else: {:error, :unavailable_guests}
+  end
+
+  defp validate_shared_availability_guests_allowed(_booking_data), do: :ok
+
+  # Every user named in the link has to be free as well: on their own schedule,
+  # in their calendar and in the bookings they host. A guest's calendar that
+  # cannot be read is treated exactly like the host's in
+  # `validate_calendar_availability/2`: a conflict or an incomplete busy set
+  # refuses, a transport failure lets the booking through.
+  defp validate_shared_availability(%{shared_availability_guests: []}, _config, _fetcher),
+    do: {:ok, :validated}
+
+  defp validate_shared_availability(booking_data, config, fetcher) do
+    case SharedAvailability.validate_guests_available(
+           booking_data.shared_availability_guests,
+           booking_data.date,
+           booking_data.start_datetime,
+           booking_data.end_datetime,
+           booking_data.user_timezone,
+           config,
+           fetcher
+         ) do
+      :ok ->
+        {:ok, :validated}
+
+      {:error, :slot_unavailable} ->
+        {:error, :slot_unavailable}
+
+      {:error, reason} when reason in [:some_calendars_unavailable, :all_calendars_unavailable] ->
+        {:error, :availability_unverifiable}
+
+      {:error, reason} ->
+        Logger.warning(
+          "Guest calendar availability check failed, proceeding with booking",
+          reason: LogFormat.reason(reason),
+          organizer_user_id: booking_data.organizer_user_id
+        )
+
+        {:ok, :validated}
     end
   end
 
@@ -365,10 +451,10 @@ defmodule Tymeslot.Bookings.Create do
   # lookup it cannot use), and handed to the three checks that need it: the
   # booking window, the schedule's own slots and the calendar conflict check.
   defp scheduling_config(booking_data) do
-    Schedules.booking_config(
-      Map.get(booking_data, :organizer_user_id),
-      Map.get(booking_data, :meeting_type)
-    )
+    booking_data
+    |> Map.get(:organizer_user_id)
+    |> Schedules.booking_config(Map.get(booking_data, :meeting_type))
+    |> SharedAvailability.strictest_policy(Map.get(booking_data, :shared_availability_guests, []))
   end
 
   defp paid_meeting_type?(%{meeting_type: %{payment_required: true}}), do: true
@@ -399,11 +485,13 @@ defmodule Tymeslot.Bookings.Create do
   defp create_guests(meeting, booking_data) do
     if Policy.guests_allowed?(booking_data) do
       booking_data
-      |> Map.get(:guest_emails, [])
-      |> Guests.sanitize_emails(
-        meeting.attendee_email,
-        Guests.limit_for(Map.get(booking_data, :meeting_type))
+      |> Map.get(:shared_availability_guests, [])
+      |> SharedAvailability.merge_guest_emails(
+        booking_data
+        |> Map.get(:guest_emails, [])
+        |> Enum.take(Guests.limit_for(Map.get(booking_data, :meeting_type)))
       )
+      |> Guests.sanitize_emails(meeting.attendee_email)
       |> then(&Guests.create_for_meeting(meeting.id, &1, :booker))
     else
       {:ok, []}

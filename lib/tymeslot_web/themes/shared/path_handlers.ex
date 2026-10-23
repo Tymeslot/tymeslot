@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   use TymeslotWeb, :verified_routes
 
   alias Tymeslot.MeetingTypes
+  alias TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
   @doc """
@@ -68,6 +69,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> put_embed_params(socket)
     |> put_preview_params(socket)
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+    |> SharedAvailabilityGuests.put_query_param(socket)
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> put_choices(socket.assigns)
   end

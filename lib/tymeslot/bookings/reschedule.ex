@@ -56,6 +56,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Notifications.{Events, GuestNotifications, Orchestrator}
   alias Tymeslot.Repo
+  alias Tymeslot.Scheduling.SharedAvailability
   alias Tymeslot.Utils.DateTimeUtils.Duration, as: UrlDuration
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -128,9 +129,9 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id,
              original_meeting.duration
            ),
-         config <- Schedules.booking_config(original_meeting.organizer_user_id, meeting_type),
+         {named_users, config} = scheduling_config(original_meeting, meeting_type),
          {:ok, new_times} <-
-           Validation.prepare_new_times(new_params, original_meeting, meeting_type, config),
+           prepare_new_times(new_params, original_meeting, meeting_type, {named_users, config}),
          :ok <- verify_calendar_free(original_meeting, new_times, config) do
       apply_new_time(
         original_meeting,
@@ -174,6 +175,37 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   # Private functions
+
+  # The users a `?with=` link named, recovered from the booking's guests, and
+  # the strictest scheduling policy of the host and every one of them: the new
+  # time has to suit them as the original one did.
+  defp scheduling_config(meeting, meeting_type) do
+    named_users = SharedAvailability.resolve_for_meeting(meeting)
+
+    config =
+      meeting.organizer_user_id
+      |> Schedules.booking_config(meeting_type)
+      |> SharedAvailability.strictest_policy(named_users)
+
+    {named_users, config}
+  end
+
+  # The new time as `Validation.prepare_new_times/4` checks it for the host,
+  # then for the named users. `params.date` has been parsed by then.
+  defp prepare_new_times(params, meeting, meeting_type, {named_users, config}) do
+    with {:ok, new_times} <-
+           Validation.prepare_new_times(params, meeting, meeting_type, config),
+         :ok <-
+           SharedAvailability.validate_reschedule(
+             named_users,
+             meeting,
+             {Date.from_iso8601!(params.date), new_times.start_time, new_times.end_time,
+              params.user_timezone},
+             config
+           ) do
+      {:ok, new_times}
+    end
+  end
 
   # A reschedule page opened before its host asked to delete their account can
   # still submit; the host's meetings are about to go, so the meeting is unknown.
