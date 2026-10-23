@@ -831,3 +831,8 @@ msgstr "Gäste stimmen auf einer Seite ab, die erst verfügbar ist, wenn Ihr Kal
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar. Confirming books it anyway."
 msgstr "Diese Zeit überschneidet sich mit einem Ereignis in Ihrem Kalender. Wenn Sie bestätigen, wird sie trotzdem gebucht."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline to add times."
+msgstr "Die Abstimmung ist beendet. Verschieben Sie die Frist, um Zeiten hinzuzufügen."

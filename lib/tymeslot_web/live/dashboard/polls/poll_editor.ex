@@ -436,6 +436,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   defp errors_for(:slot_in_past),
     do: %{new_times: [dgettext("dashboard_polls", "Times must be in the future")]}
 
+  defp errors_for(:voting_closed),
+    do: %{
+      new_times: [
+        dgettext("dashboard_polls", "Voting has closed. Move the deadline to add times.")
+      ]
+    }
+
   defp errors_for(%Changeset{data: %PollSchema{}} = changeset) do
     errors = FormErrors.to_map(changeset)
 

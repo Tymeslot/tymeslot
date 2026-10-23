@@ -187,6 +187,32 @@ defmodule Tymeslot.Polls.EditingTest do
                Polls.update_details(ctx.poll.id, ctx.user.id, %{}, starts)
     end
 
+    test "refuses them once the deadline has passed, and tells nobody", ctx do
+      insert(:poll_participant, poll: ctx.poll, voted_at: in_days(-2))
+      Repo.update!(Changeset.change(ctx.poll, deadline_at: in_days(-1)))
+
+      assert {:error, :voting_closed} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{}, [in_days(9)])
+
+      {:ok, poll} = Polls.get_poll_for_host(ctx.poll.id, ctx.user.id)
+      assert length(poll.time_slots) == 1
+      assert jobs(ctx.poll.id, "send_poll_new_times") == []
+    end
+
+    test "takes them with a new deadline that reopens voting in the same edit", ctx do
+      Repo.update!(Changeset.change(ctx.poll, deadline_at: in_days(-1)))
+
+      assert {:ok, reopened} =
+               Polls.update_details(ctx.poll.id, ctx.user.id, %{"deadline_at" => in_days(3)}, [
+                 in_days(9)
+               ])
+
+      assert Polls.voting_open?(reopened)
+      {:ok, poll} = Polls.get_poll_for_host(ctx.poll.id, ctx.user.id)
+      assert length(poll.time_slots) == 2
+      assert [_announcement] = jobs(ctx.poll.id, "send_poll_new_times")
+    end
+
     test "refuses a poll that is no longer open", ctx do
       Repo.update!(Changeset.change(ctx.poll, status: :cancelled))
 

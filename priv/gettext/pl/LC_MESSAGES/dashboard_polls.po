@@ -840,3 +840,8 @@ msgstr "Goście głosują na stronie, która otwiera się dopiero po podłączen
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar. Confirming books it anyway."
 msgstr "Ten termin koliduje z wydarzeniem w twoim kalendarzu. Po potwierdzeniu i tak zostanie zarezerwowany."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline to add times."
+msgstr "Głosowanie jest zamknięte. Aby dodać terminy, przesuń koniec głosowania."
