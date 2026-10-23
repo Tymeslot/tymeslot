@@ -558,7 +558,9 @@ msgstr "Bonjour %{guest}, la réunion pour laquelle %{organizer} vous a envoyé 
 msgid "The meeting %{organizer} invited you to has been moved to a new time."
 msgstr "La réunion pour laquelle %{organizer} vous a envoyé une invitation a été déplacée à un nouvel horaire."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #: lib/tymeslot/emails/templates/registration_closed.ex
 #, elixir-autogen, elixir-format
 msgid "Open in dashboard"
@@ -778,6 +780,31 @@ msgstr "La liste est aussi jointe en fichier CSV pour un tableur."
 msgid "You moved this meeting in your calendar."
 msgstr "Vous avez déplacé ce rendez-vous dans votre calendrier."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed"
+msgstr "Sondage confirmé"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Poll confirmed: %{title} - %{date}"
+msgstr "Sondage confirmé : %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "You moved this meeting."
+msgstr "Vous avez déplacé ce rendez-vous."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your guests have been notified of the new time."
+msgstr "Vos invités ont été informés du nouvel horaire."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your poll is confirmed, and everyone on it is invited."
+msgstr "Votre sondage est confirmé, et tous ses participants sont invités."
+
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting %{organizer} invited you to is coming up."
@@ -785,5 +812,10 @@ msgstr "Bonjour %{guest}, la réunion pour laquelle %{organizer} vous a envoyé 
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
+msgid "⏰ %{title} in %{time_until}"
+msgstr "⏰ %{title} dans %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen
 msgid "The meeting %{organizer} invited you to is coming up."
 msgstr "La réunion pour laquelle %{organizer} vous a envoyé une invitation approche."

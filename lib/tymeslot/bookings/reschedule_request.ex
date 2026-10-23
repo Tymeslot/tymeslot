@@ -78,6 +78,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
 
   defp check_requestable(meeting) do
     with :ok <- check_not_already_requested(meeting),
+         :ok <- refuse_host_managed(meeting),
          :ok <- Policy.can_request_reschedule?(meeting) do
       :ok
     else
@@ -100,6 +101,12 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
     else
       :ok
     end
+  end
+
+  # A meeting confirmed from a poll has nobody to ask for a new time: the host
+  # picks it with `Tymeslot.Bookings.HostMove.move/3`.
+  defp refuse_host_managed(meeting) do
+    if MeetingSchema.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
   end
 
   # The original slot is void until the attendee books a new time, so the
