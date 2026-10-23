@@ -137,6 +137,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
       <p
         :if={@slot_health_loading}
         class="flex items-center gap-2 text-token-xs text-tymeslot-500"
+        data-testid="poll-slot-health-checking"
       >
         <Icons.icon name="hero-arrow-path" class="w-3.5 h-3.5 animate-spin" />
         {dgettext("dashboard_common", "Checking your calendar for conflicts…")}
