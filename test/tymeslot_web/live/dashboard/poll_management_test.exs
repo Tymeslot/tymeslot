@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+  import TymeslotWeb.PollDashboardHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.Polls
@@ -203,6 +204,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
              ]
 
       refute has_element?(view, "[data-testid='poll-details-form']")
+      await_slot_health(view)
     end
 
     test "sets a meeting type the host made after sending the poll", %{
@@ -227,6 +229,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       |> render_submit()
 
       assert Repo.get!(PollSchema, poll.id).meeting_type_id == meeting_type.id
+      await_slot_health(view)
     end
 
     test "keeps a meeting type switched off since the poll went out", %{
@@ -257,6 +260,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       saved = Repo.get!(PollSchema, poll.id)
       assert saved.title == "Renamed"
       assert saved.meeting_type_id == switched_off.id
+      await_slot_health(view)
     end
 
     test "keeps the editor open and explains a deadline in the past", %{conn: conn, poll: poll} do
@@ -614,6 +618,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
     view
     |> element("button[phx-click='select_poll'][phx-value-id='#{poll.id}']")
     |> render_click()
+
+    await_slot_health(view)
   end
 
   defp insert_invitee(poll) do
