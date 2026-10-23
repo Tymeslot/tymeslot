@@ -152,7 +152,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleEmails do
   # person in its attendee fields is a guest and hears of the move with the
   # other guests.
   defp attendee_copy(meeting, service, content) do
-    if HostManaged.managed_by_host?(meeting),
+    if HostManaged.managed?(meeting),
       do: {:ok, :skipped},
       else: service.send_reschedule_email_to_attendee(content.attendee_email, content)
   end

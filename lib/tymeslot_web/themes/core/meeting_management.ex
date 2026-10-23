@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   defp validate_meeting_action(meeting, action) when action in [:cancel, :reschedule] do
     cond do
       Meetings.group?(meeting) -> {:error, :group_meeting}
-      HostManaged.managed_by_host?(meeting) -> {:error, :managed_by_host}
+      HostManaged.managed?(meeting) -> {:error, :managed_by_host}
       true -> permitted(meeting, action)
     end
   end

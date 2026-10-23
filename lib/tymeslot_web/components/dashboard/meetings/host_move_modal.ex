@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   @moduledoc """
   LiveComponent in which the host picks a new time for a meeting they manage,
-  one confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed_by_host?/1`).
+  one confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed?/1`).
 
   Such a meeting has no booker to ask for a new time, so the dashboard's
   Reschedule opens this instead of the reschedule request. The time is read

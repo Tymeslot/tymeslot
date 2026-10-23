@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   end
 
   defp open(socket, meeting) do
-    if HostManaged.managed_by_host?(meeting),
+    if HostManaged.managed?(meeting),
       do: assign(socket, :host_move_meeting, meeting),
       else: ModalHook.show_modal(socket, :reschedule_request, meeting)
   end

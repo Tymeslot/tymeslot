@@ -230,7 +230,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
   # person in its attendee fields is a guest, invited, reminded and told of
   # changes with the other guests, so the booking emails with their
   # reschedule and cancel links are never sent to them.
-  defp booker?(meeting), do: not HostManaged.managed_by_host?(meeting)
+  defp booker?(meeting), do: not HostManaged.managed?(meeting)
 
   defp send_confirmation_emails(meeting) do
     if meeting.organizer_email_sent && meeting.attendee_email_sent do

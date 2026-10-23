@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         timezone: timezone,
         guests: guest_list(assigns.meeting),
         group?: Helpers.group_meeting?(assigns.meeting),
-        managed?: HostManaged.managed_by_host?(assigns.meeting),
+        managed?: HostManaged.managed?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting)
       )
@@ -398,7 +398,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # snapshotted at creation, so it survives the meeting type being edited or
   # deleted.
   defp meeting_title(meeting) do
-    if Helpers.group_meeting?(meeting) or HostManaged.managed_by_host?(meeting),
+    if Helpers.group_meeting?(meeting) or HostManaged.managed?(meeting),
       do: group_title(meeting),
       else: solo_title(meeting)
   end

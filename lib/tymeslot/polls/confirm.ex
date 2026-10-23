@@ -7,7 +7,7 @@ defmodule Tymeslot.Polls.Confirm do
   sync, notifications and optional video provisioning as any other booking. On
   success the poll transitions to `:confirmed` and subscribers are notified.
 
-  The meeting is managed by the host (`Tymeslot.Meetings.HostManaged.managed_by_host?/1`): it
+  The meeting is managed by the host (`Tymeslot.Meetings.HostManaged.managed?/1`): it
   has no booker. Every participant is invited as a guest and answers yes or no
   like one, and only the host can move or cancel it. The first participant
   available for the slot fills the meeting's attendee fields, which a calendar

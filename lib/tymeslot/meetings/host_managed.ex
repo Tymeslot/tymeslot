@@ -1,17 +1,17 @@
 defmodule Tymeslot.Meetings.HostManaged do
   @moduledoc """
-  Whether only the host manages a meeting, read off the meeting row. Kept
-  apart from `Tymeslot.Meetings.MeetingSchema`, which holds the row's shape
-  and its changesets.
+  Meetings only their host manages: those confirmed from a poll
+  (`meetings.managed_by_host`). Such a meeting has no booker. Its attendee is
+  a guest like everyone else, so they are sent no booking emails and the
+  public cancel and reschedule pages refuse it; the host moves it from the
+  dashboard instead (`Tymeslot.Bookings.HostMove.move/3`).
+
+  Split out of `MeetingSchema` to keep it inside the size limit; the schema
+  delegates `managed_by_host?/1` here.
   """
 
-  @doc """
-  Whether only the host manages the meeting: one confirmed from a poll. Its
-  attendee is a guest like everyone else, so they are sent no booking emails
-  and the public cancel and reschedule pages refuse it; the host moves it
-  from the dashboard instead (`Tymeslot.Bookings.HostMove.move/3`).
-  """
-  @spec managed_by_host?(map()) :: boolean()
-  def managed_by_host?(%{managed_by_host: true}), do: true
-  def managed_by_host?(_meeting), do: false
+  @doc "Whether only the host manages `meeting`."
+  @spec managed?(map()) :: boolean()
+  def managed?(%{managed_by_host: true}), do: true
+  def managed?(_meeting), do: false
 end

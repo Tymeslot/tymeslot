@@ -141,7 +141,7 @@ defmodule Tymeslot.Bookings.Policy do
   here would leave a request that still reads as approvable pointing at
   time that no longer holds.
 
-  A meeting confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed_by_host?/1`) has
+  A meeting confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed?/1`) has
   nobody to ask for a new time: its host picks one with
   `Tymeslot.Bookings.HostMove.move/3`, so a request is refused with
   `:managed_by_host`.
@@ -171,20 +171,20 @@ defmodule Tymeslot.Bookings.Policy do
   @spec can_host_change_time?(meeting_record()) ::
           :ok | {:error, reschedule_refusal() | booker_move_refusal()}
   def can_host_change_time?(meeting) do
-    if HostManaged.managed_by_host?(meeting),
+    if HostManaged.managed?(meeting),
       do: can_reschedule_meeting?(meeting),
       else: can_request_reschedule?(meeting)
   end
 
   @doc """
   Whether the booker may move `meeting` themselves. A meeting confirmed from
-  a poll (`Tymeslot.Meetings.HostManaged.managed_by_host?/1`) has no booker: only its host
+  a poll (`Tymeslot.Meetings.HostManaged.managed?/1`) has no booker: only its host
   moves it (`Tymeslot.Bookings.HostMove`). The flag never changes, so the
   answer needs no repeating under the meeting's lock.
   """
   @spec can_booker_move_meeting?(map()) :: :ok | {:error, booker_move_refusal()}
   def can_booker_move_meeting?(meeting) do
-    if HostManaged.managed_by_host?(meeting), do: {:error, :managed_by_host}, else: :ok
+    if HostManaged.managed?(meeting), do: {:error, :managed_by_host}, else: :ok
   end
 
   @doc """

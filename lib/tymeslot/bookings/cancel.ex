@@ -244,7 +244,7 @@ defmodule Tymeslot.Bookings.Cancel do
   # everyone: only the host may, from their dashboard. Each invitee answers
   # for themselves with the RSVP links in their invitation.
   defp refuse_host_managed(meeting, opts) do
-    if HostManaged.managed_by_host?(meeting) and Keyword.get(opts, :caller) != :organizer do
+    if HostManaged.managed?(meeting) and Keyword.get(opts, :caller) != :organizer do
       {:error, :managed_by_host}
     else
       :ok
