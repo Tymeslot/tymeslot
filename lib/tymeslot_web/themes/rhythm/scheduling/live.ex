@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
     BookingComponent,
     ConfirmationComponent,
     CustomQuestionsComponent,
+    LengthComponent,
     OverviewComponent,
     ScheduleComponent
   }
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
     wrapper: &Wrapper.rhythm_wrapper/1,
     steps: %{
       overview: OverviewComponent,
+      length: LengthComponent,
       schedule: ScheduleComponent,
       questions: CustomQuestionsComponent,
       booking: BookingComponent,

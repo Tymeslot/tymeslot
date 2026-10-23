@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
@@ -39,6 +40,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
+                length_minutes={ChosenLength.minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@duration}
               />
@@ -68,7 +70,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     <div class="summary-label">
                       {BookingText.duration_label(%{
                         meeting_type: @meeting_type,
-                        duration: @selected_duration
+                        duration: @selected_duration,
+                        chosen_length_minutes: ChosenLength.minutes(assigns)
                       })} {dgettext(
                         "booking",
                         "meeting"

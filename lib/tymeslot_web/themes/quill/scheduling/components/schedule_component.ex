@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
@@ -89,13 +90,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+    assigns =
+      assign(assigns,
+        navigable_steps: Runtime.navigable_steps(assigns),
+        step_numbers: Runtime.step_numbers(assigns)
+      )
 
     ~H"""
     <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
+        step_numbers={@step_numbers}
         current_step={2}
         slug={@duration}
         username_context={@username_context}
@@ -203,7 +209,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </button>
                           </div>
                           <div class="week-day-strip">
-                            <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type) do %>
+                            <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, ChosenLength.meeting_type(assigns)) do %>
                               <button
                                 class={[
                                   "week-day-cell",
@@ -301,7 +307,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               </div>
                             </div>
                             <div class="calendar-month-grid grid grid-cols-7 gap-0.5">
-                              <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, @meeting_type) do %>
+                              <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @week_start, @organizer_profile, @month_availability_map, ChosenLength.meeting_type(assigns)) do %>
                                 <.calendar_day
                                   phx-click="select_date"
                                   phx-target={@myself}
@@ -379,7 +385,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                   <div class="schedule-actions shrink-0" data-testid="schedule-actions">
                     <.action_button
-                      :if={@entered_via_overview}
+                      :if={@entered_via_overview or ChosenLength.choose?(assigns)}
                       type="button"
                       phx-click="back_step"
                       phx-target={@myself}

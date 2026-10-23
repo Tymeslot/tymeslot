@@ -402,6 +402,16 @@ msgstr "rezerwacje grupowe nie mogą wymagać płatności"
 msgid "You already have a meeting type with this name"
 msgstr "Masz już typ spotkania o tej nazwie"
 
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot offer more than one duration"
+msgstr "rezerwacje grupowe mogą oferować tylko jeden czas trwania"
+
+#: lib/tymeslot/meeting_types/fixed_dates.ex
+#, elixir-autogen, elixir-format
+msgid "fixed dates need group bookings"
+msgstr "stałe terminy wymagają rezerwacji grupowych"
+
 #: lib/tymeslot/security/universal_sanitizer.ex
 #, elixir-autogen, elixir-format
 msgid "Input exceeds maximum length (%{max_length} characters)"
@@ -813,15 +823,30 @@ msgstr "Odpowiedź jest za długa"
 msgid "Unknown field type"
 msgstr "Nieznany typ pola"
 
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "allows at most %{max} durations"
+msgstr "dopuszcza najwyżej %{max} czasów trwania"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "must each be a multiple of %{step} minutes"
+msgstr "muszą każdorazowo być wielokrotnością %{step} minut"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "must each be between %{min} and %{max} minutes"
+msgstr "muszą każdorazowo mieścić się między %{min} a %{max} min"
+
+#: lib/tymeslot/meeting_types/lengths.ex
+#, elixir-autogen, elixir-format
+msgid "must not repeat a duration"
+msgstr "nie może powtarzać czasu trwania"
+
 #: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
 #, elixir-autogen, elixir-format
 msgid "meeting moves"
 msgstr "przeniesień spotkań"
-
-#: lib/tymeslot/meeting_types/fixed_dates.ex
-#, elixir-autogen, elixir-format
-msgid "fixed dates need group bookings"
-msgstr "stałe terminy wymagają rezerwacji grupowych"
 
 #: lib/tymeslot/meeting_types/fixed_dates.ex
 #, elixir-autogen, elixir-format

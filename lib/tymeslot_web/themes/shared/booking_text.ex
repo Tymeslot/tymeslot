@@ -35,9 +35,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Components.PaymentHelpers
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.Voice
 
@@ -142,16 +144,21 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
 
   @doc """
   The meeting's length as a step shows it: the meeting type's own duration
-  when the page has resolved one, otherwise the duration selected in the URL
-  (`:duration`, e.g. `"30-minutes"`).
+  when the page has resolved one, or the length the booking is for when the
+  type offers several (`ChosenLength.minutes/1`), otherwise the duration
+  selected in the URL (`:duration`, e.g. `"30-minutes"`).
 
-  Takes a map with `:meeting_type` and `:duration`, so a step component can
-  pass its assigns straight through; a component whose selected duration lives
-  under another key builds the map itself.
+  Takes a map with `:meeting_type` and `:duration`, and the length assigns, so
+  a step component can pass its assigns straight through; a component whose
+  selected duration lives under another key builds the map itself.
   """
   @spec duration_label(map()) :: String.t()
-  def duration_label(%{meeting_type: %{duration_minutes: minutes}}),
-    do: LocalizationHelpers.format_duration(minutes)
+  def duration_label(%{meeting_type: %{duration_minutes: minutes} = meeting_type} = assigns)
+      when is_integer(minutes),
+      do:
+        LocalizationHelpers.format_duration(
+          Offer.duration_minutes(meeting_type, nil, ChosenLength.minutes(assigns))
+        )
 
   def duration_label(assigns),
     do: LocalizationHelpers.format_duration(Map.get(assigns, :duration))

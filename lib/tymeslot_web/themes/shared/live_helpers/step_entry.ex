@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   }
 
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
@@ -184,6 +185,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
     socket
+    |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
     |> maybe_subscribe_to_group_seats()

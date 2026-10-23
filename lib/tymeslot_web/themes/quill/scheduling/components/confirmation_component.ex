@@ -31,13 +31,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :navigable_steps, Runtime.navigable_steps(assigns))
+    assigns =
+      assign(assigns,
+        navigable_steps: Runtime.navigable_steps(assigns),
+        step_numbers: Runtime.step_numbers(assigns)
+      )
 
     ~H"""
     <div class="container quill-container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         navigable_steps={@navigable_steps}
+        step_numbers={@step_numbers}
         current_step={4}
         slug={@duration}
         username_context={@username_context}
