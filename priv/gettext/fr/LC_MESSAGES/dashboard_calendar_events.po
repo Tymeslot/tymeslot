@@ -993,3 +993,13 @@ msgstr "Participant ajouté, mais son invitation n'a pas pu être envoyée."
 #, elixir-autogen, elixir-format
 msgid "Attendee removed, but they could not be notified."
 msgstr "Participant supprimé, mais il n'a pas pu être notifié."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee added. They will be invited once the change has synced to your calendar."
+msgstr "Participant ajouté. Il sera invité une fois la modification synchronisée avec votre calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee removed. They will be notified once the change has synced to your calendar."
+msgstr "Participant supprimé. Il sera notifié une fois la modification synchronisée avec votre calendrier."
