@@ -1,0 +1,487 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded:"
+msgstr "Ya reembolsado:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Amount"
+msgstr "Importe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Amount exceeds the remaining refundable balance."
+msgstr "El importe supera el saldo que queda por reembolsar."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee"
+msgstr "Asistente"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Charges and payouts are enabled."
+msgstr "Los cobros y las transferencias están activados."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a refund type."
+msgstr "Elige un tipo de reembolso."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Stripe"
+msgstr "Conectar Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Stripe to start charging for meetings."
+msgstr "Conecta Stripe para empezar a cobrar por las reuniones."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
+msgstr "Conecta Stripe para empezar a cobrar por las reuniones. El dinero va directamente a tu cuenta de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connected and ready"
+msgstr "Conectado y listo"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connecting…"
+msgstr "Conectando…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Continue onboarding"
+msgstr "Continuar el registro"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not disconnect Stripe. Please try again."
+msgstr "No se pudo desconectar Stripe. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Could not start Stripe connection. Please try again."
+msgstr "No se pudo iniciar la conexión con Stripe. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not update currency. Please try again."
+msgstr "No se pudo actualizar la moneda. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Currency not supported."
+msgstr "Moneda no compatible."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Currency updated."
+msgstr "Moneda actualizada."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Currency updated. Paid event-type prices have been reset."
+msgstr "Moneda actualizada. Se borraron los precios de los tipos de reunión de pago."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Fecha"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Default currency"
+msgstr "Moneda predeterminada"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect Stripe"
+msgstr "Desconectar Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
+msgstr "Desconecta tu cuenta de Stripe de Tymeslot. Los pagos existentes siguen visibles. Las nuevas reservas de pago fallarán hasta que vuelvas a conectarla."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
+msgstr "¿Desconectar tu cuenta de Stripe de Tymeslot? Los pagos existentes siguen visibles, pero las nuevas reservas de pago fallarán hasta que vuelvas a conectarla."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnected"
+msgstr "Desconectado"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Disputed"
+msgstr "En disputa"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid refund amount."
+msgstr "Escribe un importe de reembolso válido."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Failed"
+msgstr "Fallido"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Finish connecting Stripe"
+msgstr "Terminar de conectar Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Full refund"
+msgstr "Reembolso completo"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Issue refund"
+msgstr "Emitir el reembolso"
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting payments are not enabled for this account."
+msgstr "Los pagos de reuniones no están activados para esta cuenta."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting payments require an upgraded plan."
+msgstr "Los pagos de reuniones necesitan un plan superior."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "No payments yet."
+msgstr "Todavía no hay pagos."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Not connected"
+msgstr "No conectado"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Original charge:"
+msgstr "Cargo original:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Paid"
+msgstr "Pagado"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Partial amount"
+msgstr "Importe parcial"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Partial refund"
+msgstr "Reembolso parcial"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Partially refunded"
+msgstr "Reembolsado en parte"
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Payment setup is temporarily unavailable. Please try again later."
+msgstr "La configuración de pagos no está disponible en este momento. Inténtalo más tarde."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Pending"
+msgstr "Pendiente"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Pending Stripe review"
+msgstr "Pendiente de revisión por Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
+#, elixir-autogen, elixir-format
+msgid "Platform fee paid"
+msgstr "Comisión de la plataforma pagada"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Reason: %{reason}"
+msgstr "Motivo: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Recent payments"
+msgstr "Pagos recientes"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Refund"
+msgstr "Reembolsar"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refund amount must be greater than zero and within the remaining balance."
+msgstr "El importe del reembolso debe ser mayor que cero y no superar el saldo restante."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refund issued. The attendee will receive a confirmation email."
+msgstr "Reembolso emitido. El asistente recibirá un correo de confirmación."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund payment"
+msgstr "Reembolsar el pago"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund type"
+msgstr "Tipo de reembolso"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Refunded"
+msgstr "Reembolsado"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refunding..."
+msgstr "Reembolsando…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds older than 60 days must be processed in your Stripe dashboard."
+msgstr "Los pagos de hace más de 60 días deben reembolsarse en tu panel de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remaining refundable:"
+msgstr "Queda por reembolsar:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Restricted"
+msgstr "Con restricciones"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong while issuing the refund. Please try again."
+msgstr "Algo salió mal al emitir el reembolso. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr "Estado"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account disconnected."
+msgstr "Cuenta de Stripe desconectada."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe has not yet captured a charge for this booking. Try again in a moment."
+msgstr "Stripe todavía no registró ningún cargo para esta reserva. Inténtalo de nuevo en un momento."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
+msgstr "Stripe está revisando tu cuenta. Los cobros se activan automáticamente cuando Stripe la apruebe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
+msgstr "El asistente recibe el importe completo que reembolsas. La comisión de la plataforma de Tymeslot se te devuelve en proporción. Las comisiones de procesamiento de Stripe del cargo original corren por tu cuenta."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has not been paid yet, so it cannot be refunded."
+msgstr "Esta reserva todavía no se pagó, así que no se puede reembolsar."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
+msgstr "Este pago ya no se puede reembolsar desde Tymeslot. Los pagos de hace más de 60 días deben reembolsarse en tu panel de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This payment has already been fully refunded."
+msgstr "Este pago ya se reembolsó por completo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This payment is under dispute and must be handled in your Stripe dashboard."
+msgstr "Este pago está en disputa y debe gestionarse en tu panel de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
+#, elixir-autogen, elixir-format
+msgid "Total received"
+msgstr "Total recibido"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
+msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
+msgstr[0] "Tienes %{count} reserva pendiente de pago. Si desconectas, se cancelará."
+msgstr[1] "Tienes %{count} reservas pendientes de pago. Si desconectas, se cancelarán."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
+msgstr "Empezaste a conectar Stripe, pero aún no terminaste el registro. Continúa para empezar a aceptar pagos."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
+msgstr "Tu cuenta de Stripe está desconectada. Vuelve a conectarla para aceptar pagos de nuevo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund %{attendee} for %{meeting_type}."
+msgstr "Reembolsar a %{attendee} por %{meeting_type}."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
+msgstr "Si cambias la moneda, todos los tipos de reunión de pago pasan a ser gratuitos. Los precios actuales están en la moneda anterior y, sin este paso, se cobrarían en la nueva."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Outstanding"
+msgstr "Pendiente"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund in Stripe"
+msgstr "Reembolsar en Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Reembolsos pendientes"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
+msgstr "Estas reservas se cancelaron cuando todavía tenías el dinero de los asistentes. Al cancelar una reserva, el dinero no se devuelve automáticamente."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} pending booking cancelled."
+msgid_plural "%{count} pending bookings cancelled."
+msgstr[0] "Se canceló %{count} reserva pendiente."
+msgstr[1] "Se cancelaron %{count} reservas pendientes."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} refund is still outstanding and must now be issued from your Stripe dashboard."
+msgid_plural "%{count} refunds are still outstanding and must now be issued from your Stripe dashboard."
+msgstr[0] "Queda %{count} reembolso pendiente, que ahora debe emitirse desde tu panel de Stripe."
+msgstr[1] "Quedan %{count} reembolsos pendientes, que ahora deben emitirse desde tu panel de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the %{shown} oldest of %{total} outstanding refunds."
+msgstr "Se muestran los %{shown} más antiguos de %{total} reembolsos pendientes."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You still owe %{count} refund totalling %{total}. Disconnecting does not issue it, and afterwards you will have to refund it from your Stripe dashboard."
+msgid_plural "You still owe %{count} refunds totalling %{total}. Disconnecting does not issue them, and afterwards you will have to refund them from your Stripe dashboard."
+msgstr[0] "Todavía debes %{count} reembolso por un total de %{total}. Desconectar no lo emite, y después tendrás que reembolsarlo desde tu panel de Stripe."
+msgstr[1] "Todavía debes %{count} reembolsos por un total de %{total}. Desconectar no los emite, y después tendrás que reembolsarlos desde tu panel de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
+msgstr "Tu cuenta de Stripe no está conectada, así que estos reembolsos deben emitirse desde tu panel de Stripe. Sigues debiendo ese dinero."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled %{date}"
+msgstr "Reserva cancelada el %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Vencida"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired, paid %{date}"
+msgstr "Vencida, pagada el %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Expired bookings were paid for but never confirmed, for example because the payment arrived after the slot was taken. Their refund is issued automatically; if one is still listed later, refund it here or in Stripe."
+msgstr "Las reservas vencidas se pagaron, pero nunca se confirmaron. Por ejemplo, porque el pago llegó cuando la franja horaria ya estaba ocupada. Su reembolso se emite automáticamente. Si alguna sigue apareciendo más tarde, reembólsala aquí o en Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Declined %{date}"
+msgstr "Rechazada el %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "You declined these bookings, but their automatic refund didn't go through. Refund them here or in Stripe."
+msgstr "Rechazaste estas reservas, pero su reembolso automático no se completó. Reembólsalas aquí o en Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency, %{currency}, is not supported for meeting payments. Choose one of the currencies below to take payments again."
+msgstr "La moneda de tu cuenta de Stripe, %{currency}, no es compatible con los pagos de reuniones. Elige una de las monedas de abajo para volver a aceptar pagos."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Currency not supported"
+msgstr "Moneda no compatible"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Payments cannot be taken in your account's currency, %{currency}. Choose a supported currency below to take payments again."
+msgstr "No se pueden aceptar pagos en la moneda de tu cuenta, %{currency}. Elige abajo una moneda compatible para volver a aceptar pagos."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
+#, elixir-autogen, elixir-format
+msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
+msgstr "Ya no se pueden fijar precios en la moneda de tu cuenta de Stripe, %{currency}. Las reservas se siguen cobrando a sus precios actuales; para cambiarlos, elige una de las monedas de abajo."

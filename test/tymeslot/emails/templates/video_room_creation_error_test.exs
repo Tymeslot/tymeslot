@@ -54,6 +54,7 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationErrorTest do
       "en" => {"1 day,", "3 days,", "30 days,"},
       "cs" => {"1 den", "3 dny", "30 dní"},
       "de" => {"1 Tag", "3 Tagen", "30 Tagen"},
+      "es" => {"1 día", "3 días", "30 días"},
       "fr" => {"1 jour", "3 jours", "30 jours"},
       "it" => {"1 giorno", "3 giorni", "30 giorni"},
       "pl" => {"1 dzień", "3 dni", "30 dni"},

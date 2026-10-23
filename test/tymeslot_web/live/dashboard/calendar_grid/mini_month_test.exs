@@ -122,7 +122,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
           {"uk", "Січень 2026"},
           {"cs", "Leden 2026"},
           {"pl", "Styczeń 2026"},
-          {"pt", "Janeiro de 2026"}
+          {"pt", "Janeiro de 2026"},
+          {"es", "Enero de 2026"}
         ] do
       test "#{locale}: names the month in the capitalised nominative" do
         Gettext.put_locale(TymeslotWeb.Gettext, unquote(locale))
