@@ -105,6 +105,19 @@ html.scheduling-app .poll-link-sent-icon {
   color: var(--theme-accent);
 }
 
+/* Marks a time added after the participant last answered */
+html.scheduling-app .poll-slot-new {
+  display: inline-block;
+  margin-left: var(--space-xs);
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--theme-accent-solid);
+  color: var(--theme-on-accent);
+  font-size: var(--theme-font-size-xs);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
 html.scheduling-app .poll-field {
   display: flex;
   flex-direction: column;

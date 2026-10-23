@@ -8,6 +8,8 @@ defmodule Tymeslot.Polls.PollSchema do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Polls.{PollParticipantSchema, PollTimeSlotSchema}
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
@@ -40,6 +42,10 @@ defmodule Tymeslot.Polls.PollSchema do
     # (`Tymeslot.Emails.EmailScheduler.schedule_poll_vote_digest/1`),
     # and when they last were, so the next update names only who voted since.
     field(:notify_on_vote, :boolean, default: false)
+    # When participants who have not voted are reminded, as lead times before
+    # `deadline_at`. Nil for a poll from before the host could choose: see
+    # `reminders/1`.
+    field(:reminder_config, {:array, :map})
     field(:vote_digest_sent_at, :utc_datetime)
     field(:deadline_at, :utc_datetime)
     field(:timezone, :string)
@@ -93,12 +99,14 @@ defmodule Tymeslot.Polls.PollSchema do
       :duration_minutes,
       :deadline_at,
       :timezone,
-      :notify_on_vote
+      :notify_on_vote,
+      :reminder_config
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
     |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
     |> validate_length(:title, max: 255)
     |> validate_description_length()
+    |> validate_reminder_config()
     |> put_new_token()
     |> Token.put_hash(:token, :token_hash)
     |> unique_constraint(:token_hash)
@@ -107,17 +115,29 @@ defmodule Tymeslot.Polls.PollSchema do
   end
 
   @doc """
-  Changeset for a host editing a poll's wording after it exists.
+  Changeset for a host editing an open poll.
 
-  Deliberately narrow: only the title, the description and whether the host
-  is told about new votes, never the candidate times, duration, timezone, or
-  deadline. Guests vote against the slots they were shown, so changing those
-  under an in-flight poll would silently invalidate votes already cast.
+  Covers the title, the description, whether the host is told about new votes,
+  the voting deadline, the reminders before it, and the meeting type whose
+  calendar and video the confirmed meeting uses (checked by
+  `Tymeslot.Polls.Editing`, which knows the host). A deadline may be moved,
+  removed, or set again after it passed, which reopens voting, but never into
+  the past. The candidate times, duration and timezone stay as they are:
+  guests voted against the slots they were shown, so changing those under an
+  in-flight poll would silently invalidate votes already cast. Times can only
+  be added (`Tymeslot.Polls.Editing`).
   """
   @spec details_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def details_changeset(poll, attrs) do
     poll
-    |> cast(attrs, [:title, :description, :notify_on_vote])
+    |> cast(attrs, [
+      :title,
+      :description,
+      :notify_on_vote,
+      :deadline_at,
+      :reminder_config,
+      :meeting_type_id
+    ])
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
     # nil as well as trim: a title of "   " arrives here as a nil *change*, and
     # `validate_required/2` is what turns it into an error.
@@ -126,7 +146,51 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_required([:title])
     |> validate_length(:title, max: 255)
     |> validate_description_length()
+    |> validate_future_deadline()
+    |> validate_reminder_config()
+    |> foreign_key_constraint(:meeting_type_id)
   end
+
+  @doc """
+  The poll's reminders as `%{value:, unit:}` lead times before its deadline.
+  A poll from before the host could choose them keeps the one reminder every
+  poll had then, a day before.
+  """
+  @spec reminders(%__MODULE__{}) :: [%{value: pos_integer(), unit: String.t()}]
+  def reminders(%__MODULE__{reminder_config: nil}), do: [%{value: 1, unit: "days"}]
+
+  def reminders(%__MODULE__{reminder_config: config}),
+    do: Reminders.normalize_reminders(config)
+
+  # Only a deadline being set is judged: an untouched one that has passed must
+  # not stop the host fixing a typo in the title.
+  defp validate_future_deadline(changeset) do
+    validate_change(changeset, :deadline_at, fn :deadline_at, deadline_at ->
+      if DateTime.compare(deadline_at, DateTime.utc_now()) == :gt,
+        do: [],
+        else: [deadline_at: "must be in the future"]
+    end)
+  end
+
+  defp validate_reminder_config(changeset) do
+    case get_change(changeset, :reminder_config) do
+      nil -> changeset
+      reminders -> check_reminders(changeset, reminders)
+    end
+  end
+
+  # The same rules as a meeting type's reminders: at most three, no two alike,
+  # none more than a year ahead.
+  defp check_reminders(changeset, reminders) do
+    with {:ok, normalised} <- ReminderValidation.parse_and_normalize_reminders(reminders),
+         :ok <- ReminderValidation.validate_reminders_policy(normalised) do
+      put_change(changeset, :reminder_config, Enum.map(normalised, &stringify/1))
+    else
+      {:error, message} -> add_error(changeset, :reminder_config, message)
+    end
+  end
+
+  defp stringify(%{value: value, unit: unit}), do: %{"value" => value, "unit" => unit}
 
   # The description becomes the confirmed meeting's organiser note, so it is
   # held to that limit from the start.

@@ -1,8 +1,9 @@
 defmodule Tymeslot.Notifications.Email.PollEmails do
   @moduledoc """
   Handles poll-related email actions: invitations, participants' voting links
-  and receipts, deadline reminders to unvoted participants, and for the host
-  pick-a-time nudges and updates on new votes.
+  and receipts, deadline reminders to unvoted participants, news of added
+  times and of a cancelled poll, and for the host pick-a-time nudges and
+  updates on new votes.
 
   Every email to a participant carries their personal `?p=` link, read from
   the participant here rather than from the job args.
@@ -11,9 +12,12 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   require Logger
 
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.Templates.PollCancelled
   alias Tymeslot.Emails.Templates.PollDeadlineReminder
   alias Tymeslot.Emails.Templates.PollHostNudge
   alias Tymeslot.Emails.Templates.PollInvitation
+  alias Tymeslot.Emails.Templates.PollNewTimes
   alias Tymeslot.Emails.Templates.PollParticipantLink
   alias Tymeslot.Emails.Templates.PollVoteDigest
   alias Tymeslot.Emails.Templates.PollVoteReceipt
@@ -28,6 +32,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   @no_username "host has no username"
   @poll_gone "poll not found"
   @poll_closed "poll not open"
+  # Scheduled for a deadline the host has since moved or removed.
+  @stale_deadline "poll deadline changed"
   # An unconfirmed participant pruned before their email went out.
   @participant_gone "poll participant not found"
 
@@ -38,7 +44,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   """
   @spec expected_discard?(term()) :: boolean()
   def expected_discard?(reason),
-    do: reason in [@no_username, @poll_gone, @poll_closed, @participant_gone]
+    do: reason in [@no_username, @poll_gone, @poll_closed, @participant_gone, @stale_deadline]
 
   @doc "Emails a participant their personal voting link."
   @spec handle_participant_link(%{String.t() => term()}) ::
@@ -111,8 +117,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
   @spec handle_deadline_reminders(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_deadline_reminders(%{"poll_id" => poll_id}, job_id) do
-    with_open_poll(poll_id, "poll deadline reminders", fn poll ->
+  def handle_deadline_reminders(%{"poll_id" => poll_id} = args, job_id) do
+    with_current_deadline(poll_id, args, "poll deadline reminders", fn poll ->
       # Without a host username the public voting page has no working URL, so the
       # reminder's call-to-action would be broken. Discard rather than sending a
       # dead link to every participant.
@@ -148,8 +154,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
   @spec handle_host_nudge(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_host_nudge(%{"poll_id" => poll_id, "variant" => variant}, job_id) do
-    with_open_poll(poll_id, "poll host nudge", fn poll ->
+  def handle_host_nudge(%{"poll_id" => poll_id, "variant" => variant} = args, job_id) do
+    with_current_deadline(poll_id, args, "poll host nudge", fn poll ->
       DeliveryClaims.once(job_id, "host", fn ->
         poll
         |> PollHostNudge.render(variant_atom(variant), results_url())
@@ -195,6 +201,66 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     end)
   end
 
+  @doc """
+  Tells everyone who has already voted which times the host added, with their
+  link to answer them. Whoever has not voted yet sees the new times when they
+  open their link, so they are not emailed.
+  """
+  @spec handle_new_times(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_new_times(%{"poll_id" => poll_id, "slot_ids" => slot_ids}, job_id) do
+    with_open_poll(poll_id, "poll new times", fn poll ->
+      case {host_username(poll), Enum.filter(poll.time_slots, &(&1.id in slot_ids))} do
+        {_username, []} ->
+          :ok
+
+        {nil, _slots} ->
+          {:discard, @no_username}
+
+        {username, slots} ->
+          poll.participants
+          |> Enum.filter(& &1.voted_at)
+          |> Enum.each(fn participant ->
+            DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
+              poll
+              |> PollNewTimes.render(
+                participant,
+                slots,
+                personal_url(poll, username, participant)
+              )
+              |> Delivery.deliver()
+            end)
+          end)
+      end
+    end)
+  end
+
+  @doc "Tells every participant of a cancelled poll that it will not go ahead."
+  @spec handle_cancelled(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:discard, String.t()}
+  def handle_cancelled(%{"poll_id" => poll_id}, job_id) do
+    case PollQueries.get_with_host(poll_id) do
+      %{status: :cancelled} = poll ->
+        Enum.each(poll.participants, fn participant ->
+          DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
+            poll |> PollCancelled.render(participant) |> Delivery.deliver()
+          end)
+        end)
+
+      # Deleted straight after it was cancelled, before this ran.
+      nil ->
+        Logger.info("Skipping poll cancellation emails — poll no longer exists",
+          poll_id: poll_id
+        )
+
+        {:discard, @poll_gone}
+
+      # A poll that is not cancelled has nothing to announce.
+      _poll ->
+        {:discard, @poll_closed}
+    end
+  end
+
   # Who voted after the host's last update and up to `cutoff`, in the order
   # they voted. Votes after `cutoff` scheduled the next update.
   defp voted_since_update(poll, cutoff) do
@@ -214,6 +280,35 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       {:ok, _poll} -> :ok
       {:error, changeset} -> {:error, changeset}
     end
+  end
+
+  # Like `with_open_poll/3`, and a job scheduled for a deadline the poll no
+  # longer has is discarded. Jobs from before deadlines were carried, and the
+  # all-voted nudge, have none to compare.
+  defp with_current_deadline(poll_id, args, action, fun) do
+    with_open_poll(poll_id, action, fn poll ->
+      case {args["deadline_at"], poll.deadline_at} do
+        {nil, _current} ->
+          fun.(poll)
+
+        {scheduled_for, %DateTime{} = current} ->
+          if scheduled_for == PollScheduler.deadline_arg(current),
+            do: fun.(poll),
+            else: stale(poll_id, action)
+
+        {_scheduled_for, nil} ->
+          stale(poll_id, action)
+      end
+    end)
+  end
+
+  defp stale(poll_id, action) do
+    Logger.info("Skipping poll email — scheduled for a deadline that has changed",
+      email_action: action,
+      poll_id: poll_id
+    )
+
+    {:discard, @stale_deadline}
   end
 
   # Fetches the poll with its host preloaded and runs `fun` only while the poll is

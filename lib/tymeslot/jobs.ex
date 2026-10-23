@@ -92,6 +92,12 @@ defmodule Tymeslot.Jobs do
   defdelegate delete_poll_jobs(poll_id, worker_module), to: ObanJobQueries
 
   @doc """
+  Deletes the pending jobs a worker holds for one poll whose args also contain
+  `args_match`, such as one action's jobs, on the emails queue.
+  """
+  defdelegate delete_poll_jobs_matching(poll_id, worker_module, args_match), to: ObanJobQueries
+
+  @doc """
   Deletes the pending job a meeting holds for one action, on the emails queue.
   """
   defdelegate delete_jobs_by_action(worker_module, action, meeting_id), to: ObanJobQueries

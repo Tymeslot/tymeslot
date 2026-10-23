@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
@@ -31,13 +30,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   alias TymeslotWeb.Dashboard.Polls.{
     CancelPollModal,
+    DeletePollModal,
     PollForm,
     PollInvite,
     PollList,
     PollResults
   }
 
-  alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
 
   @task_supervisor Tymeslot.TaskSupervisor
@@ -47,6 +46,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   def update(%{poll_created: true}, socket) do
     # The child form persisted a poll: refresh the list and close the form.
     {:ok, socket |> assign(:show_form, false) |> load_polls()}
+  end
+
+  def update(%{poll_edited: true}, socket) do
+    # The editor saved: close it and show the poll as it now stands.
+    {:ok,
+     socket
+     |> assign(:editing_details?, false)
+     |> reload_selected(refresh_health: true)
+     |> load_polls()}
   end
 
   def update(%{poll_updated: poll_id}, socket) do
@@ -87,9 +95,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:winning_slot_id, fn -> nil end)
      |> assign_new(:meeting_types, fn -> [] end)
      |> assign_new(:show_cancel_modal, fn -> false end)
+     |> assign_new(:show_delete_modal, fn -> false end)
      |> assign_new(:expanded_slots, fn -> MapSet.new() end)
      |> assign_new(:editing_details?, fn -> false end)
-     |> assign_new(:detail_errors, fn -> %{} end)
      |> load_polls()}
   end
 
@@ -134,11 +142,19 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             winning_slot_id={@winning_slot_id}
             expanded_slots={@expanded_slots}
             editing_details?={@editing_details?}
-            detail_errors={@detail_errors}
+            meeting_types={@meeting_types}
+            user_id={@current_user.id}
+            parent_id={@id}
             profile={@profile}
             integration_status={@integration_status}
             meetings_path={~p"/dashboard/meetings"}
             time_format={@time_format}
+            myself={@myself}
+          />
+
+          <DeletePollModal.delete_poll_modal
+            open={@show_delete_modal}
+            poll={@selected_poll}
             myself={@myself}
           />
 
@@ -166,12 +182,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("new_poll", _params, socket) do
-    meeting_types =
-      socket.assigns.current_user.id
-      |> MeetingTypes.get_active_meeting_types()
-      |> Enum.reject(& &1.payment_required)
-
-    {:noreply, assign(socket, show_form: true, meeting_types: meeting_types)}
+    {:noreply, assign(socket, show_form: true, meeting_types: poll_meeting_types(socket))}
   end
 
   @impl Phoenix.LiveComponent
@@ -238,43 +249,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("edit_poll_details", _params, socket) do
-    {:noreply, assign(socket, editing_details?: true, detail_errors: %{})}
+    {:noreply, assign(socket, editing_details?: true, meeting_types: poll_meeting_types(socket))}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_edit_poll_details", _params, socket) do
-    {:noreply, assign(socket, editing_details?: false, detail_errors: %{})}
+    {:noreply, assign(socket, editing_details?: false)}
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("save_poll_details", %{"poll" => params}, socket) do
-    poll_id = socket.assigns.selected_poll_id
-    user_id = socket.assigns.current_user.id
-    attrs = Map.take(params, ["title", "description", "notify_on_vote"])
-
-    case Polls.update_details(poll_id, user_id, attrs) do
-      {:ok, _poll} ->
-        Flash.info(dgettext("dashboard_common", "Poll updated"))
-
-        {:noreply,
-         socket
-         |> assign(editing_details?: false, detail_errors: %{})
-         |> reload_selected(refresh_health: false)
-         |> load_polls()}
-
-      {:error, :not_open} ->
-        {:noreply, socket |> assign(:editing_details?, false) |> poll_no_longer_open()}
-
-      {:error, %Changeset{} = changeset} ->
-        {:noreply, assign(socket, :detail_errors, FormErrors.to_map(changeset))}
-
-      {:error, _reason} ->
-        Flash.error(dgettext("dashboard_common", "Couldn't save this poll. Please try again."))
-        {:noreply, socket}
-    end
-  end
-
-  @impl Phoenix.LiveComponent
   def handle_event("invite_participants", %{"invite" => %{"emails" => text}}, socket) do
     poll_id = socket.assigns.selected_poll_id
     user_id = socket.assigns.current_user.id
@@ -311,6 +293,33 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       end
 
     {:noreply, assign(socket, :expanded_slots, toggled)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("request_delete_poll", _params, socket) do
+    {:noreply, assign(socket, :show_delete_modal, true)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_delete_poll_modal", _params, socket) do
+    {:noreply, assign(socket, :show_delete_modal, false)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("delete_poll", _params, socket) do
+    poll_id = socket.assigns.selected_poll_id
+
+    case Polls.delete_poll(poll_id, socket.assigns.current_user.id) do
+      :ok ->
+        Flash.info(dgettext("dashboard_common", "Poll deleted"))
+        {:noreply, socket |> clear_selection() |> load_polls()}
+
+      {:error, _reason} ->
+        Flash.error(dgettext("dashboard_common", "Couldn't delete this poll. Please try again."))
+
+        {:noreply,
+         socket |> assign(:show_delete_modal, false) |> reload_selected(refresh_health: false)}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -359,6 +368,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     |> assign(:selected_poll_id, poll_id)
     |> assign(slot_errors: %{}, invite_value: "", invite_error: nil)
     |> reload_selected(refresh_health: true)
+  end
+
+  # A paid meeting type cannot carry a poll: confirming one mints no payment.
+  defp poll_meeting_types(socket) do
+    socket.assigns.current_user.id
+    |> MeetingTypes.get_active_meeting_types()
+    |> Enum.reject(& &1.payment_required)
   end
 
   defp parse_invitees(text) do
@@ -459,9 +475,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       slot_errors: %{},
       winning_slot_id: nil,
       show_cancel_modal: false,
+      show_delete_modal: false,
       expanded_slots: MapSet.new(),
       editing_details?: false,
-      detail_errors: %{},
       invite_value: "",
       invite_error: nil
     )

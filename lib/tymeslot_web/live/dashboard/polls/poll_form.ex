@@ -24,11 +24,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Polls.{Invitations, PollSchema}
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
-  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Dashboard.Polls.{PollInvite, PollsComponent}
+  alias TymeslotWeb.Dashboard.Polls.{LocalTime, PollInvite, PollReminders, PollsComponent}
   alias TymeslotWeb.Helpers.FormErrors
   alias TymeslotWeb.Live.Shared.Flash
+
+  @reminder_events PollReminders.events()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -40,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        duration: "30",
        deadline: "",
        notify_on_vote: true,
+       reminder_picker: PollReminders.new([%{value: 1, unit: "days"}]),
        invitees: "",
        slots: [],
        slot_counter: 0,
@@ -234,20 +236,29 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           />
 
           <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
-
-          <div class="flex justify-end gap-3 pt-2">
-            <.action_button
-              variant={:secondary}
-              phx-click="cancel_poll_form"
-              phx-target={@parent_myself}
-            >
-              {dgettext("dashboard_common", "Cancel")}
-            </.action_button>
-            <.action_button type="submit">
-              {dgettext("dashboard_common", "Create poll")}
-            </.action_button>
-          </div>
         </form>
+
+        <PollReminders.reminders_form
+          id={"poll-create-reminders-#{@id}"}
+          state={@reminder_picker}
+          myself={@myself}
+        />
+        <p :for={error <- error_list(@errors, :reminder_config)} class="form-error">{error}</p>
+
+        <%!-- Outside the form above, so the reminder picker can sit before it;
+              `form` ties the submit button back to the poll. --%>
+        <div class="flex justify-end gap-3 pt-2">
+          <.action_button
+            variant={:secondary}
+            phx-click="cancel_poll_form"
+            phx-target={@parent_myself}
+          >
+            {dgettext("dashboard_common", "Cancel")}
+          </.action_button>
+          <.action_button type="submit" form={"poll-create-form-#{@id}"}>
+            {dgettext("dashboard_common", "Create poll")}
+          </.action_button>
+        </div>
       </.card>
     </div>
     """
@@ -275,6 +286,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket) when event in @reminder_events do
+    {:noreply,
+     assign(
+       socket,
+       :reminder_picker,
+       PollReminders.apply_event(event, socket.assigns.reminder_picker, params)
+     )}
+  end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_slot", _params, socket) do
@@ -340,7 +361,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
     starts =
       for %{key: key, value: value} <- slots,
-          start_time = to_utc(value, timezone),
+          start_time = LocalTime.to_utc(value, timezone),
           start_time != nil,
           do: {key, start_time}
 
@@ -366,8 +387,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       timezone: timezone,
       duration_minutes: parse_duration(Map.get(params, "duration", socket.assigns.duration)),
       meeting_type_id: parse_meeting_type_id(Map.get(params, "meeting_type_id")),
-      deadline_at: to_utc(Map.get(params, "deadline"), timezone),
+      deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
+      reminder_config: PollReminders.to_config(socket.assigns.reminder_picker),
       slots: build_slots(Map.get(params, "slots", %{}), timezone)
     }
   end
@@ -382,25 +404,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp build_slots(values, timezone) do
     values
     |> Enum.sort_by(fn {key, _value} -> String.to_integer(key) end)
-    |> Enum.map(fn {_key, value} -> to_utc(value, timezone) end)
+    |> Enum.map(fn {_key, value} -> LocalTime.to_utc(value, timezone) end)
     |> Enum.reject(&is_nil/1)
     |> Enum.map(fn start_time -> %{start_time: start_time} end)
-  end
-
-  defp to_utc(value, _timezone) when value in [nil, ""], do: nil
-
-  defp to_utc(value, timezone) do
-    with {:ok, naive} <- parse_naive(value),
-         {:ok, datetime} <- DateTimeUtils.convert_to_utc(naive, timezone) do
-      DateTime.truncate(datetime, :second)
-    else
-      _other -> nil
-    end
-  end
-
-  defp parse_naive(value) do
-    normalized = if String.length(value) == 16, do: value <> ":00", else: value
-    NaiveDateTime.from_iso8601(normalized)
   end
 
   # --- Meeting-type / duration resolution ---

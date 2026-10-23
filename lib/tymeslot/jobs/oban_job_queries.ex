@@ -314,6 +314,15 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Like `delete_poll_jobs/2`, but only the jobs whose args also contain
+  `args_match`, e.g. one action's.
+  """
+  @spec delete_poll_jobs_matching(term(), module(), map()) :: {non_neg_integer(), nil}
+  def delete_poll_jobs_matching(poll_id, worker_module, args_match) do
+    delete_pending_jobs(worker_module, Map.put(args_match, "poll_id", poll_id), queue: "emails")
+  end
+
+  @doc """
   Deletes every job still waiting to run whose args name `user_id` or one of
   `meeting_ids`, on any queue and for any worker. Run once an account has
   been deleted: nothing queued for it may run later, and no reminder may keep

@@ -117,6 +117,14 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
     count == 1
   end
 
+  @doc "Deletes the participant `participant_id` of `poll_id`, with their votes."
+  @spec delete_from_poll(Ecto.UUID.t(), Ecto.UUID.t()) :: {non_neg_integer(), nil}
+  def delete_from_poll(poll_id, participant_id) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and p.id == ^participant_id)
+    |> Repo.delete_all()
+  end
+
   @doc "Whether the host has invited anyone to `poll_id` by address."
   @spec any_invited?(Ecto.UUID.t()) :: boolean()
   def any_invited?(poll_id) do
