@@ -186,6 +186,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             poll={@selected_poll}
             slot={@confirming_slot}
             time_format={@time_format}
+            conflict?={@confirming_slot != nil and @slot_health[@confirming_slot.id] == :conflict}
             myself={@myself}
           />
 
