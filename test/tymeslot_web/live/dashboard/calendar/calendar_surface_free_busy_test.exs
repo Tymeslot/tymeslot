@@ -12,11 +12,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
   @moduletag :live
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers, only: [offered: 3, open_schedule_for: 1]
   import Tymeslot.Factory, only: [insert: 2]
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Tymeslot.Integrations.Calendar.Google.EventMapper, as: GoogleEventMapper
+  alias Tymeslot.Integrations.Calendar.Google.EventNormaliser, as: GoogleEventNormaliser
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
+  alias Tymeslot.Profiles
 
   @task_timeout 5_000
 
@@ -72,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
 
     lv |> element("#calendar-preview-free") |> render_click()
 
-    await_provider_update(lv)
+    assert %{transparency: "transparent"} = await_provider_update(lv)
     assert has_element?(lv, "#calendar-toast", "Shown as free. Guests can book this time.")
     assert has_element?(lv, ~s|#calendar-preview-free[aria-pressed="true"]|)
     assert has_element?(lv, "#calendar-preview", "Guests can book this time")
@@ -81,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
     assert row.transparency == "transparent"
 
     lv |> element("#calendar-undo") |> render_click()
-    await_provider_update(lv)
+    assert %{transparency: "opaque"} = await_provider_update(lv)
 
     {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, review.uid)
     assert row.transparency == "opaque"
@@ -267,6 +271,67 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceFreeBusyTest do
     await_provider_update(lv)
     assert has_element?(lv, "#calendar-toast", "Shown as free. Guests can book this time.")
     assert has_element?(lv, "#calendar-undo")
+  end
+
+  # A Google calendar that keeps what the toggle writes to it: the update is
+  # formatted as the Google adapter sends it, and the booking page reads the
+  # event back through the Google normaliser.
+  defp google_keeps_writes(integration, event) do
+    test_pid = self()
+    {:ok, stored} = Agent.start_link(fn -> %{"transparency" => "opaque"} end)
+
+    stub(Tymeslot.CalendarMock, :update_event, fn _uid, payload, _context ->
+      body = GoogleEventMapper.format_event_data(payload)
+      Agent.update(stored, fn _previous -> body end)
+      send(test_pid, {:provider_update, self(), payload})
+      :ok
+    end)
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+      body = Agent.get(stored, & &1)
+
+      raw = %{
+        "id" => event.uid,
+        "status" => "confirmed",
+        "summary" => event.summary,
+        "transparency" => body["transparency"],
+        "start" => %{"dateTime" => DateTime.to_iso8601(event.start_at)},
+        "end" => %{"dateTime" => DateTime.to_iso8601(event.end_at)}
+      }
+
+      GoogleEventNormaliser.normalise_events([raw], %{
+        calendar_integration_id: integration.id,
+        provider_calendar_id: event.provider_calendar_id,
+        synced_at: DateTime.utc_now()
+      })
+    end)
+  end
+
+  test "Free gives the time to the booking page, and Busy takes it back", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+    open_schedule_for(profile)
+
+    # 10:00 UTC is 11:00 in London, two days after the frozen clock.
+    standup = event(integration, "work", "Stand-up", ~U[2026-10-16 10:00:00Z], 30)
+    google_keeps_writes(integration, standup)
+
+    refute "11:00 AM" in offered(profile, ~D[2026-10-16], "30min")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{standup.id}")
+    lv |> element("#calendar-preview-free") |> render_click()
+
+    assert %{transparency: "transparent"} = await_provider_update(lv)
+    assert "11:00 AM" in offered(profile, ~D[2026-10-16], "30min")
+
+    lv |> element("#calendar-preview-busy") |> render_click()
+
+    assert %{transparency: "opaque"} = await_provider_update(lv)
+    refute "11:00 AM" in offered(profile, ~D[2026-10-16], "30min")
   end
 
   test "the keys hint names E", %{lv: lv} do
