@@ -273,6 +273,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       assert CheckoutSessions.stripe_locale("cs") == "cs"
       assert CheckoutSessions.stripe_locale("pl") == "pl"
       assert CheckoutSessions.stripe_locale("pt") == "pt-BR"
+      assert CheckoutSessions.stripe_locale("es") == "es-419"
     end
   end
 

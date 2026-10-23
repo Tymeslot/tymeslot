@@ -347,7 +347,8 @@ config :tymeslot, :locales,
     %{code: "uk", name: "Українська", country_code: :ukr},
     %{code: "cs", name: "Čeština", country_code: :cze},
     %{code: "pl", name: "Polski", country_code: :pol},
-    %{code: "pt", name: "Português (Brasil)", country_code: :bra}
+    %{code: "pt", name: "Português (Brasil)", country_code: :bra},
+    %{code: "es", name: "Español (Argentina)", country_code: :arg}
   ],
   default: "en"
 

@@ -101,6 +101,10 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
           "pt" ->
             assert result =~ ".", "Portuguese should use period as thousand separator"
             assert result =~ ",", "Portuguese should use comma as decimal separator"
+
+          "es" ->
+            assert result =~ ".", "Spanish should use period as thousand separator"
+            assert result =~ ",", "Spanish should use comma as decimal separator"
         end
       end
 

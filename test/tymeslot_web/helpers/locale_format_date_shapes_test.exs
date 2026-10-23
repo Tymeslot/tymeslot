@@ -37,6 +37,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
       assert LocaleFormat.format_short_weekday_date(@date, "pt") == "qui 5 de fev"
     end
 
+    test "es: links day, month and year with \"de\"" do
+      assert LocaleFormat.format_weekday_date(@date, "es") == "jueves, 5 de febrero de 2026"
+      assert LocaleFormat.format_weekday_day_month(@date, "es") == "jueves, 5 de febrero"
+      assert LocaleFormat.format_short_date(@date, "es") == "5 de feb"
+      assert LocaleFormat.format_short_weekday_date(@date, "es") == "jue 5 de feb"
+    end
+
     test "an unknown locale falls back to English order" do
       assert LocaleFormat.format_weekday_date(@date, "xx") == "Thursday, 5 February 2026"
     end
@@ -49,7 +56,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
           {"fr", "5 févr. 2026"},
           {"cs", "5. úno 2026"},
           {"pl", "5 lut 2026"},
-          {"pt", "5 de fev de 2026"}
+          {"pt", "5 de fev de 2026"},
+          {"es", "5 de feb de 2026"}
         ] do
       test "#{locale}: adds the year in the locale's order" do
         assert LocaleFormat.format_short_date_with_year(~D[2026-02-05], unquote(locale)) ==
@@ -67,7 +75,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormatDateShapesTest do
           {"de", "Donnerstag, 5. Februar 2026 · 14:30"},
           {"fr", "jeudi 5 février 2026 · 14:30"},
           {"cs", "čtvrtek 5. února 2026 · 14:30"},
-          {"pt", "quinta-feira, 5 de fevereiro de 2026 · 14:30"}
+          {"pt", "quinta-feira, 5 de fevereiro de 2026 · 14:30"},
+          {"es", "jueves, 5 de febrero de 2026 · 14:30"}
         ] do
       test "#{locale}: sets the weekday-led date beside the locale's clock" do
         assert LocaleFormat.format_weekday_datetime(@datetime, unquote(locale)) ==

@@ -1,0 +1,168 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} visit"
+msgid_plural "%{count} visits"
+msgstr[0] "%{count} visita"
+msgstr[1] "%{count} visitas"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "(direct / unknown)"
+msgstr "(directo / desconocido)"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr "30 días"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "7 days"
+msgstr "7 días"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "90 days"
+msgstr "90 días"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Bar chart showing daily visit counts for the selected date range."
+msgstr "Gráfico de barras con la cantidad de visitas por día en el período seleccionado."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Booking analytics is not enabled on this installation."
+msgstr "Las estadísticas de reservas no están activadas en esta instalación."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up."
+msgstr "Las estadísticas de reservas empezaron a registrarse el %{date}. Las fechas anteriores no tienen datos, así que los períodos largos se van a ver incompletos hasta que se acumule más historial."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr "Reservas"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Conversion"
+msgstr "Conversión"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Conversion (est.)"
+msgstr "Conversión (est.)"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Daily visits"
+msgstr "Visitas por día"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Daily visits over the selected date range"
+msgstr "Visitas por día en el período seleccionado"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Date range"
+msgstr "Período"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop"
+msgstr "Computadora"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Devices"
+msgstr "Dispositivos"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Mobile"
+msgstr "Celular"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh analytics"
+msgstr "Actualizar estadísticas"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Source"
+msgstr "Origen"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Tablet"
+msgstr "Tablet"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Unique visitors"
+msgstr "Visitantes únicos"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unique visitors and conversion are cookieless estimates: each visitor is counted once per day, so totals over a longer range approximate the number of distinct people. Conversion is the share of visitors who went on to book and is indicative, not exact."
+msgstr "Los visitantes únicos y la conversión son estimaciones sin cookies: cada visitante se cuenta una vez por día, así que el total de un período largo se aproxima a la cantidad de personas distintas. La conversión es la proporción de visitantes que llegaron a reservar y es orientativa, no exacta."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr "Desconocido"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Updated %{time}"
+msgstr "Actualizado a las %{time}"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Visits"
+msgstr "Visitas"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Visits over time"
+msgstr "Visitas a lo largo del tiempo"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "No visits yet"
+msgstr "Todavía no hay visitas"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "No traffic in this period yet"
+msgstr "Todavía no hay tráfico en este período"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic sources"
+msgstr "Fuentes de tráfico"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Analytics are temporarily unavailable. Please try refreshing in a moment."
+msgstr "Las estadísticas no están disponibles por el momento. Probá actualizar en un rato."

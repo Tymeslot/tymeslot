@@ -1,0 +1,337 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change booking link"
+msgstr "Cambiar enlace de reserva"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Changing this link will stop any links you have already shared for this meeting type from working."
+msgstr "Si cambiás este enlace, van a dejar de funcionar todos los enlaces que ya compartiste para este tipo de reunión."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your public booking page; reachable only by its direct link"
+msgstr "Oculto en tu página de reservas pública; solo se puede acceder mediante su enlace directo"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Link address"
+msgstr "Dirección del enlace"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Randomise"
+msgstr "Generar al azar"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save link"
+msgstr "Guardar enlace"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Unlisted"
+msgstr "No listado"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
+msgstr "Usá letras minúsculas, números y guiones. \"Generar al azar\" crea un enlace imposible de adivinar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "+%{count} custom question"
+msgid_plural "+%{count} custom questions"
+msgstr[0] "+%{count} pregunta personalizada"
+msgstr[1] "+%{count} preguntas personalizadas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add Meeting Type"
+msgstr "Agregar tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr "Calendario"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create meeting types to offer different appointment options"
+msgstr "Creá tipos de reunión para ofrecer distintas opciones de turno"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Eliminar"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Meeting Type"
+msgstr "Eliminar tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Editar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting types configured yet"
+msgstr "Todavía no configuraste ningún tipo de reunión"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone and will permanently remove this meeting type from your account."
+msgstr "Esta acción no se puede deshacer y quita este tipo de reunión de tu cuenta de forma definitiva."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle %{name} availability"
+msgstr "Activar o desactivar la disponibilidad de %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
+msgstr "¿Querés eliminar el tipo de reunión \"%{name}\"?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Limits"
+msgstr "Límites de reservas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limit must be between 1 and 500"
+msgstr "El límite de reservas debe estar entre 1 y 500"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limit removed"
+msgstr "Se quitó el límite de reservas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limit updated to %{limit} bookings"
+msgstr "Límite de reservas actualizado a %{limit} reservas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
+msgstr "Cantidad máxima de reservas que aceptás sumando todos los tipos de reunión. Los días que llegan al límite desaparecen de tu página de reservas. Dejá un campo vacío para no poner límite."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Calendario eliminado"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Solo lectura"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "El calendario donde este tipo de reunión registra las reservas ya no está en la cuenta conectada. Editalo y elegí otro calendario."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Este tipo de reunión registra las reservas en un calendario en el que ya no podés escribir. Editalo y elegí otro calendario."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} location"
+msgid_plural "%{count} locations"
+msgstr[0] "%{count} ubicación"
+msgstr[1] "%{count} ubicaciones"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is offered by these meeting types. Deleting it removes it from them:"
+msgstr "%{name} se ofrece en estos tipos de reunión. Si la eliminás, se quita de todos:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add an office, a studio or any other place you meet people. In-person meeting types can then offer it to bookers."
+msgstr "Agregá una oficina, un estudio o cualquier otro lugar donde atiendas a las personas. Después, los tipos de reunión presenciales pueden ofrecérselo a quien reserva."
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add location"
+msgstr "Agregar ubicación"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Address and directions (optional)"
+msgstr "Dirección e indicaciones para llegar (opcional)"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete the location"
+msgstr "No se pudo eliminar la ubicación"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reorder the locations"
+msgstr "No se pudieron reordenar las ubicaciones"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}? This cannot be undone."
+msgstr "¿Eliminar %{name}? No se puede deshacer."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete location"
+msgstr "Eliminar ubicación"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Edit location"
+msgstr "Editar ubicación"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location deleted"
+msgstr "Ubicación eliminada"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location saved"
+msgstr "Ubicación guardada"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations reordered"
+msgstr "Ubicaciones reordenadas"
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings already booked there keep their address. This cannot be undone."
+msgstr "Las reuniones ya reservadas ahí conservan su dirección. No se puede deshacer."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nombre"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "No saved locations yet"
+msgstr "Todavía no hay ubicaciones guardadas"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Not used by any meeting type yet"
+msgstr "Todavía no la usa ningún tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save location"
+msgstr "Guardar ubicación"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save the places you meet people once, then offer them on any in-person meeting type."
+msgstr "Guardá una sola vez los lugares donde atendés a las personas y ofrecelos en cualquier tipo de reunión presencial."
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Street, postcode and city, plus anything that helps bookers find you: 3rd floor, ring the bell."
+msgstr "Calle, código postal y ciudad, y todo lo que ayude a quien reserva a encontrarte: 3.er piso, tocar timbre."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "These are then left with an in-person option that has no address, so their bookers will be told the address is arranged after booking:"
+msgstr "Estos quedan con una opción presencial sin dirección, así que a quienes reserven se les va a avisar que la dirección se acuerda después de la reserva:"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_card.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{count} meeting type"
+msgid_plural "Used by %{count} meeting types"
+msgstr[0] "La usa %{count} tipo de reunión"
+msgstr[1] "La usan %{count} tipos de reunión"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Berlin office"
+msgstr "ej.: Oficina de Córdoba"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location no longer exists"
+msgstr "Esta ubicación ya no existe"
+
+#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A place you meet people, such as an office or a studio. Offer it on any in-person meeting type, and bookers see its name and address when they book."
+msgstr "Un lugar donde atendés a las personas, como una oficina o un estudio. Ofrecelo en cualquier tipo de reunión presencial, y quien reserva ve su nombre y dirección al reservar."
+
+#: lib/tymeslot_web/live/dashboard/locations/delete_venue_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is the only location of these group meeting types, whose address must be fixed in advance. Give them another location before deleting it:"
+msgstr "%{name} es la única ubicación de estos tipos de reunión grupales, cuya dirección tiene que estar fijada de antemano. Asignales otra ubicación antes de eliminarla:"
+
+#: lib/tymeslot_web/live/dashboard/locations/locations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This location is the only one of a group meeting type, so it cannot be deleted"
+msgstr "Esta es la única ubicación de un tipo de reunión grupal, así que no se puede eliminar"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group · up to %{count}"
+msgstr "Grupal · hasta %{count}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings are not included in your current plan, so this meeting type is taking no new bookings. Existing bookings are unaffected. Upgrade, or set the participant limit to 1, to take bookings again."
+msgstr "Las reservas grupales no están incluidas en tu plan actual, así que este tipo de reunión no está recibiendo reservas nuevas. Las reservas existentes no se ven afectadas. Pasate a Pro, o poné el límite de participantes en 1, para volver a recibir reservas."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "En pausa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}"
+msgstr "Eliminar %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete meeting type"
+msgstr "Eliminar tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit %{name}"
+msgstr "Editar %{name}"

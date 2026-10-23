@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
     test "falls back to English for unknown locale" do
       date = ~D[2026-03-15]
-      assert LocaleFormat.format_date(date, "es") == "15 March 2026"
+      assert LocaleFormat.format_date(date, "ja") == "15 March 2026"
     end
   end
 
@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
     test "falls back to English for unknown locale" do
       time = ~T[14:30:00]
-      assert LocaleFormat.format_time(time, "es") == "02:30 PM"
+      assert LocaleFormat.format_time(time, "ja") == "02:30 PM"
     end
   end
 
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "falls back to English for unknown locale" do
-      months = LocaleFormat.get_month_names("es")
+      months = LocaleFormat.get_month_names("ja")
       assert Enum.at(months, 0) == "January"
     end
   end
@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "falls back to English for unknown locale in short format" do
-      months = LocaleFormat.get_month_names("es", :short)
+      months = LocaleFormat.get_month_names("ja", :short)
       assert Enum.at(months, 0) == "Jan"
       assert Enum.at(months, 11) == "Dec"
     end
@@ -460,6 +460,18 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
                "30 de abril – 2 de maio de 2026"
     end
 
+    test "links day, month and year with \"de\" in Spanish" do
+      assert LocaleFormat.format_date(~D[2026-04-05], "es") == "5 de abril de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "es") ==
+               "10–12 de abril de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-04-30], ~D[2026-05-02], "es") ==
+               "30 de abril – 2 de mayo de 2026"
+
+      assert LocaleFormat.format_number(1234.56, "es", 2) == "1.234,56"
+    end
+
     test "keeps the period after the day in Czech" do
       assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "cs") ==
                "10.–12. dubna 2026"
@@ -563,6 +575,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_month_year(9, 2026, "uk") == "Вересень 2026"
       assert LocaleFormat.format_month_year(10, 2026, "pl") == "Październik 2026"
       assert LocaleFormat.format_month_year(10, 2026, "pt") == "Outubro de 2026"
+      assert LocaleFormat.format_month_year(10, 2026, "es") == "Octubre de 2026"
     end
 
     test "capitalises the heading in languages that lowercase month names" do
