@@ -27,6 +27,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   alias Phoenix.ConnTest
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
@@ -305,6 +306,33 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       {:ok, _view, html} = live(conn, poll_path(profile.username, poll.token))
       assert html =~ "poll-confirmed"
       assert html =~ "Scheduled for"
+    end
+  end
+
+  describe "a poll whose meeting the host cancelled" do
+    test "no longer shows the cancelled time as scheduled", %{conn: conn} do
+      %{user: user, profile: profile} =
+        seed_booking_account("1", "cancelled-meeting-host", "Etc/UTC")
+
+      start_time = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+      poll = insert(:poll, user: user, status: :open)
+
+      slot =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute)
+        )
+
+      {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
+      participant = request(loaded, %{name: "Di", email: "di@example.com"})
+      assert {:ok, _vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert {:ok, _cancelled} = Cancellation.cancel(meeting, user.id, :none)
+
+      {:ok, view, _html} = live(conn, poll_path(profile.username, poll.token))
+      assert has_element?(view, "[data-testid='poll-meeting-cancelled']")
+      refute has_element?(view, "[data-testid='poll-confirmed']")
     end
   end
 

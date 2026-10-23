@@ -230,3 +230,8 @@ msgstr "Це особисте посилання для голосування �
 #, elixir-autogen, elixir-format
 msgid "Choose an answer for at least one time, then save."
 msgstr "Виберіть відповідь хоча б для одного варіанта часу, а потім збережіть."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting arranged through this poll has been cancelled."
+msgstr "Зустріч, призначену через це опитування, скасовано."

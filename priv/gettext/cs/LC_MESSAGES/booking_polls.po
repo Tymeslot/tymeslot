@@ -230,3 +230,8 @@ msgstr "Tento osobní odkaz k hlasování není platný nebo už nefunguje."
 #, elixir-autogen, elixir-format
 msgid "Choose an answer for at least one time, then save."
 msgstr "Vyberte odpověď alespoň u jednoho termínu a pak uložte."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting arranged through this poll has been cancelled."
+msgstr "Schůzka domluvená přes tuto anketu byla zrušena."

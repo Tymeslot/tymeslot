@@ -230,3 +230,8 @@ msgstr "Questo link di voto personale non è valido o non funziona più."
 #, elixir-autogen, elixir-format
 msgid "Choose an answer for at least one time, then save."
 msgstr "Scegli una risposta per almeno un orario, poi salva."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting arranged through this poll has been cancelled."
+msgstr "La riunione fissata tramite questo sondaggio è stata annullata."

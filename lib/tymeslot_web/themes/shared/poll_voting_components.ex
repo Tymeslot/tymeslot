@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Polls.PollParticipantSchema
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -376,24 +377,16 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   end
 
   @doc """
-  Renders the closed-poll view: a confirmed schedule or a cancellation notice.
+  Renders the closed-poll view: a confirmed schedule, the cancellation of
+  the meeting it booked, or a cancellation notice.
   """
   @spec poll_closed(map()) :: Phoenix.LiveView.Rendered.t()
-  def poll_closed(%{poll: %{status: :confirmed}} = assigns) do
-    assigns = assign(assigns, :scheduled, scheduled_time(assigns.poll))
-
-    ~H"""
-    <div class="poll-closed poll-closed--confirmed" data-testid="poll-confirmed">
-      <.icon name="hero-check-circle" class="poll-closed-icon poll-closed-icon--success" />
-      <p class="poll-closed-message">
-        <%= if @scheduled do %>
-          {dgettext("booking_polls", "Scheduled for %{time}", time: @scheduled)}
-        <% else %>
-          {dgettext("booking_polls", "This poll has been scheduled.")}
-        <% end %>
-      </p>
-    </div>
-    """
+  # The host can cancel the meeting a poll booked from their dashboard; the
+  # poll stays confirmed, but its time no longer stands.
+  def poll_closed(%{poll: %{status: :confirmed} = poll} = assigns) do
+    if meeting_cancelled?(poll),
+      do: meeting_cancelled(assigns),
+      else: confirmed(assign(assigns, :scheduled, scheduled_time(poll)))
   end
 
   def poll_closed(assigns) do
@@ -405,6 +398,32 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           "booking_polls",
           "This poll has been cancelled and is no longer accepting responses."
         )}
+      </p>
+    </div>
+    """
+  end
+
+  defp meeting_cancelled(assigns) do
+    ~H"""
+    <div class="poll-closed poll-closed--cancelled" data-testid="poll-meeting-cancelled">
+      <.icon name="hero-x-circle" class="poll-closed-icon poll-closed-icon--danger" />
+      <p class="poll-closed-message">
+        {dgettext("booking_polls", "The meeting arranged through this poll has been cancelled.")}
+      </p>
+    </div>
+    """
+  end
+
+  defp confirmed(assigns) do
+    ~H"""
+    <div class="poll-closed poll-closed--confirmed" data-testid="poll-confirmed">
+      <.icon name="hero-check-circle" class="poll-closed-icon poll-closed-icon--success" />
+      <p class="poll-closed-message">
+        <%= if @scheduled do %>
+          {dgettext("booking_polls", "Scheduled for %{time}", time: @scheduled)}
+        <% else %>
+          {dgettext("booking_polls", "This poll has been scheduled.")}
+        <% end %>
       </p>
     </div>
     """
@@ -524,6 +543,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   end
 
   defp scheduled_time(_poll), do: nil
+
+  defp meeting_cancelled?(%{confirmed_meeting: %{status: _status} = meeting}),
+    do: MeetingState.cancelled?(meeting)
+
+  defp meeting_cancelled?(_poll), do: false
 
   defp tz(%{timezone: timezone}) when is_binary(timezone) and timezone != "", do: timezone
   defp tz(_poll), do: "Etc/UTC"
