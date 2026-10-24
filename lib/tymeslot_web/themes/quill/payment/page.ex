@@ -1,10 +1,13 @@
 defmodule TymeslotWeb.Themes.Quill.Payment.Page do
   @moduledoc """
   The frame of Quill's two payment return pages: the booking page's own
-  wrapper (`Wrapper.quill_wrapper/1`, so its background, palette, language
-  switcher and extensions) around a glass card like the confirmation step's,
+  wrapper (`Wrapper.quill_wrapper/1`, so its background, palette and language
+  switcher) around a glass card like the confirmation step's,
   marked with the confirmation's badge while the booking waits or once it is
   confirmed.
+
+  The theme extensions (branding banner, analytics beacon) are left out: a
+  return page is not a booking-page impression.
 
   The pages render it as a function, not as a component, from assigns the
   shared return LiveViews set, so the optional ones are read with
@@ -32,6 +35,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Page do
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
+      show_extensions={false}
     >
       <div class="quill-container payment-page-layout" data-testid={@testid}>
         <div class="payment-page-inner">

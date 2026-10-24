@@ -2,9 +2,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Page do
   @moduledoc """
   The frame of Rhythm's two payment return pages: the booking page's own
   wrapper (`Wrapper.rhythm_wrapper/1`, so its video or still background,
-  palette, language switcher and extensions) around the box its confirmation
+  palette, language switcher) around the box its confirmation
   step uses, marked with the confirmation's badge while the booking waits or
   once it is confirmed.
+
+  The theme extensions (branding banner, analytics beacon) are left out: a
+  return page is not a booking-page impression.
 
   The pages render it as a function, not as a component, from assigns the
   shared return LiveViews set, so the optional ones are read with
@@ -30,6 +33,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Page do
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
+      show_extensions={false}
     >
       <div class="scheduling-box booker-card" data-testid={@testid}>
         <div class="payment-page-card-body">
