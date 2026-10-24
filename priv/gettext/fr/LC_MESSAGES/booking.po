@@ -941,13 +941,17 @@ msgstr "Demain"
 msgid "More times"
 msgstr "Plus d'horaires"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Paid"
 msgstr "Payé"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid:"
+msgstr "Payé :"
+
 #: lib/tymeslot_web/themes/shared/components/meeting_price.ex
 #, elixir-autogen, elixir-format
-msgid "Price"
-msgstr "Prix"
+msgid "Price:"
+msgstr "Prix :"

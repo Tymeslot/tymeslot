@@ -11,9 +11,14 @@
    Neutral surfaces in the text colour around them: these are facts about the
    booking, not states to warn about or celebrate. The hint inherits its colour
    so it reads on a selected card as on an unselected one.
+
+   The hint's pill is shared with a paid type's price
+   (TymeslotWeb.Themes.Shared.Components.MeetingPrice, .meeting-price-hint),
+   so the two read as a pair when a type is both.
    ========================================================================== */
 
-.group-session-hint {
+.group-session-hint,
+.meeting-price-hint {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3xs);
@@ -29,7 +34,8 @@
   white-space: nowrap;
 }
 
-.group-session-hint-icon {
+.group-session-hint-icon,
+.meeting-price-hint-icon {
   width: 0.75rem;
   height: 0.75rem;
   flex-shrink: 0;

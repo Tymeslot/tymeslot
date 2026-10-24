@@ -3,8 +3,12 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
   A paid meeting type's price on Quill's and Rhythm's booking pages: beside
   the type in the overview list, in the heading of its schedule step, and on
   the details step the booker submits from, in the organiser's currency
-  (`MeetingPrice.hint/1`). A free type shows no price anywhere, and an
-  embedded paid booking's confirmation says what was paid.
+  (`MeetingPrice.hint/1`). A free type, and a reschedule, shows no price, and
+  an embedded paid booking's confirmation says what was paid.
+
+  The organiser's account is in a legacy currency (RON: still charged, but
+  outside the allowlist new prices are set in), so a price shown in the
+  fallback currency instead of the one checkout charges fails every test.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -82,12 +86,14 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
         insert(:connect_account,
           user: user,
           stripe_account_id: "acct_PRICE",
-          default_currency: "gbp",
+          default_currency: "ron",
           charges_enabled: true
         )
 
         %{
+          user: user,
           profile: profile,
+          paid_type: paid,
           paid: MeetingTypes.effective_slug(paid),
           free: MeetingTypes.effective_slug(free)
         }
@@ -100,7 +106,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
         assert has_element?(
                  view,
                  "[data-fact='meeting_type'][data-value='#{paid}'] #{@price}",
-                 "£45.00"
+                 "RON 45.00"
                )
 
         refute has_element?(view, "[data-fact='meeting_type'][data-value='#{free}'] #{@price}")
@@ -113,12 +119,44 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
         if step(view) == :overview, do: BookingDriver.continue(view)
 
         assert step(view) == :schedule
-        assert has_element?(view, @price, "£45.00")
+        assert has_element?(view, @price, "RON 45.00")
 
         BookingDriver.book(view, until: :attendee, meeting_type: paid)
 
         assert step(view) == :booking
-        assert has_element?(view, @price, "£45.00")
+        assert has_element?(view, @price, "RON 45.00")
+      end
+
+      # Moving a booking is never charged again, so the price that was paid
+      # for it must not read as a price for the move.
+      test "rescheduling a paid booking shows no price",
+           %{conn: conn, user: user, profile: profile, paid_type: paid_type} do
+        start = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+        meeting =
+          insert(:meeting,
+            organizer_user_id: user.id,
+            meeting_type_id: paid_type.id,
+            start_time: start,
+            end_time: DateTime.add(start, 45, :minute),
+            duration: 45,
+            attendee_timezone: "UTC",
+            status: "confirmed"
+          )
+
+        {:ok, view, _html} =
+          live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+        if step(view) == :overview, do: BookingDriver.continue(view)
+
+        assert :sys.get_state(view.pid).socket.assigns.is_rescheduling == true
+        assert step(view) == :schedule
+        refute has_element?(view, @price)
+
+        BookingDriver.book(view, until: :attendee)
+
+        assert step(view) == :booking
+        refute has_element?(view, @price)
       end
 
       test "a free type's details step shows no price",
@@ -156,7 +194,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
         Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
         _drain = :sys.get_state(view.pid)
 
-        assert has_element?(view, "[data-testid='confirmation-paid']", "£45.00")
+        assert has_element?(view, "[data-testid='confirmation-paid']", "RON 45.00")
       end
     end
   end

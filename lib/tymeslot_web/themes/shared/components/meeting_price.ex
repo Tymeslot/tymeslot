@@ -11,9 +11,9 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPrice do
 
   `hint/1` renders nothing for a free meeting type (or an unknown
   currency), so free pages keep their markup untouched. The markup is
-  theme-neutral, styled by the shared
-  `assets/css/scheduling/shared/components/meeting-price.css` through each
-  theme's tokens, as `GroupSession` is.
+  theme-neutral, styled through each theme's tokens by the pill it shares
+  with `GroupSession.hint/1`, in
+  `assets/css/scheduling/shared/components/group-session.css`.
   """
 
   use Phoenix.Component
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPrice do
     ~H"""
     <span :if={@price} class={["meeting-price-hint", @class]} data-testid="meeting-price">
       <.icon name="hero-credit-card-micro" class="meeting-price-hint-icon" />
-      <span class="sr-only">{dgettext("booking", "Price")}:</span>
+      <span class="sr-only">{dgettext("booking", "Price:")}</span>
       <span>{@price}</span>
     </span>
     """

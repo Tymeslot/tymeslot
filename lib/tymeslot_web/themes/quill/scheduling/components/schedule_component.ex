@@ -130,6 +130,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                       <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
                       <MeetingPrice.hint
+                        :if={!@is_rescheduling}
                         meeting_type={@meeting_type}
                         currency={@host_currency}
                         locale={@locale}

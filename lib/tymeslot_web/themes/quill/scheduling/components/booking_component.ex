@@ -81,6 +81,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   </p>
 
                   <MeetingPrice.hint
+                    :if={!@is_rescheduling}
                     meeting_type={@meeting_type}
                     currency={@host_currency}
                     locale={@locale}

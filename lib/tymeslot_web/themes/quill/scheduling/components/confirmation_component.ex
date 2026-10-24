@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon name="hero-credit-card" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
-                          {dgettext("booking", "Paid")}:
+                          {dgettext("booking", "Paid:")}
                           <span class="confirmation-email-link font-semibold">
                             {@paid_price}
                           </span>

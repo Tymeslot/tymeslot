@@ -21,12 +21,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   - meeting_type: Optional meeting type (for duration)
   - selected_duration: Optional selected duration (fallback if no meeting_type)
   - host_currency: The currency a paid meeting type's price is shown in
+  - show_price: Whether to show that price (a reschedule is never charged)
   - locale: The page's locale, for writing the price
   """
   attr :organizer_profile, :map, required: true
   attr :meeting_type, :map, default: nil
   attr :selected_duration, :string, default: nil
   attr :host_currency, :string, default: nil
+  attr :show_price, :boolean, default: true
   attr :locale, :string, required: true
 
   @spec organizer_header_small(map()) :: Phoenix.LiveView.Rendered.t()
@@ -48,7 +50,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
         </div>
         <GroupSession.hint :if={@meeting_type} meeting_type={@meeting_type} />
         <MeetingPrice.hint
-          :if={@meeting_type}
+          :if={@meeting_type && @show_price}
           meeting_type={@meeting_type}
           currency={@host_currency}
           locale={@locale}
