@@ -17,9 +17,13 @@
    so the two read as a pair when a type is both.
    ========================================================================== */
 
+/* A pill hugs its content wherever it sits: as a flex or grid item (Quill's
+   booking heading, Rhythm's organiser header) it would otherwise stretch to
+   the column's width. */
 .group-session-hint,
 .meeting-price-hint {
   display: inline-flex;
+  width: fit-content;
   align-items: center;
   gap: var(--space-3xs);
   margin-top: var(--space-3xs);
