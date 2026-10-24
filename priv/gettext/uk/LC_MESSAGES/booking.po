@@ -836,9 +836,9 @@ msgstr "Інше місце"
 #, elixir-autogen, elixir-format
 msgid "%{count} spot left"
 msgid_plural "%{count} spots left"
-msgstr[0] "Залишилось %{count} місце"
-msgstr[1] "Залишилось %{count} місця"
-msgstr[2] "Залишилось %{count} місць"
+msgstr[0] "%{count} вільне місце"
+msgstr[1] "%{count} вільні місця"
+msgstr[2] "%{count} вільних місць"
 
 #: lib/tymeslot_web/themes/shared/components/seat_badge.ex
 #, elixir-autogen, elixir-format
