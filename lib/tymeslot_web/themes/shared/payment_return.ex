@@ -80,10 +80,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Assigns the organiser's customisation for the page's theme, as the booking
   page loads it (`Customization.Helpers.assign_theme_customization/3`):
   `:theme_tokens`, the `%Tokens{}` the theme's spec builds from the saved
-  customisation or from its defaults, and `:theme_customized`, whether the
-  organiser saved one. A theme with a `page_shell:` hands the tokens to its
-  shell; Quill and Rhythm, whose own payment cards never showed the booking
-  page's defaults, write them only when `:theme_customized` is true.
+  customisation or from its defaults. Every theme hands them to the shell
+  its booking page uses, so the attendee comes back from Stripe to the
+  booking page's own background and palette.
 
   Called on the connected mount, once the meeting's organiser is known: the
   dead render reads no data, so it has no customisation
@@ -95,16 +94,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     theme_id = socket.assigns.theme_id
     customization = Demo.get_theme_customization(profile.id, theme_id)
 
-    Component.assign(socket,
-      theme_tokens: ThemeCustomizations.tokens(theme_id, customization),
-      theme_customized: customization != nil
-    )
+    Component.assign(socket, :theme_tokens, ThemeCustomizations.tokens(theme_id, customization))
   end
 
   @doc "Assigns no customisation: the dead render's, before any data is read."
   @spec no_customization(LiveView.Socket.t()) :: LiveView.Socket.t()
   def no_customization(socket),
-    do: Component.assign(socket, theme_tokens: nil, theme_customized: false)
+    do: Component.assign(socket, :theme_tokens, nil)
 
   @doc """
   Assigns the language switcher's state: `:language_dropdown_open`, which a
@@ -307,6 +303,16 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       outcome -> outcome
     end
   end
+
+  @doc """
+  Where an outcome leaves the booking, for the page's status mark: still
+  waiting (on the payment, or on the organiser's approval), confirmed, or
+  ended (it will not go ahead).
+  """
+  @spec progress(outcome()) :: :waiting | :confirmed | :ended
+  def progress(outcome) when outcome in [:loading, :awaiting_approval], do: :waiting
+  def progress(:confirmed), do: :confirmed
+  def progress(_failed_or_ended), do: :ended
 
   @doc """
   Formats a gated meeting's approval deadline for the return page, or
