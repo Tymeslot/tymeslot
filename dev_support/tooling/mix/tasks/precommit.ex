@@ -145,26 +145,11 @@ defmodule Mix.Tasks.Precommit do
 
       Runner.run(narrowed.steps, fail_fast?,
         skipped: narrowed.skipped,
-        suite_plan: suite_plan(narrowed.suite)
+        suite_plan: CpuBudget.planner(narrowed.suite)
       )
     else
       if opts[:base], do: Mix.raise("--base only applies together with --affected")
-      Runner.run(@steps, fail_fast?, suite_plan: &CpuBudget.suite_plan/0)
+      Runner.run(@steps, fail_fast?, suite_plan: CpuBudget.planner(nil))
     end
   end
-
-  # A selection is partitioned like the full suite, since it can still be
-  # thousands of tests, but never into more partitions than it has files: `mix
-  # test --partitions` deals files out one per partition in turn, and a
-  # partition dealt none exits 1.
-  defp suite_plan(%{scope: :selection, files: files}) do
-    fn ->
-      case CpuBudget.suite_plan() do
-        %{partitions: count} = plan -> %{plan | partitions: min(count, length(files))}
-        nil -> nil
-      end
-    end
-  end
-
-  defp suite_plan(_suite), do: &CpuBudget.suite_plan/0
 end
