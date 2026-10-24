@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.NextDayEndComponentTest
     %{
       id: "step",
       locale: "en",
+      host_currency: nil,
       duration: "#{duration}min",
       meeting_type: meeting_type,
       selected_date: "2027-06-14",

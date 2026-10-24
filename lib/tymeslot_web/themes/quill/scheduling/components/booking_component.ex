@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -78,6 +79,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   >
                     {@next_day_end}
                   </p>
+
+                  <MeetingPrice.hint
+                    meeting_type={@meeting_type}
+                    currency={@host_currency}
+                    locale={@locale}
+                  />
 
                   <LocationField.location_field
                     :if={BookingLocation.choice_required?(assigns)}

@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.Components.SessionList
   alias TymeslotWeb.Themes.Shared.Components.SlotList
   alias TymeslotWeb.Themes.Shared.Components.TimezonePicker
@@ -128,6 +129,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       </p>
 
                       <GroupSession.hint meeting_type={@meeting_type} class="mt-2" />
+                      <MeetingPrice.hint
+                        meeting_type={@meeting_type}
+                        currency={@host_currency}
+                        locale={@locale}
+                        class="mt-2"
+                      />
 
                       <GroupSession.seat_move_notice
                         from={assigns[:reschedule_seat_from]}

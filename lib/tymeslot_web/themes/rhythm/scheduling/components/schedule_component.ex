@@ -44,6 +44,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 organizer_profile={@organizer_profile}
                 meeting_type={@meeting_type}
                 selected_duration={@selected_duration}
+                host_currency={@host_currency}
+                locale={@locale}
               />
               <div class="timezone-selector-container">
                 <%!-- Visual label only: it names no control (the trigger below carries

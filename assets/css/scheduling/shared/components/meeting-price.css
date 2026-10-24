@@ -1,0 +1,35 @@
+/* ==========================================================================
+   Meeting price: what a paid meeting type costs, on the booking page
+
+   Matching the shared component
+   (TymeslotWeb.Themes.Shared.Components.MeetingPrice):
+
+     .meeting-price-hint  - beside a paid type in the meeting-type list and
+                            in the heading of the steps that follow
+
+   The same neutral pill as the group-session hint, so the two read as a
+   pair when a type is both. It inherits its colour so it reads on a
+   selected card as on an unselected one.
+   ========================================================================== */
+
+.meeting-price-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  margin-top: var(--space-3xs);
+  padding: var(--space-hairline) var(--space-2xs);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--surface-light);
+  color: inherit;
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--theme-line-height-snug);
+  white-space: nowrap;
+}
+
+.meeting-price-hint-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}

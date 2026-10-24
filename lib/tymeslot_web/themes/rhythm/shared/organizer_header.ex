@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   @moduledoc """
   Shared organizer profile header component for the Rhythm theme.
   Displays organizer avatar, name, and meeting duration, and marks a group
-  type as a group session on every step it heads.
+  type as a group session and a paid type with its price on every step it
+  heads.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   alias Tymeslot.{Demo, Profiles}
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
 
   @doc """
   Renders a small organizer profile header.
@@ -18,10 +20,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   - organizer_profile: The organizer profile to display
   - meeting_type: Optional meeting type (for duration)
   - selected_duration: Optional selected duration (fallback if no meeting_type)
+  - host_currency: The currency a paid meeting type's price is shown in
+  - locale: The page's locale, for writing the price
   """
   attr :organizer_profile, :map, required: true
   attr :meeting_type, :map, default: nil
   attr :selected_duration, :string, default: nil
+  attr :host_currency, :string, default: nil
+  attr :locale, :string, required: true
 
   @spec organizer_header_small(map()) :: Phoenix.LiveView.Rendered.t()
   def organizer_header_small(assigns) do
@@ -41,6 +47,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
           {BookingText.duration_label(%{meeting_type: @meeting_type, duration: @selected_duration})}
         </div>
         <GroupSession.hint :if={@meeting_type} meeting_type={@meeting_type} />
+        <MeetingPrice.hint
+          :if={@meeting_type}
+          meeting_type={@meeting_type}
+          currency={@host_currency}
+          locale={@locale}
+        />
       </div>
     </div>
     """
