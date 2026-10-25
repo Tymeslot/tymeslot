@@ -1,0 +1,468 @@
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
+msgstr "Cualquier persona con este enlace puede reservar este tipo de reunión directamente, sin ver tus otros tipos de reunión."
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr "¡Se copió el enlace de reserva!"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking link updated"
+msgstr "Enlace de reserva actualizado"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Change link"
+msgstr "Cambiar enlace"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Copy"
+msgstr "Copiar"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Direct booking link"
+msgstr "Enlace de reserva directo"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update visibility"
+msgstr "No se pudo actualizar la visibilidad"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type not found"
+msgstr "No se encontró el tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "That link is already taken. Please choose another."
+msgstr "Ese enlace ya está en uso. Elegí otro."
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility updated"
+msgstr "Visibilidad actualizada"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "That link isn't valid. Use lowercase letters, numbers and hyphens."
+msgstr "Ese enlace no es válido. Usá letras minúsculas, números y guiones."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} needs reconnecting."
+msgstr "Hay que volver a conectar %{name}."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} stopped syncing."
+msgstr "%{name} dejó de sincronizarse."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Add Integration"
+msgstr "Agregar integración"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Add Meeting Type"
+msgstr "Agregar tipo de reunión"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Adding..."
+msgstr "Agregando…"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete this %{type} integration?"
+msgstr "¿Querés eliminar esta integración de %{type}?"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. Please try again."
+msgstr "Falló la autenticación. Volvé a intentarlo."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication session mismatch. Please sign in and try again."
+msgstr "La sesión de autenticación no coincide. Iniciá sesión y volvé a intentarlo."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Back to providers"
+msgstr "Volver a los proveedores"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr "Calendario"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Calendars"
+msgstr "Calendarios"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Cerrar"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Connected"
+msgstr "Conectado"
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "Connection test failed: %{reason}"
+msgstr "Falló la prueba de conexión: %{reason}"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Could not identify your Zoom account. Please try again."
+msgstr "No pudimos identificar tu cuenta de Zoom. Volvé a intentarlo."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Integration"
+msgstr "Eliminar integración"
+
+#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Edit Meeting Type"
+msgstr "Editar tipo de reunión"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete integration"
+msgstr "No se pudo eliminar la integración"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete meeting type"
+msgstr "No se pudo eliminar el tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to reorder meeting types"
+msgstr "No se pudo reordenar los tipos de reunión"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update meeting type"
+msgstr "No se pudo actualizar el tipo de reunión"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Finish connecting Stripe to accept payments."
+msgstr "Terminá de conectar Stripe para aceptar pagos."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Integration deleted successfully"
+msgstr "La integración se eliminó correctamente"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Integration not found. It may have already been deleted."
+msgstr "No se encontró la integración. Puede que ya se haya eliminado."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid authentication response. Please try again."
+msgstr "La respuesta de autenticación no es válida. Volvé a intentarlo."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid integration ID"
+msgstr "ID de integración no válido"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type deleted"
+msgstr "Tipo de reunión eliminado"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type status updated"
+msgstr "Estado del tipo de reunión actualizado"
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types reordered"
+msgstr "Tipos de reunión reordenados"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Missing required Microsoft Teams information. Please try again."
+msgstr "Falta información obligatoria de Microsoft Teams. Volvé a intentarlo."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "No integration selected for deletion"
+msgstr "No se seleccionó ninguna integración para eliminar"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Payments"
+msgstr "Pagos"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Review"
+msgstr "Revisar"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe is still reviewing your account."
+msgstr "Stripe todavía está revisando tu cuenta."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone and will remove all associated %{data}."
+msgstr "Esta acción no se puede deshacer y va a eliminar todo lo asociado: %{data}."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video"
+msgstr "Video"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+msgstr "Tu organización de Microsoft exige la aprobación de un administrador antes de poder conectar Tymeslot. Pedile a tu administrador de TI que otorgue el consentimiento para la app."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is restricted."
+msgstr "Tu cuenta de Stripe está restringida."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "calendar data"
+msgstr "datos del calendario"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "video conferencing configuration"
+msgstr "configuración de videoconferencia"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "%{service} connected successfully!"
+msgstr "¡%{service} se conectó correctamente!"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to connect %{service}. Please try again."
+msgstr "No se pudo conectar %{service}. Volvé a intentarlo."
+
+#: lib/tymeslot_web/components/integrations/providers/generic_provider_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Guardar"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Error"
+msgstr "Error"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Warning"
+msgstr "Advertencia"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} connection needs attention - %{message}"
+msgid_plural "%{count} connections need attention - %{message}"
+msgstr[0] "%{count} conexión necesita atención: %{message}"
+msgstr[1] "%{count} conexiones necesitan atención: %{message}"
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
+msgstr "%{service} no se conectó porque no se otorgó el permiso de Calendar. Volvé a intentarlo y marcá la casilla \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\": Tymeslot lo necesita para crear reuniones y enlaces de Google Meet."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{status} - needs attention"
+msgstr "%{status}: necesita atención"
+
+#: lib/tymeslot/integrations/shared/reauth_handling.ex
+#, elixir-autogen, elixir-format
+msgid "Access to the connected account has expired or been revoked. Please reconnect the integration."
+msgstr "El acceso a la cuenta conectada venció o se revocó. Volvé a conectar la integración."
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "Connection test could not be attributed to your account. Please try again."
+msgstr "No se pudo asociar la prueba de conexión a tu cuenta. Volvé a intentarlo."
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "Connection validation failed"
+msgstr "Falló la validación de la conexión"
+
+#: lib/tymeslot/integrations/shared/oauth/account_match.ex
+#, elixir-autogen, elixir-format
+msgid "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
+msgstr "No pudimos verificar la identidad de tu cuenta. Volvé a intentarlo. Si el problema continúa, quitá la integración y volvé a agregarla."
+
+#: lib/tymeslot/integrations/shared/input_validators.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter a valid server URL"
+msgstr "Ingresá una URL de servidor válida"
+
+#: lib/tymeslot/integrations/shared/reauth_handling.ex
+#, elixir-autogen, elixir-format
+msgid "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
+msgstr "Las credenciales guardadas no se pudieron descifrar con la clave de cifrado actual. Volvé a conectar la integración."
+
+#: lib/tymeslot/integrations/shared/reauth_handling.ex
+#, elixir-autogen, elixir-format
+msgid "The provider rejected the stored credentials for this integration. Please reconnect the integration."
+msgstr "El proveedor rechazó las credenciales guardadas de esta integración. Volvé a conectar la integración."
+
+#: lib/tymeslot/integrations/shared/oauth/account_match.ex
+#, elixir-autogen, elixir-format
+msgid "You authenticated with a different account than the one linked to this integration. Please use the correct account."
+msgstr "Te autenticaste con una cuenta distinta de la vinculada a esta integración. Usá la cuenta correcta."
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Custom provider configured - %{message}"
+msgstr "✓ Proveedor personalizado configurado: %{message}"
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Google Meet connection verified - %{message}"
+msgstr "✓ Conexión con Google Meet verificada: %{message}"
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Microsoft Teams connection verified - %{message}"
+msgstr "✓ Conexión con Microsoft Teams verificada: %{message}"
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "✓ MiroTalk connection verified - %{message}"
+msgstr "✓ Conexión con MiroTalk verificada: %{message}"
+
+#: lib/tymeslot/integrations/shared/reauth_handling.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
+msgstr "El feed del calendario rechazó el enlace guardado. Probablemente lo revocaron o restablecieron: volvé a suscribirte con una URL nueva."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} upcoming booking still uses this integration. Its meeting room keeps working unless you delete it here."
+msgid_plural "%{count} upcoming bookings still use this integration. Their meeting rooms keep working unless you delete them here."
+msgstr[0] "%{count} reserva próxima todavía usa esta integración. Su sala de reunión sigue funcionando, salvo que la elimines acá."
+msgstr[1] "%{count} reservas próximas todavía usan esta integración. Sus salas de reunión siguen funcionando, salvo que las elimines acá."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
+msgstr "Eliminar también sus salas de reunión. Los participantes que ya tienen el enlace para unirse van a ver que deja de funcionar."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a full address starting with https://, for example https://cloud.example.com"
+msgstr "Ingresá una dirección completa que empiece con https://, por ejemplo https://cloud.example.com"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} conversation from this integration is still on your Nextcloud server, even if its meeting is over. It stays there unless you delete it here."
+msgid_plural "%{count} conversations from this integration are still on your Nextcloud server, including those of past meetings. They stay there unless you delete them here."
+msgstr[0] "%{count} conversación de esta integración sigue en tu servidor de Nextcloud, aunque su reunión ya haya terminado. Se queda ahí salvo que la elimines acá."
+msgstr[1] "%{count} conversaciones de esta integración siguen en tu servidor de Nextcloud, incluidas las de reuniones pasadas. Se quedan ahí salvo que las elimines acá."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: new bookings get no video link."
+msgstr "%{name}: las reservas nuevas no reciben enlace de video."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Also delete these conversations from your Nextcloud server. Attendees of upcoming meetings will find their join link no longer works."
+msgstr "Eliminar también estas conversaciones de tu servidor de Nextcloud. Los participantes de las próximas reuniones van a ver que su enlace para unirse deja de funcionar."
+
+#: lib/tymeslot/integrations/shared/input_validators.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the address on its own and put the username and password in their own fields."
+msgstr "Ingresá solo la dirección y poné el nombre de usuario y la contraseña en sus propios campos."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration categories"
+msgstr "Categorías de integraciones"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Setup guide"
+msgstr "Guía de configuración"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{type} integration"
+msgstr "Eliminar integración de %{type}"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account's currency is not supported. Choose another to take payments."
+msgstr "La moneda de tu cuenta de Stripe no es compatible. Elegí otra para cobrar pagos."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: 1 change made here was not saved to the calendar."
+msgid_plural "%{name}: %{count} changes made here were not saved to the calendar."
+msgstr[0] "%{name}: 1 cambio hecho acá no se guardó en el calendario."
+msgstr[1] "%{name}: %{count} cambios hechos acá no se guardaron en el calendario."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: %{count} calendar is no longer on your calendar server, so Tymeslot has stopped using it."
+msgid_plural "%{name}: %{count} calendars are no longer on your calendar server, so Tymeslot has stopped using them."
+msgstr[0] "%{name}: %{count} calendario ya no está en tu servidor de calendarios, así que Tymeslot dejó de usarlo."
+msgstr[1] "%{name}: %{count} calendarios ya no están en tu servidor de calendarios, así que Tymeslot dejó de usarlos."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: “%{calendar}” is no longer on your calendar server, so Tymeslot has stopped using it."
+msgstr "%{name}: “%{calendar}” ya no está en tu servidor de calendarios, así que Tymeslot dejó de usarlo."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "%{service} is busy right now. Please try again in a minute."
+msgstr "%{service} está ocupado en este momento. Volvé a intentarlo en un minuto."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authorisation was denied. Please try again."
+msgstr "Se denegó la autorización. Volvé a intentarlo."

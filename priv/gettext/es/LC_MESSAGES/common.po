@@ -1,0 +1,372 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "No"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Sí"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr "Intentando reconectar"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Browser Not Supported"
+msgstr "Navegador no compatible"
+
+#: lib/tymeslot_web/components/core_components/modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/add_guests_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/calendar_move_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/components/language_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Change language"
+msgstr "Cambiar idioma"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Cerrar"
+
+#: lib/tymeslot_web/components/core_components/modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close modal"
+msgstr "Cerrar ventana"
+
+#: lib/tymeslot_web/components/core_components/modal.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm"
+msgstr "Confirmar"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Connection Lost"
+msgstr "Se perdió la conexión"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "JavaScript Disabled"
+msgstr "JavaScript desactivado"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Learn About Modern Browsers"
+msgstr "Conocé los navegadores modernos"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One lowercase letter"
+msgstr "Una letra minúscula"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One number"
+msgstr "Un número"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One uppercase letter"
+msgstr "Una letra mayúscula"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain:"
+msgstr "La contraseña debe tener:"
+
+#: lib/tymeslot_web/components/core_components/buttons.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Processing..."
+msgstr "Procesando…"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh Page"
+msgstr "Actualizar página"
+
+#: lib/tymeslot_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "Schedule a Meeting"
+msgstr "Agendar una reunión"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search cities, countries, or timezones..."
+msgstr "Buscá ciudades, países o zonas horarias…"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Select timezone"
+msgstr "Seleccionar zona horaria"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
+msgstr "%{context} necesita un navegador moderno compatible con módulos ES. Actualizá a la última versión de Chrome, Firefox, Safari o Edge."
+
+#: lib/tymeslot_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "This app requires JavaScript to function. Please enable it in your browser settings."
+msgstr "Esta app necesita JavaScript para funcionar. Activalo en la configuración de tu navegador."
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "This timezone will be used for your availability and scheduling."
+msgstr "Esta zona horaria se va a usar para tu disponibilidad y tus reservas."
+
+#: lib/tymeslot_web/components/core_components/brand.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot logo"
+msgstr "Logo de Tymeslot"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Your Timezone"
+msgstr "Tu zona horaria"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "application"
+msgstr "Esta app"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "local time"
+msgstr "hora local"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "scheduling page"
+msgstr "Esta página de reservas"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Panel"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr "Empezar"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr "Ingresar"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr "Cerrar sesión"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr "Abrir o cerrar el menú"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
+msgstr "Reservas de reuniones con diseño cuidado y tu propia marca. Sin publicidad ni rastreo."
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr "Ver en GitHub"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "© %{year} Tymeslot. All rights reserved."
+msgstr "© %{year} Tymeslot. Todos los derechos reservados."
+
+#: lib/tymeslot_web/components/core_components/containers.ex
+#, elixir-autogen, elixir-format
+msgid "Saving changes..."
+msgstr "Guardando los cambios…"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least %{count} characters"
+msgstr "Al menos %{count} caracteres"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One special character"
+msgstr "Un carácter especial"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "This tab contains errors"
+msgstr "Esta pestaña tiene errores"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Pausar el video de fondo"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Reproducir el video de fondo"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Buscar zonas horarias"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} día"
+msgstr[1] "%{count} días"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} hora"
+msgstr[1] "%{count} horas"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} minuto"
+msgstr[1] "%{count} minutos"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} before"
+msgstr "%{label} antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour before"
+msgstr "1 hora antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "30 min. before"
+msgstr "30 min. antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Agregar"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add Custom"
+msgstr "Recordatorio personalizado"
+
+#: lib/tymeslot_web/components/shared/reminder_picker_state.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{label} before"
+msgstr "Recordatorio agregado: %{label} antes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr "Días"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hours"
+msgstr "Horas"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] "Se permite un máximo de %{count} recordatorio"
+msgstr[1] "Se permite un máximo de %{count} recordatorios"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Minutes"
+msgstr "Minutos"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No reminders configured."
+msgstr "No hay recordatorios configurados."
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value is required"
+msgstr "El valor del recordatorio es obligatorio"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value must be a positive number"
+msgstr "El valor del recordatorio tiene que ser un número positivo"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Recordatorios"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr "Los recordatorios no pueden programarse con más de 1 año de anticipación"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder"
+msgstr "Quitar recordatorio"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a valid reminder unit"
+msgstr "Elegí una unidad de recordatorio válida"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This reminder already exists"
+msgstr "Este recordatorio ya existe"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] "Podés configurar hasta %{count} recordatorio"
+msgstr[1] "Podés configurar hasta %{count} recordatorios"
+
+#: lib/tymeslot_web/components/core_components/feedback.ex
+#, elixir-autogen, elixir-format
+msgid "Loading"
+msgstr "Cargando"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged"
+msgstr "✓ Entendido"

@@ -1,0 +1,169 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr "%{current} / %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Account settings and log out are here in the top-right."
+msgstr "Acá arriba a la derecha tenés la configuración de la cuenta y la opción para cerrar sesión."
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr "Volver"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmation"
+msgstr "Confirmación"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Date & Time"
+msgstr "Fecha y hora"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Datos"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Duración"
+
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr "Finalizar"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr "Entendido"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#, elixir-autogen, elixir-format
+msgid "New feature"
+msgstr "Novedad"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr "Siguiente"
+
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr "Omitir"
+
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
+msgstr "Paso %{n} de %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Take 30 seconds to learn where everything lives."
+msgstr "Tomate 30 segundos para ver dónde está cada cosa."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to your Tymeslot dashboard"
+msgstr "Te damos la bienvenida a tu panel de Tymeslot"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "You're set"
+msgstr "Todo listo"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your account"
+msgstr "Tu cuenta"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Read the docs"
+msgstr "Leer la documentación"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type - and let people book you."
+msgstr "Creá tu primer tipo de reunión y empezá a recibir reservas."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Everything lives here"
+msgstr "Todo está acá"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
+msgstr "Todo empieza en tu calendario. Las reuniones, la disponibilidad, las integraciones y tu perfil están a un clic."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
+msgstr "Abrila para conectar un calendario, personalizar tu página de reservas y compartir tu enlace. Desaparece cuando completás todos los pasos."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your setup checklist"
+msgstr "Tu lista de primeros pasos"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Add a holiday on the availability page and those days stop being offered, across every schedule and every meeting type, without a blocking event in any calendar you have connected. Give the first and last day a time when you leave mid-afternoon or come back mid-morning. Bookings already in your diary keep their times, and you are shown which ones before you save. Nobody booking you sees why the days are closed."
+msgstr "Agregá una ausencia en la página de disponibilidad y esos días dejan de ofrecerse, en todas las agendas y en todos los tipos de reunión, sin necesidad de un evento de bloqueo en ninguno de los calendarios que conectaste. Ponele un horario al primer y al último día si te vas a media tarde o volvés a media mañana. Las reservas que ya tenés en tu calendario mantienen su horario, y antes de guardar te mostramos cuáles son. Quien reserva no ve por qué esos días están cerrados."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Close the days you are away"
+msgstr "Cerrá los días en que no estás"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Meet on Jitsi, kMeet or Nextcloud Talk"
+msgstr "Reuniones por Jitsi, kMeet o Nextcloud Talk"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every booking gets a room of its own: a Talk conversation keeps its lobby shut until the meeting starts, moves when you reschedule and is deleted when you cancel. kMeet needs no setup at all."
+msgstr "Se suman tres proveedores de video a Zoom, Google Meet, Teams y MiroTalk en el selector de integraciones. Conectá Tymeslot a tu propio Jitsi o Nextcloud y cada reserva tiene su propia sala: una conversación de Talk mantiene la sala de espera cerrada hasta que empieza la reunión, se mueve cuando reprogramás y se elimina cuando cancelás. kMeet no necesita ninguna configuración."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
+msgstr "Ahora un tipo de reunión puede ofrecer varias ubicaciones: presencial en una dirección, una videollamada o una llamada telefónica. Quien reserva elige la que le quede mejor y puede cambiarla al reprogramar. Si ofrecés más de un servicio de video, también elige en cuál se hace la reunión."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Let people choose where you meet"
+msgstr "Dejá que elijan dónde se reúnen"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Host webinars, workshops and classes"
+msgstr "Organizá webinars, talleres y clases"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
+msgstr "Convertí cualquier tipo de reunión en una sesión grupal. Definí cuántas personas pueden sumarse y cada horario queda abierto hasta que se completan los cupos, así una sola página de reservas te sirve para tu webinar, taller, clase o consultas. Cada participante hace su propia reserva, recibe su confirmación y su invitación de calendario, y puede cancelar o reprogramar sin tener que pedírtelo."
