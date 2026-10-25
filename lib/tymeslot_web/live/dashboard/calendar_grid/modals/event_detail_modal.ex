@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Attendee
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -208,7 +209,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
-            @user_timezone
+            @user_timezone,
+            event_start(@selected_event)
           )}</span>
         </form>
         <div :if={!@editable or @time_locked}>
@@ -218,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               :if={!@selected_event.all_day}
               class="text-token-xs font-normal text-tymeslot-400 ml-1"
             >
-              {Helpers.tz_abbr(@user_timezone)}
+              {Helpers.tz_abbr(@user_timezone, event_start(@selected_event))}
             </span>
           </p>
           <p class="text-token-xs text-tymeslot-400 mt-0.5">
@@ -442,4 +444,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
     |> List.wrap()
     |> Enum.map(&Attendee.normalise/1)
   end
+
+  # The instant the zone label describes, so it names the offset in effect on
+  # the event's day rather than today's.
+  defp event_start(event),
+    do: Map.get(event, :display_start_at) || event.start_at || Clock.utc_now()
 end

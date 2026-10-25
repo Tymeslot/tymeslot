@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   # Time formatting
 
   defdelegate format_display_time_range(event, fmt, timezone), to: TimeFormatting
-  defdelegate tz_abbr(timezone), to: TimeFormatting
+  defdelegate tz_abbr(timezone, at), to: TimeFormatting
   defdelegate datetime_to_local_parts(dt, timezone), to: TimeFormatting
   defdelegate format_hour(hour, assigns), to: TimeFormatting
   defdelegate user_tz_abbr(assigns), to: TimeFormatting

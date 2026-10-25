@@ -116,20 +116,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
     end
   end
 
-  # ── tz_abbr/1 ───────────────────────────────────────────────────────
+  # ── tz_abbr/2 ───────────────────────────────────────────────────────
 
-  describe "tz_abbr/1" do
+  describe "tz_abbr/2" do
     test "returns UTC for Etc/UTC" do
-      assert TimeFormatting.tz_abbr("Etc/UTC") == "UTC"
+      assert TimeFormatting.tz_abbr("Etc/UTC", ~U[2026-04-06 08:00:00Z]) == "UTC"
     end
 
-    test "returns a known abbreviation for Europe/London" do
-      abbr = TimeFormatting.tz_abbr("Europe/London")
-      assert abbr in ["GMT", "BST"]
+    test "names the offset in effect at the given instant, not now" do
+      assert TimeFormatting.tz_abbr("Europe/London", ~U[2026-07-01 12:00:00Z]) == "BST"
+      assert TimeFormatting.tz_abbr("Europe/London", ~U[2026-12-01 12:00:00Z]) == "GMT"
+    end
+
+    test "switches at the DST boundary" do
+      # Europe/Berlin leaves summer time at 01:00 UTC on 25 October 2026.
+      assert TimeFormatting.tz_abbr("Europe/Berlin", ~U[2026-10-25 00:59:59Z]) == "CEST"
+      assert TimeFormatting.tz_abbr("Europe/Berlin", ~U[2026-10-25 01:00:00Z]) == "CET"
     end
 
     test "returns the input string for an invalid timezone" do
-      assert TimeFormatting.tz_abbr("Not/A/Timezone") == "Not/A/Timezone"
+      assert TimeFormatting.tz_abbr("Not/A/Timezone", ~U[2026-04-06 08:00:00Z]) ==
+               "Not/A/Timezone"
     end
   end
 
