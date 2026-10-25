@@ -24,7 +24,7 @@ msgstr "%{booker} vous a envoyé une invitation à cette réunion avec %{organiz
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has moved your meeting."
-msgstr "%{name} a déplacé votre rendez-vous."
+msgstr "%{name} a déplacé votre réunion."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -202,17 +202,17 @@ msgstr "DÉTAILS DE LA RÉUNION :"
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
-msgstr "Rendez-vous déplacé"
+msgstr "Réunion reportée"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled - %{date} with %{name}"
-msgstr "Rendez-vous déplacé - %{date} avec %{name}"
+msgstr "Réunion reportée - %{date} avec %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting rescheduled"
-msgstr "Rendez-vous déplacé"
+msgstr "Réunion reportée"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -225,7 +225,7 @@ msgstr "Réunion avec %{name}"
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "NEW MEETING DETAILS:"
-msgstr "NOUVEAUX DÉTAILS DU RENDEZ-VOUS :"
+msgstr "NOUVEAUX DÉTAILS DE LA RÉUNION :"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -411,7 +411,7 @@ msgstr "Le participant a été informé du nouvel horaire."
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting has moved."
-msgstr "Le rendez-vous a été déplacé."
+msgstr "La réunion a été déplacée."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -521,7 +521,7 @@ msgstr "Votre réponse précédente concernait l’ancien horaire, merci de nous
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Your meeting has moved."
-msgstr "Votre rendez-vous a été déplacé."
+msgstr "Votre réunion a été déplacée."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -604,7 +604,7 @@ msgstr "Bonjour %{guest}, la réunion avec %{organizer} se termine désormais à
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - our meeting now ends at %{to} instead of %{from}. It still starts at the same time, and my calendar is already updated."
-msgstr "Bonjour %{name}, notre rendez-vous se termine désormais à %{to} au lieu de %{from}. Il commence toujours à la même heure, et mon agenda est déjà à jour."
+msgstr "Bonjour %{name}, notre réunion se termine désormais à %{to} au lieu de %{from}. Elle commence toujours à la même heure, et mon agenda est déjà à jour."
 
 #: lib/tymeslot/emails/templates/meeting_end_changed.ex
 #, elixir-autogen, elixir-format
@@ -694,7 +694,7 @@ msgstr "Vous avez reçu : %{amount} (avant déduction des frais de traitement St
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting in your calendar."
-msgstr "Vous avez déplacé ce rendez-vous dans votre calendrier."
+msgstr "Vous avez déplacé cette réunion dans votre calendrier."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -709,7 +709,7 @@ msgstr "Sondage confirmé : %{title} - %{date}"
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "You moved this meeting."
-msgstr "Vous avez déplacé ce rendez-vous."
+msgstr "Vous avez déplacé cette réunion."
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format

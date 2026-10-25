@@ -114,7 +114,7 @@ msgstr "Date/heure invalide"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting duration selected"
-msgstr "Durée de rendez-vous sélectionnée invalide"
+msgstr "Durée de réunion sélectionnée invalide"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -144,7 +144,7 @@ msgstr "Veuillez sélectionner une date et une heure"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration"
-msgstr "Veuillez sélectionner une durée de rendez-vous"
+msgstr "Veuillez sélectionner une durée de réunion"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format

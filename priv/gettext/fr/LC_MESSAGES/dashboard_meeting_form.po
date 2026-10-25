@@ -367,7 +367,7 @@ msgstr "Disponibilité"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
 msgid "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
-msgstr "Choisissez les horaires pendant lesquels ce type de rendez-vous peut être réservé. Le planning par défaut s'applique, sauf si vous en choisissez un autre."
+msgstr "Choisissez les horaires pendant lesquels ce type de réunion peut être réservé. Le planning par défaut s’applique, sauf si vous en choisissez un autre."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
 #, elixir-autogen, elixir-format
@@ -440,12 +440,12 @@ msgstr "Intervalle entre les créneaux"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "How far apart booking start times are offered. Leave as default to match the meeting length."
-msgstr "Espacement des heures de début proposées. Par défaut, identique à la durée du rendez-vous."
+msgstr "Espacement des heures de début proposées. Par défaut, identique à la durée de la réunion."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "Same as meeting length"
-msgstr "Identique à la durée du rendez-vous"
+msgstr "Identique à la durée de la réunion"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -460,7 +460,7 @@ msgstr "Personnalisé…"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
 msgid "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…"
-msgstr "Conformément à la durée du rendez-vous, les heures seront proposées toutes les %{minutes} minutes : %{examples}…"
+msgstr "Conformément à la durée de la réunion, les heures seront proposées toutes les %{minutes} minutes : %{examples}…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/slot_interval_field.ex
 #, elixir-autogen, elixir-format
@@ -676,7 +676,7 @@ msgstr[1] "Annuler cette date ? %{count} personnes sont inscrites et seront pré
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
 msgid "Create the meeting type to plan its dates."
-msgstr "Créez le type de rendez-vous pour en planifier les dates."
+msgstr "Créez le type de réunion pour en planifier les dates."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format

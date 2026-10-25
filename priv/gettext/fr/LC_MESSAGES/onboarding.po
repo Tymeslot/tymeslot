@@ -116,9 +116,7 @@ msgstr "Tout se trouve ici"
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
-msgstr ""
-"Votre calendrier est la page d'accueil. Vos rendez-vous, vos disponibilités, "
-"vos intégrations et votre profil sont à un clic."
+msgstr "Votre calendrier est la page d’accueil. Vos réunions, vos disponibilités, vos intégrations et votre profil sont à un clic."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -151,12 +149,12 @@ msgstr "Se retrouver sur Jitsi, kMeet ou Nextcloud Talk"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every booking gets a room of its own: a Talk conversation keeps its lobby shut until the meeting starts, moves when you reschedule and is deleted when you cancel. kMeet needs no setup at all."
-msgstr "Trois fournisseurs vidéo de plus rejoignent Zoom, Google Meet, Teams et MiroTalk dans le sélecteur d'intégrations. Indiquez à Tymeslot votre propre Jitsi ou Nextcloud et chaque réservation obtient sa propre salle : une conversation Talk garde son salon d'attente fermé jusqu'au début du rendez-vous, se déplace quand vous reportez et est supprimée quand vous annulez. kMeet ne demande aucune configuration."
+msgstr "Trois fournisseurs vidéo de plus rejoignent Zoom, Google Meet, Teams et MiroTalk dans le sélecteur d’intégrations. Indiquez à Tymeslot votre propre Jitsi ou Nextcloud et chaque réservation obtient sa propre salle : une conversation Talk garde son salon d’attente fermé jusqu’au début de la réunion, se déplace quand vous reportez et est supprimée quand vous annulez. kMeet ne demande aucune configuration."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
-msgstr "Un type de rendez-vous peut désormais proposer plusieurs lieux : en personne à une adresse, un appel vidéo ou un appel téléphonique. La personne qui réserve choisit celui qui lui convient et peut le changer en reprogrammant. Proposez plusieurs services vidéo et elle choisit celui sur lequel se tient la réunion."
+msgstr "Un type de réunion peut désormais proposer plusieurs lieux : en personne à une adresse, un appel vidéo ou un appel téléphonique. La personne qui réserve choisit celui qui lui convient et peut en changer lors d’un report. Proposez plusieurs services vidéo et elle choisit celui sur lequel se tient la réunion."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -171,7 +169,7 @@ msgstr "Animez webinaires, ateliers et cours"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
-msgstr "Transformez n'importe quel type de rendez-vous en session de groupe. Fixez le nombre de participants et chaque créneau reste ouvert jusqu'à ce qu'il soit complet, si bien qu'une seule page de réservation suffit pour votre webinaire, atelier, cours ou permanence. Chacun s'inscrit seul, reçoit sa propre confirmation et son invitation de calendrier, et peut annuler ou reporter sans vous solliciter."
+msgstr "Transformez n’importe quel type de réunion en session de groupe. Fixez le nombre de participants et chaque créneau reste ouvert jusqu’à ce qu’il soit complet, si bien qu’une seule page de réservation suffit pour votre webinaire, atelier, cours ou permanence. Chacun s’inscrit seul, reçoit sa propre confirmation et son invitation de calendrier, et peut annuler ou reporter sans vous solliciter."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format

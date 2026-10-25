@@ -502,7 +502,7 @@ msgstr "Votre réservation avec %{name} a été annulée."
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "a meeting"
-msgstr "un rendez-vous"
+msgstr "une réunion"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format

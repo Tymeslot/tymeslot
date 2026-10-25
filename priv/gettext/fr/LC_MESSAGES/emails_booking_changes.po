@@ -91,7 +91,7 @@ msgstr "(mis à jour)"
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "A group meeting cannot be moved for everyone at once. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
-msgstr "Un rendez-vous de groupe ne peut pas être déplacé pour tout le monde à la fois. Pour conserver l’horaire d’origine, remettez l’événement à sa place dans votre calendrier. Pour le modifier, envoyez aux participants une demande de reprogrammation depuis votre tableau de bord, ou annulez-y le rendez-vous afin que chaque participant soit prévenu."
+msgstr "Une réunion de groupe ne peut pas être déplacée pour tout le monde à la fois. Pour conserver l’horaire d’origine, remettez l’événement à sa place dans votre calendrier. Pour le modifier, envoyez aux participants une demande de report depuis votre tableau de bord, ou annulez-y la réunion afin que chaque participant soit prévenu."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -409,7 +409,7 @@ msgstr "Veuillez vérifier et mettre à jour la réservation dans Tymeslot."
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "Please review the group meeting in Tymeslot."
-msgstr "Veuillez vérifier le rendez-vous de groupe dans Tymeslot."
+msgstr "Veuillez vérifier la réunion de groupe dans Tymeslot."
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex
 #, elixir-autogen, elixir-format
@@ -509,7 +509,7 @@ msgstr "Le participant a été informé de l’annulation."
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "The group meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original time for every participant, and a group meeting cannot be moved for everyone at once."
-msgstr "Le rendez-vous de groupe « %{title} » a été reporté dans votre calendrier externe. Tymeslot conserve l’horaire d’origine pour chaque participant, et un rendez-vous de groupe ne peut pas être déplacé pour tout le monde à la fois."
+msgstr "La réunion de groupe « %{title} » a été reportée dans votre calendrier externe. Tymeslot conserve l’horaire d’origine pour chaque participant, et une réunion de groupe ne peut pas être déplacée pour tout le monde à la fois."
 
 #: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
 #, elixir-autogen, elixir-format
@@ -561,7 +561,7 @@ msgstr[1] "Les %{count} invités ont également été prévenus par e-mail."
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "This group meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above, and its participants still expect it. To keep the original time, move the event back in your calendar. To change it, send the participants a reschedule request from your dashboard, or cancel the meeting there so every participant is notified."
-msgstr "Ce rendez-vous de groupe a été <strong>reporté dans votre calendrier externe</strong>. Tymeslot affiche encore l’horaire d’origine ci-dessus, et ses participants comptent toujours dessus. Pour conserver l’horaire d’origine, remettez l’événement à sa place dans votre calendrier. Pour le modifier, envoyez aux participants une demande de reprogrammation depuis votre tableau de bord, ou annulez-y le rendez-vous afin que chaque participant soit prévenu."
+msgstr "Cette réunion de groupe a été <strong>reportée dans votre calendrier externe</strong>. Tymeslot affiche encore l’horaire d’origine ci-dessus, et ses participants comptent toujours dessus. Pour conserver l’horaire d’origine, remettez l’événement à sa place dans votre calendrier. Pour le modifier, envoyez aux participants une demande de report depuis votre tableau de bord, ou annulez-y la réunion afin que chaque participant soit prévenu."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -671,7 +671,7 @@ msgstr "Vous avez modifié la fin de « %{title} » dans votre calendrier extern
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."
-msgstr "Vous n’avez rien à faire. Si vous avez ajouté le rendez-vous à votre calendrier, le fichier joint le marque comme annulé."
+msgstr "Vous n’avez rien à faire. Si vous avez ajouté la réunion à votre calendrier, le fichier joint la marque comme annulée."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
@@ -696,7 +696,7 @@ msgstr "votre organisateur"
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. To move the booking to the new time, open it in your dashboard and choose <strong>Move booking</strong>: Tymeslot then reschedules its reminders and emails the attendee the new time. If <strong>Move booking</strong> is not offered there, send the attendee a reschedule request from your dashboard instead."
-msgstr "Cette réunion a été <strong>reportée dans votre calendrier externe</strong>. Tymeslot affiche encore l’horaire d’origine ci-dessus. Pour déplacer la réservation au nouvel horaire, ouvrez-la dans votre tableau de bord et choisissez <strong>Déplacer la réservation</strong> : Tymeslot reprogramme alors ses rappels et envoie le nouvel horaire au participant par e-mail. Si l’option <strong>Déplacer la réservation</strong> n’y est pas proposée, envoyez plutôt une demande de report au participant depuis votre tableau de bord."
+msgstr "Cette réunion a été <strong>reportée dans votre calendrier externe</strong>. Tymeslot affiche encore l’horaire d’origine ci-dessus. Pour déplacer la réservation au nouvel horaire, ouvrez-la dans votre tableau de bord et choisissez <strong>Déplacer la réservation</strong> : Tymeslot décale alors ses rappels et envoie le nouvel horaire au participant par e-mail. Si l’option <strong>Déplacer la réservation</strong> n’y est pas proposée, envoyez plutôt une demande de report au participant depuis votre tableau de bord."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
