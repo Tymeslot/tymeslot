@@ -372,10 +372,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
   defp max_datetime(a, b), do: if(DateTime.compare(a, b) == :gt, do: a, else: b)
 
-  # Whether an event block may be dragged or resized on the grid. A booking's
-  # time belongs to whoever booked it, and a group booking stays fixed even
-  # when the grid only knows it as the provider event mirroring it, which
-  # carries the meeting's uid but not the `:booking` kind.
   # Two lines of the day view's text-token-sm (2 x 1.25rem) plus the block's
   # vertical padding; a shorter block cannot show the time below the title.
   @stacked_layout_min_rem 2.75
@@ -388,6 +384,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       else: :stacked
   end
 
+  # Whether an event block may be dragged or resized on the grid. A booking's
+  # time belongs to whoever booked it, and a group booking stays fixed even
+  # when the grid only knows it as the provider event mirroring it, which
+  # carries the meeting's uid but not the `:booking` kind.
   defp movable?(event, group_booking_uids) do
     not (Helpers.booking?(event) or EventBadges.seat_locked?(group_booking_uids, event))
   end
