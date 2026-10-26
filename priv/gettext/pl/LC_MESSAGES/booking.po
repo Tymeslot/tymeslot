@@ -955,11 +955,6 @@ msgstr "Więcej terminów"
 msgid "Paid"
 msgstr "Opłacono"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Paid:"
-msgstr "Opłacono:"
-
 #: lib/tymeslot_web/themes/shared/components/meeting_price.ex
 #, elixir-autogen, elixir-format
 msgid "Price:"
@@ -974,3 +969,8 @@ msgstr "Rezerwujesz spotkanie na %{duration}"
 #, elixir-autogen, elixir-format
 msgid "You're booking %{duration} with %{name}"
 msgstr "Rezerwujesz spotkanie na %{duration}, organizator: %{name}"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid %{amount}"
+msgstr "Zapłacono %{amount}"

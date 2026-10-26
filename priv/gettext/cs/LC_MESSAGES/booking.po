@@ -958,11 +958,6 @@ msgstr "Další časy"
 msgid "Paid"
 msgstr "Zaplaceno"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Paid:"
-msgstr "Zaplaceno:"
-
 #: lib/tymeslot_web/themes/shared/components/meeting_price.ex
 #, elixir-autogen, elixir-format
 msgid "Price:"
@@ -977,3 +972,8 @@ msgstr "Rezervujete si schůzku (%{duration})"
 #, elixir-autogen, elixir-format
 msgid "You're booking %{duration} with %{name}"
 msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid %{amount}"
+msgstr "Zaplaceno %{amount}"

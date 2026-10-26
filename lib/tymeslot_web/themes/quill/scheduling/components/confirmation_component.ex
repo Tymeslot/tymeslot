@@ -156,12 +156,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         <div class="confirmation-icon-wrapper rounded-full">
                           <.icon name="hero-credit-card" class="confirmation-email-link w-4 h-4" />
                         </div>
-                        <p class="text-sm text-white">
-                          {dgettext("booking", "Paid:")}
-                          <span class="confirmation-email-link font-semibold">
-                            {@paid_price}
-                          </span>
-                        </p>
+                        <.paid_line amount={@paid_price} />
                       </div>
                     </div>
 
@@ -327,6 +322,35 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   end
 
   # ========== PRIVATE HELPERS ==========
+
+  # Placeholder for the amount while the paid line is translated: a private-use
+  # character no translation contains.
+  @amount_marker "\u{E000}"
+
+  # The paid line is one msgid, so a language can put the amount wherever its
+  # grammar wants it; the translation is then split around the amount so the
+  # amount keeps its own emphasis.
+  attr :amount, :string, required: true
+
+  defp paid_line(assigns) do
+    {before, rest} = split_paid_line()
+    assigns = assign(assigns, before: before, rest: rest)
+
+    ~H"""
+    <p class="text-sm text-white">
+      {@before}<span class="confirmation-email-link font-semibold">{@amount}</span>{@rest}
+    </p>
+    """
+  end
+
+  defp split_paid_line do
+    line = dgettext("booking", "Paid %{amount}", amount: @amount_marker)
+
+    case String.split(line, @amount_marker, parts: 2) do
+      [before, rest] -> {before, rest}
+      [line] -> {line <> " ", ""}
+    end
+  end
 
   # A held request is not a confirmed meeting, and this screen is the last thing
   # an invitee sees before the emails arrive, so the heading changes too, not

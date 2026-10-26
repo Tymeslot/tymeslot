@@ -4,7 +4,8 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
   the type in the overview list, in the heading of its schedule step, and on
   the details step the booker submits from, in the organiser's currency
   (`MeetingPrice.hint/1`). A free type, and a reschedule, shows no price, and
-  an embedded paid booking's confirmation says what was paid.
+  an embedded paid booking's confirmation says what was paid, in a line the
+  guest's language words around the amount.
 
   The organiser's account is in a legacy currency (RON: still charged, but
   outside the allowlist new prices are set in), so a price shown in the
@@ -173,30 +174,52 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
       @tag :capture_log
       test "an embedded paid booking's confirmation says what was paid",
            %{conn: conn, profile: profile, paid: paid} do
-        expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-          {:ok, %{id: "cs_PRICE", url: "https://checkout.stripe.com/cs_PRICE"}}
-        end)
-
-        # Stripe Checkout cannot be framed, so an embedded booker waits for the
-        # payment in place and reaches the confirmation on the `:paid`
-        # broadcast. The referer is the parent page `allowed_embed_domains`
-        # admits.
-        conn = put_req_header(conn, "referer", "https://embedder.test/page")
-        {:ok, view, _html} = live(conn, "/#{profile.username}?embed=1")
-        assert :sys.get_state(view.pid).socket.assigns[:embedded] == true
-
-        BookingDriver.book(view, until: :submitted, meeting_type: paid)
-        _drain = :sys.get_state(view.pid)
-
-        refute has_element?(view, "[data-testid='confirmation-paid']")
-        meeting = :sys.get_state(view.pid).socket.assigns.awaiting_payment_meeting
-
-        Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
-        _drain = :sys.get_state(view.pid)
+        view = pay_embedded(conn, "/#{profile.username}?embed=1", paid)
 
         assert has_element?(view, "[data-testid='confirmation-paid']", "RON 45.00")
       end
+
+      # Quill writes what was paid as one sentence: the translation decides
+      # where the amount goes, and the amount keeps its own emphasis there.
+      if theme == "quill" do
+        @tag :capture_log
+        test "the paid line is worded around the amount in the guest's language",
+             %{conn: conn, profile: profile, paid: paid} do
+          view = pay_embedded(conn, "/#{profile.username}?embed=1&locale=de", paid)
+
+          line = view |> render() |> Floki.parse_document!()
+          amount = line |> Floki.find("[data-testid='confirmation-paid'] p span") |> Floki.text()
+          text = line |> Floki.find("[data-testid='confirmation-paid'] p") |> Floki.text()
+
+          assert amount =~ "45,00"
+          assert String.trim(text) == "#{amount} bezahlt"
+        end
+      end
     end
+  end
+
+  # Stripe Checkout cannot be framed, so an embedded booker waits for the
+  # payment in place and reaches the confirmation on the `:paid` broadcast.
+  # The referer is the parent page `allowed_embed_domains` admits.
+  defp pay_embedded(conn, path, meeting_type) do
+    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+      {:ok, %{id: "cs_PRICE", url: "https://checkout.stripe.com/cs_PRICE"}}
+    end)
+
+    conn = put_req_header(conn, "referer", "https://embedder.test/page")
+    {:ok, view, _html} = live(conn, path)
+    assert :sys.get_state(view.pid).socket.assigns[:embedded] == true
+
+    BookingDriver.book(view, until: :submitted, meeting_type: meeting_type)
+    _drain = :sys.get_state(view.pid)
+
+    refute has_element?(view, "[data-testid='confirmation-paid']")
+    meeting = :sys.get_state(view.pid).socket.assigns.awaiting_payment_meeting
+
+    Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
+    _drain = :sys.get_state(view.pid)
+
+    view
   end
 
   defp step(view), do: :sys.get_state(view.pid).socket.assigns.current_state
