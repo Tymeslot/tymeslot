@@ -33,7 +33,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       expect(GoogleCalendarAPIMock, :list_primary_events, fn _integration, _start, _end ->
-        {:error, :timeout}
+        {:error, :network_error, "timeout"}
       end)
 
       LogCapture.attach()
@@ -125,7 +125,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration,
                                                                 _start_date,
                                                                 _end_date ->
-        {:error, :timeout}
+        {:error, :network_error, "timeout"}
       end)
 
       # Trigger check
@@ -468,7 +468,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
         )
 
       expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
-        {:error, :timeout}
+        {:error, :network_error, "timeout"}
       end)
 
       run_health_checks()
@@ -492,7 +492,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
-        {:error, :timeout}
+        {:error, :network_error, "timeout"}
       end)
 
       run_health_checks()
