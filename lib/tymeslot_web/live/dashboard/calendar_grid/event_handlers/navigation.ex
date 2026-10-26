@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
 
     socket =
       socket
-      |> assign(:view, view_atom)
+      |> switch_view(view_atom)
       |> assign(:show_view_menu, false)
       |> Helpers.load_events()
 
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
     if target == socket.assigns.view do
       {:noreply, socket}
     else
-      socket = socket |> assign(:view, target) |> Helpers.load_events()
+      socket = socket |> switch_view(target) |> Helpers.load_events()
       {:noreply, socket}
     end
   end
@@ -136,6 +136,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
     else
       navigate_period(socket, delta)
     end
+  end
+
+  # Normalises the anchor only on a view switch: `navigate_period/2` steps from
+  # the anchor as it stands, and Agenda's 30-day step must not snap to a week.
+  defp switch_view(socket, view) do
+    socket
+    |> assign(:date, Helpers.view_switch_anchor(socket.assigns))
+    |> assign(:view, view)
   end
 
   defp navigate_period(socket, direction) do
