@@ -172,12 +172,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   Renders a glass-morphism card container.
   """
   attr :class, :string, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   @spec glass_morphism_card(map()) :: Phoenix.LiveView.Rendered.t()
   def glass_morphism_card(assigns) do
     ~H"""
-    <div class={["glass-morphism-card", @class]}>
+    <div class={["glass-morphism-card", @class]} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """

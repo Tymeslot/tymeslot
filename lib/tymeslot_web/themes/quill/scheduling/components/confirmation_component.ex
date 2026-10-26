@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
         <div class="stack">
           <div class="confirmation-outer flex-1 flex items-center justify-center">
             <div class="w-full confirmation-container">
-              <.glass_morphism_card class="booker-card">
+              <.glass_morphism_card class="booker-card" data-testid="booker-card">
                 <div class="confirmation-content">
                   <div class="confirmation-heading-row flex items-center">
                     <div class="shrink-0">

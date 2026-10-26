@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
         <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full">
-              <.glass_morphism_card class="booker-card booking-form-card">
+              <.glass_morphism_card class="booker-card booking-form-card" data-testid="booker-card">
                 <div class="booking-card-body">
                   <h1 class="section-header booking-heading booking-heading-wrapper">
                     {dgettext("booking", "Enter Your Details")}

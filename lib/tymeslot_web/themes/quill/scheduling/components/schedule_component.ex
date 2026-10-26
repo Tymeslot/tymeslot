@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
         <div class="stack">
           <div class="schedule-content-area flex-1 flex items-start justify-center">
             <div class="w-full min-h-0">
-              <.glass_morphism_card class="booker-card calendar-card">
+              <.glass_morphism_card class="booker-card calendar-card" data-testid="booker-card">
                 <div class="schedule-card-body min-h-0">
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
