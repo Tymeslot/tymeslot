@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
@@ -527,10 +528,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
   # --- Field mappers ---
 
-  defp tymeslot_origin?(raw) do
-    uid = raw[:uid] || ""
-    String.ends_with?(uid, "@tymeslot.com")
-  end
+  defp tymeslot_origin?(raw), do: Format.uid_origin(raw[:uid]) == :tymeslot
 
   defp map_visibility("PUBLIC"), do: :public
   defp map_visibility("PRIVATE"), do: :private

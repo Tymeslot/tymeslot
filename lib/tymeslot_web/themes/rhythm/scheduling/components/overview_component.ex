@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                           <ApprovalNotice.pill :if={Approval.required?(meeting_type)} />
                         </div>
                         <div class="duration-time">
-                          {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
+                          {LocalizationHelpers.format_length_badge(meeting_type)}
                         </div>
                         <GroupSession.hint meeting_type={meeting_type} />
                         <MeetingPrice.hint
@@ -136,6 +136,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   end
 
   # Helpers
+  # Keyed to the type's *primary* duration on purpose. This is the card in the
+  # type list, rendered before any length has been picked and unchanged once
+  # one is: an icon that swapped itself out under the booker would read as the
+  # card having become a different meeting type. A type offering several
+  # lengths shows the icon of the one its organiser put first, and the span of
+  # lengths is stated on the card's badge instead.
   defp get_default_icon(meeting_type) do
     case meeting_type.duration_minutes do
       15 -> "hero-bolt"

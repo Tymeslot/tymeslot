@@ -77,11 +77,13 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   require Logger
 
   # Cache columns describing the event itself, copied to the destination row.
+  # Ownership travels too, so the destination row is flagged as the source
+  # was from the start rather than only once a sync has read it back.
   # Everything the source provider owns (etag, raw_ical, provider_event_id,
   # provider_metadata) belongs to the original resource and is left behind.
   @carried_fields ~w(summary description location visibility colour all_day start_date end_date
                      start_at end_at timezone transparency status organiser attendees reminders
-                     attachments links video_link video_integration_id)a
+                     attachments links video_link video_integration_id created_by_tymeslot)a
 
   @type destination :: %{
           required(:integration) => map(),
@@ -158,14 +160,14 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     stored = Occurrence.cached_row(event)
 
     case movable(stored) do
-      :ok -> move_single(user_id, event, destination)
+      :ok -> move_single(user_id, event, stored, destination)
       {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
       {:error, _reason} = refused -> refused
     end
   end
 
-  defp move_single(user_id, event, %{integration: integration} = destination) do
-    moved = moved_event(event, integration, Map.get(destination, :calendar_id))
+  defp move_single(user_id, event, stored, %{integration: integration} = destination) do
+    moved = moved_event(event, stored, integration, Map.get(destination, :calendar_id))
 
     with :ok <- ensure_destination(moved),
          {:ok, payload} <- ProviderPayload.from_event(moved),
@@ -236,10 +238,18 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
   # The event as it will exist on the destination. The uid is generated here
   # so that the create and the cache row address the same event.
-  defp moved_event(event, integration, calendar_id) do
+  #
+  # Ownership is read off the cached row, since the event handed in may be an
+  # optimistic copy, and only an explicit `false` makes the event somebody
+  # else's, as in `ProviderPayload`. It decides the uid: the CalDAV and ICS
+  # syncs take any `@tymeslot.com` uid for Tymeslot's, so somebody else's
+  # event must not be given one on its way to a new calendar.
+  defp moved_event(event, stored, integration, calendar_id) do
+    owned? = Map.get(stored, :created_by_tymeslot) != false
+
     %{
-      event
-      | uid: ICalBuilder.generate_uid(),
+      Map.put(event, :created_by_tymeslot, owned?)
+      | uid: ICalBuilder.generate_uid(if(owned?, do: :tymeslot, else: :foreign)),
         calendar_integration_id: integration.id,
         provider: integration.provider,
         provider_calendar_id: destination_calendar_id(integration, calendar_id),

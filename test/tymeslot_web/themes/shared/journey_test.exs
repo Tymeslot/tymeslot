@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.JourneyTest do
   }
 
   alias TymeslotWeb.Themes.Shared.Journey
-  alias TymeslotWeb.Themes.Shared.Journey.Facts.{Answers, Attendee, MeetingType, Slot}
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.{Answers, Attendee, Length, MeetingType, Slot}
   alias TymeslotWeb.Themes.Shared.Journey.Moment
 
   # A navigator with every callback and no behaviour, so the checks can be
@@ -105,9 +105,10 @@ defmodule TymeslotWeb.Themes.Shared.JourneyTest do
   end
 
   describe "facts/0" do
-    test "holds the four shipped facts by key" do
+    test "holds the five shipped facts by key" do
       assert Journey.facts() == %{
                meeting_type: MeetingType,
+               length: Length,
                slot: Slot,
                answers: Answers,
                attendee: Attendee

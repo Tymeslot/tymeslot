@@ -133,12 +133,12 @@ msgstr "Utwórz ankietę"
 msgid "Description (optional)"
 msgstr "Opis (opcjonalnie)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Czas trwania (minuty)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr "Czas trwania: %{minutes} min (z typu spotkania)"
@@ -845,3 +845,8 @@ msgstr "Ten termin koliduje z wydarzeniem w twoim kalendarzu. Po potwierdzeniu i
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline to add times."
 msgstr "Głosowanie jest zamknięte. Aby dodać terminy, przesuń koniec głosowania."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Czas trwania"

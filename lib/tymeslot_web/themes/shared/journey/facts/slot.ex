@@ -7,7 +7,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   showing a moment that collects it sets up: the meeting type the URL names,
   the calendar's opening day and month, the month's availability, a fresh
   slot list when the duration changed while away, and the week on screen.
-  Known once a day and a time are chosen; moving on needs both.
+  Known once a day and a time are chosen; moving on needs both. For a type
+  whose booker picks a length (`Facts.Length`) it needs that length too: the
+  times are offered for it, and a moment collecting the slot entered before
+  it is known gives way to the moment asking it.
   """
 
   use TymeslotWeb.Themes.Shared.Journey.Fact
@@ -19,6 +22,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, CalendarHelpers, WeekSlots}
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Journey.Fact
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Length
+  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
   alias TymeslotWeb.Themes.Shared.SlotGrouping
 
@@ -39,7 +44,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   def key, do: :slot
 
   @impl Fact
-  def requires(_assigns), do: [:meeting_type]
+  def requires(assigns) do
+    if Length.required?(assigns), do: [:meeting_type, :length], else: [:meeting_type]
+  end
 
   @impl Fact
   def required?(_assigns), do: true
@@ -89,10 +96,16 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Slot do
   # back here. A no-op for a page that shows no week.
   @impl Fact
   def enter(socket, params) do
-    socket
-    |> StepEntry.handle_schedule_entry(params)
-    |> refresh_stale_slot_snapshot()
-    |> WeekSlots.refetch()
+    socket = StepEntry.handle_schedule_entry(socket, params)
+    length_moment = if is_nil(socket.redirected), do: Length.pending_moment(socket.assigns)
+
+    if length_moment do
+      Runtime.transition_to(socket, length_moment, %{})
+    else
+      socket
+      |> refresh_stale_slot_snapshot()
+      |> WeekSlots.refetch()
+    end
   end
 
   @impl Fact

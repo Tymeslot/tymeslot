@@ -15,6 +15,9 @@ defmodule Tymeslot.Precommit.Affected do
     * **deps.unlock, deps.audit, sobelow, migrations, workflows, css tokens
       and the JavaScript suite** run only when the diff touches the files
       they read.
+    * **hex.audit** never runs: it reads the live Hex registry, not the
+      diff, so no diff can tell whether its answer moved. The full gate
+      runs it.
     * **The suite** is narrowed by `Tymeslot.TestAffected.Selection`, the engine
       behind `mix test.affected`, and inherits its rule of widening to the full
       suite rather than guessing.
@@ -70,6 +73,7 @@ defmodule Tymeslot.Precommit.Affected do
   @conditions %{
     "deps.unlock" => {:deps, "mix.exs and mix.lock unchanged"},
     "deps.audit" => {:deps, "mix.exs and mix.lock unchanged"},
+    "hex.audit" => {:never, "reads the live Hex registry; the full gate runs it"},
     "sobelow" => {:security, "no web, config, auth or upload code changed"},
     "excellent_migrations.check_safety" => {:migrations, "no migration changed"},
     "actionlint" => {:workflows, "no workflow changed"},
@@ -187,6 +191,7 @@ defmodule Tymeslot.Precommit.Affected do
 
   defp reaches_build?(path), do: Selection.classify(path) != :ignore
 
+  defp touches?(:never, _path), do: false
   defp touches?(:deps, path), do: path in @dep_files
   defp touches?(:workflows, path), do: String.starts_with?(path, @workflow_prefixes)
   defp touches?(:migrations, path), do: String.starts_with?(path, @migration_prefixes)

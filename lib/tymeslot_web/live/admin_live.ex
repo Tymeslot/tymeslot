@@ -460,6 +460,13 @@ defmodule TymeslotWeb.AdminLive do
 
   defp logo_max_size_label, do: "#{div(@logo_max_bytes, 1_000_000)} MB"
 
+  # The support card asks for alert reports only once alerts can actually
+  # reach someone: switched on, with a recipient to send them to.
+  defp alerts_ready?(effective_values) do
+    Map.fetch!(effective_values, :admin_alerts_enabled).value == true and
+      Map.fetch!(effective_values, :admin_alert_email).value not in [nil, ""]
+  end
+
   # --- Render: each tab is a thin shell around its component module ---
 
   @impl Phoenix.LiveView
@@ -469,6 +476,7 @@ defmodule TymeslotWeb.AdminLive do
       live_action={@live_action}
       current_user={@current_user}
       profile={@profile}
+      alerts_ready={alerts_ready?(@effective_values)}
     >
       <Users.users_tab
         users={@users}
@@ -491,6 +499,7 @@ defmodule TymeslotWeb.AdminLive do
       live_action={@live_action}
       current_user={@current_user}
       profile={@profile}
+      alerts_ready={alerts_ready?(@effective_values)}
     >
       <Settings.settings_tab
         tab={@live_action}

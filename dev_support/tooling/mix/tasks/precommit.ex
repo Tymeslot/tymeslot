@@ -108,6 +108,11 @@ defmodule Mix.Tasks.Precommit do
     {"credo", ~w[credo --strict], :dev},
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},
+    # mix_audit reads the advisory database frozen into its own release, so a
+    # newly published advisory stays invisible to it until mix_audit ships
+    # again. hex.audit asks the live Hex registry instead. Its answer changes
+    # without any file here changing, so `--affected` never runs it.
+    {"hex.audit", ~w[hex.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
     # The booking-theme CSS rules, colour literals included. Nothing else

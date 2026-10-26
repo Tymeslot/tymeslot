@@ -62,7 +62,7 @@ defmodule CredoChecks.GettextDomainBoundary do
         emails_integrations emails_payments emails_polls
         auth account onboarding onboarding_wizard
         dashboard_common
-        dashboard_home dashboard_meeting_types dashboard_meeting_form
+        dashboard_home dashboard_meeting_types dashboard_meeting_form dashboard_meeting_lengths
         dashboard_meeting_questions dashboard_meeting_locations
         dashboard_availability dashboard_calendar_settings dashboard_calendar
         dashboard_calendar_events dashboard_calendar_repeat dashboard_group_events

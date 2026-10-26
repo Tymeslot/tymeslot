@@ -134,12 +134,12 @@ msgstr "Créer le sondage"
 msgid "Description (optional)"
 msgstr "Description (facultatif)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Durée (minutes)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr "Durée : %{minutes} min (d'après le type de réunion)"
@@ -836,3 +836,8 @@ msgstr "Ce créneau chevauche un événement de votre calendrier. Si vous confir
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline to add times."
 msgstr "Le vote est clos. Repoussez la date limite pour ajouter des horaires."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Durée"

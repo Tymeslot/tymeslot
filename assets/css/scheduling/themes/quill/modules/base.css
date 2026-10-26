@@ -122,75 +122,84 @@ body.quill-theme {
 
    The booking markup leans on utility classes (`flex-1`, `flex-col`, `min-h-0`)
    that the self-contained theme doesn't ship, so each link below is set
-   explicitly rather than assumed from the class names. */
+   explicitly rather than assumed from the class names.
 
-/* Lock the theme wrapper to the viewport. A viewport unit is definite regardless
-   of ancestor sizing, which gives the grid below a real height to fill — setting
-   `height: 100dvh` on the grid itself fails because it is a flex item whose
-   automatic min-content size wins. */
-.quill-theme-wrapper:has(.calendar-card),
-.quill-theme-wrapper:has(.calendar-card) > div {
-  height: 100dvh;
-  min-height: 0;
-}
+   Standalone pages only. In an embed the viewport is the iframe, whose height
+   iframe_embed.js sets from the content: a content locked to 100dvh would
+   measure the iframe's current height and keep it, so the schedule step would
+   stay at the previous step's height with its slots hidden in a squeezed inner
+   scroll. There the step flows to its natural height and the host page
+   scrolls. */
 
-.main-gradient.theme-grid:has(.calendar-card) {
-  flex: 1 1 auto;
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr) auto;
-}
+:where(html:not([data-embedded])) {
+  /* Lock the theme wrapper to the viewport. A viewport unit is definite regardless
+     of ancestor sizing, which gives the grid below a real height to fill — setting
+     `height: 100dvh` on the grid itself fails because it is a flex item whose
+     automatic min-content size wins. */
+  .quill-theme-wrapper:has(.calendar-card),
+  .quill-theme-wrapper:has(.calendar-card) > div {
+    height: 100dvh;
+    min-height: 0;
+  }
 
-.main-gradient.theme-grid:has(.calendar-card) .content-area {
-  padding-bottom: 0;
-}
+  .main-gradient.theme-grid:has(.calendar-card) {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
 
-/* Stretch the centred container into a full-height column (was margin-auto
-   centred + content-sized) so its descendants can flex-fill the row. */
-.main-gradient.theme-grid:has(.calendar-card) .content-area .quill-container {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
-}
+  .main-gradient.theme-grid:has(.calendar-card) .content-area {
+    padding-bottom: 0;
+  }
 
-/* page_layout (`flex-1 flex flex-col`) wraps the step-nav + stack. It grows
-   already but defaults to `min-height: auto` (min-content), which would refuse to
-   shrink below its tall content — so the bound never reaches the card. */
-.main-gradient.theme-grid:has(.calendar-card) .content-area .quill-container > div {
-  min-height: 0;
-}
+  /* Stretch the centred container into a full-height column (was margin-auto
+     centred + content-sized) so its descendants can flex-fill the row. */
+  .main-gradient.theme-grid:has(.calendar-card) .content-area .quill-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+  }
 
-.main-gradient.theme-grid:has(.calendar-card) .stack {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
+  /* page_layout (`flex-1 flex flex-col`) wraps the step-nav + stack. It grows
+     already but defaults to `min-height: auto` (min-content), which would refuse to
+     shrink below its tall content — so the bound never reaches the card. */
+  .main-gradient.theme-grid:has(.calendar-card) .content-area .quill-container > div {
+    min-height: 0;
+  }
 
-.main-gradient.theme-grid:has(.calendar-card) .schedule-content-area {
-  align-items: stretch;
-  min-height: 0;
-}
+  .main-gradient.theme-grid:has(.calendar-card) .stack {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
 
-/* Card wrapper: a full-height column that vertically centres the card, so the
-   card is natural-height-and-centred when it fits and fills-and-scrolls when it
-   doesn't. */
-.main-gradient.theme-grid:has(.calendar-card) .schedule-content-area > div {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 0;
-}
+  .main-gradient.theme-grid:has(.calendar-card) .schedule-content-area {
+    align-items: stretch;
+    min-height: 0;
+  }
 
-/* The card is a shrinkable flex item of that wrapper: natural height when it
-   fits, shrunk to the wrapper's resolved height (calendar scrolls inside) when
-   it doesn't. `min-height: 0` lets it shrink past its content and overrides the
-   container-query minimums, which would otherwise pin it too tall to fit. */
-.main-gradient.theme-grid:has(.calendar-card) .calendar-card {
-  flex: 0 1 auto;
-  min-height: 0;
+  /* Card wrapper: a full-height column that vertically centres the card, so the
+     card is natural-height-and-centred when it fits and fills-and-scrolls when it
+     doesn't. */
+  .main-gradient.theme-grid:has(.calendar-card) .schedule-content-area > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  /* The card is a shrinkable flex item of that wrapper: natural height when it
+     fits, shrunk to the wrapper's resolved height (calendar scrolls inside) when
+     it doesn't. `min-height: 0` lets it shrink past its content and overrides the
+     container-query minimums, which would otherwise pin it too tall to fit. */
+  .main-gradient.theme-grid:has(.calendar-card) .calendar-card {
+    flex: 0 1 auto;
+    min-height: 0;
+  }
 }
 
 /* Footer styling */

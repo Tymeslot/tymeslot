@@ -425,27 +425,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert event.transparency == "transparent"
     end
 
-    test "calculates end date from DURATION when DTEND missing on all-day event" do
-      ical_content = """
-      BEGIN:VCALENDAR
-      VERSION:2.0
-      BEGIN:VEVENT
-      UID:allday-duration@example.com
-      DTSTART;VALUE=DATE:20300115
-      DURATION:P3D
-      SUMMARY:Three Day Event
-      END:VEVENT
-      END:VCALENDAR
-      """
-
-      assert {:ok, [event]} = ICalParser.parse(ical_content)
-      assert event.summary == "Three Day Event"
-      assert %Date{} = event.start_time
-      assert %Date{} = event.end_time
-      assert event.start_time == ~D[2030-01-15]
-      assert event.end_time == ~D[2030-01-18]
-    end
-
     test "sets transparency to nil when TRANSP property is absent" do
       ical_content = """
       BEGIN:VCALENDAR

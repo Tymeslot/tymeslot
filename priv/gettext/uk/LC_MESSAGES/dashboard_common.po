@@ -138,7 +138,7 @@ msgstr "Перемкнути бічну панель"
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "View Page"
-msgstr "Переглянути сторінку"
+msgstr "Моя сторінка"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format

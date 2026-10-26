@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias Tymeslot.Utils.DateTimeUtils.ICal
 
@@ -114,8 +115,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
     {end_time, duration_defaulted} =
       case parse_datetime_property(dtend, vtimezones) do
-        nil -> calculate_end_time(start_time, extract_property(lines, "DURATION"))
-        dtend_time -> {dtend_time, false}
+        nil ->
+          duration = extract_property(lines, "DURATION")
+          calculate_end_time(start_time, duration, dtstart, vtimezones)
+
+        dtend_time ->
+          {dtend_time, false}
       end
 
     if uid && start_time do
@@ -428,15 +433,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp parse_datetime_property(nil, _vtimezones), do: nil
 
-  defp parse_datetime_property(%{value: value, timezone: timezone} = dt_info, vtimezones) do
-    if vtimezone_override?(timezone, vtimezones) do
-      resolve_via_vtimezone(value, timezone, vtimezones)
+  defp parse_datetime_property(%{value: value, timezone: timezone}, vtimezones) do
+    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
+         {:ok, datetime} <- wall_clock_to_utc(naive, timezone, vtimezones) do
+      datetime
     else
-      case ICal.parse_datetime_with_timezone(dt_info) do
-        {:ok, datetime} -> datetime
-        # Fallback for all-day or basic date formats (YYYYMMDD)
-        {:error, _reason} -> all_day_date(value)
-      end
+      # All-day (YYYYMMDD) values, and anything unreadable as nil
+      _not_a_datetime -> all_day_date(value)
+    end
+  end
+
+  # A wall-clock time in a property's TZID, as a UTC DateTime: through the
+  # file's VTIMEZONE when it overrides the zone, else the time zone database.
+  defp wall_clock_to_utc(naive, timezone, vtimezones) do
+    if vtimezone_override?(timezone, vtimezones) do
+      VTimezone.to_utc(Map.fetch!(vtimezones, timezone), naive)
+    else
+      DateTimeUtils.convert_to_utc(naive, timezone)
     end
   end
 
@@ -448,16 +461,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     do: Map.has_key?(vtimezones, timezone) and not tz_database_known?(timezone)
 
   defp vtimezone_override?(_timezone, _vtimezones), do: false
-
-  defp resolve_via_vtimezone(value, timezone, vtimezones) do
-    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
-         {:ok, vtz} <- Map.fetch(vtimezones, timezone),
-         {:ok, datetime} <- VTimezone.to_utc(vtz, naive) do
-      datetime
-    else
-      _unresolved -> all_day_date(value)
-    end
-  end
 
   # Probes the configured time zone database at a fixed, transition-free instant
   # so a known zone never reports as unknown via a DST gap/ambiguity result.
@@ -484,32 +487,56 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   # The end an event's DTSTART and DURATION give when it has no DTEND, and
   # whether DURATION was unreadable so the default length stands in for it.
-  defp calculate_end_time(nil, _duration), do: {nil, false}
+  defp calculate_end_time(nil, _duration, _dtstart, _vtimezones), do: {nil, false}
 
   # RFC 5545 §3.6.1: with neither DTEND nor DURATION, a DATE-TIME DTSTART
   # ends where it starts, and a DATE one takes up that whole day.
-  defp calculate_end_time(%DateTime{} = start_time, nil), do: {start_time, false}
+  defp calculate_end_time(%DateTime{} = start_time, nil, _dtstart, _vtimezones),
+    do: {start_time, false}
 
-  defp calculate_end_time(%Date{} = start_time, nil), do: {Date.add(start_time, 1), false}
+  defp calculate_end_time(%Date{} = start_time, nil, _dtstart, _vtimezones),
+    do: {Date.add(start_time, 1), false}
 
-  defp calculate_end_time(%DateTime{} = start_time, duration_str) do
-    case Duration.parse(duration_str) do
-      {:ok, seconds} -> {DateTime.add(start_time, seconds, :second), false}
-      {:error, _reason} -> {DateTime.add(start_time, 3600, :second), true}
+  # RFC 5545 §3.3.6: a duration's days are nominal and its time part exact,
+  # so the days move DTSTART's wall-clock time on in its own zone (`P1D`
+  # across a DST change is still the same time the next day), and only then
+  # the hours, minutes and seconds are added as elapsed time.
+  defp calculate_end_time(%DateTime{} = start_time, duration_str, dtstart, vtimezones) do
+    case Duration.parse_nominal(duration_str) do
+      {:ok, {days, seconds}} ->
+        end_time =
+          start_time
+          |> add_nominal_days(days, dtstart, vtimezones)
+          |> DateTime.add(seconds, :second)
+
+        {end_time, false}
+
+      {:error, _reason} ->
+        {DateTime.add(start_time, 3600, :second), true}
     end
   end
 
-  defp calculate_end_time(%Date{} = start_time, duration_str) do
-    # For all-day events with duration, we calculate the number of days.
-    case Duration.parse(duration_str) do
-      {:ok, seconds} ->
-        # Convert seconds to days, rounding up to at least 1 day
-        days = div(seconds, 86_400)
+  # An all-day event spans whole days: a time part past them takes up one more.
+  defp calculate_end_time(%Date{} = start_time, duration_str, _dtstart, _vtimezones) do
+    case Duration.parse_nominal(duration_str) do
+      {:ok, {days, seconds}} ->
+        days = if seconds > 0, do: days + 1, else: days
         {Date.add(start_time, max(days, 1)), false}
 
       {:error, _reason} ->
-        # Fallback to 1 day
         {Date.add(start_time, 1), true}
+    end
+  end
+
+  defp add_nominal_days(start_time, 0, _dtstart, _vtimezones), do: start_time
+
+  defp add_nominal_days(start_time, days, %{value: value, timezone: timezone}, vtimezones) do
+    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
+         {:ok, end_time} <-
+           wall_clock_to_utc(NaiveDateTime.add(naive, days, :day), timezone, vtimezones) do
+      end_time
+    else
+      _unresolved -> DateTime.add(start_time, days, :day)
     end
   end
 

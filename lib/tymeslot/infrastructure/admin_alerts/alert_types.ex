@@ -47,6 +47,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     analytics_tracking_anomaly: %{category: "Analytics", severity: :warning},
     recipient_email_rejected: %{category: "Email", severity: :warning},
     configured_email_exhausted: %{category: "Email", severity: :error},
+    contact_recipient_rejected: %{category: "Email", severity: :error},
     user_registered_hook_failed: %{category: "System", severity: :error},
     group_meeting_release_failed: %{category: "Booking", severity: :error},
     upload_delete_failed: %{category: "System", severity: :warning},
@@ -139,6 +140,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       nil -> format_message(:recipient_email_rejected, metadata)
       identifier -> "recipient_email_rejected:#{identifier}"
     end
+  end
+
+  # Every enquiry sent while the contact recipient is suppressed is rejected
+  # the same way, so a run of failed forms is one incident: key on the
+  # recipient, not the job. Only one contact recipient is configured, so its
+  # masked form cannot stand for two different inboxes.
+  def dedup_key(:contact_recipient_rejected, metadata) do
+    "contact_recipient_rejected:#{Map.get(metadata, :recipients_masked, "unknown")}"
   end
 
   # The message names the owner only by masked address, which two owners can
@@ -509,10 +518,33 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     summary = Map.get(metadata, :summary, "Recipient permanently undeliverable")
     reason = Map.get(metadata, :reason_message, "unknown")
 
-    case recipient_email_rejected_identifier(metadata) do
-      nil -> "#{summary}: #{reason}"
-      identifier -> "#{summary} (#{identifier}): #{reason}"
+    labels =
+      Enum.reject(
+        [recipient_email_rejected_identifier(metadata), recipients_label(metadata)],
+        &is_nil/1
+      )
+
+    case labels do
+      [] -> "#{summary}: #{reason}"
+      labels -> "#{summary} (#{Enum.join(labels, ", ")}): #{reason}"
     end
+  end
+
+  # Unlike `:recipient_email_rejected`, the refused address is our own inbox,
+  # so every enquiry bounces until it is reactivated with the mail provider.
+  def format_message(:contact_recipient_rejected, metadata) do
+    recipient =
+      case Map.get(metadata, :recipients_masked) do
+        masked when is_binary(masked) and masked != "" -> " (#{masked})"
+        _none -> ""
+      end
+
+    action = Map.get(metadata, :action, "unknown")
+    job_id = Map.get(metadata, :job_id, "unknown")
+
+    "The configured contact recipient#{recipient} is being rejected by the mail provider, " <>
+      "so incoming enquiries are not being delivered; reactivate the address with the provider " <>
+      "(#{action}, job #{job_id}: #{reason_text(metadata)})"
   end
 
   # A configured email (a payment notice, say) is lost once Oban stops
@@ -580,6 +612,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       id = Map.get(metadata, :booking_payment_id) -> "booking payment #{id}"
       id = Map.get(metadata, :meeting_id) -> "meeting #{id}"
       true -> nil
+    end
+  end
+
+  defp recipients_label(metadata) do
+    case Map.get(metadata, :recipients_masked) do
+      recipients when is_binary(recipients) and recipients != "" -> "to #{recipients}"
+      _none -> nil
     end
   end
 

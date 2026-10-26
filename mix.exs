@@ -149,7 +149,6 @@ defmodule Tymeslot.MixProject do
       {:gen_smtp, "~> 1.2"},
       {:castore, "~> 1.0"},
       {:mjml, "~> 6.0"},
-      {:nodejs, "~> 3.0"},
       {:oban, "~> 2.20"},
       {:error_tracker, "~> 0.9"},
       {:logger_json, "~> 7.0"},

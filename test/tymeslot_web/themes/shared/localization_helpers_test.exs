@@ -3,8 +3,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   Covers `format_meeting_datetime/2`, which renders a meeting's start time on
   the payment return pages in the attendee's own timezone rather than raw UTC,
   and its compact sibling used by lists that repeat the date on every row, plus
-  the month form a date takes versus a standalone month heading, and the label
-  a slot key gets on the visitor's clock.
+  the month form a date takes versus a standalone month heading, the label
+  a slot key gets on the visitor's clock, and the "ends the next day" note,
+  which a booking step works out for the length chosen.
   """
 
   use ExUnit.Case, async: true
@@ -12,6 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   @moduletag :utils
   @moduletag :i18n
 
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   setup do
@@ -428,6 +430,39 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
                "1440min",
                "Europe/Berlin"
              ) == "Ends 01:00 AM on Monday 29 March"
+    end
+  end
+
+  # A booking step's assigns for the 11:00 PM slot on 14 June, London time,
+  # with `chosen` minutes picked on `meeting_type`.
+  defp late_slot(meeting_type, chosen) do
+    %{
+      meeting_type: meeting_type,
+      chosen_length_minutes: chosen,
+      selected_date: "2027-06-14",
+      selected_time: "11:00 PM",
+      user_timezone: "Europe/London"
+    }
+  end
+
+  describe "booking_next_day_end/1" do
+    test "names the next-day end of the length chosen, not the type's own" do
+      meeting_type = %MeetingTypeSchema{duration_minutes: 30, extra_lengths_minutes: [120]}
+
+      assert LocalizationHelpers.booking_next_day_end(late_slot(meeting_type, 120)) ==
+               "Ends 01:00 AM on Tuesday 15 June"
+    end
+
+    test "is nil when the length chosen ends that day, though the type's own would not" do
+      meeting_type = %MeetingTypeSchema{duration_minutes: 120, extra_lengths_minutes: [30]}
+
+      assert LocalizationHelpers.booking_next_day_end(late_slot(meeting_type, 30)) == nil
+    end
+
+    test "keeps to the type's own length when the length chosen is not offered" do
+      meeting_type = %MeetingTypeSchema{duration_minutes: 30, extra_lengths_minutes: [120]}
+
+      assert LocalizationHelpers.booking_next_day_end(late_slot(meeting_type, 90)) == nil
     end
   end
 end

@@ -97,7 +97,7 @@ msgstr "Popis (nepovinné)"
 msgid "Done"
 msgstr "Hotovo"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Délka (minuty)"
@@ -113,7 +113,7 @@ msgstr "Délka musí být platné číslo"
 msgid "Each guest is emailed a confirmation with their own link to accept or decline. You'll see every guest's response on your dashboard."
 msgstr "Každý host dostane e-mailem potvrzení s vlastním odkazem, kterým účast přijme nebo odmítne. Odpovědi všech hostů uvidíte na nástěnce."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Zadejte délku mezi %{min} a %{max} minutami"
@@ -926,7 +926,7 @@ msgid "A time shows how many spots are left, such as \"3 spots left\", only once
 msgstr "Termín ukáže, kolik míst zbývá (třeba „3 volná místa“), až když zbývá jen posledních několik."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
+#, elixir-autogen
 msgid "Last spots"
 msgstr "Poslední místa"
 

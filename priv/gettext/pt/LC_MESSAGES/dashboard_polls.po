@@ -134,12 +134,12 @@ msgstr "Criar enquete"
 msgid "Description (optional)"
 msgstr "Descrição (opcional)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Duração (minutos)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr "Duração: %{minutes} min (do tipo de reunião)"
@@ -836,3 +836,8 @@ msgstr "Este horário conflita com um evento do seu calendário. Se você confir
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline to add times."
 msgstr "A votação foi encerrada. Mude o prazo para adicionar horários."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Duração"

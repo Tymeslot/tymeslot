@@ -167,6 +167,9 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     assert integration_id == destination.id
     assert_received {:series_write, :put, put_url}
     assert put_url == "https://calendar.example.com/dest/home/#{uid}.ics"
+    # The series copied is somebody else's (`standup@example.com`), and the
+    # CalDAV sync reads ownership off the uid alone.
+    refute String.ends_with?(uid, "@tymeslot.com")
     assert_received {:series_write, :delete, "https://calendar.example.com/src/" <> _resource}
   end
 

@@ -28,11 +28,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Polls.{Invitations, PollSchema}
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
-  alias Tymeslot.Validation.Constraints
 
   alias TymeslotWeb.Dashboard.Polls.{
     LocalTime,
     PollAccess,
+    PollDuration,
     PollInvite,
     PollReminders,
     PollsComponent
@@ -125,25 +125,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
               errors={error_list(@errors, :meeting_type_id)}
             />
 
-            <div :if={meeting_type_selected?(@meeting_types, @meeting_type_id)}>
-              <input type="hidden" name="poll[duration]" value={@duration} />
-              <p class="text-token-sm text-tymeslot-600 mt-8">
-                {dgettext("dashboard_polls", "Duration: %{minutes} min (from meeting type)",
-                  minutes: @duration
-                )}
-              </p>
-            </div>
-            <.input
-              :if={!meeting_type_selected?(@meeting_types, @meeting_type_id)}
-              type="number"
-              name="poll[duration]"
-              label={dgettext("dashboard_polls", "Duration (minutes)")}
-              value={@duration}
-              min={Constraints.poll_duration_minutes_opts()[:greater_than_or_equal_to]}
-              max={Constraints.poll_duration_minutes_opts()[:less_than_or_equal_to]}
-              required
+            <PollDuration.duration_field
+              meeting_type={selected_meeting_type(@meeting_types, @meeting_type_id)}
+              duration={@duration}
               errors={error_list(@errors, :duration_minutes)}
-              icon="hero-clock"
             />
           </div>
 
@@ -482,14 +467,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   # --- Meeting-type / duration resolution ---
 
   defp resolve_duration(params, meeting_type_id, socket) do
-    case selected_meeting_type(socket.assigns.meeting_types, meeting_type_id) do
-      nil -> Map.get(params, "duration", socket.assigns.duration)
-      meeting_type -> Integer.to_string(meeting_type.duration_minutes)
-    end
-  end
-
-  defp meeting_type_selected?(meeting_types, meeting_type_id) do
-    selected_meeting_type(meeting_types, meeting_type_id) != nil
+    socket.assigns.meeting_types
+    |> selected_meeting_type(meeting_type_id)
+    |> PollDuration.resolve(params, socket.assigns.duration)
   end
 
   defp selected_meeting_type(_meeting_types, id) when id in [nil, ""], do: nil

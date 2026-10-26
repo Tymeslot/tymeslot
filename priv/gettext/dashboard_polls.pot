@@ -134,12 +134,12 @@ msgstr ""
 msgid "Description (optional)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr ""
@@ -835,4 +835,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline to add times."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
 msgstr ""

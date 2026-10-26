@@ -212,6 +212,7 @@ msgstr "Wypełnij wszystkie wymagane pola"
 msgid "Please select a date to see available times"
 msgstr "Wybierz datę, aby zobaczyć dostępne terminy"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
@@ -363,7 +364,7 @@ msgid "Your timezone"
 msgstr "Twoja strefa czasowa"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
+#, elixir-autogen
 msgid "Add any details..."
 msgstr "Dodaj szczegóły…"
 
@@ -413,8 +414,10 @@ msgid "Name"
 msgstr "Imię i nazwisko"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -605,9 +608,11 @@ msgstr "%{organizer} musi jeszcze zaakceptować ten termin. Tak czy inaczej wyś
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
@@ -690,6 +695,17 @@ msgstr "Szukaj stref czasowych"
 #, elixir-autogen, elixir-format
 msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
 msgstr "Tryb podglądu: rezerwacje są tu tylko symulowane. Nic nie jest zapisywane ani wysyłane."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} min"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "How long should the meeting be?"
+msgstr "Jak długo ma trwać spotkanie?"
 
 #: lib/tymeslot_web/themes/shared/booking_location.ex
 #, elixir-autogen, elixir-format
