@@ -100,9 +100,10 @@ defmodule Tymeslot.GettextCompletenessCase do
     msgid_consistency_tests =
       for domain <- domains do
         quote do
-          test unquote("every locale matches the #{domain}.pot template") do
+          test unquote("every locale matches the #{domain}.pot template"),
+               %{catalogues: catalogues} do
             domain = unquote(domain)
-            template_keys = Catalogue.template_keys(@gettext_path, domain)
+            template_keys = Catalogue.template_keys(catalogues, domain)
 
             if unquote(domain in empty_domains) do
               assert template_keys == [],
@@ -112,7 +113,7 @@ defmodule Tymeslot.GettextCompletenessCase do
             end
 
             for locale <- Locales.supported_codes() do
-              {missing, extra} = Catalogue.template_drift(@gettext_path, locale, domain)
+              {missing, extra} = Catalogue.template_drift(catalogues, locale, domain)
 
               assert missing == [], """
               Locale '#{locale}' is missing messages from #{domain}.pot:
@@ -142,17 +143,21 @@ defmodule Tymeslot.GettextCompletenessCase do
       @domains unquote(domains)
       @max_msgids unquote(max_msgids)
 
+      setup_all do
+        %{catalogues: Catalogue.load(@gettext_path, @domains)}
+      end
+
       describe "structure" do
-        test "every supported locale has a .po for every domain" do
-          assert Catalogue.missing_catalogues(@gettext_path, @domains) == []
+        test "every supported locale has a .po for every domain", %{catalogues: catalogues} do
+          assert Catalogue.missing_catalogues(catalogues) == []
         end
 
-        test "every .po has valid headers" do
-          assert Catalogue.header_problems(@gettext_path, @domains) == []
+        test "every .po has valid headers", %{catalogues: catalogues} do
+          assert Catalogue.header_problems(catalogues) == []
         end
 
-        test "no domain exceeds the catalogue size limit" do
-          oversized = Catalogue.oversized(@gettext_path, @domains, @max_msgids)
+        test "no domain exceeds the catalogue size limit", %{catalogues: catalogues} do
+          oversized = Catalogue.oversized(catalogues, @max_msgids)
 
           assert oversized == [], """
           Domains over the #{@max_msgids}-message limit:
@@ -169,8 +174,8 @@ defmodule Tymeslot.GettextCompletenessCase do
       end
 
       describe "source language" do
-        test "the default locale leaves every msgstr empty" do
-          filled = Catalogue.filled_source_msgstrs(@gettext_path, @domains)
+        test "the default locale leaves every msgstr empty", %{catalogues: catalogues} do
+          filled = Catalogue.filled_source_msgstrs(catalogues)
 
           assert filled == [], """
           #{length(filled)} filled msgstrs in the default locale. The msgid is the English
@@ -179,8 +184,8 @@ defmodule Tymeslot.GettextCompletenessCase do
           """
         end
 
-        test "no msgid is a key rather than English text" do
-          keys = Catalogue.key_style_msgids(@gettext_path, @domains)
+        test "no msgid is a key rather than English text", %{catalogues: catalogues} do
+          keys = Catalogue.key_style_msgids(catalogues)
 
           assert keys == [], """
           Key-style msgids render verbatim wherever a translation is missing, English
@@ -191,8 +196,10 @@ defmodule Tymeslot.GettextCompletenessCase do
       end
 
       describe "completeness" do
-        test "no untranslated entries in any domain, in any non-default locale" do
-          gaps = Catalogue.untranslated(@gettext_path, @domains)
+        test "no untranslated entries in any domain, in any non-default locale", %{
+          catalogues: catalogues
+        } do
+          gaps = Catalogue.untranslated(catalogues)
 
           assert gaps == [], """
           #{length(gaps)} untranslated entries.
@@ -205,8 +212,8 @@ defmodule Tymeslot.GettextCompletenessCase do
           """
         end
 
-        test "no fuzzy entries in any locale" do
-          fuzzy = Catalogue.fuzzy(@gettext_path, @domains)
+        test "no fuzzy entries in any locale", %{catalogues: catalogues} do
+          fuzzy = Catalogue.fuzzy(catalogues)
 
           assert fuzzy == [], """
           Fuzzy entries found. Gettext SERVES a fuzzy translation, it does not fall back to
@@ -222,8 +229,10 @@ defmodule Tymeslot.GettextCompletenessCase do
       end
 
       describe "translation safety" do
-        test "translations carry exactly the placeholders their msgid defines" do
-          mismatched = Catalogue.placeholder_mismatches(@gettext_path, @domains)
+        test "translations carry exactly the placeholders their msgid defines", %{
+          catalogues: catalogues
+        } do
+          mismatched = Catalogue.placeholder_mismatches(catalogues)
 
           assert mismatched == [], """
           Translations whose placeholders differ from their msgid's. An unknown one raises
@@ -232,8 +241,8 @@ defmodule Tymeslot.GettextCompletenessCase do
           """
         end
 
-        test "plural entries carry one msgstr per plural form" do
-          mismatched = Catalogue.plural_count_mismatches(@gettext_path, @domains)
+        test "plural entries carry one msgstr per plural form", %{catalogues: catalogues} do
+          mismatched = Catalogue.plural_count_mismatches(catalogues)
 
           assert mismatched == [], """
           Plural entries whose msgstr count does not match the catalogue's `nplurals`:
