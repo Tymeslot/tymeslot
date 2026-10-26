@@ -115,6 +115,8 @@ defmodule Tymeslot.Timezones.DataTest do
                "Berlin, Deutschland"
 
       assert in_locale("uk", fn -> Data.display_name("Europe/Kyiv") end) == "Київ, Україна"
+      assert in_locale("de", fn -> Data.display_name("Europe/Kyiv") end) == "Kyjiw, Ukraine"
+      assert Data.display_name("Europe/Kyiv") == "Kyiv, Ukraine"
       assert in_locale("pt", fn -> Timezones.format("America/Sao_Paulo") end) =~ "São Paulo"
     end
 
