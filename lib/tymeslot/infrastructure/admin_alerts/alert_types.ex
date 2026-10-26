@@ -509,9 +509,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     summary = Map.get(metadata, :summary, "Recipient permanently undeliverable")
     reason = Map.get(metadata, :reason_message, "unknown")
 
-    case recipient_email_rejected_identifier(metadata) do
-      nil -> "#{summary}: #{reason}"
-      identifier -> "#{summary} (#{identifier}): #{reason}"
+    labels =
+      Enum.reject(
+        [recipient_email_rejected_identifier(metadata), recipients_label(metadata)],
+        &is_nil/1
+      )
+
+    case labels do
+      [] -> "#{summary}: #{reason}"
+      labels -> "#{summary} (#{Enum.join(labels, ", ")}): #{reason}"
     end
   end
 
@@ -580,6 +586,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       id = Map.get(metadata, :booking_payment_id) -> "booking payment #{id}"
       id = Map.get(metadata, :meeting_id) -> "meeting #{id}"
       true -> nil
+    end
+  end
+
+  defp recipients_label(metadata) do
+    case Map.get(metadata, :recipients_masked) do
+      recipients when is_binary(recipients) and recipients != "" -> "to #{recipients}"
+      _none -> nil
     end
   end
 

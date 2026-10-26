@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.Delivery do
   alias Tymeslot.Emails.Shared.Sanitise
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.Logging.EmailMasker
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Mailer
@@ -50,8 +51,10 @@ defmodule Tymeslot.Emails.Delivery do
   `timeout_error?/1`). Display names and the subject are stripped of control
   characters before the adapter sees them.
 
-  Returns `{:error, {:recipient_rejected, reason}}` when the provider rejects
-  the address permanently; callers should give up rather than retry.
+  Returns `{:error, {:recipient_rejected, %{reason: reason, recipients_masked: masked}}}`
+  when the provider rejects the address permanently; callers should give up
+  rather than retry. `masked` lists the message's recipients, masked, because
+  the provider's reason does not reliably name the address it refused.
 
   `breaker:` names the circuit breaker to deliver through, the application's
   email breaker by default; tests pass their own so that no other delivery
@@ -179,7 +182,8 @@ defmodule Tymeslot.Emails.Delivery do
       reason: LogFormat.reason(reason)
     )
 
-    {:error, {:recipient_rejected, reason}}
+    {:error,
+     {:recipient_rejected, %{reason: reason, recipients_masked: masked_recipients(email)}}}
   end
 
   # A timeout after the message may have been handed over is ambiguous: the
@@ -374,4 +378,17 @@ defmodule Tymeslot.Emails.Delivery do
   end
 
   defp recipient_domain(_recipient), do: "invalid"
+
+  # Who a rejected message was for, masked: unlike `recipient_domains/1` this
+  # is written only on a permanent rejection, where the operator has to know
+  # which address to look up in the provider's suppression list.
+  defp masked_recipients(%Swoosh.Email{to: to, cc: cc, bcc: bcc}) do
+    (to ++ cc ++ bcc)
+    |> Enum.map(fn
+      {_name, address} when is_binary(address) -> EmailMasker.mask_email(address) || "invalid"
+      _recipient -> "invalid"
+    end)
+    |> Enum.uniq()
+    |> Enum.join(", ")
+  end
 end
