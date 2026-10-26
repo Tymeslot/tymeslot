@@ -1034,7 +1034,7 @@ end
 | `organizer_profile` | overview, schedule, booking, confirmation | mount | the organiser's profile: name, avatar, greeting, `headline`, `bio` |
 | `username_context` | every step | mount | the organiser's username, for paths |
 | `meeting_types` | overview | mount | the organiser's active meeting types |
-| `host_currency` | overview, schedule, booking | mount | the currency the organiser's paid meeting types are priced in, for `BookingText.price_label/3`; `nil` while none is paid |
+| `host_currency` | overview, length, schedule, booking | mount | the currency the organiser's paid meeting types are priced in, for `BookingText.price_label/3`; `nil` while none is paid |
 | `selected_duration` | overview, schedule, booking | mount | the chosen meeting type's duration slug; `nil` until one is chosen |
 | `duration` | schedule, questions, booking, confirmation | mount | the duration slug the schedule step was entered with (`"30-minutes"`), `nil` before; never print it: show the length with `BookingText.duration_label/1`, or take the number from `Offer.duration_minutes(@meeting_type, @duration)` |
 | `meeting_type` | schedule, booking, confirmation | mount | the chosen meeting type; `nil` until a step resolves one |
@@ -1066,7 +1066,7 @@ end
 | `form` | booking | mount | the booking form |
 | `validation_errors` | booking | mount | the booking form's visible errors |
 | `submitting` | booking | mount | whether the booking is being submitted |
-| `is_rescheduling` | schedule, booking, confirmation | mount | whether this booking replaces an earlier one |
+| `is_rescheduling` | length, schedule, booking, confirmation | mount | whether this booking replaces an earlier one |
 | `guest_emails` | booking, confirmation | mount | the guests added |
 | `guests_open` | booking | mount | whether the guest field is open |
 | `guest_input` | booking | mount | the guest address being typed |

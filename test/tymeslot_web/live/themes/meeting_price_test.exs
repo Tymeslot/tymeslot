@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
   @moduledoc """
   A paid meeting type's price on Quill's and Rhythm's booking pages: beside
-  the type in the overview list, in the heading of its schedule step, and on
-  the details step the booker submits from, in the organiser's currency
+  the type in the overview list, on the length step of a type offering
+  several lengths, in the heading of its schedule step, and on the details
+  step the booker submits from, in the organiser's currency
   (`MeetingPrice.hint/1`). A free type, and a reschedule, shows no price, and
   an embedded paid booking's confirmation says what was paid, in a line the
   guest's language words around the amount.
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
   for {theme_id, theme} <- [{"1", "quill"}, {"2", "rhythm"}] do
     describe theme do
       setup do
-        %{user: user, profile: profile, meeting_types: [paid, free]} =
+        %{user: user, profile: profile, meeting_types: [paid, free, several]} =
           seed_organiser(unquote(theme_id), "priced-#{unquote(theme)}",
             types: [
               [
@@ -79,7 +80,14 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
                 payment_required: true,
                 price_cents: 4500
               ],
-              [name: "Quick Chat", duration_minutes: 30]
+              [name: "Quick Chat", duration_minutes: 30],
+              [
+                name: "Flexible Consult",
+                duration_minutes: 30,
+                extra_lengths_minutes: [60],
+                payment_required: true,
+                price_cents: 4500
+              ]
             ],
             profile: [allowed_embed_domains: ["embedder.test"]]
           )
@@ -96,7 +104,8 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
           profile: profile,
           paid_type: paid,
           paid: MeetingTypes.effective_slug(paid),
-          free: MeetingTypes.effective_slug(free)
+          free: MeetingTypes.effective_slug(free),
+          several: MeetingTypes.effective_slug(several)
         }
       end
 
@@ -125,6 +134,24 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
         BookingDriver.book(view, until: :attendee, meeting_type: paid)
 
         assert step(view) == :booking
+        assert has_element?(view, @price, "RON 45.00")
+      end
+
+      # One price covers every length (`Tymeslot.MeetingTypes.Lengths`), so the
+      # step between the overview and the calendar shows it too.
+      test "the length step of a paid type offering two lengths shows its price",
+           %{conn: conn, profile: profile, several: several} do
+        {:ok, view, _html} = live(conn, "/#{profile.username}")
+        BookingDriver.choose_meeting_type(view, several)
+        if step(view) == :overview, do: BookingDriver.continue(view)
+
+        assert BookingDriver.lengths(view) == ["30", "60"]
+        assert has_element?(view, "[data-testid='length-step'] #{@price}", "RON 45.00")
+
+        BookingDriver.choose_length(view, 60)
+        BookingDriver.continue(view)
+
+        assert step(view) == :schedule
         assert has_element?(view, @price, "RON 45.00")
       end
 
