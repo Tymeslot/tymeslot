@@ -140,6 +140,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
     end
   end
 
+  # ── days_tz_abbr/2 ──────────────────────────────────────────────────
+
+  describe "days_tz_abbr/2" do
+    test "labels days by the offset in force on them, not today's" do
+      winter = Date.range(~D[2026-10-26], ~D[2026-11-01])
+      summer = Date.range(~D[2026-03-30], ~D[2026-04-05])
+
+      assert TimeFormatting.days_tz_abbr("Europe/Berlin", winter) == "CET"
+      assert TimeFormatting.days_tz_abbr("Europe/Berlin", summer) == "CEST"
+    end
+
+    test "names both offsets, in order, for days straddling a change" do
+      # Europe/Berlin leaves summer time on 25 October 2026 and enters it on 29 March 2026.
+      october = Date.range(~D[2026-10-19], ~D[2026-10-25])
+      march = Date.range(~D[2026-03-23], ~D[2026-03-29])
+
+      assert TimeFormatting.days_tz_abbr("Europe/Berlin", october) == "CEST/CET"
+      assert TimeFormatting.days_tz_abbr("Europe/Berlin", march) == "CET/CEST"
+    end
+
+    test "labels a single day" do
+      assert TimeFormatting.days_tz_abbr("Europe/Berlin", [~D[2026-10-24]]) == "CEST"
+      assert TimeFormatting.days_tz_abbr("Europe/Berlin", [~D[2026-10-25]]) == "CET"
+    end
+
+    test "returns the input string for an invalid timezone" do
+      assert TimeFormatting.days_tz_abbr("Not/A/Timezone", [~D[2026-04-06]]) ==
+               "Not/A/Timezone"
+    end
+  end
+
   # ── datetime_to_local_parts/2 ───────────────────────────────────────
 
   describe "datetime_to_local_parts/2" do

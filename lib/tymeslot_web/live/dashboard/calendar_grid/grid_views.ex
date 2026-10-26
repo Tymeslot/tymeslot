@@ -103,7 +103,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
         >
           <div class="flex items-center justify-end pr-2 sticky left-0 bg-white z-10">
-            <span class="text-token-xs text-tymeslot-500">{Helpers.user_tz_abbr(assigns)}</span>
+            <span id="calendar-tz-label" class="text-token-xs text-tymeslot-500">{Helpers.days_tz_abbr(
+              @user_timezone,
+              @visible_days
+            )}</span>
           </div>
           <div
             :for={day <- @visible_days}

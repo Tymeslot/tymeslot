@@ -28,11 +28,25 @@ defmodule Tymeslot.Precommit.CpuBudget do
 
   ## The numbers
 
-  Measured on a 16-core host, whole Core suite, all partitions in parallel:
-  126s unpartitioned, 73s at 4 partitions, about 60s at 6 and 60s at 8, so the
-  gain flattens past 6. Capping each of 6 partitions to 3 schedulers cost 9%
-  against uncapped (60.7s against 55.8s) while using half the CPU. Hence one
-  partition per three allowed cores, at most six, each capped to its share.
+  The suite's wall clock is its synchronous modules, which are bound by
+  latency (database round trips, timeouts, process hand-offs) rather than CPU,
+  so what shortens it is how many partitions run them side by side, not how
+  many schedulers each one has. Measured on a container host with a 9-CPU
+  quota, whole Core suite, partitions alone: 496s as 1 partition of 4
+  schedulers, 394s as 2 of 2, 262s as 3 of 2, and 234s as 4 of 2 and as 4 of
+  1 alike. Four
+  partitions of one scheduler run the suite in under half the time of one
+  partition of four, on the same allowance. Given all 9 CPUs, 6 of 1 took
+  187s against 223s for 3 of 3.
+
+  On a 16-core host the gain flattened past 6 partitions (126s whole, 73s at
+  4, about 60s at 6 and at 8), and capping each of 6 partitions to 3
+  schedulers cost 9% against uncapped while using half the CPU. Hence one
+  partition per allowed core, at most six, each capped to its share. This
+  matters most on a small allowance, such as the share the workspace `mix.sh`
+  gives each of two gates run side by side: at three cores per partition, a
+  4-core share planned a single partition and the suite ran serially for ten
+  minutes.
 
   `PRECOMMIT_TEST_PARTITIONS` overrides the partition count (`1` runs the suite
   as a single partition); the scheduler cap still follows the allowance. A run
@@ -40,9 +54,8 @@ defmodule Tymeslot.Precommit.CpuBudget do
   hand, and gets no plan, so the suite runs whole as they set it up.
   """
 
-  @cores_per_partition 3
   @max_partitions 6
-  @min_schedulers 2
+  @min_schedulers 1
 
   @type plan :: %{partitions: pos_integer(), schedulers: pos_integer()}
 
@@ -60,6 +73,28 @@ defmodule Tymeslot.Precommit.CpuBudget do
   end
 
   @doc """
+  The `:suite_plan` for `Tymeslot.Precommit.Runner`, given the suite the run
+  takes: `Tymeslot.Precommit.Affected`'s narrowed suite, or `nil` for the whole
+  one.
+
+  A selection is partitioned like the full suite, since it can still be
+  thousands of tests, but never into more partitions than it has files: `mix
+  test --partitions` deals files out one per partition in turn, and a
+  partition dealt none exits 1.
+  """
+  @spec planner(map() | :upstream | nil) :: (-> plan() | nil)
+  def planner(%{scope: :selection, files: files}) do
+    fn ->
+      case suite_plan() do
+        %{partitions: count} = plan -> %{plan | partitions: min(count, length(files))}
+        nil -> nil
+      end
+    end
+  end
+
+  def planner(_suite), do: &suite_plan/0
+
+  @doc """
   Plans the suite for a given number of cores, optionally forcing the partition
   count.
   """
@@ -70,7 +105,7 @@ defmodule Tymeslot.Precommit.CpuBudget do
   end
 
   defp partitions_for(cores) do
-    cores |> div(@cores_per_partition) |> max(1) |> min(@max_partitions)
+    min(cores, @max_partitions)
   end
 
   defp parse_positive(value) do

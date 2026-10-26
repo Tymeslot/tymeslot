@@ -224,6 +224,9 @@
   --approval-notice-ink: var(--theme-text-secondary);
   --approval-notice-max-width: 30rem;
 
+  /* Embedded confirmation ticket (modules/confirmation.css) */
+  --ticket-note-row-basis: 16rem;
+
   /* Poll voting page (shared/components/polls.css) */
   --poll-voting-padding: var(--space-lg);
   --poll-panel-surface: rgba(255, 255, 255, 0.08);

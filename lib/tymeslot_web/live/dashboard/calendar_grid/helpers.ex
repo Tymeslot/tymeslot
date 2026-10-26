@@ -35,9 +35,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   defdelegate format_display_time_range(event, fmt, timezone), to: TimeFormatting
   defdelegate tz_abbr(timezone, at), to: TimeFormatting
+  defdelegate days_tz_abbr(timezone, days), to: TimeFormatting
   defdelegate datetime_to_local_parts(dt, timezone), to: TimeFormatting
   defdelegate format_hour(hour, assigns), to: TimeFormatting
-  defdelegate user_tz_abbr(assigns), to: TimeFormatting
   defdelegate url?(str), to: TimeFormatting
   defdelegate linkify_text(text), to: TimeFormatting
 
@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate period_label(assigns), to: PreferenceHelpers
   defdelegate view_label(view), to: PreferenceHelpers
   defdelegate navigate_month(date, delta), to: PreferenceHelpers
+  defdelegate view_switch_anchor(assigns), to: PreferenceHelpers
   defdelegate month_cell_class(day, assigns), to: PreferenceHelpers
   defdelegate week_start_atom(assigns), to: PreferenceHelpers
   defdelegate show_week_numbers?(assigns), to: PreferenceHelpers

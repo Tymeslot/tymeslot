@@ -20,9 +20,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   @moduletag :calendar
   @moduletag :live
 
-  # The drop asks for 14:00 in the organiser's timezone, which the block
-  # carries as this minute offset after a move. Before it, the block carries
-  # the seeded 10:00 UTC in that timezone: see original_start_minutes/1.
+  # The drop asks for 14:00 in the organiser's timezone, which the grid renders
+  # in; this is the minute offset the block carries after a move.
   @moved_start_minutes 840
 
   # The provider write runs in a Task; allow for a busy test machine.
@@ -133,10 +132,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       |> render_hook("event_dropped", drop_params(ctx.event))
 
       assert render(lv) =~ html_escape(@locked_message)
-
-      assert event_block(lv, ctx.event.id) =~
-               ~s(data-start-minutes="#{original_start_minutes(ctx)}")
-
+      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{local_start_minutes(ctx)}")
       assert_untouched(ctx, jobs)
     end
 
@@ -171,10 +167,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       })
 
       assert render(lv) =~ html_escape(@locked_message)
-
-      assert event_block(lv, ctx.event.id) =~
-               ~s(data-start-minutes="#{original_start_minutes(ctx)}")
-
+      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{local_start_minutes(ctx)}")
       assert_untouched(ctx, jobs)
     end
 
@@ -407,21 +400,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
     assert Enum.map(all_enqueued([]), & &1.id) == Enum.map(jobs_before, & &1.id)
   end
 
+  # Minutes past local midnight at which the seeded event starts in the
+  # organiser's timezone. It is seeded at 10:00 UTC, so the figure follows the
+  # zone's offset on the frozen date and moves when summer time begins or ends.
+  defp local_start_minutes(%{event: event, profile: profile}) do
+    local = DateTime.shift_zone!(event.start_at, profile.timezone)
+    local.hour * 60 + local.minute
+  end
+
   # The rendered markup of one event block, so an assertion about a single
   # event cannot pass on some other element of the page.
   defp event_block(lv, event_id) do
     lv |> element("[id^='event-#{event_id}-']") |> render()
-  end
-
-  # The seeded event's 10:00 UTC in the organiser's timezone, as the block's
-  # minute offset: 13:00 in Tallinn in summer, 12:00 in winter, so it is read
-  # from the zone's offset on the (frozen) day rather than fixed.
-  defp original_start_minutes(%{profile: profile}) do
-    local =
-      Clock.utc_today()
-      |> DateTime.new!(~T[10:00:00], "Etc/UTC")
-      |> DateTime.shift_zone!(profile.timezone)
-
-    local.hour * 60 + local.minute
   end
 end

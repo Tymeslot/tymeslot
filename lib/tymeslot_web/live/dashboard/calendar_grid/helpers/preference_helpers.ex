@@ -23,6 +23,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   @spec week_start(Date.t(), map()) :: Date.t()
   def week_start(date, assigns), do: Date.beginning_of_week(date, week_start_atom(assigns))
 
+  @doc """
+  The anchor date to carry into another view.
+
+  Every view shares one anchor (`assigns.date`), but Week and Month show the
+  period containing it while Day, 3-day and Agenda start from it. Week
+  navigation can leave the anchor mid-week, so a view switch that kept it would
+  open the next view part-way through what was on screen. Week and Month hand
+  over today when today is on screen, and the first day of the period
+  otherwise; the views that already start at their anchor keep it.
+  """
+  @spec view_switch_anchor(map()) :: Date.t()
+  def view_switch_anchor(%{view: :week, date: date} = assigns) do
+    first = week_start(date, assigns)
+    today_or_first(assigns, Date.range(first, Date.add(first, 6)))
+  end
+
+  def view_switch_anchor(%{view: :month, date: date} = assigns) do
+    today_or_first(assigns, Date.range(Date.beginning_of_month(date), Date.end_of_month(date)))
+  end
+
+  def view_switch_anchor(%{date: date}), do: date
+
+  defp today_or_first(assigns, %Date.Range{first: first} = period) do
+    today = today(Map.get(assigns, :user_timezone, "Etc/UTC"))
+    if today in period, do: today, else: first
+  end
+
   @spec col_count(map()) :: integer()
   def col_count(%{view: :week} = assigns), do: if(show_weekends?(assigns), do: 7, else: 5)
   def col_count(%{view: :three_day}), do: 3

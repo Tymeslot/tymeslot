@@ -471,11 +471,13 @@ html.rhythm-theme[data-embedded] .ticket-info {
 }
 
 /* The arranged-address note takes its own line under the inline value, and
-   its row takes only the space the other rows leave, so the sentence wraps
-   there instead of squeezing them. */
+   its row grows into the space the other rows leave, so the sentence wraps
+   there instead of squeezing them. A zero basis would never count the row as
+   too wide for that space, so it stayed beside the others however little was
+   left and clipped its label; the basis makes it wrap to a line of its own
+   once the remainder is narrower than a readable note. */
 html.rhythm-theme[data-embedded] .ticket-row:has(.location-field__note) {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 var(--ticket-note-row-basis);
 }
 html.rhythm-theme[data-embedded] .ticket-info:has(.location-field__note) {
   flex-wrap: wrap;
