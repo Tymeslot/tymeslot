@@ -96,6 +96,23 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ProviderPickerModalTest 
     assert html =~ "Connected"
   end
 
+  # A connected card shares its title row with the badge; the title must wrap
+  # (and the badge drop below it) rather than be cut to "Custom Video Li…".
+  test "a connected provider's title wraps beside its badge instead of truncating" do
+    groups = [
+      %{label: nil, providers: [entry("custom", title: "Custom Video Link", connected?: true)]}
+    ]
+
+    doc = %{groups: groups} |> render_picker() |> Floki.parse_fragment!()
+
+    title_classes = classes_of(doc, "h4")
+    refute "truncate" in title_classes
+    assert "break-words" in title_classes
+
+    assert [_title] = Floki.find(doc, "div.flex-wrap > h4")
+    assert doc |> Floki.find("div.flex-wrap > span") |> Floki.text() =~ "Connected"
+  end
+
   test "renders a provider without a click event as disabled" do
     groups = [%{label: nil, providers: [entry("comingsoon", click_event: nil)]}]
 
