@@ -2,6 +2,7 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
   use TymeslotWeb.BrowserCase, async: false
 
   alias Tymeslot.Factory
+  alias Wallaby.Element
 
   @moduletag :e2e
   @moduletag :calendar
@@ -99,6 +100,35 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
     |> refute_has(css("#calendar-allday-row details[open]"))
   end
 
+  # Releasing a mouse resize or move fires a click on the event block, which
+  # bubbles to its open-event phx-click. The gesture must be a real mouse: a
+  # dispatched mousedown/mouseup pair never makes the browser fire that click.
+  feature "resizing an event with the mouse saves the new end without opening its editor", %{
+    session: session
+  } do
+    {session, event} = calendar_with_event(session)
+
+    session
+    |> mouse_gesture("#event-#{event.id}-#{Date.utc_today()} [data-resize-handle]", 64)
+    |> assert_has(css("[data-event-id='#{event.id}'][data-duration-minutes='120']"))
+    |> refute_has(css("#event-detail-modal"))
+  end
+
+  feature "moving an event a short way with the mouse does not open its editor", %{
+    session: session
+  } do
+    {session, event} = calendar_with_event(session)
+    block = "#event-#{event.id}-#{Date.utc_today()}"
+    start = session |> find(css(block)) |> Element.attr("data-start-minutes")
+
+    # 16px is a quarter of an hour, so the release stays inside the block's
+    # own footprint, where the stray click lands on it.
+    session
+    |> mouse_gesture(block, 16)
+    |> refute_has(css("[data-event-id='#{event.id}'][data-start-minutes='#{start}']"))
+    |> refute_has(css("#event-detail-modal"))
+  end
+
   # The grid is the widest thing in the dashboard and demotes to a narrower view
   # on small screens, so it is the most likely place for the shell to be pushed
   # past the viewport.
@@ -112,6 +142,43 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
     |> wait_for_live()
     |> assert_has(css("[data-day-col]", count: :any, minimum: 1))
     |> assert_no_horizontal_overflow("dashboard calendar at 320px")
+  end
+
+  defp calendar_with_event(session) do
+    {session, user} = log_in_via_browser(session)
+    integration = Factory.insert(:calendar_integration, user: user, is_active: true)
+    today = Date.utc_today()
+
+    event =
+      Factory.insert(:provider_calendar_event, %{
+        calendar_integration: integration,
+        summary: "Gesture Target",
+        start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
+        all_day: false
+      })
+
+    session =
+      session
+      |> visit("/dashboard/calendar")
+      |> wait_for_live()
+      |> assert_has(css("[data-event-id='#{event.id}']", text: "Gesture Target"))
+
+    {session, event}
+  end
+
+  # Presses on the element matching `selector`, drags it down by `dy` pixels and releases, through
+  # the real pointer. The grid opens scrolled to the current time, so the
+  # event is brought into view first for the pointer to reach it.
+  defp mouse_gesture(session, selector, dy) do
+    session
+    |> execute_script("document.querySelector(arguments[0]).scrollIntoView({block: 'center'})", [
+      selector
+    ])
+    |> hover(css(selector))
+    |> button_down()
+    |> move_mouse_by(0, dy)
+    |> button_up()
   end
 
   # Drag-to-create uses real mousedown/mousemove/mouseup events on an empty
