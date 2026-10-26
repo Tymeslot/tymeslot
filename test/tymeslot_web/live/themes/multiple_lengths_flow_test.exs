@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
+  alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -74,6 +75,15 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
     |> Floki.attribute("button[data-testid='length-option']", "data-minutes")
   end
 
+  defp time_values(view) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.attribute("[data-fact='time']:not([disabled])", "data-value")
+  end
+
+  defp assigns(view), do: :sys.get_state(view.pid).socket.assigns
+
   defp pick_first_slot_and_continue(view) do
     BookingDriver.pick_first_slot(view)
     BookingDriver.continue(view)
@@ -125,6 +135,109 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsFlowTest do
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
         assert meeting.duration == 60
         assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == 60
+      end
+
+      # Back from the calendar to change the length: the time picked for the
+      # first length goes, the calendar offers the second length's times
+      # (`Facts.Slot.enter/2` refreshing the stale slot snapshot), and the
+      # booking is stored for the second length.
+      @tag :capture_log
+      test "changing the length after picking a time offers and books the new length",
+           %{conn: conn} do
+        %{user: user, profile: profile} =
+          seed_several_lengths(unquote(theme_id), "relength-#{unquote(theme)}")
+
+        {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+        day = Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+
+        BookingDriver.choose_meeting_type(view, "quick-chat")
+        BookingDriver.continue(view)
+        BookingDriver.choose_length(view, 15)
+        BookingDriver.continue(view)
+
+        # On a 15-minute grid a quarter past is offered; it does not fit the
+        # hourly grid of 60 minutes.
+        BookingDriver.pick_first_slot(view, on: day)
+        fifteen_times = time_values(view)
+        [_on_the_hour, quarter_past | _rest] = fifteen_times
+        BookingDriver.pick_time(view, quarter_past)
+        assert assigns(view).selected_time == quarter_past
+
+        BookingDriver.back(view)
+        assert has_element?(view, "[data-testid='length-step']")
+        BookingDriver.choose_length(view, 60)
+        BookingDriver.continue(view)
+        BookingDriver.load(view)
+
+        eventually(fn -> time_values(view) != [] end, timeout: 5000)
+        hour_times = time_values(view)
+
+        refute quarter_past in hour_times
+        assert length(hour_times) < length(fifteen_times)
+        assert assigns(view).duration_minutes == 60
+        assert assigns(view).selected_date == day
+        assert assigns(view).selected_time == nil
+
+        [first_hour | _rest] = hour_times
+        BookingDriver.pick_time(view, first_hour)
+        BookingDriver.continue(view)
+        eventually(fn -> has_element?(view, "form[data-fact='attendee']") end, timeout: 5000)
+
+        BookingDriver.submit(view, %{
+          name: "Test Attendee",
+          email: "relength-#{unquote(theme)}@example.com"
+        })
+
+        eventually(fn -> has_element?(view, "[data-intent='restart']") end, timeout: 10_000)
+
+        meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
+        assert meeting.duration == 60
+        assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == 60
+      end
+
+      # Open 16:00 to 17:00 UTC only, seen from Bangkok (UTC+7): the one hour
+      # is 23:00 to 00:00 there. Booked for 60 minutes, the 23:00 slot ends the
+      # next day; for the type's own 30 it would not, so the note must follow
+      # the length chosen.
+      @tag :capture_log
+      test "the booking step notes the next-day end of the length chosen", %{conn: conn} do
+        %{profile: profile} = seed_several_lengths(unquote(theme_id), "late-#{unquote(theme)}")
+
+        Repo.update_all(
+          from(w in WeeklyAvailabilitySchema,
+            join: s in assoc(w, :schedule),
+            where: s.profile_id == ^profile.id
+          ),
+          set: [start_time: ~T[16:00:00]]
+        )
+
+        {:ok, view, _html} =
+          live(conn, ~p"/#{profile.username}/quick-chat?minutes=60&timezone=Asia/Bangkok")
+
+        day = Date.utc_today() |> Date.add(2) |> Date.to_iso8601()
+        assert {^day, "11:00 PM"} = BookingDriver.pick_first_slot(view, on: day)
+        BookingDriver.continue(view)
+        eventually(fn -> has_element?(view, "form[data-fact='attendee']") end, timeout: 5000)
+
+        next_day = Date.utc_today() |> Date.add(3) |> Calendar.strftime("%A %-d %B")
+
+        assert view |> element("[data-testid='booking-next-day-end']") |> render() =~
+                 "Ends 12:00 AM on #{next_day}"
+      end
+
+      # The shared walk every flow suite books through takes the length too,
+      # through the markup contract alone.
+      @tag :capture_log
+      test "the shared booking walk books the length asked for", %{conn: conn} do
+        %{user: user, profile: profile} =
+          seed_several_lengths(unquote(theme_id), "walk-#{unquote(theme)}")
+
+        {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
+        BookingDriver.book(view, meeting_type: "quick-chat", length: 15)
+
+        meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
+        assert meeting.duration == 15
+        assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == 15
       end
 
       test "a direct link to the type opens on the length choice", %{conn: conn} do

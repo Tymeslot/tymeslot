@@ -16,10 +16,14 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormLengthsTest do
   @moduletag :meeting_types
   @moduletag :live
 
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Lengths
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Validation.Constraints
 
   setup :setup_dashboard_user
@@ -118,6 +122,37 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormLengthsTest do
     assert created.name == "Consultation"
     assert created.duration_minutes == 30
     assert created.extra_lengths_minutes == [90]
+  end
+
+  # A row written before the column had a default, or by hand, holds NULL
+  # rather than an empty list. The form must open on it, save another change,
+  # and leave the type offering its one length.
+  test "a type stored with no further durations at all still saves", %{conn: conn, user: user} do
+    meeting_type =
+      insert(:meeting_type, user: user, name: "Old Name", duration_minutes: 30)
+
+    {1, _rows} =
+      Repo.update_all(from(mt in MeetingTypeSchema, where: mt.id == ^meeting_type.id),
+        set: [extra_lengths_minutes: nil]
+      )
+
+    assert stored(meeting_type, user) == nil
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+    open_edit_form(view, meeting_type)
+
+    refute has_element?(view, "[data-testid='extra-length']")
+
+    view
+    |> element(~s|input[name="meeting_type[name]"]|)
+    |> render_change(%{"meeting_type" => %{"name" => "Renamed"}})
+
+    assert render(view) =~ "All changes saved"
+
+    saved = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
+    assert saved.name == "Renamed"
+    assert Lengths.offered(saved) == [30]
+    refute Lengths.multiple?(saved)
   end
 
   test "no + is offered once the maximum is reached", %{conn: conn, user: user} do

@@ -14,7 +14,9 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   The organiser offers two meeting types and the one booked asks two
   questions, so the meeting-type and answers facts are required wherever a
   journey collects them; a moment's questions are all answered, however
-  many it shows at a time, before the walk leaves it.
+  many it shows at a time, before the walk leaves it. Each theme is walked a
+  second time with the booked type offering three lengths, so a journey that
+  asks the length is held to marking it too.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -28,18 +30,22 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
   alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.ThemeTestMatrix
 
   @timezone "Etc/UTC"
   @max_moments 12
   @answers %{"mc-company" => "Acme Corp", "mc-recorded" => true}
+  @length_picked 60
 
   setup :verify_on_exit!
 
@@ -59,24 +65,57 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   for theme <- ThemeTestMatrix.registered() do
     @tag :capture_log
     test "#{theme.name}: every moment marks the facts it collects", %{conn: conn} do
-      %{user: user, profile: profile} =
-        seed_booking_account(unquote(theme.id), "contract-#{unquote(theme.slug)}", @timezone)
-
-      asked = ask_questions(user)
-      insert(:meeting_type, user: user, duration_minutes: 60, name: "Long Chat", is_active: true)
-
-      ctx = %{
-        offered:
-          user |> meeting_types() |> Enum.map(&MeetingTypes.effective_slug/1) |> Enum.sort(),
-        booked: MeetingTypes.effective_slug(asked)
-      }
-
-      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
-
-      seen = view |> walk(ctx, [], @max_moments) |> List.flatten() |> Enum.uniq() |> Enum.sort()
+      {seen, _view, _user} =
+        walk_booking(conn, unquote(theme.id), "contract-#{unquote(theme.slug)}")
 
       assert seen == [:answers, :attendee, :meeting_type, :slot]
     end
+
+    # The type booked offers 15, 30 (its own) and 60 minutes. A journey with
+    # a moment asking the length must mark each choice with its minutes and
+    # take the pick through `select_length`, and the booking is stored for the
+    # length picked; every shipped theme asks it. A journey without such a
+    # moment (a fixture's) books the type's own length.
+    @tag :capture_log
+    test "#{theme.name}: a type offering several lengths marks each length", %{conn: conn} do
+      {seen, view, user} =
+        walk_booking(conn, unquote(theme.id), "contract-len-#{unquote(theme.slug)}", [60, 15])
+
+      asks_length? = Progress.moment_for(live_assigns(view).journey, :length) != nil
+      # Every shipped theme asks it; a fixture's journey may not.
+      unless unquote(theme.fixture), do: assert(asks_length?, "the theme never asks the length")
+
+      meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
+
+      if asks_length? do
+        assert seen == [:answers, :attendee, :length, :meeting_type, :slot]
+        assert meeting.duration == @length_picked
+      else
+        assert seen == [:answers, :attendee, :meeting_type, :slot]
+        assert meeting.duration == 30
+      end
+
+      assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == meeting.duration
+    end
+  end
+
+  defp walk_booking(conn, theme_id, username, extra_lengths \\ []) do
+    %{user: user, profile: profile} = seed_booking_account(theme_id, username, @timezone)
+
+    asked = ask_questions(user, extra_lengths)
+    insert(:meeting_type, user: user, duration_minutes: 60, name: "Long Chat", is_active: true)
+
+    ctx = %{
+      offered: user |> meeting_types() |> Enum.map(&MeetingTypes.effective_slug/1) |> Enum.sort(),
+      booked: MeetingTypes.effective_slug(asked),
+      lengths: asked |> Lengths.offered() |> Enum.map(&Integer.to_string/1)
+    }
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{@timezone}")
+
+    seen = view |> walk(ctx, [], @max_moments) |> List.flatten() |> Enum.uniq() |> Enum.sort()
+
+    {seen, view, user}
   end
 
   # One moment at a time: the current moment marks what it collects, then the
@@ -116,6 +155,23 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
            "the meeting-type choices are not each marked once with their slug"
 
     BookingDriver.choose_meeting_type(view, ctx.booked)
+  end
+
+  defp check_and_do(view, :length, ctx, _assigns) do
+    lengths = attribute(view, "[data-fact='length']", "data-value")
+
+    assert Enum.sort_by(lengths, &String.to_integer/1) == ctx.lengths,
+           "the length choices are not each marked once with their minutes"
+
+    events = attribute(view, "[data-fact='length']", "phx-click")
+
+    assert length(events) == length(lengths) and Enum.all?(events, &(&1 =~ "select_length")),
+           "a length choice does not send select_length"
+
+    BookingDriver.choose_length(view, @length_picked)
+
+    assert live_assigns(view).chosen_length_minutes == @length_picked,
+           "the length choice marked #{@length_picked} did not choose #{@length_picked} minutes"
   end
 
   defp check_and_do(view, :slot, _ctx, before) do
@@ -212,11 +268,12 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
     end
   end
 
-  defp ask_questions(user) do
+  defp ask_questions(user, extra_lengths) do
     meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
 
     {:ok, meeting_type} =
       MeetingTypes.update_meeting_type(meeting_type, %{
+        "extra_lengths_minutes" => extra_lengths,
         "custom_fields" => [
           %{
             "id" => "mc-company",
