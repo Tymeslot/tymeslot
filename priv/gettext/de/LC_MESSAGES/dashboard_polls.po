@@ -134,12 +134,12 @@ msgstr "Umfrage erstellen"
 msgid "Description (optional)"
 msgstr "Beschreibung (optional)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Dauer (Minuten)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr "Dauer: %{minutes} Min. (aus Termintyp)"
@@ -836,3 +836,8 @@ msgstr "Diese Zeit überschneidet sich mit einem Ereignis in Ihrem Kalender. Wen
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline to add times."
 msgstr "Die Abstimmung ist beendet. Verschieben Sie die Frist, um Zeiten hinzuzufügen."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Dauer"
