@@ -19,7 +19,10 @@ defmodule Tymeslot.Polls.Editing do
       after it passed reopens voting.
     * new times are announced to everyone who has already voted, who would
       otherwise not know there is more to answer. Whoever has not voted yet
-      sees them when they open their link.
+      sees them when they open their link. Times are added only while
+      voting is open once the edit is applied: on a poll whose deadline has
+      passed, the announcement would ask people to answer what they no
+      longer can, so the same edit has to move the deadline first.
 
   Subscribers are told once the edit has committed.
 
@@ -49,6 +52,7 @@ defmodule Tymeslot.Polls.Editing do
           | :not_open
           | :too_many_slots
           | :slot_in_past
+          | :voting_closed
           | :meeting_type_not_found
           | :payment_required_type
           | Changeset.t()
@@ -57,6 +61,9 @@ defmodule Tymeslot.Polls.Editing do
   Applies `attrs` (see `PollSchema.details_changeset/2`) to the user's open
   poll and adds a candidate time starting at each of `new_starts`, each as
   long as the poll's duration.
+
+  New times on a poll whose voting has closed, and that `attrs` does not
+  reopen, are refused with `{:error, :voting_closed}`, and nothing is saved.
   """
   @spec update(Ecto.UUID.t(), integer(), map(), [DateTime.t()]) ::
           {:ok, PollSchema.t()} | {:error, reason()}
@@ -137,6 +144,9 @@ defmodule Tymeslot.Polls.Editing do
     now = DateTime.utc_now()
 
     cond do
+      not PollSchema.voting_open?(poll) ->
+        {:error, :voting_closed}
+
       length(poll.time_slots) + length(new_starts) > PollSchema.max_slots() ->
         {:error, :too_many_slots}
 

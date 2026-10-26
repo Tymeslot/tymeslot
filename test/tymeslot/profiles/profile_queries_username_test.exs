@@ -24,6 +24,14 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
                ProfileQueries.get_by_username("nonexistent_#{System.unique_integer([:positive])}")
     end
 
+    test "get_by_username/1 answers not found for a username that is not valid UTF-8" do
+      assert {:error, :not_found} == ProfileQueries.get_by_username(<<0xC0>>)
+    end
+
+    test "get_by_username_with_user/1 answers not found for a username that is not valid UTF-8" do
+      assert {:error, :not_found} == ProfileQueries.get_by_username_with_user(<<0xC0>>)
+    end
+
     test "username_available?/1 returns true for available username" do
       assert ProfileQueries.username_available?("available_#{System.unique_integer([:positive])}")
     end

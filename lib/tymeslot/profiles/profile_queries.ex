@@ -179,14 +179,12 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
   A host whose account is pending deletion is not found: their public pages
   answer as if they did not exist.
+
+  A username that is not valid UTF-8 is not found either, without a query:
+  it arrives from a path param, and PostgreSQL would refuse it with an error.
   """
   @spec get_by_username(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
-  def get_by_username(username) when is_binary(username) do
-    from(p in ProfileSchema, where: p.username == ^username)
-    |> owner_not_pending_deletion()
-    |> Repo.one()
-    |> found()
-  end
+  def get_by_username(username) when is_binary(username), do: find_by_username(username, [])
 
   @doc """
   Checks if a username is available.
@@ -325,12 +323,8 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   """
   @spec get_by_username_with_user(String.t()) ::
           {:ok, ProfileSchema.t()} | {:error, :not_found}
-  def get_by_username_with_user(username) when is_binary(username) do
-    from(p in ProfileSchema, where: p.username == ^username, preload: [:user])
-    |> owner_not_pending_deletion()
-    |> Repo.one()
-    |> found()
-  end
+  def get_by_username_with_user(username) when is_binary(username),
+    do: find_by_username(username, [:user])
 
   @doc """
   Sets the primary calendar integration for a user's profile.
@@ -375,6 +369,17 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   # by username or feed token answers as if the profile did not exist.
   defp owner_not_pending_deletion(query) do
     from(p in query, join: u in assoc(p, :user), where: is_nil(u.deletion_scheduled_at))
+  end
+
+  defp find_by_username(username, preloads) do
+    if String.valid?(username) do
+      from(p in ProfileSchema, where: p.username == ^username, preload: ^preloads)
+      |> owner_not_pending_deletion()
+      |> Repo.one()
+      |> found()
+    else
+      {:error, :not_found}
+    end
   end
 
   defp found(nil), do: {:error, :not_found}

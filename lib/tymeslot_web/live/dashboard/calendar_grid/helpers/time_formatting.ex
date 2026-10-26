@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @moduledoc "Date/time formatting utilities for the calendar grid: time ranges, timezone abbreviations, and local date parts."
 
   alias Phoenix.HTML
+  alias Tymeslot.Clock
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
   alias TymeslotWeb.Dashboard.DashboardFormat
 
@@ -20,9 +21,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
     DashboardFormat.time_range(start_at, end_at, timezone, fmt)
   end
 
-  @spec tz_abbr(String.t()) :: String.t()
-  def tz_abbr(timezone) do
-    case DateTime.now(timezone) do
+  @doc """
+  The timezone's abbreviation in effect at `at`, not now: a summer event viewed
+  in winter is labelled CEST, not CET. Falls back to the zone name when it is
+  not a known zone.
+  """
+  @spec tz_abbr(String.t(), DateTime.t()) :: String.t()
+  def tz_abbr(timezone, %DateTime{} = at) do
+    case DateTime.shift_zone(at, timezone) do
       {:ok, dt} -> Calendar.strftime(dt, "%Z")
       _error -> timezone
     end
@@ -52,14 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   def user_timezone(assigns), do: assigns.user_timezone
 
   @spec user_tz_abbr(map()) :: String.t()
-  def user_tz_abbr(assigns) do
-    tz = assigns.user_timezone
-
-    case DateTime.now(tz) do
-      {:ok, dt} -> Calendar.strftime(dt, "%Z")
-      _error -> tz
-    end
-  end
+  def user_tz_abbr(assigns), do: tz_abbr(assigns.user_timezone, Clock.utc_now())
 
   @spec url?(String.t()) :: boolean()
   def url?(str), do: String.match?(str, ~r{^https?://})

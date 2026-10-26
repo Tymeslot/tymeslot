@@ -844,3 +844,8 @@ msgstr "Hosté hlasují na stránce, která se otevře až po připojení vašeh
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar. Confirming books it anyway."
 msgstr "Tento termín se překrývá s událostí ve vašem kalendáři. Potvrzením ho přesto zarezervujete."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline to add times."
+msgstr "Hlasování skončilo. Chcete-li přidat termíny, posuňte uzávěrku."

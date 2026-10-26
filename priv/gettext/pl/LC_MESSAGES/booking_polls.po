@@ -230,3 +230,8 @@ msgstr "Ten osobisty link do głosowania jest nieprawidłowy lub już nie dział
 #, elixir-autogen, elixir-format
 msgid "Choose an answer for at least one time, then save."
 msgstr "Wybierz odpowiedź dla co najmniej jednego terminu, a potem zapisz."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting arranged through this poll has been cancelled."
+msgstr "Spotkanie umówione za pomocą tej ankiety zostało odwołane."

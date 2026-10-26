@@ -189,7 +189,7 @@ msgstr "Ouvrir ou fermer le menu"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
-msgstr "Une planification de rendez-vous élégante et à votre image. Sans publicité ni pistage."
+msgstr "Une prise de rendez-vous élégante et à votre image. Sans publicité ni pistage."
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

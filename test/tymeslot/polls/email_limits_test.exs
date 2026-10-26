@@ -246,6 +246,32 @@ defmodule Tymeslot.Polls.EmailLimitsTest do
       assert link_jobs() == []
     end
 
+    test "repeated requests for an address on the poll leave the poll's share to newcomers" do
+      poll = insert(:poll)
+      mallory = address("mallory")
+
+      insert(:poll_participant,
+        poll: poll,
+        email: mallory,
+        confirmed_at: nil,
+        link_sent_at: DateTime.utc_now()
+      )
+
+      leave(:poll_link_request, poll.id, 1)
+
+      # Asking again for an address already on the poll, as often as the page
+      # allows, is answered from the resend interval and costs the poll nothing.
+      for _repeat <- 1..3 do
+        assert Voting.request_link(poll, %{name: "Mallory", email: mallory}) ==
+                 {:ok, :throttled}
+      end
+
+      assert {:ok, :sent} = Voting.request_link(poll, %{name: "Ada", email: address("ada")})
+
+      assert Voting.request_link(poll, %{name: "Bo", email: address("bo")}) ==
+               {:error, :too_many_requests}
+    end
+
     test "a new address that has had too many poll emails is not added" do
       poll = insert(:poll)
       ada = address("ada")

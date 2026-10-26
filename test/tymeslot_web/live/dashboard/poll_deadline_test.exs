@@ -5,7 +5,8 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
   list say voting has closed rather than that it is open. A panel already open
   when the deadline passes turns closed there and then, with no reload, and
   so does the list. The deadline timer belongs to the dashboard and is
-  cancelled when the host leaves the Polls section.
+  cancelled when the host leaves the Polls section. Times cannot be added
+  to a poll whose voting has closed without moving the deadline.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
   import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
 
   alias Ecto.Changeset
+  alias Tymeslot.Polls
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
@@ -71,6 +73,15 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
     render(view)
     :sys.get_state(view.pid).socket.assigns[:poll_deadline_timer]
   end
+
+  # A datetime-local value in the poll's timezone, as the editor's inputs take it.
+  defp tallinn_local(datetime),
+    do:
+      datetime
+      |> DateTime.shift_zone!("Europe/Tallinn")
+      |> DateTime.to_naive()
+      |> NaiveDateTime.to_iso8601()
+      |> String.slice(0, 16)
 
   defp in_an_hour, do: DateTime.utc_now() |> DateTime.add(1, :hour) |> DateTime.truncate(:second)
 
@@ -167,6 +178,38 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
 
     assert has_element?(view, "[data-testid='poll-status']", "Voting closed")
     refute has_element?(view, "[data-testid='poll-status']", "Open")
+  end
+
+  test "the editor refuses a new time once voting has closed, and says how to reopen it", %{
+    conn: conn,
+    user: user
+  } do
+    passed =
+      DateTime.utc_now()
+      |> DateTime.add(-1, :day)
+      |> Map.put(:second, 0)
+      |> DateTime.truncate(:second)
+
+    poll = poll_with_deadline(user, passed)
+    view = open_results(conn, poll)
+    view |> element("[data-testid='poll-edit-details']") |> render_click()
+    view |> element("[data-testid='poll-new-times'] button", "Add time") |> render_click()
+
+    html =
+      view
+      |> form("[data-testid='poll-details-form']", %{
+        "poll" => %{
+          "title" => poll.title,
+          "deadline" => tallinn_local(passed),
+          "new_times" => %{"0" => tallinn_local(DateTime.add(passed, 10, :day))}
+        }
+      })
+      |> render_submit()
+
+    assert html =~ "Voting has closed. Move the deadline to add times."
+    assert has_element?(view, "[data-testid='poll-details-form']")
+    {:ok, unchanged} = Polls.get_poll_for_host(poll.id, user.id)
+    assert length(unchanged.time_slots) == 1
   end
 
   test "a poll without a deadline shows no deadline line", %{conn: conn, user: user} do

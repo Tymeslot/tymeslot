@@ -638,7 +638,7 @@ msgstr "Pas encore confirmé"
 #: lib/tymeslot_web/themes/shared/booking_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Request meeting"
-msgstr "Demander un rendez-vous"
+msgstr "Demander une réunion"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex

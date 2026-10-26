@@ -338,7 +338,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           <span
             :if={!@creating_event[:all_day]}
             class="text-token-xs font-normal text-tymeslot-400 ml-1"
-          >{Helpers.tz_abbr(@user_timezone)}</span>
+          >{Helpers.tz_abbr(@user_timezone, recurrence_start(@creating_event, @user_timezone))}</span>
         </form>
       </div>
 

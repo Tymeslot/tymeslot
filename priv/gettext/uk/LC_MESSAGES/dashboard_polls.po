@@ -844,3 +844,8 @@ msgstr "Гості голосують на сторінці, яка відкри
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar. Confirming books it anyway."
 msgstr "Цей час перетинається з подією у вашому календарі. Якщо ви підтвердите, його все одно буде заброньовано."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline to add times."
+msgstr "Голосування завершено. Щоб додати варіанти часу, перенесіть кінцевий термін."

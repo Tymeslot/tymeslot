@@ -552,7 +552,7 @@ msgstr "Réunion créée"
 #: lib/tymeslot/notifications/event_options.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
-msgstr "Rendez-vous déplacé"
+msgstr "Réunion reportée"
 
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format

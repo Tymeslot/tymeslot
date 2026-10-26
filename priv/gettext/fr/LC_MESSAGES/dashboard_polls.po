@@ -831,3 +831,8 @@ msgstr "Les invités votent sur une page qui ne s'ouvre qu'une fois votre calend
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar. Confirming books it anyway."
 msgstr "Ce créneau chevauche un événement de votre calendrier. Si vous confirmez, il sera tout de même réservé."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Move the deadline to add times."
+msgstr "Le vote est clos. Repoussez la date limite pour ajouter des horaires."

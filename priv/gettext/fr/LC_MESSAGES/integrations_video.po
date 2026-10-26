@@ -603,7 +603,7 @@ msgstr "Zoom ne dispose pas de l’autorisation nécessaire pour créer des réu
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
-msgstr "Zoom ne dispose pas de l’autorisation nécessaire pour reprogrammer des réunions. Veuillez reconnecter votre compte Zoom."
+msgstr "Zoom ne dispose pas de l’autorisation nécessaire pour reporter des réunions. Veuillez reconnecter votre compte Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
