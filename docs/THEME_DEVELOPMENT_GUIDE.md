@@ -1066,7 +1066,7 @@ end
 | `form` | booking | mount | the booking form |
 | `validation_errors` | booking | mount | the booking form's visible errors |
 | `submitting` | booking | mount | whether the booking is being submitted |
-| `is_rescheduling` | booking, confirmation | mount | whether this booking replaces an earlier one |
+| `is_rescheduling` | schedule, booking, confirmation | mount | whether this booking replaces an earlier one |
 | `guest_emails` | booking, confirmation | mount | the guests added |
 | `guests_open` | booking | mount | whether the guest field is open |
 | `guest_input` | booking | mount | the guest address being typed |
