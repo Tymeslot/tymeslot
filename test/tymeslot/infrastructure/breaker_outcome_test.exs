@@ -208,6 +208,22 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       assert BreakerOutcome.failure_summary({:error, error}) == "Req.TransportError (nxdomain)"
     end
 
+    test "keeps the transport reason a calendar client folded into :network_error" do
+      result =
+        {:error, :network_error, "Network error: %Req.TransportError{reason: :nxdomain}"}
+
+      assert BreakerOutcome.failure_summary(result) == "network_error (nxdomain)"
+    end
+
+    test "copies nothing but a known transport reason out of the message" do
+      assert BreakerOutcome.failure_summary(
+               {:error, :network_error, "Network error: Bearer sk_live_abc rejected"}
+             ) == "network_error"
+
+      assert BreakerOutcome.failure_summary({:error, :timeout, "timeout after 8s"}) == "timeout"
+      assert BreakerOutcome.failure_summary({:error, :server_error, "HTTP 503"}) == "server_error"
+    end
+
     test "tags an explicit provider error, but drops free text that may carry credentials" do
       assert BreakerOutcome.failure_summary({:provider_error, :rate_limited}) ==
                "provider error: rate_limited"

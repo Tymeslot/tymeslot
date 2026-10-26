@@ -109,6 +109,8 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
     rate_limited service_unavailable server_error malformed_response
   )a
 
+  @transport_tokens Enum.map(@transport_reasons, &Atom.to_string/1)
+
   # Transport-level exception structs, matched by name so that neither Req nor
   # Mint has to be a compile-time dependency of this module.
   @transport_exceptions ~w(
@@ -158,9 +160,25 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   status, an exception's module. Response bodies, exception messages and free
   text are dropped, because a provider call runs with decrypted credentials
   in scope and any of them can echo one back.
+
+  The one thing taken from a message is a known transport reason. The JSON
+  calendar clients fold every transport failure into `:network_error` and
+  keep the underlying reason only in the message
+  (`"Network error: %Req.TransportError{reason: :nxdomain}"`), and a DNS
+  failure, a refused connection and a timeout call for different responses.
+  Only a word from `@transport_reasons` is ever copied, never the text
+  around it.
   """
   @spec failure_summary(term()) :: String.t()
   def failure_summary({:provider_error, reason}), do: "provider error: #{summarise(reason)}"
+
+  def failure_summary({:error, reason, message}) when is_atom(reason) and is_binary(message) do
+    case message_transport_reason(reason, message) do
+      nil -> summarise(reason)
+      detail -> "#{summarise(reason)} (#{detail})"
+    end
+  end
+
   def failure_summary({:error, reason, _message}), do: summarise(reason)
   def failure_summary({:error, reason}), do: summarise(reason)
   def failure_summary(_result), do: "unclassified"
@@ -176,6 +194,11 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
 
   defp summarise(%module{}), do: inspect(module)
   defp summarise(_reason), do: "unclassified"
+
+  defp message_transport_reason(reason, message) do
+    own = Atom.to_string(reason)
+    Enum.find(error_tokens(message), &(&1 in @transport_tokens and &1 != own))
+  end
 
   # A breaker refusal from a nested call says nothing new about the provider,
   # and counting it would let an open breaker keep itself open.
