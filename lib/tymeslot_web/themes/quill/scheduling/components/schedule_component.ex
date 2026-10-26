@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                 <div class="schedule-card-body min-h-0">
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
-                    <div class="flex-1 min-w-0">
+                    <div class="schedule-title-area">
                       <h1 class="section-header schedule-title">
                         {dgettext("booking", "Select a Date & Time")}
                       </h1>
