@@ -157,4 +157,40 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesOperationalTest do
                })
     end
   end
+
+  describe ":contact_recipient_rejected" do
+    defp contact_rejection(job_id, recipients_masked \\ "c***@example.com") do
+      %{
+        summary: "Contact recipient rejected by the mail provider",
+        action: "send_contact_form",
+        job_id: job_id,
+        recipients_masked: recipients_masked,
+        reason_message: "You tried to send to recipient(s) that have been marked as inactive."
+      }
+    end
+
+    test "is an error, unlike a customer's rejected address" do
+      assert %{category: "Email", severity: :error} = AlertTypes.get(:contact_recipient_rejected)
+    end
+
+    test "says enquiries are not delivered, naming the action, job, recipient and reason" do
+      msg = message(:contact_recipient_rejected, contact_rejection(42))
+
+      assert msg =~ "contact recipient (c***@example.com) is being rejected"
+      assert msg =~ "enquiries are not being delivered"
+      assert msg =~ "send_contact_form, job 42"
+      assert msg =~ "marked as inactive"
+    end
+
+    test "a run of rejected enquiries is one alert per recipient" do
+      assert AlertTypes.dedup_key(:contact_recipient_rejected, contact_rejection(1)) ==
+               AlertTypes.dedup_key(:contact_recipient_rejected, contact_rejection(2))
+
+      refute AlertTypes.dedup_key(:contact_recipient_rejected, contact_rejection(1)) ==
+               AlertTypes.dedup_key(
+                 :contact_recipient_rejected,
+                 contact_rejection(1, "s***@example.com")
+               )
+    end
+  end
 end
