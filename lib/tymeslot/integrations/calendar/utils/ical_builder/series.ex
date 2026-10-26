@@ -248,6 +248,14 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   def reuid(document, uid) when is_binary(document) and is_binary(uid),
     do: Uid.put(document, uid)
 
+  @doc """
+  A new identifier for a copy of the series in `document`, to `reuid/2` it
+  with: marked as Tymeslot's only when the series it copies is, so a copy
+  of somebody else's series stays theirs on the next sync.
+  """
+  @spec successor_uid(String.t()) :: String.t()
+  def successor_uid(document) when is_binary(document), do: Uid.successor(document)
+
   # --- Writing an override ---
 
   # The form every timing line of the override takes: the master's DTSTART,
