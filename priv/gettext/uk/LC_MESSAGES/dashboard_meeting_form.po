@@ -97,7 +97,7 @@ msgstr "Опис (необов’язково)"
 msgid "Done"
 msgstr "Готово"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Тривалість (у хвилинах)"
@@ -113,7 +113,7 @@ msgstr "Тривалість має бути коректним числом"
 msgid "Each guest is emailed a confirmation with their own link to accept or decline. You'll see every guest's response on your dashboard."
 msgstr "Кожен гість отримає електронний лист із підтвердженням та власним посиланням, щоб прийняти або відхилити запрошення. Ви бачитимете відповіді всіх гостей на своїй панелі керування."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Введіть тривалість від %{min} до %{max} хвилин"
@@ -926,7 +926,7 @@ msgid "A time shows how many spots are left, such as \"3 spots left\", only once
 msgstr "Слот показує, скільки місць залишилося (наприклад, «Залишилось 3 місця»), лише коли їх лишається кілька."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
+#, elixir-autogen
 msgid "Last spots"
 msgstr "Останні місця"
 

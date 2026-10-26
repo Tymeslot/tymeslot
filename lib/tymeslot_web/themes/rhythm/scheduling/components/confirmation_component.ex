@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
@@ -100,7 +101,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                   <span class="ticket-badge">
                     {dgettext("booking", "%{minutes} min",
-                      minutes: Offer.duration_minutes(@meeting_type, @duration)
+                      minutes:
+                        Offer.duration_minutes(
+                          @meeting_type,
+                          @duration,
+                          ChosenLength.minutes(assigns)
+                        )
                     )}
                   </span>
                 </div>

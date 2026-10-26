@@ -137,12 +137,12 @@ msgstr "Vytvořit anketu"
 msgid "Description (optional)"
 msgstr "Popis (nepovinné)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Délka (minuty)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr "Délka: %{minutes} min. (podle typu schůzky)"
@@ -849,3 +849,8 @@ msgstr "Tento termín se překrývá s událostí ve vašem kalendáři. Potvrze
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Move the deadline to add times."
 msgstr "Hlasování skončilo. Chcete-li přidat termíny, posuňte uzávěrku."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_duration.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Délka"

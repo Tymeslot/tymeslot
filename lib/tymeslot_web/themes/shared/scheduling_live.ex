@@ -4,7 +4,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
   A theme passes its wrapper component and its journey, and gets a `render/1`
   that handles every state the booking can be in. The classic journey, the
-  five steps Quill and Rhythm show, is one LiveComponent per step:
+  five steps Quill and Rhythm show, is one LiveComponent per step, plus an
+  optional `length:` step for a meeting type that offers several lengths:
 
       defmodule MyTheme.Scheduling.Live do
         alias MyTheme.Scheduling.Components.{
@@ -75,6 +76,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   """
 
   @steps [:overview, :schedule, :questions, :booking, :confirmation]
+  # A theme without it books a meeting type offering several lengths for its
+  # primary one (`Journey.Facts.Length`).
+  @optional_steps [:length]
 
   # The generated code names every module in full rather than through an
   # alias, which would also apply to the theme's own code (see `__using__/1`).
@@ -215,7 +219,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   end
 
   # The journey's literal for `__journey__/0`, after checking it: `steps:`
-  # (today's five steps) becomes `Journey.classic/1` of its map. Its aliases
+  # (today's five steps, and `length:`) becomes `Journey.classic/1` of its map. Its aliases
   # are resolved here, where they were checked (`qualify/2`).
   defp journey!(opts, caller) do
     case {Keyword.fetch(opts, :steps), Keyword.fetch(opts, :journey)} do
@@ -298,14 +302,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   defp validate_steps!({:%{}, _meta, pairs}) do
     keys = Keyword.keys(pairs)
 
-    case {@steps -- keys, keys -- @steps} do
+    case {@steps -- keys, keys -- (@steps ++ @optional_steps)} do
       {[], []} ->
         :ok
 
       {[], unknown} ->
         raise ArgumentError,
               "use SchedulingLive got steps it does not know: #{inspect(unknown)}; " <>
-                "the steps are #{inspect(@steps)}"
+                "the steps are #{inspect(@steps)}, and optionally #{inspect(@optional_steps)}"
 
       {missing, _unknown} ->
         raise ArgumentError,
