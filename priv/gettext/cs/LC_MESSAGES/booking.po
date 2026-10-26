@@ -348,16 +348,6 @@ msgstr "Ano"
 msgid "You're All Set!"
 msgstr "Máte hotovo!"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking a %{duration} meeting"
-msgstr "Rezervujete si schůzku (%{duration})"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking a %{duration} meeting with %{name}"
-msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Your Name"
@@ -961,3 +951,13 @@ msgstr "Zaplaceno:"
 #, elixir-autogen, elixir-format
 msgid "Price:"
 msgstr "Cena:"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{duration}"
+msgstr "Rezervujete si schůzku (%{duration})"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{duration} with %{name}"
+msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
