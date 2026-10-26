@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.AdminLive.Components.Layout do
   @moduledoc """
   Page chrome for the admin section — top nav with Back-to-Dashboard and
-  the user dropdown, plus the section header and pill-style tab bar.
+  the user dropdown, plus the section header and pill-style tab bar, and the
+  support card below every tab.
 
   Mirrors `AccountLive` so admin feels like part of the dashboard chrome.
   """
@@ -9,12 +10,14 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.AdminLive.Components.SupportBox
   alias TymeslotWeb.AdminLive.Tabs
   alias TymeslotWeb.Components.UserDropdownComponent
 
   attr :live_action, :atom, required: true
   attr :current_user, :map, required: true
   attr :profile, :any, required: true
+  attr :alerts_ready, :boolean, required: true
   slot :inner_block, required: true
 
   @spec admin_layout(map()) :: Phoenix.LiveView.Rendered.t()
@@ -76,6 +79,8 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
             </nav>
 
             {render_slot(@inner_block)}
+
+            <SupportBox.support_box alerts_ready={@alerts_ready} />
           </div>
         </main>
       </div>
