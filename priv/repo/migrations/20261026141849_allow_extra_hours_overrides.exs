@@ -6,6 +6,10 @@ defmodule Tymeslot.Repo.Migrations.AllowExtraHoursOverrides do
   hours: `availability_overrides` rows of type `extra_hours`, several per
   date allowed. The other override types stay one per schedule and date, so
   the unique index becomes partial, and the type check admits the new type.
+
+  This migration first ran under the version `20261016120000`. Running it
+  again on a database that already has it is harmless: it replaces the type
+  check and the index with the same ones.
   """
 
   # Swapping a CHECK constraint means dropping the old one and adding the new
@@ -19,7 +23,7 @@ defmodule Tymeslot.Repo.Migrations.AllowExtraHoursOverrides do
   # excellent_migrations:safety-assured-for-this-file index_not_concurrently
 
   def up do
-    execute("ALTER TABLE availability_overrides DROP CONSTRAINT override_type_check")
+    execute("ALTER TABLE availability_overrides DROP CONSTRAINT IF EXISTS override_type_check")
 
     execute(
       "ALTER TABLE availability_overrides ADD CONSTRAINT override_type_check " <>
@@ -41,7 +45,7 @@ defmodule Tymeslot.Repo.Migrations.AllowExtraHoursOverrides do
     drop_if_exists(unique_index(:availability_overrides, [:schedule_id, :date]))
     create(unique_index(:availability_overrides, [:schedule_id, :date]))
 
-    execute("ALTER TABLE availability_overrides DROP CONSTRAINT override_type_check")
+    execute("ALTER TABLE availability_overrides DROP CONSTRAINT IF EXISTS override_type_check")
 
     execute(
       "ALTER TABLE availability_overrides ADD CONSTRAINT override_type_check " <>
