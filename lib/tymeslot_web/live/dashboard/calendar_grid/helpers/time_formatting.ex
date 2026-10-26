@@ -2,7 +2,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @moduledoc "Date/time formatting utilities for the calendar grid: time ranges, timezone abbreviations, and local date parts."
 
   alias Phoenix.HTML
-  alias Tymeslot.Clock
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
   alias TymeslotWeb.Dashboard.DashboardFormat
 
@@ -57,8 +56,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @spec user_timezone(map()) :: String.t()
   def user_timezone(assigns), do: assigns.user_timezone
 
-  @spec user_tz_abbr(map()) :: String.t()
-  def user_tz_abbr(assigns), do: tz_abbr(assigns.user_timezone, Clock.utc_now())
+  @doc """
+  The timezone's abbreviation over a run of local days, each taken at noon, so
+  a week after the clocks change is not labelled with today's offset. When the
+  days straddle a change, both abbreviations are shown in order: "CEST/CET".
+  """
+  @spec days_tz_abbr(String.t(), [Date.t()]) :: String.t()
+  def days_tz_abbr(timezone, days) do
+    days
+    |> Enum.map(&day_tz_abbr(timezone, &1))
+    |> Enum.dedup()
+    |> Enum.join("/")
+  end
+
+  defp day_tz_abbr(timezone, day) do
+    case DateTime.new(day, ~T[12:00:00], timezone) do
+      {:ok, dt} -> Calendar.strftime(dt, "%Z")
+      _error -> timezone
+    end
+  end
 
   @spec url?(String.t()) :: boolean()
   def url?(str), do: String.match?(str, ~r{^https?://})
