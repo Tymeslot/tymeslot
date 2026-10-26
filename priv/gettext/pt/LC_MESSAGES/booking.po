@@ -403,7 +403,7 @@ msgstr "Digite seu nome completo"
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "john@example.com"
-msgstr "john@example.com"
+msgstr "joao@example.com"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -499,7 +499,7 @@ msgstr "Você não precisa adicionar seu próprio e-mail como convidado."
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr "guest@example.com"
+msgstr "convidado@example.com"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format

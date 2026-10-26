@@ -499,7 +499,7 @@ msgstr "Svou vlastní e-mailovou adresu jako hosta přidávat nemusíte."
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr "guest@example.com"
+msgstr "host@example.com"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
