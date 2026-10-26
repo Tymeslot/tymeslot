@@ -137,6 +137,32 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
+  feature "embedded schedule flows to its natural height instead of the viewport's (both themes)",
+          %{session: session} do
+    # In an embed the viewport is the iframe, which iframe_embed.js sizes from
+    # the content. A schedule step locked to the viewport would measure the
+    # previous step's height and keep it, hiding the slots in a squeezed inner
+    # scroll. `data-embedded` on a top-level page exercises the same rules, as
+    # EmbedConfirmationLayoutTest does; the short window stands in for an
+    # iframe still at the overview's height.
+    {profile, _slug} = create_user_with_meeting_type()
+
+    for theme <- ThemeTestMatrix.all(), width <- [480, 1280], reduce: session do
+      acc ->
+        context = "#{theme.name} embedded schedule #{width}x463"
+
+        acc
+        |> resize_window(width, 463)
+        |> visit("/#{profile.username}?theme=#{theme.id}")
+        |> wait_for_live()
+        |> mark_embedded()
+        |> advance_to_schedule()
+        |> pick_first_visible_day()
+        |> assert_has(css("[data-testid='time-slot']", minimum: 1))
+        |> assert_no_inner_scroll_region(context)
+    end
+  end
+
   feature "a fixed-date type's dates scroll with the calendar at short heights (both themes)",
           %{session: session} do
     # The list of dates sits above the calendar. Were the calendar the only
