@@ -20,10 +20,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   @moduletag :calendar
   @moduletag :live
 
-  # The seeded event starts at 10:00 UTC and the drop asks for 14:00 in the
-  # organiser's timezone; both are rendered in that timezone, so the minute
-  # offsets below are what the block carries before and after a move.
-  @original_start_minutes 780
+  # The drop asks for 14:00 in the organiser's timezone, which the grid renders
+  # in; this is the minute offset the block carries after a move.
   @moved_start_minutes 840
 
   # The provider write runs in a Task; allow for a busy test machine.
@@ -134,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       |> render_hook("event_dropped", drop_params(ctx.event))
 
       assert render(lv) =~ html_escape(@locked_message)
-      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{@original_start_minutes}")
+      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{local_start_minutes(ctx)}")
       assert_untouched(ctx, jobs)
     end
 
@@ -169,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       })
 
       assert render(lv) =~ html_escape(@locked_message)
-      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{@original_start_minutes}")
+      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{local_start_minutes(ctx)}")
       assert_untouched(ctx, jobs)
     end
 
@@ -400,6 +398,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
 
     refute_receive {:provider_write, _kind, _uid}
     assert Enum.map(all_enqueued([]), & &1.id) == Enum.map(jobs_before, & &1.id)
+  end
+
+  # Minutes past local midnight at which the seeded event starts in the
+  # organiser's timezone. It is seeded at 10:00 UTC, so the figure follows the
+  # zone's offset on the frozen date and moves when summer time begins or ends.
+  defp local_start_minutes(%{event: event, profile: profile}) do
+    local = DateTime.shift_zone!(event.start_at, profile.timezone)
+    local.hour * 60 + local.minute
   end
 
   # The rendered markup of one event block, so an assertion about a single
