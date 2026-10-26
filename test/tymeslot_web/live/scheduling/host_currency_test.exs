@@ -77,6 +77,27 @@ defmodule TymeslotWeb.Live.Scheduling.HostCurrencyTest do
     assert host_currency(conn, profile) == "ron"
   end
 
+  # Stored prices are hundredths: in a zero-decimal currency 4500 would read
+  # as ¥4,500, a hundred times the price, on a type checkout cannot charge.
+  test "is nil for an account currency checkout cannot charge",
+       %{conn: conn, user: user, profile: profile} do
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+
+    insert(:connect_account, user: user, default_currency: "jpy", charges_enabled: true)
+
+    insert(:meeting_type,
+      user: user,
+      name: "Paid Session",
+      payment_required: true,
+      price_cents: 4500
+    )
+
+    assert host_currency(conn, profile) == nil
+  end
+
   test "is nil while every meeting type is free", %{conn: conn, user: user, profile: profile} do
     insert(:connect_account, user: user, default_currency: "chf")
 
