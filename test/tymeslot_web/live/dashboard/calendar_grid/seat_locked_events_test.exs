@@ -20,10 +20,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   @moduletag :calendar
   @moduletag :live
 
-  # The seeded event starts at 10:00 UTC and the drop asks for 14:00 in the
-  # organiser's timezone; both are rendered in that timezone, so the minute
-  # offsets below are what the block carries before and after a move.
-  @original_start_minutes 780
+  # The drop asks for 14:00 in the organiser's timezone, which the block
+  # carries as this minute offset after a move. Before it, the block carries
+  # the seeded 10:00 UTC in that timezone: see original_start_minutes/1.
   @moved_start_minutes 840
 
   # The provider write runs in a Task; allow for a busy test machine.
@@ -134,7 +133,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       |> render_hook("event_dropped", drop_params(ctx.event))
 
       assert render(lv) =~ html_escape(@locked_message)
-      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{@original_start_minutes}")
+
+      assert event_block(lv, ctx.event.id) =~
+               ~s(data-start-minutes="#{original_start_minutes(ctx)}")
+
       assert_untouched(ctx, jobs)
     end
 
@@ -169,7 +171,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       })
 
       assert render(lv) =~ html_escape(@locked_message)
-      assert event_block(lv, ctx.event.id) =~ ~s(data-start-minutes="#{@original_start_minutes}")
+
+      assert event_block(lv, ctx.event.id) =~
+               ~s(data-start-minutes="#{original_start_minutes(ctx)}")
+
       assert_untouched(ctx, jobs)
     end
 
@@ -406,5 +411,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
   # event cannot pass on some other element of the page.
   defp event_block(lv, event_id) do
     lv |> element("[id^='event-#{event_id}-']") |> render()
+  end
+
+  # The seeded event's 10:00 UTC in the organiser's timezone, as the block's
+  # minute offset: 13:00 in Tallinn in summer, 12:00 in winter, so it is read
+  # from the zone's offset on the (frozen) day rather than fixed.
+  defp original_start_minutes(%{profile: profile}) do
+    local =
+      Clock.utc_today()
+      |> DateTime.new!(~T[10:00:00], "Etc/UTC")
+      |> DateTime.shift_zone!(profile.timezone)
+
+    local.hour * 60 + local.minute
   end
 end
