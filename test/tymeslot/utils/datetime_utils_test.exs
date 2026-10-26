@@ -30,6 +30,14 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
                Duration.parse("P")
     end
 
+    test "parse_nominal/1 keeps nominal days apart from the exact time part" do
+      assert {:ok, {1, 7200}} == Duration.parse_nominal("P1DT2H")
+      assert {:ok, {8, 0}} == Duration.parse_nominal("P1W1D")
+      assert {:ok, {0, 5400}} == Duration.parse_nominal("PT1H30M")
+      assert {:error, "Negative duration"} == Duration.parse_nominal("-P1D")
+      assert {:error, "Invalid duration format"} == Duration.parse_nominal("P1Y")
+    end
+
     property "never crashes and returns either ok or error for random strings" do
       check all(s <- string(:ascii)) do
         assert {status, _payload} = Duration.parse(s)
