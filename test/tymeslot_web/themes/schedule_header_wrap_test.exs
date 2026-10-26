@@ -52,16 +52,18 @@ defmodule TymeslotWeb.Themes.ScheduleHeaderWrapTest do
          %{conn: conn} do
       %{user: user, profile: profile} = booking_page("quillheader", "1")
       insert(:meeting_type, user: user, name: "Intro Call", duration_minutes: 30, is_active: true)
-      {:ok, view, _} = live(conn, "/#{profile.username}?timezone=America/New_York")
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=America/New_York")
 
-      [duration | _] = BookingDriver.meeting_types(view)
+      [duration | _others] = BookingDriver.meeting_types(view)
       BookingDriver.choose_meeting_type(view, duration)
       BookingDriver.continue(view)
 
       doc = document(view)
 
-      assert [_] = Floki.find(doc, ".schedule-card-header > .schedule-title-area h1")
-      assert [_] = Floki.find(doc, ".schedule-card-header > .schedule-timezone-area .tz-picker")
+      assert [_heading] = Floki.find(doc, ".schedule-card-header > .schedule-title-area h1")
+
+      assert [_picker] =
+               Floki.find(doc, ".schedule-card-header > .schedule-timezone-area .tz-picker")
     end
 
     test "wraps the header row, and gives the title a basis to wrap at" do
@@ -71,7 +73,9 @@ defmodule TymeslotWeb.Themes.ScheduleHeaderWrapTest do
 
       # `flex-1` (a zero basis) lets the title shrink to nothing before the row
       # wraps; the basis is what makes the trigger move down instead.
-      assert [_, basis] = Regex.run(~r/flex:\s*1 1 ([^;]+);/, rule(css, ".schedule-title-area"))
+      assert [_match, basis] =
+               Regex.run(~r/flex:\s*1 1 ([^;]+);/, rule(css, ".schedule-title-area"))
+
       assert basis =~ ~r/^[1-9][0-9.]*rem$/
     end
   end
@@ -80,7 +84,8 @@ defmodule TymeslotWeb.Themes.ScheduleHeaderWrapTest do
     test "keeps the time zone trigger in the flow of the stacked phone header" do
       css = File.read!(@rhythm_header_css)
 
-      [_, phone] = Regex.run(~r/@container scheduling \(max-width: 479px\) \{(.*?)\n\}/s, css)
+      [_match, phone] =
+        Regex.run(~r/@container scheduling \(max-width: 479px\) \{(.*?)\n\}/s, css)
 
       assert rule(phone, ".timezone-selector-container") =~ ~r/position:\s*static/
     end
@@ -91,7 +96,7 @@ defmodule TymeslotWeb.Themes.ScheduleHeaderWrapTest do
     pattern = ~r/(?:^|\n)\s*#{Regex.escape(selector)}\s*\{([^}]*)\}/
 
     case Regex.run(pattern, css) do
-      [_, body] -> body
+      [_match, body] -> body
       nil -> flunk("no #{selector} rule found")
     end
   end
