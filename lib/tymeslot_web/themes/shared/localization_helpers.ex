@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Themes.Shared.ChosenLength
 
   @doc """
   Groups normalised slot maps (`TymeslotWeb.Components.MeetingUtils.slot/0`)
@@ -116,13 +117,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @doc """
   `format_next_day_end/4` for a booking or confirmation step's assigns: the
-  chosen date and time, the meeting type's duration (or the bare `duration`)
-  and the booker's timezone.
+  chosen date and time, the length being booked (`ChosenLength.meeting_type/1`,
+  or the bare `duration` without a meeting type) and the booker's timezone.
   """
   @spec booking_next_day_end(map()) :: String.t() | nil
   def booking_next_day_end(assigns) do
     duration =
-      case assigns[:meeting_type] do
+      case ChosenLength.meeting_type(assigns) do
         %{duration_minutes: minutes} -> minutes
         _no_meeting_type -> assigns[:duration]
       end
