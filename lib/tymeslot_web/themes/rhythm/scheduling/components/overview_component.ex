@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -100,6 +101,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                           {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
                         </div>
                         <GroupSession.hint meeting_type={meeting_type} />
+                        <MeetingPrice.hint
+                          meeting_type={meeting_type}
+                          currency={@host_currency}
+                          locale={@locale}
+                        />
                         <div class="duration-description">
                           {meeting_type.description}
                         </div>

@@ -26,6 +26,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   attr :show_language_switcher, :boolean, default: nil
   attr :owner_preview, :boolean, default: false
   attr :demo_mode, :boolean, doc: "handed to the theme extensions only when given"
+
+  attr :show_extensions, :boolean,
+    default: true,
+    doc: "false on pages that are not booking-page impressions (the payment return pages)"
+
   slot :inner_block, required: true
 
   @doc """
@@ -72,6 +77,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
           {render_slot(@inner_block)}
         </div>
         <ThemeShell.extensions
+          :if={@show_extensions}
           theme_id={@theme_id}
           organizer_user_id={@organizer_user_id}
           should_show_branding={@should_show_branding}

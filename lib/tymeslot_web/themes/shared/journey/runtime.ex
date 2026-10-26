@@ -156,7 +156,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # the booking just made: kept, the schedule step would reopen the calendar
   # on them, with a time that is no longer free. The answers are the last
   # booker's, and the booking's `meeting_uid` would leave the attendee
-  # known, so the next booking's details moment would open as done. A
+  # known, so the next booking's details moment would open as done; what
+  # its payment took is that booking's too (`:paid_price`). A
   # reschedule still named in the URL is patched out of it, to the route the
   # booking starts again on, so a reload does not start the move over.
   @spec restart(Socket.t()) :: Socket.t()
@@ -170,7 +171,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     |> forget_payment_wait()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
-    |> assign(selected_date: nil, selected_time: nil)
+    |> assign(selected_date: nil, selected_time: nil, paid_price: nil)
     |> assign(:journey_opened, MapSet.new())
     |> transition_to(opening, %{})
     |> ReschedulePin.drop_from_url(route)

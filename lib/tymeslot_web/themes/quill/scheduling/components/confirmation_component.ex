@@ -143,6 +143,23 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       } />
                     </div>
 
+                    <div
+                      :if={assigns[:paid_price]}
+                      class="confirmation-border-top mt-3 pt-3 border-t"
+                    >
+                      <div class="confirmation-email-row" data-testid="confirmation-paid">
+                        <div class="confirmation-icon-wrapper rounded-full">
+                          <.icon name="hero-credit-card" class="confirmation-email-link w-4 h-4" />
+                        </div>
+                        <p class="text-sm text-white">
+                          {dgettext("booking", "Paid:")}
+                          <span class="confirmation-email-link font-semibold">
+                            {@paid_price}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
                       <div class="confirmation-email-row">
                         <div class="confirmation-icon-wrapper rounded-full">

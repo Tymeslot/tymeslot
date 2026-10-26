@@ -836,9 +836,9 @@ msgstr "Інше місце"
 #, elixir-autogen, elixir-format
 msgid "%{count} spot left"
 msgid_plural "%{count} spots left"
-msgstr[0] "Залишилось %{count} місце"
-msgstr[1] "Залишилось %{count} місця"
-msgstr[2] "Залишилось %{count} місць"
+msgstr[0] "%{count} вільне місце"
+msgstr[1] "%{count} вільні місця"
+msgstr[2] "%{count} вільних місць"
 
 #: lib/tymeslot_web/themes/shared/components/seat_badge.ex
 #, elixir-autogen, elixir-format
@@ -946,3 +946,18 @@ msgstr "Завтра"
 #, elixir-autogen, elixir-format
 msgid "More times"
 msgstr "Інші варіанти часу"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid"
+msgstr "Оплачено"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid:"
+msgstr "Оплачено:"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_price.ex
+#, elixir-autogen, elixir-format
+msgid "Price:"
+msgstr "Ціна:"

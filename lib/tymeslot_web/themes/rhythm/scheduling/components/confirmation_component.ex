@@ -166,6 +166,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                   </div>
 
+                  <div
+                    :if={assigns[:paid_price]}
+                    class="ticket-row"
+                    data-testid="confirmation-paid"
+                  >
+                    <div class="ticket-icon">
+                      <.icon name="hero-credit-card" class="hero-icon hero-icon--md" />
+                    </div>
+                    <div class="ticket-info">
+                      <span class="ticket-value">{@paid_price}</span>
+                      <span class="ticket-sublabel">{dgettext("booking", "Paid")}</span>
+                    </div>
+                  </div>
+
                   <div :if={@guest_emails not in [nil, []]} class="ticket-row">
                     <div class="ticket-icon">
                       <.icon name="hero-user-group" class="hero-icon hero-icon--md" />

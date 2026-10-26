@@ -110,3 +110,8 @@ msgstr "Tato rezervace nebyla přijata, a proto se neuskuteční. Vaše platba s
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. You can return and try again at any time."
 msgstr "Vaše rezervace nebyla potvrzena. Kdykoli se můžete vrátit a zkusit to znovu."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Paid: %{amount}"
+msgstr "Zaplaceno: %{amount}"

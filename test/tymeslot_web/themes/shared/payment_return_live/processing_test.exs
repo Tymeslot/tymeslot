@@ -56,6 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
     assert html =~ "Confirming your payment"
+    refute html =~ ~s(data-testid="payment-paid-amount")
   end
 
   test "flips to confirmation UI when broadcast says paid", %{conn: conn, user: user} do
@@ -194,7 +195,34 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
       live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
     assert html =~ "Payment received"
+    assert html =~ ~s(data-testid="payment-paid-amount")
     refute html =~ "Booking confirmed"
+  end
+
+  test "the confirmation says what was paid, in the guest's locale", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "confirmed")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "paid",
+      paid_at: DateTime.utc_now(:second),
+      amount_cents: 4550,
+      currency: "eur",
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert has_element?(view, "h1", "Booking confirmed")
+    assert has_element?(view, "[data-testid='payment-paid-amount']", "Paid: €45.50")
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST&locale=de")
+
+    # The amount is set off from the symbol by a non-breaking space.
+    assert has_element?(view, "[data-testid='payment-paid-amount']", "Bezahlt: 45,50\u00A0€")
   end
 
   test "renders the declined wording and mentions the refund for a declined gated booking", %{
