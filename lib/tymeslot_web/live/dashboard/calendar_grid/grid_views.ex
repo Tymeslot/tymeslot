@@ -190,14 +190,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                     )
                   }
                 >
-                  <div class="truncate font-semibold">
-                    <.icon
-                      :if={(Map.get(event, :reminders) || []) != []}
-                      name="hero-bell-micro"
-                      class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-                    />{DashboardFormat.title(event.summary)}
+                  <%!-- A block too short for two lines puts the time beside the title --%>
+                  <div class="truncate" data-event-layout={event_layout(event)}>
+                    <span class="font-semibold">
+                      <.icon
+                        :if={(Map.get(event, :reminders) || []) != []}
+                        name="hero-bell-micro"
+                        class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
+                      />{DashboardFormat.title(event.summary)}
+                    </span>
+                    <span :if={event_layout(event) == :inline} class="opacity-80">
+                      {Helpers.format_display_time_range(
+                        event,
+                        Helpers.time_format(assigns),
+                        @user_timezone
+                      )}
+                    </span>
                   </div>
-                  <div class="opacity-80">
+                  <div :if={event_layout(event) == :stacked} class="opacity-80">
                     {Helpers.format_display_time_range(
                       event,
                       Helpers.time_format(assigns),
@@ -205,7 +215,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                     )}
                   </div>
                   <div
-                    :if={Helpers.booking?(event) && event.attendee_name}
+                    :if={
+                      event_layout(event) == :stacked && Helpers.booking?(event) &&
+                        event.attendee_name
+                    }
                     class="opacity-80 truncate"
                   >
                     {event.attendee_name}
@@ -360,6 +373,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   # time belongs to whoever booked it, and a group booking stays fixed even
   # when the grid only knows it as the provider event mirroring it, which
   # carries the meeting's uid but not the `:booking` kind.
+  # Two lines of the day view's text-token-sm (2 x 1.25rem) plus the block's
+  # vertical padding; a shorter block cannot show the time below the title.
+  @stacked_layout_min_rem 2.75
+
+  # :stacked puts the time (and a booking's attendee) under the title;
+  # :inline puts the time beside the title on one line.
+  defp event_layout(event) do
+    if Helpers.height_rem(event.start_at, event.end_at) < @stacked_layout_min_rem,
+      do: :inline,
+      else: :stacked
+  end
+
   defp movable?(event, group_booking_uids) do
     not (Helpers.booking?(event) or EventBadges.seat_locked?(group_booking_uids, event))
   end
