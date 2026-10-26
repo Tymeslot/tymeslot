@@ -29,6 +29,10 @@ defmodule Tymeslot.Timezones.Data do
     "beijing" => "Asia/Shanghai",
     "peking" => "Asia/Shanghai",
     "cape town" => "Africa/Johannesburg",
+    # No language in the list spells it Kiev or Kiew any more, but people
+    # still type those.
+    "kiev" => "Europe/Kyiv",
+    "kiew" => "Europe/Kyiv",
     # Départements et collectivités d'outre-mer : la façon dont un agent les
     # nomme (« la Réunion », « les Antilles ») ou les numérote ne correspond à
     # aucun libellé de la liste, qui porte le chef-lieu.
@@ -127,12 +131,38 @@ defmodule Tymeslot.Timezones.Data do
     |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
   end
 
+  # Ukrainian keeps Ґ, Є, І, Ї and Й as letters of their own, placed beside
+  # Г, Е and И; by code point Є and І would follow Я, and folding would merge
+  # Ї into І and Й into И. Its labels sort by each letter's place in the
+  # alphabet; any other character sorts by its folded form, ahead of letters.
+  uk_rank =
+    "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
+    |> String.graphemes()
+    |> Enum.with_index()
+    |> Map.new()
+
+  sort_key = fn
+    "uk", label ->
+      label
+      |> String.downcase()
+      |> String.graphemes()
+      |> Enum.map(fn char ->
+        case Map.fetch(uk_rank, char) do
+          {:ok, rank} -> {1, rank}
+          :error -> {0, fold.(char)}
+        end
+      end)
+
+    _locale, label ->
+      fold.(label)
+  end
+
   # Options list sorted alphabetically by label, accents ignored, so that
   # "Österreich" sorts among the O's rather than after "Zypern".
   @options_by_locale Map.new(@entries_by_locale, fn {locale, entries} ->
                        {locale,
                         entries
-                        |> Enum.sort_by(&fold.(&1.label))
+                        |> Enum.sort_by(&sort_key.(locale, &1.label))
                         |> Enum.map(fn e -> {e.label, e.timezone_id} end)}
                      end)
 

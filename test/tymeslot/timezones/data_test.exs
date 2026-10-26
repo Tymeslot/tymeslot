@@ -142,11 +142,41 @@ defmodule Tymeslot.Timezones.DataTest do
       assert rome < first_t
     end
 
+    test "sorts Ukrainian options in the Ukrainian alphabet" do
+      # By code point, Є and І would follow Я; folded, Й would merge into И.
+      labels = in_locale("uk", fn -> Enum.map(Data.all_options(), &elem(&1, 0)) end)
+      index = fn label -> Enum.find_index(labels, &String.starts_with?(&1, label)) end
+
+      assert index.("Душанбе") < index.("Єкатеринбург")
+      assert index.("Єрусалим") < index.("Загреб")
+      assert index.("Іркутськ") < index.("Йоганнесбурґ")
+      assert index.("Йоганнесбурґ") < index.("Кабул")
+      assert index.("Каєнна") < index.("Калінінград")
+    end
+
+    test "writes every Ukrainian city in Cyrillic" do
+      # A city CLDR files under an older zone id (Indianapolis, Louisville) or
+      # does not name at all (Montreal) otherwise falls back to English.
+      latin =
+        in_locale("uk", fn -> Data.all_options() end)
+        |> Enum.map(&elem(&1, 0))
+        |> Enum.filter(&(&1 =~ ~r/[A-Za-z]/))
+
+      assert latin == []
+    end
+
     test "finds a zone by its local name, its English name and an alias" do
       in_locale("pl", fn ->
         assert "America/New_York" in found("Nowy Jork")
         assert "America/New_York" in found("New York")
         assert "Asia/Kolkata" in found("mumbai")
+      end)
+    end
+
+    test "finds Kyiv by the spellings people still type" do
+      in_locale("fr", fn ->
+        assert "Europe/Kyiv" in found("Kiev")
+        assert "Europe/Kyiv" in found("Kiew")
       end)
     end
 
