@@ -83,7 +83,9 @@ defmodule Tymeslot.Polls.PollQueries do
   end
 
   defp preload_associations(nil), do: nil
-  defp preload_associations(poll), do: Repo.preload(poll, @preloads)
+
+  defp preload_associations(%PollSchema{} = poll),
+    do: %PollSchema{} = Repo.preload(poll, @preloads)
 
   @spec list_for_user(pos_integer()) :: [PollSchema.t()]
   def list_for_user(user_id) do

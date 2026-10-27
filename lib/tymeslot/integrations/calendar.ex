@@ -459,10 +459,9 @@ defmodule Tymeslot.Integrations.Calendar do
   Discovers fresh calendars from the provider and updates the database.
   Sends {:calendar_list_refreshed, component_id, integration_id, calendars} back to the caller.
   """
-  @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) :: {:ok, pid()}
-  def refresh_calendar_list_async(integration_id, user_id, component_id) do
-    Workflows.refresh_calendar_list_async(integration_id, user_id, component_id)
-  end
+  @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) ::
+          DynamicSupervisor.on_start_child()
+  defdelegate refresh_calendar_list_async(integration_id, user_id, component_id), to: Workflows
 
   @doc """
   Starts a Google or Outlook calendar OAuth flow and returns the

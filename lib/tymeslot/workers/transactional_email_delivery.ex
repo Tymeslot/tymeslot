@@ -49,7 +49,10 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   @recipient_rejected_reason "Recipient permanently undeliverable"
 
   @typedoc "An Oban `perform/1` return value."
-  @type outcome :: :ok | {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
+  @type outcome :: :ok | failure()
+
+  @typedoc "The `t:outcome/0` of a delivery that failed."
+  @type failure :: {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
 
   @doc """
   Returns true for the discard `handle_failure/3` returns for a permanently
@@ -97,7 +100,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   `job.attempt` in its place leaves both loops unbounded, since a snooze does
   not advance `attempt` from Oban 2.24 on.
   """
-  @spec handle_failure(term(), String.t(), keyword()) :: outcome()
+  @spec handle_failure(term(), String.t(), keyword()) :: failure()
   def handle_failure(:circuit_open, _failure_message, metadata) do
     executions = Keyword.fetch!(metadata, :executions)
     base_seconds = CircuitBreakerSupervisor.email_breaker_recovery_seconds()

@@ -63,8 +63,9 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   Computes `max(amount_cents - refunded_amount_cents, 0)`.
   """
   @spec refundable_remaining_cents(BookingPaymentSchema.t()) :: non_neg_integer()
-  def refundable_remaining_cents(%{amount_cents: amount, refunded_amount_cents: refunded}),
-    do: max(amount - refunded, 0)
+  def refundable_remaining_cents(%{amount_cents: amount, refunded_amount_cents: refunded})
+      when is_integer(amount) and is_integer(refunded),
+      do: max(amount - refunded, 0)
 
   @doc """
   Returns `true` when the host still holds money the attendee has not been

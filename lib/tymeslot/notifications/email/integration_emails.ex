@@ -365,7 +365,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   # separately (`DeliveryClaims`): a job the Oban lifeline rescues part-way
   # through re-mails nobody it already reached.
   @spec handle_event_update_notification(%{String.t() => term()}, DeliveryClaims.job_id()) ::
-          :ok | {:error, term()} | {:discard, String.t()}
+          :ok | {:discard, String.t()}
   def handle_event_update_notification(
         %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
         job_id

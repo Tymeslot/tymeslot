@@ -288,9 +288,15 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   """
   @spec preload_live_participants(Meeting.t()) :: Meeting.t()
   @spec preload_live_participants([Meeting.t()]) :: [Meeting.t()]
-  def preload_live_participants(meeting_or_meetings),
-    do:
+  def preload_live_participants(meeting_or_meetings) do
+    preloaded =
       Repo.preload(meeting_or_meetings, [participants: live_participants_preload()], force: true)
+
+    # Matched to rule out the `nil` that `Repo.preload/3` returns for a `nil`.
+    case preloaded do
+      loaded when is_list(loaded) or is_struct(loaded, Meeting) -> loaded
+    end
+  end
 
   @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`

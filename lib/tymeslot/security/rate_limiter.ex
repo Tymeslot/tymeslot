@@ -237,7 +237,17 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_verification_rate_limit(term(), String.t() | :inet.ip_address() | nil) :: result()
   def check_verification_rate_limit(user_id, ip) do
-    with :ok <- check(:verification_ip, ip), do: check(:verification_user, user_id)
+    with :ok <- check_any_key(:verification_ip, ip),
+         do: check_any_key(:verification_user, user_id)
+  end
+
+  # `check/2` for a limit whose scope (`:source`, `:key`) accepts any key, so
+  # it can only allow or refuse, never report an invalid id.
+  defp check_any_key(name, key) do
+    case check(name, key) do
+      :ok -> :ok
+      {:error, :rate_limited, _message} = refusal -> refusal
+    end
   end
 
   # Integrations

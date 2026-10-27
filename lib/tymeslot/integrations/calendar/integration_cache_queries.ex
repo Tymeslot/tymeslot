@@ -267,7 +267,7 @@ defmodule Tymeslot.Integrations.Calendar.IntegrationCacheQueries do
     |> distinct(true)
     |> select([e], e.calendar_integration_id)
     |> Repo.all()
-    |> Enum.sum_by(fn integration_id ->
+    |> Enum.reduce(0, fn integration_id, total ->
       case under_lock(integration_id, fn ->
              {count, _rows} =
                rows
@@ -276,8 +276,8 @@ defmodule Tymeslot.Integrations.Calendar.IntegrationCacheQueries do
 
              count
            end) do
-        {:ok, count} -> count
-        {:error, :integration_gone} -> 0
+        {:ok, count} -> total + count
+        {:error, :integration_gone} -> total
       end
     end)
   end

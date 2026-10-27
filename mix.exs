@@ -43,7 +43,7 @@ defmodule Tymeslot.MixProject do
         plt_ignore_apps: [:xmerl],
         plt_core_path: "priv/plts",
         plt_local_path: "priv/plts",
-        flags: [:error_handling]
+        flags: [:error_handling, :missing_return, :extra_return]
       ],
       releases: [
         tymeslot: [

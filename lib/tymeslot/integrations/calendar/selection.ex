@@ -529,7 +529,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   The `t:visibility_rule/0` matching cached rows from `entries`: `:none`
   for no entries.
   """
-  @spec entries_rule([CalendarEntry.t()]) :: visibility_rule()
+  @spec entries_rule([CalendarEntry.t()]) ::
+          :none | {:selected, [%{id: String.t() | nil, prefix: String.t() | nil}]}
   def entries_rule([]), do: :none
 
   def entries_rule(entries),
