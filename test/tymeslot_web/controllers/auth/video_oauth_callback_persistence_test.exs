@@ -16,6 +16,7 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
 
   @moduletag :integration
   @moduletag :integrations
+  @moduletag :video
 
   import Ecto.Query, only: [from: 2]
   import Mox
@@ -239,8 +240,9 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
       assert meeting.video_integration_id == integration.id
 
       assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => meeting.id})
-      assert %{success: success} = Oban.drain_queue(queue: :video_rooms, with_recursion: true)
-      assert success >= 1
+
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(queue: :video_rooms, with_recursion: true)
 
       updated = Repo.get!(MeetingSchema, meeting.id)
       assert updated.video_room_id == "CallbackSpace1"

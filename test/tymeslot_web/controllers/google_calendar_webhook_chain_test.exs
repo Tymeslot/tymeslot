@@ -32,16 +32,21 @@ defmodule TymeslotWeb.GoogleCalendarWebhookChainTest do
     :ok
   end
 
-  defp google_event(summary, start_iso, end_iso) do
+  # An hour-long event, so the times stay ahead of the suite whenever it runs.
+  defp google_event(summary, start_at) do
     %{
       "id" => "push-event-1",
       "iCalUID" => "push-event-1@google.com",
       "summary" => summary,
       "status" => "confirmed",
-      "start" => %{"dateTime" => start_iso},
-      "end" => %{"dateTime" => end_iso},
+      "start" => %{"dateTime" => DateTime.to_iso8601(start_at)},
+      "end" => %{"dateTime" => start_at |> DateTime.add(1, :hour) |> DateTime.to_iso8601()},
       "attendees" => []
     }
+  end
+
+  defp days_ahead(days, hour) do
+    Date.utc_today() |> Date.add(days) |> DateTime.new!(Time.new!(hour, 0, 0))
   end
 
   test "a push notification leads to the changed event being visible in the cache", %{conn: conn} do
@@ -57,7 +62,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookChainTest do
     expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
       {:ok,
        %{
-         events: [google_event("Design review", "2030-04-10T09:00:00Z", "2030-04-10T10:00:00Z")],
+         events: [google_event("Design review", days_ahead(30, 9))],
          next_sync_token: "token-1"
        }}
     end)
@@ -82,15 +87,15 @@ defmodule TymeslotWeb.GoogleCalendarWebhookChainTest do
                args: %{"calendar_integration_id" => integration.id}
              )
 
+    moved_start = days_ahead(31, 14)
+
     # The delta runs from the token the earlier sync stored.
     expect(GoogleCalendarAPIMock, :list_events_incremental, fn %{google_sync_token: token} ->
       assert token == "token-1"
 
       {:ok,
        %{
-         events: [
-           google_event("Design review (moved)", "2030-04-11T14:00:00Z", "2030-04-11T15:00:00Z")
-         ],
+         events: [google_event("Design review (moved)", moved_start)],
          next_sync_token: "token-2"
        }}
     end)
@@ -99,8 +104,8 @@ defmodule TymeslotWeb.GoogleCalendarWebhookChainTest do
 
     cached = cached_event(integration)
     assert cached.summary == "Design review (moved)"
-    assert DateTime.compare(cached.start_at, ~U[2030-04-11 14:00:00Z]) == :eq
-    assert DateTime.compare(cached.end_at, ~U[2030-04-11 15:00:00Z]) == :eq
+    assert DateTime.compare(cached.start_at, moved_start) == :eq
+    assert DateTime.compare(cached.end_at, DateTime.add(moved_start, 1, :hour)) == :eq
 
     assert Repo.get!(CalendarIntegrationSchema, integration.id).google_sync_token == "token-2"
   end

@@ -47,7 +47,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookLifecycleChainTest do
         token_expires_at: DateTime.add(DateTime.utc_now(:second), -60, :second),
         graph_subscription_id: "graph-sub-live",
         graph_client_state: "chain-client-state",
-        graph_subscription_expires_at: ~U[2030-01-01 00:00:00Z]
+        graph_subscription_expires_at: DateTime.add(DateTime.utc_now(:second), 1, :day)
       )
 
     conn =
@@ -85,6 +85,8 @@ defmodule TymeslotWeb.OutlookCalendarWebhookLifecycleChainTest do
 
     assert :ok = perform_job(TokenRefreshJob, refresh_job.args)
 
+    renewed_expiry = DateTime.add(DateTime.utc_now(:second), 3, :day)
+
     expect(Tymeslot.HTTPClientMock, :request, fn :patch, url, _body, headers, _opts ->
       assert String.ends_with?(url, "/subscriptions/graph-sub-live")
       assert {"Authorization", "Bearer fresh-token"} in headers
@@ -95,7 +97,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookLifecycleChainTest do
          body:
            Jason.encode!(%{
              "id" => "graph-sub-live",
-             "expirationDateTime" => "2030-06-05T10:00:00Z"
+             "expirationDateTime" => DateTime.to_iso8601(renewed_expiry)
            })
        }}
     end)
@@ -110,6 +112,6 @@ defmodule TymeslotWeb.OutlookCalendarWebhookLifecycleChainTest do
     assert stored.access_token == "fresh-token"
     assert stored.graph_subscription_id == "graph-sub-live"
     assert stored.graph_client_state == "chain-client-state"
-    assert stored.graph_subscription_expires_at == ~U[2030-06-05 10:00:00Z]
+    assert stored.graph_subscription_expires_at == renewed_expiry
   end
 end
