@@ -175,9 +175,13 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
         {:ok, view, _html} =
           live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
-        if step(view) == :overview, do: BookingDriver.continue(view)
-
         assert :sys.get_state(view.pid).socket.assigns.is_rescheduling == true
+
+        if step(view) == :overview do
+          refute has_element?(view, @price)
+          BookingDriver.continue(view)
+        end
+
         assert step(view) == :schedule
         refute has_element?(view, @price)
 

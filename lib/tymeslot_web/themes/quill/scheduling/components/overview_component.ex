@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   attr :requires_approval, :boolean, default: false
   attr :meeting_type, :any, default: nil
   attr :currency, :string, default: nil
+  attr :show_price, :boolean, default: true
   attr :locale, :string, required: true
   attr :target, :any, default: nil
 
@@ -66,7 +67,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
             {@description}
           </p>
           <GroupSession.hint meeting_type={@meeting_type} />
-          <MeetingPrice.hint meeting_type={@meeting_type} currency={@currency} locale={@locale} />
+          <MeetingPrice.hint
+            :if={@show_price}
+            meeting_type={@meeting_type}
+            currency={@currency}
+            locale={@locale}
+          />
         </div>
         <%= if @icon != "none" do %>
           <%= if String.starts_with?(@icon, "hero-") do %>
@@ -152,6 +158,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                             requires_approval={Approval.required?(meeting_type)}
                             meeting_type={meeting_type}
                             currency={@host_currency}
+                            show_price={!assigns[:is_rescheduling]}
                             locale={@locale}
                             target={@myself}
                           />

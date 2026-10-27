@@ -102,6 +102,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                         </div>
                         <GroupSession.hint meeting_type={meeting_type} />
                         <MeetingPrice.hint
+                          :if={!assigns[:is_rescheduling]}
                           meeting_type={meeting_type}
                           currency={@host_currency}
                           locale={@locale}
