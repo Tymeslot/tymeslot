@@ -193,39 +193,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                     )
                   }
                 >
-                  <%!-- A block too short for two lines puts the time beside the title --%>
-                  <div class="truncate" data-event-layout={event_layout(event)}>
-                    <span class="font-semibold">
-                      <.icon
-                        :if={(Map.get(event, :reminders) || []) != []}
-                        name="hero-bell-micro"
-                        class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-                      />{DashboardFormat.title(event.summary)}
-                    </span>
-                    <span :if={event_layout(event) == :inline} class="opacity-80">
-                      {Helpers.format_display_time_range(
+                  <.event_text
+                    event={event}
+                    layout={event_layout(event)}
+                    time={
+                      Helpers.format_display_time_range(
                         event,
                         Helpers.time_format(assigns),
                         @user_timezone
-                      )}
-                    </span>
-                  </div>
-                  <div :if={event_layout(event) == :stacked} class="opacity-80">
-                    {Helpers.format_display_time_range(
-                      event,
-                      Helpers.time_format(assigns),
-                      @user_timezone
-                    )}
-                  </div>
-                  <div
-                    :if={
-                      event_layout(event) == :stacked && Helpers.booking?(event) &&
-                        event.attendee_name
+                      )
                     }
-                    class="opacity-80 truncate"
-                  >
-                    {event.attendee_name}
-                  </div>
+                  />
                   <img
                     :if={Map.get(event, :created_by_tymeslot)}
                     src="/images/brand/logo.svg"
@@ -371,6 +349,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   end
 
   defp max_datetime(a, b), do: if(DateTime.compare(a, b) == :gt, do: a, else: b)
+
+  attr :event, :map, required: true
+  attr :layout, :atom, required: true, values: [:inline, :stacked]
+  attr :time, :string, required: true
+
+  # A block too short for two lines puts the time beside the title.
+  defp event_text(assigns) do
+    ~H"""
+    <div class="truncate" data-event-layout={@layout}>
+      <span class="font-semibold">
+        <.icon
+          :if={(Map.get(@event, :reminders) || []) != []}
+          name="hero-bell-micro"
+          class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
+        />{DashboardFormat.title(@event.summary)}
+      </span>
+      <span :if={@layout == :inline} class="opacity-80">{@time}</span>
+    </div>
+    <div :if={@layout == :stacked} class="opacity-80">{@time}</div>
+    <div
+      :if={@layout == :stacked && Helpers.booking?(@event) && @event.attendee_name}
+      class="opacity-80 truncate"
+    >
+      {@event.attendee_name}
+    </div>
+    """
+  end
 
   # Two lines of the day view's text-token-sm (2 x 1.25rem) plus the block's
   # vertical padding; a shorter block cannot show the time below the title.
