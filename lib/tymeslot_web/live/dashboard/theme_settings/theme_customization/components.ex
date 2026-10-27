@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Live.Scheduling.PreviewMode
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @spec toolbar(map()) :: Phoenix.LiveView.Rendered.t()
   def toolbar(assigns) do
@@ -14,7 +15,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
       <.section_header
         icon="hero-paint-brush"
-        title={dgettext("dashboard_appearance", "Customise Style")}
+        title={
+          dgettext("dashboard_appearance", "Customise %{theme_name}",
+            theme_name: ThemeInfo.get_theme_name(@theme_id)
+          )
+        }
       />
 
       <div class="flex items-center justify-between gap-3 md:justify-start">

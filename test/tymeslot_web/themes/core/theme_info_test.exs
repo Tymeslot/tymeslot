@@ -87,7 +87,8 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
                name: "Rhythm",
                status: :active,
                preview_image: "/images/ui/theme-previews/rhythm-theme-preview.webp",
-               description: "Modern sliding design: each step slides in over a video background."
+               description:
+                 "Modern sliding design: each step slides in on a glass card over a video background."
              } = ThemeInfo.get_theme("2")
     end
 
@@ -137,7 +138,7 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfoTest do
                Gettext.dgettext(
                  TymeslotWeb.Gettext,
                  "dashboard_appearance",
-                 "Modern sliding design: each step slides in over a video background."
+                 "Modern sliding design: each step slides in on a glass card over a video background."
                )
 
       refute Rhythm.metadata().description =~ "Modern sliding design"

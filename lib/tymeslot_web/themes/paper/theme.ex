@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Themes.Paper.Theme do
   @moduledoc """
-  Paper: a calm, neutral booking page. One card on the tone's canvas, in two
-  screens: the meeting types, then the time and the details together; one
-  accent colour, and a light, dark or automatic colour mode. Its meeting,
+  Paper: a calm, flat booking page. One card on the palette's canvas, in two
+  screens: the meeting types, then the time and the details together; a
+  colour palette with a light and a dark set, and a light, dark or automatic
+  colour mode. Its meeting,
   poll and payment pages are the shared defaults (`Shared.DefaultPages`)
   inside its page shell.
   """
@@ -14,7 +15,7 @@ defmodule TymeslotWeb.Themes.Paper.Theme do
     description:
       dgettext_noop(
         "dashboard_appearance",
-        "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
+        "A calm, flat booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes in the colour palette you choose."
       ),
     story:
       dgettext_noop(

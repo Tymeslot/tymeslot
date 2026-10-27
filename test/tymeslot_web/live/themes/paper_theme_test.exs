@@ -550,12 +550,12 @@ defmodule TymeslotWeb.Live.Themes.PaperThemeTest do
     assert auto =~ "--theme-color-scheme: light dark;"
     assert auto =~ "@media (prefers-color-scheme: dark)"
 
-    customise(profile, %{"color_scheme" => "cool", "colour_mode" => "dark"})
+    customise(profile, %{"color_scheme" => "paper_arctic", "colour_mode" => "dark"})
 
     {:ok, _view, dark} = live(conn, ~p"/#{profile.username}")
 
     assert dark =~ "--theme-color-scheme: dark;"
-    assert dark =~ "--theme-canvas: #0b1120;"
+    assert dark =~ "--theme-canvas: #0c1426;"
     refute dark =~ "prefers-color-scheme"
   end
 

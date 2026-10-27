@@ -14,11 +14,11 @@ Someone who used Calendly or cal.com, a team that white-labels its page, an orga
 
 ## Look
 
-One flat card on the tone's canvas (neutral, cool or warm), light, dark or following the visitor's system, with one accent colour. The card is 40rem, widening to 64rem for the overview and the month schedule and to 72rem for the week, and lays its panes out by its own width. System font, Inter or IBM Plex Sans; tabular numerals for times. The organiser's logo, when uploaded, sits top-left of every card. It never has a background behind the card: no gradient, image, video or glass. The timezone sits above the times on every view. On the second screen the details part follows the picker under a hairline rule, aligned under the picker once the card shows the details column beside it, in a reading width of its own: the chosen time with its icon and "Change time", the questions one under another, then the form, a paid type's price above the submit.
+One flat card on the palette's canvas, light, dark or following the visitor's system. Each palette is one of Quill and Rhythm's colour families, as a light set on a pale tint of its colour and a dark set on the ground those themes use. The card is 40rem, widening to 64rem for the overview and the month schedule and to 72rem for the week, and lays its panes out by its own width. System font, Inter or IBM Plex Sans; tabular numerals for times. The organiser's logo, when uploaded, sits top-left of every card. It never has a background behind the card: no gradient, image, video or glass. The timezone sits above the times on every view. On the second screen the details part follows the picker under a hairline rule, aligned under the picker once the card shows the details column beside it, in a reading width of its own: the chosen time with its icon and "Change time", the questions one under another, then the form, a paid type's price above the submit.
 
 ## Options
 
-A tone (neutral, cool or warm, or a custom seed colour), a colour mode (light, dark or automatic), an accent (nine presets), a font (system, Inter or IBM Plex Sans), a corner radius, a calendar view (a month calendar or a week of free times) and a logo. Defaults: the neutral tone, the automatic colour mode, the Tymeslot accent, the system font, soft corners and the month calendar, with no logo.
+A colour palette (eight presets, or a custom seed colour that derives both sets), a colour mode (light, dark or automatic), a font (system, Inter or IBM Plex Sans), a corner radius, a calendar view (a month calendar or a week of free times) and a logo. Defaults: the Default Turquoise palette, the automatic colour mode, the system font, soft corners and the month calendar, with no logo.
 
 ## Voice
 

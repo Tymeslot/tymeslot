@@ -1,27 +1,21 @@
 defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   @moduledoc """
-  Customisation spec of the Paper theme: a neutral tone with one accent
-  colour, a colour mode (light, dark, or the visitor's own), a font, a
-  corner style, a calendar view (a month calendar, or a week of free times
-  on one screen) and a logo. Paper has no background option: the tone's
-  canvas is the page.
+  Customisation spec of the Paper theme: a colour palette, a colour mode
+  (light, dark, or the visitor's own), a font, a corner style, a calendar
+  view (a month calendar, or a week of free times on one screen) and a
+  logo. Paper has no background option: the palette's canvas is the page.
 
-  The groups are the shared ones, in the canonical order, so the generated
-  `changeset/2`, `asset_fields/0` and `tokens/2` stand: the palette lays out
-  the tone's light set and its dark set (`follow_os: true`), the colour mode
-  picks between them, and the accent then replaces the primary family in
-  whichever sets remain, fitted to each set's card; the font and radius add
-  their variables, and the calendar view and the logo their media (the
-  schedule screen reads `media[:calendar_view]`).
-
-  Onboarding offers the accents rather than the tones. The three tones share
-  one primary and differ only in their greys, so their swatches would be
-  three identical circles, while the accent is the colour a Paper page is
-  recognised by.
+  The palettes are Quill and Rhythm's colour families, each with a light set
+  on a pale tint of its colour and a dark set (`follow_os: true`); the colour
+  mode picks between them. A custom seed derives both sets from one colour
+  (`seed_mode: :light`). The groups are the shared ones, in the canonical
+  order, so the generated `changeset/2`, `asset_fields/0`, `tokens/2` and
+  `onboarding_choices/0` stand: the font and radius add their variables, and
+  the calendar view and the logo their media (the schedule screen reads
+  `media[:calendar_view]`).
   """
   use Tymeslot.ThemeCustomizations.Spec
 
-  alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Font
@@ -29,18 +23,15 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   alias Tymeslot.ThemeCustomizations.Options.Palette
   alias Tymeslot.ThemeCustomizations.Options.Radius
   alias Tymeslot.ThemeCustomizations.Spec
-  alias Tymeslot.ThemeCustomizations.Specs
 
-  @tones ~w(neutral cool warm)
-  @accents ~w(tymeslot cobalt indigo violet rose ember emerald teal graphite)
+  @palettes ~w(paper_turquoise paper_arctic paper_purple paper_sunset paper_ocean paper_forest paper_rose paper_monochrome)
   @fonts ~w(system inter plex)
 
   @impl Spec
   def option_groups,
     do: [
-      %{key: :palette, module: Palette, schemes: @tones, seed_mode: :light, follow_os: true},
+      %{key: :palette, module: Palette, schemes: @palettes, seed_mode: :light, follow_os: true},
       %{key: :colour_mode, module: ColourMode, default: "auto"},
-      %{key: :accent, module: Accent, presets: @accents, default: "tymeslot"},
       %{key: :font, module: Font, presets: @fonts, default: "system"},
       %{key: :radius, module: Radius, default: "soft"},
       %{key: :calendar_view, module: CalendarView, default: "month"},
@@ -50,26 +41,10 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpec do
   @impl Spec
   def defaults,
     do: %{
-      color_scheme: "neutral",
+      color_scheme: "paper_turquoise",
       colour_mode: "auto",
-      accent: "tymeslot",
       font: "system",
       radius: "soft",
       calendar_view: "month"
     }
-
-  @impl Spec
-  def onboarding_choices do
-    group = Specs.group(__MODULE__, Accent)
-
-    %{
-      group: group.key,
-      field: "preset",
-      setting: "accent",
-      choices:
-        for {id, %{name: name, color: colour}} <- Accent.presets(group) do
-          %{value: id, name: name, swatch: colour}
-        end
-    }
-  end
 end

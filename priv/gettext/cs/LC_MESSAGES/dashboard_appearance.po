@@ -603,7 +603,6 @@ msgstr "Barevná paleta"
 msgid "Could not save your theme customisation. Please try again."
 msgstr "Přizpůsobení motivu se nepodařilo uložit. Zkuste to prosím znovu."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Customise Style"
@@ -682,10 +681,60 @@ msgstr "MP4 nebo WebM. Max. %{size} MB."
 
 #: lib/tymeslot_web/themes/rhythm/theme.ex
 #, elixir-autogen, elixir-format
-msgid "Modern sliding design: each step slides in over a video background."
-msgstr "Moderní posuvný design: každý krok se vysune nad videem na pozadí."
+msgid "Modern sliding design: each step slides in on a glass card over a video background."
+msgstr "Moderní posuvný design: každý krok se vysune na skleněné kartě nad videem na pozadí."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Customise %{theme_name}"
+msgstr "Přizpůsobit %{theme_name}"
 
 #: lib/tymeslot_web/themes/paper/theme.ex
 #, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
-msgstr "Klidná, neutrální rezervační stránka: nejdřív typ schůzky, pak čas a rezervace na jedné obrazovce. Světlý a tmavý režim a vlastní barva zvýraznění."
+msgid "A calm, flat booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes in the colour palette you choose."
+msgstr "Klidná rezervační stránka v plochém stylu: nejdřív typ schůzky, pak čas a rezervace na jedné obrazovce. Světlý a tmavý režim v barevné paletě, kterou si zvolíte."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Arctic Blue"
+msgstr "Arktická modř"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Default Turquoise"
+msgstr "Výchozí tyrkysová"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Forest Green"
+msgstr "Lesní zeleň"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Monochrome"
+msgstr "Monochromatický"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ocean Breeze"
+msgstr "Mořský vánek"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Purple Dream"
+msgstr "Fialový sen"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Rose Gold"
+msgstr "Růžové zlato"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sunset Glow"
+msgstr "Západ slunce"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
+msgstr "Barvy vaší rezervační stránky, zde ve světlé i tmavé podobě. Kterou z nich uvidí návštěvníci, určuje Barevný režim."

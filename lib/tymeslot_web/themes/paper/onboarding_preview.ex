@@ -3,9 +3,9 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
   Paper in the onboarding wizard, the shape of its first screen: one light
   card in two panes, the organiser's introduction on the left (the shared
   header, left-aligned) and a rule, then on the right the meeting types as
-  a bordered list with the first one chosen in the accent colour, the
+  a bordered list with the first one chosen in the palette's primary colour, the
   times the wizard explains its steps with, and one solid Book button in
-  the accent colour.
+  the palette's primary colour.
   """
   use Phoenix.Component
 
@@ -117,8 +117,8 @@ defmodule TymeslotWeb.Themes.Paper.OnboardingPreview do
     """
   end
 
-  # A meeting type's row: the first is the chosen one, an accent edge on its
-  # left and a faint accent tint, as Paper marks a chosen type.
+  # A meeting type's row: the first is the chosen one, a primary-colour edge on its
+  # left and a faint tint of it, as Paper marks a chosen type.
   defp type_style(0, primary, _edge),
     do: "border-left: 2px solid #{primary}; background: #{primary}0f;"
 

@@ -10,7 +10,6 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
   @moduletag :unit
 
   alias Ecto.Changeset
-  alias Tymeslot.ThemeCustomizations.Options.Accent
   alias Tymeslot.ThemeCustomizations.Options.CalendarView
   alias Tymeslot.ThemeCustomizations.Options.ColourMode
   alias Tymeslot.ThemeCustomizations.Options.Font
@@ -36,22 +35,25 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
   describe "option groups" do
     test "are the shared groups Paper offers, in the canonical order" do
       assert Enum.map(PaperSpec.option_groups(), & &1.module) ==
-               [Palette, ColourMode, Accent, Font, Radius, CalendarView, Logo]
+               [Palette, ColourMode, Font, Radius, CalendarView, Logo]
     end
 
-    test "offer the three tones, following the visitor's OS, and no background" do
+    test "offer the eight palettes, following the visitor's OS, and no background" do
       palette = Specs.group(PaperSpec, Palette)
 
-      assert palette.schemes == ~w(neutral cool warm)
+      assert palette.schemes ==
+               ~w(paper_turquoise paper_arctic paper_purple paper_sunset paper_ocean paper_forest paper_rose paper_monochrome)
+
+      for {_id, scheme} <- Palette.schemes(palette) do
+        assert %{mode: :light, dark_colors: %{}} = scheme
+      end
+
       assert palette.follow_os == true
       assert palette.seed_mode == :light
       assert Specs.background_kinds(PaperSpec) == []
     end
 
-    test "offer the nine accents and three fonts" do
-      assert Specs.group(PaperSpec, Accent).presets ==
-               ~w(tymeslot cobalt indigo violet rose ember emerald teal graphite)
-
+    test "offer three fonts" do
       assert Specs.group(PaperSpec, Font).presets == ~w(system inter plex)
     end
 
@@ -73,9 +75,8 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
     end
 
     for {setting, value} <- [
-          {"color_scheme", "purple"},
+          {"color_scheme", "neutral"},
           {"colour_mode", "sepia"},
-          {"accent", "chartreuse"},
           {"font", "editorial"},
           {"radius", "pill"},
           {"calendar_view", "day"}
@@ -92,19 +93,21 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
       assert validate(Map.put(defaults(), "calendar_view", "week")).valid?
     end
 
-    test "accepts a custom accent colour" do
-      assert validate(Map.put(defaults(), "accent", "#7c2d12")).valid?
+    test "accepts a custom seed colour in place of a palette" do
+      assert validate(Map.put(defaults(), "custom_palette_seed", "#7c2d12")).valid?
     end
   end
 
   describe "tokens" do
-    test "auto, the default, shows the neutral light set and the dark set inside the dark media query" do
+    test "auto, the default, shows the turquoise light set and the dark set inside the dark media query" do
       tokens = tokens(%{})
 
-      assert tokens.vars["--theme-canvas"] == "#f5f5f5"
+      assert tokens.vars["--theme-canvas"] == "#ecfeff"
       assert tokens.vars["--theme-surface"] == "#ffffff"
+      assert tokens.vars["--theme-primary"] == "#0e7490"
       assert tokens.vars["--theme-color-scheme"] == "light dark"
-      assert tokens.dark_vars["--theme-canvas"] == "#0e0e10"
+      assert tokens.dark_vars["--theme-canvas"] == "#0f172a"
+      assert tokens.dark_vars["--theme-primary"] == "#22d3ee"
       assert ThemeStyle.css(tokens) =~ "@media (prefers-color-scheme: dark)"
     end
 
@@ -116,34 +119,29 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
       refute ThemeStyle.css(tokens) =~ "prefers-color-scheme"
     end
 
-    test "dark puts the tone's dark set on the page" do
-      tokens = tokens(%{"color_scheme" => "warm", "colour_mode" => "dark"})
+    test "dark puts the palette's dark set on the page" do
+      tokens = tokens(%{"color_scheme" => "paper_forest", "colour_mode" => "dark"})
 
-      assert tokens.vars["--theme-canvas"] == "#151210"
-      assert tokens.vars["--theme-surface"] == "#1f1b18"
+      assert tokens.vars["--theme-canvas"] == "#052e16"
+      assert tokens.vars["--theme-surface"] == "#0f3d22"
+      assert tokens.vars["--theme-primary"] == "#34d399"
       assert tokens.vars["--theme-color-scheme"] == "dark"
       assert tokens.dark_vars == %{}
     end
 
-    test "the default accent is the primary, fitted to each set's card" do
-      tokens = tokens(%{})
+    test "a custom seed derives both sets from one colour" do
+      tokens = tokens(%{"custom_palette_seed" => "#7c3aed"})
 
-      assert tokens.vars["--theme-primary"] == "#07819e"
-      assert tokens.dark_vars["--theme-primary"] == "#0891b2"
+      assert tokens.vars["--theme-canvas"]
+      assert tokens.dark_vars["--theme-canvas"]
+      refute tokens.vars["--theme-canvas"] == tokens.dark_vars["--theme-canvas"]
     end
 
-    test "a stored accent replaces the primary in both sets" do
-      tokens = tokens(%{"accent" => "cobalt"})
-
-      assert tokens.vars["--theme-primary"] == "#2563eb"
-      assert tokens.dark_vars["--theme-primary"] == "#4a7eee"
-    end
-
-    test "an embed's primary colour wins over the accent, in both sets" do
-      tokens = tokens(%{"accent" => "cobalt"}, %{primary_color: "#e11d48"})
+    test "an embed's primary colour wins over the palette's, in both sets" do
+      tokens = tokens(%{}, %{primary_color: "#e11d48"})
 
       assert tokens.vars["--theme-primary"] == "#e11d48"
-      assert tokens.dark_vars["--theme-primary"] == "#e8496c"
+      assert tokens.dark_vars["--theme-primary"] == "#e11d48"
     end
 
     test "the font and the corners are the chosen ones" do
@@ -173,21 +171,21 @@ defmodule Tymeslot.ThemeCustomizations.PaperSpecTest do
   end
 
   describe "onboarding" do
-    test "offers the nine accents, in the group's order, written through the accent group" do
-      assert %{group: :accent, field: "preset", setting: "accent", choices: choices} =
+    test "offers the eight palettes, in the group's order, swatched by their primary" do
+      assert %{group: :palette, field: "scheme", setting: "color_scheme", choices: choices} =
                PaperSpec.onboarding_choices()
 
-      assert Enum.map(choices, & &1.value) ==
-               ~w(tymeslot cobalt indigo violet rose ember emerald teal graphite)
+      assert Enum.map(choices, & &1.value) == Specs.group(PaperSpec, Palette).schemes
 
-      assert %{name: "Cobalt", swatch: "#2563eb"} = Enum.find(choices, &(&1.value == "cobalt"))
+      assert %{name: "Forest Green", swatch: "#047857"} =
+               Enum.find(choices, &(&1.value == "paper_forest"))
     end
 
-    test "every choice is one the accent group saves" do
-      group = Specs.group(PaperSpec, Accent)
+    test "every choice is one the palette group saves" do
+      group = Specs.group(PaperSpec, Palette)
 
       for %{value: value} <- PaperSpec.onboarding_choices().choices do
-        assert {:ok, changes} = Accent.changes("preset", value, group)
+        assert {:ok, changes} = Palette.changes("scheme", value, group)
         assert validate(Map.merge(defaults(), changes)).valid?
       end
     end

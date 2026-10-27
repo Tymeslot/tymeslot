@@ -603,7 +603,6 @@ msgstr "Farbpalette"
 msgid "Could not save your theme customisation. Please try again."
 msgstr "Ihre Design-Anpassung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Customise Style"
@@ -682,10 +681,60 @@ msgstr "MP4 oder WebM. Max. %{size} MB."
 
 #: lib/tymeslot_web/themes/rhythm/theme.ex
 #, elixir-autogen, elixir-format
-msgid "Modern sliding design: each step slides in over a video background."
-msgstr "Modernes Design mit gleitenden Übergängen: Jeder Schritt gleitet über einem Videohintergrund herein."
+msgid "Modern sliding design: each step slides in on a glass card over a video background."
+msgstr "Modernes Design mit gleitenden Übergängen: Jeder Schritt gleitet auf einer Glaskarte über einem Videohintergrund herein."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
+#, elixir-autogen, elixir-format
+msgid "Customise %{theme_name}"
+msgstr "%{theme_name} anpassen"
 
 #: lib/tymeslot_web/themes/paper/theme.ex
 #, elixir-autogen, elixir-format
-msgid "A calm, neutral booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes and your own accent colour."
-msgstr "Eine ruhige, neutrale Buchungsseite: zuerst die Terminart, dann Uhrzeit und Buchung auf einem Bildschirm. Heller und dunkler Modus und Ihre eigene Akzentfarbe."
+msgid "A calm, flat booking page: choose a meeting type, then pick a time and book on one screen. Light and dark modes in the colour palette you choose."
+msgstr "Eine ruhige, flach gestaltete Buchungsseite: zuerst die Terminart, dann Uhrzeit und Buchung auf einem Bildschirm. Heller und dunkler Modus in der Farbpalette Ihrer Wahl."
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Arctic Blue"
+msgstr "Arktisblau"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Default Turquoise"
+msgstr "Standard-Türkis"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Forest Green"
+msgstr "Waldgrün"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Monochrome"
+msgstr "Monochrom"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Ocean Breeze"
+msgstr "Meeresbrise"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Purple Dream"
+msgstr "Lila Traum"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Rose Gold"
+msgstr "Roségold"
+
+#: lib/tymeslot/theme_customizations/presets/colour_schemes.ex
+#, elixir-autogen, elixir-format
+msgid "Sunset Glow"
+msgstr "Abendrot"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/palette_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The colours of your booking page, shown here light and dark. Colour Mode decides which one visitors see."
+msgstr "Die Farben Ihrer Buchungsseite, hier hell und dunkel gezeigt. Welche Variante Besucher sehen, legt der Farbmodus fest."

@@ -3,13 +3,14 @@ defmodule Tymeslot.ThemeCustomizations.Presets.ColourSchemes do
   The colour-scheme presets. Read through `Tymeslot.ThemeCustomizations.Presets`;
   a theme offers a scheme only when its palette group lists the id.
 
-  The light tones (`neutral`, `cool`, `warm`) carry their dark set in
-  `dark_colors`, for a palette group with `follow_os: true`; their names, and
-  those of Folio's six fixed-mode schemes (`ivory`, `sage`, `harbour`,
-  `blush`, `dusk`, `ink`), are registered for the dashboard
-  (`dashboard_appearance`) and translated where they are shown. Every tone
-  has the same primary family, since the accent group that goes with them
-  replaces it.
+  The light tones (`neutral`, `cool`, `warm`) and Paper's eight palettes
+  (`paper_*`, Quill and Rhythm's colour families in a light and a dark set)
+  carry their dark set in `dark_colors`, for a palette group with
+  `follow_os: true`. Their names, and those of Folio's six fixed-mode schemes
+  (`ivory`, `sage`, `harbour`, `blush`, `dusk`, `ink`), are registered for
+  the dashboard (`dashboard_appearance`) and translated where they are shown.
+  Every tone has the same primary family, since the accent group that goes
+  with them replaces it.
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -211,6 +212,202 @@ defmodule Tymeslot.ThemeCustomizations.Presets.ColourSchemes do
         surface: "#1f1b18",
         text: "#f5f5f4",
         text_secondary: "#a8a29e"
+      }
+    },
+    # Paper's palettes: Quill and Rhythm's colour families, each as a light
+    # set on a pale tint of its colour and a dark set on the same ground those
+    # themes use, solid rather than glass. Paper follows the visitor's OS, so
+    # every one carries both sets.
+    "paper_turquoise" => %{
+      name: dgettext_noop("dashboard_appearance", "Default Turquoise"),
+      mode: :light,
+      colors: %{
+        primary: "#0e7490",
+        primary_hover: "#155e75",
+        secondary: "#0891b2",
+        accent: "#0d9488",
+        background: "#ecfeff",
+        surface: "#ffffff",
+        text: "#083344",
+        text_secondary: "#456b76"
+      },
+      dark_colors: %{
+        primary: "#22d3ee",
+        primary_hover: "#06b6d4",
+        secondary: "#2dd4bf",
+        accent: "#34d399",
+        background: "#0f172a",
+        surface: "#1e293b",
+        text: "#f1f5f9",
+        text_secondary: "#94a3b8"
+      }
+    },
+    "paper_arctic" => %{
+      name: dgettext_noop("dashboard_appearance", "Arctic Blue"),
+      mode: :light,
+      colors: %{
+        primary: "#0369a1",
+        primary_hover: "#075985",
+        secondary: "#0284c7",
+        accent: "#0284c7",
+        background: "#f0f9ff",
+        surface: "#ffffff",
+        text: "#0c2a43",
+        text_secondary: "#4a6378"
+      },
+      dark_colors: %{
+        primary: "#38bdf8",
+        primary_hover: "#0ea5e9",
+        secondary: "#7dd3fc",
+        accent: "#38bdf8",
+        background: "#0c1426",
+        surface: "#17223a",
+        text: "#f0f9ff",
+        text_secondary: "#7dd3fc"
+      }
+    },
+    "paper_purple" => %{
+      name: dgettext_noop("dashboard_appearance", "Purple Dream"),
+      mode: :light,
+      colors: %{
+        primary: "#6d28d9",
+        primary_hover: "#5b21b6",
+        secondary: "#7c3aed",
+        accent: "#9333ea",
+        background: "#f5f3ff",
+        surface: "#ffffff",
+        text: "#1e1b4b",
+        text_secondary: "#5b5880"
+      },
+      dark_colors: %{
+        primary: "#a78bfa",
+        primary_hover: "#8b5cf6",
+        secondary: "#c4b5fd",
+        accent: "#c084fc",
+        background: "#1e1b4b",
+        surface: "#2b2763",
+        text: "#f5f3ff",
+        text_secondary: "#c4b5fd"
+      }
+    },
+    "paper_sunset" => %{
+      name: dgettext_noop("dashboard_appearance", "Sunset Glow"),
+      mode: :light,
+      colors: %{
+        primary: "#c2410c",
+        primary_hover: "#9a3412",
+        secondary: "#ea580c",
+        accent: "#b45309",
+        background: "#fff7ed",
+        surface: "#ffffff",
+        text: "#431407",
+        text_secondary: "#7c5a48"
+      },
+      dark_colors: %{
+        primary: "#fb923c",
+        primary_hover: "#f97316",
+        secondary: "#fdba74",
+        accent: "#fbbf24",
+        background: "#431407",
+        surface: "#5c1f0b",
+        text: "#fff7ed",
+        text_secondary: "#fed7aa"
+      }
+    },
+    "paper_ocean" => %{
+      name: dgettext_noop("dashboard_appearance", "Ocean Breeze"),
+      mode: :light,
+      colors: %{
+        primary: "#075985",
+        primary_hover: "#0c4a6e",
+        secondary: "#0369a1",
+        accent: "#0284c7",
+        background: "#eef6fa",
+        surface: "#ffffff",
+        text: "#082f49",
+        text_secondary: "#4b6577"
+      },
+      dark_colors: %{
+        primary: "#38bdf8",
+        primary_hover: "#0ea5e9",
+        secondary: "#7dd3fc",
+        accent: "#7dd3fc",
+        background: "#082f49",
+        surface: "#0b3d5c",
+        text: "#f0f9ff",
+        text_secondary: "#bae6fd"
+      }
+    },
+    "paper_forest" => %{
+      name: dgettext_noop("dashboard_appearance", "Forest Green"),
+      mode: :light,
+      colors: %{
+        primary: "#047857",
+        primary_hover: "#065f46",
+        secondary: "#059669",
+        accent: "#15803d",
+        background: "#f0fdf4",
+        surface: "#ffffff",
+        text: "#052e16",
+        text_secondary: "#4a6b55"
+      },
+      dark_colors: %{
+        primary: "#34d399",
+        primary_hover: "#10b981",
+        secondary: "#6ee7b7",
+        accent: "#6ee7b7",
+        background: "#052e16",
+        surface: "#0f3d22",
+        text: "#f0fdf4",
+        text_secondary: "#a7f3d0"
+      }
+    },
+    "paper_rose" => %{
+      name: dgettext_noop("dashboard_appearance", "Rose Gold"),
+      mode: :light,
+      colors: %{
+        primary: "#be123c",
+        primary_hover: "#9f1239",
+        secondary: "#e11d48",
+        accent: "#db2777",
+        background: "#fff1f2",
+        surface: "#ffffff",
+        text: "#4c0519",
+        text_secondary: "#7a5560"
+      },
+      dark_colors: %{
+        primary: "#fb7185",
+        primary_hover: "#f43f5e",
+        secondary: "#fda4af",
+        accent: "#fda4af",
+        background: "#4c0519",
+        surface: "#65102b",
+        text: "#fff1f2",
+        text_secondary: "#fecdd3"
+      }
+    },
+    "paper_monochrome" => %{
+      name: dgettext_noop("dashboard_appearance", "Monochrome"),
+      mode: :light,
+      colors: %{
+        primary: "#374151",
+        primary_hover: "#1f2937",
+        secondary: "#4b5563",
+        accent: "#4b5563",
+        background: "#f5f5f5",
+        surface: "#ffffff",
+        text: "#111827",
+        text_secondary: "#5f6368"
+      },
+      dark_colors: %{
+        primary: "#e5e7eb",
+        primary_hover: "#d1d5db",
+        secondary: "#9ca3af",
+        accent: "#d1d5db",
+        background: "#111827",
+        surface: "#1f2937",
+        text: "#f9fafb",
+        text_secondary: "#d1d5db"
       }
     },
     # Folio's schemes: editorial, low-saturation grounds with one strong

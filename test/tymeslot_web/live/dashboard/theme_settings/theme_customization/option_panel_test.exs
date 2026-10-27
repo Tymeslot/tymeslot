@@ -99,27 +99,21 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     refute label_class =~ "text-tymeslot-400"
   end
 
-  test "a scheme's dots sit on its own background, a tone's on the neutral backing" do
+  test "a scheme's dots sit on its own background" do
     html =
       render_panel(%{key: :palette, module: Palette, schemes: ~w(ocean neutral)})
 
-    tone_html =
-      render_panel(%{key: :palette, module: Palette, schemes: ~w(neutral), follow_os: true})
-
-    backing = fn html, scheme ->
+    backing = fn scheme ->
       html
       |> Floki.parse_fragment!()
       |> Floki.find("button[phx-value-choice='#{scheme}'] [data-testid='scheme-swatches']")
       |> Floki.attribute("style")
     end
 
-    assert backing.(html, "ocean") ==
-             ["background-color: #{ColourSchemes.all()["ocean"].colors.background}"]
-
-    assert backing.(html, "neutral") ==
-             ["background-color: #{ColourSchemes.all()["neutral"].colors.background}"]
-
-    assert backing.(tone_html, "neutral") == []
+    for scheme <- ~w(ocean neutral) do
+      assert backing.(scheme) ==
+               ["background-color: #{ColourSchemes.all()[scheme].colors.background}"]
+    end
   end
 
   test "the current-palette indicator derives a seed the way the group does" do
@@ -140,35 +134,43 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     refute html =~ "background: #{dark.secondary}"
   end
 
-  test "the tone schemes of a follow_os group draw different swatches" do
+  test "a follow_os group draws each scheme as a page in its light set beside its dark set" do
     html =
       render_panel(%{
         key: :palette,
         module: Palette,
-        schemes: ~w(neutral cool warm),
+        schemes: ~w(paper_forest paper_rose),
         follow_os: true
       })
 
-    swatches =
-      for scheme <- ~w(neutral cool warm) do
+    for id <- ~w(paper_forest paper_rose) do
+      scheme = ColourSchemes.all()[id]
+
+      styles =
         html
         |> Floki.parse_fragment!()
-        |> Floki.find("button[phx-value-choice='#{scheme}'] div[style]")
+        |> Floki.find("button[phx-value-choice='#{id}'] [data-testid='tone-preview'] [style]")
         |> Floki.attribute("style")
-      end
 
-    assert Enum.all?(swatches, &(length(&1) == 3))
-    assert length(Enum.uniq(swatches)) == 3
-    assert swatches |> Enum.concat() |> Enum.uniq() |> length() == 9
+      expected =
+        for colours <- [scheme.colors, scheme.dark_colors],
+            key <- [:background, :surface, :text, :text_secondary, :primary],
+            do: "background-color: #{colours[key]}"
 
-    [neutral | _others] = swatches
-    tone = ColourSchemes.all()["neutral"]
+      assert styles == expected
 
-    assert neutral == [
-             "background-color: #{tone.colors.background}",
-             "background-color: #{tone.colors.text_secondary}",
-             "background-color: #{tone.dark_colors.background}"
-           ]
+      refute html
+             |> Floki.parse_fragment!()
+             |> Floki.find("button[phx-value-choice='#{id}'] [data-testid='scheme-swatches']")
+             |> Enum.any?()
+    end
+  end
+
+  test "a follow_os group still offers a custom colour" do
+    html =
+      render_panel(%{key: :palette, module: Palette, schemes: ~w(paper_forest), follow_os: true})
+
+    assert html =~ ~s(phx-click="theme:toggle_palette_picker")
   end
 
   test "the schemes of a group without follow_os keep their primary, secondary and accent" do
@@ -240,14 +242,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.OptionPanelTest
     end
   end
 
-  test "the palette panel names a scheme in the viewer's language where the catalogue has it" do
+  test "the palette panel names each scheme in the viewer's language" do
     html =
       Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
         render_panel(%{key: :palette, module: Palette, schemes: ["cool", "ocean"]})
       end)
 
     assert html =~ "Kühl"
-    assert html =~ "Ocean Breeze"
+    assert html =~ "Meeresbrise"
   end
 
   test "the colour-mode panel offers the three modes, named in the viewer's language" do

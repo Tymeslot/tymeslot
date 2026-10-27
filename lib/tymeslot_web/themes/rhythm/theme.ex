@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     description:
       dgettext_noop(
         "dashboard_appearance",
-        "Modern sliding design: each step slides in over a video background."
+        "Modern sliding design: each step slides in on a glass card over a video background."
       ),
     story:
       dgettext_noop(
