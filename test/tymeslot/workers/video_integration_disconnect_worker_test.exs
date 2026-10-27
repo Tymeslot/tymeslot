@@ -17,15 +17,17 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.InviteeData
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
   alias Tymeslot.ZoomOAuthHelperMock
+
+  # A grant without the update scope; the factory's Zoom holds all three.
+  @zoom_scope "meeting:write:meeting meeting:delete:meeting"
 
   setup :verify_on_exit!
 
   test "deletes each upcoming room, clears the booking, and purges the row" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
     meeting =
       insert_meeting_for_user(user, %{
@@ -64,7 +66,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
   test "leaves past bookings alone" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
     past =
       insert_meeting_for_user(user, %{
@@ -91,7 +93,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
   test "deletes the conversations of ended Talk meetings before purging the row" do
     %{user: user} = create_user_with_profile()
     host = "disconnect-ended.example.com"
-    integration = insert_talk_integration(user, host)
+    integration = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
     ended =
       insert_meeting_for_user(user, %{
@@ -136,7 +138,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
       test "has its room cleared, and the row purged, on the first run (#{label})" do
         %{user: user} = create_user_with_profile()
         host = "disconnect-erased.example.com"
-        integration = insert_talk_integration(user, host)
+        integration = insert(:talk_video_integration, user: user, base_url: "https://" <> host)
 
         ended =
           insert_meeting_for_user(user, %{
@@ -177,7 +179,12 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
   # ended one's is history.
   test "refreshes the calendar event of a booking still to come only" do
     %{user: user} = create_user_with_profile()
-    integration = insert_talk_integration(user, "disconnect-refresh.example.com")
+
+    integration =
+      insert(:talk_video_integration,
+        user: user,
+        base_url: "https://disconnect-refresh.example.com"
+      )
 
     room = fn attrs ->
       insert_meeting_for_user(
@@ -213,7 +220,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
   test "retries and keeps the row when the provider call fails" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
     insert_meeting_for_user(user, %{
       video_integration_id: integration.id,
@@ -238,7 +245,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
   test "purges the row on the final attempt even if a room could not be deleted" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
     insert_meeting_for_user(user, %{
       video_integration_id: integration.id,
@@ -273,7 +280,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
   test "skips the sweep entirely when the integration was reconnected before this attempt ran" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
     meeting =
       insert_meeting_for_user(user, %{
@@ -298,7 +305,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
 
   test "keeps a reconnect that lands mid-drain, even though the purge acted on a stale read" do
     %{user: user} = create_user_with_profile()
-    integration = insert_zoom_integration(user)
+    integration = insert(:zoom_video_integration, user: user, oauth_scope: @zoom_scope)
 
     meeting =
       insert_meeting_for_user(user, %{
@@ -333,38 +340,6 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
     assert still_there.is_active
   end
 
-  defp insert_talk_integration(user, host) do
-    base_url = "https://" <> host
-
-    insert(:video_integration,
-      user: user,
-      provider: "nextcloud_talk",
-      base_url: base_url,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: base_url <> "||organiser"
-    )
-  end
-
   defp talk_ocs(data),
     do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
-      provider_account_id: nil
-    )
-  end
 end

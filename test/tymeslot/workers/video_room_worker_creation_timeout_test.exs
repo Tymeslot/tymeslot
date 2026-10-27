@@ -25,7 +25,6 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoRoomWorker
 
   @server "https://slow.talk.example.com"
@@ -42,7 +41,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
   end
 
   test "records the room once when the provider takes its time to answer", %{user: user} do
-    meeting = insert_meeting(user, insert_talk_integration(user))
+    meeting = insert_meeting(user, insert(:talk_video_integration, user: user, base_url: @server))
 
     expect(HTTPClientMock, :request, fn :get, _list_url, _body, _headers, _opts ->
       ocs(200, [])
@@ -67,7 +66,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
 
   describe "creation_timeout_ms/1" do
     test "outlasts the budget of the meeting's own provider", %{user: user} do
-      talk = insert_meeting(user, insert_talk_integration(user))
+      talk = insert_meeting(user, insert(:talk_video_integration, user: user, base_url: @server))
       teams = insert_meeting(user, insert(:video_integration, user: user, provider: "teams"))
 
       assert VideoRoomWorker.creation_timeout_ms(talk) >
@@ -77,7 +76,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
     end
 
     test "waits only for the meeting's own provider, not for the slowest", %{user: user} do
-      talk = insert_meeting(user, insert_talk_integration(user))
+      talk = insert_meeting(user, insert(:talk_video_integration, user: user, base_url: @server))
 
       assert VideoRoomWorker.creation_timeout_ms(talk) <
                ProviderConfig.room_creation_budget_ms()
@@ -104,19 +103,6 @@ defmodule Tymeslot.Workers.VideoRoomWorkerCreationTimeoutTest do
                  ProviderConfig.room_creation_budget_ms()
       end
     end
-  end
-
-  defp insert_talk_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Nextcloud Talk",
-      provider: "nextcloud_talk",
-      base_url: @server,
-      api_key_encrypted: nil,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: @server <> "||organiser"
-    )
   end
 
   defp insert_meeting(user, integration) do

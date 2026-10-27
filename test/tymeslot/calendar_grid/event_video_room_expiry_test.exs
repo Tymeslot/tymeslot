@@ -61,7 +61,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
       {:ok, [%{"id" => "alice@example.com", "primary" => true}]}
     end)
 
-    %{user: user, talk: insert_talk_integration(user, talk_host), talk_host: talk_host}
+    %{
+      user: user,
+      talk: insert(:talk_video_integration, user: user, base_url: "https://" <> talk_host),
+      talk_host: talk_host
+    }
   end
 
   describe "a Google calendar" do
@@ -453,19 +457,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
     END:VEVENT\r
     END:VCALENDAR\r
     """
-  end
-
-  defp insert_talk_integration(user, host) do
-    base_url = "https://" <> host
-
-    insert(:video_integration,
-      user: user,
-      provider: "nextcloud_talk",
-      base_url: base_url,
-      client_id_encrypted: Encryption.encrypt("organiser"),
-      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
-      provider_account_id: base_url <> "||organiser"
-    )
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})

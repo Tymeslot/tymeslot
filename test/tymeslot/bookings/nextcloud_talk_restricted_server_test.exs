@@ -26,7 +26,6 @@ defmodule Tymeslot.Bookings.NextcloudTalkRestrictedServerTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Dashboard.VideoSettings.Components
@@ -56,7 +55,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkRestrictedServerTest do
   test "a server that refuses to create conversations is explained to the organiser until it allows them",
        %{user: user} do
     server = server("restricted")
-    integration = insert_talk_integration(user, server)
+    integration = insert(:talk_video_integration, user: user, base_url: server)
     meeting_type = insert_meeting_type(user, integration, "Talk consultation")
 
     # Two guests book while Nextcloud lets only another group create
@@ -233,21 +232,4 @@ defmodule Tymeslot.Bookings.NextcloudTalkRestrictedServerTest do
   end
 
   defp server(name), do: "https://#{name}.talk.example.com"
-
-  defp insert_talk_integration(user, server) do
-    insert(:video_integration,
-      user: user,
-      name: "Nextcloud Talk",
-      provider: "nextcloud_talk",
-      base_url: server,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: nil,
-      refresh_token_encrypted: nil,
-      client_id_encrypted: Encryption.encrypt(@login),
-      client_secret_encrypted: Encryption.encrypt(@app_password),
-      provider_account_id: server <> "||" <> @login
-    )
-  end
 end
