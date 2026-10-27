@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer
   alias Tymeslot.Test.LogCapture
+  alias Tymeslot.TestHelpers.Eventually
 
   @receive_timeout 2_000
   @await_timeout 5_000
@@ -27,17 +28,16 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
 
   defp counter, do: Agent.get(__MODULE__.Counter, & &1)
 
-  defp wait_for_waiters(expected_count, attempts \\ 50) do
-    %{requests: requests} = :sys.get_state(RequestCoalescer)
-    total_waiters = requests |> Map.values() |> Enum.map(&length(&1.waiters)) |> Enum.sum()
-
-    if total_waiters >= expected_count do
-      :ok
-    else
-      if attempts <= 0, do: raise("Timed out waiting for #{expected_count} waiters")
-      Process.sleep(10)
-      wait_for_waiters(expected_count, attempts - 1)
-    end
+  defp wait_for_waiters(expected_count) do
+    Eventually.eventually(
+      fn ->
+        %{requests: requests} = :sys.get_state(RequestCoalescer)
+        requests |> Map.values() |> Enum.map(&length(&1.waiters)) |> Enum.sum() >= expected_count
+      end,
+      timeout: @await_timeout,
+      interval: 10,
+      message: "Timed out waiting for #{expected_count} waiters"
+    )
   end
 
   test "coalesces identical concurrent requests and shares the result" do

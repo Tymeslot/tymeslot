@@ -7,13 +7,10 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
   This test file intentionally uses `Process.sleep/1` to test edge cases in
   the locking mechanism:
 
-  1. `Process.sleep(:infinity)` - Holds a lock indefinitely to test cleanup
-     when the process is killed
-  2. Short sleeps - Allow time for async cleanup operations (monitor messages)
-     to be processed by GenServers
-
-  These sleeps are necessary for testing process lifecycle and cleanup behavior,
-  not timing dependencies.
+  `Process.sleep(:infinity)` holds a lock indefinitely to test cleanup when
+  the holder is killed. The lock owner learns of the death from its own
+  `:DOWN` message, which nothing orders against the test's, so the test polls
+  for the release rather than waiting a fixed time.
   """
 
   # async: false to control ETS table state
@@ -21,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Shared.Lock
+  alias Tymeslot.TestHelpers.Eventually
 
   describe "Lock lifecycle" do
     test "works even if init() wasn't called (table auto-created)" do
@@ -68,14 +66,8 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
         {:DOWN, ^ref, :process, ^pid, :killed} -> :ok
       end
 
-      # Intentional sleep: Allow GenServer time to process the :DOWN monitor
-      # message and remove the lock entry from ETS. This is testing async
-      # cleanup behavior, not a timing dependency - the GenServer needs time
-      # to process its mailbox
-      Process.sleep(50)
-
-      # Verify it's now unlocked
-      assert :ok = Lock.with_lock(:google, 123, fn -> :ok end)
+      # A refused acquire changes nothing, so polling it is safe.
+      Eventually.eventually(fn -> assert :ok = Lock.with_lock(:google, 123, fn -> :ok end) end)
     end
   end
 end
