@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Plugs.RejectMalformedPathPlug do
   @moduledoc """
   Answers `400 Bad Request` for a path whose segments do not percent-decode to
-  valid UTF-8 (`/%c0`).
+  valid UTF-8 (`/%c0`), or decode to a NUL byte (`/%00`), which is valid UTF-8
+  but which PostgreSQL refuses in text all the same.
 
   Plug rejects invalid UTF-8 in a query string, but nothing checks the path:
   the router decodes each segment and hands the result on as a path param.
@@ -20,7 +21,7 @@ defmodule TymeslotWeb.Plugs.RejectMalformedPathPlug do
 
   @impl Plug
   def call(%Plug.Conn{path_info: segments} = conn, _opts) do
-    if Enum.all?(segments, &(&1 |> URI.decode() |> String.valid?())) do
+    if Enum.all?(segments, &(&1 |> URI.decode() |> storable?())) do
       conn
     else
       conn
@@ -29,4 +30,6 @@ defmodule TymeslotWeb.Plugs.RejectMalformedPathPlug do
       |> halt()
     end
   end
+
+  defp storable?(segment), do: String.valid?(segment) and not String.contains?(segment, <<0>>)
 end
