@@ -1,10 +1,10 @@
-defmodule TymeslotWeb.Components.HeroiconsTest do
+defmodule TymeslotWeb.Components.IconsTest do
   @moduledoc """
-  Guards the vendored-heroicon pipeline (priv/heroicons → compile-time map →
-  inline `<svg>`). Regression cover for the failure mode that motivated
+  Guards the icon pipeline (priv SVGs → compile-time maps → inline `<svg>`):
+  the vendored Heroicons, Core's custom icons in priv/icons, and the `<.icon>`
+  renderer they share. Regression cover for the failure mode that motivated
   vendoring: an empty or partially-populated icon map silently rendering blank
-  tiles. The same `<.icon>` component serves both Core and SaaS, so these
-  assertions also cover SaaS-only icon names — there is no per-app icon subset.
+  tiles.
   """
   use TymeslotWeb.ConnCase, async: true
 
@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Components.HeroiconsTest do
 
   import Phoenix.LiveViewTest
 
+  alias TymeslotWeb.Components.CoreComponents.CustomIcons
   alias TymeslotWeb.Components.CoreComponents.Heroicons
   alias TymeslotWeb.Components.CoreComponents.Icons
 
@@ -30,8 +31,9 @@ defmodule TymeslotWeb.Components.HeroiconsTest do
         name = "hero-academic-cap" <> unquote(suffix)
 
         assert Heroicons.known?(name)
-        assert {:ok, %{body: body, view_box: view_box}} = Heroicons.fetch(name)
+        assert {:ok, %{body: body, attrs: attrs}} = Heroicons.fetch(name)
         assert byte_size(body) > 0
+        assert {"viewBox", view_box} = List.keyfind(attrs, "viewBox", 0)
         assert view_box =~ ~r/^[\d.\s]+$/
       end
     end
@@ -79,15 +81,53 @@ defmodule TymeslotWeb.Components.HeroiconsTest do
       refute html =~ "definitely-not-a-real-icon"
     end
 
-    test "a non-heroicon name renders its literal text" do
-      html = render_icon(%{name: "custom-marker"})
+    test "keeps the heroicon's own stroke weight, which a class can override" do
+      html = render_icon(%{name: "hero-check", class: "stroke-3"})
 
-      assert html =~ "custom-marker"
+      assert html =~ ~s(stroke-width="1.5")
+      assert html =~ "stroke-3"
+    end
+
+    test "passes global attributes through to the svg" do
+      html = render_icon(%{name: "hero-eye", rest: %{"data-eye-open": true, id: "eye"}})
+
+      assert html =~ ~s(data-eye-open)
+      assert html =~ ~s(id="eye")
+      assert html =~ ~s(aria-hidden="true")
+    end
+  end
+
+  describe "custom icons from priv/icons" do
+    test "every file in priv/icons is drawable by its file name" do
+      dir = Path.expand("../../../priv/icons", __DIR__)
+      names = dir |> File.ls!() |> Enum.map(&Path.basename(&1, ".svg")) |> Enum.sort()
+
+      assert names != []
+      assert Enum.sort(CustomIcons.names()) == names
+      for name <- names, do: assert(Icons.known?(name), "expected #{name} to be drawable")
+    end
+
+    test "renders a brand mark filled in currentColor at the default 24px" do
+      html = render_icon(%{name: "brand-slack", class: "w-6 h-6"})
+
+      assert html =~ "<svg"
+      assert html =~ ~s(fill="currentColor")
+      assert html =~ ~s(width="24")
+      assert html =~ "w-6 h-6"
+    end
+
+    test "an unknown name degrades to an empty span without leaking the name" do
+      html = render_icon(%{name: "brand-not-a-real-mark"})
+
+      assert html =~ "<span"
+      refute html =~ "<svg"
+      refute html =~ "brand-not-a-real-mark"
+      refute Icons.known?("brand-not-a-real-mark")
     end
   end
 
   defp render_icon(assigns) do
-    assigns = Map.merge(%{class: nil, style: nil}, assigns)
+    assigns = Map.merge(%{class: nil, style: nil, rest: %{}}, assigns)
     render_component(&Icons.icon/1, assigns)
   end
 end

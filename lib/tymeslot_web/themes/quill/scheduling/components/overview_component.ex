@@ -164,9 +164,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           unless assigns[:selected_duration],
                             do: dgettext("booking", "Please select a meeting duration first")
                         }
-                        class="w-full"
+                        class="w-full gap-2"
                       >
-                        {dgettext("booking", "Next")} →
+                        {dgettext("booking", "Next")}
+                        <.icon name="hero-arrow-right" class="inline-icon" />
                       </.action_button>
                     </div>
                   </div>

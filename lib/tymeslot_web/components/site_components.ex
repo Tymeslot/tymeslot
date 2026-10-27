@@ -124,20 +124,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           }
           aria-label={dgettext("common", "Toggle menu")}
         >
-          <svg
-            class="w-7 h-7 text-turquoise-700"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="3"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4 6h16M4 12h16M4 18h16"
-            >
-            </path>
-          </svg>
+          <.icon name="hero-bars-3" class="w-7 h-7 text-turquoise-700 stroke-3" />
         </button>
 
         <%!-- Mobile Menu --%>
@@ -362,20 +349,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
   defp nav_chevron(assigns) do
     ~H"""
-    <svg
+    <.icon
+      name="hero-chevron-down"
       id={@id}
       class={[
-        "w-4 h-4 transition-transform duration-200",
+        "w-4 h-4 transition-transform duration-200 stroke-[2.5]",
         is_nil(@id) && "group-hover:rotate-180"
       ]}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      stroke-width="2.5"
-      aria-hidden="true"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
+    />
     """
   end
 
@@ -437,14 +418,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               data-analytics-props={Jason.encode!(%{source_page: "footer"})}
               class="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-turquoise-500 to-turquoise-600 text-white font-semibold rounded-token-lg hover:from-turquoise-600 hover:to-turquoise-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-turquoise-500/25 text-token-sm"
             >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
-                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                >
-                </path>
-              </svg>
+              <.icon name="brand-github" class="w-4 h-4" />
               {dgettext("common", "View on GitHub")}
             </a>
           </div>

@@ -204,27 +204,24 @@
 /* ===== Dropdown chevron: a single-select with more than five options =====
 
    The select is appearance-none, so nothing draws its arrow. The
-   .custom-question-select wrapper (single_select.ex) holds the select
-   alone, so a chevron centred on the wrapper is centred on the select. The
-   mask takes the chevron's shape from the SVG and its colour from the
-   token, so the SVG's own stroke colour never shows. The select's padding
-   rule outranks each theme's `.<theme>-wrapper select.input` padding. */
+   .custom-question-select wrapper (single_select.ex) holds the select and
+   a chevron icon, so the chevron centred on the wrapper is centred on the
+   select. The chevron takes its colour from the token and lets clicks
+   through to the select. The select's padding rule outranks each theme's
+   `.<theme>-wrapper select.input` padding. */
 
 .scheduling-app .custom-question-select {
   position: relative;
 }
 
-.scheduling-app .custom-question-select::after {
-  content: "";
+.scheduling-app .custom-question-select-chevron {
   position: absolute;
   inset-inline-end: var(--space-sm);
   top: 50%;
   translate: 0 -50%;
   width: 1rem;
   height: 1rem;
-  background: var(--select-chevron-ink, var(--ink-2));
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  color: var(--select-chevron-ink, var(--ink-2));
   pointer-events: none;
 }
 

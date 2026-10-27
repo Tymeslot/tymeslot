@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
 
   import Phoenix.LiveViewTest
 
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.FlagHelpers
 
   describe "safe_flag/1" do
@@ -13,7 +14,7 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
       html = render_component(&FlagHelpers.safe_flag/1, country_code: :usa, class: "w-6 h-4")
 
       assert html =~ "<svg"
-      refute html =~ "🌍"
+      refute html =~ "Flag not available"
     end
 
     test "renders fallback icon for Algeria (:dza) which has no Flagpack flag" do
@@ -21,11 +22,11 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
         render_component(&FlagHelpers.safe_flag/1,
           country_code: :dza,
           class: "w-6 h-4",
-          fallback_icon: "🌍"
+          fallback_icon: "hero-globe-europe-africa"
         )
 
-      assert html =~ "🌍"
-      refute html =~ "<svg"
+      assert html =~ "Flag not available"
+      assert html =~ globe_icon()
     end
 
     test "renders nothing when show_fallback is false and flag is missing" do
@@ -36,19 +37,15 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
           show_fallback: false
         )
 
-      refute html =~ "🌍"
+      refute html =~ "Flag not available"
       refute html =~ "<svg"
     end
 
-    test "renders fallback for nil country code" do
-      html =
-        render_component(&FlagHelpers.safe_flag/1,
-          country_code: nil,
-          class: "w-6 h-4",
-          fallback_icon: "🌍"
-        )
+    test "renders the default globe fallback for nil country code" do
+      html = render_component(&FlagHelpers.safe_flag/1, country_code: nil, class: "w-6 h-4")
 
-      assert html =~ "🌍"
+      assert html =~ "Flag not available"
+      assert html =~ globe_icon()
     end
   end
 
@@ -68,11 +65,11 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
         render_component(&FlagHelpers.timezone_flag/1,
           timezone: "Africa/Algiers",
           class: "w-6 h-4",
-          fallback_icon: "🌍"
+          fallback_icon: "hero-globe-europe-africa"
         )
 
-      assert html =~ "🌍"
-      refute html =~ "<svg"
+      assert html =~ "Flag not available"
+      assert html =~ globe_icon()
     end
 
     test "renders fallback for unknown timezone" do
@@ -80,10 +77,15 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
         render_component(&FlagHelpers.timezone_flag/1,
           timezone: "Fake/Zone",
           class: "w-6 h-4",
-          fallback_icon: "🌍"
+          fallback_icon: "hero-globe-europe-africa"
         )
 
-      assert html =~ "🌍"
+      assert html =~ "Flag not available"
     end
+  end
+
+  # The globe fallback's markup exactly as `<.icon>` draws it.
+  defp globe_icon do
+    render_component(&Icons.icon/1, name: "hero-globe-europe-africa", class: "w-full h-full")
   end
 end

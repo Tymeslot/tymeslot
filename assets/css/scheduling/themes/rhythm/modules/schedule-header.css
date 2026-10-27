@@ -124,6 +124,8 @@
 }
 
 .timezone-arrow {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   color: var(--theme-text-secondary);
   flex-shrink: 0;
   transition: transform var(--transition-normal);

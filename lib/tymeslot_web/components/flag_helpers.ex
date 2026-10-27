@@ -10,10 +10,13 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   alias Phoenix.LiveView.TagEngine
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Components.CoreComponents.Icons
 
   @doc """
   Renders a country flag with automatic fallback if the flag doesn't exist.
   Logs a warning when a flag is missing to help identify unsupported countries.
+  The fallback is an icon (`fallback_icon`, a `<.icon>` name), sized by
+  `class` like the flag it stands in for.
 
   ## Examples
 
@@ -22,7 +25,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   """
   attr :country_code, :atom, required: true
   attr :class, :string, default: ""
-  attr :fallback_icon, :string, default: "🌍"
+  attr :fallback_icon, :string, default: "hero-globe-europe-africa"
   attr :show_fallback, :boolean, default: true
 
   @spec safe_flag(map()) :: Phoenix.LiveView.Rendered.t()
@@ -46,7 +49,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
       if assigns.show_fallback do
         ~H"""
         <span class={["inline-flex items-center justify-center", @class]} title="Flag not available">
-          {@fallback_icon}
+          <Icons.icon name={@fallback_icon} class="w-full h-full" />
         </span>
         """
       else
@@ -68,7 +71,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   """
   attr :timezone, :string, required: true
   attr :class, :string, default: ""
-  attr :fallback_icon, :string, default: "🌍"
+  attr :fallback_icon, :string, default: "hero-globe-europe-africa"
   attr :show_fallback, :boolean, default: true
 
   @spec timezone_flag(map()) :: Phoenix.LiveView.Rendered.t()

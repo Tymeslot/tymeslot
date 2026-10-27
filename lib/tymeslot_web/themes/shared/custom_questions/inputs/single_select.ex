@@ -7,10 +7,11 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   compactness, inside a form: LiveView's client sends `phx-change` only from
   an input that has a form, so a bare select would never commit the answer.
 
-  The select is `appearance-none`, so its chevron is drawn by the
-  `custom-question-select` wrapper (`shared/components/custom-questions.css`).
-  The wrapper holds the select alone (the input gets no label and no
-  errors here), so the chevron centres on the select itself.
+  The select is `appearance-none`, so its chevron is an icon laid over it
+  inside the `custom-question-select` wrapper
+  (`shared/components/custom-questions.css`). The wrapper holds only the
+  select and the chevron (the input gets no label and no errors here), so
+  the chevron centres on the select itself.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -67,6 +68,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
           prompt={dgettext("booking", "Select…")}
           aria-label={@definition["label"]}
         />
+        <.icon name="hero-chevron-down" class="custom-question-select-chevron" />
       </div>
     </form>
     """

@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
   just the icons actually rendered.
   """
 
+  alias TymeslotWeb.Components.CoreComponents.IconSource
+
   # The SVGs are vendored into priv (see priv/heroicons/README.md) rather than
   # pulled from a git dep: a dep checkout was only reliably present in the main
   # checkout, so fresh worktrees compiled an empty map and silently rendered
@@ -26,39 +28,20 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
   # is baked into the BEAM, the path is never consulted at runtime).
   @optimized_dir Path.expand("../../../../priv/heroicons", __DIR__)
 
-  # {name suffix, sub-directory, outline?, intrinsic px} — mirrors the four
-  # styles the old plugin produced (default / -solid / -mini / -micro).
+  # {name suffix, sub-directory, intrinsic px}: the four styles, outline by
+  # default and `-solid` / `-mini` / `-micro` for the others.
   @sources [
-    {"", "24/outline", true, 24},
-    {"-solid", "24/solid", false, 24},
-    {"-mini", "20/solid", false, 20},
-    {"-micro", "16/solid", false, 16}
+    {"", "24/outline", 24},
+    {"-solid", "24/solid", 24},
+    {"-mini", "20/solid", 20},
+    {"-micro", "16/solid", 16}
   ]
 
-  @icons (for {suffix, subdir, outline?, size} <- @sources,
-              dir = Path.join(@optimized_dir, subdir),
-              File.dir?(dir),
-              file <- File.ls!(dir),
-              String.ends_with?(file, ".svg"),
-              into: %{} do
-            path = Path.join(dir, file)
-            @external_resource path
-            content = File.read!(path)
-
-            view_box =
-              case Regex.run(~r/viewBox="([^"]*)"/, content) do
-                [_match, vb] -> vb
-                _no_viewbox -> "0 0 #{size} #{size}"
-              end
-
-            body =
-              case Regex.run(~r/<svg[^>]*>(.*)<\/svg>/s, content) do
-                [_match, inner] -> String.trim(inner)
-                _no_svg -> ""
-              end
-
-            name = "hero-" <> Path.basename(file, ".svg") <> suffix
-            {name, %{view_box: view_box, body: body, outline?: outline?, size: size}}
+  @icons (for {suffix, subdir, size} <- @sources, reduce: %{} do
+            icons ->
+              dir = Path.join(@optimized_dir, subdir)
+              for file <- IconSource.files(dir), do: @external_resource(Path.join(dir, file))
+              Map.merge(icons, IconSource.load(dir, prefix: "hero-", suffix: suffix, size: size))
           end)
 
   # Fail the build loudly rather than silently shipping blank icon tiles — the
@@ -71,9 +54,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
   @doc """
   Looks up a heroicon by its `hero-*` name.
 
-  Returns `{:ok, %{view_box:, body:, outline?:, size:}}` or `:error`.
+  Returns `{:ok, icon}` (see `IconSource.icon/0`) or `:error`.
   """
-  @spec fetch(String.t()) :: {:ok, map()} | :error
+  @spec fetch(String.t()) :: {:ok, IconSource.icon()} | :error
   def fetch(name), do: Map.fetch(@icons, name)
 
   @doc "Whether a `hero-*` name is known at compile time."

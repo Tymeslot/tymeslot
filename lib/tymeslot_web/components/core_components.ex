@@ -18,9 +18,10 @@ defmodule TymeslotWeb.Components.CoreComponents do
   Adding a shared component: write it in the submodule it belongs to (or a new
   one), then add its name to `@shared`.
 
-  `use` takes `only: [name: 1, …]` to import a subset. `button_classes/1,2`,
-  the classes of an action button for an element that cannot be one, comes
-  along with the buttons.
+  `use` takes `only: [name: 1, …]` to import a subset, or `except:` to leave
+  some out (an app with its own `icon/1` takes `except: [icon: 1]`).
+  `button_classes/1,2`, the classes of an action button for an element that
+  cannot be one, comes along with the buttons.
   """
 
   # Submodules are named by atom, never by alias: an alias reference would
@@ -80,10 +81,17 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc false
   defmacro __using__(opts) do
     wanted = Keyword.get(opts, :only)
+    unwanted = Keyword.get(opts, :except, [])
 
     for {module, names} <- @components,
         imports =
-          for(name <- names, fun = function(name), wanted == nil or fun in wanted, do: fun),
+          for(
+            name <- names,
+            fun = function(name),
+            wanted == nil or fun in wanted,
+            fun not in unwanted,
+            do: fun
+          ),
         imports != [] do
       quote do
         import unquote(module), only: unquote(imports)
