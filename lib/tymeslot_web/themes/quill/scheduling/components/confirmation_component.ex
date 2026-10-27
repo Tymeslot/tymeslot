@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -149,14 +150,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     </div>
 
                     <div
-                      :if={assigns[:paid_price]}
+                      :if={MeetingPrice.paid_price(assigns[:paid_payment], @locale)}
                       class="confirmation-border-top mt-3 pt-3 border-t"
                     >
                       <div class="confirmation-email-row" data-testid="confirmation-paid">
                         <div class="confirmation-icon-wrapper rounded-full">
                           <.icon name="hero-credit-card" class="confirmation-email-link w-4 h-4" />
                         </div>
-                        <.paid_line amount={@paid_price} />
+                        <.paid_line amount={MeetingPrice.paid_price(@paid_payment, @locale)} />
                       </div>
                     </div>
 

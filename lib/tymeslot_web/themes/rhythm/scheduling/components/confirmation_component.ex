@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -173,7 +174,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   </div>
 
                   <div
-                    :if={assigns[:paid_price]}
+                    :if={MeetingPrice.paid_price(assigns[:paid_payment], @locale)}
                     class="ticket-row"
                     data-testid="confirmation-paid"
                   >
@@ -181,7 +182,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       <.icon name="hero-credit-card" class="hero-icon hero-icon--md" />
                     </div>
                     <div class="ticket-info">
-                      <span class="ticket-value">{@paid_price}</span>
+                      <span class="ticket-value">{MeetingPrice.paid_price(@paid_payment, @locale)}</span>
                       <span class="ticket-sublabel">{dgettext("booking", "Paid")}</span>
                     </div>
                   </div>

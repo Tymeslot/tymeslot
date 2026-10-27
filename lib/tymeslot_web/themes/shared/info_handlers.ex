@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Live.Scheduling.WeekSlots
   alias TymeslotWeb.Themes.Shared.BookingFlow
   alias TymeslotWeb.Themes.Shared.BookingLocation
-  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
@@ -376,7 +375,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           |> BookingLocation.assign_booked(meeting)
           |> assign(:name, meeting.attendee_name)
           |> assign(:email, meeting.attendee_email)
-          |> assign(:paid_price, paid_price(meeting, socket.assigns[:locale]))
+          |> assign(:paid_payment, paid_payment(meeting))
           |> Runtime.forget_payment_wait()
 
         {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
@@ -389,9 +388,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     end
   end
 
-  # What the payment took, for the confirmation to say the booking is paid.
-  defp paid_price(meeting, locale),
-    do: meeting.id |> MeetingPayments.payment_for_meeting() |> MeetingPrice.paid_price(locale)
+  # What the payment took, for the confirmation to say the booking is paid,
+  # in the locale the confirmation is shown in (`MeetingPrice.paid_price/2`).
+  defp paid_payment(meeting),
+    do: MeetingPayments.payment_for_meeting(meeting.id, meeting.organizer_user_id)
 
   @doc """
   Handles the `:expired` PubSub broadcast for an embedded paid booking.
