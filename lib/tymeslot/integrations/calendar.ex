@@ -95,6 +95,26 @@ defmodule Tymeslot.Integrations.Calendar do
       )
 
   @doc """
+  Whether the user's booking page can offer times, judged by their calendars:
+
+    * `:taking_bookings`: a writable calendar is connected and none refused.
+    * `{:credentials_refused, names}`: an active integration is flagged
+      `needs_reauth`. The availability read fails closed on a calendar it
+      cannot read, so the page offers no times until each is reconnected.
+    * `:no_calendar`: nothing a booking can be written to is connected.
+
+  Poll creation gates on `has_bookable_integration?/1` instead, on purpose.
+  """
+  @spec booking_page_health(user_id()) ::
+          :taking_bookings | :no_calendar | {:credentials_refused, [String.t()]}
+  def booking_page_health(user_id) when is_integer(user_id) do
+    case CalendarIntegrationQueries.active_needing_reauth_names(user_id) do
+      [] -> if has_bookable_integration?(user_id), do: :taking_bookings, else: :no_calendar
+      names -> {:credentials_refused, names}
+    end
+  end
+
+  @doc """
   Lists calendar integrations for a user and annotates the primary one.
   """
   @spec list_integrations(user_id()) :: [integration()]

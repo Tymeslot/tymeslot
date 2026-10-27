@@ -280,6 +280,41 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
     end
   end
 
+  # Reconnecting is where an iCloud user most needs the app-specific password
+  # guidance: the usual reason they are here is that the old one was revoked.
+  describe "CalDAV reconnect modal (iCloud app-specific password guidance)" do
+    test "the iCloud modal says where to make a new app-specific password and why",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My iCloud",
+          provider: "apple",
+          base_url: "https://caldav.icloud.com",
+          username_encrypted: Encryption.encrypt("alice@icloud.com"),
+          password_encrypted: Encryption.encrypt("revoked"),
+          calendar_paths: ["/123/calendars/home/"],
+          provider_account_id: "https://caldav.icloud.com||alice@icloud.com",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#caldav-reconnect-credentials-form a[href='https://appleid.apple.com']"
+             )
+
+      assert view |> element("#caldav-reconnect-credentials-form") |> render() =~
+               "the old one will not work again: generate a new one"
+    end
+  end
+
   describe "CalDAV reconnect modal (mailbox.org URL is locked)" do
     test "the URL field is disabled and pinned to https://dav.mailbox.org",
          %{conn: conn, user: user} do

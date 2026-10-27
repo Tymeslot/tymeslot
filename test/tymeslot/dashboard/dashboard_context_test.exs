@@ -53,6 +53,8 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
     test "returns the all-false defaults for nil user_id" do
       assert DashboardContext.get_integration_status(nil) == %{
                has_calendar: false,
+               calendar_ready: false,
+               refused_calendars: [],
                has_video: false,
                has_meeting_types: false
              }
@@ -109,6 +111,47 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
       insert(:calendar_integration, user: user, provider: "caldav")
 
       assert %{has_calendar: true} = DashboardContext.get_integration_status(user.id)
+    end
+
+    test "a connected calendar with nothing refused is ready to take bookings" do
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "caldav")
+
+      assert %{has_calendar: true, calendar_ready: true, refused_calendars: []} =
+               DashboardContext.get_integration_status(user.id)
+    end
+
+    # The availability read fails closed on a calendar it cannot read, so one
+    # refused calendar empties the booking page however healthy the rest are.
+    # It is still connected, though, which is what polls gate on.
+    test "a refused calendar beside a healthy one leaves the booking page not ready" do
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "caldav", name: "Work")
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "apple",
+        name: "iCloud",
+        needs_reauth: true
+      )
+
+      assert %{has_calendar: true, calendar_ready: false, refused_calendars: ["iCloud"]} =
+               DashboardContext.get_integration_status(user.id)
+    end
+
+    test "a refused calendar switched off no longer counts against the booking page" do
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "caldav")
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "apple",
+        needs_reauth: true,
+        is_active: false
+      )
+
+      assert %{calendar_ready: true, refused_calendars: []} =
+               DashboardContext.get_integration_status(user.id)
     end
   end
 

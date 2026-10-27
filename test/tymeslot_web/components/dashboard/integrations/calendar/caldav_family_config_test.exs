@@ -116,6 +116,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
       assert apple =~ "iCloud will not accept your Apple ID password here."
     end
 
+    # Revoking the password, or changing the Apple ID password, is the usual
+    # way an iCloud connection breaks, so the owner is told before it happens.
+    test "iCloud warns that revoking the password disconnects the booking page" do
+      {apple, _doc} = render_form(:apple)
+
+      assert apple =~ "Revoking it, or changing your Apple ID password, disconnects iCloud"
+    end
+
     test "servers that take an ordinary login show no app-password hint" do
       for provider <- [:caldav, :radicale, :baikal, :zimbra] do
         {html, _doc} = render_form(provider)
