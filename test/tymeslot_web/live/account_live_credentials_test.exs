@@ -11,12 +11,15 @@ defmodule TymeslotWeb.AccountLiveCredentialsTest do
   import Phoenix.LiveViewTest
   import Tymeslot.TestFixtures
   import Tymeslot.AuthTestHelpers
+  import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Phoenix.Socket.Broadcast
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{UserSchema, UserTokenQueries}
+  alias Tymeslot.Auth.{Session, UserSchema, UserTokenQueries}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, Token}
+  alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.ClientIP
 
   setup %{conn: conn} do
@@ -66,6 +69,37 @@ defmodule TymeslotWeb.AccountLiveCredentialsTest do
 
       assert {:error, {:invalid_token, _message}} =
                Auth.verify_email_change(change_token, ClientIP.request_opts(%Plug.Conn{}))
+    end
+
+    # Disconnecting the page's own socket would drop the reply carrying the
+    # redirect, and the browser would sit on a frozen form until LiveView's
+    # reload-with-jitter, landing on the login page as an expired session.
+    test "a password change signs out every session but leaves this page connected to redirect",
+         %{conn: conn, user: user} do
+      this_topic = Session.live_socket_id(get_session(conn, :user_token))
+      other_token = Token.generate()
+      insert(:user_session, user: user, token_hash: Token.hash_token(other_token))
+      other_topic = Session.live_socket_id(other_token)
+      Endpoint.subscribe(this_topic)
+      Endpoint.subscribe(other_topic)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+      view |> element("button", "Change Password") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_password']", %{
+        "password_form" => %{
+          "current_password" => "Password123!",
+          "new_password" => "NewPassword123!",
+          "new_password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_submit()
+
+      assert_redirect(view, ~p"/auth/login")
+      assert_receive %Broadcast{event: "disconnect", topic: ^other_topic}
+      refute_receive %Broadcast{event: "disconnect", topic: ^this_topic}
+      assert Session.get_user_by_token(get_session(conn, :user_token)) == nil
     end
 
     test "shows an error on every invalid field at once", %{conn: conn} do
