@@ -209,10 +209,22 @@ defmodule Tymeslot.MeetingPayments do
   in hundredths (see `Currency.support/1`).
   """
   @spec charges_enabled_for_user?(integer()) :: boolean()
-  def charges_enabled_for_user?(user_id) do
+  def charges_enabled_for_user?(user_id), do: charge_currency(user_id) != nil
+
+  @doc """
+  The currency checkout charges the user in: their live Connect account's
+  default currency, while the account has charges enabled in a currency
+  checkout can charge (see `charges_enabled_for_user?/1`), and `nil` otherwise.
+  This is the currency to show a stored price in to someone about to pay it.
+  """
+  @spec charge_currency(integer()) :: String.t() | nil
+  def charge_currency(user_id) do
     case ConnectAccountQueries.live_for_user(user_id) do
-      %{charges_enabled: true, default_currency: currency} -> Currency.chargeable?(currency)
-      _other -> false
+      %{charges_enabled: true, default_currency: currency} ->
+        if Currency.chargeable?(currency), do: currency
+
+      _other ->
+        nil
     end
   end
 

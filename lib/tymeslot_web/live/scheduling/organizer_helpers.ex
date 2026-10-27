@@ -64,23 +64,17 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   end
 
   # The currency the organiser's paid meeting types are priced in, for the
-  # steps that show a price (`BookingText.price_label/3`): the account's own
-  # currency, which checkout charges, even one outside the allowlist that new
-  # prices can no longer be set in. Looked up only when one of them is paid,
-  # so a page without a paid type costs no query. A demo persona's meeting
-  # types are plain maps without the field. A currency checkout cannot charge
-  # gives no price at all: stored prices are hundredths, which would read at
-  # the wrong scale in a currency with other minor units (4500 as ¥4,500).
+  # steps that show a price (`BookingText.price_label/3`): the currency
+  # checkout charges (`MeetingPayments.charge_currency/1`), even one outside
+  # the allowlist that new prices can no longer be set in. Looked up only when
+  # one of them is paid, so a page without a paid type costs no query. A demo
+  # persona's meeting types are plain maps without the field.
   defp host_currency(%{user_id: user_id, meeting_types: meeting_types}) do
     if Enum.any?(meeting_types, &(Map.get(&1, :payment_required) == true)) do
-      chargeable_currency(MeetingPayments.account_currency(user_id))
+      MeetingPayments.charge_currency(user_id)
     else
       nil
     end
-  end
-
-  defp chargeable_currency(currency) do
-    if MeetingPayments.currency_support(currency) in [:supported, :legacy], do: currency
   end
 
   @doc """
