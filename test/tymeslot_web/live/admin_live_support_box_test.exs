@@ -6,8 +6,11 @@ defmodule TymeslotWeb.AdminLiveSupportBoxTest do
 
   import Phoenix.LiveViewTest
   import Tymeslot.AdminPageHelpers
+  import Tymeslot.AppSettingsEnvHelpers
 
   alias Tymeslot.AppSettings
+
+  setup :restore_app_settings_env
 
   setup :admin_conn
 
