@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   }
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.ChoicesInUrl
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
@@ -122,6 +123,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   On the payment wait (`:awaiting_payment`) it applies nothing: a client may
   patch this socket to any URL the page serves, and only the payment webhook
   (`:paid`, `:expired`) ends the wait. A reload is a fresh mount, not this.
+
+  Nor does it apply the page's own patch (`ChoicesInUrl`), which carries the
+  choices the socket already holds: entered again, the route would send the
+  visitor back to its first moment after every choice.
+
+  A URL naming a moment of a paged journey (`step`, which `ChoicesInUrl`
+  writes) resumes on it, when the choices the URL carries reach it
+  (`Runtime.resume/2`).
   """
   @spec handle_scheduling_params(Phoenix.LiveView.Socket.t(), map()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -129,6 +138,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     do: {:noreply, socket}
 
   def handle_scheduling_params(socket, params) do
+    if ChoicesInUrl.own_patch?(socket, params) do
+      {:noreply, assign(socket, :page_query_params, PathHandlers.query_params(params))}
+    else
+      apply_params(ChoicesInUrl.forget(socket), params)
+    end
+  end
+
+  defp apply_params(socket, params) do
     initial_state = entry(socket)
     socket = handle_param_updates(socket, params)
 
@@ -142,6 +159,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
         |> ThemeUtils.assign_theme_with_preview(params)
         |> assign_owner_preview(params)
         |> Runtime.transition_to(initial_state, params)
+        |> resume(params)
 
       if socket.redirected do
         {:noreply, socket}
@@ -272,6 +290,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
       socket
     end
   end
+
+  defp resume(%{redirected: nil} = socket, params), do: Runtime.resume(socket, params)
+  defp resume(socket, _params), do: socket
 
   # The moment, or outcome, the route opens on: the journey's navigator
   # decides (`Navigator.entry/3`). `SchedulingLive` assigns the journey

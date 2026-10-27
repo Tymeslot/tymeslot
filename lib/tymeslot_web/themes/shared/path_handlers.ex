@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   use TymeslotWeb, :verified_routes
 
   alias Tymeslot.MeetingTypes
+  alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
   @doc """
@@ -68,38 +69,75 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> put_embed_params(socket)
     |> put_preview_params(socket)
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
-    |> maybe_put_query_param("minutes", socket.assigns[:chosen_length_minutes])
+    |> maybe_put_query_param("minutes", chosen_length(socket.assigns))
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> put_choices(socket.assigns)
   end
 
-  # A page that opens its moments by itself shows the switcher on every
-  # moment, so a switch can come after the visitor has chosen. The redirect
-  # carries the choices as the deep-link parameters, and the page that comes
-  # back lands where the visitor was. The route stays the one the visit
-  # started on, which is what `entered_via_overview` is read from: a type
-  # chosen on the overview goes as `duration` on the overview route (a type
-  # the overview does not list is never taken from it), and a meeting
-  # type's own link names its type in the path. A time no longer free is
-  # dropped on arrival, as a deep link's is. The day and time are wall clock
-  # in the visitor's timezone, so that goes too (`visitor_timezone`, which the
-  # mount prefers to the browser's). The answers and the details are not
-  # carried. A paged journey's switcher shows on its first moment only,
-  # before any choice, so it carries nothing; nor does an outcome, whose
-  # choices are a booking already made (a switch on the confirmation would
-  # otherwise land on the details for the slot just booked).
+  # What a page carries of the visitor's choices: the deep-link parameters
+  # `put_choices/2` writes, and the chosen length.
+  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step"]
+
+  # What a fresh booking forgets of them: everything built on the meeting
+  # type, which a restart keeps (`Journey.Runtime.restart/1`).
+  @slot_params ["date", "time", "minutes", "step"]
+
+  @doc """
+  The query string that carries the visitor's choices on the page's own URL
+  (`ChoicesInUrl`): the page's own query (an embed's parameters, a preview,
+  a reschedule, the locale it arrived with), with the choices it named on
+  arrival replaced by the ones made since.
+  """
+  @spec choices_query(Phoenix.LiveView.Socket.t()) :: %{String.t() => String.t()}
+  def choices_query(socket) do
+    (socket.assigns[:page_query_params] || %{})
+    |> Map.drop(@choice_params)
+    |> maybe_put_query_param("minutes", chosen_length(socket.assigns))
+    |> put_choices(socket.assigns)
+  end
+
+  defp chosen_length(%{current_state: state}) when state in [:confirmation, :awaiting_payment],
+    do: nil
+
+  defp chosen_length(assigns), do: assigns[:chosen_length_minutes]
+
+  # The visitor's choices, as the deep-link parameters a mount reads back, so
+  # a page mounted from them lands where the visitor was: the locale switch
+  # (a full redirect) and the patch that keeps the address bar in step with
+  # every choice (`ChoicesInUrl`), whose URL a reconnect remounts from. The
+  # route stays the one the visit started on, which is what
+  # `entered_via_overview` is read from: a type chosen on the overview goes
+  # as `duration` on the overview route (a type the overview does not list
+  # is never taken from it), and a meeting type's own link names its type in
+  # the path. A time no longer free is dropped on arrival, as a deep link's
+  # is. The day and time are wall clock in the visitor's timezone, so that
+  # goes too (`visitor_timezone`, which the mount prefers to the browser's).
+  # A paged journey shows one moment at a time and does not move on by
+  # itself, so the moment on screen goes as `step` (`Navigators.Paged`
+  # resumes on it). The answers and the details are not carried: the
+  # details form is recovered by LiveView's form recovery. Nor is anything
+  # on an outcome, whose choices are a booking already made (carried, a
+  # reload of the confirmation would land on the details for the slot just
+  # booked).
   defp put_choices(params, assigns) do
-    if Reveal.journey?(assigns[:journey]) and
-         assigns[:current_state] not in [:confirmation, :awaiting_payment] do
+    if assigns[:current_state] in [:confirmation, :awaiting_payment] do
+      params
+    else
       params
       |> maybe_put_query_param("duration", overview_choice(assigns))
       |> maybe_put_query_param("date", assigns[:selected_date])
       |> maybe_put_query_param("time", assigns[:selected_date] && assigns[:selected_time])
       |> maybe_put_query_param("visitor_timezone", assigns[:user_timezone])
-    else
-      params
+      |> maybe_put_query_param("step", paged_moment(assigns))
     end
   end
+
+  defp paged_moment(%{journey: journey, current_state: state}) when is_atom(state) do
+    if not Reveal.journey?(journey) and Journey.moment(journey, state),
+      do: Atom.to_string(state)
+  end
+
+  defp paged_moment(_assigns), do: nil
 
   defp overview_choice(%{live_action: :overview} = assigns),
     do: MeetingTypes.normalize_duration_slug(assigns[:selected_duration])
@@ -173,7 +211,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   end
 
   defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
-  defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
+  # As the URL will read it back: a string (the chosen length is an integer).
+  defp maybe_put_query_param(params, key, value), do: Map.put(params, key, to_string(value))
 
   # The route's own segments, which arrive in `params` beside the query.
   @path_params ["username", "slug"]
@@ -196,7 +235,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   @doc """
   The host's booking page from the start, as a fresh booking: the page's
   own query (an embed's parameters, a preview, the timezone) is kept, and
-  only the reschedule it was for is dropped.
+  the reschedule it was for is dropped, with the slot and everything else
+  the URL carried of the last booking but its meeting type.
 
   `route` is where the booking starts again: `:overview`, the host's page
   with every meeting type, or `:schedule`, the chosen meeting type's own
@@ -211,7 +251,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
         _none -> "/"
       end
 
-    query = Map.drop(socket.assigns[:page_query_params] || %{}, @reschedule_params)
+    query =
+      Map.drop(socket.assigns[:page_query_params] || %{}, @reschedule_params ++ @slot_params)
+
     if query == %{}, do: base, else: "#{base}?#{URI.encode_query(query)}"
   end
 

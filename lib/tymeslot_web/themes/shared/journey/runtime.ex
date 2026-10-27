@@ -142,6 +142,24 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   def settle(socket), do: socket
 
   @doc """
+  Resumes on the moment the URL names (`params["step"]`), through the
+  navigator's `resume/4`; the socket unchanged without one, or without a
+  `step`.
+  """
+  @spec resume(Socket.t(), map()) :: Socket.t()
+  def resume(
+        %Socket{assigns: %{journey: %Journey{navigator: navigator} = journey}} = socket,
+        %{"step" => step} = params
+      )
+      when is_binary(step) do
+    if Code.ensure_loaded?(navigator) and function_exported?(navigator, :resume, 4),
+      do: navigator.resume(journey, socket, step, params),
+      else: socket
+  end
+
+  def resume(socket, _params), do: socket
+
+  @doc """
   Starts the booking again, in place: the confirmation's "Schedule another
   meeting". It keeps the meeting type and forgets every fact depending on
   it (the time, the answers, the booking just made). A booker who came
