@@ -375,28 +375,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
         raw_ical: event.raw_ical,
         etag: event.etag
       },
-      replayed_reminders(event)
+      replayed_reminders(event, row.sync_reminders_changed)
     )
   end
 
   # The patcher removes every alarm of the master VEVENT that a reminder can
   # express and `:reminders` leaves out, while keeping the others verbatim.
   # So a row holding the server's document replays its reminders only when
-  # they differ from the ones that document's master holds, which is when a
-  # local edit changed them. A series' document holds a VEVENT per edited
-  # occurrence beside the master, so the comparison reads the master alone,
-  # the VEVENT the patcher edits.
+  # the queued change edited them, which the tag records on the row
+  # (`sync_reminders_changed`): a removal of every reminder replays as `[]`
+  # and takes the alarms off the server, while a rename of a row cached
+  # before the sync read alarms, whose reminders are `[]` whatever the
+  # document says, leaves them alone.
   #
-  # Whenever the comparison cannot be made, the server's alarms are kept:
-  # a document without exactly one master cannot say whether the reminders
-  # changed, and an empty list is never replayed because a row cached before
-  # the sync read alarms says `[]` whatever the document holds, so replaying
-  # it would remove the server's reminders with an edit about something
-  # else. The cost is that a queued removal of every reminder is not
-  # replayed while the server's copy is patched; the alarms stay rather than
-  # being lost. A row with no document is rebuilt from the row, reminders and
-  # all.
-  defp replayed_reminders(%{raw_ical: raw_ical, reminders: reminders})
+  # An unmarked change left the reminders alone, unless it was queued before
+  # the mark existed and so is unmarked whatever it changed. For that row an
+  # unmarked replay compares the row's reminders with the ones the
+  # document's master holds (a series' document holds a VEVENT per edited
+  # occurrence beside the master, the VEVENT the patcher edits) and sends
+  # them when they differ, as the queue did before. That comparison cannot
+  # tell a removal of every reminder from a row cached before the sync read
+  # alarms, so it never replays `[]`, and a document without exactly one
+  # master keeps the server's alarms too. A row with no document is rebuilt
+  # from the row, reminders and all.
+  defp replayed_reminders(%{reminders: reminders}, true = _changed), do: %{reminders: reminders}
+
+  defp replayed_reminders(%{raw_ical: raw_ical, reminders: reminders}, _unmarked)
        when is_binary(raw_ical) and raw_ical != "" do
     case ICalNormaliser.document_reminders(raw_ical) do
       {:ok, document_reminders} when reminders != [] and document_reminders != reminders ->
@@ -407,7 +411,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     end
   end
 
-  defp replayed_reminders(event), do: %{reminders: event.reminders}
+  defp replayed_reminders(event, _unmarked), do: %{reminders: event.reminders}
 
   # All-day events are modelled with `start_date`/`end_date` only, leaving
   # `start_at`/`end_at` NULL — the 20260408110831 migration dropped those
