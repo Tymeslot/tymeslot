@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
   import Tymeslot.JourneyFixtureHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
@@ -41,21 +42,6 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
     |> stub(:get_booking_integration_info, fn _user_id -> {:error, :no_integration} end)
 
     :ok
-  end
-
-  # The URL the page last patched itself to: every patch is a message to the
-  # test process, so the last one drained is the address bar's.
-  defp current_url(view, last \\ nil) do
-    case patched(view) do
-      nil -> last || flunk("the page never patched its URL")
-      to -> current_url(view, to)
-    end
-  end
-
-  defp patched(view) do
-    assert_patch(view, 0)
-  rescue
-    ArgumentError -> nil
   end
 
   defp query(url), do: url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
@@ -87,7 +73,7 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
         BookingDriver.continue(view)
         assert live_assigns(view).current_state == :booking
 
-        url = current_url(view)
+        url = BookingTestHelpers.last_patched_url(view)
         assert URI.parse(url).path == "/#{profile.username}"
 
         assert %{
@@ -121,12 +107,14 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
         BookingDriver.book(view, meeting_type: "quick-chat", until: :attendee)
         token = live_assigns(view).submission_token
-        assert is_binary(token)
+        assert token not in [nil, ""]
 
         send(view.pid, {:step_event, :booking, :change_timezone, "America/New_York"})
         Eventually.eventually(fn -> live_assigns(view).user_timezone == "America/New_York" end)
 
-        assert query(current_url(view))["visitor_timezone"] == "America/New_York"
+        assert query(BookingTestHelpers.last_patched_url(view))["visitor_timezone"] ==
+                 "America/New_York"
+
         assert live_assigns(view).current_state == :booking
         assert live_assigns(view).submission_token == token
       end
@@ -135,12 +123,12 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
         %{profile: profile} = seed_organiser(unquote(theme_id), "url-booked-#{unquote(theme)}")
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}")
         BookingDriver.book(view, meeting_type: "quick-chat", until: :attendee)
-        assert query(current_url(view))["step"] == "booking"
+        assert query(BookingTestHelpers.last_patched_url(view))["step"] == "booking"
 
         BookingDriver.submit(view, @attendee)
         assert live_assigns(view).current_state == :confirmation
 
-        url = current_url(view)
+        url = BookingTestHelpers.last_patched_url(view)
         assert URI.parse(url).path == "/#{profile.username}"
         assert URI.parse(url).query in [nil, ""]
       end
@@ -180,7 +168,7 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
 
       BookingDriver.choose_meeting_type(view, "quick-chat")
 
-      url = current_url(view)
+      url = BookingTestHelpers.last_patched_url(view)
       assert URI.parse(url).path == "/#{profile.username}"
       assert Map.merge(query(url), embed) == query(url)
       assert query(url)["duration"] == "quick-chat"
@@ -203,7 +191,7 @@ defmodule TymeslotWeb.Live.Themes.BookingChoicesUrlTest do
       BookingDriver.choose_meeting_type(view, "long-chat")
       {day, time} = BookingDriver.pick_first_slot(view, on: a_few_days_ahead())
 
-      url = current_url(view)
+      url = BookingTestHelpers.last_patched_url(view)
       assert %{"duration" => "long-chat", "date" => ^day, "time" => ^time} = query(url)
       refute Map.has_key?(query(url), "step")
 

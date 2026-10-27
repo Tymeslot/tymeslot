@@ -213,6 +213,50 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
     end
   end
 
+  # The page writes the booker's choices into its own URL, and a reconnect
+  # mounts again from that URL. The reschedule is part of the URL too: lost
+  # from a patch, the remounted page books a second meeting instead.
+  describe "a reschedule interrupted by a reconnect" do
+    @tag :capture_log
+    test "the remounted page still moves the meeting", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting,
+      original_start: original_start
+    } do
+      view =
+        navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
+
+      url = last_patched_url(view)
+      uid = meeting.uid
+
+      assert %{"reschedule_meeting_uid" => ^uid, "step" => "booking"} =
+               url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      {:ok, view, _html} = live(build_conn(), url)
+      assert has_element?(view, "form[phx-submit='submit']")
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      assert meeting_count_for(user) == 1,
+             "rescheduling must move the existing meeting, not book a duplicate"
+    end
+  end
+
   describe "\"Schedule Another Meeting\" after a reschedule" do
     # The organiser's other public type, on the same default schedule as the
     # first. It needs no window of its own: the reschedule has taken one of
