@@ -355,3 +355,13 @@ msgstr "Проводьте вебінари, воркшопи та занятт�
 #, elixir-autogen, elixir-format
 msgid "Turn any meeting type into a group session. Set how many people can join and each slot stays open until it's full, so one booking page can run your webinar, workshop, class or office hours. Everyone books themselves in, gets their own confirmation and calendar invite, and can cancel or reschedule without asking you."
 msgstr "Перетворіть будь-який тип зустрічі на групову сесію. Вкажіть, скільки людей може долучитися, і кожен слот залишатиметься відкритим, доки не заповниться, тож одна сторінка бронювання обслужить ваш вебінар, воркшоп, заняття чи консультації. Кожен записується сам, отримує власне підтвердження й запрошення в календар, а скасувати чи перенести бронювання може, не питаючи вас."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Two new booking page themes: Folio and Paper"
+msgstr "Дві нові теми сторінки бронювання: Folio і Paper"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Folio introduces you before anyone picks a time: a cover image, your portrait, headline and bio, in serif type on one continuous page. Paper does the opposite: one calm card in the colour palette you choose, light or dark, and the time and details on a single screen. Open the Theme page to preview either on your own booking page before you switch."
+msgstr "Folio представляє вас ще до того, як хтось вибере час: обкладинка, ваш портрет, заголовок і біографія, шрифтом із засічками на одній суцільній сторінці. Paper робить навпаки: одна спокійна картка в колірній палітрі на ваш вибір, світла чи темна, а час і деталі на одному екрані. Відкрийте сторінку «Тема», щоб переглянути будь-яку з них на власній сторінці бронювання, перш ніж перемикатися."

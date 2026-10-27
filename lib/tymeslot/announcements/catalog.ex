@@ -62,6 +62,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @group_bookings_published_at ~U[2026-10-07 00:00:00Z]
   @group_bookings_expires_at ~U[2026-11-06 00:00:00Z]
 
+  @new_themes_published_at ~U[2026-10-18 00:00:00Z]
+  @new_themes_expires_at ~U[2026-11-17 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -69,6 +72,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      new_themes(),
       group_bookings(),
       meeting_locations(),
       video_providers(),
@@ -87,6 +91,25 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp new_themes do
+    %Announcement{
+      key: "new_themes_folio_paper",
+      title: dgettext("onboarding", "Two new booking page themes: Folio and Paper"),
+      body:
+        dgettext(
+          "onboarding",
+          "Folio introduces you before anyone picks a time: a cover image, your portrait, " <>
+            "headline and bio, in serif type on one continuous page. Paper does the opposite: " <>
+            "one calm card in the colour palette you choose, light or dark, and the time " <>
+            "and details on a single screen. Open the Theme page to preview either on your own " <>
+            "booking page before you switch."
+        ),
+      image_path: "/images/announcements/new-themes.svg",
+      published_at: @new_themes_published_at,
+      expires_at: @new_themes_expires_at
+    }
   end
 
   defp group_bookings do
