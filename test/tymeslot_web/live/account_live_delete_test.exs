@@ -215,6 +215,18 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
     refute has_element?(view, "#delete-account-modal")
   end
 
+  test "reopening after cancel shows the deletion date and drops the old error", %{conn: conn} do
+    view = open_modal(conn)
+    assert submit(view, %{current_password: "nope"}) =~ "Current password is incorrect"
+
+    view |> element("#delete-account-modal button", "Cancel") |> render_click()
+    view |> element("#danger-zone button", "Delete account") |> render_click()
+
+    modal = view |> element("#delete-account-modal") |> render()
+    assert modal =~ "Your account will be deleted on"
+    refute modal =~ "Current password is incorrect"
+  end
+
   test "repeated wrong passwords end in a rate-limit message", %{conn: conn} do
     view = open_modal(conn)
 

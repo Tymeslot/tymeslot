@@ -80,7 +80,7 @@ defmodule TymeslotWeb.AccountLive do
         :if={@show_delete_modal}
         confirmation={@deletion_confirmation}
         grace_days={@deletion_grace_days}
-        deletion_date={@deletion_date}
+        deletion_date={@delete_modal_data}
         feedback_options={@deletion_feedback_options}
         errors={@delete_errors}
       />

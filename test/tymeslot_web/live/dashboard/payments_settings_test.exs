@@ -422,6 +422,43 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       assert reloaded.refunded_amount_cents == 5000
     end
 
+    test "cancelling the refund modal and opening another payment shows the new one", %{
+      conn: conn
+    } do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_REFUND",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      first = paid_payment_for(user, %{attendee_name: "Ada Lovelace"})
+      second = paid_payment_for(user, %{attendee_name: "Grace Hopper"})
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view
+      |> element("button[phx-click=open_refund_modal][phx-value-id='#{first.id}']")
+      |> render_click()
+
+      assert view |> element("#refund-modal") |> render() =~ "Ada Lovelace"
+
+      view |> element("#refund-modal button", "Cancel") |> render_click()
+      refute has_element?(view, "#refund-modal")
+
+      view
+      |> element("button[phx-click=open_refund_modal][phx-value-id='#{second.id}']")
+      |> render_click()
+
+      modal = view |> element("#refund-modal") |> render()
+      assert modal =~ "Grace Hopper"
+      refute modal =~ "Ada Lovelace"
+    end
+
     test "submitting a partial refund updates the row to partially_refunded", %{conn: conn} do
       user = create_onboarded_user()
 

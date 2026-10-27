@@ -97,6 +97,7 @@
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.UseCoreModal, []},
+          {CredoChecks.UseModalHook, []},
           {CredoChecks.UseColorScale, [priority: :low]},
           {CredoChecks.NoArbitraryHexColors, [priority: :low]},
           {CredoChecks.RequireDashboardPage, [priority: :low]},

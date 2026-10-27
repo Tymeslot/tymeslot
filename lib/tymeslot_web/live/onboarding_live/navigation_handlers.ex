@@ -18,6 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.CustomInputModeHelper
+  alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
@@ -97,7 +98,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       "skip" ->
         # Don't advance immediately: Tymeslot only makes sense with a calendar
         # connected, so nudge the user to reconsider before proceeding.
-        {:noreply, Component.assign(socket, :show_skip_calendar_modal, true)}
+        {:noreply, ModalHook.show_modal(socket, :skip_calendar)}
 
       _none ->
         if socket.assigns.connected_calendars == [] do
@@ -235,7 +236,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_show_skip_modal(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_skip_modal(socket) do
-    {:noreply, Component.assign(socket, :show_skip_modal, true)}
+    {:noreply, ModalHook.show_modal(socket, :skip)}
   end
 
   @doc """
@@ -244,7 +245,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_hide_skip_modal(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_hide_skip_modal(socket) do
-    {:noreply, Component.assign(socket, :show_skip_modal, false)}
+    {:noreply, ModalHook.hide_modal(socket, :skip)}
   end
 
   @doc """
@@ -257,7 +258,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def handle_confirm_skip_calendar(socket) do
     {:noreply,
      socket
-     |> Component.assign(:show_skip_calendar_modal, false)
+     |> ModalHook.hide_modal(:skip_calendar)
      |> advance_step(:connect_calendar, %{skipped: true})}
   end
 
@@ -267,7 +268,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_hide_skip_calendar_modal(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_hide_skip_calendar_modal(socket) do
-    {:noreply, Component.assign(socket, :show_skip_calendar_modal, false)}
+    {:noreply, ModalHook.hide_modal(socket, :skip_calendar)}
   end
 
   @doc """

@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
 
             <BookingLinkModal.booking_link_modal
               show={@show_slug_modal}
-              meeting_type={@slug_modal_type}
+              meeting_type={@slug_modal_data}
               slug_draft={@slug_draft}
               base_url={booking_base_url(@profile) || ""}
               myself={@myself}
