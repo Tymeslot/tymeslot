@@ -31,6 +31,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarGrid
@@ -76,9 +77,20 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
     }
   end
 
+  @planning %{
+    uid: "040000008200E00074C5B7101A82E008-existing",
+    provider: "outlook",
+    provider_event_id: @grid_event_id,
+    provider_calendar_id: "outlook-calendar-1",
+    summary: "Planning",
+    description: "Agenda",
+    start_at: ~U[2030-06-01 09:00:00.000000Z],
+    end_at: ~U[2030-06-01 10:00:00.000000Z]
+  }
+
   describe "a grid event whose Teams meeting is a separate event on another account" do
     setup ctx do
-      %{event: with_separate_teams(ctx, insert_event(ctx.calendar), ctx.other_teams)}
+      %{event: with_separate_teams(ctx, insert_event(ctx.calendar, @planning), ctx.other_teams)}
     end
 
     test "deleting the grid event deletes the separate Teams event", ctx do
@@ -194,7 +206,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
         )
 
       event =
-        insert_event(google, %{
+        insert_event(google, @planning, %{
           uid: "google-grid-event",
           provider: "google",
           provider_event_id: "google-grid-event",
@@ -217,7 +229,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   # deletes the Teams event.
   describe "a grid event with a separate Teams event, deleted in Outlook" do
     setup ctx do
-      event = with_separate_teams(ctx, insert_event(ctx.calendar), ctx.other_teams)
+      event = with_separate_teams(ctx, insert_event(ctx.calendar, @planning), ctx.other_teams)
       run_nightly_scan()
 
       Repo.delete!(event)
@@ -289,7 +301,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   # Outlook id, so a clean-up that deletes Teams rooms by id must not reach it.
   describe "a grid event whose Teams meeting is attached to it" do
     setup ctx do
-      event = insert_event(ctx.calendar)
+      event = insert_event(ctx.calendar, @planning)
 
       assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.own_teams.id)
       assert url == join_url(@grid_event_id)
@@ -428,24 +440,6 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   end
 
   defp insert_mirotalk(user), do: insert(:video_integration, user: user, provider: "mirotalk")
-
-  defp insert_event(calendar, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: calendar,
-      uid: "040000008200E00074C5B7101A82E008-existing",
-      provider: "outlook",
-      provider_event_id: @grid_event_id,
-      provider_calendar_id: "outlook-calendar-1",
-      summary: "Planning",
-      description: "Agenda",
-      start_at: ~U[2030-06-01 09:00:00.000000Z],
-      end_at: ~U[2030-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
-  end
 
   defp reload(event) do
     {:ok, row} = ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid)

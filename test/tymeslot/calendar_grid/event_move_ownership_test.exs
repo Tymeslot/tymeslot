@@ -15,12 +15,21 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
+
+  @design_review %{
+    summary: "Design review",
+    provider_calendar_id: "/src/",
+    provider_event_id: "/src/design-review.ics",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z]
+  }
 
   setup :verify_on_exit!
 
@@ -43,22 +52,6 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
     expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
     %{user: user, source: source, destination: destination}
-  end
-
-  defp insert_event(integration, attrs) do
-    defaults = %{
-      calendar_integration: integration,
-      summary: "Design review",
-      provider: integration.provider,
-      provider_calendar_id: "/src/",
-      provider_event_id: "/src/design-review.ics",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   defp move(user, event, destination),
@@ -101,7 +94,11 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
     source: source,
     destination: destination
   } do
-    event = insert_event(source, %{uid: "invite@example.com", created_by_tymeslot: false})
+    event =
+      insert_event(source, @design_review, %{
+        uid: "invite@example.com",
+        created_by_tymeslot: false
+      })
 
     assert {:ok, %{uid: uid}} = move(user, event, destination)
 
@@ -118,7 +115,8 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
     source: source,
     destination: destination
   } do
-    event = insert_event(source, %{uid: "own@tymeslot.com", created_by_tymeslot: true})
+    event =
+      insert_event(source, @design_review, %{uid: "own@tymeslot.com", created_by_tymeslot: true})
 
     assert {:ok, %{uid: uid}} = move(user, event, destination)
 

@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.Test.CalendarGridHelpers
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
@@ -61,12 +62,23 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
     %{user: user, calendar: calendar, meet: meet}
   end
 
+  @planning %{
+    uid: "googlehex1@google.com",
+    provider: "google",
+    provider_event_id: "googlehex1",
+    provider_calendar_id: "primary",
+    summary: "Planning",
+    description: "Agenda",
+    start_at: ~U[2026-06-01 09:00:00.000000Z],
+    end_at: ~U[2026-06-01 10:00:00.000000Z]
+  }
+
   describe "switching a Google event to Meet from the same account" do
     test "asks Google for the conference and caches the link it made", ctx do
       zoom = insert(:video_integration, user: ctx.user, provider: "zoom")
 
       event =
-        insert_event(ctx.calendar, %{
+        insert_event(ctx.calendar, @planning, %{
           description: "Agenda\n\nJoin video call: #{@zoom_url}",
           video_link: @zoom_url,
           video_integration_id: zoom.id
@@ -93,7 +105,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
     end
 
     test "keeps the integration without a link when Google has not made one yet", ctx do
-      event = insert_event(ctx.calendar)
+      event = insert_event(ctx.calendar, @planning)
       expect_update()
 
       expect_read_back(conference: nil)
@@ -109,7 +121,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
   describe "switching away from Meet from the same account" do
     setup ctx do
       event =
-        insert_event(ctx.calendar, %{
+        insert_event(ctx.calendar, @planning, %{
           description: "Agenda",
           video_link: @meet_url,
           video_integration_id: ctx.meet.id
@@ -159,7 +171,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
         )
 
       event =
-        insert_event(ctx.calendar, %{
+        insert_event(ctx.calendar, @planning, %{
           description: "Agenda\n\nJoin video call: #{@meet_url}",
           video_link: @meet_url,
           video_integration_id: other.id
@@ -276,24 +288,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoMeetTest do
           "entryPoints" => [%{"entryPointType" => "video", "uri" => url}]
         }),
       else: base
-  end
-
-  defp insert_event(calendar, attrs \\ %{}) do
-    defaults = %{
-      calendar_integration: calendar,
-      uid: "googlehex1@google.com",
-      provider: "google",
-      provider_event_id: "googlehex1",
-      provider_calendar_id: "primary",
-      summary: "Planning",
-      description: "Agenda",
-      start_at: ~U[2026-06-01 09:00:00.000000Z],
-      end_at: ~U[2026-06-01 10:00:00.000000Z],
-      all_day: false,
-      sync_state: "synced"
-    }
-
-    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   defp reload(event) do

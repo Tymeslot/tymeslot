@@ -23,7 +23,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Failing Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -45,7 +46,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Month-end close",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -182,7 +184,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Move Me",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -202,7 +205,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Weekly Standup",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -225,7 +229,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Moved Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -320,7 +325,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
     test "error path flashes failure message", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      insert_event(integration, %{
+      insert(:provider_calendar_event, %{
+        calendar_integration: integration,
         summary: "Stubborn Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
@@ -460,9 +466,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       assert html =~ "Please start the series on the 28th or earlier"
       refute html =~ "Failed to create event"
     end
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

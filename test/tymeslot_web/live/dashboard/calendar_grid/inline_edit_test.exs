@@ -36,7 +36,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Team Standup",
           start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
@@ -139,7 +140,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Location Event",
           location: "Room 101",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -189,7 +191,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "No Location Event",
           location: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
@@ -222,7 +225,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Description Event",
           description: "Original notes",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -272,7 +276,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "No Notes Event",
           description: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
@@ -305,7 +310,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Timed Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -395,7 +401,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Recurring Timed Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
@@ -426,7 +433,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       today = Date.utc_today()
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "All Day Workshop",
           all_day: true,
           start_date: today,
@@ -463,7 +471,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Invite Test Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -472,7 +481,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         })
 
       event_with_guest =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Existing Attendee Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
@@ -569,7 +579,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       video_integration = insert(:video_integration, user: user, is_active: true)
 
       event =
-        insert_event(integration, %{
+        insert(:provider_calendar_event, %{
+          calendar_integration: integration,
           summary: "Video Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -599,9 +610,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     |> Floki.parse_fragment!()
     |> Floki.attribute("##{id}", "value")
     |> hd()
-  end
-
-  defp insert_event(integration, attrs) do
-    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end
