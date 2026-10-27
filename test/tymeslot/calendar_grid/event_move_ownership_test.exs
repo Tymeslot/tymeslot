@@ -127,4 +127,30 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
     assert row.created_by_tymeslot
     assert sync_destination(destination, uid).created_by_tymeslot
   end
+
+  test "an event created on the grid stays Tymeslot's when moved before its first sync", %{
+    user: user,
+    source: source,
+    destination: destination
+  } do
+    :ok =
+      CalendarGrid.cache_created_event(%{
+        uid: "fresh@tymeslot.com",
+        calendar_integration_id: source.id,
+        provider: source.provider,
+        provider_calendar_id: "/src/",
+        summary: "Design review",
+        start_at: ~U[2026-06-01 09:00:00Z],
+        end_at: ~U[2026-06-01 10:00:00Z]
+      })
+
+    {:ok, event} = ProviderCalendarEventQueries.get_by_uid(source.id, "fresh@tymeslot.com")
+
+    assert {:ok, %{uid: uid}} = move(user, event, destination)
+
+    assert String.ends_with?(uid, "@tymeslot.com")
+    assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(destination.id, uid)
+    assert row.created_by_tymeslot
+    assert sync_destination(destination, uid).created_by_tymeslot
+  end
 end

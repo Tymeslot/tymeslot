@@ -206,9 +206,9 @@ defmodule Tymeslot.Payments do
   @spec mark_abandoned_checkouts_handled(pos_integer(), keyword()) :: non_neg_integer()
   defdelegate mark_abandoned_checkouts_handled(user_id, opts), to: PaymentQueries
 
-  @doc "The Stripe platform API key, or `nil` when none is configured."
-  @spec stripe_api_key() :: String.t() | nil
-  defdelegate stripe_api_key(), to: Config
+  @doc "Whether a Stripe platform API key is configured."
+  @spec stripe_configured?() :: boolean()
+  def stripe_configured?, do: is_binary(Config.stripe_api_key())
 
   # Stripe API. Each function calls the configured provider (resolved per
   # call, so a test's `:stripe_provider` override takes effect) and returns

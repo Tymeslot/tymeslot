@@ -30,6 +30,13 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   limit the result is `{:error, :rate_limited, message}` and nothing is
   checked.
 
+  A successful change revokes every session of the account.
+  `:current_session_token` names the session making the change: its row goes
+  with the rest, but its live socket is left connected so the caller can
+  still deliver its own reply (the LiveView's redirect to the login page).
+  Disconnecting it would drop that reply, leaving the form frozen until the
+  client gives up and reloads the page.
+
   A failure is `{:error, %{field => message}}`, keyed by the form field each
   message belongs to. Malformed input is reported for every field at once;
   only then is the current password checked, and it is checked first: a wrong
@@ -87,7 +94,10 @@ defmodule Tymeslot.Auth.PasswordUpdate do
              new_password,
              new_password_confirmation
            ),
-         :ok <- Session.revoke_all_sessions(updated_user.id) do
+         :ok <-
+           Session.revoke_all_sessions(updated_user.id,
+             leave_connected: opts[:current_session_token]
+           ) do
       SecurityLogger.log_password_change(updated_user.id, %{
         ip_address: opts[:ip],
         user_agent: opts[:user_agent],

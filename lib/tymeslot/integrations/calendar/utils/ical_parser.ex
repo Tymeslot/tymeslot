@@ -516,11 +516,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  # An all-day event spans whole days: a time part past them takes up one more.
+  # An all-day event spans whole days: its time part counts in whole days too,
+  # a part day rounding up (`PT48H` is two days, `P1DT12H` also two).
   defp calculate_end_time(%Date{} = start_time, duration_str, _dtstart, _vtimezones) do
     case Duration.parse_nominal(duration_str) do
       {:ok, {days, seconds}} ->
-        days = if seconds > 0, do: days + 1, else: days
+        days = days + div(seconds + 86_399, 86_400)
         {Date.add(start_time, max(days, 1)), false}
 
       {:error, _reason} ->

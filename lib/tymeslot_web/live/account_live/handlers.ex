@@ -185,7 +185,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
            params["current_password"],
            params["new_password"],
            params["new_password_confirmation"],
-           ClientIP.request_opts(socket)
+           ClientIP.request_opts(socket) ++ [current_session_token: socket.assigns.session_token]
          ) do
       {:ok, _updated_user} ->
         {:noreply,

@@ -47,7 +47,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   def list_live_for_meeting(meeting_id) do
     Participant
     |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
-    |> order_by([p], asc: p.inserted_at)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
     |> Repo.all()
   end
 

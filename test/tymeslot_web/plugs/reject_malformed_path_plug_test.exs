@@ -19,6 +19,10 @@ defmodule TymeslotWeb.Plugs.RejectMalformedPathPlugTest do
     test "invalid UTF-8 in a later segment" do
       assert run("/alice/%ff%fe").status == 400
     end
+
+    test "a segment that decodes to a NUL byte" do
+      assert run("/alice/meeting/%00/cancel").status == 400
+    end
   end
 
   describe "paths left alone" do
@@ -42,7 +46,8 @@ defmodule TymeslotWeb.Plugs.RejectMalformedPathPlugTest do
             "/%c0/intro-call",
             "/%c0/meeting/abc/cancel",
             "/%c0/meeting/abc/calendar.ics",
-            "/%c0/poll/token"
+            "/%c0/poll/token",
+            "/alice/meeting/%00/cancel"
           ] do
         assert conn |> get(path) |> response(400) == "Bad Request", path
       end
