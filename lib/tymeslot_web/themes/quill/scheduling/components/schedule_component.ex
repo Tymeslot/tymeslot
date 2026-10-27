@@ -172,14 +172,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               phx-click="prev_week"
                               aria-label={dgettext("booking", "Previous week")}
                               phx-target={@myself}
-                              phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.prev_week_disabled?(
                                   @current_week_start,
                                   @user_timezone
                                 )
                               }
-                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                             >
                               <.icon name="hero-arrow-left" class="inline-icon stroke-2" />
                             </button>
@@ -193,7 +192,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               phx-click="next_week"
                               aria-label={dgettext("booking", "Next week")}
                               phx-target={@myself}
-                              phx-disable-with="..."
                               disabled={
                                 CalendarNavigation.next_week_disabled?(
                                   @current_week_start,
@@ -201,7 +199,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   @booking_window_days
                                 )
                               }
-                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                             >
                               <.icon name="hero-arrow-right" class="inline-icon stroke-2" />
                             </button>
@@ -247,7 +245,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 aria-label={dgettext("booking", "Previous month")}
                                 phx-target={@myself}
                                 data-intent="earlier"
-                                phx-disable-with="..."
                                 disabled={
                                   CalendarNavigation.prev_month_disabled?(
                                     @current_year,
@@ -255,7 +252,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                     @user_timezone
                                   )
                                 }
-                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                               >
                                 <.icon name="hero-arrow-left" class="inline-icon stroke-2" />
                               </button>
@@ -270,7 +267,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 aria-label={dgettext("booking", "Next month")}
                                 phx-target={@myself}
                                 data-intent="later"
-                                phx-disable-with="..."
                                 disabled={
                                   CalendarNavigation.next_month_disabled?(
                                     @current_year,
@@ -279,7 +275,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                     @booking_window_days
                                   )
                                 }
-                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                                class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                               >
                                 <.icon name="hero-arrow-right" class="inline-icon stroke-2" />
                               </button>

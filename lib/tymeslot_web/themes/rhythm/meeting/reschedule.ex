@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                 <div class="confirmation-header-section">
                   <div class="success-badge">
                     <div class="success-badge-inner success-badge-inner--info">
-                      <.icon name="hero-arrow-path" class="success-icon" />
+                      <.icon name="hero-arrow-path" class="success-icon stroke-2" />
                     </div>
                   </div>
 

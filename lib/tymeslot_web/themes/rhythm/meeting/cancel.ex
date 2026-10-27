@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <%= if @meeting_kept do %>
                     <div class="success-badge success-badge--transparent">
                       <div class="success-badge-inner success-badge-inner--success">
-                        <.icon name="hero-check-circle" class="success-icon" />
+                        <.icon name="hero-check-circle" class="success-icon stroke-2" />
                       </div>
                     </div>
 
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <% else %>
                     <div class="success-badge success-badge--transparent">
                       <div class="success-badge-inner success-badge-inner--danger">
-                        <.icon name="hero-x-mark" class="success-icon" />
+                        <.icon name="hero-x-mark" class="success-icon stroke-2" />
                       </div>
                     </div>
 

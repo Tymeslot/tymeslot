@@ -203,18 +203,14 @@
 
 /* ===== Dropdown chevron: a single-select with more than five options =====
 
-   The select is appearance-none, so nothing draws its arrow. The
-   .custom-question-select wrapper (single_select.ex) holds the select and
-   a chevron icon, so the chevron centred on the wrapper is centred on the
-   select. The chevron takes its colour from the token and lets clicks
-   through to the select. The select's padding rule outranks each theme's
+   The select is appearance-none, so its arrow is the .select-chevron icon
+   that <.input type="select"> draws beside it. These rules restyle that
+   icon for the booking page: themed position, size and colour from the
+   token, in place of its dashboard utilities (unlayered, so these beat
+   them). The select's padding rule outranks each theme's
    `.<theme>-wrapper select.input` padding. */
 
-.scheduling-app .custom-question-select {
-  position: relative;
-}
-
-.scheduling-app .custom-question-select-chevron {
+.scheduling-app .custom-question-select .select-chevron {
   position: absolute;
   inset-inline-end: var(--space-sm);
   top: 50%;

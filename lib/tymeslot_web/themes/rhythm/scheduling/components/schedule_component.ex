@@ -85,12 +85,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               <div class="calendar-section calendar-section-wrapper">
                 <div class="calendar-header">
                   <button
-                    class="calendar-nav-button phx-click-loading:animate-pulse"
+                    class="calendar-nav-button phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                     phx-click="prev_week"
                     aria-label={dgettext("booking", "Previous week")}
                     phx-target={@myself}
                     data-intent="earlier"
-                    phx-disable-with="..."
                     disabled={
                       CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)
                     }
@@ -108,12 +107,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       </div>
                     <% end %>
                     <button
-                      class="calendar-nav-button phx-click-loading:animate-pulse"
+                      class="calendar-nav-button phx-click-loading:animate-pulse phx-click-loading:pointer-events-none"
                       phx-click="next_week"
                       aria-label={dgettext("booking", "Next week")}
                       phx-target={@myself}
                       data-intent="later"
-                      phx-disable-with="..."
                       disabled={
                         CalendarNavigation.next_week_disabled?(
                           @current_week_start,
