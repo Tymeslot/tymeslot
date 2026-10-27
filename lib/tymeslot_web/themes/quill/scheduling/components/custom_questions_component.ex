@@ -46,7 +46,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
         <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full">
-              <.glass_morphism_card class="booker-card custom-questions-card">
+              <.glass_morphism_card
+                class="booker-card custom-questions-card"
+                data-testid="booker-card"
+              >
                 <div class="booking-card-body">
                   <%= if @total > 1 do %>
                     <p class="text-quill-secondary text-sm mb-2 custom-questions-progress">

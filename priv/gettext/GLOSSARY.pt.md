@@ -368,7 +368,7 @@ Calendar**.
 - If the msgid has three placeholders, the msgstr has exactly those three.
 - You **may and should reorder** them to fit Portuguese syntax:
   - `"%{month} %{day}, %{year}"` → `"%{day} de %{month} de %{year}"`
-  - `"You're booking a %{duration} meeting with %{name}"` →
+  - `"You're booking %{duration} with %{name}"` →
     `"Você está agendando uma reunião de %{duration} com %{name}"`
 - A dropped or invented placeholder is a runtime crash, not a typo.
 

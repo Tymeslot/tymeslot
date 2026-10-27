@@ -5,16 +5,27 @@
 
 /* ===== Base Styles ===== */
 
+/* The title and the timezone trigger share a row while the title keeps at
+   least its basis beside the trigger; on a narrow card (a phone, or a long
+   zone name) the trigger wraps under the title instead of squeezing it into a
+   column too narrow for a single word. */
 .schedule-card-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
   margin-bottom: var(--space-sm);
 }
 
+.schedule-title-area {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
 .schedule-timezone-area {
   flex-shrink: 0;
+  max-width: 100%;
 }
 
 /* ===== Embedded ===== */

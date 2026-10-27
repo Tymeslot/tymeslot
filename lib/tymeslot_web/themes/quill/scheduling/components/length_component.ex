@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingTypes.Lengths
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
   use TymeslotWeb.Components.CoreComponents
@@ -50,6 +51,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                 <p class="overview-description text-glass-primary">
                   {dgettext("booking", "How long should the meeting be?")}
                 </p>
+                <MeetingPrice.hint
+                  :if={!@is_rescheduling}
+                  meeting_type={@meeting_type}
+                  currency={@host_currency}
+                  locale={@locale}
+                  class="mt-2 mb-2"
+                />
 
                 <%!-- Its own list class: the overview's width tiers key on
                       `.overview-duration-list` card counts and would widen this

@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   URLs as the session carries them, so the theme slug in the path is the one
   the booking flow chose, not one written into the test. The success URL
   must land on the theme's own processing page, which turns into the
-  confirmation once the `checkout.session.completed` webhook is handled; the
+  confirmation, saying what was paid, once the `checkout.session.completed`
+  webhook is handled; the
   cancel URL must land on the theme's own cancelled page, offering the way
   back to the meeting type. The setup is `embed_paid_booking_test.exs`'s.
   """
@@ -119,6 +120,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
         {:ok, view, _html} = live(conn, success_url)
         shell = "[data-testid='#{slug}-payment-processing']"
         assert has_element?(view, "#{shell} h1", "Confirming your payment")
+        refute has_element?(view, "#{shell} [data-testid='payment-paid-amount']")
 
         assert :ok =
                  CheckoutSessionCompleted.handle(%{
@@ -138,6 +140,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
                  })
 
         assert has_element?(view, "#{shell} h1", "Booking confirmed")
+        assert has_element?(view, "#{shell} [data-testid='payment-paid-amount']", "Paid: $50.00")
         assert Repo.get!(MeetingSchema, meeting_id).status == "confirmed"
       end
 

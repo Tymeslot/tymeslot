@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
         <div class="stack">
           <div class="confirmation-outer flex-1 flex items-center justify-center">
             <div class="w-full confirmation-container">
-              <.glass_morphism_card class="booker-card">
+              <.glass_morphism_card class="booker-card" data-testid="booker-card">
                 <div class="confirmation-content">
                   <div class="confirmation-heading-row flex items-center">
                     <div class="shrink-0">
@@ -146,6 +147,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       <LocationField.arranged_note :if={
                         BookingLocation.arranged_after_booking?(assigns)
                       } />
+                    </div>
+
+                    <div
+                      :if={MeetingPrice.paid_price(assigns[:paid_payment], @locale)}
+                      class="confirmation-border-top mt-3 pt-3 border-t"
+                    >
+                      <div class="confirmation-email-row" data-testid="confirmation-paid">
+                        <div class="confirmation-icon-wrapper rounded-full">
+                          <.icon name="hero-credit-card" class="confirmation-email-link w-4 h-4" />
+                        </div>
+                        <.paid_line amount={MeetingPrice.paid_price(@paid_payment, @locale)} />
+                      </div>
                     </div>
 
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
@@ -310,6 +323,35 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   end
 
   # ========== PRIVATE HELPERS ==========
+
+  # Placeholder for the amount while the paid line is translated: a private-use
+  # character no translation contains.
+  @amount_marker "\u{E000}"
+
+  # The paid line is one msgid, so a language can put the amount wherever its
+  # grammar wants it; the translation is then split around the amount so the
+  # amount keeps its own emphasis.
+  attr :amount, :string, required: true
+
+  defp paid_line(assigns) do
+    {before, rest} = split_paid_line()
+    assigns = assign(assigns, before: before, rest: rest)
+
+    ~H"""
+    <p class="text-sm text-white">
+      {@before}<span class="confirmation-email-link font-semibold">{@amount}</span>{@rest}
+    </p>
+    """
+  end
+
+  defp split_paid_line do
+    line = dgettext("booking", "Paid %{amount}", amount: @amount_marker)
+
+    case String.split(line, @amount_marker, parts: 2) do
+      [before, rest] -> {before, rest}
+      [line] -> {line <> " ", ""}
+    end
+  end
 
   # A held request is not a confirmed meeting, and this screen is the last thing
   # an invitee sees before the emails arrive, so the heading changes too, not

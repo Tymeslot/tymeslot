@@ -83,6 +83,32 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModalTest do
     assert active_option(html, "default-view-toggle") == "week"
   end
 
+  # Guards the layout that keeps a long description from running underneath
+  # its control: the text column may shrink and wrap, the control may not.
+  test "every control sits in a non-shrinking column beside a wrapping text column" do
+    rows =
+      (&SettingsModal.settings_modal/1)
+      |> render_component(base_assigns())
+      |> Floki.parse_fragment!()
+      |> Floki.find("[data-testid='preference-row']")
+
+    control_ids =
+      Enum.flat_map(rows, fn row ->
+        assert [text_class] = row |> Floki.find("div.flex-1") |> Floki.attribute("class")
+        assert text_class =~ "min-w-0"
+
+        row
+        |> Floki.find("[data-testid='preference-control'].shrink-0 [id]")
+        |> Floki.attribute("id")
+      end)
+
+    for id <-
+          ~w(week-start-toggle time-format-toggle default-view-toggle week-numbers-switch weekends-switch desktop-reminders-switch) do
+      assert Enum.any?(control_ids, &String.starts_with?(&1, id)),
+             "#{id} is not in a shrink-0 control column"
+    end
+  end
+
   # The active option is the button pressed in the segmented control; its id
   # is "<toggle-id>-<value>".
   defp active_option(html, toggle_id) do

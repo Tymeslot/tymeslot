@@ -56,6 +56,27 @@ defmodule TymeslotWeb.Live.Scheduling.HostCurrencyTest do
     assert host_currency(conn, profile) == "chf"
   end
 
+  # Checkout charges the account's own currency, so a price in the fallback
+  # would read as a different amount from the one taken.
+  test "is the account's currency even outside the allowlist new prices are set in",
+       %{conn: conn, user: user, profile: profile} do
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+
+    insert(:connect_account, user: user, default_currency: "ron", charges_enabled: true)
+
+    insert(:meeting_type,
+      user: user,
+      name: "Paid Session",
+      payment_required: true,
+      price_cents: 4500
+    )
+
+    assert host_currency(conn, profile) == "ron"
+  end
+
   test "is nil while every meeting type is free", %{conn: conn, user: user, profile: profile} do
     insert(:connect_account, user: user, default_currency: "chf")
 

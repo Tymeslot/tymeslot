@@ -349,16 +349,6 @@ msgstr "Ano"
 msgid "You're All Set!"
 msgstr "Máte hotovo!"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking a %{duration} meeting"
-msgstr "Rezervujete si schůzku (%{duration})"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're booking a %{duration} meeting with %{name}"
-msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Your Name"
@@ -502,7 +492,7 @@ msgstr "Svou vlastní e-mailovou adresu jako hosta přidávat nemusíte."
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr "guest@example.com"
+msgstr "host@example.com"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
@@ -962,3 +952,28 @@ msgstr "Zítra"
 #, elixir-autogen, elixir-format
 msgid "More times"
 msgstr "Další časy"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid"
+msgstr "Zaplaceno"
+
+#: lib/tymeslot_web/themes/shared/components/meeting_price.ex
+#, elixir-autogen, elixir-format
+msgid "Price:"
+msgstr "Cena:"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{duration}"
+msgstr "Rezervujete si schůzku (%{duration})"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking %{duration} with %{name}"
+msgstr "Rezervujete si schůzku (%{duration}) s hostitelem %{name}"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid %{amount}"
+msgstr "Zaplaceno %{amount}"
