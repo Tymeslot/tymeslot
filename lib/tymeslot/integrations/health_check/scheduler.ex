@@ -39,7 +39,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   Seeds a default health state for integrations that have none, reads the
   due ones in one query per kind, and removes health states whose
   integration is gone. `force: true` enqueues a check for every active
-  integration regardless of backoff.
+  integration regardless of backoff. An account pending deletion is skipped
+  (see `IntegrationHealthStateQueries.due/2`).
 
   Each due integration is enqueued with its own `Oban.insert/1`, because the
   worker's uniqueness (one pending check per integration) is enforced on a

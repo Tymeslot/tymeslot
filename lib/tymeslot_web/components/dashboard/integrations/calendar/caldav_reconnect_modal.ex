@@ -227,7 +227,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         )}
       </p>
 
-      <SharedForm.nextcloud_app_password_hint :if={@provider == "nextcloud"} />
+      <SharedForm.app_password_hint provider={@provider} reconnecting />
 
       <%= if @locked_url do %>
         <SharedForm.locked_url_field

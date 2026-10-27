@@ -98,7 +98,8 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   # paint too, so it must be the real value there, not the all-false
   # default — otherwise a fully set-up host sees a false "setup incomplete"
   # flash before the socket connects. `DashboardContext.get_integration_status/1`
-  # is three indexed EXISTS queries, so fetching it synchronously here is cheap.
+  # is a handful of small indexed queries, so fetching it synchronously here is
+  # cheap.
   defp load_profile_and_integration_status(user, socket) do
     if connected?(socket) do
       fetch_profile_and_integration_status(user)

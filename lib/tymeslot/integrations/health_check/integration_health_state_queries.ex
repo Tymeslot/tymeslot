@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   import Ecto.Query
 
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
@@ -76,7 +77,9 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   @doc """
   The active integrations of `kind` whose next health check is due at `now`:
-  never checked, or checked longer ago than their backoff.
+  never checked, or checked longer ago than their backoff. An account waiting
+  to be deleted is left out, as the sync sweep leaves it out, so a leaving
+  owner is not emailed about an integration they may already have revoked.
 
   Reads health states through `integration_health_states_next_check_index`,
   whose expression the comparison below repeats exactly, so the cost follows
@@ -94,7 +97,10 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       from(s in IntegrationHealthStateSchema,
         join: i in subquery(IntegrationTypes.queries(kind).active_query()),
         on: i.id == s.integration_id,
+        join: u in UserSchema,
+        on: u.id == i.user_id,
         where: s.integration_type == ^type_str,
+        where: is_nil(u.deletion_scheduled_at),
         where:
           fragment(
             "(COALESCE(?, '-infinity'::timestamp) + ? * interval '1 millisecond') <= ?",

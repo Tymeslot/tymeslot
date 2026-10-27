@@ -812,3 +812,13 @@ msgstr "%{provider}: zmiana została odrzucona. Połączenie działa, ale kalend
 #, elixir-autogen, elixir-format
 msgid "Your calendar connection does not allow Tymeslot to add bookings to it. Please reconnect the integration and allow Tymeslot to create and edit events."
 msgstr "Połączenie z kalendarzem nie pozwala Tymeslot dodawać do niego rezerwacji. Połącz integrację ponownie i zezwól Tymeslot na tworzenie i edytowanie wydarzeń."
+
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud refused the stored app password. It was most likely revoked, or the account password was changed. Create a new app password and reconnect."
+msgstr "Nextcloud odrzucił zapisane hasło aplikacji. Najprawdopodobniej zostało unieważnione albo zmieniono hasło do konta. Utwórz nowe hasło aplikacji i połącz integrację ponownie."
+
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
+msgstr "iCloud odrzucił zapisane hasło dla aplikacji. Najprawdopodobniej zostało unieważnione albo zmieniono hasło do Apple ID, co unieważnia wszystkie hasła dla aplikacji. Wygeneruj nowe i połącz integrację ponownie."

@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
   import Req.Test, only: [set_req_test_to_shared: 1]
   import Tymeslot.ConfigTestHelpers
 
+  alias Ecto.Changeset
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -25,7 +26,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
-  defp assert_flags_reauth_on_401(integration) do
+  defp assert_flags_reauth_on_401(
+         integration,
+         reason \\ "CalDAV server rejected the stored credentials. Please reconnect the integration."
+       ) do
     ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
 
     assert {:discard, _reason} =
@@ -36,8 +40,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
     assert reloaded.needs_reauth == true
 
-    assert reloaded.sync_error ==
-             "CalDAV server rejected the stored credentials. Please reconnect the integration."
+    assert reloaded.sync_error == reason
   end
 
   describe "perform/1 when the CalDAV server returns 401" do
@@ -71,6 +74,17 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
       # Every request the worker makes to the CalDAV server comes back 401,
       # mirroring a server-side credential rejection.
       assert_flags_reauth_on_401(integration)
+    end
+
+    # iCloud only ever holds an app-specific password here, so the stored
+    # reason can name what the owner most likely did to it.
+    test "names the likely cause for an iCloud integration", %{integration: integration} do
+      integration = Repo.update!(Changeset.change(integration, provider: "apple"))
+
+      assert_flags_reauth_on_401(
+        integration,
+        "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
+      )
     end
   end
 
@@ -160,6 +174,25 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
 
       assert healthy.id in ids
       refute flagged.id in ids
+    end
+
+    # A leaving owner's calendars are not synced while the account waits, so
+    # nothing flags them or emails the owner; a restore brings them back.
+    test "list_active_page skips the integrations of an account pending deletion" do
+      leaving =
+        insert(:user, deletion_scheduled_at: DateTime.add(DateTime.utc_now(:second), 86_400))
+
+      staying = insert(:calendar_integration, provider: "caldav", is_active: true)
+      paused = insert(:calendar_integration, user: leaving, provider: "caldav", is_active: true)
+
+      ids = Enum.map(CalendarIntegrationQueries.list_active_page(0, 100), & &1.id)
+
+      assert staying.id in ids
+      refute paused.id in ids
+
+      Repo.update!(Changeset.change(leaving, deletion_scheduled_at: nil))
+
+      assert paused.id in Enum.map(CalendarIntegrationQueries.list_active_page(0, 100), & &1.id)
     end
   end
 

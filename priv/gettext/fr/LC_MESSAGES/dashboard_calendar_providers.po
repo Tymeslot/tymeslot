@@ -221,12 +221,12 @@ msgstr "URL du serveur"
 msgid "Session expired. Please start the reconnect process again."
 msgstr "Session expirée. Veuillez recommencer le processus de reconnexion."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Settings → Security"
 msgstr "Paramètres → Sécurité"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
 msgstr "Connexion et sécurité → Mots de passe spécifiques aux applications"
@@ -276,7 +276,7 @@ msgstr "Calendrier sans nom"
 msgid "Username"
 msgstr "Nom d’utilisateur"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
 msgstr "mot de passe spécifique à l’application"
@@ -341,12 +341,12 @@ msgstr "https://mail.example.com"
 msgid "https://radicale.example.com:5232"
 msgstr "https://radicale.example.com:5232"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
 msgstr "Si vous avez activé l’authentification à deux facteurs, générez un mot de passe spécifique à l’application sous %{location} sur mailbox.org et utilisez-le ici à la place de votre mot de passe habituel."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr "iCloud n’acceptera pas votre mot de passe Apple ID ici. Générez un %{app_specific_password} sur %{link} sous %{location}, puis saisissez-le ci-dessous avec votre adresse e-mail Apple ID."
@@ -631,3 +631,13 @@ msgstr "Compter chaque événement comme occupé"
 msgid "Holiday and school-holiday calendars mark their events as free, so they would block nothing. With this on, every event in the feed blocks the time, however it is marked."
 msgstr ""
 "Les calendriers de jours fériés et de vacances scolaires marquent leurs événements comme disponibles, si bien qu’ils ne bloqueraient rien. Avec cette option, chaque événement du flux bloque la période, quel que soit son marquage."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "If you revoked the old app-specific password or changed your Apple ID password since connecting, the old one will not work again: generate a new one and enter it here."
+msgstr "Si vous avez révoqué l’ancien mot de passe spécifique à l’application ou modifié votre mot de passe Apple ID depuis la connexion, l’ancien ne fonctionnera plus : générez-en un nouveau et saisissez-le ici."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
+msgstr "Conservez ce mot de passe tant que vous utilisez Tymeslot. Le révoquer ou modifier votre mot de passe Apple ID déconnecte iCloud, et votre page de réservation ne propose plus aucun créneau tant que vous n’avez pas reconnecté iCloud."

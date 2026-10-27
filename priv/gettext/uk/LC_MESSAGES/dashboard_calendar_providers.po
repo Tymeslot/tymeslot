@@ -221,12 +221,12 @@ msgstr "URL-адреса сервера"
 msgid "Session expired. Please start the reconnect process again."
 msgstr "Час сеансу минув. Почніть процес перепідключення знову."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Settings → Security"
 msgstr "Налаштування → Безпека"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
 msgstr "Вхід і безпека → Паролі застосунків"
@@ -276,7 +276,7 @@ msgstr "Календар без назви"
 msgid "Username"
 msgstr "Ім'я користувача"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
 msgstr "пароль застосунку"
@@ -341,12 +341,12 @@ msgstr "https://mail.example.com"
 msgid "https://radicale.example.com:5232"
 msgstr "https://radicale.example.com:5232"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
 msgstr "Якщо у вас увімкнено двофакторну автентифікацію, згенеруйте пароль застосунку в розділі %{location} на mailbox.org і введіть його тут замість звичайного пароля."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr "iCloud не прийме тут ваш пароль від Apple ID. Згенеруйте %{app_specific_password} за посиланням %{link} у розділі %{location}, а потім введіть його нижче разом з електронною адресою вашого Apple ID."
@@ -632,3 +632,13 @@ msgstr "Вважати кожну подію зайнятою"
 msgid "Holiday and school-holiday calendars mark their events as free, so they would block nothing. With this on, every event in the feed blocks the time, however it is marked."
 msgstr ""
 "Календарі свят і шкільних канікул позначають свої події як вільні, тож вони нічого не блокували б. Якщо це ввімкнено, кожна подія з фіду блокує час, хоч би як вона була позначена."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "If you revoked the old app-specific password or changed your Apple ID password since connecting, the old one will not work again: generate a new one and enter it here."
+msgstr "Якщо після підключення ви відкликали старий пароль застосунку або змінили пароль від Apple ID, старий більше не працюватиме: згенеруйте новий і введіть його тут."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
+msgstr "Зберігайте цей пароль, доки користуєтеся Tymeslot. Якщо його відкликати або змінити пароль від Apple ID, iCloud відключиться, і ваша сторінка бронювання не пропонуватиме жодного слота, доки ви знову не підключите iCloud."

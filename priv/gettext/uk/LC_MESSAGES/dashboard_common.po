@@ -358,3 +358,21 @@ msgstr "З ким"
 #, elixir-autogen, elixir-format
 msgid "%{date}, %{time}"
 msgstr "%{date}, %{time}"
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "%{names} refused the credentials Tymeslot holds for it, so your booking page is offering no times. Reconnect it to take bookings again."
+msgid_plural "%{names} refused the credentials Tymeslot holds for them, so your booking page is offering no times. Reconnect them to take bookings again."
+msgstr[0] "Інтеграція %{names} відхилила облікові дані, збережені в Tymeslot, тому ваша сторінка бронювання не пропонує жодного слота. Перепідключіть її, щоб знову приймати бронювання."
+msgstr[1] "Інтеграції %{names} відхилили облікові дані, збережені в Tymeslot, тому ваша сторінка бронювання не пропонує жодного слота. Перепідключіть їх, щоб знову приймати бронювання."
+msgstr[2] "Інтеграції %{names} відхилили облікові дані, збережені в Tymeslot, тому ваша сторінка бронювання не пропонує жодного слота. Перепідключіть їх, щоб знову приймати бронювання."
+
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Перепідключити"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect %{names}: your booking page offers no times until you do"
+msgstr "Перепідключіть %{names}: доти ваша сторінка бронювання не пропонує жодного слота"

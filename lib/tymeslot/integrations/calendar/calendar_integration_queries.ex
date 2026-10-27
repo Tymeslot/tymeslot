@@ -40,6 +40,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     |> Repo.exists?()
   end
 
+  @doc "Names of the user's active integrations flagged `needs_reauth`, by name."
+  @spec active_needing_reauth_names(integer()) :: [String.t()]
+  def active_needing_reauth_names(user_id) do
+    CalendarIntegrationSchema
+    |> where([c], c.user_id == ^user_id and c.is_active == true and c.needs_reauth == true)
+    |> order_by([c], asc: c.name)
+    |> select([c], c.name)
+    |> Repo.all()
+  end
+
   @doc "Of `user_ids`, those with at least one active calendar integration."
   @spec user_ids_with_active([integer()]) :: [integer()]
   def user_ids_with_active([]), do: []
@@ -79,6 +89,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   order: at most `limit` of them with an id above `after_id` (`0` for the
   first page). Credentials are left encrypted, as for `list_all_active/0`.
 
+  An account waiting to be deleted is left out until restored, so nothing
+  flags its calendars or emails its owner meanwhile.
+
   Each page is its own short query, so a caller can act on one page (enqueue
   jobs, say) before reading the next without holding a transaction open
   across the whole walk.
@@ -86,7 +99,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   @spec list_active_page(non_neg_integer(), pos_integer()) :: [CalendarIntegrationSchema.t()]
   def list_active_page(after_id, limit) do
     CalendarIntegrationSchema
+    |> join(:inner, [c], u in UserSchema, on: u.id == c.user_id)
     |> where([c], c.is_active == true and c.needs_reauth == false and c.id > ^after_id)
+    |> where([_c, u], is_nil(u.deletion_scheduled_at))
     |> order_by([c], asc: c.id)
     |> limit(^limit)
     |> Repo.all()
